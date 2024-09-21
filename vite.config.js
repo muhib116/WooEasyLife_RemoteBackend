@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
@@ -15,9 +16,17 @@ export default defineConfig({
                     includeAbsolute: false,
                 },
             },
+            script: {
+                defineModel: true,
+            },
         }),
     ],
     server: {
         port: 3000,
+    },
+    resolve: {
+        alias: {
+            '@/*': fileURLToPath(new URL('./resources/js', import.meta.url)),
+        }
     },
 });
