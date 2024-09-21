@@ -45,3 +45,5 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// https://inertiaui.com/inertia-tables

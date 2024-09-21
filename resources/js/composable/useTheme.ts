@@ -1,20 +1,8 @@
-import { ref, watch } from "vue"
+import { useDark } from "@vueuse/core"
 
 export const useTheme = () => {
-    const isDarkMode = ref(false)
+    const isDarkMode = useDark()
 
-
-    watch(() => [isDarkMode], () => {
-        let _html = document.querySelector('html')
-        if(_html && isDarkMode.value) {
-            _html.classList.add('dark')
-        } else {
-            _html.classList.remove('dark')
-        }
-    }, {
-        immediate: true
-    })
-    
     return {
         isDarkMode
     }

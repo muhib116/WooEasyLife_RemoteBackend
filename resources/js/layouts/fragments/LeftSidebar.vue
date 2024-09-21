@@ -24,8 +24,15 @@
 <script setup lang="ts">
 import { Icon } from '@/plugins'
 import { Link } from '@inertiajs/vue3';
+import { IconName } from '@/types';
 
-const routes = [
+type SidebarRoutes = {
+    title: string
+    name: string
+    icon: IconName
+}
+
+const routes : SidebarRoutes[] = [
     {
         title: 'Dashboard',
         name: route('dashboard'),

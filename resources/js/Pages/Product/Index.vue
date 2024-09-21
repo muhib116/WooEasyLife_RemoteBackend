@@ -1,12 +1,12 @@
 <template>
     <AuthenticatedLayout title="Product List">
-        <Table>
+        <Table.Basic>
             
-        </Table>
+        </Table.Basic>
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
-import { Icon, Table } from "@/plugins";
+import { Button, Table } from "@/plugins";
 import { AuthenticatedLayout } from "@/layouts";
 </script>

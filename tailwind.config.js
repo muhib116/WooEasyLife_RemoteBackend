@@ -1,5 +1,7 @@
-import defaultTheme from 'tailwindcss/defaultTheme';
-import forms from '@tailwindcss/forms';
+import defaultTheme from 'tailwindcss/defaultTheme'
+import forms from '@tailwindcss/forms'
+import plugin from 'tailwindcss'
+import applicationComponents from '@/theme/Index'
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -36,5 +38,10 @@ export default {
         },
     },
 
-    plugins: [forms],
+    plugins: [
+        forms,
+        plugin(function({ addComponents }) {
+            addComponents(applicationComponents)
+        })
+    ],
 };

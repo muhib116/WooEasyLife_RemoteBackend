@@ -2,7 +2,7 @@
     <Head
         :title="title"
     />
-    <div class="flex h-dvh w-full bg-slate-100 dark:text-white dark:bg-slate-800 overflow-hidden">
+    <div class="flex h-dvh w-full bg-slate-100 dark:text-white dark:bg-slate-900 overflow-hidden">
         <Transition
             enter-active-class="transition ease-out duration-100"
             enter-from-class="transform opacity-0 scale-95"
@@ -13,13 +13,13 @@
         >
             <div
                 v-if="showLeftSidebar"
-                class="w-[300px] relative flex-shrink-0 flex flex-col bg-white dark:bg-slate-800 border-r"
+                class="w-[300px] relative flex-shrink-0 flex flex-col bg-white dark:bg-slate-800 border-r dark:border-slate-700"
                 :class="{
                     'max-lg:absolute z-50 h-full': showLeftSidebar
                 }"
             >
                 <div
-                    class="border-b relative h-[60px] flex items-center justify-center font-black text-xl uppercase"
+                    class="border-b dark:border-slate-700 relative h-[60px] flex items-center justify-center font-black text-xl uppercase"
                 >
                     Natural Care
                     <div class="h-full flex items-center">
@@ -40,7 +40,7 @@
             </div>
         </Transition>
         <main class="flex-1 h-dvh">
-            <div class="h-[60px] px-4 flex justify-between items-center sticky top-0 bg-white dark:text-white dark:bg-slate-800 border-b">
+            <div class="h-[60px] px-4 flex justify-between items-center sticky top-0 bg-white dark:text-white dark:bg-slate-800 border-b dark:border-slate-700">
                 <div>
                     <button
                         @click="showLeftSidebar=!showLeftSidebar"
@@ -52,13 +52,17 @@
                     </button>
                 </div>
                 <div>
-                    <Icon 
-                        name="PhGear"
-                    />
+                    <button
+                        @click="isDarkMode=!isDarkMode"
+                    >
+                        <Icon 
+                            :name="isDarkMode ? 'PhSun' : 'PhMoonStars'"
+                        />
+                    </button>
                 </div>
             </div>
             <div class="mx-auto max-w-screen-2xl h-[calc(100dvh-60px)] overflow-y-auto px-4">
-                <div v-if="!skipWrapper" class="py-5 bg-white dark:bg-slate-600 mt-5 px-5 min-h-[calc(100dvh-100px)] rounded">
+                <div v-if="!skipWrapper" class="py-5 bg-white dark:bg-slate-800 mt-5 px-5 min-h-[calc(100dvh-100px)] rounded">
                     <slot></slot>
                 </div>
                 <slot v-else></slot>
@@ -71,7 +75,7 @@
 import { Icon } from "@/plugins";
 import LeftSidebar from "./fragments/LeftSidebar.vue";
 import { Head } from '@inertiajs/vue3'
-import { useLayout } from "@/composable";
+import { useLayout, useTheme } from "@/composable";
 
 withDefaults(defineProps<{
     title?: string
@@ -81,5 +85,6 @@ withDefaults(defineProps<{
 })
 
 const { showLeftSidebar } = useLayout()
+const { isDarkMode } = useTheme()
 
 </script>

@@ -1,11 +1,11 @@
 <!-- src/components/BaseButton.vue -->
 <template>
     <AuthenticatedLayout title="Phosphor Icons">
-        <div class="bg-white overflow-y-auto h-[calc(100dvh-100px)] mt-5 dark:bg-black overflow-hidden shadow-sm sm:rounded-lg">
-            <div class="px-4 mt-5 mb-3 sticky z-10 top-0 bg-white dark:bg-black py-4">
+        <div class="bg-white overflow-y-auto h-[calc(100dvh-100px)] mt-5 dark:bg-slate-800 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="px-4 mt-5 mb-3 sticky z-10 top-0 bg-white dark:bg-slate-800 py-4">
                 <input
                     v-model="inputText"
-                    class="bg-transparent text-white w-full rounded"
+                    class="bg-transparent w-full rounded"
                     placeholder="Search icon"
                 />
             </div>

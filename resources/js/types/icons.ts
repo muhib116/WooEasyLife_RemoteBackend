@@ -1,5 +1,3 @@
-import * as AllIcons from '@phosphor-icons/vue'
-
 const icons = [
     'PhAcorn',
     'PhAddressBook',

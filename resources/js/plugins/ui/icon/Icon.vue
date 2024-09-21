@@ -8,7 +8,7 @@
 
 <script setup lang="ts">
     import { shallowRef, watch } from 'vue'
-    import { IconName } from './useIcon'
+    import { IconName } from '@/types'
 
     defineOptions({
         name: 'Icon',
@@ -16,7 +16,7 @@
     })
     const iconComponent = shallowRef(null)
     const props = withDefaults(defineProps<{
-        name: IconName | string
+        name: IconName
         source?: 'phosphor' | 'custom'
         wrapperClass?: string
         size?: number | string
