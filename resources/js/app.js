@@ -1,11 +1,15 @@
 import './bootstrap';
 import '../css/app.css';
+import 'primeicons/primeicons.css'
 
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { vClickOutside } from '@/plugins/directives'
+import PrimeVue from 'primevue/config';
+import Aura from '@primevue/themes/aura';
+
 const appName = import.meta.env.VITE_APP_NAME || 'Natural Care';
 
 createInertiaApp({
@@ -16,6 +20,17 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue)
             .use(vClickOutside)
+            .use(PrimeVue, {
+                theme: {
+                    preset: Aura,
+                    options: {
+                        // prefix: 'p',
+                        darkModeSelector: '.my-app-dark',
+                        cssLayer: false,
+                    }
+                },
+                ripple: true,
+            })
             .mount(el);
     },
     progress: {

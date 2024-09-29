@@ -6,8 +6,11 @@
                 :index="index"
             >
                 <Link 
-                   :href="_route.name"
+                   :href="route(_route.name)"
                     class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                    :class="{
+                        'bg-white dark:!bg-gray-900': route().current(_route.name)
+                    }"
                 >
                     <Icon
                         :name="_route.icon"
@@ -35,17 +38,22 @@ type SidebarRoutes = {
 const routes : SidebarRoutes[] = [
     {
         title: 'Dashboard',
-        name: route('dashboard'),
+        name: 'dashboard',
         icon: 'PhChartBar'
     },
     {
+        title: 'Customer',
+        name: 'customers.index',
+        icon: 'PhUsers'
+    },
+    {
         title: 'Products',
-        name: route('products'),
+        name: 'products',
         icon: 'PhBookmarks'
     },
     {
         title: 'Phosphor Icons',
-        name: route('icons'),
+        name: 'icons',
         icon: 'PhListHeart'
     },
 ]

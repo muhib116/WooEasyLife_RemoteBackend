@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
@@ -42,6 +43,11 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/icons', function(){return Inertia::render('Icons/Index');})->name('icons');
     Route::get('/products', [ProductController::class, 'index'])->name('products');
+    Route::group(['as' => 'customers.', 'prefix' => 'customers'], function() {
+        Route::get('/', [CustomerController::class, 'index'])->name('index');
+        Route::post('/save', [CustomerController::class, 'save'])->name('save');
+        Route::post('/delete', [CustomerController::class, 'delete'])->name('delete');
+    });
 });
 
 require __DIR__.'/auth.php';
