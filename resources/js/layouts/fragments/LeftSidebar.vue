@@ -47,6 +47,11 @@ const routes : SidebarRoutes[] = [
         icon: 'PhUsers'
     },
     {
+        title: 'FollowUp',
+        name: 'followUp.index',
+        icon: 'PhDiamondsFour'
+    },
+    {
         title: 'Products',
         name: 'products',
         icon: 'PhBookmarks'
@@ -54,6 +59,11 @@ const routes : SidebarRoutes[] = [
     {
         title: 'Phosphor Icons',
         name: 'icons',
+        icon: 'PhListHeart'
+    },
+    {
+        title: 'Prime Icons',
+        name: 'icons.prime',
         icon: 'PhListHeart'
     },
 ]

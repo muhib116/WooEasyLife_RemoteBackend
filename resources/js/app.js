@@ -9,6 +9,8 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { vClickOutside } from '@/plugins/directives'
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
+import ConfirmationService from 'primevue/confirmationservice';
+import ToastService from 'primevue/toastservice';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Natural Care';
 
@@ -20,6 +22,8 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue)
             .use(vClickOutside)
+            .use(ConfirmationService)
+            .use(ToastService)
             .use(PrimeVue, {
                 theme: {
                     preset: Aura,

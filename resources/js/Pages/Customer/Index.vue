@@ -21,9 +21,18 @@
             <template #action="{item}">
                 <div class="flex gap-2 justify-end">
                     <Button 
+                        icon="pi pi-eye" 
+                        size="small"
+                        class="!w-7 h-7"
+                        :as="Link"
+                        :href="route('followUp.view', item.id)"
+                        v-tooltip.top="{ value: 'Follow Up', autoHide: false }"
+                    />
+                    <Button 
                         icon="pi pi-pencil" 
                         size="small"
                         class="!w-7 h-7"
+                        severity="info"
                         aria-label="Filter"
                         @click="handleEdit(item)"
                     />
@@ -32,7 +41,9 @@
                         size="small"
                         class="!w-7 h-7"
                         severity="danger"
+                        :loading="item.loading"
                         aria-label="Filter"
+                        @click="handleDelete($event, item)"
                     />
                 </div>
             </template>
@@ -81,7 +92,8 @@
                 </div>
             </form>
         </Dialog>
-
+        <Toast />
+        <ConfirmPopup></ConfirmPopup>
     </AuthenticatedLayout>
 </template>
 
@@ -93,13 +105,18 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import RadioButton from 'primevue/radiobutton'
+import ConfirmPopup from 'primevue/confirmpopup'
 import Tag from "primevue/tag";
-import { useForm, router } from "@inertiajs/vue3";
+import { useForm, router, Link } from "@inertiajs/vue3";
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
 const props = defineProps<{
     customers: any[]
 }>()
 
+const confirm = useConfirm();
+const toast = useToast();
 const showForm = ref(false)
 const customerForm = useForm({
     id: null,
@@ -116,6 +133,34 @@ const handleEdit = (item) => {
     customerForm.email = item.email
     showForm.value = true
 }
+
+const handleDelete = (event, item) => {
+    confirm.require({
+        target: event.currentTarget,
+        message: `Do you want to delete ${item.name} from customer?`,
+        icon: 'pi pi-info-circle',
+        rejectProps: {
+            label: 'Cancel',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: 'Delete',
+            severity: 'danger'
+        },
+        accept: () => {
+            console.log('done')
+            router.post(route('customers.delete', item.id))
+            item.loading = true
+            // toast.add({ severity: 'info', summary: 'Confirmed', detail: 'Record deleted', life: 3000 });
+        },
+        reject: () => {
+            console.log('un done')
+            item.loading = false
+            toast.add({ severity: 'error', summary: 'Rejected', detail: 'You have rejected', life: 3000 });
+        }
+    });
+};
 
 const handleSave = async () => {
     customerForm.post(route('customers.save'), {

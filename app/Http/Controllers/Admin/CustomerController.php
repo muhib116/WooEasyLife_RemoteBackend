@@ -15,6 +15,10 @@ class CustomerController extends Controller
     }
 
     public function save(Request $request) {
+        $request->validate([
+            'name' => 'required',
+            'phone' => 'required'
+        ]);
         Customer::updateOrCreate([
             'id' => $request->id
         ], $request->all());
