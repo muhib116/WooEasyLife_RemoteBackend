@@ -21,11 +21,13 @@ class FollowUpController extends Controller
     }
 
     public function save(Request $request, $customer_id) {
-
+        $request->validate([
+            'title' => 'required',
+        ]);
         $data = [
             'customer_id' => $customer_id,
             'title' => $request->title,
-            'description' => $request->details,
+            'description' => $request->description,
             'next_follow_topic' => $request->next_follow_topic,
             'follow_date' => $request->follow_date,
             'next_follow_date' => $request->next_follow_date,

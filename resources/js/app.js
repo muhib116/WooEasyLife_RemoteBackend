@@ -8,7 +8,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { vClickOutside } from '@/plugins/directives'
 import PrimeVue from 'primevue/config';
-import Aura from '@primevue/themes/aura';
+import Aura from './aura';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 
