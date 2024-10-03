@@ -1,0 +1,12 @@
+.ck-content h1 {
+	@apply text-3xl;
+}
+.ck-content h2 {
+	@apply text-2xl;
+}
+.ck-content h3 {
+	@apply text-xl;
+}
+.ck-content h4 {
+	@apply text-[18px];
+}

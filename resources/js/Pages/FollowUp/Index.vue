@@ -3,19 +3,55 @@
         <Card>
             <template #content>
                 <div class="relative">
-                    <div class="w-full max-w-3xl mx-auto">
-                        <div class="flex items-center justify-between">
-                            <div class="text-xl">
-                                Timeline
-                            </div>
-                            <Button
-                                icon="pi pi-plus"
-                                aria-label="Save"
-                                v-tooltip.left="'Create'"
-                                @click="showModal = true"
-                            />
-                        </div>
-                        <div class="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:ml-[8.7rem] md:before:translate-x-0 before:h-full before:w-1 before:bg-slate-600">
+                    <div class="w-full max-w-4xl mx-auto">
+                        <DataTable 
+                            :value="followUps" 
+                            tableStyle="min-width: 50rem"
+                            showGridlines
+                            stripedRows
+                        >
+                            <template #header>
+                                <div class="flex flex-wrap w-full items-center justify-between gap-2">
+                                    <span class="text-xl font-bold">Timeline</span>
+                                    <Button 
+                                        icon="pi pi-plus" 
+                                        rounded 
+                                        raised 
+                                        v-tooltip.left="'Create'"
+                                        @click="showModal = true"
+                                    />
+                                </div>
+                            </template>
+                            <Column 
+                                field="created_at" 
+                                header="Created"
+                                style="width:250px"
+                            >
+                                <template #body="{data}">
+                                    {{ format(data.created_at, "MMM dd, yyyy hh:mm a") }}
+                                </template>
+                            </Column>
+                            <Column field="title" header="Title"></Column>
+                            <Column field="description" header="Description">
+                                <template #body="{data}">
+                                    <div 
+                                        class="line-clamp-2 ck-content"
+                                        v-html="getInnerText(data.description)"
+                                    >
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="Action">
+                                <template #body="{data}">
+                                    <Button
+                                        @click="handleEdit(data)"
+                                        icon="pi pi-pencil"
+                                        class="!w-8 h-8"
+                                    />
+                                </template>
+                            </Column>
+                        </DataTable>
+                        <!-- <div class="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:ml-[8.7rem] md:before:translate-x-0 before:h-full before:w-1 before:bg-slate-600">
 
                             <div
                                 v-for="(item, index) in followUps"
@@ -54,7 +90,7 @@
                                 </div>
                             </div>
 
-                        </div>
+                        </div> -->
 
                     </div>
                 </div>
@@ -73,9 +109,9 @@
             <label class="grid gap-1 mb-2">
                 <div>Title</div>
                 <InputText 
-                    v-model="form.title" 
+                    v-model="form.title"
                     id="title"
-                    :invalid="true"
+                    :invalid="!form.title"
                     placeholder="Follow Up Title"
                     class="flex-auto w-full"
                     autocomplete="off" 
@@ -84,11 +120,10 @@
             </label>
             <div>
                 <div>Details</div>
-                <textarea
+                <Editor.Classic
                     v-model="form.description"
                     placeholder="Write details"
-                    class="w-full min-h-[100px]"
-                    editorStyle="min-height: 100px" 
+                    class="w-full min-h-[500px]"
                 />
             </div>
             <div class="mt-5 flex justify-end">
@@ -106,10 +141,11 @@
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts"
 import { ref, reactive } from "vue";
-import { Icon } from "@/plugins";
+import { format } from 'date-fns'
 import { useForm, usePage } from "@inertiajs/vue3";
 import { isEmpty } from 'lodash'
 import { Customer } from "@/types";
+import { Editor } from "@/plugins/form";
 
 defineOptions({
     name: 'FollowUp'
@@ -130,6 +166,12 @@ const form = useForm({
     follow_date: '',
     next_follow_date: '',
 })
+
+const getInnerText = (content) => {
+    let div = document.createElement('div')
+    div.innerHTML = content
+    return div.innerText
+}
 
 const handleEdit = (item) => {
     form.id = item.id

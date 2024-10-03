@@ -1,6 +1,8 @@
 import './bootstrap';
 import '../css/app.css';
 import 'primeicons/primeicons.css'
+import 'ckeditor5/ckeditor5.css'
+import '../css/ckeditorOverride.css'
 
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
@@ -11,6 +13,7 @@ import PrimeVue from 'primevue/config';
 import Aura from './aura';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
+import { CkeditorPlugin } from '@ckeditor/ckeditor5-vue'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Natural Care';
 
@@ -24,6 +27,7 @@ createInertiaApp({
             .use(vClickOutside)
             .use(ConfirmationService)
             .use(ToastService)
+            .use(CkeditorPlugin)
             .use(PrimeVue, {
                 theme: {
                     preset: Aura,

@@ -57,6 +57,8 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
+
 require __DIR__.'/auth.php';
 
 // https://inertiaui.com/inertia-tables

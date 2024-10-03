@@ -9,7 +9,7 @@
                    :href="route(_route.name)"
                     class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
                     :class="{
-                        'bg-[var(--p-primary-600)] hover:bg-[var(--p-primary-700)] text-white dark:!bg-gray-900': route().current(_route.name)
+                        'text-black bg-gray-100 dark:!bg-gray-900': route().current(_route.name)
                     }"
                 >
                     <Icon
