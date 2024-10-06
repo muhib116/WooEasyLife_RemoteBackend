@@ -47,11 +47,6 @@ const routes : SidebarRoutes[] = [
         icon: 'PhUsers'
     },
     {
-        title: 'FollowUp',
-        name: 'followUp.index',
-        icon: 'PhDiamondsFour'
-    },
-    {
         title: 'Products',
         name: 'products',
         icon: 'PhBookmarks'

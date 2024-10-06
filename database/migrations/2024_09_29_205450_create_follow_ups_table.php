@@ -20,8 +20,8 @@ return new class extends Migration
             $table->text('title')->nullable();
             $table->longText('description')->nullable();
             $table->longText('next_follow_topic')->nullable();
-            $table->timestamp('follow_date')->nullable();
-            $table->timestamp('next_follow_date')->nullable();
+            $table->date('follow_date')->nullable();
+            $table->date('next_follow_date')->nullable();
             $table->timestamps();
         });
     }

@@ -18,17 +18,32 @@
                                         rounded 
                                         raised 
                                         v-tooltip.left="'Create'"
-                                        @click="showModal = true"
+                                        @click="() => {
+                                            form.reset()
+                                            showModal = true
+                                        }"
                                     />
                                 </div>
                             </template>
                             <Column 
-                                field="created_at" 
-                                header="Created"
+                                field="follow_date" 
+                                header="Follow Date"
                                 style="width:250px"
                             >
                                 <template #body="{data}">
-                                    {{ format(data.created_at, "MMM dd, yyyy hh:mm a") }}
+                                    <!-- {{ format(data.follow_date, "MMM dd, yyyy hh:mm a") }} -->
+                                    {{ format(data.follow_date, "MMM dd, yyyy") }}
+                                </template>
+                            </Column>
+                            <Column 
+                                field="next_follow_date" 
+                                header="Next Follow"
+                                style="width:250px"
+                            >
+                                <template #body="{data}">
+                                    <span v-if="data.next_follow_date">
+                                        {{ format(data.next_follow_date, "MMM dd, yyyy") }}
+                                    </span>
                                 </template>
                             </Column>
                             <Column field="title" header="Title"></Column>
@@ -51,53 +66,12 @@
                                 </template>
                             </Column>
                         </DataTable>
-                        <!-- <div class="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:ml-[8.7rem] md:before:translate-x-0 before:h-full before:w-1 before:bg-slate-600">
-
-                            <div
-                                v-for="(item, index) in followUps"
-                                class="relative"
-                            >
-                                <div class="md:flex items-center md:space-x-4 mb-3">
-                                    <div class="flex items-center space-x-4 md:space-x-2 md:space-x-reverse">
-                                        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow md:order-1">
-                                            <Icon
-                                                name="PhAcorn"
-                                            />
-                                        </div>
-                                        
-                                        <time class="text-sm font-medium text-indigo-500 md:w-28">
-                                            {{ item.created_at }}
-                                        </time>
-                                    </div>
-                                    <div class="text-slate-500 flex items-center justify-between w-full ml-14">
-                                        <div>
-                                            <span class="text-slate-900 font-bold">Mark Mikrol</span>
-                                            {{ item.title }}
-                                        </div>
-                                        <div>
-                                            <Button
-                                                @click="handleEdit(item)"
-                                            >
-                                                <span class="pi pi-pencil"></span>
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div
-                                    v-html="item.description"
-                                    class="bg-white p-4 rounded border border-slate-200 text-slate-500 shadow ml-14 md:ml-44"
-                                >
-                                </div>
-                            </div>
-
-                        </div> -->
-
                     </div>
                 </div>
             </template>
         </Card>
         <Dialog
-            v-model:visible="showModal" 
+            v-model:visible="showModal"
             maximizable
             modal
             header="Header"
@@ -106,34 +80,75 @@
             as="form"
             @submit.prevent="handleSave"
         >
-            <label class="grid gap-1 mb-2">
-                <div>Title</div>
-                <InputText 
-                    v-model="form.title"
-                    id="title"
-                    :invalid="!form.title"
-                    placeholder="Follow Up Title"
-                    class="flex-auto w-full"
-                    autocomplete="off" 
-                />
-                <span v-if="form.errors.title" class="text-red-500">{{ form.errors.title }}</span>
-            </label>
-            <div>
-                <div>Details</div>
-                <Editor.Classic
-                    v-model="form.description"
-                    placeholder="Write details"
-                    class="w-full min-h-[500px]"
-                />
+            <div class="relative">
+                <label class="grid gap-1 mb-2">
+                    <div>Title</div>
+                    <InputText 
+                        v-model="form.title"
+                        id="title"
+                        placeholder="Follow Up Title"
+                        class="flex-auto w-full"
+                        autocomplete="off" 
+                    />
+                    <span v-if="form.errors.title" class="text-red-500">{{ form.errors.title }}</span>
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="grid gap-1 mb-2">
+                        <div>Follow Up Date</div>
+                        <DatePicker
+                            v-model="form.follow_date"
+                            dateFormat="yy-mm-dd"
+                            placeholder="Follow Up Date"
+                            class="flex-auto w-full"
+                        />
+                        <span v-if="form.errors.follow_date" class="text-red-500">{{ form.errors.follow_date }}</span>
+                    </label>
+                    <label class="grid gap-1 mb-2">
+                        <div>Next Follow Date</div>
+                        <DatePicker
+                            v-model="form.next_follow_date"
+                            dateFormat="yy-mm-dd"
+                            placeholder="Next Follow Up Date"
+                            class="flex-auto w-full"
+                        />
+                        <span v-if="form.errors.next_follow_date" class="text-red-500">{{ form.errors.next_follow_date }}</span>
+                    </label>
+                </div>
+                <div class="mb-3">
+                    <div>Follow Up Note</div>
+                    <!-- <Editor.Classic
+                        v-model="form.description"
+                        placeholder="Write details"
+                        class="w-full min-h-[500px]"
+                    /> -->
+                    <InputText
+                        v-model="form.description"
+                        placeholder="Write details"
+                        class="w-full"
+                    />
+                </div>
+                <div>
+                    <div>Next Follow Up Note</div>
+                    <InputText
+                        v-model="form.next_follow_topic"
+                        placeholder="Write details"
+                        class="w-full"
+                    />
+                </div>
             </div>
-            <div class="mt-5 flex justify-end">
-                <Button
-                    :loading="form.processing"
-                    @click="handleSave"
-                >
-                    {{ form.id ? 'Update' : 'Create' }}
-                </Button>
-            </div>
+            <template #footer>
+                <div class="mt-5 flex justify-end">
+                    <Button
+                        :disabled="form.processing"
+                        @click="handleSave"
+                    >
+                        <span 
+                            :class="form.processing ? 'pi pi-spinner animate-spin' : 'pi pi-save'"
+                        />
+                        {{ form.id ? 'Update' : 'Create' }}
+                    </Button>
+                </div>
+            </template>
         </Dialog>
     </AuthenticatedLayout>
 </template>
@@ -174,6 +189,7 @@ const getInnerText = (content) => {
 }
 
 const handleEdit = (item) => {
+    form.reset()
     form.id = item.id
     form.title = item.title
     form.description = item.description
@@ -184,6 +200,12 @@ const handleEdit = (item) => {
 }
 
 const handleSave = () => {
+    if(form.follow_date) {
+        form.follow_date = format(form.follow_date, 'yyyy/MM/dd')
+    }
+    if(form.next_follow_date) {
+        form.next_follow_date = format(form.next_follow_date, 'yyyy/MM/dd')
+    }
     form.post(route('followUp.save', props.customer.id), {
         onFinish() {
             if(isEmpty(usePage().props.errors)) {
