@@ -29,6 +29,7 @@ class FollowUpController extends Controller
         $followUps = FollowUp::orderBy('id', 'desc')->get();
         return Inertia::render('FollowUp/Index', compact('followUps'));
     }
+    
     public function followUp($id) {
         $customer = Customer::find($id);
         $followUps = FollowUp::where('customer_id', $id)->orderBy('id', 'desc')->get();

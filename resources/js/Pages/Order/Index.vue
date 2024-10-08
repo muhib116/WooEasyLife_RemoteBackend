@@ -1,9 +1,9 @@
 <template>
-    <AuthenticatedLayout title="Follow Up">
+    <AuthenticatedLayout title="Orders">
         <Card>
             <template #content>
                 <div class="relative">
-                    <div class="w-full">
+                    <div class="w-full max-w-4xl mx-auto">
                         <DataTable 
                             :value="followUps" 
                             tableStyle="min-width: 50rem"
@@ -12,12 +12,12 @@
                         >
                             <template #header>
                                 <div class="flex flex-wrap w-full items-center justify-between gap-2">
-                                    <span class="text-xl font-bold">Timeline</span>
+                                    <span class="text-xl font-bold">Orders</span>
                                     <Button 
                                         icon="pi pi-plus" 
                                         rounded 
                                         raised 
-                                        v-tooltip.left="'Create'"
+                                        v-tooltip.left="'Create Order'"
                                         @click="() => {
                                             form.reset()
                                             showModal = true
@@ -74,13 +74,25 @@
             v-model:visible="showModal"
             maximizable
             modal
-            header="Header"
+            header="New Order"
             :style="{ width: '50rem' }"
             :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
             as="form"
             @submit.prevent="handleSave"
         >
             <div class="relative">
+                <label class="grid gap-1 mb-2">
+                    <div>Customer</div>
+                    <AutoComplete 
+                        v-model="form.customer_id" 
+                        :suggestions="customers" 
+                        @complete="handleFilter" 
+                        optionLabel="name" 
+                        dropdown
+                    />
+
+                    <span v-if="form.errors.title" class="text-red-500">{{ form.errors.title }}</span>
+                </label>
                 <label class="grid gap-1 mb-2">
                     <div>Title</div>
                     <InputText 
@@ -155,26 +167,30 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts"
-import { ref, reactive } from "vue";
+import { ref, onMounted } from "vue";
 import { format } from 'date-fns'
 import { useForm, usePage } from "@inertiajs/vue3";
 import { isEmpty } from 'lodash'
-import { Customer } from "@/types";
-import { Editor } from "@/plugins/form";
+import { useCustomers } from "@/composable/useCustomers";
 
 defineOptions({
     name: 'FollowUp'
 })
 
 const props = defineProps<{
-    customer: Customer,
     followUps: any[]
 }>()
 
+
+const { customers, fetchCustomers } = useCustomers()
+onMounted(async () => {
+    await fetchCustomers()
+})
 const showModal = ref(false)
 
 const form = useForm({
     id: null,
+    customer_id: null,
     title: '',
     description: '',
     next_follow_topic: '',
@@ -206,13 +222,19 @@ const handleSave = () => {
     if(form.next_follow_date) {
         form.next_follow_date = format(form.next_follow_date, 'yyyy/MM/dd')
     }
-    form.post(route('followUp.save', props.customer.id), {
-        onFinish() {
-            if(isEmpty(usePage().props.errors)) {
-                form.reset()
-                showModal.value = false
-            }
-        }
+    // form.post(route('followUp.save', props.customer.id), {
+    //     onFinish() {
+    //         if(isEmpty(usePage().props.errors)) {
+    //             form.reset()
+    //             showModal.value = false
+    //         }
+    //     }
+    // })
+}
+
+const handleFilter = async (event) => {
+    await fetchCustomers({
+        name: event.query
     })
 }
 

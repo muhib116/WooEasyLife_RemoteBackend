@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
@@ -49,11 +50,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [CustomerController::class, 'index'])->name('index');
         Route::post('/save', [CustomerController::class, 'save'])->name('save');
         Route::post('/{id}/delete', [CustomerController::class, 'delete'])->name('delete');
+        Route::post('/filter-customers', [CustomerController::class, 'filter'])->name('filter');
     });
     Route::group(['as' => 'followUp.', 'prefix' => 'follow-up'], function() {
         Route::get('/', [FollowUpController::class, 'index'])->name('index');
         Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');
         Route::post('/{id}/save', [FollowUpController::class, 'save'])->name('save');
+    });
+    Route::group(['as' => 'orders.', 'prefix' => 'orders'], function() {
+        Route::get('/', [OrderController::class, 'index'])->name('index');
+        // Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');
+        // Route::post('/{id}/save', [FollowUpController::class, 'save'])->name('save');
     });
 });
 

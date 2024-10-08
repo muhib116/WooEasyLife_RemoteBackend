@@ -14,6 +14,15 @@ class CustomerController extends Controller
         return Inertia::render('Customer/Index', compact('customers'));
     }
 
+    public function filter(Request $request) {
+        $query = Customer::query();
+        if($request->name) {
+            $query->where('name', 'like', '%'.$request->name.'%');
+        }
+        $customers = $query->get();
+        return response()->json($customers ?? []);
+    }
+
     public function save(Request $request) {
         $request->validate([
             'name' => 'required',

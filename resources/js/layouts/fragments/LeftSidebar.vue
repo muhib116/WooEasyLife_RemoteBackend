@@ -52,6 +52,11 @@ const routes : SidebarRoutes[] = [
         icon: 'PhBookmarks'
     },
     {
+        title: 'Orders',
+        name: 'orders.index',
+        icon: 'PhShoppingCart'
+    },
+    {
         title: 'Phosphor Icons',
         name: 'icons',
         icon: 'PhListHeart'
