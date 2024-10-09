@@ -1,8 +1,3 @@
-<script setup>
-import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
-</script>
-
 <template>
     <AuthenticatedLayout
         title="Dashboard"
@@ -23,10 +18,36 @@ import { Head } from '@inertiajs/vue3';
                 <span class="text-gray-400 text-sm">Completed</span>
             </div>
         </div>
-        <!-- <div class="py-12">
+        <div class="py-12">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">You're logged in!</div>
+                <div class="p-6 text-gray-900">
+                    <!-- You're logged in! -->
+                    <button @click="takeScreenshot">Take Screenshot</button>
+                </div>
             </div>
-        </div> -->
+        </div>
     </AuthenticatedLayout>
 </template>
+
+<script setup>
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
+import { Head } from '@inertiajs/vue3';
+import html2canvas from 'html2canvas';
+
+const takeScreenshot = async () => {
+    const targetElement = document.getElementById('screenshotTarget');
+
+    // Use html2canvas to take a screenshot of the target element
+    const canvas = await html2canvas(targetElement);
+
+    // Convert the canvas to a data URL
+    const imgData = canvas.toDataURL('image/png');
+
+    // Create a link to download the image
+    const link = document.createElement('a');
+    link.href = imgData;
+    link.download = 'screenshot.png';
+    link.click();
+}
+
+</script>

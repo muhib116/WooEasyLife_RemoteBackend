@@ -26,6 +26,7 @@
         "@vueuse/core": "^11.0.3",
         "ckeditor5": "^43.2.0",
         "date-fns": "^4.1.0",
+        "html2canvas": "^1.4.1",
         "lodash": "^4.17.21",
         "primeicons": "^7.0.0",
         "primevue": "^4.0.7",
