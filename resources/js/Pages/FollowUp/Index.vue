@@ -19,7 +19,8 @@
                                         raised 
                                         v-tooltip.left="'Create'"
                                         @click="() => {
-                                            form.reset()
+                                            console.log('reset')
+                                            handleReset()
                                             showModal = true
                                         }"
                                     />
@@ -74,7 +75,7 @@
             v-model:visible="showModal"
             maximizable
             modal
-            header="Header"
+            :header="form.id ? 'Update' : 'Create'"
             :style="{ width: '50rem' }"
             :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
             as="form"
@@ -182,6 +183,15 @@ const form = useForm({
     next_follow_date: '',
 })
 
+const handleReset = () => {
+    form.id = null;
+    form.title = '';
+    form.description = '';
+    form.next_follow_topic = '';
+    form.follow_date = '';
+    form.next_follow_date = '';
+}
+
 const getInnerText = (content) => {
     let div = document.createElement('div')
     div.innerHTML = content
@@ -189,7 +199,7 @@ const getInnerText = (content) => {
 }
 
 const handleEdit = (item) => {
-    form.reset()
+    handleReset()
     form.id = item.id
     form.title = item.title
     form.description = item.description
@@ -209,7 +219,7 @@ const handleSave = () => {
     form.post(route('followUp.save', props.customer.id), {
         onFinish() {
             if(isEmpty(usePage().props.errors)) {
-                form.reset()
+                handleReset()
                 showModal.value = false
             }
         }
