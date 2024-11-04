@@ -10,8 +10,14 @@ export const useCustomers = () => {
         customers.value = data || []
     }
 
+    const getCustomerAddress = async (customerId: number) => {
+        const { data } = await axios.get(route('customers.address', customerId))
+        return data
+    }
+
     return {
         customers,
-        fetchCustomers
+        fetchCustomers,
+        getCustomerAddress
     }
 }

@@ -48,7 +48,7 @@ const routes : SidebarRoutes[] = [
     },
     {
         title: 'Products',
-        name: 'products',
+        name: 'products.index',
         icon: 'PhBookmarks'
     },
     {

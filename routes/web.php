@@ -45,12 +45,18 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/icons', function(){return Inertia::render('Icons/Index');})->name('icons');
     Route::get('/primeicons', function(){return Inertia::render('Icons/Prime');})->name('icons.prime');
-    Route::get('/products', [ProductController::class, 'index'])->name('products');
+    Route::group(['as' => 'products.', 'prefix' => 'products'], function() {
+        Route::get('/', [ProductController::class, 'index'])->name('index');
+        Route::post('/filter', [ProductController::class, 'filter'])->name('filter');
+        Route::post('/save', [ProductController::class, 'save'])->name('save');
+        Route::post('/{id}/delete', [ProductController::class, 'delete'])->name('delete');
+    });
     Route::group(['as' => 'customers.', 'prefix' => 'customers'], function() {
         Route::get('/', [CustomerController::class, 'index'])->name('index');
         Route::post('/save', [CustomerController::class, 'save'])->name('save');
         Route::post('/{id}/delete', [CustomerController::class, 'delete'])->name('delete');
         Route::post('/filter-customers', [CustomerController::class, 'filter'])->name('filter');
+        Route::get('/{id}/address', [CustomerController::class, 'getAddress'])->name('address');
     });
     Route::group(['as' => 'followUp.', 'prefix' => 'follow-up'], function() {
         Route::get('/', [FollowUpController::class, 'index'])->name('index');

@@ -1,7 +1,5 @@
 <template>
-    <AuthenticatedLayout
-        title="Dashboard"
-    >
+    <AuthenticatedLayout title="Dashboard">
         <div class="grid grid-cols-4 gap-5 pt-3">
             <div
                 v-for="i in 8"
@@ -11,7 +9,9 @@
                     <div class="text-xl font-semibold">
                         {{ Math.round(Math.random() * 400) }}
                     </div>
-                    <span class="p-1 rounded text-[12px] font-semibold bg-emerald-500/10 text-emerald-500 leading-none ml-1">
+                    <span
+                        class="p-1 rounded text-[12px] font-semibold bg-emerald-500/10 text-emerald-500 leading-none ml-1"
+                    >
                         {{ Math.round(Math.random() * 400) }}
                     </span>
                 </div>
@@ -19,10 +19,20 @@
             </div>
         </div>
         <div class="py-12">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <!-- You're logged in! -->
-                    <button @click="takeScreenshot">Take Screenshot</button>
+            <div class="bg-white dark:bg-gray-900 shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900 relative">
+                    <!-- <Tooltip text="Hi">
+                    </Tooltip> -->
+                    <button
+                        class="relative bg-blue-500 text-white p-2"
+                        v-tooltip.right-bottom="{
+                            text: 'Hi tooltip',
+                            parentPosition: 'relative',
+                        }"
+                    >
+                        <!-- <span class="py-1 px-3 bg-black text-white right-0 group-hover:block hidden rounded-sm absolute bottom-full">Hi tooltip</span> -->
+                        Take Screenshot
+                    </button>
                 </div>
             </div>
         </div>
@@ -30,24 +40,27 @@
 </template>
 
 <script setup>
-import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
-import html2canvas from 'html2canvas';
-
-const takeScreenshot = async () => {
-    const targetElement = document.getElementById('screenshotTarget');
-
-    // Use html2canvas to take a screenshot of the target element
-    const canvas = await html2canvas(targetElement);
-
-    // Convert the canvas to a data URL
-    const imgData = canvas.toDataURL('image/png');
-
-    // Create a link to download the image
-    const link = document.createElement('a');
-    link.href = imgData;
-    link.download = 'screenshot.png';
-    link.click();
-}
-
+import AuthenticatedLayout from "@/layouts/AuthenticatedLayout.vue";
+import { Head } from "@inertiajs/vue3";
+import Tooltip from "./Tooltip.vue";
+import { vTooltip } from "./directive";
 </script>
+
+<style scoped>
+.tooltip {
+    position: relative;
+}
+.tooltip::before {
+    content: "Hi";
+    place-content: center;
+    padding: 8px 12px;
+    background-color: red;
+    color: white;
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+}
+.tooltip:hover::before {
+    display: grid;
+}
+</style>

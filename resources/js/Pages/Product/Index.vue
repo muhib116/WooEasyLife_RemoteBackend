@@ -1,88 +1,195 @@
 <template>
-    <AuthenticatedLayout title="Product List">
-        <Table.Basic
-            :items="data"
-            :options="options"
-            title="Products"
-        />
-        <!-- 
-        <div class="card flex justify-center">
-            <Button label="Check" icon="pi pi-check" />
-        </div> -->
-        <!-- <SelectButton v-model="size" :options="sizeOptions" optionLabel="label" dataKey="label" /> -->
-        <!-- <DataTable 
-            :value="data" 
-            stripedRows
-            size="large"
-            tableStyle="min-width: 50rem"
+    <AuthenticatedLayout title="Orders">
+        <Card>
+            <template #content>
+                <div class="relative">
+                    <div class="w-full">
+                        <DataTable 
+                            :value="products" 
+                            tableStyle="min-width: 50rem"
+                            showGridlines
+                            stripedRows
+                        >
+                            <template #header>
+                                <div class="flex flex-wrap w-full items-center justify-between gap-2">
+                                    <span class="text-xl font-bold">Products</span>
+                                    <Button 
+                                        icon="pi pi-plus" 
+                                        rounded 
+                                        raised 
+                                        v-tooltip.left="'Create Product'"
+                                        @click="() => {
+                                            form.reset('id', 'name', 'price')
+                                            console.log(form.defaults())
+                                            showModal = true
+                                        }"
+                                    />
+                                </div>
+                            </template>
+                            <Column 
+                                field="follow_date" 
+                                header="Follow Date"
+                                style="width:250px"
+                            >
+                                <template #body="{data}">
+                                    {{ format(data.created_at, "MMM dd, yyyy hh:mm a") }}
+                                </template>
+                            </Column>
+                            <Column field="name" header="Name"></Column>
+                            <!-- <Column field="purchase_price" header="Purchase Price"></Column>
+                            <Column field="discount" header="Discount"></Column>
+                            <Column field="sell_price" header="Sell Price"></Column>
+                            <Column field="sell_price" header="Final Price">
+                                <template #body="{data}">
+                                    {{ data.sell_price - data.discount }}
+                                </template>
+                            </Column> -->
+                            <Column header="Action">
+                                <template #body="{data}">
+                                    <Button
+                                        @click="handleEdit(data)"
+                                        icon="pi pi-pencil"
+                                        class="!w-8 h-8"
+                                    />
+                                </template>
+                            </Column>
+                        </DataTable>
+                    </div>
+                </div>
+            </template>
+        </Card>
+        <Dialog
+            v-model:visible="showModal"
+            maximizable
+            modal
+            header="New Order"
+            :style="{ width: '50rem' }"
+            :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
         >
-            <Column field="name" header="Name"></Column>
-        </DataTable> -->
+            <form 
+                @submit.prevent="handleSave"
+                id="form"
+            >
+                <div class="relative">
+                    <label class="grid gap-1 mb-2">
+                        <div>Name</div>
+                        <InputText 
+                            v-model="form.name" 
+                        />
+                        <span v-if="form.errors.name" class="text-red-500">{{ form.errors.name }}</span>
+                    </label>
+                </div>
+                <!-- <div class="relative">
+                    <label class="grid gap-1 mb-2">
+                        <div>Description</div>
+                        <InputText
+                            v-model="form.description" 
+                        />
+                        <span v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</span>
+                    </label>
+                </div> -->
+                <div class="relative">
+                    <label class="grid gap-1 mb-2">
+                        <div>Sell Price</div>
+                        <InputNumber
+                            v-model="form.price" 
+                            :minFractionDigits="0" 
+                            :maxFractionDigits="5"
+                            fluid
+                        />
+                        <span v-if="form.errors.price" class="text-red-500">{{ form.errors.purchase_price }}</span>
+                    </label>
+                </div>
+                <!-- 
+                <div class="relative">
+                    <label class="grid gap-1 mb-2">
+                        <div>Sell Price</div>
+                        <InputNumber
+                            v-model="form.sell_price" 
+                            :minFractionDigits="0" 
+                            :maxFractionDigits="5"
+                            fluid
+                        />
+                        <span v-if="form.errors.sell_price" class="text-red-500">{{ form.errors.sell_price }}</span>
+                    </label>
+                </div>
+                <div class="relative">
+                    <label class="grid gap-1 mb-2">
+                        <div>Discount</div>
+                        <InputNumber
+                            v-model="form.discount" 
+                            :minFractionDigits="0" 
+                            :maxFractionDigits="5"
+                            fluid
+                        />
+                        <span v-if="form.errors.discount" class="text-red-500">{{ form.errors.discount }}</span>
+                    </label>
+                </div> -->
+            </form>
+            <template #footer>
+                <div class="mt-5 flex justify-end">
+                    <Button
+                        :disabled="form.processing"
+                        @click="handleSave"
+                        for="form"
+                    >
+                        <span 
+                            :class="form.processing ? 'pi pi-spinner animate-spin' : 'pi pi-save'"
+                        />
+                        {{ form.id ? 'Update' : 'Create' }}
+                    </Button>
+                </div>
+            </template>
+        </Dialog>
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
-import { Table } from "@/plugins";
-import { AuthenticatedLayout } from "@/layouts";
-import Button from "primevue/button"
-import Column from 'primevue/column'
-import DataTable from 'primevue/datatable'
+import { AuthenticatedLayout } from "@/layouts"
+import { ref } from "vue";
+import { format } from 'date-fns'
+import { useForm, usePage } from "@inertiajs/vue3";
+import { isEmpty } from 'lodash'
 
+defineOptions({
+    name: 'FollowUp'
+})
 
-const data = [
-    {
-        name: "Frozen Yogurt",
-        calories: 159,
-        fat: 6.0,
-        carbs: 24,
-        protein: 4.0,
-        iron: "1",
-    },
-    {
-        name: "Jelly bean",
-        calories: 375,
-        fat: 0.0,
-        carbs: 94,
-        protein: 0.0,
-        iron: "0",
-    },
-    {
-        name: "KitKat",
-        calories: 518,
-        fat: 26.0,
-        carbs: 65,
-        protein: 7,
-        iron: "6",
-    },
-    {
-        name: "Eclair",
-        calories: 262,
-        fat: 16.0,
-        carbs: 23,
-        protein: 6.0,
-        iron: "7",
-    },
-    {
-        name: "Gingerbread",
-        calories: 356,
-        fat: 16.0,
-        carbs: 49,
-        protein: 3.9,
-        iron: "16",
-    }
-];
+defineProps<{
+    products: any[]
+}>()
 
-const options = [
-    {
-        title: "Dessert (100g serving)",
-        align: "left",
-        sortable: false,
-        key: "name",
-    },
-    { title: "Calories", key: "calories", align: "left" },
-    { title: "Fat (g)", key: "fat", align: "left" },
-    { title: "Carbs (g)", key: "carbs", align: "left" },
-    { title: "Protein (g)", key: "protein", align: "left" },
-    { title: "Iron (%)", key: "iron", align: "right" },
-];
+const showModal = ref(false)
+
+const form = useForm({
+    id: null,
+    name: '',
+    description: '',
+    price: null,
+    settings: null,
+})
+
+const handleEdit = (item) => {
+    form.transform((data) => {
+        console.log(data)
+        return data
+    })
+    form.id = item.id
+    form.name = item.name
+    form.description = item.description
+    form.price = item.price
+    showModal.value = true
+}
+
+const handleSave = () => {
+    form.post(route('products.save'), {
+        onFinish() {
+            if(isEmpty(usePage().props.errors)) {
+                form.reset()
+                showModal.value = false
+            }
+        }
+    })
+}
+
 </script>

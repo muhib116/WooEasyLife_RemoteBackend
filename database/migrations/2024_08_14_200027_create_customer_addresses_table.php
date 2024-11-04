@@ -14,11 +14,9 @@ return new class extends Migration
         Schema::create('customer_addresses', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('customer_id')->nullable();
-            $table->text('full_name')->nullable();
             $table->text('phone')->nullable();
             $table->text('district')->nullable();
-            $table->text('city')->nullable();
-            $table->text('zone')->nullable();
+            $table->text('thana')->nullable();
             $table->text('address')->nullable();
             $table->timestamps();
         });

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('email')->nullable();
             $table->string('type')->default('lead');
             $table->json('settings')->nullable();
+            $table->date('converted_at')->nullable();
             $table->timestamps();
         });
     }

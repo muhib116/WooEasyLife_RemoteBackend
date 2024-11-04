@@ -2,6 +2,7 @@ import defaultTheme from 'tailwindcss/defaultTheme'
 import forms from '@tailwindcss/forms'
 import * as themeOption from '@/theme'
 import plugin from 'tailwindcss'
+import Typography from '@tailwindcss/typography'
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -60,7 +61,7 @@ export default {
                     '900': '#155237',
                     '950': '#062d1c',
                 },
-                
+
             },
             boxShadow: {
                 'box': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
@@ -70,6 +71,7 @@ export default {
 
     plugins: [
         forms,
+        Typography
         // plugin(function({ addComponents }) {
         //     addComponents(applicationComponents)
         // })

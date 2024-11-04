@@ -3,9 +3,9 @@
         <Card>
             <template #content>
                 <div class="relative">
-                    <div class="w-full max-w-4xl mx-auto">
+                    <div class="w-full">
                         <DataTable 
-                            :value="followUps" 
+                            :value="[]" 
                             tableStyle="min-width: 50rem"
                             showGridlines
                             stripedRows
@@ -83,27 +83,27 @@
             <div class="relative">
                 <label class="grid gap-1 mb-2">
                     <div>Customer</div>
-                    <AutoComplete 
-                        v-model="form.customer_id" 
+                    <Dropdown.PrimeVue
+                        v-model="form.customer_id"
                         :suggestions="customers" 
-                        @complete="handleFilter" 
-                        optionLabel="name" 
-                        dropdown
+                        :filter="handleCustomerFilter" 
+                        optionKey="name"
+                        value="id"
                     />
-
-                    <span v-if="form.errors.title" class="text-red-500">{{ form.errors.title }}</span>
+                    <span v-if="form.errors.customer_id" class="text-red-500">{{ form.errors.customer_id }}</span>
                 </label>
                 <label class="grid gap-1 mb-2">
-                    <div>Title</div>
-                    <InputText 
-                        v-model="form.title"
-                        id="title"
-                        placeholder="Follow Up Title"
-                        class="flex-auto w-full"
-                        autocomplete="off" 
+                    <div>Product</div>
+                    <Dropdown.PrimeVue
+                        v-model="form.product_id"
+                        :suggestions="products" 
+                        :filter="handleProductFilter" 
+                        optionKey="name"
+                        value="id"
                     />
-                    <span v-if="form.errors.title" class="text-red-500">{{ form.errors.title }}</span>
+                    <span v-if="form.errors.customer_id" class="text-red-500">{{ form.errors.customer_id }}</span>
                 </label>
+                
                 <div class="grid grid-cols-2 gap-2">
                     <label class="grid gap-1 mb-2">
                         <div>Follow Up Date</div>
@@ -125,27 +125,6 @@
                         />
                         <span v-if="form.errors.next_follow_date" class="text-red-500">{{ form.errors.next_follow_date }}</span>
                     </label>
-                </div>
-                <div class="mb-3">
-                    <div>Follow Up Note</div>
-                    <!-- <Editor.Classic
-                        v-model="form.description"
-                        placeholder="Write details"
-                        class="w-full min-h-[500px]"
-                    /> -->
-                    <InputText
-                        v-model="form.description"
-                        placeholder="Write details"
-                        class="w-full"
-                    />
-                </div>
-                <div>
-                    <div>Next Follow Up Note</div>
-                    <InputText
-                        v-model="form.next_follow_topic"
-                        placeholder="Write details"
-                        class="w-full"
-                    />
                 </div>
             </div>
             <template #footer>
@@ -170,32 +149,36 @@ import { AuthenticatedLayout } from "@/layouts"
 import { ref, onMounted } from "vue";
 import { format } from 'date-fns'
 import { useForm, usePage } from "@inertiajs/vue3";
+import { Dropdown } from "@/plugins/form";
 import { isEmpty } from 'lodash'
 import { useCustomers } from "@/composable/useCustomers";
+import { useProducts } from "@/composable/useProducts";
 
 defineOptions({
-    name: 'FollowUp'
+    name: 'Orders'
 })
 
-const props = defineProps<{
-    followUps: any[]
-}>()
-
-
+const { products, fetchProducts } = useProducts()
 const { customers, fetchCustomers } = useCustomers()
-onMounted(async () => {
-    await fetchCustomers()
-})
+
 const showModal = ref(false)
 
 const form = useForm({
     id: null,
-    customer_id: null,
-    title: '',
-    description: '',
-    next_follow_topic: '',
-    follow_date: '',
-    next_follow_date: '',
+    customer_id: '',
+    product_id: '',
+    total_price: null,
+    discount: null,
+    delivery_charge: null,
+    delivery_method: '',
+    order_status: '',
+    payment_status: '',
+    source: '',
+    order_date: '',
+    shipping_date: '',
+    delivery_date: '',
+    return_date: '',
+    settings: '',
 })
 
 const getInnerText = (content) => {
@@ -207,11 +190,6 @@ const getInnerText = (content) => {
 const handleEdit = (item) => {
     form.reset()
     form.id = item.id
-    form.title = item.title
-    form.description = item.description
-    form.next_follow_topic = item.next_follow_topic
-    form.follow_date = item.follow_date
-    form.next_follow_date = item.next_follow_date
     showModal.value = true
 }
 
@@ -232,10 +210,20 @@ const handleSave = () => {
     // })
 }
 
-const handleFilter = async (event) => {
+const handleCustomerFilter = async (event) => {
     await fetchCustomers({
         name: event.query
     })
 }
+const handleProductFilter = async (event) => {
+    await fetchProducts({
+        name: event.query
+    })
+}
+
+onMounted(async () => {
+    await fetchCustomers()
+    await fetchProducts()
+})
 
 </script>
