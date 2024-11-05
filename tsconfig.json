@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": [
+                "resources/js/*"
+            ],
+            "ziggy-js": [
+                "./vendor/tightenco/ziggy"
+            ]
+        },
+        "moduleResolution": "node",
+        "target": "ES6", // Or ES2015, ES2017, etc.
+        "lib": ["ES6", "DOM", "DOM.Iterable"]
+    },
+    "exclude": [
+        "node_modules",
+        "public"
+    ]
+}

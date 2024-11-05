@@ -1,0 +1,37 @@
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+.timelineBeforeStyle {
+    margin-bottom: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.timelineBeforeStyle {
+    @apply flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-300 sm:before:ml-[6.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-indigo-600 after:border-4 after:box-content after:border-slate-50 after:rounded-full sm:after:ml-[6.5rem] after:-translate-x-1/2 after:translate-y-1.5;
+}
+
+@layer tailwind-base, primevue, tailwind-utilities;
+
+@layer tailwind-base {
+    @tailwind base;
+}
+
+@layer tailwind-utilities {
+    @tailwind components;
+    @tailwind utilities;
+}
+
+
+@layer utilities {
+    .table th {
+        @apply bg-[#f3f4f6] dark:bg-gray-900 py-2 px-5 text-left;
+    }
+    .table tbody tr {
+        @apply bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-slate-200;
+    }
+    .table td {
+        @apply  py-2 px-5 text-left;
+    }
+} 
