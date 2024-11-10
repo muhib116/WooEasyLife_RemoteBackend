@@ -7,12 +7,17 @@
         <div
             class="bg-white flex-shrink-0 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600 px-4 h-[60px] flex items-center justify-between"
         >
-            <div class="text-xl font-semibold">Natural Care</div>
+            <div
+                @click="showSuccess"
+                class="text-xl font-semibold cursor-pointer"
+            >
+                Natural Care
+            </div>
             <div class="flex items-center gap-5">
                 <button @click="isDarkMode = !isDarkMode">
                     <Icon :name="isDarkMode ? 'PhSun' : 'PhMoonStars'" />
                 </button>
-                <button @click="themeDialog=true">
+                <button @click="themeDialog = true">
                     <Icon name="PhPalette" />
                 </button>
             </div>
@@ -25,44 +30,43 @@
                 <slot></slot>
             </div>
         </div>
-        <Dialog 
-            v-model:visible="themeDialog" 
-            modal 
+        <Dialog
+            v-model:visible="themeDialog"
+            modal
             closeOnEscape
             blockScroll
             draggable
-            header="Primary Color" 
+            header="Primary Color"
             :style="{ width: '25rem' }"
         >
             <div class="flex justify-center items-center mt-5 flex-wrap gap-5">
-                <div
-                    v-for="(color, name) in colors"
-                    :key="name"
-                >
-                    <button 
+                <div v-for="(color, name) in colors" :key="name">
+                    <button
                         class="border w-9 h-9 rounded select-none cursor-pointer hover:scale-105"
                         :class="{
-                            'ring-2 ring-blue-500 ring-offset-2': primaryTheme == name
+                            'ring-2 ring-blue-500 ring-offset-2':
+                                primaryTheme == name,
                         }"
                         :style="{
-                            backgroundColor: get(color, '600')
+                            backgroundColor: get(color, '600'),
                         }"
                         @click="changePrimaryColor(name)"
-                    >
-                    </button>
+                    ></button>
                 </div>
             </div>
         </Dialog>
+        <Toast position="bottom-right" group="br" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { Icon } from "@/plugins";
 import LeftSidebar from "./fragments/LeftSidebar.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import { useLayout, useTheme } from "@/composable";
-import { ref } from 'vue'
-import { get } from 'lodash'
+import { ref, watch } from "vue";
+import { get } from "lodash";
+import { useToast } from "primevue/usetoast";
 
 withDefaults(
     defineProps<{
@@ -74,7 +78,47 @@ withDefaults(
     }
 );
 
-const themeDialog = ref(false)
+const toast = useToast();
+const page = usePage();
+let timeout;
+watch(
+    page,
+    () => {
+        const props = usePage().props;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            // @ts-ignore
+            if (props.flash?.success) {
+                let data = {
+                    severity: "success",
+                    // @ts-ignore
+                    summary: props.flash?.success,
+                    // detail: "Message Content",
+                    life: 3000,
+                    group: "br",
+                }
+                if(typeof props.flash?.success == 'object') {
+                    data.summary = props.flash?.success?.message
+                    data.detail = props.flash?.success?.detail
+                }
+                toast.add(data);
+            }
+            // @ts-ignore
+            if (props.flash?.error) {
+                toast.add({
+                    severity: "error",
+                    // @ts-ignore
+                    summary: props.flash?.error,
+                    // detail: "Message Content",
+                    life: 3000,
+                });
+            }
+        }, 100);
+    },
+    { deep: true }
+);
+
+const themeDialog = ref(false);
 const { showLeftSidebar } = useLayout();
 const { isDarkMode, colors, primaryTheme, changePrimaryColor } = useTheme();
 </script>

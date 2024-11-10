@@ -31,6 +31,22 @@ class CustomerController extends Controller
         $addresses = CustomerAddress::where('customer_id', $id)->get();
         return $addresses ?? [];
     }
+    public function saveAddress(Request $request, $id)
+    {
+        $customer = Customer::find($id);
+        $data = [
+            'customer_id' => $id,
+            'phone' => $request->phone,
+            'district' => $request->district,
+            'thana' => $request->thana,
+            'address' => $request->address,
+        ];
+        CustomerAddress::updateOrCreate(['customer_id' => $request->customer_id], $data);
+        return back()->with('success', [
+            'message' => 'Address successfully',
+            'detail' => 'Address added for customer ' . $customer->name
+        ]);
+    }
 
     public function save(Request $request)
     {
