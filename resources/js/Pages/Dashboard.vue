@@ -18,49 +18,9 @@
                 <span class="text-gray-400 text-sm">Completed</span>
             </div>
         </div>
-        <div class="py-12">
-            <div class="bg-white dark:bg-gray-900 shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 relative">
-                    <!-- <Tooltip text="Hi">
-                    </Tooltip> -->
-                    <button
-                        class="relative bg-blue-500 text-white p-2"
-                        v-tooltip.right-bottom="{
-                            text: 'Hi tooltip',
-                            parentPosition: 'relative',
-                        }"
-                    >
-                        <!-- <span class="py-1 px-3 bg-black text-white right-0 group-hover:block hidden rounded-sm absolute bottom-full">Hi tooltip</span> -->
-                        Take Screenshot
-                    </button>
-                </div>
-            </div>
-        </div>
     </AuthenticatedLayout>
 </template>
 
 <script setup>
 import AuthenticatedLayout from "@/layouts/AuthenticatedLayout.vue";
-import { Head } from "@inertiajs/vue3";
-import Tooltip from "./Tooltip.vue";
-import { vTooltip } from "./directive";
 </script>
-
-<style scoped>
-.tooltip {
-    position: relative;
-}
-.tooltip::before {
-    content: "Hi";
-    place-content: center;
-    padding: 8px 12px;
-    background-color: red;
-    color: white;
-    display: none;
-    position: absolute;
-    top: calc(100% + 10px);
-}
-.tooltip:hover::before {
-    display: grid;
-}
-</style>

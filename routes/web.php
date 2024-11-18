@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -72,6 +73,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         // Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');
         // Route::post('/{id}/save', [FollowUpController::class, 'save'])->name('save');
+    });
+    Route::group(['as' => 'builder.', 'prefix' => 'builder'], function () {
+        Route::get('/', [PageBuilder::class, 'index'])->name('index');
     });
 });
 

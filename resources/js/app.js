@@ -14,6 +14,7 @@ import Aura from './aura';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 import { CkeditorPlugin } from '@ckeditor/ckeditor5-vue'
+import DialogService from 'primevue/dialogservice';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Natural Care';
 
@@ -28,6 +29,7 @@ createInertiaApp({
             .use(ConfirmationService)
             .use(ToastService)
             .use(CkeditorPlugin)
+            .use(DialogService)
             .use(PrimeVue, {
                 theme: {
                     preset: Aura,

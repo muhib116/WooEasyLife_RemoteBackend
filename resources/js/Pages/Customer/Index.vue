@@ -141,33 +141,54 @@
 
         <Dialog
             v-model:visible="selectedCustomer"
+            header="Flex Scroll"
+            :style="{ width: '75vw' }"
+            maximizable
+            modal
+            :contentStyle="{ height: '500px' }"
+        >
+            <AddressList
+                v-if="activeTab == 'list'"
+                :customer="selectedCustomer"
+            />
+
+            <template #footer>
+                <Button
+                    label="Ok"
+                    icon="pi pi-check"
+                    @click="selectedCustomer = false"
+                />
+            </template>
+        </Dialog>
+
+        <!-- <Dialog
+            v-model:visible="selectedCustomer"
             :style="{ width: '45rem' }"
             modal
             maximizable
             header="Address"
+            :contentStyle="{ height: '300px' }"
         >
-            <Tabs v-model:value="activeTab">
-                <TabList>
+            <Tabs class="relative hi" v-model:value="activeTab">
+                <TabList class="!sticky top-0">
                     <Tab value="list">Address list</Tab>
                     <Tab value="form">Add new one</Tab>
                 </TabList>
-                <TabPanels>
-                    <TabPanel value="list">
-                        <AddressList
-                            v-if="activeTab == 'list'"
-                            :customer="selectedCustomer"
-                        />
-                    </TabPanel>
-                    <TabPanel value="form">
-                        <AddressPopup
-                            v-if="activeTab == 'form'"
-                            :customer="selectedCustomer"
-                            :active="!!selectedCustomer?.id"
-                        />
-                    </TabPanel>
-                </TabPanels>
             </Tabs>
-        </Dialog>
+            <AddressList
+                v-if="activeTab == 'list'"
+                :customer="selectedCustomer"
+            />
+            <AddressPopup
+                v-if="activeTab == 'form'"
+                :customer="selectedCustomer"
+                :active="!!selectedCustomer?.id"
+            />
+
+            <template #footer>
+                <Button label="Close" @click="selectedCustomer = null" />
+            </template>
+        </Dialog> -->
 
         <Toast />
         <ConfirmPopup></ConfirmPopup>

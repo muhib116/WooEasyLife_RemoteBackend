@@ -11,8 +11,13 @@
             ]
         },
         "moduleResolution": "node",
-        "target": "ES6", // Or ES2015, ES2017, etc.
-        "lib": ["ES6", "DOM", "DOM.Iterable"]
+        "module": "ES2020",
+        "target": "ES2020", // Or ES2015, ES2017, etc.
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ]
     },
     "exclude": [
         "node_modules",
