@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AutoComplete: typeof import('primevue/autocomplete')['default']
+    Avatar: typeof import('primevue/avatar')['default']
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']
     Column: typeof import('primevue/column')['default']
@@ -15,6 +16,10 @@ declare module 'vue' {
     DatePicker: typeof import('primevue/datepicker')['default']
     Dialog: typeof import('primevue/dialog')['default']
     DynamicDialog: typeof import('primevue/dynamicdialog')['default']
+    Fieldset: typeof import('primevue/fieldset')['default']
+    Image: typeof import('primevue/image')['default']
+    InputGroup: typeof import('primevue/inputgroup')['default']
+    InputMask: typeof import('primevue/inputmask')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
     Rating: typeof import('primevue/rating')['default']

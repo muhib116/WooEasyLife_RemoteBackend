@@ -8,7 +8,6 @@
             class="bg-white flex-shrink-0 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600 px-4 h-[60px] flex items-center justify-between"
         >
             <div
-                @click="showSuccess"
                 class="text-xl font-semibold cursor-pointer"
             >
                 Natural Care

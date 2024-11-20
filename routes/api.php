@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\Message\PutMessageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,3 +21,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
+
+Route::post('/put-message', [PutMessageController::class, 'putMessage']);

@@ -4,9 +4,12 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\CurlController;
+use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -29,6 +32,7 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
+Route::get('/curl', [CurlController::class, 'index']);
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -77,6 +81,10 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'builder.', 'prefix' => 'builder'], function () {
         Route::get('/', [PageBuilder::class, 'index'])->name('index');
     });
+    Route::group(['as' => 'frauds.', 'prefix' => 'frauds'], function () {
+        Route::get('/', [FraudCheckController::class, 'index'])->name('index');
+        Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
+    });
 });
 
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
@@ -84,3 +92,5 @@ Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 require __DIR__ . '/auth.php';
 
 // https://inertiaui.com/inertia-tables
+
+// Http::get()
