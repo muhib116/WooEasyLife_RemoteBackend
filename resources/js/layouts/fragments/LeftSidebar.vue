@@ -48,6 +48,11 @@ const routes: SidebarRoutes[] = [
         icon: "PhUserCheck",
     },
     {
+        title: "Api Keys",
+        name: "apiKeys.index",
+        icon: "PhLockKeyOpen",
+    },
+    {
         title: "Products",
         name: "products.index",
         icon: "PhBookmarks",

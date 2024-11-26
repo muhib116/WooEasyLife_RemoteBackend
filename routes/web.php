@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\OrderController;
@@ -84,6 +85,10 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'frauds.', 'prefix' => 'frauds'], function () {
         Route::get('/', [FraudCheckController::class, 'index'])->name('index');
         Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
+    });
+    Route::group(['as' => 'apiKeys.', 'prefix' => 'api-keys'], function () {
+        Route::get('/', [ApiKeyController::class, 'index'])->name('index');
+        Route::post('/create', [ApiKeyController::class, 'create'])->name('create');
     });
 });
 
