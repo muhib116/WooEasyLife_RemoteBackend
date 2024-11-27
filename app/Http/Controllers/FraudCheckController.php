@@ -32,7 +32,7 @@ class FraudCheckController extends Controller
         ];
 
         return response()->json([
-            'data' => $response_data,
+            ...$response_data,
             'steadfast_response' => $steadfast_response,
             'pathao_response' => $pathao_response,
             'paper_fly_response' => $paper_fly_response
