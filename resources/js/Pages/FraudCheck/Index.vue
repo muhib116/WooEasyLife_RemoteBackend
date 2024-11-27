@@ -86,7 +86,7 @@ const handleSearch = async () => {
     if (form.phone) {
         isLoading.value = true;
         const phone = String(form.phone).replace("-", "");
-        const { data } = await axios.post(route("frauds.check"), {
+        const { data } = await axios.post(route("fraudCheck"), {
             phone,
         });
         isLoading.value = false;

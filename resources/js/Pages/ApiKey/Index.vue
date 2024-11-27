@@ -30,6 +30,7 @@ const form = useForm({
 });
 
 const handleGenerate = () => {
-    form.post(route("apiKeys.create"));
+    isLoading.value = !isLoading.value;
+    // form.post(route("apiKeys.create"));
 };
 </script>

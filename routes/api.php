@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Message\PutMessageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
 
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 
