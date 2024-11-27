@@ -138,32 +138,32 @@ class FraudCheckController extends Controller
 
     private function checkOnPaperFly($phone)
     {
-        $url = "https://go-app.paperfly.com.bd/merchant/api/react/smart-check/list.php?";
-        $headers = [
-            "accept: application/json, text/plain, */*",
-            "accept-language: en-US,en;q=0.9",
-            "authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI3MjkzNDcsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjcyOTM0NywiZXhwIjoxNzMyNzMwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.e7BU6Hvouj5GYgT3WH6HCyqH14FJsqQuZQkTye9qdJM",
-            "content-type: application/json",
-            "cookie: _ga=GA1.1.1330688403.1732138592; _ga_VRFXKXNXYT=GS1.1.1732729336.2.0.1732729343.0.0.0; _hjSessionUser_3161698=eyJpZCI6ImYyMTFmYmEwLWM5YjMtNTE1Mi1hNTViLTk5OWUzMWM2OWIyZSIsImNyZWF0ZWQiOjE3MzIxMzg1OTkwNzIsImV4aXN0aW5nIjp0cnVlfQ==; _hjSession_3161698=eyJpZCI6Ijg1YTU1NGM5LWNkNjItNGIxYy05YTZjLTFjOTdiMGExNTNiNyIsImMiOjE3MzI3MjkzNDQ4MzUsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjowLCJzcCI6MH0=; token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI3MjkzNDcsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjcyOTM0NywiZXhwIjoxNzMyNzMwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.e7BU6Hvouj5GYgT3WH6HCyqH14FJsqQuZQkTye9qdJM",
-            "device_identifier: f87bdfb4-2a54-e9cb-85ea-61d72ccea6cb",
-            "device_name: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            "origin: https://go.paperfly.com.bd",
-            "priority: u=1, i",
-            "referer: https://go.paperfly.com.bd/",
-            "sec-ch-ua: \"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
-            "sec-ch-ua-mobile: ?0",
-            "sec-ch-ua-platform: \"macOS\"",
-            "sec-fetch-dest: empty",
-            "sec-fetch-mode: cors",
-            "sec-fetch-site: same-site",
-            "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-        ];
+        // $url = "https://go-app.paperfly.com.bd/merchant/api/react/smart-check/list.php?";
+        // $headers = [
+        //     "accept: application/json, text/plain, */*",
+        //     "accept-language: en-US,en;q=0.9",
+        //     "authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI3MjkzNDcsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjcyOTM0NywiZXhwIjoxNzMyNzMwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.e7BU6Hvouj5GYgT3WH6HCyqH14FJsqQuZQkTye9qdJM",
+        //     "content-type: application/json",
+        //     "cookie: _ga=GA1.1.1330688403.1732138592; _ga_VRFXKXNXYT=GS1.1.1732729336.2.0.1732729343.0.0.0; _hjSessionUser_3161698=eyJpZCI6ImYyMTFmYmEwLWM5YjMtNTE1Mi1hNTViLTk5OWUzMWM2OWIyZSIsImNyZWF0ZWQiOjE3MzIxMzg1OTkwNzIsImV4aXN0aW5nIjp0cnVlfQ==; _hjSession_3161698=eyJpZCI6Ijg1YTU1NGM5LWNkNjItNGIxYy05YTZjLTFjOTdiMGExNTNiNyIsImMiOjE3MzI3MjkzNDQ4MzUsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjowLCJzcCI6MH0=; token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI3MjkzNDcsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjcyOTM0NywiZXhwIjoxNzMyNzMwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.e7BU6Hvouj5GYgT3WH6HCyqH14FJsqQuZQkTye9qdJM",
+        //     "device_identifier: f87bdfb4-2a54-e9cb-85ea-61d72ccea6cb",
+        //     "device_name: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        //     "origin: https://go.paperfly.com.bd",
+        //     "priority: u=1, i",
+        //     "referer: https://go.paperfly.com.bd/",
+        //     "sec-ch-ua: \"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
+        //     "sec-ch-ua-mobile: ?0",
+        //     "sec-ch-ua-platform: \"macOS\"",
+        //     "sec-fetch-dest: empty",
+        //     "sec-fetch-mode: cors",
+        //     "sec-fetch-site: same-site",
+        //     "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        // ];
 
-        $data = json_encode([
-            "search_text" => "01752360254",
-            "limit" => 50,
-            "page" => 1
-        ]);
+        // $data = json_encode([
+        //     "search_text" => "01752360254",
+        //     "limit" => 50,
+        //     "page" => 1
+        // ]);
 
         $response_data = [
             'total_order' => 0,
