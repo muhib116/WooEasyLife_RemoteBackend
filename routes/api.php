@@ -21,7 +21,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
+Route::any('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
 
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 
