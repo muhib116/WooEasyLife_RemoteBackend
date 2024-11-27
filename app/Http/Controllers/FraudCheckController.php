@@ -25,13 +25,18 @@ class FraudCheckController extends Controller
 
         $success_rate = ($steadfast_response['success_rate'] + $pathao_response['success_rate'] + $paper_fly_response['success_rate']) / 3;
         $response_data = [
-            'total_order' => ceil(($steadfast_response['total_order'] + $pathao_response['total_order'] + $paper_fly_response['total_order']) / 3),
-            'confirmed' => ceil(($steadfast_response['confirmed'] + $pathao_response['confirmed'] + $paper_fly_response['confirmed']) / 3),
-            'cancel' => ceil(($steadfast_response['cancel'] + $pathao_response['cancel'] + $paper_fly_response['cancel']) / 3),
+            'total_order' => ceil(($steadfast_response['total_order'] + $pathao_response['total_order'] + $paper_fly_response['total_order'])),
+            'confirmed' => ceil(($steadfast_response['confirmed'] + $pathao_response['confirmed'] + $paper_fly_response['confirmed'])),
+            'cancel' => ceil(($steadfast_response['cancel'] + $pathao_response['cancel'] + $paper_fly_response['cancel'])),
             'success_rate' => ceil($success_rate == 0 ? 100 : $success_rate)
         ];
 
-        return response()->json($response_data);
+        return response()->json([
+            'data' => $response_data,
+            'steadfast_response' => $steadfast_response,
+            'pathao_response' => $pathao_response,
+            'paper_fly_response' => $paper_fly_response
+        ]);
     }
 
     private function checkOnPathao(PathaoUserSuccessRateRequest $request)
