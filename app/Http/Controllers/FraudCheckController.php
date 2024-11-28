@@ -25,8 +25,7 @@ class FraudCheckController extends Controller
         $total_order = ceil(($steadfast_response['total_order'] + $pathao_response['total_order'] + $paper_fly_response['total_order']));
         $confirm_order = ceil(($steadfast_response['confirmed'] + $pathao_response['confirmed'] + $paper_fly_response['confirmed']));
 
-        // $success_rate = ($steadfast_response['success_rate'] + $pathao_response['success_rate'] + $paper_fly_response['success_rate']) / 3;
-        $success_rate = $total_order == 0 ? 'No order history found!' : ($confirm_order / $total_order) * 100;
+        $success_rate = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100);
         $response_data = [
             'total_order' => $total_order,
             'confirmed' => $confirm_order,
@@ -49,12 +48,6 @@ class FraudCheckController extends Controller
             ]
         ];
         return $response_data;
-        // return [
-        //     ...$response_data,
-        //     'steadfast_response' => $steadfast_response,
-        //     'pathao_response' => $pathao_response,
-        //     'paper_fly_response' => $paper_fly_response
-        // ];
     }
 
     private function checkMultiple($numbers)
@@ -179,70 +172,77 @@ class FraudCheckController extends Controller
             $response_data['total_order'] = $total_order;
             $response_data['confirmed'] = $confirm_order;
             $response_data['cancel'] = $cancel_order;
-            $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ($confirm_order / $total_order) * 100;
+            $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100);
         } catch (\Throwable $th) {
         }
 
         return $response_data;
     }
 
-
-
     private function checkOnPaperFly($phone)
     {
-        // $url = "https://go-app.paperfly.com.bd/merchant/api/react/smart-check/list.php?";
-        // $headers = [
-        //     "accept: application/json, text/plain, */*",
-        //     "accept-language: en-US,en;q=0.9",
-        //     "authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI3MjkzNDcsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjcyOTM0NywiZXhwIjoxNzMyNzMwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.e7BU6Hvouj5GYgT3WH6HCyqH14FJsqQuZQkTye9qdJM",
-        //     "content-type: application/json",
-        //     "cookie: _ga=GA1.1.1330688403.1732138592; _ga_VRFXKXNXYT=GS1.1.1732729336.2.0.1732729343.0.0.0; _hjSessionUser_3161698=eyJpZCI6ImYyMTFmYmEwLWM5YjMtNTE1Mi1hNTViLTk5OWUzMWM2OWIyZSIsImNyZWF0ZWQiOjE3MzIxMzg1OTkwNzIsImV4aXN0aW5nIjp0cnVlfQ==; _hjSession_3161698=eyJpZCI6Ijg1YTU1NGM5LWNkNjItNGIxYy05YTZjLTFjOTdiMGExNTNiNyIsImMiOjE3MzI3MjkzNDQ4MzUsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjowLCJzcCI6MH0=; token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI3MjkzNDcsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjcyOTM0NywiZXhwIjoxNzMyNzMwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.e7BU6Hvouj5GYgT3WH6HCyqH14FJsqQuZQkTye9qdJM",
-        //     "device_identifier: f87bdfb4-2a54-e9cb-85ea-61d72ccea6cb",
-        //     "device_name: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        //     "origin: https://go.paperfly.com.bd",
-        //     "priority: u=1, i",
-        //     "referer: https://go.paperfly.com.bd/",
-        //     "sec-ch-ua: \"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
-        //     "sec-ch-ua-mobile: ?0",
-        //     "sec-ch-ua-platform: \"macOS\"",
-        //     "sec-fetch-dest: empty",
-        //     "sec-fetch-mode: cors",
-        //     "sec-fetch-site: same-site",
-        //     "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-        // ];
-
-        // $data = json_encode([
-        //     "search_text" => "01752360254",
-        //     "limit" => 50,
-        //     "page" => 1
-        // ]);
-
         $response_data = [
             'total_order' => 0,
             'confirmed' => 0,
             'cancel' => 0,
             'success_rate' => 'No order history found!',
         ];
+        $url = "https://go-app.paperfly.com.bd/merchant/api/react/smart-check/list.php";
+
+        // cURL initialization
+        $ch = curl_init();
+
+        // Request headers
+        $headers = [
+            "accept: application/json, text/plain, */*",
+            "authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI4MzIyOTQsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjgzMjI5NCwiZXhwIjoxNzMyOTAzMTk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.oFZVgiZkBELRjI5PZH_Qtp21gRT7RZX2VPl_ecwe000",
+            "content-type: application/json",
+            "device_identifier: f87bdfb4-2a54-e9cb-85ea-61d72ccea6cb",
+            "device_name: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "priority: u=1, i",
+            "sec-ch-ua: \"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
+            "sec-ch-ua-mobile: ?0",
+            "sec-ch-ua-platform: \"macOS\"",
+            "sec-fetch-dest: empty",
+            "sec-fetch-mode: cors",
+            "sec-fetch-site: same-site",
+        ];
+
+        // Request body
+        $body = json_encode([
+            "search_text" => $phone,
+            "limit" => 50,
+            "page" => 1,
+        ]);
+
         try {
-            // $ch = curl_init();
-            // curl_setopt($ch, CURLOPT_URL, $url);
-            // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            // curl_setopt($ch, CURLOPT_POST, true);
-            // curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            // curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            // $response = curl_exec($ch);
-            // curl_close($ch);
 
-            // $response_data['total_order'] = $total_order;
-            // $response_data['confirmed'] = $confirm_order;
-            // $response_data['cancel'] = $cancel_order;
-            // $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ($confirm_order / $total_order) * 100;
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_POSTFIELDS => $body,
+                CURLOPT_FOLLOWLOCATION => true,
+            ]);
 
-            // $response_data['total_order'] = '';
-            // $response_data['confirmed'] = '';
-            // $response_data['cancel'] = '';
-            // $response_data['success_rate'] = '';
+            $response = curl_exec($ch);
 
+            if (curl_errno($ch)) {
+                $error_msg = curl_error($ch);
+                curl_close($ch);
+            }
+            curl_close($ch);
+
+            $records = collect(json_decode($response)->records);
+            $delivered = $records->sum('delivered');
+            $returned = $records->sum('returned');
+            $total_order = $delivered + $returned;
+            $success_rate = $total_order == 0 ? 'No order history found!' : ceil(($delivered / $total_order) * 100);
+            $response_data['total_order'] = $total_order;
+            $response_data['confirmed'] = $delivered;
+            $response_data['cancel'] = $returned;
+            $response_data['success_rate'] = $success_rate;
         } catch (\Throwable $th) {
         }
 
