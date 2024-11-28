@@ -22,12 +22,16 @@ class FraudCheckController extends Controller
         $pathao_response = $this->checkOnPathao($request);
         $paper_fly_response = $this->checkOnPaperFly($phone);
 
-        $success_rate = ($steadfast_response['success_rate'] + $pathao_response['success_rate'] + $paper_fly_response['success_rate']) / 3;
+        $total_order = ceil(($steadfast_response['total_order'] + $pathao_response['total_order'] + $paper_fly_response['total_order']));
+        $confirm_order = ceil(($steadfast_response['confirmed'] + $pathao_response['confirmed'] + $paper_fly_response['confirmed']));
+
+        // $success_rate = ($steadfast_response['success_rate'] + $pathao_response['success_rate'] + $paper_fly_response['success_rate']) / 3;
+        $success_rate = $total_order == 0 ? 'No order history found!' : ($confirm_order / $total_order) * 100;
         $response_data = [
-            'total_order' => ceil(($steadfast_response['total_order'] + $pathao_response['total_order'] + $paper_fly_response['total_order'])),
-            'confirmed' => ceil(($steadfast_response['confirmed'] + $pathao_response['confirmed'] + $paper_fly_response['confirmed'])),
+            'total_order' => $total_order,
+            'confirmed' => $confirm_order,
             'cancel' => ceil(($steadfast_response['cancel'] + $pathao_response['cancel'] + $paper_fly_response['cancel'])),
-            'success_rate' => ceil($success_rate == 0 ? 100 : $success_rate),
+            'success_rate' => $success_rate,
 
             'courier' => [
                 [
@@ -88,7 +92,7 @@ class FraudCheckController extends Controller
             'total_order' => 0,
             'confirmed' => 0,
             'cancel' => 0,
-            'success_rate' => 100,
+            'success_rate' => 'No order history found!',
         ];
 
         try {
@@ -101,12 +105,13 @@ class FraudCheckController extends Controller
 
             if (!$pathao_response['data']['is_new']) {
                 $data = $pathao_response['data'];
-                $pathao_data['success_rate'] = $data['success_rate'];
+                $pathao_data['success_rate'] = 'No order history found!';
                 if (isset($data['customer'])) {
                     $customer = $data['customer'];
                     $pathao_data['total_order'] = $customer['total_delivery'];
                     $pathao_data['confirmed'] = $customer['successful_delivery'];
                     $pathao_data['cancel'] = $pathao_data['total_order'] - $pathao_data['confirmed'];
+                    $pathao_data['success_rate'] = $pathao_data['total_order'] == 0 ? 'No order history found!' : ($pathao_data['confirmed'] / $pathao_data['total_order']) * 100;
                 }
             }
         } catch (\Throwable $th) {
@@ -121,7 +126,7 @@ class FraudCheckController extends Controller
             'total_order' => 0,
             'confirmed' => 0,
             'cancel' => 0,
-            'success_rate' => 100,
+            'success_rate' => 'No order history found!',
         ];
         try {
             $response = Http::get('https://steadfast.com.bd');
@@ -174,7 +179,7 @@ class FraudCheckController extends Controller
             $response_data['total_order'] = $total_order;
             $response_data['confirmed'] = $confirm_order;
             $response_data['cancel'] = $cancel_order;
-            $response_data['success_rate'] = $total_order == 0 ? 100 : ($confirm_order / $total_order) * 100;
+            $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ($confirm_order / $total_order) * 100;
         } catch (\Throwable $th) {
         }
 
@@ -216,7 +221,7 @@ class FraudCheckController extends Controller
             'total_order' => 0,
             'confirmed' => 0,
             'cancel' => 0,
-            'success_rate' => 100,
+            'success_rate' => 'No order history found!',
         ];
         try {
             // $ch = curl_init();
@@ -231,7 +236,7 @@ class FraudCheckController extends Controller
             // $response_data['total_order'] = $total_order;
             // $response_data['confirmed'] = $confirm_order;
             // $response_data['cancel'] = $cancel_order;
-            // $response_data['success_rate'] = $total_order == 0 ? 100 : ($confirm_order / $total_order) * 100;
+            // $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ($confirm_order / $total_order) * 100;
 
             // $response_data['total_order'] = '';
             // $response_data['confirmed'] = '';
