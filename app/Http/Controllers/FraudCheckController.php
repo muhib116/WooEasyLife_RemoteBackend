@@ -27,7 +27,22 @@ class FraudCheckController extends Controller
             'total_order' => ceil(($steadfast_response['total_order'] + $pathao_response['total_order'] + $paper_fly_response['total_order'])),
             'confirmed' => ceil(($steadfast_response['confirmed'] + $pathao_response['confirmed'] + $paper_fly_response['confirmed'])),
             'cancel' => ceil(($steadfast_response['cancel'] + $pathao_response['cancel'] + $paper_fly_response['cancel'])),
-            'success_rate' => ceil($success_rate == 0 ? 100 : $success_rate)
+            'success_rate' => ceil($success_rate == 0 ? 100 : $success_rate),
+
+            'courier' => [
+                [
+                    'title' => 'Stead Fast',
+                    'report' => $steadfast_response
+                ],
+                [
+                    'title' => 'Pathao',
+                    'report' => $pathao_response
+                ],
+                [
+                    'title' => 'Paper Fly',
+                    'report' => $paper_fly_response
+                ],
+            ]
         ];
         return $response_data;
         // return [

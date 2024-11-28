@@ -1,6 +1,6 @@
 <template>
     <AuthenticatedLayout title="Orders">
-        <Card>
+        <Card class="dark:bg-slate-900">
             <template #content>
                 <div class="min-h-[400px]">
                     <Button @click="handleGenerate" :loading="form.processing">
@@ -16,7 +16,7 @@
 import { AuthenticatedLayout } from "@/layouts";
 import { useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
-import axios from "axios";
+import axios from "axios"
 
 defineOptions({
     name: "FraudCheck",
@@ -30,7 +30,7 @@ const form = useForm({
 });
 
 const handleGenerate = () => {
-    isLoading.value = !isLoading.value;
-    // form.post(route("apiKeys.create"));
+    // isLoading.value = !isLoading.value;
+    form.post(route("apiKeys.create"));
 };
 </script>

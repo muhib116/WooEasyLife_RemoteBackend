@@ -17,6 +17,13 @@ class ApiKeyController extends Controller
     public function create(Request $request)
     {
         $user = Auth::user();
+        return $user->tokens->map(function ($token) {
+            return [
+                'token' => $token->token,
+                'abilities' => $token->abilities,
+                'name' => $token->name,
+            ];
+        });
         // dd($user->createToken('Token Name')->accessToken);
     }
 }
