@@ -104,7 +104,7 @@ class FraudCheckController extends Controller
                     $pathao_data['total_order'] = $customer['total_delivery'];
                     $pathao_data['confirmed'] = $customer['successful_delivery'];
                     $pathao_data['cancel'] = $pathao_data['total_order'] - $pathao_data['confirmed'];
-                    $pathao_data['success_rate'] = $pathao_data['total_order'] == 0 ? 'No order history found!' : ($pathao_data['confirmed'] / $pathao_data['total_order']) * 100;
+                    $pathao_data['success_rate'] = $pathao_data['total_order'] == 0 ? 'No order history found!' : ceil(($pathao_data['confirmed'] / $pathao_data['total_order']) * 100) . '%';
                 }
             }
         } catch (\Throwable $th) {
