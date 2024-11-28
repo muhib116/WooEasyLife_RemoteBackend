@@ -25,7 +25,7 @@ class FraudCheckController extends Controller
         $total_order = ceil(($steadfast_response['total_order'] + $pathao_response['total_order'] + $paper_fly_response['total_order']));
         $confirm_order = ceil(($steadfast_response['confirmed'] + $pathao_response['confirmed'] + $paper_fly_response['confirmed']));
 
-        $success_rate = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100);
+        $success_rate = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100) . '%';
         $response_data = [
             'total_order' => $total_order,
             'confirmed' => $confirm_order,
@@ -172,7 +172,7 @@ class FraudCheckController extends Controller
             $response_data['total_order'] = $total_order;
             $response_data['confirmed'] = $confirm_order;
             $response_data['cancel'] = $cancel_order;
-            $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100);
+            $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100) . '%';
         } catch (\Throwable $th) {
         }
 
@@ -238,7 +238,7 @@ class FraudCheckController extends Controller
             $delivered = $records->sum('delivered');
             $returned = $records->sum('returned');
             $total_order = $delivered + $returned;
-            $success_rate = $total_order == 0 ? 'No order history found!' : ceil(($delivered / $total_order) * 100);
+            $success_rate = $total_order == 0 ? 'No order history found!' : ceil(($delivered / $total_order) * 100) . '%';
             $response_data['total_order'] = $total_order;
             $response_data['confirmed'] = $delivered;
             $response_data['cancel'] = $returned;

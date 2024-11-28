@@ -22,7 +22,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
-Route::post('/steadfast/create_order');
+// Route::post('/steadfast/create_order', []);
 
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 
