@@ -1,6 +1,6 @@
 <template>
     <AuthenticatedLayout title="Orders">
-        <Card>
+        <Card class="dark:bg-slate-800">
             <template #content>
                 <div class="min-h-[400px]">
                     <div class="relative flex justify-center">

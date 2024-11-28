@@ -15,10 +15,9 @@ class FraudCheckController extends Controller
         return Inertia::render('FraudCheck/Index');
     }
 
-    public function check(PathaoUserSuccessRateRequest $request)
-    {
-        $phone = $request->phone;
 
+    private function getReport(PathaoUserSuccessRateRequest $request, $phone)
+    {
         $steadfast_response = $this->checkOnSteadfast($phone);
         $pathao_response = $this->checkOnPathao($request);
         $paper_fly_response = $this->checkOnPaperFly($phone);
@@ -30,13 +29,41 @@ class FraudCheckController extends Controller
             'cancel' => ceil(($steadfast_response['cancel'] + $pathao_response['cancel'] + $paper_fly_response['cancel'])),
             'success_rate' => ceil($success_rate == 0 ? 100 : $success_rate)
         ];
+        return $response_data;
+        // return [
+        //     ...$response_data,
+        //     'steadfast_response' => $steadfast_response,
+        //     'pathao_response' => $pathao_response,
+        //     'paper_fly_response' => $paper_fly_response
+        // ];
+    }
 
-        return response()->json([
-            ...$response_data,
-            'steadfast_response' => $steadfast_response,
-            'pathao_response' => $pathao_response,
-            'paper_fly_response' => $paper_fly_response
-        ]);
+    private function checkMultiple($numbers)
+    {
+        $users = [];
+        foreach ($numbers as $number) {
+            $request = new PathaoUserSuccessRateRequest();
+            $request->merge(['phone' => $number['phone']]);
+            $report = $this->getReport($request, $number['phone']);
+            $users[] = [
+                ...$number,
+                'report' => $report
+            ];
+        }
+        return $users;
+    }
+
+    public function check(Request $request)
+    {
+        $phone = $request->phone;
+        if (is_array($phone)) {
+            return $this->checkMultiple($phone);
+        } else {
+            $request = new PathaoUserSuccessRateRequest();
+            $request->merge(['phone' => $phone]);
+            $response = $this->getReport($request, $phone);
+            return response()->json($response);
+        }
     }
 
     private function checkOnPathao(PathaoUserSuccessRateRequest $request)
