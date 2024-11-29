@@ -11,19 +11,33 @@ class ApiKeyController extends Controller
 {
     public function index()
     {
-        return Inertia::render('ApiKey/Index');
+        $user = Auth::user();
+        $tokens = $user->tokens->map(function ($token) {
+            return [
+                'id' => $token->id,
+                'token' => $token->plainTextToken,
+                'abilities' => $token->abilities,
+                'name' => $token->name,
+                'last_used_ago' => optional($token->last_used_at)->diffForHumans()
+            ];
+        });
+        return $tokens;
+        return Inertia::render('ApiKey/Index', compact('tokens'));
     }
 
     public function create(Request $request)
     {
         $user = Auth::user();
-        return $user->tokens->map(function ($token) {
-            return [
-                'token' => $token->token,
-                'abilities' => $token->abilities,
-                'name' => $token->name,
-            ];
-        });
-        // dd($user->createToken('Token Name')->accessToken);
+        $token = $request->user()->createToken(
+            $user->name . '(' . $user->id . ')',
+            ['*']
+        );
+        return $token;
+        // return $user->createToken('Token Name')->accessToken;
+    }
+    public function delete(Request $request)
+    {
+        $request->user()->tokens()->where('id', $request->tokenId)->first()->delete();
+        return back(303);
     }
 }

@@ -89,6 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'apiKeys.', 'prefix' => 'api-keys'], function () {
         Route::get('/', [ApiKeyController::class, 'index'])->name('index');
         Route::post('/create', [ApiKeyController::class, 'create'])->name('create');
+        Route::post('/delete', [ApiKeyController::class, 'delete'])->name('delete');
     });
 });
 

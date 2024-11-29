@@ -15,7 +15,6 @@ class FraudCheckController extends Controller
         return Inertia::render('FraudCheck/Index');
     }
 
-
     private function getReport(PathaoUserSuccessRateRequest $request, $phone)
     {
         $steadfast_response = $this->checkOnSteadfast($phone);
@@ -80,7 +79,6 @@ class FraudCheckController extends Controller
 
     private function checkOnPathao(PathaoUserSuccessRateRequest $request)
     {
-
         $pathao_data = [
             'total_order' => 0,
             'confirmed' => 0,

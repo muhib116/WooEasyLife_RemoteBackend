@@ -9,6 +9,22 @@ use Illuminate\Support\Facades\Validator;
 
 class SteadFastController extends Controller
 {
+    protected $baseUrl;
+    protected $apiKey;
+    protected $secretKey;
+
+    public function __construct()
+    {
+        $this->baseUrl = 'https://portal.steadfast.com.bd/api/v1';
+        $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80 ';
+        $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t ';
+    }
+
+    public function checkBalance()
+    {
+        return $this->getCurrentBalance();
+    }
+
     public function createOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -17,62 +33,120 @@ class SteadFastController extends Controller
             'recipient_address' => 'required',
             'cod_amount' => 'required',
         ]);
-
         if (!$validator->valid()) {
             return $this->validationErrorResponse($validator->errors());
         }
-
-        $url = 'https://portal.packzy.com/api/v1';
-
         $data = [
-            'invoice' => '',
-            'recipient_name' => '',
-            'recipient_phone' => '',
-            'recipient_address' => '',
-            'cod_amount' => '',
-            'note' => '',
+            'invoice' => $request->invoice,
+            'recipient_name' => $request->recipient_name,
+            'recipient_phone' => $request->recipient_phone,
+            'recipient_address' => $request->recipient_address,
+            'cod_amount' => $request->cod_amount,
+            'note' => $request->note,
         ];
 
-        $headers = [
-            'Api-Key' => 'YOUR_API_KEY',
-            'Secret-Key' => 'YOUR_SECRET_KEY',
-            'Content-Type' => 'application/json',
-        ];
-
-        $response = Http::withHeaders($headers)->post($url, $data);
-
-        if ($response->successful()) {
-            return $response->json(); // Return the successful response
-        } else {
-            return response()->json([
-                'error' => 'Failed to create order',
-                'message' => $response->body(),
-            ], $response->status());
-        }
+        $response = $this->placeOrder($data);
+        return $this->successResponse($response->consignment, $response->message);
     }
 
-    public function bulkCreate2($data)
+    public function createBulkOrder(Request $request)
     {
-
-        $api_key = '1m9mwrrwsjbrg0w';
-
-        $secret_key = 'y196ftazvk9s3';
-
-
-        $response = Http::withHeaders([
-
-            'Api-Key' => $api_key,
-
-            'Secret-Key' => $secret_key,
-
-            'Content-Type' => 'application/json'
-
-        ])->post('https://portal.packzy.com/api/v1' . '/create_order/bulk-order', [
-
-            'data' => $data,
-
+        $validator = Validator::make($request->all(), [
+            'orders' => 'required|array',
+            'orders.*.recipient_name' => 'required|string',
+            'orders.*.recipient_phone' => 'required|string',
+            'orders.*.recipient_address' => 'required|string',
+            'orders.*.cod_amount' => 'required|numeric',
         ]);
 
-        return json_decode($response->getBody()->getContents());
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->errors());
+        }
+
+        $orders = $request->input('orders');
+
+        $data = array_map(function ($order) {
+            return [
+                'invoice' => $order['invoice'],
+                'recipient_name' => $order['recipient_name'],
+                'recipient_phone' => $order['recipient_phone'],
+                'recipient_address' => $order['recipient_address'],
+                'cod_amount' => $order['cod_amount'],
+                'note' => $order['note'] ?? null,
+            ];
+        }, $orders);
+
+        $response = $this->bulkCreateOrders($data);
+
+        return $this->successResponse($response);
+    }
+
+    private function placeOrder($data)
+    {
+        $response = Http::withHeaders([
+            'Api-Key' => $this->apiKey,
+            'Secret-Key' => $this->secretKey,
+            'Content-Type' => 'application/json',
+        ])->post($this->baseUrl . '/create_order', $data);
+
+        return $response->json();
+    }
+
+    private function bulkCreateOrders($data)
+    {
+        $response = Http::withHeaders([
+            'Api-Key' => $this->apiKey,
+            'Secret-Key' => $this->secretKey,
+            'Content-Type' => 'application/json',
+        ])->post($this->baseUrl . '/create_order/bulk-order', [
+            'data' => json_encode($data)
+        ]);
+
+        return $response->json();
+    }
+
+    private function checkDeliveryStatusByConsignmentId($id)
+    {
+        $response = Http::withHeaders([
+            'Api-Key' => $this->apiKey,
+            'Secret-Key' => $this->secretKey,
+            'Content-Type' => 'application/json',
+        ])->get($this->baseUrl . '/status_by_cid/' . $id);
+
+        return $response->json();
+    }
+
+
+    private function checkDeliveryStatusByInvoiceId($id)
+    {
+        $response = Http::withHeaders([
+            'Api-Key' => $this->apiKey,
+            'Secret-Key' => $this->secretKey,
+            'Content-Type' => 'application/json',
+        ])->get($this->baseUrl . '/status_by_invoice/' . $id);
+
+        return $response->json();
+    }
+
+    private function checkDeliveryStatusByTrackingCode($id)
+    {
+        $response = Http::withHeaders([
+            'Api-Key' => $this->apiKey,
+            'Secret-Key' => $this->secretKey,
+            'Content-Type' => 'application/json',
+        ])->get($this->baseUrl . '/status_by_trackingcode/' . $id);
+
+        return $response->json();
+    }
+
+    private function getCurrentBalance()
+    {
+        $response = Http::withHeaders([
+            'Api-Key' => $this->apiKey,
+            'Secret-Key' => $this->secretKey,
+            'Content-Type' => 'application/json',
+        ])->get($this->baseUrl . '/get_balance');
+
+        return $response->json();
     }
 }

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\Courier\ConfigurationController;
+use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Message\PutMessageController;
 use Illuminate\Http\Request;
@@ -17,13 +19,21 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::middleware('auth:sanctum')->get('/get-user', function (Request $request) {
     return $request->user();
 });
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
+        Route::post('/list', [ConfigurationController::class, 'getList']);
+        Route::post('/save-configuration', [ConfigurationController::class, 'saveConfiguration']);
+        Route::post('/get-configuration', [ConfigurationController::class, 'getConfiguration']);
+    });
+});
+
 Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
-// Route::post('/steadfast/create_order', []);
 
-Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
-
-Route::post('/put-message', [PutMessageController::class, 'putMessage']);
+Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
+    Route::post('/create-order', [SteadFastController::class, 'createOrder']);
+    Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
+});
