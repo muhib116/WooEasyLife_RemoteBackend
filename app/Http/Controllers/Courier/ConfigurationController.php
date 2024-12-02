@@ -16,9 +16,12 @@ class ConfigurationController extends Controller
 
     public function getList()
     {
-        $formatted = collect($this->vendors)->map(function ($item) {
-            return ucfirst($item);
-        });
+        $formatted = [
+            'pathao' => 'Pathao',
+            'paperfly' => 'PaperFly',
+            'steadfast' => 'SteadFast',
+            'redx' => 'RedX',
+        ];
         return $this->successResponse($formatted);
     }
 
