@@ -51,15 +51,24 @@ class ConfigurationController extends Controller
 
     public function getConfiguration(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'title' => ['required', 'string', Rule::in($this->vendors)],
-        ]);
-        if (!$validator->valid()) {
-            return $this->validationErrorResponse($validator->errors());
+        // $validator = Validator::make($request->all(), [
+        //     'title' => ['required', 'string', Rule::in($this->vendors)],
+        // ]);
+        // if (!$validator->valid()) {
+        //     return $this->validationErrorResponse($validator->errors());
+        // }
+
+        // $config = CourierConfiguration::where(['title' => $request->title])->find(['user_id' => Auth::id()]);
+
+        $query = CourierConfiguration::query();
+        if ($request->title) {
+            $query->where(['title' => $request->title]);
         }
 
-        $config = CourierConfiguration::where(['title' => $request->name])->find(['user_id' => Auth::id()]);
+        $query->where(['user_id' => Auth::id()]);
 
-        return $this->successResponse($config, !$config ? 'No configuration found for ' . $request->name : '');
+        $config = $query->get();
+
+        return $this->successResponse($config);
     }
 }
