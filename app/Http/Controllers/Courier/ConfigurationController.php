@@ -82,19 +82,9 @@ class ConfigurationController extends Controller
             'redx' => [],
         ];
 
-        if ($config->find('slug', 'pathao')) {
-            $data['pathao'] = $config->find('slug', 'pathao');
+        foreach ($config as $item) {
+            $data[$item->slug] = $item;
         }
-        if ($config->find('slug', 'paperfly')) {
-            $data['paperfly'] = $config->find('slug', 'paperfly');
-        }
-        if ($config->find('slug', 'steadfast')) {
-            $data['steadfast'] = $config->find('slug', 'steadfast');
-        }
-        if ($config->find('slug', 'redx')) {
-            $data['redx'] = $config->find('slug', 'redx');
-        }
-
-        return $this->successResponse($config);
+        return $this->successResponse($data);
     }
 }
