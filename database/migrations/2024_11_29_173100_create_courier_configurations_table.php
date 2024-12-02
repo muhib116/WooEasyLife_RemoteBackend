@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('courier_configurations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable();
-            $table->text('name')->nullable();
+            $table->text('title')->nullable();
             $table->text('api_key')->nullable();
             $table->text('secret_key')->nullable();
             $table->json('settings')->nullable();

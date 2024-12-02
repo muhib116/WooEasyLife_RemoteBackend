@@ -16,13 +16,16 @@ class ConfigurationController extends Controller
 
     public function getList()
     {
-        return $this->successResponse($this->vendors);
+        $formatted = collect($this->vendors)->map(function ($item) {
+            return ucfirst($item);
+        });
+        return $this->successResponse($formatted);
     }
 
     public function saveConfiguration(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', Rule::in($this->vendors)],
+            'title' => ['required', 'string', Rule::in($this->vendors)],
             'api_key' => 'required',
             'secret_key' => 'required',
         ]);
@@ -32,7 +35,7 @@ class ConfigurationController extends Controller
         }
 
         $data = [
-            'name' => $request->title,
+            'title' => $request->title,
             'api_key' => $request->api_key,
             'secret_key' => $request->secret_key,
             'user_id' => Auth::id()
@@ -49,13 +52,13 @@ class ConfigurationController extends Controller
     public function getConfiguration(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', Rule::in($this->vendors)],
+            'title' => ['required', 'string', Rule::in($this->vendors)],
         ]);
         if (!$validator->valid()) {
             return $this->validationErrorResponse($validator->errors());
         }
 
-        $config = CourierConfiguration::where(['name' => $request->name])->find(['user_id' => Auth::id()]);
+        $config = CourierConfiguration::where(['title' => $request->name])->find(['user_id' => Auth::id()]);
 
         return $this->successResponse($config, !$config ? 'No configuration found for ' . $request->name : '');
     }
