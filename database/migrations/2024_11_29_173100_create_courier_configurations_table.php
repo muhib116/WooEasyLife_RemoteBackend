@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->text('title')->nullable();
+            $table->text('slug')->nullable();
             $table->text('api_key')->nullable();
             $table->text('secret_key')->nullable();
             $table->json('settings')->nullable();

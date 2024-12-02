@@ -18,20 +18,20 @@ class ConfigurationController extends Controller
     {
         $formatted = [
             [
+                'slug' => 'pathao',
                 'title' => 'Pathao',
-                'key' => 'pathao'
             ],
             [
+                'slug' => 'paperfly',
                 'title' => 'PaperFly',
-                'key' => 'paperfly'
             ],
             [
+                'slug' => 'steadfast',
                 'title' => 'Steadfast',
-                'key' => 'steadfast'
             ],
             [
+                'slug' => 'redx',
                 'title' => 'RedX',
-                'key' => 'redx'
             ],
         ];
         return $this->successResponse($formatted);
@@ -66,15 +66,6 @@ class ConfigurationController extends Controller
 
     public function getConfiguration(Request $request)
     {
-        // $validator = Validator::make($request->all(), [
-        //     'title' => ['required', 'string', Rule::in($this->vendors)],
-        // ]);
-        // if (!$validator->valid()) {
-        //     return $this->validationErrorResponse($validator->errors());
-        // }
-
-        // $config = CourierConfiguration::where(['title' => $request->title])->find(['user_id' => Auth::id()]);
-
         $query = CourierConfiguration::query();
         if ($request->title) {
             $query->where(['title' => $request->title]);
@@ -83,6 +74,26 @@ class ConfigurationController extends Controller
         $query->where(['user_id' => Auth::id()]);
 
         $config = $query->get();
+
+        $data = [
+            'pathao' => [],
+            'paperfly' => [],
+            'steadfast' => [],
+            'redx' => [],
+        ];
+
+        if ($config->find('slug', 'pathao')) {
+            $data['pathao'] = $config->find('slug', 'pathao');
+        }
+        if ($config->find('slug', 'paperfly')) {
+            $data['paperfly'] = $config->find('slug', 'paperfly');
+        }
+        if ($config->find('slug', 'steadfast')) {
+            $data['steadfast'] = $config->find('slug', 'steadfast');
+        }
+        if ($config->find('slug', 'redx')) {
+            $data['redx'] = $config->find('slug', 'redx');
+        }
 
         return $this->successResponse($config);
     }
