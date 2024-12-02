@@ -73,7 +73,7 @@ class ConfigurationController extends Controller
 
         $query->where(['user_id' => Auth::id()]);
 
-        $config = $query->get();
+        $config = collect($query->get() ?? []);
 
         $data = [
             'pathao' => [],
