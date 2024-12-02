@@ -23,7 +23,7 @@ class ConfigurationController extends Controller
             ],
             [
                 'slug' => 'paperfly',
-                'title' => 'PaperFly',
+                'title' => 'Paperfly',
             ],
             [
                 'slug' => 'steadfast',
