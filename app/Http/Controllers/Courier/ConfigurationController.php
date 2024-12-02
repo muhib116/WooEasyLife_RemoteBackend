@@ -17,10 +17,22 @@ class ConfigurationController extends Controller
     public function getList()
     {
         $formatted = [
-            'pathao' => 'Pathao',
-            'paperfly' => 'PaperFly',
-            'steadfast' => 'SteadFast',
-            'redx' => 'RedX',
+            [
+                'title' => 'Pathao',
+                'key' => 'pathao'
+            ],
+            [
+                'title' => 'PaperFly',
+                'key' => 'paperfly'
+            ],
+            [
+                'title' => 'Steadfast',
+                'key' => 'steadfast'
+            ],
+            [
+                'title' => 'RedX',
+                'key' => 'redx'
+            ],
         ];
         return $this->successResponse($formatted);
     }
