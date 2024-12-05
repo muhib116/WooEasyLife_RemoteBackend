@@ -18,16 +18,16 @@ class ConfigurationController extends Controller
     {
         $formatted = [
             [
+                'slug' => 'steadfast',
+                'title' => 'Steadfast',
+            ],
+            [
                 'slug' => 'pathao',
                 'title' => 'Pathao',
             ],
             [
                 'slug' => 'paperfly',
                 'title' => 'Paperfly',
-            ],
-            [
-                'slug' => 'steadfast',
-                'title' => 'Steadfast',
             ],
             [
                 'slug' => 'redx',
@@ -40,29 +40,38 @@ class ConfigurationController extends Controller
     public function saveConfiguration(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'title' => ['required', 'string', Rule::in($this->vendors)],
-            'api_key' => 'required',
-            'secret_key' => 'required',
+            'id' => 'nullable|integer|exists:courier_configurations,id',
+            'title' => ['required', 'string'],
+            'slug' => ['required', 'string', Rule::in($this->vendors)],
+            'api_key' => 'required|string',
+            'secret_key' => 'required|string',
         ]);
-
-        if (!$validator->valid()) {
+    
+        if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
         }
-
+    
         $data = [
             'title' => $request->title,
-            'api_key' => $request->api_key,
-            'secret_key' => $request->secret_key,
-            'user_id' => Auth::id()
+            'slug' => trim($request->slug),
+            'api_key' => trim($request->api_key),
+            'secret_key' => trim($request->secret_key),
+            'user_id' => Auth::id(),
         ];
-
-        $exist = CourierConfiguration::updateOrCreate(
-            ['user_id' => Auth::id()],
-            $data
-        );
-
-        return $this->successResponse($exist, 'Configuration Saved Successfully!');
+    
+        // Check if ID is provided for an existing record
+        if ($request->filled('id')) {
+            // Update the existing record
+            $configuration = CourierConfiguration::find($request->id);
+            $configuration->update($data);
+        } else {
+            // Create a new record
+            $configuration = CourierConfiguration::create($data);
+        }
+    
+        return $this->successResponse($configuration, 'Configuration saved successfully!');
     }
+
 
     public function getConfiguration(Request $request)
     {
@@ -76,10 +85,10 @@ class ConfigurationController extends Controller
         $config = collect($query->get() ?? []);
 
         $data = [
-            'pathao' => [],
-            'paperfly' => [],
-            'steadfast' => [],
-            'redx' => [],
+            'pathao' => new \stdClass(),
+            'paperfly' => new \stdClass(),
+            'steadfast' => new \stdClass(),
+            'redx' => new \stdClass(),
         ];
 
         foreach ($config as $item) {
