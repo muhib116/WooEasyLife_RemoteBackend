@@ -43,7 +43,6 @@ class SmsController extends Controller
     public function send(Request $request)
     {
         $apiToken = 'GuN1Tp8ueoRJACAl072B';
-        // http://bulksmsbd.net/api/smsapi?api_key=GuN1Tp8ueoRJACAl072B&type=text&number=Receiver&senderid=8809617619992&message=TestSMS
 
         $validator = Validator::make($request->all(), [
             'phone' => [
@@ -120,5 +119,34 @@ class SmsController extends Controller
         }
 
         return $this->successResponse($isSuccess, 'Sms sent successfully');
+    }
+
+    public function recharge(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->errors());
+        }
+
+        $data = [
+            'user_id' => Auth::id(),
+            'type' => 'in',
+            'amount' => $request->amount,
+        ];
+
+        $balance = SmsBalance::create($data);
+
+        return $balance;
+    }
+
+    public function smsBalance()
+    {
+        $userId = Auth::id();
+
+        $balance = SmsBalance::query()->where('user_id', $userId)->sum('amount');
+        return $this->successResponse($balance);
     }
 }
