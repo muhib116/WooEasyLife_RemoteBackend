@@ -18,10 +18,6 @@
                             <template #body="{ data }">
                                 <div class="flex gap-2">
                                     <Button
-                                        @click="() => handleCopy(data)"
-                                        icon="pi pi-copy"
-                                    />
-                                    <Button
                                         severity="danger"
                                         :loading="data?.loading"
                                         @click="() => handleDeleteToken(data)"

@@ -9,6 +9,7 @@ use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SmsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;

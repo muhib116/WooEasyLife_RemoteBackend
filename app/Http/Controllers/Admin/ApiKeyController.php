@@ -21,7 +21,7 @@ class ApiKeyController extends Controller
                 'last_used_ago' => optional($token->last_used_at)->diffForHumans()
             ];
         });
-        return $tokens;
+        // return $tokens;
         return Inertia::render('ApiKey/Index', compact('tokens'));
     }
 
