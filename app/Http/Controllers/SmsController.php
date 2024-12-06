@@ -146,7 +146,10 @@ class SmsController extends Controller
     {
         $userId = Auth::id();
 
-        $balanceHistory = SmsBalance::query()->where('user_id', $userId)->get();
+        $balanceHistory = SmsBalance::query()
+            ->where('user_id', $userId)
+            ->where('type', 'in')
+            ->get();
 
         return $this->successResponse($balanceHistory);
     }
