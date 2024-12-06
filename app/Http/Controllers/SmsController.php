@@ -153,6 +153,26 @@ class SmsController extends Controller
 
         return $this->successResponse($balanceHistory);
     }
+    public function useHistory(Request $request)
+    {
+        $userId = Auth::id();
+
+        $query = SmsBalance::query()
+            ->where('user_id', $userId)
+            ->where('type', 'in');
+
+        if ($request->has('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $balanceHistory = $query->get()->toArray();
+
+        return $this->successResponse($balanceHistory);
+    }
 
     public function smsBalance()
     {

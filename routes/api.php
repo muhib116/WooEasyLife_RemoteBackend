@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/send', [SmsController::class, 'send']);
         Route::post('/recharge', [SmsController::class, 'recharge']);
         Route::get('/recharge-history', [SmsController::class, 'rechargeHistory']);
+        Route::get('/use-history', [SmsController::class, 'useHistory']);
         Route::get('/balance', [SmsController::class, 'smsBalance']);
     });
 });
