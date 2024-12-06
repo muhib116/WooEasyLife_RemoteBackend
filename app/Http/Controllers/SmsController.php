@@ -159,7 +159,7 @@ class SmsController extends Controller
 
         $query = SmsBalance::query()
             ->where('user_id', $userId)
-            ->where('type', 'in');
+            ->where('type', 'out');
 
         if ($request->has('start_date')) {
             $query->whereDate('created_at', '>=', $request->start_date);
