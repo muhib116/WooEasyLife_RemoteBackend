@@ -5,13 +5,9 @@
         class="h-svh flex flex-col bg-[#f3f4f6] dark:bg-gray-800 dark:text-white"
     >
         <div
-            class="bg-white flex-shrink-0 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600 px-4 h-[60px] flex items-center justify-between"
+            class="bg-white flex-shrink-0 dark:bg-slate-800 dark:border-gray-600 px-4 h-[60px] flex items-center justify-between"
         >
-            <div
-                class="text-xl font-semibold cursor-pointer"
-            >
-                Natural Care
-            </div>
+            <div class="text-xl font-semibold cursor-pointer">Natural Care</div>
             <div class="flex items-center gap-5">
                 <button @click="isDarkMode = !isDarkMode">
                     <Icon :name="isDarkMode ? 'PhSun' : 'PhMoonStars'" />
@@ -22,7 +18,9 @@
             </div>
         </div>
         <div class="flex-1 flex">
-            <div class="w-[240px] h-[calc(100svh-60px)] overflow-auto py-8">
+            <div
+                class="w-[240px] h-[calc(100svh-60px)] bg-white dark:bg-slate-800 overflow-auto py-8"
+            >
                 <LeftSidebar />
             </div>
             <div class="flex-1 py-6 h-[calc(100svh-60px)] overflow-auto px-6">
@@ -95,10 +93,10 @@ watch(
                     // detail: "Message Content",
                     life: 3000,
                     group: "br",
-                }
-                if(typeof props.flash?.success == 'object') {
-                    data.summary = props.flash?.success?.message
-                    data.detail = props.flash?.success?.detail
+                };
+                if (typeof props.flash?.success == "object") {
+                    data.summary = props.flash?.success?.message;
+                    data.detail = props.flash?.success?.detail;
                 }
                 toast.add(data);
             }
