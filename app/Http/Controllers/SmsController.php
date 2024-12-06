@@ -142,6 +142,15 @@ class SmsController extends Controller
         return $balance;
     }
 
+    public function rechargeHistory(Request $request)
+    {
+        $userId = Auth::id();
+
+        $balanceHistory = SmsBalance::query()->where('user_id', $userId)->get();
+
+        return $this->successResponse($balanceHistory);
+    }
+
     public function smsBalance()
     {
         $userId = Auth::id();

@@ -33,7 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::group(['as' => 'sms.', 'prefix' => 'sms'], function () {
         Route::post('/send', [SmsController::class, 'send']);
         Route::post('/recharge', [SmsController::class, 'recharge']);
-        Route::post('/balance', [SmsController::class, 'smsBalance']);
+        Route::get('/recharge-history', [SmsController::class, 'rechargeHistory']);
+        Route::get('/balance', [SmsController::class, 'smsBalance']);
     });
 });
 
