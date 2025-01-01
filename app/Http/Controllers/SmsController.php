@@ -12,80 +12,82 @@ class SmsController extends Controller
 
     public function calculateSMSDetails($message)
     {
-        // Encoding constants
         $GSM_7BIT = "GSM_7BIT";
         $GSM_7BIT_EX = "GSM_7BIT_EX";
         $UTF16 = "UTF16";
 
-        // GSM character sets
-        $gsm7bitChars = "@£\$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
-        $gsm7bitExChar = "^{}\\[~]|€\n";
+        $gsm7bitExChar = "\\^{}\\\\\\[~\\]|â‚¬\n";
+        $gsm7bitChars = "@Â£$Â¥Ã¨Ã©Ã¹Ã¬Ã²Ã‡\\nÃ˜Ã¸\\rÃ…Ã¥Î_Î¦ÎÎ›Î©Î Î¨Î£Î˜ÎžÃ†Ã¦ÃŸÃ‰ !\\\"#Â¤%&'()*+,-./0123456789:;<=>?Â¡ABCDEFGHIJKLMNOPQRSTUVWXYZÃ„ÃÃ‘ÃœÂ§Â¿abcdefghijklmnopqrstuvwxyzÃ¤Ã¶Ã±Ã¼Ã ";
 
-        $gsm7bitRegExp = '/^[' . preg_quote($gsm7bitChars, '/') . ']*$/';
-        $gsm7bitExRegExp = '/^[' . preg_quote($gsm7bitChars . $gsm7bitExChar, '/') . ']*$/';
-        $gsm7bitExOnlyRegExp = '/^[' . preg_quote($gsm7bitExChar, '/') . ']*$/';
-
-        // Single and multi-part message lengths
         $messageLength = [
             $GSM_7BIT => 160,
             $GSM_7BIT_EX => 160,
-            $UTF16 => 70,
+            $UTF16 => 70
         ];
-
         $multiMessageLength = [
             $GSM_7BIT => 153,
             $GSM_7BIT_EX => 153,
-            $UTF16 => 67,
+            $UTF16 => 67
         ];
 
-        // Detect encoding
-        function detectEncoding($text, $gsm7bitRegExp, $gsm7bitExRegExp)
+        $gsm7bitRegExp = "/^[{$gsm7bitChars}]*$/";
+        $gsm7bitExRegExp = "/^[{$gsm7bitChars}{$gsm7bitExChar}]*$/";
+        $gsm7bitExOnlyRegExp = "/^[\\{$gsm7bitExChar}]*$/";
+
+        function detectEncoding($text)
         {
+            global $gsm7bitRegExp, $gsm7bitExRegExp;
+
             if (preg_match($gsm7bitRegExp, $text)) {
                 return "GSM_7BIT";
             } elseif (preg_match($gsm7bitExRegExp, $text)) {
                 return "GSM_7BIT_EX";
-            } else {
-                return "UTF16";
             }
+            return "UTF16";
         }
 
-        // Count GSM 7-bit extended characters
-        function countGsm7bitEx($text, $gsm7bitExOnlyRegExp)
+        function countGsm7bitEx($text)
         {
-            $matches = [];
+            global $gsm7bitExOnlyRegExp;
             preg_match_all($gsm7bitExOnlyRegExp, $text, $matches);
             return count($matches[0]);
         }
 
-        // Normalize newlines
-        $message = str_replace(["\r\n", "\n", "\r"], " ", $message);
+        // Remove line breaks from the input text
+        $props = str_replace(["\r\n", "\n", "\r"], " ", $props);
 
         // Detect encoding
-        $encoding = detectEncoding($message, $gsm7bitRegExp, $gsm7bitExRegExp);
+        $encoding = detectEncoding($props);
 
-        // Calculate length
-        $length = mb_strlen($message, 'UTF-8'); // Handle multi-byte characters correctly
+        // Get the message length
+        $length = strlen($props);
+        $per_message = $messageLength[$encoding];
+        $messages = 1;
+        $remaining = 0;
+
         if ($encoding === $GSM_7BIT_EX) {
-            $length += countGsm7bitEx($message, $gsm7bitExOnlyRegExp);
+            $length += countGsm7bitEx($props);
         }
 
-        // Determine single and multi-message limits
-        $perMessage = $messageLength[$encoding];
-        if ($length > $perMessage) {
-            $perMessage = $multiMessageLength[$encoding];
+        if ($length > $per_message) {
+            $per_message = $multiMessageLength[$encoding];
         }
 
-        // Calculate total messages and remaining characters
-        $messages = ceil($length / $perMessage);
-        // $remaining = $perMessage * $messages - $length;
+        // Calculate number of messages
+        $messages = ceil($length / $per_message);
+        $remaining = $per_message * $messages - $length;
+
+        if ($remaining == 0 && $messages == 0) {
+            $remaining = $per_message;
+        }
 
         return $messages;
+
         // return [
         //     'encoding' => $encoding,
-        //     'totalCharacters' => $length,
-        //     'remainingCharacters' => $remaining,
-        //     'totalParts' => $messages,
+        //     'setSmsCharacterCount' => $length,
+        //     'setSmsRemainingCount' => $remaining,
+        //     'setSmsPartCount' => $messages
         // ];
     }
 
@@ -167,7 +169,7 @@ class SmsController extends Controller
 
             if ($responseDecoded->message_id && !$responseDecoded->error_message) {
                 // add success to content
-                $smsLength = strlen($sms);
+                // $smsLength = strlen($sms);
                 $smsCount = $this->countSmsSegments($sms);
                 // 63/145
                 $data = [
