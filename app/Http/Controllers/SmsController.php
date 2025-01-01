@@ -138,7 +138,8 @@ class SmsController extends Controller
             return $this->validationErrorResponse($validator->errors());
         }
 
-        $isSuccess = false;
+        // $isSuccess = false;
+        $responseDecoded = [];
 
         try {
             $url = "http://bulksmsbd.net/api/smsapi";
@@ -165,6 +166,7 @@ class SmsController extends Controller
             // Execute the request and fetch the response
             $response = curl_exec($ch);
 
+
             $responseDecoded = json_decode($response);
 
             if ($responseDecoded->message_id && !$responseDecoded->error_message) {
@@ -183,7 +185,7 @@ class SmsController extends Controller
                     'note' => '',
                 ];
                 SmsBalance::create($data);
-                $isSuccess = true;
+                // $isSuccess = true;
             }
 
             file_put_contents(__DIR__ . '/sms.log', $response);
@@ -200,7 +202,7 @@ class SmsController extends Controller
             //throw $th;
         }
 
-        return $this->successResponse($isSuccess, 'Sms sent successfully');
+        return $this->successResponse($responseDecoded, 'Sms sent successfully');
     }
 
     public function recharge(Request $request)
