@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
         Route::post('/create-order', [SteadFastController::class, 'createOrder']);
+        Route::post('/create-bulk-order', [SteadFastController::class, 'createBulkOrder']);
         Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
     });
     // Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {

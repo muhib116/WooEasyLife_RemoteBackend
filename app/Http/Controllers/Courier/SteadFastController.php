@@ -99,9 +99,11 @@ class SteadFastController extends Controller
             ];
         }, $orders);
 
-        $response = $this->bulkCreateOrders($data);
+        return $this->successResponse($data);
 
-        return $this->successResponse($response);
+        // $response = $this->bulkCreateOrders($data);
+
+        // return $this->successResponse($response);
     }
 
     private function placeOrder($data)
