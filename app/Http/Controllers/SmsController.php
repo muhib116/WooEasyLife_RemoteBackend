@@ -10,10 +10,90 @@ use Illuminate\Support\Facades\Validator;
 class SmsController extends Controller
 {
 
+    public function calculateSMSDetails($message)
+    {
+        // Encoding constants
+        $GSM_7BIT = "GSM_7BIT";
+        $GSM_7BIT_EX = "GSM_7BIT_EX";
+        $UTF16 = "UTF16";
+
+        // GSM character sets
+        $gsm7bitChars = "@£\$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+        $gsm7bitExChar = "^{}\\[~]|€\n";
+
+        $gsm7bitRegExp = '/^[' . preg_quote($gsm7bitChars, '/') . ']*$/';
+        $gsm7bitExRegExp = '/^[' . preg_quote($gsm7bitChars . $gsm7bitExChar, '/') . ']*$/';
+        $gsm7bitExOnlyRegExp = '/^[' . preg_quote($gsm7bitExChar, '/') . ']*$/';
+
+        // Single and multi-part message lengths
+        $messageLength = [
+            $GSM_7BIT => 160,
+            $GSM_7BIT_EX => 160,
+            $UTF16 => 70,
+        ];
+
+        $multiMessageLength = [
+            $GSM_7BIT => 153,
+            $GSM_7BIT_EX => 153,
+            $UTF16 => 67,
+        ];
+
+        // Detect encoding
+        function detectEncoding($text, $gsm7bitRegExp, $gsm7bitExRegExp)
+        {
+            if (preg_match($gsm7bitRegExp, $text)) {
+                return "GSM_7BIT";
+            } elseif (preg_match($gsm7bitExRegExp, $text)) {
+                return "GSM_7BIT_EX";
+            } else {
+                return "UTF16";
+            }
+        }
+
+        // Count GSM 7-bit extended characters
+        function countGsm7bitEx($text, $gsm7bitExOnlyRegExp)
+        {
+            $matches = [];
+            preg_match_all($gsm7bitExOnlyRegExp, $text, $matches);
+            return count($matches[0]);
+        }
+
+        // Normalize newlines
+        $message = str_replace(["\r\n", "\n", "\r"], " ", $message);
+
+        // Detect encoding
+        $encoding = detectEncoding($message, $gsm7bitRegExp, $gsm7bitExRegExp);
+
+        // Calculate length
+        $length = mb_strlen($message, 'UTF-8'); // Handle multi-byte characters correctly
+        if ($encoding === $GSM_7BIT_EX) {
+            $length += countGsm7bitEx($message, $gsm7bitExOnlyRegExp);
+        }
+
+        // Determine single and multi-message limits
+        $perMessage = $messageLength[$encoding];
+        if ($length > $perMessage) {
+            $perMessage = $multiMessageLength[$encoding];
+        }
+
+        // Calculate total messages and remaining characters
+        $messages = ceil($length / $perMessage);
+        // $remaining = $perMessage * $messages - $length;
+
+        return $messages;
+        // return [
+        //     'encoding' => $encoding,
+        //     'totalCharacters' => $length,
+        //     'remainingCharacters' => $remaining,
+        //     'totalParts' => $messages,
+        // ];
+    }
+
     private function countSmsSegments($text)
     {
+        return $this->calculateSMSDetails($text);
         // Define character limits
-        $englishLimit = 145; // Characters per SMS for English
+        $englishLimit = 160; // Characters per SMS for English
         $banglaLimit = 63;   // Characters per SMS for Bangla
 
         // Regular expression to detect Bangla characters

@@ -30,16 +30,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/save-configuration', [ConfigurationController::class, 'saveConfiguration']);
         Route::post('/get-configuration', [ConfigurationController::class, 'getConfiguration']);
     });
+    Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
+        Route::post('/create-order', [SteadFastController::class, 'createOrder']);
+        Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
+    });
+    // Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
+    //     Route::post('/create-order', [SteadFastController::class, 'createOrder']);
+    //     Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
+    // });
     Route::group(['as' => 'sms.', 'prefix' => 'sms'], function () {
         Route::post('/send', [SmsController::class, 'send']);
         Route::post('/recharge', [SmsController::class, 'recharge']);
         Route::get('/recharge-history', [SmsController::class, 'rechargeHistory']);
         Route::get('/use-history', [SmsController::class, 'useHistory']);
         Route::get('/balance', [SmsController::class, 'smsBalance']);
-    });
-    Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
-        Route::post('/create-order', [SteadFastController::class, 'createOrder']);
-        Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
     });
 });
 
