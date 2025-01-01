@@ -37,11 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/use-history', [SmsController::class, 'useHistory']);
         Route::get('/balance', [SmsController::class, 'smsBalance']);
     });
+    Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
+        Route::post('/create-order', [SteadFastController::class, 'createOrder']);
+        Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
+    });
 });
 
 Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
-
-Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
-    Route::post('/create-order', [SteadFastController::class, 'createOrder']);
-    Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
-});

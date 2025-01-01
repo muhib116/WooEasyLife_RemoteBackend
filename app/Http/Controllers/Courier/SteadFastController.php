@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
+use App\Models\CourierConfiguration;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,13 +18,34 @@ class SteadFastController extends Controller
     public function __construct()
     {
         $this->baseUrl = 'https://portal.steadfast.com.bd/api/v1';
-        $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80 ';
-        $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t ';
+        $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80';
+        $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t';
     }
 
     public function checkBalance()
     {
-        return $this->getCurrentBalance();
+        $steadfastData = CourierConfiguration::where('user_id', Auth::id())
+            ->where('slug', 'steadfast')
+            ->first();
+
+        if ($steadfastData && $steadfastData->api_key && $steadfastData->secret_key) {
+            $response = Http::withHeaders([
+                'Api-Key' => $steadfastData->api_key,
+                'Secret-Key' => $steadfastData->secret_key,
+                'Content-Type' => 'application/json',
+            ])->get($this->baseUrl . '/get_balance');
+
+            try {
+                $jsonResponse = $response->json();
+                return $this->successResponse([
+                    'balance' => $jsonResponse['current_balance']
+                ]);
+            } catch (\Throwable $th) {
+                return $this->errorResponse('Opps! Something went wrong to get balance.');
+            }
+        } else {
+            return $this->errorResponse('Configuration issue');
+        }
     }
 
     public function createOrder(Request $request)
@@ -135,17 +158,6 @@ class SteadFastController extends Controller
             'Secret-Key' => $this->secretKey,
             'Content-Type' => 'application/json',
         ])->get($this->baseUrl . '/status_by_trackingcode/' . $id);
-
-        return $response->json();
-    }
-
-    private function getCurrentBalance()
-    {
-        $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/get_balance');
 
         return $response->json();
     }
