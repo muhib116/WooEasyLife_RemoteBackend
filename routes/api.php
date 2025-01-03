@@ -35,10 +35,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create-bulk-order', [SteadFastController::class, 'createBulkOrder']);
         Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
     });
-    // Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
-    //     Route::post('/create-order', [SteadFastController::class, 'createOrder']);
-    //     Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
-    // });
+    Route::group(['as' => 'pathao.', 'prefix' => 'steadfast'], function () {
+        Route::post('/create-order', [SteadFastController::class, 'createOrder']);
+        Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
+    });
+    
     Route::group(['as' => 'sms.', 'prefix' => 'sms'], function () {
         Route::post('/send', [SmsController::class, 'send']);
         Route::post('/recharge', [SmsController::class, 'recharge']);
