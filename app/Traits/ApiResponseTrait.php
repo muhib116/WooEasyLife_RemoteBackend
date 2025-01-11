@@ -31,6 +31,11 @@ trait ApiResponseTrait
      */
     public function errorResponse($message = 'Error', $statusCode = 400, $errors = null)
     {
+        try {
+            $errors = convertErrorArrayToString($errors);
+        } catch (\Throwable $th) {
+        }
+
         return response()->json([
             'status' => false,
             'message' => $message,

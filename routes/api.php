@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Courier\ConfigurationController;
+use App\Http\Controllers\Courier\PathaoController;
 use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Message\PutMessageController;
@@ -35,9 +36,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create-bulk-order', [SteadFastController::class, 'createBulkOrder']);
         Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
     });
-    Route::group(['as' => 'pathao.', 'prefix' => 'steadfast'], function () {
-        Route::post('/create-order', [SteadFastController::class, 'createOrder']);
-        Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
+    Route::group(['as' => 'pathao.', 'prefix' => 'pathao'], function () {
+        Route::post('/create-order', [PathaoController::class, 'createOrder']);
+        Route::post('/create-bulk-order', [PathaoController::class, 'createBulkOrder']);
+        Route::post('/check-balance', [PathaoController::class, 'checkBalance']);
     });
     
     Route::group(['as' => 'sms.', 'prefix' => 'sms'], function () {

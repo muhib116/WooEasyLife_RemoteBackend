@@ -17,48 +17,69 @@ class SteadFastController extends Controller
 
     public function __construct()
     {
-        $this->baseUrl = 'https://portal.steadfast.com.bd/api/v1';
+        $this->baseUrl = 'https://portal.packzy.com/api/v1';
         $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80';
         $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t';
     }
 
-    public function checkBalance()
+    private function getConfig()
     {
-        $steadfastData = CourierConfiguration::where('user_id', Auth::id())
+        $config = CourierConfiguration::where('user_id', Auth::id())
             ->where('slug', 'steadfast')
             ->first();
 
-        if ($steadfastData && $steadfastData->api_key && $steadfastData->secret_key) {
-            $response = Http::withHeaders([
-                'Api-Key' => $steadfastData->api_key,
-                'Secret-Key' => $steadfastData->secret_key,
-                'Content-Type' => 'application/json',
-            ])->get($this->baseUrl . '/get_balance');
+        if (!$config || !$config->api_key || !$config->secret_key) {
+            return false;
+        }
 
-            try {
-                $jsonResponse = $response->json();
-                return $this->successResponse([
-                    'balance' => $jsonResponse['current_balance']
-                ]);
-            } catch (\Throwable $th) {
-                return $this->errorResponse('Opps! Something went wrong to get balance.');
-            }
-        } else {
-            return $this->errorResponse('Configuration issue');
+        return $config;
+    }
+
+    public function checkBalance()
+    {
+        $config = $this->getConfig();
+
+        if (!$config) {
+            return $this->errorResponse('The SteadFast settings are not configured properly.');
+        }
+
+        $response = Http::withHeaders([
+            'Api-Key' => $config->api_key,
+            'Secret-Key' => $config->secret_key,
+            'Content-Type' => 'application/json',
+        ])->get($this->baseUrl . '/get_balance');
+
+        try {
+            $jsonResponse = $response->json();
+            return $this->successResponse([
+                'balance' => $jsonResponse['current_balance']
+            ]);
+        } catch (\Throwable $th) {
+            return $this->errorResponse('Opps! Something went wrong to get balance.');
         }
     }
 
     public function createOrder(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'recipient_name' => 'required',
-            'recipient_phone' => 'required',
-            'recipient_address' => 'required',
-            'cod_amount' => 'required',
-        ]);
-        if (!$validator->valid()) {
-            return $this->validationErrorResponse($validator->errors());
+        $config = $this->getConfig();
+
+        if (!$config) {
+            return $this->errorResponse('The SteadFast settings are not configured properly.');
         }
+
+        $validator = Validator::make($request->all(), [
+            'invoice' => 'required|string|regex:/^[a-zA-Z0-9_-]+$/|max:255,invoice',
+            'recipient_name' => 'required|string|max:100',
+            'recipient_phone' => 'required|digits:11|regex:/^01[0-9]{9}$/',
+            'recipient_address' => 'required|string|max:250',
+            'cod_amount' => 'required|numeric|min:0',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->messages());
+        }
+
         $data = [
             'invoice' => $request->invoice,
             'recipient_name' => $request->recipient_name,
@@ -69,7 +90,12 @@ class SteadFastController extends Controller
         ];
 
         $response = $this->placeOrder($data);
-        return $this->successResponse($response->consignment, $response->message);
+
+        if (@$response->status == 200 && @$response->consignment) {
+            return $this->successResponse($response->consignment, $response->message);
+        }
+
+        return $this->errorResponse('An issue occurred while processing the order.');
     }
 
     public function createBulkOrder(Request $request)
@@ -77,13 +103,13 @@ class SteadFastController extends Controller
         $validator = Validator::make($request->all(), [
             'orders' => 'required|array',
             'orders.*.recipient_name' => 'required|string',
-            'orders.*.recipient_phone' => 'required|string',
+            'orders.*.recipient_phone' => 'required|digits:11|regex:/^01[0-9]{9}$/',
             'orders.*.recipient_address' => 'required|string',
             'orders.*.cod_amount' => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
-            return $this->validationErrorResponse($validator->errors());
+            return $this->validationErrorResponse($validator->messages());
         }
 
         $orders = $request->input('orders');
@@ -108,9 +134,10 @@ class SteadFastController extends Controller
 
     private function placeOrder($data)
     {
+        $config = $this->getConfig();
         $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
+            'Api-Key' => $config->api_key,
+            'Secret-Key' => $config->secret_key,
             'Content-Type' => 'application/json',
         ])->post($this->baseUrl . '/create_order', $data);
 
@@ -119,9 +146,11 @@ class SteadFastController extends Controller
 
     private function bulkCreateOrders($data)
     {
+        $config = $this->getConfig();
+
         $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
+            'Api-Key' => $config->api_key,
+            'Secret-Key' => $config->secret_key,
             'Content-Type' => 'application/json',
         ])->post($this->baseUrl . '/create_order/bulk-order', [
             'data' => json_encode($data)
