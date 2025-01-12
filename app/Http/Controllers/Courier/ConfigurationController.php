@@ -34,6 +34,7 @@ class ConfigurationController extends Controller
                 'title' => 'RedX',
             ],
         ];
+
         return $this->successResponse($formatted);
     }
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Courier\ConfigurationController;
 use App\Http\Controllers\Courier\PathaoController;
+use App\Http\Controllers\Courier\RedXController;
 use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Message\PutMessageController;
@@ -26,11 +27,13 @@ Route::middleware('auth:sanctum')->get('/get-user', function (Request $request) 
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+
     Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
         Route::post('/list', [ConfigurationController::class, 'getList']);
         Route::post('/save-configuration', [ConfigurationController::class, 'saveConfiguration']);
         Route::post('/get-configuration', [ConfigurationController::class, 'getConfiguration']);
     });
+
     Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
         Route::post('/create-order', [SteadFastController::class, 'createOrder']);
         Route::post('/create-bulk-order', [SteadFastController::class, 'createBulkOrder']);
@@ -41,7 +44,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create-bulk-order', [PathaoController::class, 'createBulkOrder']);
         Route::post('/check-balance', [PathaoController::class, 'checkBalance']);
     });
-    
+    Route::group(['as' => 'redx.', 'prefix' => 'redx'], function () {
+        Route::post('/get-areas', [RedXController::class, 'getArea']);
+        Route::post('/create-order', [RedXController::class, 'createOrder']);
+        Route::post('/create-bulk-order', [RedXController::class, 'createBulkOrder']);
+        Route::post('/check-balance', [RedXController::class, 'checkBalance']);
+    });
+
     Route::group(['as' => 'sms.', 'prefix' => 'sms'], function () {
         Route::post('/send', [SmsController::class, 'send']);
         Route::post('/recharge', [SmsController::class, 'recharge']);
