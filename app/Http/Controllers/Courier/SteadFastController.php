@@ -35,6 +35,86 @@ class SteadFastController extends Controller
         return $config;
     }
 
+    public function checkStatus(Request $request)
+    {
+        $config = $this->getConfig();
+
+        if (!$config) {
+            return $this->errorResponse('The SteadFast settings are not configured properly.');
+        }
+
+        $consignmentId = $request->consignment_id;
+
+        $response = Http::withHeaders([
+            'Api-Key' => $config->api_key,
+            'Secret-Key' => $config->secret_key,
+            'Content-Type' => 'application/json',
+        ])->get($this->baseUrl . '/status_by_cid/' . $consignmentId);
+
+        $status = '';
+        try {
+            $jsonResponse = $response->json();
+            if (@$jsonResponse['status'] == '200') {
+                $status = @$jsonResponse['delivery_status'];
+            }
+        } catch (\Throwable $th) {
+            return $this->errorResponse('There\'s an error to get status.');
+        }
+        return $this->successResponse($status);
+    }
+
+    public function bulkCheckStatus(Request $request)
+    {
+        $config = $this->getConfig();
+
+        if (!$config) {
+            return $this->errorResponse('The SteadFast settings are not configured properly.');
+        }
+
+        $consignmentIds = $request->consignment_ids ?? [];
+        $invoiceIds = $request->invoice_ids ?? [];
+
+        $response_data = [];
+
+        if (count($consignmentIds)) {
+            foreach ($consignmentIds as $id) {
+                $response = Http::withHeaders([
+                    'Api-Key' => $config->api_key,
+                    'Secret-Key' => $config->secret_key,
+                    'Content-Type' => 'application/json',
+                ])->get($this->baseUrl . '/status_by_cid/' . $id);
+                $status = '';
+                try {
+                    $jsonResponse = $response->json();
+                    if (@$jsonResponse['status'] == '200') {
+                        $status = @$jsonResponse['delivery_status'];
+                    }
+                } catch (\Throwable $th) {
+                }
+                $response_data[$id] = $status;
+            }
+        } else if (count($invoiceIds)) {
+            foreach ($consignmentIds as $id) {
+                $response = Http::withHeaders([
+                    'Api-Key' => $config->api_key,
+                    'Secret-Key' => $config->secret_key,
+                    'Content-Type' => 'application/json',
+                ])->get($this->baseUrl . '/status_by_invoice/' . $id);
+                $status = '';
+                try {
+                    $jsonResponse = $response->json();
+                    if (@$jsonResponse['status'] == '200') {
+                        $status = @$jsonResponse['delivery_status'];
+                    }
+                } catch (\Throwable $th) {
+                }
+                $response_data[$id] = $status;
+            }
+        }
+
+        return $this->successResponse($response_data);
+    }
+
     public function checkBalance()
     {
         $config = $this->getConfig();
