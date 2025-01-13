@@ -226,6 +226,13 @@ class SteadFastController extends Controller
 
             if ($statusCode == 200) {
                 $data = $response->json();
+                try {
+                    $data = array_map(function ($order) {
+                        $order['created_at'] = now();
+                        $order['updated_at'] = now();
+                        return $order;
+                    }, $data);
+                } catch (\Throwable $th) {}
                 return $this->successResponse($data);
             } else {
                 $errorMessage = $response->getBody()->getContents();
