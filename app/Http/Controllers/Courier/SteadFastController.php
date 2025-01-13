@@ -122,18 +122,24 @@ class SteadFastController extends Controller
         if (!$config) {
             return $this->errorResponse('The SteadFast settings are not configured properly.');
         }
-
-        $response = Http::withHeaders([
-            'Api-Key' => $config->api_key,
-            'Secret-Key' => $config->secret_key,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/get_balance');
-
         try {
+            $response = Http::withHeaders([
+                'Api-Key' => $config->api_key,
+                'Secret-Key' => $config->secret_key,
+                'Content-Type' => 'application/json',
+            ])->get($this->baseUrl . '/get_balance');
+            $statusCode = $response->status();
             $jsonResponse = $response->json();
-            return $this->successResponse([
-                'balance' => $jsonResponse['current_balance']
-            ]);
+            if ($statusCode == 200) {
+                return $this->successResponse([
+                    'balance' => $jsonResponse['current_balance']
+                ]);
+            } else {
+                return $this->errorResponse(
+                    'Opps! Something went wrong to get balance.',
+                    $statusCode
+                );
+            }
         } catch (\Throwable $th) {
             return $this->errorResponse('Opps! Something went wrong to get balance.');
         }
