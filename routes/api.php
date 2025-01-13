@@ -9,6 +9,7 @@ use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Message\PutMessageController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,6 +27,10 @@ Route::middleware('auth:sanctum')->get('/get-user', function (Request $request) 
     return $request->user();
 });
 
+Route::middleware('auth:sanctum')->get('/validate-token', function (Request $request) {
+    return true;
+});
+
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
@@ -41,11 +46,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bulk-check-status', [SteadFastController::class, 'bulkCheckStatus']);
         Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
     });
+
     Route::group(['as' => 'pathao.', 'prefix' => 'pathao'], function () {
         Route::post('/create-order', [PathaoController::class, 'createOrder']);
         Route::post('/create-bulk-order', [PathaoController::class, 'createBulkOrder']);
         Route::post('/check-balance', [PathaoController::class, 'checkBalance']);
     });
+
     Route::group(['as' => 'redx.', 'prefix' => 'redx'], function () {
         Route::post('/get-areas', [RedXController::class, 'getArea']);
         Route::post('/create-order', [RedXController::class, 'createOrder']);
@@ -60,6 +67,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/use-history', [SmsController::class, 'useHistory']);
         Route::get('/balance', [SmsController::class, 'smsBalance']);
     });
+
+    Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
+
 });
 
-Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
