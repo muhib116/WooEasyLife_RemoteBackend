@@ -33,21 +33,7 @@ Route::middleware('auth:sanctum')->get('/validate-token', function (Request $req
     return true;
 });
 
-Route::get('app-logo', function() {
-    $path = public_path('logo.webp');
-    
-    if (!file_exists($path)) {
-        abort(404);
-    }
-
-    $file = file_get_contents($path);
-    $type = mime_content_type($path);
-
-    return Response::make($file, 200, [
-        'Content-Type' => $type,
-        'Content-Disposition' => 'inline',
-    ]);
-});
+Route::get('app-logo', [PluginsController::class, 'appLogo']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
@@ -88,6 +74,4 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
-
 });
-
