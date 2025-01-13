@@ -222,11 +222,15 @@ class SteadFastController extends Controller
                 'data' => json_encode($data)
             ]);
 
-            $data = $response->getBody()->getContents();
-
-            // $response = $response->json();
-
-            return $this->successResponse($data);
+            if ($response->status() == 200) {
+                $data = $response->getBody()->getContents();
+                return $this->successResponse($data);
+            } else {
+                return $this->errorResponse(
+                    $response->getBody()->getContents(),
+                    $response->status(),
+                );
+            }
         } catch (\Throwable $th) {
             //throw $th;
             // return $this->errorResponse("There's an error while creating error");
