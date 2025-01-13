@@ -47,11 +47,11 @@ class ConfigurationController extends Controller
             'api_key' => 'required|string',
             'secret_key' => 'required|string',
         ]);
-    
+
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
         }
-    
+
         $data = [
             'title' => $request->title,
             'slug' => trim($request->slug),
@@ -60,7 +60,7 @@ class ConfigurationController extends Controller
             'is_active' => $request->is_active,
             'user_id' => Auth::id(),
         ];
-    
+
         // Check if ID is provided for an existing record
         if ($request->filled('id')) {
             // Update the existing record
@@ -70,7 +70,7 @@ class ConfigurationController extends Controller
             // Create a new record
             $configuration = CourierConfiguration::create($data);
         }
-    
+
         return $this->successResponse($configuration, 'Configuration saved successfully!');
     }
 
@@ -94,6 +94,9 @@ class ConfigurationController extends Controller
         ];
 
         foreach ($config as $item) {
+            if ($item->logo) {
+                $item->logo = asset($item->logo);
+            }
             $data[$item->slug] = $item;
         }
         return $this->successResponse($data);
