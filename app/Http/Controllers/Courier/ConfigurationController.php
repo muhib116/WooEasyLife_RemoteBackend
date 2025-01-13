@@ -57,6 +57,7 @@ class ConfigurationController extends Controller
             'slug' => trim($request->slug),
             'api_key' => trim($request->api_key),
             'secret_key' => trim($request->secret_key),
+            'is_active' => $request->is_active,
             'user_id' => Auth::id(),
         ];
     

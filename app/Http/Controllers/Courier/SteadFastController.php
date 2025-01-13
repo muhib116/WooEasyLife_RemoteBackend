@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\Validator;
 class SteadFastController extends Controller
 {
     protected $baseUrl;
-    protected $apiKey;
-    protected $secretKey;
+    // protected $apiKey;
+    // protected $secretKey;
 
     public function __construct()
     {
         $this->baseUrl = 'https://portal.packzy.com/api/v1';
-        $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80';
-        $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t';
+        // $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80';
+        // $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t';
     }
 
     private function getConfig()
@@ -243,52 +243,52 @@ class SteadFastController extends Controller
         return $response->json();
     }
 
-    private function bulkCreateOrders($data)
-    {
-        $config = $this->getConfig();
+    // private function bulkCreateOrders($data)
+    // {
+    //     $config = $this->getConfig();
 
-        $response = Http::withHeaders([
-            'Api-Key' => $config->api_key,
-            'Secret-Key' => $config->secret_key,
-            'Content-Type' => 'application/json',
-        ])->post($this->baseUrl . '/create_order/bulk-order', [
-            'data' => json_encode($data)
-        ]);
+    //     $response = Http::withHeaders([
+    //         'Api-Key' => $config->api_key,
+    //         'Secret-Key' => $config->secret_key,
+    //         'Content-Type' => 'application/json',
+    //     ])->post($this->baseUrl . '/create_order/bulk-order', [
+    //         'data' => json_encode($data)
+    //     ]);
 
-        return $response->json();
-    }
+    //     return $response->json();
+    // }
 
-    private function checkDeliveryStatusByConsignmentId($id)
-    {
-        $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/status_by_cid/' . $id);
+    // private function checkDeliveryStatusByConsignmentId($id)
+    // {
+    //     $response = Http::withHeaders([
+    //         'Api-Key' => $this->apiKey,
+    //         'Secret-Key' => $this->secretKey,
+    //         'Content-Type' => 'application/json',
+    //     ])->get($this->baseUrl . '/status_by_cid/' . $id);
 
-        return $response->json();
-    }
+    //     return $response->json();
+    // }
 
 
-    private function checkDeliveryStatusByInvoiceId($id)
-    {
-        $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/status_by_invoice/' . $id);
+    // private function checkDeliveryStatusByInvoiceId($id)
+    // {
+    //     $response = Http::withHeaders([
+    //         'Api-Key' => $this->apiKey,
+    //         'Secret-Key' => $this->secretKey,
+    //         'Content-Type' => 'application/json',
+    //     ])->get($this->baseUrl . '/status_by_invoice/' . $id);
 
-        return $response->json();
-    }
+    //     return $response->json();
+    // }
 
-    private function checkDeliveryStatusByTrackingCode($id)
-    {
-        $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/status_by_trackingcode/' . $id);
+    // private function checkDeliveryStatusByTrackingCode($id)
+    // {
+    //     $response = Http::withHeaders([
+    //         'Api-Key' => $this->apiKey,
+    //         'Secret-Key' => $this->secretKey,
+    //         'Content-Type' => 'application/json',
+    //     ])->get($this->baseUrl . '/status_by_trackingcode/' . $id);
 
-        return $response->json();
-    }
+    //     return $response->json();
+    // }
 }
