@@ -143,7 +143,6 @@ class SteadFastController extends Controller
     {
         $config = $this->getConfig();
 
-        return $this->errorResponse('The SteadFast settings are not configured properly.');
         if (!$config) {
             return $this->errorResponse('The SteadFast settings are not configured properly.');
         }
