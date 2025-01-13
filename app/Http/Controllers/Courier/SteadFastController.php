@@ -222,13 +222,19 @@ class SteadFastController extends Controller
                 'data' => json_encode($data)
             ]);
 
-            if ($response->status() == 200) {
-                $data = $response->getBody()->getContents();
+            $statusCode = $response->status();
+
+            if ($statusCode == 200) {
+                $data = $response->json();
                 return $this->successResponse($data);
             } else {
+                $errorMessage = $response->getBody()->getContents();
+                if ($statusCode == 401) {
+                    $errorMessage = 'The SteadFast configuration is not valid.';
+                }
                 return $this->errorResponse(
-                    $response->getBody()->getContents(),
-                    $response->status(),
+                    $errorMessage,
+                    $statusCode,
                 );
             }
         } catch (\Throwable $th) {
