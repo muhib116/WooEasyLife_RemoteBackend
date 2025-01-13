@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Courier\ConfigurationController;
 use App\Http\Controllers\Courier\PathaoController;
 use App\Http\Controllers\Courier\RedXController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Message\PutMessageController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,7 +33,24 @@ Route::middleware('auth:sanctum')->get('/validate-token', function (Request $req
     return true;
 });
 
+Route::get('app-logo', function() {
+    $path = public_path('logo.webp');
+    
+    if (!file_exists($path)) {
+        abort(404);
+    }
+
+    $file = file_get_contents($path);
+    $type = mime_content_type($path);
+
+    return Response::make($file, 200, [
+        'Content-Type' => $type,
+        'Content-Disposition' => 'inline',
+    ]);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 
     Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
         Route::post('/list', [ConfigurationController::class, 'getList']);
