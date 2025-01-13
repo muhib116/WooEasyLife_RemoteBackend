@@ -12,13 +12,13 @@ use Illuminate\Support\Facades\Validator;
 
 class RedXController extends Controller
 {
-    protected $baseUrl;
+    protected $baseUrl = 'https://sandbox.redx.com.bd/v1.0.0-beta';
     protected $apiKey;
     protected $secretKey;
-
+    // API-ACCESS-TOKEN = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MTY5MDMiLCJpYXQiOjE3MzY3NzA0MjYsImlzcyI6ImhuV1FraTdYZWswb21ObDhJaXg2SmZNMW9pWjNURWxvIiwic2hvcF9pZCI6OTE2OTAzLCJ1c2VyX2lkIjo5NDM0MDA0fQ.2VSeFA5TxsgJPUzL-Fy0Bt3tNnD1V_CY-cJeYPmfkWc
     public function __construct()
     {
-        $this->baseUrl = 'https://portal.packzy.com/api/v1';
+        // $this->baseUrl = 'https://portal.packzy.com/api/v1';
         $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80';
         $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t';
     }

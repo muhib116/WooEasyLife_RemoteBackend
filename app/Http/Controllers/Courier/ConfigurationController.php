@@ -63,20 +63,20 @@ class ConfigurationController extends Controller
             'user_id' => Auth::id(),
         ];
 
-        $statusCode = 200;
-        try {
-            $response = Http::withHeaders([
-                'Api-Key' => $data['api_key'],
-                'Secret-Key' => $data['secret_key'],
-                'Content-Type' => 'application/json',
-            ])->get($this->baseUrl . '/get_balance');
-            $statusCode = $response->status();
-        } catch (\Throwable $th) {
-        }
+        // $statusCode = 200;
+        // try {
+        //     $response = Http::withHeaders([
+        //         'Api-Key' => $data['api_key'],
+        //         'Secret-Key' => $data['secret_key'],
+        //         'Content-Type' => 'application/json',
+        //     ])->get($this->baseUrl . '/get_balance');
+        //     $statusCode = $response->status();
+        // } catch (\Throwable $th) {
+        // }
 
-        if ($statusCode != 200) {
-            return $this->errorResponse('Invalid api key or secret key.');
-        }
+        // if ($statusCode != 200) {
+        //     return $this->errorResponse('Invalid api key or secret key.');
+        // }
 
         // Check if ID is provided for an existing record
         if ($request->filled('id')) {
