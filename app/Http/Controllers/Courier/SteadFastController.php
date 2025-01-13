@@ -180,6 +180,12 @@ class SteadFastController extends Controller
 
     public function createBulkOrder(Request $request)
     {
+        $config = $this->getConfig();
+
+        if (!$config) {
+            return $this->errorResponse('The SteadFast settings are not configured properly.');
+        }
+
         $validator = Validator::make($request->all(), [
             'orders' => 'required|array',
             'orders.*.recipient_name' => 'required|string',
@@ -205,11 +211,24 @@ class SteadFastController extends Controller
             ];
         }, $orders);
 
-        return $this->successResponse($data);
+        // return $this->successResponse($data);
 
-        // $response = $this->bulkCreateOrders($data);
+        try {
+            $response = Http::withHeaders([
+                'Api-Key' => $config->api_key,
+                'Secret-Key' => $config->secret_key,
+                'Content-Type' => 'application/json',
+            ])->post($this->baseUrl . '/create_order/bulk-order', [
+                'data' => json_encode($data)
+            ]);
 
-        // return $this->successResponse($response);
+            $response = $response->json();
+            return $this->successResponse($response);
+        } catch (\Throwable $th) {
+            //throw $th;
+            // return $this->errorResponse("There's an error while creating error");
+            return $this->errorResponse($th->getMessage());
+        }
     }
 
     private function placeOrder($data)
