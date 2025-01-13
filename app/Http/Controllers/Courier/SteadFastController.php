@@ -222,8 +222,11 @@ class SteadFastController extends Controller
                 'data' => json_encode($data)
             ]);
 
-            $response = $response->json();
-            return $this->successResponse($response);
+            $data = $response->getBody()->getContents();
+
+            // $response = $response->json();
+
+            return $this->successResponse($data);
         } catch (\Throwable $th) {
             //throw $th;
             // return $this->errorResponse("There's an error while creating error");
