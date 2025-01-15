@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     })->name('icons');
 });
 Route::middleware('auth')->group(function () {
+    Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
     Route::get('/icons', function () {
         return Inertia::render('Icons/Index');
     })->name('icons');

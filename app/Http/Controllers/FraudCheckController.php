@@ -185,54 +185,42 @@ class FraudCheckController extends Controller
             'cancel' => 0,
             'success_rate' => 'No order history found!',
         ];
+
         $url = "https://go-app.paperfly.com.bd/merchant/api/react/smart-check/list.php";
 
-        // cURL initialization
-        $ch = curl_init();
-
-        // Request headers
+        // Headers
         $headers = [
-            "accept: application/json, text/plain, */*",
-            "authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzI4MzIyOTQsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczMjgzMjI5NCwiZXhwIjoxNzMyOTAzMTk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.oFZVgiZkBELRjI5PZH_Qtp21gRT7RZX2VPl_ecwe000",
-            "content-type: application/json",
-            "device_identifier: f87bdfb4-2a54-e9cb-85ea-61d72ccea6cb",
-            "device_name: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            "priority: u=1, i",
-            "sec-ch-ua: \"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
-            "sec-ch-ua-mobile: ?0",
-            "sec-ch-ua-platform: \"macOS\"",
-            "sec-fetch-dest: empty",
-            "sec-fetch-mode: cors",
-            "sec-fetch-site: same-site",
+            "accept" => "application/json, text/plain, */*",
+            "accept-language" => "en-US,en;q=0.9",
+            "authorization" => "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzY5ODI3MzQsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczNjk4MjczNCwiZXhwIjoxNzM3MDUwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.rBV7AWmjLwk8Yo9MBcbGAlwstYzllhTW0FMUd_yYduo",
+            "content-type" => "application/json",
+            "cookie" => "_ga=GA1.1.1330688403.1732138592; _hjSessionUser_3161698=eyJpZCI6ImYyMTFmYmEwLWM5YjMtNTE1Mi1hNTViLTk5OWUzMWM2OWIyZSIsImNyZWF0ZWQiOjE3MzIxMzg1OTkwNzIsImV4aXN0aW5nIjp0cnVlfQ==; _ga_VRFXKXNXYT=GS1.1.1736982728.6.0.1736982730.0.0.0; _hjSession_3161698=eyJpZCI6IjVkNTkzNTczLWI3NjgtNDRjOS04OTBlLTk2NWVlNjgyYzI1MCIsImMiOjE3MzY5ODI3MzE0MjcsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjowLCJzcCI6MH0=; token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3MzY5ODI3MzQsImlzcyI6ImxvY2FsaG9zdCIsIm5iZiI6MTczNjk4MjczNCwiZXhwIjoxNzM3MDUwMzk5LCJ1c2VybmFtZSI6ImMxNjc2NjAiLCJkZXZpY2VJZGVudGlmaWVyIjoiZjg3YmRmYjQtMmE1NC1lOWNiLTg1ZWEtNjFkNzJjY2VhNmNiIn0.rBV7AWmjLwk8Yo9MBcbGAlwstYzllhTW0FMUd_yYduo",
+            "device_identifier" => "f87bdfb4-2a54-e9cb-85ea-61d72ccea6cb",
+            "device_name" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "origin" => "https://go.paperfly.com.bd",
+            "priority" => "u=1, i",
+            "referer" => "https://go.paperfly.com.bd/",
+            "sec-ch-ua" => "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"",
+            "sec-ch-ua-mobile" => "?0",
+            "sec-ch-ua-platform" => "\"macOS\"",
+            "sec-fetch-dest" => "empty",
+            "sec-fetch-mode" => "cors",
+            "sec-fetch-site" => "same-site",
+            "user-agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         ];
 
         // Request body
-        $body = json_encode([
-            "search_text" => $phone,
+        $body = [
+            "search_text" => "01770989591",
             "limit" => 50,
             "page" => 1,
-        ]);
+        ];
 
+        // Send POST request
         try {
-
-            curl_setopt_array($ch, [
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST => true,
-                CURLOPT_HTTPHEADER => $headers,
-                CURLOPT_POSTFIELDS => $body,
-                CURLOPT_FOLLOWLOCATION => true,
-            ]);
-
-            $response = curl_exec($ch);
-
-            if (curl_errno($ch)) {
-                $error_msg = curl_error($ch);
-                curl_close($ch);
-            }
-            curl_close($ch);
-
-            $records = collect(json_decode($response)->records);
+            $response = Http::withHeaders($headers)->post($url, $body);
+            $jsonResponse = $response->json();
+            $records = collect($jsonResponse['records']);
             $delivered = $records->sum('delivered');
             $returned = $records->sum('returned');
             $total_order = $delivered + $returned;
