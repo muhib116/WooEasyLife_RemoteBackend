@@ -12,6 +12,7 @@ use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -104,6 +105,12 @@ Route::middleware('auth')->group(function () {
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 
 require __DIR__ . '/auth.php';
+
+Route::get('/run-migration', function () {
+    Artisan::call('migrate');
+    echo 'Success';
+});
+
 
 // https://inertiaui.com/inertia-tables
 
