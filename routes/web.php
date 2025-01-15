@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
@@ -91,6 +92,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ApiKeyController::class, 'index'])->name('index');
         Route::post('/create', [ApiKeyController::class, 'create'])->name('create');
         Route::post('/delete', [ApiKeyController::class, 'delete'])->name('delete');
+    });
+    Route::group(['as' => 'plugins.', 'prefix' => 'plugins'], function () {
+        Route::get('/', [PluginsController::class, 'index'])->name('index');
+        Route::post('/create-version', [PluginsController::class, 'createVersion'])->name('createVersion');
+        Route::get('download-plugins/{version}', [PluginsController::class, 'downloadVersion'])->name('downloadVersion');
     });
 });
 
