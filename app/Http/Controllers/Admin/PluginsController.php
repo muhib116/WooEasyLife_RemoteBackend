@@ -79,10 +79,9 @@ class PluginsController extends Controller
 
         $file = file_get_contents($path);
         $type = mime_content_type($path);
-        $fileName = basename($path);
         return Response::make($file, 200, [
             'Content-Type' => $type,
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'inline',
         ]);
     }
 
