@@ -23,17 +23,19 @@ class PluginsController extends Controller
     {
         $request->validate([
             'version' => 'required|unique:plugins_versions,version',
-            'file' => 'required|file|mimes:zip'
+            'file' => 'required|file|mimes:zip',
+            'settings' => 'required|json'
         ]);
 
         $file = $request->file('file');
         $destinationPath = storage_path('/app/private');
 
+        $settings = json_decode($request->settings);
+
         // Create the directory if it does not exist
         if (!file_exists($destinationPath)) {
             mkdir($destinationPath, 0755, true);
         }
-
 
         $fileName = 'wpsalehub-' . $request->version . '.' . $file->extension();
         $file->move($destinationPath, $fileName);
@@ -44,8 +46,10 @@ class PluginsController extends Controller
             'path' => $path,
             'download_count' => 0,
             'created_by' => Auth::id(),
-            'settings' => $request->settings,
+            'settings' => $settings,
         ];
+
+        file_put_contents(public_path('plugins-metadata.json'), json_encode($settings));
 
         PluginsVersion::create($data);
 
@@ -87,20 +91,32 @@ class PluginsController extends Controller
 
     public function downloadApp()
     {
-        $path = storage_path('/app/private/plugins.zip');
+        $plugins = PluginsVersion::orderBy('created_at', 'desc')->first();
+        if (!$plugins) {
+            abort(404);
+        }
+        $path = $plugins->path;
+        $path = storage_path($plugins->path);
 
         if (!file_exists($path)) {
             abort(404);
         }
-
         $file = file_get_contents($path);
         $type = mime_content_type($path);
-
         $fileName = basename($path);
         return Response::make($file, 200, [
             'Content-Type' => $type,
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
         ]);
+    }
+    public function getMetadata()
+    {
+        $plugins = PluginsVersion::orderBy('created_at', 'desc')->first();
+        if (!$plugins) {
+            abort(404);
+        }
+
+        return $plugins->settings;
     }
     public function pluginsMetadata()
     {

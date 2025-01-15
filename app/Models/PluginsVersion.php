@@ -11,6 +11,9 @@ class PluginsVersion extends Model
 
     protected $guarded = ['id'];
     protected $with = ['creator'];
+    protected $casts = [
+        'settings' => 'json'
+    ];
 
     public function creator()
     {

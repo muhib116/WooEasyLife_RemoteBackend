@@ -1,14 +1,1 @@
-{
-    "name": "Your Plugin Name",
-    "slug": "your-plugin-slug",
-    "version": "1.1.0",
-    "download_url": "https://yourserver.com/plugin-name.zip",
-    "requires": "5.0",
-    "tested": "6.2",
-    "last_updated": "2025-01-01",
-    "homepage": "https://yourwebsite.com",
-    "sections": {
-        "description": "Your plugin description goes here.",
-        "changelog": "Version 1.1.0: Fixed bugs and added new features."
-    }
-}
+{"name":"Your Plugin Name","slug":"your-plugin-slug","version":"1.1.0","download_url":"https:\/\/yourserver.com\/plugin-name.zip","requires":"5.0","tested":"6.2","last_updated":"2025-01-01","homepage":"https:\/\/yourwebsite.com","sections":{"description":"Your plugin description goes here.","changelog":"Version 1.1.0: Fixed bugs and added new features."}}

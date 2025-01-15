@@ -100,6 +100,22 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-4 mb-8">
+                    <div for="version" class="font-semibold w-24">Version</div>
+                    <div class="flex-auto relative">
+                        <Textarea
+                            class="w-full"
+                            v-model="form.settings"
+                            rows="5"
+                            cols="30"
+                        />
+                        <span
+                            v-if="form.errors.version"
+                            class="absolute -bottom-6 left-0 text-red-500"
+                            >{{ form.errors.version }}</span
+                        >
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 mb-8">
                     <div for="version" class="font-semibold w-24">File</div>
                     <div class="flex-auto relative">
                         <label
@@ -163,6 +179,7 @@ const form = useForm({
     id: null,
     version: "",
     file: null,
+    settings: null,
 });
 
 const fileName = computed(() => {
