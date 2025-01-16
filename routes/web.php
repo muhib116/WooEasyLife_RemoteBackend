@@ -59,7 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/primeicons', function () {
         return Inertia::render('Icons/Prime');
     })->name('icons.prime');
-    
+
     Route::group(['as' => 'products.', 'prefix' => 'products'], function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::post('/filter', [ProductController::class, 'filter'])->name('filter');
@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'plugins.', 'prefix' => 'plugins'], function () {
         Route::get('/', [PluginsController::class, 'index'])->name('index');
         Route::post('/create-version', [PluginsController::class, 'createVersion'])->name('createVersion');
-        Route::post('/{plugins_version_id}/update-version', [PluginsController::class, 'updateVersion'])->name('updateVersion');
+        Route::post('/{id}/update-version', [PluginsController::class, 'updateVersion'])->name('updateVersion');
         Route::get('download-plugins/{version}', [PluginsController::class, 'downloadVersion'])->name('downloadVersion');
     });
 });

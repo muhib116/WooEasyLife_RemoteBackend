@@ -224,6 +224,7 @@ const handleFileSelect = (event) => {
 
 const handleCreate = () => {
     if (form.id) {
+        form.settings = JSON.stringify(form.settings);
         form.post(route("plugins.updateVersion", form.id), {
             onSuccess(event) {
                 if (!Object.keys(event.props?.errors || {}).length) {

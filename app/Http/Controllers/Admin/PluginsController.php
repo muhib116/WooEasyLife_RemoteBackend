@@ -57,10 +57,11 @@ class PluginsController extends Controller
     }
     public function updateVersion(Request $request, $id)
     {
-        dd($id);
+        $pluginsVersion = PluginsVersion::findOrFail($id);
         $request->validate([
             'version' => 'required|unique:plugins_versions,version,' . $pluginsVersion->id,
-            'settings' => 'required|json'
+            'settings' => 'required',
+            'file' => 'nullable|mimes:zip'
         ]);
 
         $file = $request->file('file');
@@ -87,7 +88,7 @@ class PluginsController extends Controller
             'settings' => $settings,
         ];
 
-        if ($path) {
+        if (isset($path) && $path) {
             $data['path'] = $path;
         }
 
