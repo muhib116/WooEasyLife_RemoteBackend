@@ -145,6 +145,43 @@ class SteadFastController extends Controller
         }
     }
 
+    public function checkCourierBalance(Request $request)
+    {
+
+        $steadfastBalance = 0;
+
+        try {
+            $config = $this->getConfig();
+            $response = Http::withHeaders([
+                'Api-Key' => $config->api_key,
+                'Secret-Key' => $config->secret_key,
+                'Content-Type' => 'application/json',
+            ])->get($this->baseUrl . '/get_balance');
+            $jsonResponse = $response->json();
+            $steadfastBalance = $jsonResponse['current_balance'];
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+
+        $responseData = [
+            'steadfast' => [
+                'logo' => asset('images/steadfast.png'),
+                'balance' => $steadfastBalance
+            ],
+            'paperfly' => [
+                'logo' => asset('images/paperfly.png'),
+                'balance' => 0
+            ],
+            'redx' => [
+                'logo' => asset('images/redx.png'),
+                'balance' => 0
+            ],
+            'total' => $steadfastBalance,
+        ];
+
+        return $this->successResponse($responseData);
+    }
+
     public function createOrder(Request $request)
     {
         $config = $this->getConfig();

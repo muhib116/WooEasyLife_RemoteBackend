@@ -55,6 +55,46 @@ class PluginsController extends Controller
 
         return back()->with('success', 'Version created successfully');
     }
+    public function updateVersion(Request $request, $id)
+    {
+        dd($id);
+        $request->validate([
+            'version' => 'required|unique:plugins_versions,version,' . $pluginsVersion->id,
+            'settings' => 'required|json'
+        ]);
+
+        $file = $request->file('file');
+        if ($file) {
+            $destinationPath = storage_path('/app/private');
+
+
+            // Create the directory if it does not exist
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
+            $fileName = 'wpsalehub-' . $request->version . '.' . $file->extension();
+            $file->move($destinationPath, $fileName);
+            $path = 'app/private/' . $fileName;
+        }
+        $settings = json_decode($request->settings);
+        file_put_contents(public_path('plugins-metadata.json'), json_encode($settings));
+
+        $data = [
+            'version' => $request->version,
+            'download_count' => 0,
+            'created_by' => Auth::id(),
+            'settings' => $settings,
+        ];
+
+        if ($path) {
+            $data['path'] = $path;
+        }
+
+        $pluginsVersion->update($data);
+
+        return back()->with('success', 'Version updated successfully');
+    }
 
     public function downloadVersion($version)
     {

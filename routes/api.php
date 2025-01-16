@@ -44,6 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/save-configuration', [ConfigurationController::class, 'saveConfiguration']);
         Route::post('/get-configuration', [ConfigurationController::class, 'getConfiguration']);
     });
+    
+    Route::get('check-courier-balance', [SteadFastController::class, 'checkCourierBalance']);
 
     Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
         Route::post('/create-order', [SteadFastController::class, 'createOrder']);

@@ -51,20 +51,28 @@
                             </Column>
                             <Column header="Actions">
                                 <template #body="{ data }">
-                                    <a
-                                        :href="
-                                            route(
-                                                'plugins.downloadVersion',
-                                                data.version
-                                            )
-                                        "
-                                        download
-                                    >
+                                    <div class="flex gap-3">
+                                        <a
+                                            :href="
+                                                route(
+                                                    'plugins.downloadVersion',
+                                                    data.version
+                                                )
+                                            "
+                                            download
+                                        >
+                                            <Button
+                                                class="!size-8"
+                                                icon="pi pi-cloud-download"
+                                            />
+                                        </a>
                                         <Button
+                                            @click="handleEdit(data)"
                                             class="!size-8"
-                                            icon="pi pi-cloud-download"
+                                            severity="help"
+                                            icon="pi pi-file-edit"
                                         />
-                                    </a>
+                                    </div>
                                 </template>
                             </Column>
                         </DataTable>
@@ -102,16 +110,20 @@
                 <div class="flex items-center gap-4 mb-8">
                     <div for="version" class="font-semibold w-24">Version</div>
                     <div class="flex-auto relative">
-                        <Textarea
+                        <!-- <CodeEditor.Base
                             class="w-full"
                             v-model="form.settings"
-                            rows="5"
-                            cols="30"
-                        />
+                        /> -->
+                        <textarea
+                            class="w-full"
+                            rows="8"
+                            @change="form.settings"
+                            >{{ form.settings }}</textarea
+                        >
                         <span
-                            v-if="form.errors.version"
+                            v-if="form.errors.settings"
                             class="absolute -bottom-6 left-0 text-red-500"
-                            >{{ form.errors.version }}</span
+                            >{{ form.errors.settings }}</span
                         >
                     </div>
                 </div>
@@ -165,6 +177,7 @@ import { useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 import { get } from "lodash";
 import { format } from "date-fns";
+import { CodeEditor } from "@/plugins";
 
 defineOptions({
     name: "Plugins",
@@ -194,6 +207,13 @@ watch(showForm, () => {
     }
 });
 
+const handleEdit = (item: PluginsVersion) => {
+    form.id = item.id;
+    form.version = item.version;
+    form.settings = item.settings;
+    showForm.value = true;
+};
+
 const handleFileSelect = (event) => {
     const file = get(event, "target.files[0]");
     if (file) {
@@ -203,13 +223,24 @@ const handleFileSelect = (event) => {
 };
 
 const handleCreate = () => {
-    form.post(route("plugins.createVersion"), {
-        onSuccess(event) {
-            if (!Object.keys(event.props?.errors || {}).length) {
-                form.reset();
-                showForm.value = false;
-            }
-        },
-    });
+    if (form.id) {
+        form.post(route("plugins.updateVersion", form.id), {
+            onSuccess(event) {
+                if (!Object.keys(event.props?.errors || {}).length) {
+                    form.reset();
+                    showForm.value = false;
+                }
+            },
+        });
+    } else {
+        form.post(route("plugins.createVersion"), {
+            onSuccess(event) {
+                if (!Object.keys(event.props?.errors || {}).length) {
+                    form.reset();
+                    showForm.value = false;
+                }
+            },
+        });
+    }
 };
 </script>
