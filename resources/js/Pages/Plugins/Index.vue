@@ -84,6 +84,7 @@
             v-model:visible="showForm"
             :header="`${form.id ? 'Edit' : 'Create'} Version`"
             modal
+            maximizable
             :style="{ width: '35rem' }"
             :draggable="true"
         >
