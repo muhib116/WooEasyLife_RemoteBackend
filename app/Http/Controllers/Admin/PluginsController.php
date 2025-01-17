@@ -153,7 +153,11 @@ class PluginsController extends Controller
             abort(404);
         }
 
-        return $plugins->settings;
+        try {
+            return json_decode($plugins->settings);
+        } catch (\Throwable $th) {
+            return $plugins->settings;
+        }
     }
     public function pluginsMetadata()
     {
