@@ -124,7 +124,11 @@
                         <textarea
                             class="w-full"
                             rows="8"
-                            @change="form.settings"
+                            @input="
+                                (ev) => {
+                                    form.settings = ev.target?.value;
+                                }
+                            "
                             >{{ form.settings }}</textarea
                         >
                         <span
@@ -230,12 +234,12 @@ const handleFileSelect = (event) => {
 };
 
 const handleDelete = (id) => {
-    router.post(route('plugins.deleteVersion', id))
-}
+    router.post(route("plugins.deleteVersion", id));
+};
 
 const handleCreate = () => {
     if (form.id) {
-        form.settings = JSON.stringify(form.settings);
+        form.settings = form.settings;
         form.post(route("plugins.updateVersion", form.id), {
             onSuccess(event) {
                 if (!Object.keys(event.props?.errors || {}).length) {
