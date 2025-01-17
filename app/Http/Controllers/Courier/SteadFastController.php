@@ -176,6 +176,10 @@ class SteadFastController extends Controller
                 'logo' => asset('images/redx.png'),
                 'balance' => 0
             ],
+            'pathao' => [
+                'logo' => asset('images/pathao.png'),
+                'balance' => 0
+            ],
             'total' => $steadfastBalance,
         ];
 
