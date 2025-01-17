@@ -36,9 +36,9 @@ Route::middleware('auth:sanctum')->get('/validate-token', function (Request $req
 Route::get('app-logo', [PluginsController::class, 'appLogo']);
 
 Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
+Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
     Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
         Route::post('/list', [ConfigurationController::class, 'getList']);
