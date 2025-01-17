@@ -175,4 +175,22 @@ class PluginsController extends Controller
             'Content-Disposition' => 'inline',
         ]);
     }
+
+
+    public function deleteVersion($id)
+    {
+        $version = PluginsVersion::findOrFail($id);
+
+        $path = storage_path($version->path);
+
+        try {
+            if (file_exists($path)) {
+                unlink($path);
+            }
+        } catch (\Throwable $th) {
+        }
+        $version->delete();
+        return back()->with('success', 'Version deleted successfully');
+    }
+
 }

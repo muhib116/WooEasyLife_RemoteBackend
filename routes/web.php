@@ -99,6 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'plugins.', 'prefix' => 'plugins'], function () {
         Route::get('/', [PluginsController::class, 'index'])->name('index');
         Route::post('/create-version', [PluginsController::class, 'createVersion'])->name('createVersion');
+        Route::post('/{id}/delete-version', [PluginsController::class, 'deleteVersion'])->name('deleteVersion');
         Route::post('/{id}/update-version', [PluginsController::class, 'updateVersion'])->name('updateVersion');
         Route::get('download-plugins/{version}', [PluginsController::class, 'downloadVersion'])->name('downloadVersion');
     });

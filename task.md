@@ -14,3 +14,6 @@
 => whatsApp Message api
 => messenger access
 => Domain whitelisting
+
+== api token manage with domain with time limit.
+    -- apply charge

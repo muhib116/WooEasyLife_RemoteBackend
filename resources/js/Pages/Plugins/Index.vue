@@ -72,6 +72,12 @@
                                             severity="help"
                                             icon="pi pi-file-edit"
                                         />
+                                        <Button
+                                            @click="handleDelete(data.id)"
+                                            class="!size-8"
+                                            severity="danger"
+                                            icon="pi pi-trash"
+                                        />
                                     </div>
                                 </template>
                             </Column>
@@ -174,7 +180,7 @@
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
 import { PluginsVersion } from "@/types";
-import { useForm } from "@inertiajs/vue3";
+import { router, useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 import { get } from "lodash";
 import { format } from "date-fns";
@@ -222,6 +228,10 @@ const handleFileSelect = (event) => {
         form.errors.file = "";
     }
 };
+
+const handleDelete = (id) => {
+    router.post(route('plugins.deleteVersion', id))
+}
 
 const handleCreate = () => {
     if (form.id) {
