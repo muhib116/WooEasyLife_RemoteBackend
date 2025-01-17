@@ -49,8 +49,6 @@ class PluginsController extends Controller
             'settings' => $settings,
         ];
 
-        file_put_contents(public_path('plugins-metadata.json'), json_encode($settings));
-
         PluginsVersion::create($data);
 
         return back()->with('success', 'Version created successfully');
@@ -78,14 +76,12 @@ class PluginsController extends Controller
             $file->move($destinationPath, $fileName);
             $path = 'app/private/' . $fileName;
         }
-        $settings = json_decode($request->settings);
-        file_put_contents(public_path('plugins-metadata.json'), json_encode($settings));
 
         $data = [
             'version' => $request->version,
             'download_count' => 0,
             'created_by' => Auth::id(),
-            'settings' => $settings,
+            'settings' => $request->settings,
         ];
 
         if (isset($path) && $path) {
