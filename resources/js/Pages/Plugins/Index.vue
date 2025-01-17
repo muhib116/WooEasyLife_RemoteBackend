@@ -234,7 +234,9 @@ const handleFileSelect = (event) => {
 };
 
 const handleDelete = (id) => {
-    router.post(route("plugins.deleteVersion", id));
+    if (confirm("Do you want to delete this?")) {
+        router.post(route("plugins.deleteVersion", id));
+    }
 };
 
 const handleCreate = () => {

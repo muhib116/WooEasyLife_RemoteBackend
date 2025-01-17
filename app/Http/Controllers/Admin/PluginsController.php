@@ -182,6 +182,15 @@ class PluginsController extends Controller
         $version = PluginsVersion::findOrFail($id);
 
         $path = storage_path($version->path);
+        $version->delete();
+        return back()->with('success', 'Version deleted successfully');
+    }
+
+    public function forceDeleteVersion($id)
+    {
+        $version = PluginsVersion::findOrFail($id);
+
+        $path = storage_path($version->path);
 
         try {
             if (file_exists($path)) {
@@ -192,5 +201,4 @@ class PluginsController extends Controller
         $version->delete();
         return back()->with('success', 'Version deleted successfully');
     }
-
 }
