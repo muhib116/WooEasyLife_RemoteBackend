@@ -29,10 +29,16 @@
                             <template #body="{ data }">
                                 <div class="flex gap-2">
                                     <Button
+                                        severity="primary"
+                                        size="small"
+                                        @click="() => handleCopy(data)"
+                                        icon="pi pi-copy"
+                                    />
+                                    <Button
                                         severity="info"
                                         size="small"
                                         @click="() => handleEdit(data)"
-                                        icon="pi pi-file-edit"
+                                        icon="pi pi-pencil"
                                     />
                                     <Button
                                         severity="danger"
@@ -48,7 +54,6 @@
                 </div>
             </template>
         </Card>
-        <Toast />
         <Dialog
             v-model:visible="showForm"
             :header="`${tokenForm.id ? 'Edit' : 'Create'} Api Token`"
@@ -99,26 +104,15 @@
                     </div>
                     <div class="flex-auto relative">
                         <div class="flex-auto">
-                            <label
-                                for="datepicker-12h"
-                                class="font-bold block mb-2"
-                            >
-                                12h Format
-                            </label>
                             <DatePicker
                                 id="datepicker-12h"
                                 v-model="tokenForm.expires_at"
                                 showTime
                                 hourFormat="12"
+                                dateFormat="dd/mm/yy"
                                 fluid
                             />
                         </div>
-                        <!-- <DatePicker
-                            v-model="tokenForm.expires_at"
-                            id="expires_at"
-                            placeholder="expires_at"
-                            class="!w-full"
-                        /> -->
                         <span
                             v-if="tokenForm.errors.expires_at"
                             class="absolute -bottom-6 left-0 text-red-500"
@@ -142,13 +136,14 @@
                 </div>
             </form>
         </Dialog>
+        <Toast />
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
 import { router, useForm } from "@inertiajs/vue3";
-import { format } from "date-fns";
+import { parseISO, formatISO, format } from "date-fns";
 import { ref } from "vue";
 import axios from "axios";
 import { useClipboard } from "@vueuse/core";
@@ -181,6 +176,11 @@ const tokenForm = useForm({
 const handleEdit = (item) => {
     tokenForm.id = item.id;
     tokenForm.expires_at = item.expires_at;
+    if (item.expires_at) {
+        const parsedDate = parseISO(item.expires_at);
+        tokenForm.expires_at = parsedDate; // format(parsedDate, "MM/dd/yyyy hh:mm a");
+    }
+    // MM/dd/yyyy hh:mm a
     tokenForm.abilities = item.abilities;
     tokenForm.description = item.description;
     tokenForm.domain = item.domain;
@@ -214,7 +214,7 @@ function formatExpiresAt(expiresAt) {
         return "No Expiration";
     }
 
-    return format(new Date(expiresAt), "PPpp"); // Example: Jan 18, 2025, 12:00 AM
+    return format(new Date(expiresAt), "PPp"); // Example: Jan 18, 2025, 12:00 AM
 }
 
 const form = useForm({
@@ -222,7 +222,7 @@ const form = useForm({
 });
 
 const handleCopy = (item) => {
-    copy(item.token);
+    copy(item.bearer_token);
     toast.add({
         severity: "success",
         summary: "Success",

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use App\Models\AccessToken;
+use Illuminate\Support\Carbon;
 
 class ApiKeyController extends Controller
 {
@@ -75,7 +76,7 @@ class ApiKeyController extends Controller
         $accessToken->update([
             'description' => $request->description ?? null,
             'domain' => $request->domain ?? null,
-            'expires_at' => $request->expires_at ?? null
+            'expires_at' => $request->expires_at ? Carbon::parse($request->expires_at) : null
         ]);
 
         return back()->with('success', 'Access token info updated successfully!');
