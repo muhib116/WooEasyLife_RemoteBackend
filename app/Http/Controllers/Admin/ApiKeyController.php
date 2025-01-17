@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -27,12 +28,15 @@ class ApiKeyController extends Controller
 
     public function create(Request $request)
     {
-        $user = Auth::user();
-        $token = $request->user()->createToken(
-            $user->name . '(' . $user->id . ')',
-            ['*']
-        );
-        return $token;
+        // $user = Auth::user();
+        $user = User::find(Auth::id());
+        $existingToken = $user->tokens()->latest()->first();
+        dd($existingToken->plainTextToken);
+        // $token = $request->user()->createToken(
+        //     $user->name . '(' . $user->id . ')',
+        //     ['*']
+        // );
+        // return $token;
         // return $user->createToken('Token Name')->accessToken;
     }
     public function delete(Request $request)

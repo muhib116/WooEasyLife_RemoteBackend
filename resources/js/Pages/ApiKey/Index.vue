@@ -90,17 +90,18 @@ const handleDeleteToken = async (item) => {
 };
 
 const handleGenerate = async () => {
-    isLoading.value = true;
-    await axios.post(route("apiKeys.create"));
-    toast.add({
-        severity: "success",
-        summary: "Success",
-        detail: "Token created successfully",
-        life: 3000,
-    });
-    isLoading.value = false;
-    router.reload({
-        only: ["tokens"],
-    });
+    // isLoading.value = true;
+    form.post(route("apiKeys.create"));
+    // await axios.post(route("apiKeys.create"));
+    // toast.add({
+    //     severity: "success",
+    //     summary: "Success",
+    //     detail: "Token created successfully",
+    //     life: 3000,
+    // });
+    // isLoading.value = false;
+    // router.reload({
+    //     only: ["tokens"],
+    // });
 };
 </script>
