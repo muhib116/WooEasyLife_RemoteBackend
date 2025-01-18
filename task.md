@@ -16,4 +16,7 @@
 => Domain whitelisting
 
 == api token manage with domain with time limit.
-    -- apply charge
+-- apply charge
+
+/////////////
+**id required with phone number in fraud check api**

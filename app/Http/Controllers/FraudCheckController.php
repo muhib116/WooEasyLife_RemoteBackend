@@ -54,10 +54,10 @@ class FraudCheckController extends Controller
         $users = [];
         foreach ($numbers as $number) {
             $request = new PathaoUserSuccessRateRequest();
-            $request->merge(['phone' => $number]);
-            $report = $this->getReport($request, $number);
+            $request->merge(['phone' => $number['phone']]);
+            $report = $this->getReport($request, $number['phone']);
             $users[] = [
-                'phone' => $number,
+                ...$number,
                 'report' => $report
             ];
         }
@@ -67,8 +67,8 @@ class FraudCheckController extends Controller
     public function check(Request $request)
     {
         $phone = $request->phone;
-        if (is_array($phone)) {
-            return $this->successResponse($this->checkMultiple($phone));
+        if (is_array(@$request->data)) {
+            return $this->successResponse($this->checkMultiple($request->data));
         } else {
             $request = new PathaoUserSuccessRateRequest();
             $request->merge(['phone' => $phone]);
