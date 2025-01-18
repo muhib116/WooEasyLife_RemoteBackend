@@ -49,7 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('check-courier-balance', [SteadFastController::class, 'checkCourierBalance']);
 
     Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
-        Route::post('/create-order', [SteadFastController::class, 'createOrder']);
+        Route::post('/crea\te-order', [SteadFastController::class, 'createOrder']);
         Route::post('/create-bulk-order', [SteadFastController::class, 'createBulkOrder']);
         Route::post('/check-status', [SteadFastController::class, 'checkStatus']);
         Route::post('/bulk-check-status', [SteadFastController::class, 'bulkCheckStatus']);

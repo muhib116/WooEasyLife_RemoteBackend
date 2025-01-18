@@ -54,10 +54,10 @@ class FraudCheckController extends Controller
         $users = [];
         foreach ($numbers as $number) {
             $request = new PathaoUserSuccessRateRequest();
-            $request->merge(['phone' => $number['phone']]);
-            $report = $this->getReport($request, $number['phone']);
+            $request->merge(['phone' => $number]);
+            $report = $this->getReport($request, $number);
             $users[] = [
-                ...$number,
+                'phone' => $number,
                 'report' => $report
             ];
         }
