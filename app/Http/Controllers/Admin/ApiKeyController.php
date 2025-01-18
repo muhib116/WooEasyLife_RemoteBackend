@@ -15,6 +15,20 @@ use Illuminate\Support\Carbon;
 
 class ApiKeyController extends Controller
 {
+    private function decodeToken($encryptedToken)
+    {
+        try {
+            return Crypt::decryptString($encryptedToken);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            // Handle decryption error (e.g., log the error, throw an exception, etc.)
+            return null;
+        }
+    }
+
+    private function encodeToken($token)
+    {
+        return Crypt::encryptString($token);
+    }
     public function index()
     {
         // $users = User::where('role', 'user')->get();
@@ -25,7 +39,7 @@ class ApiKeyController extends Controller
                 'expires_at' => $token->expires_at,
                 'domain' => $token->domain,
                 'description' => $token->description,
-                'bearer_token' => decodeToken($token->access_key),
+                'bearer_token' => $this->decodeToken($token->access_key),
                 'title' => $token->title,
                 'abilities' => $token->abilities,
                 'name' => $token->name,
@@ -55,7 +69,7 @@ class ApiKeyController extends Controller
 
         $accessToken = AccessToken::find($accessToken->id);
         $accessToken->update([
-            'access_key' => encodeToken($plainTextToken),
+            'access_key' => $this->encodeToken($plainTextToken),
             'title' => $title,
             'domain' => $request->domain ?? null,
             'expires_at' => $request->expires_at ?? null
