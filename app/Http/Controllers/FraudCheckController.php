@@ -57,7 +57,7 @@ class FraudCheckController extends Controller
             $request->merge(['phone' => $number['phone']]);
             $report = $this->getReport($request, $number['phone']);
             $users[] = [
-                ...$number,
+                ...$number, // return all keys that comes throw number.
                 'report' => $report
             ];
         }
