@@ -68,7 +68,7 @@ class FraudCheckController extends Controller
     {
         $phone = $request->phone;
         if (is_array($phone)) {
-            return $this->checkMultiple($phone);
+            return $this->successResponse($this->checkMultiple($phone));
         } else {
             $request = new PathaoUserSuccessRateRequest();
             $request->merge(['phone' => $phone]);
