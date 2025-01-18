@@ -53,12 +53,12 @@ class ApiKeyController extends Controller
     public function create(Request $request)
     {
 
-        $request->validate([
-            'domain' => [
-                'required',
-                'regex:/^(https?:\/\/)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}(\/.*)?$/'
-            ],
-        ]);
+        // $request->validate([
+        //     'domain' => [
+        //         'nullable',
+        //         'regex:/^(https?:\/\/)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}(\/.*)?$/'
+        //     ],
+        // ]);
         // dd($request->all());
 
         $user = User::find(Auth::id());
@@ -79,12 +79,12 @@ class ApiKeyController extends Controller
     public function update(Request $request, $id)
     {
 
-        $request->validate([
-            'domain' => [
-                'required',
-                'regex:/^(https?:\/\/)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}(\/.*)?$/'
-            ],
-        ]);
+        // $request->validate([
+        //     'domain' => [
+        //         'required',
+        //         'regex:/^(https?:\/\/)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}(\/.*)?$/'
+        //     ],
+        // ]);
 
         $accessToken = AccessToken::findOrFail($id);
         // dd($accessToken);
