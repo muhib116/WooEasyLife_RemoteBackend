@@ -17,6 +17,7 @@ class ApiKeyController extends Controller
 {
     public function index()
     {
+        // $users = User::where('role', 'user')->get();
         $user = Auth::user();
         $tokens = $user->tokens->map(function ($token) {
             return [
