@@ -1,17 +1,13 @@
 <?php
 
-use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Courier\ConfigurationController;
 use App\Http\Controllers\Courier\PathaoController;
 use App\Http\Controllers\Courier\RedXController;
 use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\FraudCheckController;
-use App\Http\Controllers\Message\PutMessageController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,7 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('check-courier-balance', [SteadFastController::class, 'checkCourierBalance']);
 
     Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
-        Route::post('/crea\te-order', [SteadFastController::class, 'createOrder']);
+        Route::post('/create-order', [SteadFastController::class, 'createOrder']);
         Route::post('/create-bulk-order', [SteadFastController::class, 'createBulkOrder']);
         Route::post('/check-status', [SteadFastController::class, 'checkStatus']);
         Route::post('/bulk-check-status', [SteadFastController::class, 'bulkCheckStatus']);
