@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::group(['as' => 'redx.', 'prefix' => 'redx'], function () {
         Route::post('/get-areas', [RedXController::class, 'getArea']);
         Route::post('/create-order', [RedXController::class, 'createOrder']);
+        Route::post('/track-parcel', [RedXController::class, 'trackParcel']);
         Route::post('/create-bulk-order', [RedXController::class, 'createBulkOrder']);
         Route::post('/check-balance', [RedXController::class, 'checkBalance']);
     });
