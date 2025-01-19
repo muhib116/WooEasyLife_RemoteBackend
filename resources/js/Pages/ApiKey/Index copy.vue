@@ -3,75 +3,7 @@
         <Card class="dark:bg-slate-900 dark:text-white">
             <template #title>
                 <div class="flex justify-between items-center gap-5">
-                    User list
-                </div>
-            </template>
-            <template #content>
-                <div class="min-h-[400px]">
-                    <DataTable :value="users" tableStyle="min-width: 50rem">
-                        <Column field="name" header="Name" />
-                        <Column field="email" header="Email" />
-                        <Column header="Token Length">
-                            <template #body="{ data }">
-                                <div v-if="data?.tokens?.length">
-                                    <span
-                                        class="text-purple-800pr-2 font-bold"
-                                        >{{ data?.tokens?.length }}</span
-                                    >
-                                </div>
-                                <span v-else> No token available </span>
-                            </template>
-                        </Column>
-                        <!-- <Column field="last_used_ago" header="Last used ago" />
-                        <Column field="domain" header="Accessed Domain" /> -->
-                        <!-- <Column field="abilities" header="Abilities" /> -->
-                        <!-- <Column field="expires_at" header="Expires At">
-                            <template #body="{ data }">
-                                {{ formatExpiresAt(data?.expires_at) }}
-                            </template>
-                        </Column> -->
-                        <Column
-                            header="Action"
-                            headerClass="text-right w-[12rem]"
-                        >
-                            <template #body="{ data }">
-                                <div class="flex gap-2">
-                                    <Button
-                                        severity="help"
-                                        size="small"
-                                        @click="() => showDetails(data)"
-                                        icon="pi pi-eye"
-                                    />
-                                    <!-- <Button
-                                        severity="danger"
-                                        :loading="data?.loading"
-                                        size="small"
-                                        @click="() => handleDeleteToken(data)"
-                                        icon="pi pi-trash"
-                                    /> -->
-                                </div>
-                            </template>
-                        </Column>
-                    </DataTable>
-                </div>
-            </template>
-        </Card>
-
-        <Dialog
-            v-model:visible="selectedUser"
-            modal
-            maximizable
-            :style="{ width: '100%', maxWidth: '80rem' }"
-            :draggable="true"
-        >
-            <template #header>
-                <div class="flex items-center justify-between flex-1 pr-5">
-                    <div>
-                        Api Keys of
-                        <span class="font-bold text-purple-500">{{
-                            selectedUser?.name
-                        }}</span>
-                    </div>
+                    Api Tokens
                     <Button
                         label="Generate Token"
                         icon="pi pi-plus"
@@ -80,14 +12,48 @@
                     />
                 </div>
             </template>
-            <Details
-                v-if="selectedUser"
-                :user="selectedUser"
-                @handleCopy="(_token) => handleCopy(_token)"
-                @handleEdit="(_token) => handleEdit(_token)"
-                @handleDeleteToken="(_token) => handleDeleteToken(_token)"
-            />
-        </Dialog>
+            <template #content>
+                <div class="min-h-[400px]">
+                    <DataTable :value="tokens" tableStyle="min-width: 50rem">
+                        <Column field="name" header="Name" />
+                        <Column field="description" header="Description" />
+                        <!-- <Column field="abilities" header="Abilities" /> -->
+                        <Column field="last_used_ago" header="Last used ago" />
+                        <Column field="domain" header="Accessed Domain" />
+                        <Column field="expires_at" header="Expires At">
+                            <template #body="{ data }">
+                                {{ formatExpiresAt(data?.expires_at) }}
+                            </template>
+                        </Column>
+                        <Column header="Action" headerClass="text-right">
+                            <template #body="{ data }">
+                                <div class="flex gap-2">
+                                    <Button
+                                        severity="primary"
+                                        size="small"
+                                        @click="() => handleCopy(data)"
+                                        icon="pi pi-copy"
+                                    />
+                                    <Button
+                                        severity="info"
+                                        size="small"
+                                        @click="() => handleEdit(data)"
+                                        icon="pi pi-pencil"
+                                    />
+                                    <Button
+                                        severity="danger"
+                                        :loading="data?.loading"
+                                        size="small"
+                                        @click="() => handleDeleteToken(data)"
+                                        icon="pi pi-trash"
+                                    />
+                                </div>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
+            </template>
+        </Card>
         <Dialog
             v-model:visible="showForm"
             :header="`${tokenForm.id ? 'Edit' : 'Create'} Api Token`"
@@ -95,7 +61,6 @@
             maximizable
             :style="{ width: '35rem' }"
             :draggable="true"
-            @hide="tokenForm.reset()"
         >
             <form @submit.prevent="handleSave">
                 <div class="flex flex-col gap-1 mb-2">
@@ -182,9 +147,8 @@ import { parseISO, formatISO, format } from "date-fns";
 import { ref } from "vue";
 import axios from "axios";
 import { useClipboard } from "@vueuse/core";
-import { set, size, find } from "lodash";
+import { set } from "lodash";
 import { useToast } from "primevue/usetoast";
-import Details from "./Details.vue";
 
 const { text, copy, copied, isSupported } = useClipboard();
 const toast = useToast();
@@ -193,33 +157,25 @@ defineOptions({
     name: "FraudCheck",
 });
 
-const props = defineProps<{
-    users: any[];
+defineProps<{
+    tokens: any[];
 }>();
 
 const showForm = ref(false);
 const isLoading = ref(false);
 const response = ref();
 
-const selectedUser = ref();
-
 const tokenForm = useForm({
     id: null,
-    tokenable_id: null,
     expires_at: null,
     abilities: null,
     description: null,
     domain: null,
 });
 
-const showDetails = (item) => {
-    selectedUser.value = item;
-};
-
 const handleEdit = (item) => {
     tokenForm.id = item.id;
     tokenForm.expires_at = item.expires_at;
-    tokenForm.tokenable_id = item.tokenable_id;
     if (item.expires_at) {
         const parsedDate = parseISO(item.expires_at);
         tokenForm.expires_at = parsedDate; // format(parsedDate, "MM/dd/yyyy hh:mm a");
@@ -231,15 +187,7 @@ const handleEdit = (item) => {
     showForm.value = true;
 };
 
-const reFindSelectedUser = () => {
-    const _user = props.users?.find((item) => item.id == selectedUser.value.id);
-    if (_user) {
-        selectedUser.value = _user;
-    }
-};
-
 const handleSave = () => {
-    if (!selectedUser.value) return;
     if (tokenForm.id) {
         tokenForm.post(route("apiKeys.update", tokenForm.id), {
             onSuccess(e) {
@@ -247,22 +195,27 @@ const handleSave = () => {
                     tokenForm.reset();
                     showForm.value = false;
                 }
-                reFindSelectedUser();
             },
         });
     } else {
-        tokenForm.tokenable_id = selectedUser.value.id;
         tokenForm.post(route("apiKeys.create"), {
             onSuccess(e) {
                 if (!Object.keys(e.props?.errors || {}).length) {
                     tokenForm.reset();
                     showForm.value = false;
                 }
-                reFindSelectedUser();
             },
         });
     }
 };
+
+function formatExpiresAt(expiresAt) {
+    if (expiresAt === null) {
+        return "No Expiration";
+    }
+
+    return format(new Date(expiresAt), "PPp"); // Example: Jan 18, 2025, 12:00 AM
+}
 
 const form = useForm({
     phone: "",

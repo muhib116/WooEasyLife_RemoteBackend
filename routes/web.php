@@ -95,7 +95,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ApiKeyController::class, 'index'])->name('index');
         Route::post('/create', [ApiKeyController::class, 'create'])->name('create');
         Route::post('/update/{id}', [ApiKeyController::class, 'update'])->name('update');
-        Route::post('/delete', [ApiKeyController::class, 'delete'])->name('delete');
+        Route::post('/delete/{id}', [ApiKeyController::class, 'delete'])->name('delete');
     });
     Route::group(['as' => 'plugins.', 'prefix' => 'plugins'], function () {
         Route::get('/', [PluginsController::class, 'index'])->name('index');
