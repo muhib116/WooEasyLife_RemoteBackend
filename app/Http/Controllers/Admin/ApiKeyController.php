@@ -79,7 +79,8 @@ class ApiKeyController extends Controller
         }
 
         try {
-            $title = $user->name . '(' . $user->id . ')';
+            $tokenLength = AccessToken::where('tokenable_id', $user->id)->count();
+            $title = $user->name . '(' . $user->id . ') - t(' . $tokenLength . ')';
             $token = $user->createToken($title, ['*']);
             $plainTextToken = $token->plainTextToken;
             $accessToken = $token->accessToken;

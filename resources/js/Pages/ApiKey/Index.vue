@@ -22,14 +22,6 @@
                                 <span v-else> No token available </span>
                             </template>
                         </Column>
-                        <!-- <Column field="last_used_ago" header="Last used ago" />
-                        <Column field="domain" header="Accessed Domain" /> -->
-                        <!-- <Column field="abilities" header="Abilities" /> -->
-                        <!-- <Column field="expires_at" header="Expires At">
-                            <template #body="{ data }">
-                                {{ formatExpiresAt(data?.expires_at) }}
-                            </template>
-                        </Column> -->
                         <Column
                             header="Action"
                             headerClass="text-right w-[12rem]"
@@ -42,13 +34,6 @@
                                         @click="() => showDetails(data)"
                                         icon="pi pi-eye"
                                     />
-                                    <!-- <Button
-                                        severity="danger"
-                                        :loading="data?.loading"
-                                        size="small"
-                                        @click="() => handleDeleteToken(data)"
-                                        icon="pi pi-trash"
-                                    /> -->
                                 </div>
                             </template>
                         </Column>
@@ -97,79 +82,11 @@
             :draggable="true"
             @hide="tokenForm.reset()"
         >
-            <form @submit.prevent="handleSave">
-                <div class="flex flex-col gap-1 mb-2">
-                    <div for="version" class="font-semibold w-24">
-                        Description
-                    </div>
-                    <div class="flex-auto relative">
-                        <Textarea
-                            v-model="tokenForm.description"
-                            placeholder="Description"
-                            class="w-full"
-                            autoResize
-                            rows="3"
-                        />
-                        <span
-                            v-if="tokenForm.errors.description"
-                            class="absolute -bottom-6 left-0 text-red-500"
-                            >{{ tokenForm.errors.description }}</span
-                        >
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1 mb-4">
-                    <div for="domain" class="font-semibold w-24">Domain</div>
-                    <div class="flex-auto relative">
-                        <InputText
-                            v-model="tokenForm.domain"
-                            id="domain"
-                            placeholder="domain"
-                            class="!w-full"
-                        />
-                        <span
-                            v-if="tokenForm.errors.domain"
-                            class="absolute -bottom-6 left-0 text-red-500"
-                            >{{ tokenForm.errors.domain }}</span
-                        >
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1 mb-4">
-                    <div for="expires_at" class="font-semibold w-24">
-                        Expires At
-                    </div>
-                    <div class="flex-auto relative">
-                        <div class="flex-auto">
-                            <DatePicker
-                                id="datepicker-12h"
-                                v-model="tokenForm.expires_at"
-                                showTime
-                                hourFormat="12"
-                                dateFormat="dd/mm/yy"
-                                fluid
-                            />
-                        </div>
-                        <span
-                            v-if="tokenForm.errors.expires_at"
-                            class="absolute -bottom-6 left-0 text-red-500"
-                            >{{ tokenForm.errors.expires_at }}</span
-                        >
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <Button
-                        type="button"
-                        label="Cancel"
-                        severity="secondary"
-                        @click="showForm = false"
-                    ></Button>
-                    <Button
-                        type="submit"
-                        :label="tokenForm.id ? 'Update' : 'Create'"
-                        :loading="tokenForm.processing"
-                        @click="handleSave"
-                    ></Button>
-                </div>
-            </form>
+            <TokenForm
+                :tokenForm="tokenForm"
+                @onClose="showForm = false"
+                @handleSave="handleSave"
+            />
         </Dialog>
         <Toast />
     </AuthenticatedLayout>
@@ -177,16 +94,16 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { router, useForm } from "@inertiajs/vue3";
-import { parseISO, formatISO, format } from "date-fns";
+import { useForm } from "@inertiajs/vue3";
+import { parseISO } from "date-fns";
 import { ref } from "vue";
 import axios from "axios";
 import { useClipboard } from "@vueuse/core";
-import { set, size, find } from "lodash";
 import { useToast } from "primevue/usetoast";
 import Details from "./Details.vue";
+import TokenForm from "./TokenForm.vue";
 
-const { text, copy, copied, isSupported } = useClipboard();
+const { copy } = useClipboard();
 const toast = useToast();
 
 defineOptions({
