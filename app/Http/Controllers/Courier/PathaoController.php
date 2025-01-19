@@ -90,11 +90,12 @@ class PathaoController extends Controller
     const ITEM_TYPE_DOCUMENT = 1;
     const ITEM_TYPE_PARCEL = 2;
 
-    private function getConfiguration() {
+    private function getConfiguration()
+    {
         $config = CourierConfiguration::where('user_id', Auth::id())
             ->where('slug', 'pathao')
             ->first();
-        if(!$config || !$config->api_key || !$config->secret_key || !@$config->settings->store_id) {
+        if (!$config || !$config->api_key || !$config->secret_key || !@$config->settings->store_id) {
             return false;
         }
 
@@ -107,7 +108,7 @@ class PathaoController extends Controller
 
         $config = $this->getConfiguration();
 
-        if(!$config) {
+        if (!$config) {
             return $this->errorResponse('The Pathao settings are not configured properly.');
         }
 
@@ -135,10 +136,10 @@ class PathaoController extends Controller
             'item_description' => $request->item_description
         ];
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' . $config->secret_key,
-        ])->post($this->baseUrl . '/aladdin/api/v1/orders', $data);
+        // $response = Http::withHeaders([
+        //     'Content-Type' => 'application/json',
+        //     'Authorization' => 'Bearer ' . $config->secret_key,
+        // ])->post($this->baseUrl . '/aladdin/api/v1/orders', $data);
 
         return $data;
 
