@@ -8,6 +8,7 @@
     flex-direction: column;
     align-items: flex-start;
 }
+
 .timelineBeforeStyle {
     @apply flex flex-col sm:flex-row items-start mb-1 group-last:before:hidden before:absolute before:left-2 sm:before:left-0 before:h-full before:px-px before:bg-slate-300 sm:before:ml-[6.5rem] before:self-start before:-translate-x-1/2 before:translate-y-3 after:absolute after:left-2 sm:after:left-0 after:w-2 after:h-2 after:bg-indigo-600 after:border-4 after:box-content after:border-slate-50 after:rounded-full sm:after:ml-[6.5rem] after:-translate-x-1/2 after:translate-y-1.5;
 }
@@ -28,10 +29,37 @@
     .table th {
         @apply bg-[#f3f4f6] dark:bg-gray-900 py-2 px-5 text-left;
     }
+
     .table tbody tr {
         @apply bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-slate-200;
     }
+
     .table td {
-        @apply  py-2 px-5 text-left;
+        @apply py-2 px-5 text-left;
     }
-} 
+
+    textarea {
+        color: var(--p-inputtext-color);
+        background: var(--p-inputtext-background);
+        padding-block: var(--p-inputtext-padding-y);
+        padding-inline: var(--p-inputtext-padding-x);
+        border: 1px solid var(--p-inputtext-border-color);
+        transition: background var(--p-inputtext-transition-duration), color var(--p-inputtext-transition-duration), border-color var(--p-inputtext-transition-duration), outline-color var(--p-inputtext-transition-duration), box-shadow var(--p-inputtext-transition-duration);
+        appearance: none;
+        border-radius: var(--p-inputtext-border-radius);
+        outline-color: transparent;
+        box-shadow: var(--p-inputtext-shadow);
+    }
+
+    .dark {
+        --p-content-background: #2a3136 !important;
+        --p-overlay-modal-background: #2a3136 !important;
+        --p-content-color: white !important;
+        --p-overlay-modal-color: white !important;
+        --p-inputtext-color: white !important;
+        --p-inputtext-background: #2a3136 !important;
+        --p-inputtext-border-color: #ddd3 !important;
+        --p-content-border-color: #ddd3 !important;
+    }
+
+}

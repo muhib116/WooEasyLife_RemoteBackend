@@ -38,8 +38,8 @@ const routes: SidebarRoutes[] = [
         icon: "PhChartBar",
     },
     {
-        title: "Customer",
-        name: "customers.index",
+        title: "Users",
+        name: "users.index",
         icon: "PhUsers",
     },
     {

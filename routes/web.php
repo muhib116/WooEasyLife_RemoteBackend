@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
@@ -78,6 +79,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [FollowUpController::class, 'index'])->name('index');
         Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');
         Route::post('/{id}/save', [FollowUpController::class, 'save'])->name('save');
+    });
+    Route::group(['as' => 'users.', 'prefix' => 'users'], function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        // Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');
+        // Route::post('/{id}/save', [FollowUpController::class, 'save'])->name('save');
     });
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');

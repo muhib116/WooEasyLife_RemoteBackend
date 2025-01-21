@@ -142,7 +142,7 @@
                     <div for="version" class="font-semibold w-24">File</div>
                     <div class="flex-auto relative">
                         <label
-                            class="inline-flex items-center gap-2 bg-slate-200 px-4 py-1 rounded hover:bg-slate-300 cursor-pointer"
+                            class="inline-flex items-center gap-2 bg-slate-200 dark:bg-indigo-600 px-4 py-1 rounded hover:bg-slate-300 cursor-pointer"
                         >
                             <i class="pi pi-cloud-upload !text-xl" />
                             Browse
