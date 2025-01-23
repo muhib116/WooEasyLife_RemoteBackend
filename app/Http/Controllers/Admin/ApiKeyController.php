@@ -16,21 +16,6 @@ use Illuminate\Support\Facades\DB;
 
 class ApiKeyController extends Controller
 {
-    private function decodeToken($encryptedToken)
-    {
-        try {
-            return Crypt::decryptString($encryptedToken);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            // Handle decryption error (e.g., log the error, throw an exception, etc.)
-            return null;
-        }
-    }
-
-    private function encodeToken($token)
-    {
-        return Crypt::encryptString($token);
-    }
-
     public function index()
     {
         $users = User::where('role', 'user')->get();

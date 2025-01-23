@@ -85,8 +85,9 @@ Route::middleware('auth')->group(function () {
     });
     Route::group(['as' => 'users.', 'prefix' => 'users'], function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
-        // Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');
-        // Route::post('/{id}/save', [FollowUpController::class, 'save'])->name('save');
+        Route::get('/{id}/view', [UserController::class, 'view'])->name('view');
+        Route::get('/{id}/api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
+        Route::get('/{id}/packages', [UserController::class, 'packages'])->name('packages');
     });
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');

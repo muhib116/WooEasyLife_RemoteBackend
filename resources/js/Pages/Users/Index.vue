@@ -8,7 +8,10 @@
             </template>
             <template #content>
                 <div class="min-h-[400px]">
-                    <DataTable :value="users" tableStyle="min-width: 50rem;background:black;">
+                    <DataTable
+                        :value="users"
+                        tableStyle="min-width: 50rem;background:black;"
+                    >
                         <Column field="name" header="Name" />
                         <Column field="email" header="Email" />
                         <Column field="phone" header="Phone" />
@@ -18,11 +21,14 @@
                         >
                             <template #body="{ data }">
                                 <div class="flex gap-2">
-                                    <Button
-                                        severity="help"
-                                        size="small"
-                                        icon="pi pi-eye"
-                                    />
+                                    <Link :href="route('users.view', data.id)">
+                                        <Button
+                                            severity="help"
+                                            size="small"
+                                            icon="pi pi-eye"
+                                            class="pointer-events-none"
+                                        />
+                                    </Link>
                                 </div>
                             </template>
                         </Column>
@@ -35,6 +41,7 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
+import { Link } from "@inertiajs/vue3";
 
 defineOptions({
     name: "Users",
