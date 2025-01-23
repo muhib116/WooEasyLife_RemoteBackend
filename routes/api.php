@@ -47,10 +47,6 @@ Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
             return true;
         })->name('apiValidate');
 
-        Route::group(['as' => 'packages.', 'prefix' => 'packages'], function () {
-            Route::get('/list', [PackageController::class, 'getList']);
-        });
-
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);
             Route::post('/save-configuration', [ConfigurationController::class, 'saveConfiguration']);

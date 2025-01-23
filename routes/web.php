@@ -38,6 +38,7 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
+
 Route::get('/curl', [CurlController::class, 'index']);
 
 Route::get('/dashboard', function () {
@@ -53,6 +54,7 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Icons/Index');
     })->name('icons');
 });
+
 Route::middleware('auth')->group(function () {
     Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
     Route::get('/icons', function () {
