@@ -9,7 +9,8 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function index() {
+    public function index()
+    {
         $users = User::query()->where('role', 'user')->orderBy('id', 'desc')->get();
         return Inertia::render('Users/Index', compact('users'));
     }

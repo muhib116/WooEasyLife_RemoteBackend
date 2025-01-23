@@ -53,6 +53,11 @@ const routes: SidebarRoutes[] = [
         icon: "PhPlugsConnected",
     },
     {
+        title: "Package Hub",
+        name: "packages.index",
+        icon: "PhPackage",
+    },
+    {
         title: "Api Keys",
         name: "apiKeys.index",
         icon: "PhLockKeyOpen",

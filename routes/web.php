@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PackageHubController;
 use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UserController;
@@ -109,6 +110,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/delete-version', [PluginsController::class, 'deleteVersion'])->name('deleteVersion');
         Route::post('/{id}/update-version', [PluginsController::class, 'updateVersion'])->name('updateVersion');
         Route::get('download-plugins/{version}', [PluginsController::class, 'downloadVersion'])->name('downloadVersion');
+    });
+    Route::group(['as' => 'packages.', 'prefix' => 'packages'], function () {
+        Route::get('/', [PackageHubController::class, 'index'])->name('index');
     });
 });
 
