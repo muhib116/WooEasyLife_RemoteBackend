@@ -23,18 +23,18 @@ class ConfigurationController extends Controller
                 'slug' => 'steadfast',
                 'title' => 'Steadfast',
             ],
-            [
-                'slug' => 'pathao',
-                'title' => 'Pathao',
-            ],
-            [
-                'slug' => 'paperfly',
-                'title' => 'Paperfly',
-            ],
-            [
-                'slug' => 'redx',
-                'title' => 'RedX',
-            ],
+            // [
+            //     'slug' => 'pathao',
+            //     'title' => 'Pathao',
+            // ],
+            // [
+            //     'slug' => 'paperfly',
+            //     'title' => 'Paperfly',
+            // ],
+            // [
+            //     'slug' => 'redx',
+            //     'title' => 'RedX',
+            // ],
         ];
 
         return $this->successResponse($formatted);
