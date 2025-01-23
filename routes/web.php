@@ -126,6 +126,11 @@ Route::get('/run-migration', function () {
     echo 'Success';
 });
 
+Route::get('/migration-rollback', function () {
+    Artisan::call('migrate:rollback');
+    echo 'Rollback successfully';
+});
+
 
 // https://inertiaui.com/inertia-tables
 

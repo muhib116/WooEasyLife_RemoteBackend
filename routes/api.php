@@ -6,6 +6,7 @@ use App\Http\Controllers\Courier\PathaoController;
 use App\Http\Controllers\Courier\RedXController;
 use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\FraudCheckController;
+use App\Http\Controllers\PackageHub\PackageController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,10 @@ Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
         Route::get('/validate-token', function (Request $request) {
             return true;
         })->name('apiValidate');
+
+        Route::group(['as' => 'packages.', 'prefix' => 'packages'], function () {
+            Route::get('/list', [PackageController::class, 'getList']);
+        });
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);

@@ -14,7 +14,10 @@
             <template #content>
                 <div class="min-h-[400px]">
                     <div>
-                        <DataTable :value="packages" class="!bg-red-500">
+                        <DataTable
+                            scrollable
+                            :value="packages"
+                        >
                             <Column field="title" header="Title"></Column>
                             <Column
                                 field="description"
@@ -120,14 +123,17 @@ const form = useForm({
 const onClose = () => {
     showForm.value = false;
     form.reset();
+    form.title = "";
+    form.description = "";
+    form.per_order_rate = null;
+    form.is_active = false;
 };
 
 const handleSubmit = () => {
     form.post(route("packages.create"), {
         onFinish(e) {
             if (!form.hasErrors) {
-                form.reset();
-                showForm.value = false;
+                onClose();
             }
         },
     });

@@ -32,6 +32,7 @@ class PackageHubController extends Controller
             'per_order_rate' => $request->per_order_rate,
             'is_active' => $request->is_active,
             'created_by' => Auth::id(),
+            'index' => PackageHub::withTrashed()->count() + 1
         ];
         PackageHub::create($data);
         return back()->with('success', 'Package created successfully!');
