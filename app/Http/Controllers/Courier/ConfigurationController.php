@@ -95,19 +95,18 @@ class ConfigurationController extends Controller
     public function getConfiguration(Request $request)
     {
         $query = CourierConfiguration::query();
-        if ($request->title) {
-            $query->where(['title' => $request->title]);
-        }
+
+        $query->where('slug', 'steadfast');
 
         $query->where(['user_id' => Auth::id()]);
 
         $config = collect($query->get() ?? []);
 
         $data = [
-            'pathao' => new \stdClass(),
-            'paperfly' => new \stdClass(),
             'steadfast' => new \stdClass(),
-            'redx' => new \stdClass(),
+            // 'pathao' => new \stdClass(),
+            // 'paperfly' => new \stdClass(),
+            // 'redx' => new \stdClass(),
         ];
 
         foreach ($config as $item) {
