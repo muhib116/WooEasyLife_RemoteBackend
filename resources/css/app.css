@@ -60,6 +60,8 @@
         --p-inputtext-background: #2a3136 !important;
         --p-inputtext-border-color: #ddd3 !important;
         --p-content-border-color: #ddd3 !important;
+        --p-form-field-background: #2a3136 !important;
+        --p-form-field-border-color: #ddd3 !important;
     }
 
 }

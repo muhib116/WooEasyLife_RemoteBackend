@@ -20,6 +20,8 @@ return new class extends Migration
             $table->double('cost'); // total koto cost hoice
             $table->integer('total_order_handled'); // ei package e current use soho kotota order handle hoice
             $table->integer('remaining_order'); // ei package e r koyda order baki ace
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

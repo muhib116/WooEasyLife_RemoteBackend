@@ -21,6 +21,8 @@ return new class extends Migration
             $table->integer('total_order_handled')->default(100);
             $table->integer('per_order_rate');
             $table->boolean('is_active')->default(false);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });
