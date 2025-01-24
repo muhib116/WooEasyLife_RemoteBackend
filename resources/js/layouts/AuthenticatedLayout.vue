@@ -87,15 +87,16 @@ watch(
             // @ts-ignore
             if (props.flash?.success) {
                 let data = {
+                    summary: "Success",
                     severity: "success",
                     // @ts-ignore
-                    summary: props.flash?.success,
+                    detail: props.flash?.success,
                     // detail: "Message Content",
                     life: 3000,
                     group: "br",
                 };
                 if (typeof props.flash?.success == "object") {
-                    data.summary = props.flash?.success?.message;
+                    data.detail = props.flash?.success?.message;
                     data.detail = props.flash?.success?.detail;
                 }
                 toast.add(data);
@@ -104,8 +105,9 @@ watch(
             if (props.flash?.error) {
                 toast.add({
                     severity: "error",
+                    summary: "Error",
                     // @ts-ignore
-                    summary: props.flash?.error,
+                    detail: props.flash?.error,
                     // detail: "Message Content",
                     life: 3000,
                 });

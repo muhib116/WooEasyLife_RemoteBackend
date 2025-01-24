@@ -64,12 +64,12 @@ class ApiKeyController extends Controller
         }
 
         try {
+            DB::beginTransaction();
             $tokenLength = AccessToken::where('tokenable_id', $user->id)->count();
-            $title = $user->name . '(' . $user->id . ') - t(' . $tokenLength . ')';
+            $title = $request->title ? $request->title : $user->name . '(' . $user->id . ') - t(' . $tokenLength . ')';
             $token = $user->createToken($title, ['*']);
             $plainTextToken = $token->plainTextToken;
             $accessToken = $token->accessToken;
-            DB::beginTransaction();
             $accessToken = AccessToken::find($accessToken->id);
 
             $accessToken->update([
@@ -94,10 +94,9 @@ class ApiKeyController extends Controller
         //         'regex:/^(https?:\/\/)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}(\/.*)?$/'
         //     ],
         // ]);
-
         $accessToken = AccessToken::findOrFail($id);
-        // dd($accessToken);
         $accessToken->update([
+            'title' => $request->title,
             'description' => $request->description ?? null,
             'domain' => $request->domain ?? null,
             'expires_at' => $request->expires_at ? Carbon::parse($request->expires_at) : null

@@ -36,6 +36,7 @@ class UserController extends Controller
 
         return Inertia::render('Users/ApiKeys', compact('user', 'tokens'));
     }
+
     public function packages($userId)
     {
         $user = User::find($userId);

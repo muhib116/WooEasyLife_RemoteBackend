@@ -7,21 +7,27 @@
             <template #content>
                 <div class="min-h-[400px]">
                     <UserNav :user="user">
-                        <Button label="Generate" size="small" icon="pi pi-plus" />
+                        <button
+                            @click="showForm = true"
+                            class="py-1 px-4 bg-indigo-500 text-white flex items-center gap-2"
+                        >
+                            <span class="pi pi-plus"></span>
+                            Generate
+                        </button>
                     </UserNav>
                     <div class="pt-4">
                         <DataTable
-                            :value="user.tokens"
+                            :value="tokens"
                             tableStyle="min-width: 50rem"
+                            showGridlines
+                            stripedRows
                         >
-                            <Column field="name" header="Name" />
-                            <Column field="email" header="Email" />
+                            <Column field="title" header="Title" />
                             <Column
                                 field="last_used_ago"
                                 header="Last used ago"
                             />
                             <Column field="domain" header="Accessed Domain" />
-                            <Column field="abilities" header="Abilities" />
                             <Column field="expires_at" header="Expires At">
                                 <template #body="{ data }">
                                     {{ formatExpiresAt(data?.expires_at) }}
@@ -36,22 +42,20 @@
                                         <Button
                                             severity="info"
                                             size="small"
-                                            @click="$emit('handleCopy', data)"
+                                            @click="handleCopy(data)"
                                             icon="pi pi-copy"
                                         />
                                         <Button
                                             severity="info"
                                             size="small"
-                                            @click="$emit('handleEdit', data)"
+                                            @click="handleEdit(data)"
                                             icon="pi pi-pencil"
                                         />
                                         <Button
                                             severity="danger"
                                             :loading="data?.loading"
                                             size="small"
-                                            @click="
-                                                $emit('handleDeleteToken', data)
-                                            "
+                                            @click="handleDeleteToken(data)"
                                             icon="pi pi-trash"
                                         />
                                     </div>
@@ -62,6 +66,24 @@
                 </div>
             </template>
         </Card>
+        <Dialog
+            v-model:visible="showForm"
+            :header="`${tokenForm.id ? 'Edit' : 'Create'} Api Token`"
+            modal
+            maximizable
+            :style="{ width: '35rem' }"
+            draggable
+            dismissableMask
+            @hide="tokenForm.reset()"
+        >
+            <TokenForm
+                :tokenForm="tokenForm"
+                @onClose="showForm = false"
+                @handleSave="handleSave"
+            />
+        </Dialog>
+
+        <Toast />
     </AuthenticatedLayout>
 </template>
 
@@ -69,13 +91,13 @@
 import { AuthenticatedLayout } from "@/layouts";
 import UserNav from "./UserNav.vue";
 import Header from "./Header.vue";
+import TokenForm from "./fragments/TokenForm.vue";
 import { format, parseISO } from "date-fns";
 import { useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { useClipboard } from "@vueuse/core";
-
 
 const { copy } = useClipboard();
 const toast = useToast();
@@ -86,11 +108,13 @@ defineOptions({
 
 const props = defineProps<{
     user: any;
+    tokens: any[];
 }>();
 
-const showForm = ref(false)
+const showForm = ref(false);
 const tokenForm = useForm({
     id: null,
+    title: null,
     tokenable_id: null,
     expires_at: null,
     abilities: null,
@@ -100,6 +124,7 @@ const tokenForm = useForm({
 
 const handleEdit = (item) => {
     tokenForm.id = item.id;
+    tokenForm.title = item.title;
     tokenForm.expires_at = item.expires_at;
     tokenForm.tokenable_id = item.tokenable_id;
     if (item.expires_at) {
