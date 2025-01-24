@@ -14,11 +14,11 @@
             <template #content>
                 <div class="min-h-[400px]">
                     <div>
-                        <DataTable
-                            scrollable
-                            :value="packages"
-                        >
-                            <Column field="title" header="Title"></Column>
+                        <DataTable scrollable :value="packages">
+                            <Column
+                                field="per_order_rate"
+                                header="Per Order Rate"
+                            ></Column>
                             <Column
                                 field="description"
                                 header="Description"
