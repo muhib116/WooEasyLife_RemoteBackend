@@ -84,6 +84,7 @@
         </Dialog>
 
         <Toast />
+        <ConfirmDialog id="confirm" />
     </AuthenticatedLayout>
 </template>
 
@@ -93,12 +94,14 @@ import UserNav from "./UserNav.vue";
 import Header from "./Header.vue";
 import TokenForm from "./fragments/TokenForm.vue";
 import { format, parseISO } from "date-fns";
-import { useForm } from "@inertiajs/vue3";
+import { router, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { useClipboard } from "@vueuse/core";
+import { useConfirm } from "primevue";
 
+const confirm = useConfirm();
 const { copy } = useClipboard();
 const toast = useToast();
 
@@ -172,9 +175,24 @@ const handleCopy = (item) => {
 };
 
 const handleDeleteToken = async (item) => {
-    if (!confirm("Are you sure?")) return;
-    const { data } = await axios.post(route("apiKeys.delete"), {
-        tokenId: item.id,
+    confirm.require({
+        message: "Are you sure you want to delete this?",
+        header: "Confirmation",
+        icon: "pi pi-exclamation-triangle",
+        rejectProps: {
+            label: "Cancel",
+            severity: "danger",
+            size: "small",
+        },
+        acceptProps: {
+            label: "Delete",
+            size: "small",
+        },
+        accept: () => {
+            item.loading = true;
+            router.post(route("apiKeys.delete", item.id));
+        },
+        reject: () => {},
     });
 };
 
