@@ -27,10 +27,12 @@ use Illuminate\Support\Facades\Route;
 //     return true;
 // });
 
-Route::get('app-logo', [PluginsController::class, 'appLogo']);
+Route::group(['prefix' => 'api'], function () {
+    Route::get('app-logo', [PluginsController::class, 'appLogo']);
 
-Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
-Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
+    Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
+    Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
+});
 
 Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
 

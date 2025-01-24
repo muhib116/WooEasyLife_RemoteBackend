@@ -1,6 +1,6 @@
 <template>
     <div class="flex gap-3 border-b pb-2 justify-between">
-        <div class="flex gap-3">
+        <div class="flex flex-1 gap-3">
             <Link
                 :href="route('users.view', user.id)"
                 class="py-1 px-4 hover:bg-indigo-500 hover:text-white"
