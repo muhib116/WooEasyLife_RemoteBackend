@@ -25,8 +25,10 @@
                                         <Button
                                             severity="help"
                                             size="small"
-                                            icon="pi pi-eye"
-                                            class="pointer-events-none"
+                                            label="Details"
+                                            icon="pi pi-angle-right"
+                                            iconPos="right"
+                                            as="span"
                                         />
                                     </Link>
                                 </div>

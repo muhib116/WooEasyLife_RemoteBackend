@@ -6,7 +6,9 @@
             </template>
             <template #content>
                 <div class="min-h-[400px]">
-                    <UserNav :user="user" />
+                    <UserNav :user="user">
+                        <Button label="Generate" size="small" icon="pi pi-plus" />
+                    </UserNav>
                     <div class="pt-4">
                         <DataTable
                             :value="user.tokens"
@@ -67,7 +69,16 @@
 import { AuthenticatedLayout } from "@/layouts";
 import UserNav from "./UserNav.vue";
 import Header from "./Header.vue";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { useForm } from "@inertiajs/vue3";
+import { ref } from "vue";
+import axios from "axios";
+import { useToast } from "primevue/usetoast";
+import { useClipboard } from "@vueuse/core";
+
+
+const { copy } = useClipboard();
+const toast = useToast();
 
 defineOptions({
     name: "ApiKeys",
@@ -76,6 +87,71 @@ defineOptions({
 const props = defineProps<{
     user: any;
 }>();
+
+const showForm = ref(false)
+const tokenForm = useForm({
+    id: null,
+    tokenable_id: null,
+    expires_at: null,
+    abilities: null,
+    description: null,
+    domain: null,
+});
+
+const handleEdit = (item) => {
+    tokenForm.id = item.id;
+    tokenForm.expires_at = item.expires_at;
+    tokenForm.tokenable_id = item.tokenable_id;
+    if (item.expires_at) {
+        const parsedDate = parseISO(item.expires_at);
+        tokenForm.expires_at = parsedDate; // format(parsedDate, "MM/dd/yyyy hh:mm a");
+    }
+    // MM/dd/yyyy hh:mm a
+    tokenForm.abilities = item.abilities;
+    tokenForm.description = item.description;
+    tokenForm.domain = item.domain;
+    showForm.value = true;
+};
+
+const handleSave = () => {
+    if (tokenForm.id) {
+        tokenForm.post(route("apiKeys.update", tokenForm.id), {
+            onSuccess(e) {
+                if (!Object.keys(e.props?.errors || {}).length) {
+                    tokenForm.reset();
+                    showForm.value = false;
+                }
+            },
+        });
+    } else {
+        tokenForm.tokenable_id = props.user.id;
+        tokenForm.post(route("apiKeys.create"), {
+            onSuccess(e) {
+                if (!Object.keys(e.props?.errors || {}).length) {
+                    tokenForm.reset();
+                    showForm.value = false;
+                }
+            },
+        });
+    }
+};
+
+const handleCopy = (item) => {
+    copy(item.bearer_token);
+    toast.add({
+        severity: "success",
+        summary: "Success",
+        detail: "Token created successfully",
+        life: 3000,
+    });
+};
+
+const handleDeleteToken = async (item) => {
+    if (!confirm("Are you sure?")) return;
+    const { data } = await axios.post(route("apiKeys.delete"), {
+        tokenId: item.id,
+    });
+};
 
 function formatExpiresAt(expiresAt) {
     if (expiresAt === null) {
