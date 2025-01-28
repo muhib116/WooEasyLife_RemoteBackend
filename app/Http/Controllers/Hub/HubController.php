@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Hub;
 use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
 use App\Models\PackageUseHistory;
+use App\Models\TransactionHistory;
 use App\Models\User;
 use App\Models\UserPackage;
 use App\Traits\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class HubController extends Controller
@@ -19,17 +21,14 @@ class HubController extends Controller
     public function hubUse(Request $request)
     {
         $rules = [
-            'data' => 'required|array',
-            'data.*.order_count' => 'integer|min:0',
-            'data.*.use_details' => 'nullable|json'
+            'order_count' => 'integer|min:0',
         ];
+
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
         }
-
-        return $request->all();
 
         $user = User::find(Auth::id());
         $token = $request->bearerToken();
@@ -49,19 +48,46 @@ class HubController extends Controller
             // return ''; // some package not found or token end error
         }
 
-        // return $package;
-        $data = [
-            'user_id' => Auth::id(),
-            'user_package_id' => $package->id,
-            'use_details' => '',
-            'order_count' => '',
-            'cost' => '',
-            'total_order_handled' => '',
-            'remaining_order' => '',
-            'created_by' => '',
-            'updated_by' => '',
-        ];
-        return $data;
-        // PackageUseHistory::create();
+        try {
+            $total_order_handled = $package->total_order_handled;
+            $remaining_order = $package->remaining_order;
+
+            DB::beginTransaction();
+            $cost = $package->per_order_rate * $request->order_count;
+            $useDetails = null;
+            try {
+                $useDetails = $request->use_details;
+            } catch (\Throwable $th) {
+            }
+            $total_order_handled = $total_order_handled + $request->order_count;
+            $remaining_order = $remaining_order - $request->order_count;
+            $data = [
+                'user_id' => Auth::id(),
+                'user_package_id' => $package->id,
+                'use_details' => $useDetails,
+                'order_count' => $request->order_count,
+                'cost' => $cost,
+                'total_order_handled' => $total_order_handled,
+                'remaining_order' => $remaining_order,
+                'created_by' => Auth::id(),
+                // 'updated_by' => '',
+            ];
+            $packageUse = PackageUseHistory::create($data);
+            $package->update([
+                'total_order_handled' => $total_order_handled,
+                'remaining_order' => $remaining_order,
+            ]);
+            $packageUse->transactionHistory()->create([
+                'user_id' => Auth::id(),
+                'created_by' => Auth::id(),
+                'amount' => $cost,
+                'type' => 'out',
+            ]);
+            DB::commit();
+
+            return $this->successResponse($packageUse, 'History stored successfully');
+        } catch (\Throwable $th) {
+            return $this->errorResponse($th->getMessage(), 500);
+        }
     }
 }

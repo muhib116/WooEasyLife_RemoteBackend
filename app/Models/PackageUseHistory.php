@@ -10,4 +10,12 @@ class PackageUseHistory extends Model
     use SoftDeletes;
 
     protected $guarded = ['id'];
+
+    protected $casts = [
+        'use_details' => 'json',
+    ];
+
+    public function transactionHistory() {
+        return $this->morphOne(TransactionHistory::class, 'transactional');
+    }
 }

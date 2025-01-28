@@ -33,6 +33,12 @@ trait Transaction
         return $transaction;
     }
 
+    public function insertTransaction($data)
+    {
+        $transaction = TransactionHistory::insert($data);
+        return $transaction;
+    }
+
     public function updateTransaction($id, $data)
     {
         $transaction = TransactionHistory::find($id);
