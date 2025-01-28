@@ -32,6 +32,7 @@
                 v-model="form.per_order_rate"
                 placeholder="Order Rate"
                 class="w-full"
+                :maxFractionDigits="5"
                 :useGrouping="false"
                 :min="0"
             />

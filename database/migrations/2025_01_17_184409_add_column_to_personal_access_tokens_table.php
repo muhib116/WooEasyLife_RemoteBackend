@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::table('personal_access_tokens', function (Blueprint $table) {
             $table->string('title')->nullable()->after('name');
-            $table->text('description')->nullable()->after('name');
-            $table->text('access_key')->nullable()->after('name');
-            $table->text('api_token')->nullable()->after('name');
-            $table->text('domain')->nullable()->after('name');
+            $table->text('description')->nullable()->after('title');
+            $table->text('access_key')->nullable()->after('description');
+            $table->text('api_token')->nullable()->after('access_key');
+            $table->text('domain')->nullable()->after('api_token');
+            $table->unsignedBigInteger('user_package_id')->nullable()->after('domain');
         });
     }
 

@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('phone')->nullable()->after('email');
             $table->string('whatsapp_phone')->nullable()->after('phone');
             $table->text('facebook_page_link')->nullable()->after('whatsapp_phone');
-            $table->boolean('status')->nullable()->after('facebook_page_link');
+            $table->text('address')->nullable()->after('facebook_page_link');
+            $table->boolean('status')->nullable()->after('address');
         });
     }
 

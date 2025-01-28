@@ -4,8 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
+use App\Models\PackageHub;
 use App\Models\User;
+use App\Models\UserPackage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -16,12 +21,60 @@ class UserController extends Controller
         return Inertia::render('Users/Index', compact('users'));
     }
 
+    public function getUser(Request $request)
+    {
+        $token = $request->bearerToken();
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->get(route('getUserData'));
+
+        return $response->json();
+    }
+
     public function view($userId)
     {
         $user = User::find($userId);
 
         return Inertia::render('Users/View', compact('user'));
     }
+
+    public function store(Request $request)
+    {
+        $roles = [
+            'name' => 'required',
+            'phone' => 'required',
+        ];
+
+        if (!$request->id) {
+            $roles['password'] = 'required';
+        }
+
+        $request->validate($roles);
+
+        $data = array_merge($request->only([
+            'name',
+            'phone',
+            'email',
+            'address',
+            'facebook_page_link',
+            'status'
+        ]), [
+            'role' => 'user',
+            'whatsapp_phone' => $request->whatsapp_phone ?? $request->phone,
+        ]);
+        if ($request->password) {
+            $data['password'] = Hash::make($request->password);
+        }
+        if ($request->id) {
+            $user = User::findOrFail($request->id);
+            $user->update($data);
+        } else {
+            User::create($data);
+        }
+        return back()->with('success', 'User Saved Successfully!');
+    }
+
     public function apiKeys($userId)
     {
         $user = User::findOrFail($userId);
@@ -34,12 +87,60 @@ class UserController extends Controller
             ];
         });
 
-        return Inertia::render('Users/ApiKeys', compact('user', 'tokens'));
+        $user_packages = UserPackage::where('user_id', $user->id)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->unique('domain');
+        // return $user_packages;
+        return Inertia::render('Users/ApiKeys', compact('user', 'tokens', 'user_packages'));
     }
 
     public function packages($userId)
     {
         $user = User::find($userId);
-        return Inertia::render('Users/Packages', compact('user'));
+        $packages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
+        $user_packages = UserPackage::where([
+            'user_id' => $userId,
+            'is_active' => true,
+        ])->orderBy('created_at', 'desc')->get();
+        return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
+    }
+
+    public function purchase(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $request->validate([
+            'limit' => 'required|integer',
+            'domain' => 'required',
+            'package_id' => 'required',
+            'transaction_method' => 'required',
+        ]);
+
+        $package = PackageHub::find($request->package_id);
+
+        $data = [
+            'title' => $package->title,
+            'description' => $package->description,
+            'domain' => $request->domain,
+            'user_id' => $user->id,
+            'package_hub_id' => $package->id,
+            'total_order_can_handle' => $request->limit,
+            'remaining_order' => $request->limit,
+            'total_order_handled' => 0,
+            'per_order_rate' => $package->per_order_rate,
+            'transaction_method' => $package->transaction_method,
+            'transaction_number' => $package->transaction_method,
+            'transaction_id' => $package->transaction_id,
+            'total_cost' => $package->per_order_rate * $request->limit,
+            'transaction_charge' => $request->transaction_charge,
+            'transaction_method' => $request->transaction_method,
+            'is_active' => true,
+            'created_by' => Auth::id(),
+            'updated_by' => Auth::id(),
+        ];
+
+        UserPackage::create($data);
+
+        return back()->with('success', 'Package created successfully');
     }
 }

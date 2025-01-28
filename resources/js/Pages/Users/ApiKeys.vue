@@ -20,7 +20,6 @@
                             :value="tokens"
                             tableStyle="min-width: 50rem"
                             showGridlines
-                            stripedRows
                         >
                             <Column field="title" header="Title" />
                             <Column
@@ -73,11 +72,11 @@
             maximizable
             :style="{ width: '35rem' }"
             draggable
-            dismissableMask
             @hide="tokenForm.reset()"
         >
             <TokenForm
                 :tokenForm="tokenForm"
+                :user_packages="user_packages"
                 @onClose="showForm = false"
                 @handleSave="handleSave"
             />
@@ -96,7 +95,6 @@ import TokenForm from "./fragments/TokenForm.vue";
 import { format, parseISO } from "date-fns";
 import { router, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
-import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { useClipboard } from "@vueuse/core";
 import { useConfirm } from "primevue";
@@ -112,13 +110,16 @@ defineOptions({
 const props = defineProps<{
     user: any;
     tokens: any[];
+    user_packages: any[];
 }>();
 
 const showForm = ref(false);
 const tokenForm = useForm({
     id: null,
     title: null,
+    package: null,
     tokenable_id: null,
+    user_package_id: null,
     expires_at: null,
     abilities: null,
     description: null,
@@ -130,6 +131,15 @@ const handleEdit = (item) => {
     tokenForm.title = item.title;
     tokenForm.expires_at = item.expires_at;
     tokenForm.tokenable_id = item.tokenable_id;
+
+    const selectedPackage = props.user_packages.find(
+        (_item) => (_item.domain = item.domain)
+    );
+    if (selectedPackage && selectedPackage?.domain) {
+        // tokenForm.domain = selectedPackage.domain;
+        tokenForm.user_package_id = selectedPackage.id;
+    }
+
     if (item.expires_at) {
         const parsedDate = parseISO(item.expires_at);
         tokenForm.expires_at = parsedDate; // format(parsedDate, "MM/dd/yyyy hh:mm a");
@@ -142,6 +152,23 @@ const handleEdit = (item) => {
 };
 
 const handleSave = () => {
+    if (!tokenForm.user_package_id) {
+        tokenForm.errors.package = "Package is required";
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "No Package Domain Selected",
+            life: 3000,
+        });
+        return;
+    }
+    const selectedPackage = props.user_packages.find(
+        (item) => item.id == tokenForm.user_package_id
+    );
+    if (selectedPackage && selectedPackage?.domain) {
+        tokenForm.domain = selectedPackage.domain;
+    }
+
     if (tokenForm.id) {
         tokenForm.post(route("apiKeys.update", tokenForm.id), {
             onSuccess(e) {

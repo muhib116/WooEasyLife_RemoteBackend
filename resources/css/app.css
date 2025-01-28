@@ -62,6 +62,7 @@
         --p-content-border-color: #ddd3 !important;
         --p-form-field-background: #2a3136 !important;
         --p-form-field-border-color: #ddd3 !important;
+        --p-form-field-color: rgb(228, 228, 228) !important;
     }
 
 }

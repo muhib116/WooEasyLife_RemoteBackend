@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
+use App\Http\Controllers\PackageHub\PackageController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SmsController;
@@ -85,9 +86,11 @@ Route::middleware('auth')->group(function () {
     });
     Route::group(['as' => 'users.', 'prefix' => 'users'], function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::post('/store', [UserController::class, 'store'])->name('store');
         Route::get('/{id}/view', [UserController::class, 'view'])->name('view');
         Route::get('/{id}/api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('/{id}/packages', [UserController::class, 'packages'])->name('packages');
+        Route::post('{id}/purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
     });
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');

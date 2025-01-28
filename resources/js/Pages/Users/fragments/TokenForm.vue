@@ -1,5 +1,5 @@
 <template>
-    <form @submit.prevent="$emit('handleSave')">
+    <div>
         <div class="flex flex-col gap-1 mb-4">
             <div for="title" class="font-semibold w-24">Title</div>
             <div class="flex-auto relative">
@@ -34,18 +34,23 @@
             </div>
         </div>
         <div class="flex flex-col gap-1 mb-4">
-            <div for="domain" class="font-semibold w-24">Domain</div>
+            <div for="domain" class="font-semibold">
+                Select Package for Domain
+            </div>
             <div class="flex-auto relative">
-                <InputText
-                    v-model="tokenForm.domain"
-                    id="domain"
-                    placeholder="domain"
-                    class="!w-full"
+                <!-- used ${item.total_order_can_handle} of ${item.total_order_handled} -->
+                <Select
+                    class="w-full"
+                    v-model="tokenForm.user_package_id"
+                    :options="user_packages"
+                    :optionLabel="(item) => `(${item.domain})`"
+                    optionValue="id"
+                    placeholder="Package"
                 />
                 <span
-                    v-if="tokenForm.errors.domain"
+                    v-if="tokenForm.errors.user_package_id"
                     class="absolute -bottom-6 left-0 text-red-500"
-                    >{{ tokenForm.errors.domain }}</span
+                    >{{ tokenForm.errors.user_package_id }}</span
                 >
             </div>
         </div>
@@ -83,11 +88,12 @@
                 @click="$emit('handleSave')"
             ></Button>
         </div>
-    </form>
+    </div>
 </template>
 
 <script setup lang="ts">
 defineProps<{
     tokenForm: any;
+    user_packages: any[];
 }>();
 </script>

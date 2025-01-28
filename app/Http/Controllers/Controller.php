@@ -26,4 +26,22 @@ class Controller extends BaseController
     {
         return Crypt::encryptString($token);
     }
+
+    public function getDomainFromUrl($url)
+    {
+        $host = null;
+
+        try {
+            $parsedUrl = parse_url($url);
+
+            $host = $parsedUrl['host'] ?? '';
+
+            if (!empty($host)) {
+                return $host;
+            }
+        } catch (\Throwable $th) {
+        }
+
+        return $host;
+    }
 }

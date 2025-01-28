@@ -4,6 +4,13 @@
             <template #title>
                 <div class="flex justify-between items-center gap-5">
                     User list
+
+                    <Button
+                        label="Create User"
+                        icon="pi pi-plus"
+                        size="small"
+                        @click="showForm = true"
+                    />
                 </div>
             </template>
             <template #content>
@@ -21,6 +28,13 @@
                         >
                             <template #body="{ data }">
                                 <div class="flex gap-2">
+                                    <Button
+                                        @click="handleEdit(data)"
+                                        severity="primary"
+                                        size="small"
+                                        label="Edit"
+                                        iconPos="right"
+                                    />
                                     <Link :href="route('users.view', data.id)">
                                         <Button
                                             severity="help"
@@ -38,12 +52,19 @@
                 </div>
             </template>
         </Card>
+        <UserForm
+            v-if="showForm"
+            v-model="showForm"
+            :selectedUser="selectedUser"
+        />
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
 import { Link } from "@inertiajs/vue3";
+import { ref } from "vue";
+import UserForm from "./fragments/UserForm.vue";
 
 defineOptions({
     name: "Users",
@@ -52,4 +73,12 @@ defineOptions({
 const props = defineProps<{
     users: any[];
 }>();
+
+const showForm = ref(false);
+const selectedUser = ref();
+
+const handleEdit = (user: any) => {
+    selectedUser.value = user;
+    showForm.value = true;
+};
 </script>

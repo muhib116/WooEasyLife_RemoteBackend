@@ -1,14 +1,17 @@
 <?php
 
 use App\Http\Controllers\Admin\PluginsController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Courier\ConfigurationController;
 use App\Http\Controllers\Courier\PathaoController;
 use App\Http\Controllers\Courier\RedXController;
 use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\FraudCheckController;
+use App\Http\Controllers\Hub\HubController;
 use App\Http\Controllers\PackageHub\PackageController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,9 +39,7 @@ Route::group(['prefix' => 'api'], function () {
 
 Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
 
-    Route::get('/get-user', function () {
-        return redirect()->route('getUserData');
-    });
+    Route::get('/get-user', [UserController::class, 'getUser']);
 
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/get-user-data', function (Request $request) {
@@ -48,6 +49,8 @@ Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
         Route::get('/validate-token', function (Request $request) {
             return true;
         })->name('apiValidate');
+
+        Route::post('hub-burn', [HubController::class, 'hubUse']);
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);
