@@ -29,8 +29,11 @@
                 Packages
             </Link>
             <Link
-                :href="route('users.index')"
+                :href="route('users.smsRecharge', user.id)"
                 class="py-1 px-4 hover:bg-indigo-500 hover:text-white"
+                :class="{
+                    'bg-indigo-500 text-white': route().current('users.smsRecharge'),
+                }"
             >
                 SMS Balance
             </Link>

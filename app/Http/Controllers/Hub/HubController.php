@@ -33,10 +33,10 @@ class HubController extends Controller
         $user = User::find(Auth::id());
         $token = $request->bearerToken();
         $accessToken = AccessToken::findToken($token);
-        // $host = $this->getDomainFromUrl($accessToken->domain);
-        // if (!$host) {
-        //     return '';
-        // }
+        $host = $this->getDomainFromUrl($accessToken->domain);
+        if (!$host) {
+            return $this->errorResponse('Invalid domain');
+        }
 
         $package = UserPackage::where('user_id', $user->id)
             ->where('remaining_order', '>', 0)
@@ -45,7 +45,7 @@ class HubController extends Controller
             ->first();
 
         if (!$package) {
-            // return ''; // some package not found or token end error
+            return $this->errorResponse('No package found or no remaining order');
         }
 
         try {
@@ -87,7 +87,7 @@ class HubController extends Controller
 
             return $this->successResponse($packageUse, 'History stored successfully');
         } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage(), 500);
+            return $this->errorResponse($th->getMessage(), $th->getCode());
         }
     }
 }

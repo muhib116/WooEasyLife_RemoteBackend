@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SmsBalance;
+use App\Models\SmsRecharge;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -208,22 +209,32 @@ class SmsController extends Controller
     public function recharge(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'amount' => 'required',
+            'total_amount' => 'required',
+            'total_charge' => 'required',
+            'account_number' => 'required',
+            'transaction_id' => 'required',
+            'transaction_method' => 'required',
         ]);
 
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
         }
 
+        // transaction charge will be 1.85% of the amount
+        // $transactionCharge = number_format(($request->total_amount * 1.85) / 100, 2);
         $data = [
             'user_id' => Auth::id(),
-            'type' => 'in',
-            'amount' => $request->amount,
+            'total_amount' => number_format($request->total_amount, 2),
+            'transaction_charge' => number_format($request->total_charge, 2),
+            'transaction_method' => $request->transaction_method,
+            'transaction_id' => $request->transaction_id,
+            'account_number' => $request->account_number,
+            'status' => 'pending',
         ];
 
-        $balance = SmsBalance::create($data);
+        $recharge = SmsRecharge::create($data);
 
-        return $balance;
+        return $recharge;
     }
 
     public function rechargeHistory(Request $request)

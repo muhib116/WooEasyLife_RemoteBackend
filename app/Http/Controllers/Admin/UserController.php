@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
 use App\Models\PackageHub;
+use App\Models\SmsRecharge;
 use App\Models\User;
 use App\Models\UserPackage;
 use Illuminate\Http\Request;
@@ -104,6 +105,20 @@ class UserController extends Controller
             'is_active' => true,
         ])->orderBy('created_at', 'desc')->get();
         return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
+    }
+    public function smsRecharge($userId)
+    {
+        $user = User::find($userId);
+        $recharge = SmsRecharge::where('user_id', $userId)->orderBy('id', 'desc')->get();
+        return Inertia::render('Users/SmsRecharge', compact('user', 'recharge'));
+    }
+
+    public function approveSmsRecharge($sms_id) {
+        $recharge = SmsRecharge::find($sms_id);
+        $recharge->update([
+            'status' => 'approved',
+        ]);
+        return back()->with('success', 'Recharge approved successfully');
     }
 
     public function purchase(Request $request, $id)

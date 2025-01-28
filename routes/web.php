@@ -90,6 +90,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{id}/view', [UserController::class, 'view'])->name('view');
         Route::get('/{id}/api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('/{id}/packages', [UserController::class, 'packages'])->name('packages');
+        Route::get('/{id}/sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
+        Route::post('approve-sms-recharge/{sms_id}', [UserController::class, 'approveSmsRecharge'])->name('approveSmsRecharge');
         Route::post('{id}/purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
     });
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {
