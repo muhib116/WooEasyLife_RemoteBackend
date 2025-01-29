@@ -15,6 +15,10 @@ import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 import { CkeditorPlugin } from '@ckeditor/ckeditor5-vue'
 import DialogService from 'primevue/dialogservice';
+import axios from 'axios';
+
+// set axios default Bearer token
+axios.defaults.headers.common['Authorization'] = `Bearer 1|44MxyNIHzm1m8BHBpaYmQmza5m6pGIddzAflWvoV1dd64aa3`;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Natural Care';
 

@@ -49,7 +49,7 @@ class FraudCheckController extends Controller
         return $response_data;
     }
 
-    private function checkMultiple($numbers)
+    private function checkMultiple($numbers, $cb = null)
     {
         $users = [];
         foreach ($numbers as $number) {
@@ -60,6 +60,7 @@ class FraudCheckController extends Controller
                 ...$number, // return all keys that comes throw number.
                 'report' => $report
             ];
+            $cb && $cb($users);
         }
         return $users;
     }
@@ -75,6 +76,58 @@ class FraudCheckController extends Controller
             $response = $this->getReport($request, $phone);
             return response()->json($response);
         }
+    }
+
+    protected function sendEvent(string $event, string $data)
+    {
+        echo "event: $event\n";
+        echo "data: " . $data . "\n\n";
+    }
+
+    public function checkStream(Request $request)
+    {
+        return response()->stream(function () use ($request) {
+            $total = count($request->data);
+            $processed = 0;
+
+            foreach ($request->data as $number) {
+                $processed++;
+
+                $pathaoRequest = new PathaoUserSuccessRateRequest();
+                $pathaoRequest->merge(['phone' => $number['phone']]);
+                $report = $this->getReport($pathaoRequest, $number['phone']);
+
+                // Send user report
+                $progress = ($processed / $total) * 100;
+                $this->sendEvent('user_report', json_encode([
+                    "data" => [
+                        'id' => $number['id'],
+                        'phone' => $number['phone'],
+                        'report' => $report
+                    ],
+                    "progress"  => ['processed' => $processed, 'total' => $total, 'percentage' => $progress]
+                ]));
+
+                ob_flush();
+                flush();
+                usleep(100000); // Optional delay
+            }
+
+            // Send final done event
+            $this->sendEvent('done', json_encode(['message' => 'All processing complete']));
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+        ]);
+        // if (is_array(@$request->data)) {
+        //     return $this->successResponse($this->checkMultiple($request->data));
+        // } else {
+        //     $request = new PathaoUserSuccessRateRequest();
+        //     $request->merge(['phone' => $phone]);
+        //     $response = $this->getReport($request, $phone);
+        //     return response()->json($response);
+        // }
     }
 
     private function checkOnPathao(PathaoUserSuccessRateRequest $request)
