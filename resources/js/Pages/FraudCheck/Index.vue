@@ -85,14 +85,15 @@ const form = useForm({
 // 01752-360254
 
 const postStreamRequest = async (url: string, payload: any, config: any) => {
+    const axiosDefaultUrl = axios.defaults?.baseURL || "";
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`${axiosDefaultUrl}${url}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
                 Authorization: String(
-                    axios.defaults.headers?.common["Authorization"]
+                    axios.defaults?.headers?.common["Authorization"]
                 ),
             },
             body: JSON.stringify(payload),
@@ -142,118 +143,6 @@ const handleSearch = async () => {
                     id: 534,
                     phone: "01700501035",
                 },
-                // {
-                //     id: 533,
-                //     phone: "01711887387",
-                // },
-                // {
-                //     id: 532,
-                //     phone: "01922483646",
-                // },
-                // {
-                //     id: 531,
-                //     phone: "01818936299",
-                // },
-                // {
-                //     id: 530,
-                //     phone: "01721407434",
-                // },
-                // {
-                //     id: 529,
-                //     phone: "01721299365",
-                // },
-                // {
-                //     id: 528,
-                //     phone: "01710695141",
-                // },
-                // {
-                //     id: 527,
-                //     phone: "01617908092",
-                // },
-                // {
-                //     id: 526,
-                //     phone: "01757413388",
-                // },
-                // {
-                //     id: 525,
-                //     phone: "01608656503",
-                // },
-                // {
-                //     id: 524,
-                //     phone: "01304516048",
-                // },
-                // {
-                //     id: 523,
-                //     phone: "01761898483",
-                // },
-                // {
-                //     id: 522,
-                //     phone: "01721407434",
-                // },
-                // {
-                //     id: 521,
-                //     phone: "01602937854",
-                // },
-                // {
-                //     id: 520,
-                //     phone: "01611841485",
-                // },
-                // {
-                //     id: 519,
-                //     phone: "01761731546",
-                // },
-                // {
-                //     id: 518,
-                //     phone: "01919076217",
-                // },
-                // {
-                //     id: 517,
-                //     phone: "01773629220",
-                // },
-                // {
-                //     id: 516,
-                //     phone: "01728254644",
-                // },
-                // {
-                //     id: 515,
-                //     phone: "01713031878",
-                // },
-                // {
-                //     id: 514,
-                //     phone: "01997672065",
-                // },
-                // {
-                //     id: 513,
-                //     phone: "01903936700",
-                // },
-                // {
-                //     id: 512,
-                //     phone: "01756367172",
-                // },
-                // {
-                //     id: 511,
-                //     phone: "01870077704",
-                // },
-                // {
-                //     id: 510,
-                //     phone: "01742341365",
-                // },
-                // {
-                //     id: 509,
-                //     phone: "01918710915",
-                // },
-                // {
-                //     id: 508,
-                //     phone: "01753331610",
-                // },
-                // {
-                //     id: 507,
-                //     phone: "01553292604",
-                // },
-                // {
-                //     id: 506,
-                //     phone: "01778503868",
-                // },
             ],
         },
         {
