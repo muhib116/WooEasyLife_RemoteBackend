@@ -18,7 +18,7 @@ import DialogService from 'primevue/dialogservice';
 import axios from 'axios';
 
 // set axios default Bearer token
-axios.defaults.headers.common['Authorization'] = `Bearer 1|44MxyNIHzm1m8BHBpaYmQmza5m6pGIddzAflWvoV1dd64aa3`;
+axios.defaults.headers.common['Authorization'] = `Bearer Kod30eDnI1EFG9vaf9gBPsSwaD3IkklCIATZoSYz9cf733bd`;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Natural Care';
 
