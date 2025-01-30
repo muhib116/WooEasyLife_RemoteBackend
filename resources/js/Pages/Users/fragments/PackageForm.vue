@@ -17,6 +17,24 @@
             </div>
         </div>
         <div class="flex flex-col gap-1 mb-4">
+            <div for="domain" class="font-semibold w-24">Note</div>
+            <div class="flex-auto relative">
+                <Textarea
+                    id="domain"
+                    v-model="form.note"
+                    autoResize
+                    rows="2"
+                    placeholder="Domain"
+                    class="!w-full"
+                />
+                <span
+                    v-if="form.errors.note"
+                    class="absolute -bottom-6 left-0 text-red-500"
+                    >{{ form.errors.note }}</span
+                >
+            </div>
+        </div>
+        <div class="flex flex-col gap-1 mb-4">
             <div class="font-semibold">Transaction Method</div>
             <div class="flex-auto relative">
                 <Select

@@ -125,6 +125,7 @@ const tokenForm = useForm({
     abilities: null,
     description: null,
     domain: null,
+    referred_by: null,
 });
 
 const handleEdit = (item) => {

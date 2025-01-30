@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('transaction_id')->nullable();
             $table->string('transaction_number')->nullable();
             $table->boolean('is_active')->default(false);
+            $table->text('note')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->softDeletes();

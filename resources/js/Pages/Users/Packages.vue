@@ -47,11 +47,12 @@
                             >
                                 <template #body="{ data }">
                                     <div class="flex gap-2">
-                                        <!-- <Button
-                                            severity="info"
+                                        <Button
+                                            @click="selectedItem = data"
+                                            severity="help"
                                             size="small"
-                                            icon="pi pi-pencil"
-                                        /> -->
+                                            icon="pi pi-eye"
+                                        />
                                     </div>
                                 </template>
                             </Column>
@@ -77,6 +78,18 @@
                 @handleSave="handleSave"
             />
         </Dialog>
+        <Dialog
+            v-model:visible="selectedItem"
+            header="Details"
+            modal
+            maximizable
+            :style="{ width: '35rem' }"
+            draggable
+            dismissableMask
+            @hide="form.reset()"
+        >
+            <pre>{{ selectedItem }}</pre>
+        </Dialog>
 
         <Toast />
         <ConfirmDialog id="confirm" />
@@ -101,6 +114,8 @@ const props = defineProps<{
     user_packages: any[];
 }>();
 
+const selectedItem = ref(false);
+
 // title
 // description
 // domain
@@ -122,6 +137,7 @@ const form = useForm({
     transaction_method: "Cash",
     transaction_charge: 0,
     domain: null,
+    note: null,
     limit: 300,
 });
 
