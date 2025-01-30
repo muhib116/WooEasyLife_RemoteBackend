@@ -1,0 +1,96 @@
+{
+    "dashboard": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=uFcrJJiDksY"
+        },
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=2vd2eJb1JG0"
+        },
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=8I9jbS4_GxE"
+        }
+    ],
+    "orders": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=8I9jbS4_GxE"
+        },
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=hxMNYkLN7tI"
+        }
+    ],
+    "missingOrders": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=Hn4a1OD4sZc"
+        }
+    ],
+    "blackList": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=llw1eCZ-gNc"
+        }
+    ],
+    "fraudCheck": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=hxMNYkLN7tI"
+        }
+    ],
+    "license": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=mON7oIUUgKw"
+        }
+    ],
+    "smsConfig": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=CKJA9blyMUg"
+        }
+    ],
+    "sendSms": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=KJbF8x83UnM"
+        }
+    ],
+    "integration": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=l6RYjEZAVug"
+        }
+    ],
+    "courier": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=vxO1KgZuZ40"
+        }
+    ],
+    "customStatus": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=MhXvQWvxENA"
+        }
+    ],
+    "smsRecharge": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=yxXzMqyHFJc"
+        }
+    ],
+    "marketingTools": [
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=ijBxe70sd8M"
+        },
+        {
+            "title": "",
+            "path": "https://www.youtube.com/watch?v=P1fIdFRnfqw"
+        }
+    ]
+}

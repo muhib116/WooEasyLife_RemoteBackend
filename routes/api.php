@@ -6,6 +6,7 @@ use App\Http\Controllers\Courier\ConfigurationController;
 use App\Http\Controllers\Courier\PathaoController;
 use App\Http\Controllers\Courier\RedXController;
 use App\Http\Controllers\Courier\SteadFastController;
+use App\Http\Controllers\Data\DataController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Hub\HubController;
 use App\Http\Controllers\PackageHub\PackageController;
@@ -35,6 +36,8 @@ Route::group(['prefix' => 'api'], function () {
 
     Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
     Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
+
+    Route::any('get-tutorials', [DataController::class, 'getTutorials']);
 });
 
 Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
