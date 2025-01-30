@@ -34,7 +34,7 @@
                 >
             </div>
         </div>
-        <div class="flex flex-col gap-1 mb-4">
+        <div v-if="!form.id" class="flex flex-col gap-1 mb-4">
             <div class="font-semibold">Transaction Method</div>
             <div class="flex-auto relative">
                 <Select
@@ -53,7 +53,7 @@
                 >
             </div>
         </div>
-        <template v-if="form.transaction_method != 'Cash'">
+        <template v-if="!form.id && form.transaction_method != 'Cash'">
             <div class="flex flex-col gap-1 mb-4">
                 <div class="font-semibold">Transaction Number</div>
                 <div class="flex-auto relative">
@@ -104,7 +104,7 @@
                 </div>
             </div>
         </template>
-        <div class="flex flex-col gap-1 mb-4">
+        <div v-if="!form.id" class="flex flex-col gap-1 mb-4">
             <div for="limit" class="font-semibold w-24">Order Limit</div>
             <div class="flex-auto relative">
                 <InputNumber
@@ -121,7 +121,7 @@
                 >
             </div>
         </div>
-        <div class="flex flex-col gap-1 mb-4">
+        <div v-if="!form.id" class="flex flex-col gap-1 mb-4">
             <div for="package" class="font-semibold w-24">Package</div>
             <div class="flex-auto relative">
                 <Select

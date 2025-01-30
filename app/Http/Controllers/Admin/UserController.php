@@ -157,6 +157,19 @@ class UserController extends Controller
         return back()->with('success', 'Recharge approved successfully');
     }
 
+    public function updatePurchasePackage(Request $request, $id) {
+        $userPackage = UserPackage::find($request->id);
+        if($userPackage) {
+            $userPackage->update([
+                'updated_by' => Auth::id(),
+                'note' => $request->note,
+                'domain' => $request->domain,
+            ]);
+        }
+
+        return back()->with('success', 'Package created successfully');
+    }
+
     public function purchase(Request $request, $id)
     {
         $user = User::findOrFail($id);
@@ -186,8 +199,9 @@ class UserController extends Controller
             'transaction_charge' => $request->transaction_charge,
             'transaction_method' => $request->transaction_method,
             'is_active' => true,
+            'note' => $request->note,
             'created_by' => Auth::id(),
-            'updated_by' => Auth::id(),
+            // 'updated_by' => Auth::id(),
         ];
 
         UserPackage::create($data);

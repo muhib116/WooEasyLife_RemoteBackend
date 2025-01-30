@@ -48,7 +48,7 @@
                                 <template #body="{ data }">
                                     <div class="flex gap-2">
                                         <Button
-                                            @click="selectedItem = data"
+                                            @click="handleEdit(data)"
                                             severity="help"
                                             size="small"
                                             icon="pi pi-eye"
@@ -88,7 +88,13 @@
             dismissableMask
             @hide="form.reset()"
         >
-            <pre>{{ selectedItem }}</pre>
+            <!-- {{ selectedItem }} -->
+            <PackageForm
+                :form="form"
+                :packages="packages"
+                @onClose="onClose"
+                @handleSave="handleSave"
+            />
         </Dialog>
 
         <Toast />
@@ -125,12 +131,14 @@ const selectedItem = ref(false);
 // total_order_handled
 // per_order_rate
 // is_active
+// note
 // created_by
 // updated_by
 
 const showForm = ref(false);
 
 const form = useForm({
+    id: null,
     package_id: null,
     transaction_number: null,
     transaction_id: null,
@@ -141,18 +149,41 @@ const form = useForm({
     limit: 300,
 });
 
+const handleEdit = (item) => {
+    form.id = item.id;
+    form.package_id = item.package_id;
+    form.transaction_number = item.transaction_number;
+    form.transaction_id = item.transaction_id;
+    form.transaction_method = item.transaction_method;
+    form.transaction_charge = item.transaction_charge;
+    form.domain = item.domain;
+    form.note = item.note;
+    form.limit = item.limit;
+    selectedItem.value = item;
+};
+
 const onClose = () => {
     form.reset();
     showForm.value = false;
 };
 
 const handleSave = () => {
-    form.post(route("users.purchasePackage", props.user.id), {
-        onFinish() {
-            if (!form.hasErrors) {
-                onClose();
-            }
-        },
-    });
+    if(form.id) {
+        form.post(route("users.updatePurchasePackage", props.user.id), {
+            onFinish() {
+                if (!form.hasErrors) {
+                    onClose();
+                }
+            },
+        });
+    } else {
+        form.post(route("users.purchasePackage", props.user.id), {
+            onFinish() {
+                if (!form.hasErrors) {
+                    onClose();
+                }
+            },
+        });
+    }
 };
 </script>
