@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Traits\ApiResponseTrait;
+use App\Traits\Util;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Crypt;
 
 class Controller extends BaseController
 {
-    use AuthorizesRequests, ValidatesRequests, ApiResponseTrait;
+    use AuthorizesRequests, ValidatesRequests, ApiResponseTrait, Util;
 
     public function decodeToken($encryptedToken)
     {
@@ -27,26 +28,4 @@ class Controller extends BaseController
         return Crypt::encryptString($token);
     }
 
-    public function getDomainFromUrl($url)
-    {
-        // Ensure the URL has a scheme, default to http:// if missing
-        if (!preg_match('/^https?:\/\//', $url) || !preg_match('/^http?:\/\//', $url)) {
-            $url = 'http://' . $url;
-        }
-
-        $host = null;
-
-        try {
-            $parsedUrl = parse_url($url);
-
-            $host = $parsedUrl['host'] ?? '';
-
-            if (!empty($host)) {
-                return $host;
-            }
-        } catch (\Throwable $th) {
-        }
-
-        return $host;
-    }
 }
