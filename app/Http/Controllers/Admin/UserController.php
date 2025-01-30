@@ -167,7 +167,7 @@ class UserController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Package created successfully');
+        return back()->with('success', 'Package updated successfully');
     }
 
     public function purchase(Request $request, $id)
