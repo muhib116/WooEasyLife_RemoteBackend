@@ -30,7 +30,42 @@ class UserController extends Controller
             'Authorization' => 'Bearer ' . $token,
         ])->get(route('getUserData'));
 
-        return $response->json();
+        try {
+            $user = $response->json();
+            // $user->has_notice = null;
+            $types = ['success', 'warning', 'danger', 'info', null];
+            
+            $notices = [
+                ['type' => 'success', 'message' => 'You did an amazing job!'],
+                ['type' => 'warning', 'message' => 'Be careful! Something might go wrong.'],
+                ['type' => 'danger', 'message' => 'Oops! Something went wrong.'],
+                ['type' => 'info', 'message' => 'Just so you know, this is important.'],
+                ['type' => 'success', 'message' => 'Well done! Keep up the good work.'],
+                ['type' => 'warning', 'message' => 'Watch out! You might need to check this.'],
+                ['type' => 'danger', 'message' => 'Alert! Action is required immediately.'],
+                ['type' => 'info', 'message' => 'Heads up! Here’s some useful information.'],
+                ['type' => 'success', 'message' => 'Great work! Everything is running smoothly.'],
+                ['type' => 'warning', 'message' => 'This needs your attention before proceeding.'],
+                ['type' => 'danger', 'message' => 'Error detected! Fix it as soon as possible.'],
+                ['type' => 'info', 'message' => 'Here’s a quick update on your progress.'],
+                ['type' => 'success', 'message' => 'You nailed it! Fantastic result.'],
+                ['type' => 'warning', 'message' => 'This might not work as expected.'],
+                ['type' => 'danger', 'message' => 'Caution! Something is broken.'],
+                ['type' => 'info', 'message' => 'Did you know? This could be useful for you.'],
+                ['type' => 'success', 'message' => 'Perfect! Everything is on track.'],
+                ['type' => 'warning', 'message' => 'A minor issue was detected, please check.'],
+                ['type' => 'danger', 'message' => 'System failure! Take immediate action.'],
+                ['type' => 'info', 'message' => 'FYI: A new update is available.']
+            ];
+            
+            $user = [
+                ...$user,
+                'notice' => $types[array_rand($types)] ? $notices[array_rand($notices)] : null
+            ];
+            return $user;
+        } catch (\Throwable $th) {
+            return $this->errorResponse($th->getMessage());
+        }
     }
 
     public function view($userId)
@@ -113,7 +148,8 @@ class UserController extends Controller
         return Inertia::render('Users/SmsRecharge', compact('user', 'recharge'));
     }
 
-    public function approveSmsRecharge($sms_id) {
+    public function approveSmsRecharge($sms_id)
+    {
         $recharge = SmsRecharge::find($sms_id);
         $recharge->update([
             'status' => 'approved',

@@ -74,6 +74,7 @@
             draggable
             @hide="tokenForm.reset()"
         >
+
             <TokenForm
                 :tokenForm="tokenForm"
                 :user_packages="user_packages"
@@ -133,7 +134,7 @@ const handleEdit = (item) => {
     tokenForm.tokenable_id = item.tokenable_id;
 
     const selectedPackage = props.user_packages.find(
-        (_item) => (_item.domain = item.domain)
+        (_item) => (_item.domain == item.domain)
     );
     if (selectedPackage && selectedPackage?.domain) {
         // tokenForm.domain = selectedPackage.domain;

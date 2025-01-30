@@ -29,6 +29,11 @@ class Controller extends BaseController
 
     public function getDomainFromUrl($url)
     {
+        // Ensure the URL has a scheme, default to http:// if missing
+        if (!preg_match('/^https?:\/\//', $url)) {
+            $url = 'http://' . $url;
+        }
+
         $host = null;
 
         try {
