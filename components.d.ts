@@ -32,6 +32,8 @@ declare module 'vue' {
     Rating: typeof import('primevue/rating')['default']
     Select: typeof import('primevue/select')['default']
     Skeleton: typeof import('primevue/skeleton')['default']
+    SpeedDial: typeof import('primevue/speeddial')['default']
+    SplitButton: typeof import('primevue/splitbutton')['default']
     Tab: typeof import('primevue/tab')['default']
     TabList: typeof import('primevue/tablist')['default']
     TabPanel: typeof import('primevue/tabpanel')['default']

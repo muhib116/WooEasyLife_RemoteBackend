@@ -91,6 +91,6 @@ Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
         });
 
         Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
-        Route::post('/fraud-stream', [FraudCheckController::class, 'checkStream'])->name('checkStream');
+        Route::post('/fraud-check-stream', [FraudCheckController::class, 'checkStream'])->name('checkStream');
     });
 });
