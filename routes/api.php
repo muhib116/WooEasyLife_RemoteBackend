@@ -53,7 +53,8 @@ Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
             return true;
         })->name('apiValidate');
 
-        Route::post('hub-burn', [HubController::class, 'hubUse']);
+        // use of package order limit
+        Route::post('package-order-use', [HubController::class, 'hubUse']);
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);

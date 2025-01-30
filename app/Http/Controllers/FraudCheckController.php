@@ -120,14 +120,6 @@ class FraudCheckController extends Controller
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
         ]);
-        // if (is_array(@$request->data)) {
-        //     return $this->successResponse($this->checkMultiple($request->data));
-        // } else {
-        //     $request = new PathaoUserSuccessRateRequest();
-        //     $request->merge(['phone' => $phone]);
-        //     $response = $this->getReport($request, $phone);
-        //     return response()->json($response);
-        // }
     }
 
     private function checkOnPathao(PathaoUserSuccessRateRequest $request)
