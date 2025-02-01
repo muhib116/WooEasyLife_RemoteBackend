@@ -21,17 +21,17 @@ class ValidateTokenDomain
     {
         try {
             $token = $request->bearerToken();
-            LogHelper::saveLog('Validate Token Domain', $token);
-            return response($token);
             $accessToken = AccessToken::findToken($token);
             $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
             if (!$frontendDomain) {
+                LogHelper::saveLog('Origin domain missing from header', $token);
                 return $this->errorResponse('Origin domain missing from header');
             }
             if (!$accessToken->domain) {
                 return $next($request);
             }
             if (!$accessToken) {
+                LogHelper::saveLog('Invalid Token from', $token);
                 return $this->errorResponse('Invalid Token');
             }
 
@@ -41,6 +41,7 @@ class ValidateTokenDomain
                 ->where('is_active', true)
                 ->sum('remaining_order');
             if ($userPackage <= 0) {
+                LogHelper::saveLog('Order limit is over', $accessToken->tokenable_id.'user order limit is over');
                 return $this->errorResponse('Your order limit is over.');
             }
 

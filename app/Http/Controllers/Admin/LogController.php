@@ -50,6 +50,7 @@ class LogController extends Controller
         }
 
         $logs = LogHelper::getLogs($filePath);
+        $logs = array_reverse($logs);
         return response()->json(['logs' => $logs]);
     }
 }
