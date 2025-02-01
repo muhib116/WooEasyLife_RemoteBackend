@@ -31,15 +31,6 @@ use Illuminate\Support\Facades\Route;
 //     return true;
 // });
 
-Route::group(['prefix' => 'api'], function () {
-    Route::get('app-logo', [PluginsController::class, 'appLogo']);
-
-    Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
-    Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
-
-    Route::any('get-tutorials', [DataController::class, 'getTutorials']);
-});
-
 Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
 
     Route::get('/get-user', [UserController::class, 'getUser']);
