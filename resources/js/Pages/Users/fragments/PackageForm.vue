@@ -1,8 +1,8 @@
 <template>
     <form @submit.prevent="$emit('handleSave')">
-        <div class="flex flex-col gap-1 mb-4">
-            <div for="domain" class="font-semibold w-24">Domain</div>
-            <div class="flex-auto relative">
+        <div class="mb-4 flex flex-col gap-1">
+            <div for="domain" class="w-24 font-semibold">Domain</div>
+            <div class="relative flex-auto">
                 <InputText
                     v-model="form.domain"
                     id="domain"
@@ -16,15 +16,15 @@
                 >
             </div>
         </div>
-        <div class="flex flex-col gap-1 mb-4">
-            <div for="domain" class="font-semibold w-24">Note</div>
-            <div class="flex-auto relative">
+        <div class="mb-4 flex flex-col gap-1">
+            <div for="note" class="w-24 font-semibold">Note</div>
+            <div class="relative flex-auto">
                 <Textarea
-                    id="domain"
+                    id="note"
                     v-model="form.note"
                     autoResize
                     rows="2"
-                    placeholder="Domain"
+                    placeholder="Note"
                     class="!w-full"
                 />
                 <span
@@ -34,9 +34,9 @@
                 >
             </div>
         </div>
-        <div v-if="!form.id" class="flex flex-col gap-1 mb-4">
+        <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
             <div class="font-semibold">Transaction Method</div>
-            <div class="flex-auto relative">
+            <div class="relative flex-auto">
                 <Select
                     class="w-full"
                     v-model="form.transaction_method"
@@ -54,9 +54,9 @@
             </div>
         </div>
         <template v-if="!form.id && form.transaction_method != 'Cash'">
-            <div class="flex flex-col gap-1 mb-4">
+            <div class="mb-4 flex flex-col gap-1">
                 <div class="font-semibold">Transaction Number</div>
-                <div class="flex-auto relative">
+                <div class="relative flex-auto">
                     <InputText
                         v-model="form.transaction_number"
                         id="transaction_number"
@@ -70,9 +70,9 @@
                     >
                 </div>
             </div>
-            <div class="flex flex-col gap-1 mb-4">
+            <div class="mb-4 flex flex-col gap-1">
                 <div class="font-semibold">Transaction Id</div>
-                <div class="flex-auto relative">
+                <div class="relative flex-auto">
                     <InputText
                         v-model="form.transaction_id"
                         id="transaction_id"
@@ -86,9 +86,9 @@
                     >
                 </div>
             </div>
-            <div class="flex flex-col gap-1 mb-4">
+            <div class="mb-4 flex flex-col gap-1">
                 <div class="font-semibold">Transaction Charge</div>
-                <div class="flex-auto relative">
+                <div class="relative flex-auto">
                     <InputNumber
                         :useGrouping="false"
                         :maxFractionDigits="5"
@@ -104,9 +104,9 @@
                 </div>
             </div>
         </template>
-        <div v-if="!form.id" class="flex flex-col gap-1 mb-4">
-            <div for="limit" class="font-semibold w-24">Order Limit</div>
-            <div class="flex-auto relative">
+        <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
+            <div for="limit" class="w-24 font-semibold">Order Limit</div>
+            <div class="relative flex-auto">
                 <InputNumber
                     :useGrouping="false"
                     v-model="form.limit"
@@ -121,9 +121,9 @@
                 >
             </div>
         </div>
-        <div v-if="!form.id" class="flex flex-col gap-1 mb-4">
-            <div for="package" class="font-semibold w-24">Package</div>
-            <div class="flex-auto relative">
+        <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
+            <div for="package" class="w-24 font-semibold">Package</div>
+            <div class="relative flex-auto">
                 <Select
                     class="w-full"
                     v-model="form.package_id"
@@ -142,7 +142,7 @@
             </div>
         </div>
 
-        <div class="flex justify-end items-center gap-2">
+        <div class="flex items-center justify-end gap-2">
             <div class="pr-5">Total Cost = {{ getTotalCost }} TK</div>
             <Button
                 type="button"
@@ -170,7 +170,7 @@ const props = defineProps<{
 
 const getTotalCost = computed(() => {
     const foundPackage = (props.packages || []).find(
-        (item) => item.id == props.form.package_id
+        (item) => item.id == props.form.package_id,
     );
     if (foundPackage) {
         console.log(foundPackage);

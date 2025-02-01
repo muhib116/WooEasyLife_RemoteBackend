@@ -30,10 +30,11 @@ use Illuminate\Support\Facades\Route;
 // Route::middleware('auth:sanctum')->get('/validate-token', function (Request $request) {
 //     return true;
 // });
-
-Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
-
+Route::group(['prefix' => 'api'], function () {
     Route::get('/get-user', [UserController::class, 'getUser']);
+});
+
+Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () {
 
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/get-user-data', function (Request $request) {
@@ -43,6 +44,8 @@ Route::group(['middleware' => 'check.token', 'prefix' => 'api'], function () {
         Route::get('/validate-token', function (Request $request) {
             return true;
         })->name('apiValidate');
+
+        Route::any('get-tutorials', [DataController::class, 'getTutorials']);
 
         // use of package order limit
         Route::post('package-order-use', [HubController::class, 'hubUse']);

@@ -29,7 +29,7 @@ trait ApiResponseTrait
      * @param mixed $errors
      * @return \Illuminate\Http\JsonResponse
      */
-    public function errorResponse($message = 'Error', $statusCode = 400, $errors = null)
+    public function errorResponse($message = 'Error', $statusCode = 400, $errors = null, $overError = false)
     {
         try {
             $errors = convertErrorArrayToString($errors);
@@ -41,6 +41,7 @@ trait ApiResponseTrait
             'data' => null,
             'message' => $message,
             'errors' => $errors,
+            'is_order_limit_over' => $overError
         ], $statusCode);
     }
 

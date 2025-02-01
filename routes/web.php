@@ -10,15 +10,11 @@ use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CurlController;
-use App\Http\Controllers\Data\DataController;
 use App\Http\Controllers\FraudCheckController;
-use App\Http\Controllers\PackageHub\PackageController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SmsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -47,9 +43,6 @@ Route::get('/curl', [CurlController::class, 'index']);
 Route::get('app-logo', [PluginsController::class, 'appLogo']);
 Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
-Route::any('get-tutorials', [DataController::class, 'getTutorials']);
-
-
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

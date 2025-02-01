@@ -61,6 +61,12 @@ class UserController extends Controller
                 return $this->errorResponse('User Not found', 401);
             }
 
+            $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
+                ->where('domain', $accessToken->domain)
+                ->where('is_active', true)
+                ->sum('remaining_order');
+
+            $user->order_limit_information = $userPackage + 0;
             $user->notice = $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
             return response()->json($user, 200);
         } catch (\Throwable $th) {

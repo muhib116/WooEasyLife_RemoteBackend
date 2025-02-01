@@ -36,15 +36,15 @@ class ValidateTokenDomain
             }
 
             $host = $this->getDomainFromUrl($accessToken->domain);
-
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
+                ->where('domain', $accessToken->domain)
                 ->where('is_active', true)
                 ->sum('remaining_order');
             if ($userPackage <= 0) {
-                LogHelper::saveLog('Order limit is over', $accessToken->tokenable_id.'user order limit is over');
-                return $this->errorResponse('Your order limit is over.');
+                LogHelper::saveLog('Order limit is over', '(' . $accessToken->tokenable_id . ') user order limit is over');
+                return $this->errorResponse('Your order limit is over.', 400, null, true);
             }
-
+            // return response($userPackage);
             $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
             $requestDomain = $this->getDomainFromUrl($frontendDomain);
             if ($requestDomain !== $host) {
