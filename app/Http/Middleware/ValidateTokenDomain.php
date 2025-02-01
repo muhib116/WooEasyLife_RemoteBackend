@@ -19,32 +19,35 @@ class ValidateTokenDomain
     public function handle(Request $request, Closure $next)
     {
         try {
-            // if (!env('APP_SKIP_DOMAIN')) {
-            // }
             $token = $request->bearerToken();
             $accessToken = AccessToken::findToken($token);
+            $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
+            if (!$frontendDomain) {
+                return $this->errorResponse('Origin domain missing from header');
+            }
             if (!$accessToken->domain) {
                 return $next($request);
             }
-            // return response()->json($accessToken);
             if (!$accessToken) {
                 return $this->errorResponse('Invalid Token');
             }
 
-            $token = $request->bearerToken();
             $host = $this->getDomainFromUrl($accessToken->domain);
+
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
                 ->where('is_active', true)
                 ->sum('remaining_order');
             if ($userPackage <= 0) {
                 return $this->errorResponse('Your order limit is over.');
             }
-            $requestDomain = $this->getDomainFromUrl($request->url());
-            if ($host !== $requestDomain) {
+
+            $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
+            $requestDomain = $this->getDomainFromUrl($frontendDomain);
+            if ($requestDomain !== $host) {
                 return $this->errorResponse('Invalid domain');
             }
         } catch (\Throwable $th) {
-            //throw $th;
+            throw $th;
         }
 
         return $next($request);

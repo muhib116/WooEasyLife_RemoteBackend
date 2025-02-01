@@ -25,16 +25,15 @@ class UserController extends Controller
     public function getUser(Request $request)
     {
         $token = $request->bearerToken();
-
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $token,
-        ])->get(route('getUserData'));
+        $accessToken = AccessToken::findToken($token);
+        if (!$accessToken) {
+            return $this->errorResponse('Invalid Token');
+        }
 
         try {
-            $user = $response->json();
-            // $user->has_notice = null;
+            $user = $accessToken->tokenable;
             $types = ['success', 'warning', 'danger', 'info', null];
-            
+
             $notices = [
                 ['type' => 'success', 'message' => 'You did an amazing job!'],
                 ['type' => 'warning', 'message' => 'Be careful! Something might go wrong.'],
@@ -57,12 +56,13 @@ class UserController extends Controller
                 ['type' => 'danger', 'message' => 'System failure! Take immediate action.'],
                 ['type' => 'info', 'message' => 'FYI: A new update is available.']
             ];
-            
-            $user = [
-                ...$user,
-                'notice' => $types[array_rand($types)] ? $notices[array_rand($notices)] : null
-            ];
-            return $user;
+
+            if (!$user) {
+                return $this->errorResponse('User Not found', 401);
+            }
+
+            $user->notice = $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
+            return response()->json($user, 200);
         } catch (\Throwable $th) {
             return $this->errorResponse($th->getMessage());
         }
@@ -157,9 +157,10 @@ class UserController extends Controller
         return back()->with('success', 'Recharge approved successfully');
     }
 
-    public function updatePurchasePackage(Request $request, $id) {
+    public function updatePurchasePackage(Request $request, $id)
+    {
         $userPackage = UserPackage::find($request->id);
-        if($userPackage) {
+        if ($userPackage) {
             $userPackage->update([
                 'updated_by' => Auth::id(),
                 'note' => $request->note,
