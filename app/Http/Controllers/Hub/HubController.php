@@ -44,7 +44,6 @@ class HubController extends Controller
             ->where('domain', $accessToken->domain)
             ->orderBy('id', 'asc')
             ->first();
-        return $package;
         if (!$package) {
             return $this->errorResponse('No package found or no remaining order');
         }
