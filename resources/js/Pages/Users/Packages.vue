@@ -9,7 +9,7 @@
                     <UserNav :user="user">
                         <button
                             @click="showForm = true"
-                            class="py-1 px-4 bg-indigo-500 text-white flex items-center gap-2"
+                            class="flex items-center gap-2 bg-indigo-500 px-4 py-1 text-white"
                         >
                             <span class="pi pi-plus"></span>
                             Activate Package
@@ -168,7 +168,7 @@ const onClose = () => {
 };
 
 const handleSave = () => {
-    if(form.id) {
+    if (form.id) {
         form.post(route("users.updatePurchasePackage", props.user.id), {
             onFinish() {
                 if (!form.hasErrors) {
