@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\LogHelper;
 use App\Models\AccessToken;
 use App\Models\User;
 use App\Models\UserPackage;
@@ -20,6 +21,8 @@ class ValidateTokenDomain
     {
         try {
             $token = $request->bearerToken();
+            LogHelper::saveLog('Validate Token Domain', $token);
+            return response($token);
             $accessToken = AccessToken::findToken($token);
             $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
             if (!$frontendDomain) {

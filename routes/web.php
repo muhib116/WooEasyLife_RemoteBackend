@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PackageHubController;
 use App\Http\Controllers\Admin\PluginsController;
@@ -65,6 +66,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/primeicons', function () {
         return Inertia::render('Icons/Prime');
     })->name('icons.prime');
+
+    Route::group(['as' => 'logs.', 'prefix' => 'logs'], function () {
+        Route::get('/', [LogController::class, 'index'])->name('index');
+        Route::get('/list', [LogController::class, 'listLogs'])->name('list');
+        Route::post('/view', [LogController::class, 'viewLog'])->name('view');
+    });
 
     Route::group(['as' => 'products.', 'prefix' => 'products'], function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');

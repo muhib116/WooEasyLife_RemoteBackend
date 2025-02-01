@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Hub;
 
 use App\Http\Controllers\Controller;
+use App\LogHelper;
 use App\Models\AccessToken;
 use App\Models\PackageUseHistory;
 use App\Models\TransactionHistory;
@@ -58,6 +59,7 @@ class HubController extends Controller
             try {
                 $useDetails = $request->use_details;
             } catch (\Throwable $th) {
+                LogHelper::saveLog('Package use_details parse error', $th->getMessage());
             }
             $total_order_handled = $total_order_handled + $request->order_count;
             $remaining_order = $remaining_order - $request->order_count;
@@ -87,6 +89,7 @@ class HubController extends Controller
 
             return $this->successResponse($packageUse, 'History stored successfully');
         } catch (\Throwable $th) {
+            LogHelper::saveLog('Package use error', $th->getMessage());
             return $this->errorResponse($th->getMessage(), $th->getCode());
         }
     }
