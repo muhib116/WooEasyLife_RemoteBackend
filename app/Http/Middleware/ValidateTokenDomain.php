@@ -41,7 +41,7 @@ class ValidateTokenDomain
             }
             $requestDomain = $this->getDomainFromUrl($request->url());
             if ($host !== $requestDomain) {
-                return $this->errorResponse('Invalid domain');
+                return $this->errorResponse($request->url() . 'Invalid domain' . $requestDomain);
             }
         } catch (\Throwable $th) {
             //throw $th;
