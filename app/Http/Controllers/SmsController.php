@@ -234,7 +234,7 @@ class SmsController extends Controller
 
         $recharge = SmsRecharge::create($data);
 
-        return $recharge;
+        return $this->successResponse($recharge);
     }
 
     public function rechargeHistory(Request $request)
@@ -248,6 +248,7 @@ class SmsController extends Controller
 
         return $this->successResponse($balanceHistory);
     }
+
     public function useHistory(Request $request)
     {
         $userId = Auth::id();

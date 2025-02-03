@@ -49,22 +49,21 @@
                             >
                                 <template #body="{ data }">
                                     <div
+                                        v-if="data?.status == 'pending'"
                                         class="relative flex items-center justify-end gap-2"
                                     >
-                                        <!-- <Button
+                                        <Button
+                                            @click="handleReject(data)"
+                                            severity="danger"
+                                            size="small"
+                                            icon="pi pi-ban"
+                                        />
+                                        <Button
                                             @click="handleApprove(data)"
                                             severity="info"
                                             size="small"
                                             icon="pi pi-check"
-                                        /> -->
-                                        <div class="absolute">
-                                            <SplitButton
-                                                label="Actions"
-                                                size="small"
-                                                :model="getItems(data)"
-                                                @click="activeData = data"
-                                            />
-                                        </div>
+                                        />
                                     </div>
                                 </template>
                             </Column>
@@ -109,42 +108,11 @@ const getItems = (data) => {
     const items = [
         {
             label: "Approve",
-            command: async () => {
-                confirm.require({
-                    header: "Approve this?",
-                    rejectProps: {
-                        label: "Cancel",
-                        severity: "secondary",
-                        outlined: true,
-                    },
-                    acceptProps: {
-                        label: "Approve",
-                    },
-                    accept: () => {
-                        router.post(route("users.approveSmsRecharge", data.id));
-                    },
-                });
-            },
+            command: async () => {},
         },
         {
             label: "Reject",
-            command: () => {
-                confirm.require({
-                    header: "Approve this?",
-                    rejectProps: {
-                        label: "Cancel",
-                        severity: "secondary",
-                        outlined: true,
-                    },
-                    acceptProps: {
-                        label: "Reject",
-                        severity: "danger",
-                    },
-                    accept: () => {
-                        router.post(route("users.rejectSmsRecharge", data.id));
-                    },
-                });
-            },
+            command: () => {},
         },
     ];
 
@@ -152,10 +120,44 @@ const getItems = (data) => {
 };
 
 const handleApprove = (item) => {
-    router.post(
-        route("users.approveSmsRecharge", {
-            sms_id: item.id,
-        }),
-    );
+    confirm.require({
+        header: "Approve this?",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+        },
+        acceptProps: {
+            label: "Approve",
+        },
+        accept: () => {
+            router.post(
+                route("users.approveSmsRecharge", {
+                    sms_id: item.id,
+                }),
+            );
+        },
+    });
+};
+const handleReject = (item) => {
+    confirm.require({
+        header: "Reject this?",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+        },
+        acceptProps: {
+            label: "Reject",
+            severity: "danger",
+        },
+        accept: () => {
+            router.post(
+                route("users.rejectSmsRecharge", {
+                    sms_id: item.id,
+                }),
+            );
+        },
+    });
 };
 </script>

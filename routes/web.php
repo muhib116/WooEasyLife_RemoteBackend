@@ -93,6 +93,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');
         Route::post('/{id}/save', [FollowUpController::class, 'save'])->name('save');
     });
+
     Route::group(['as' => 'users.', 'prefix' => 'users'], function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::post('/store', [UserController::class, 'store'])->name('store');
@@ -105,6 +106,7 @@ Route::middleware('auth')->group(function () {
         Route::post('{id}/purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
         Route::post('{id}/update-purchase-package', [UserController::class, 'updatePurchasePackage'])->name('updatePurchasePackage');
     });
+
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         // Route::get('/{id}/view', [FollowUpController::class, 'followUp'])->name('view');

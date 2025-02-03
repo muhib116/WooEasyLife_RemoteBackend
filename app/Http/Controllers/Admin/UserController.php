@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
 use App\Models\PackageHub;
+use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
 use App\Models\User;
 use App\Models\UserPackage;
@@ -164,6 +165,11 @@ class UserController extends Controller
         $recharge->update([
             'status' => 'approved',
         ]);
+        // SmsBalance::create([
+        //     'user_id' => $recharge->user_id,
+        //     'amount' => $recharge->amount,
+        //     'type' => 'in',
+        // ]);
         return back()->with('success', 'Recharge approved successfully');
     }
     public function rejectSmsRecharge($sms_id)
