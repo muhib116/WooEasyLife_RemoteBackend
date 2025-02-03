@@ -172,7 +172,7 @@ class SmsController extends Controller
 
             $responseDecoded = json_decode($response);
 
-            if ($responseDecoded->message_id && !$responseDecoded->error_message) {
+            if (@$responseDecoded->message_id && !@$responseDecoded->error_message) {
                 // add success to content
                 // $smsLength = strlen($sms);
                 try {
@@ -195,7 +195,10 @@ class SmsController extends Controller
                 // $isSuccess = true;
             }
 
-            file_put_contents(__DIR__ . '/sms.log', $response);
+            try {
+                file_put_contents(__DIR__ . '/sms.log', $response);
+            } catch (\Throwable $th) {
+            }
             // Check for errors
             if (curl_errno($ch)) {
                 echo 'Error:' . curl_error($ch);

@@ -25,11 +25,18 @@ class LogHelper
             // Determine the latest chunk file
             $chunkedFile = self::getChunkedFileName($logDirectory, $baseFileName);
 
+            $endpoint = '';
+            try {
+                $endpoint = request()->url();
+            } catch (\Throwable $th) {
+            }
+
             // Create a structured log entry
             $logEntry = json_encode([
                 'timestamp' => now()->toDateTimeString(),
                 'title' => $title,
                 'message' => $message,
+                'endpoint' => $endpoint
             ]) . PHP_EOL;
 
             // Save to the latest chunked log file
