@@ -49,7 +49,7 @@
                             >
                                 <template #body="{ data }">
                                     <div
-                                        class="flex justify-end items-center relative gap-2"
+                                        class="relative flex items-center justify-end gap-2"
                                     >
                                         <!-- <Button
                                             @click="handleApprove(data)"
@@ -59,8 +59,10 @@
                                         /> -->
                                         <div class="absolute">
                                             <SplitButton
+                                                label="Actions"
                                                 size="small"
-                                                :model="items"
+                                                :model="getItems(data)"
+                                                @click="activeData = data"
                                             />
                                         </div>
                                     </div>
@@ -73,7 +75,7 @@
         </Card>
 
         <Toast />
-        <ConfirmDialog id="confirm" />
+        <ConfirmDialog id="confirm" class="min-w-[20rem]" />
     </AuthenticatedLayout>
 </template>
 
@@ -85,6 +87,7 @@ import PackageForm from "./fragments/PackageForm.vue";
 import { ref } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
+import { useConfirm } from "primevue";
 
 defineOptions({
     name: "Packages",
@@ -97,47 +100,62 @@ const props = defineProps<{
 
 const toast = useToast();
 
-const showForm = ref(false);
+const confirm = useConfirm();
 
-const items = [
-    {
-        label: "Update",
-        command: () => {
-            toast.add({
-                severity: "success",
-                summary: "Updated",
-                detail: "Data Updated",
-                life: 3000,
-            });
+const showForm = ref(false);
+const activeData = ref();
+
+const getItems = (data) => {
+    const items = [
+        {
+            label: "Approve",
+            command: async () => {
+                confirm.require({
+                    header: "Approve this?",
+                    rejectProps: {
+                        label: "Cancel",
+                        severity: "secondary",
+                        outlined: true,
+                    },
+                    acceptProps: {
+                        label: "Approve",
+                    },
+                    accept: () => {
+                        router.post(route("users.approveSmsRecharge", data.id));
+                    },
+                });
+            },
         },
-    },
-    {
-        label: "Delete",
-        command: () => {
-            toast.add({
-                severity: "warn",
-                summary: "Delete",
-                detail: "Data Deleted",
-                life: 3000,
-            });
+        {
+            label: "Reject",
+            command: () => {
+                confirm.require({
+                    header: "Approve this?",
+                    rejectProps: {
+                        label: "Cancel",
+                        severity: "secondary",
+                        outlined: true,
+                    },
+                    acceptProps: {
+                        label: "Reject",
+                        severity: "danger",
+                    },
+                    accept: () => {
+                        router.post(route("users.rejectSmsRecharge", data.id));
+                    },
+                });
+            },
         },
-    },
-    {
-        separator: true,
-    },
-    {
-        label: "Quit",
-        command: () => {
-            window.location.href = "https://vuejs.org/";
-        },
-    },
-];
+    ];
+
+    return items;
+};
 
 const handleApprove = (item) => {
     router.post(
         route("users.approveSmsRecharge", {
             sms_id: item.id,
-        })
+        }),
     );
 };
 </script>

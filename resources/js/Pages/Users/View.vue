@@ -7,6 +7,15 @@
             <template #content>
                 <div class="min-h-[400px]">
                     <UserNav :user="user" />
+
+                    <div class="mt-5 flex flex-wrap gap-8">
+                        <div class="w-[300px] rounded border p-4">
+                            <h2>Personal Access Tokens</h2>
+                            <div class="text-4xl">
+                                {{ report.active_api_key }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </template>
         </Card>
@@ -24,5 +33,6 @@ defineOptions({
 
 const props = defineProps<{
     user: any;
+    report: any;
 }>();
 </script>

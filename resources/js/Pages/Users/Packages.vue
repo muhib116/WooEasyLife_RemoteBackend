@@ -32,6 +32,12 @@
                                 field="total_order_handled"
                                 header="Handled"
                             />
+                            <Column field="is_active" header="Active">
+                                <template #body="{ data }">
+                                    <Badge severity="success" v-if="data?.is_active">Active</Badge>
+                                    <Badge v-else>Disabled</Badge>
+                                </template>
+                            </Column>
                             <Column
                                 field="per_order_rate"
                                 header="Order Rate"

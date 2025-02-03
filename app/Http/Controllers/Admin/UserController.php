@@ -79,7 +79,11 @@ class UserController extends Controller
     {
         $user = User::find($userId);
 
-        return Inertia::render('Users/View', compact('user'));
+        $report = [
+            'active_api_key' => AccessToken::where('tokenable_id', $userId)->count()
+        ];
+
+        return Inertia::render('Users/View', compact('user', 'report'));
     }
 
     public function store(Request $request)
@@ -144,7 +148,6 @@ class UserController extends Controller
         $packages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
         $user_packages = UserPackage::where([
             'user_id' => $userId,
-            'is_active' => true,
         ])->orderBy('created_at', 'desc')->get();
         return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
     }
@@ -162,6 +165,14 @@ class UserController extends Controller
             'status' => 'approved',
         ]);
         return back()->with('success', 'Recharge approved successfully');
+    }
+    public function rejectSmsRecharge($sms_id)
+    {
+        $recharge = SmsRecharge::find($sms_id);
+        $recharge->update([
+            'status' => 'reject',
+        ]);
+        return back()->with('success', 'Recharge reject successfully');
     }
 
     public function updatePurchasePackage(Request $request, $id)
