@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserPackage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
@@ -161,10 +162,26 @@ class UserController extends Controller
 
     public function approveSmsRecharge($sms_id)
     {
-        $recharge = SmsRecharge::find($sms_id);
-        $recharge->update([
-            'status' => 'approved',
-        ]);
+
+        DB::beginTransaction();
+        try {
+            $recharge = SmsRecharge::find($sms_id);
+            $recharge->update([
+                'status' => 'approved',
+            ]);
+            $data = [
+                'user_id' => $recharge->user_id,
+                'type' => 'in',
+                'amount' => $recharge->total_amount - $recharge->transaction_charge,
+                'note' => 'Recharge',
+            ];
+            SmsBalance::create($data);
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            throw $th;
+            // return back()->with('error', $th->getMessage());
+        }
         // SmsBalance::create([
         //     'user_id' => $recharge->user_id,
         //     'amount' => $recharge->amount,

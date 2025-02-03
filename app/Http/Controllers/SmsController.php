@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\LogHelper;
 use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class SmsController extends Controller
@@ -135,13 +137,13 @@ class SmsController extends Controller
             'content' => 'required'
         ]);
 
-        if ($validator->failed()) {
+        if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
         }
 
         // $isSuccess = false;
         $responseDecoded = [];
-
+        DB::beginTransaction();
         try {
             $url = "http://bulksmsbd.net/api/smsapi";
 
@@ -173,19 +175,23 @@ class SmsController extends Controller
             if ($responseDecoded->message_id && !$responseDecoded->error_message) {
                 // add success to content
                 // $smsLength = strlen($sms);
-                $smsCount = $this->countSmsSegments($sms);
-                // 63/145
-                $data = [
-                    'user_id' => Auth::id(),
-                    'type' => 'out',
-                    'amount' => - ($smsCount * 0.04),
-                    'sms_rate' => 0.40,
-                    'sms_text' => $sms,
-                    'sms_count' => $smsCount,
-                    'message_id' => $responseDecoded->message_id,
-                    'note' => '',
-                ];
-                SmsBalance::create($data);
+                try {
+                    $smsCount = $this->countSmsSegments($sms);
+                    // 63/145
+                    $data = [
+                        'user_id' => Auth::id(),
+                        'type' => 'out',
+                        'amount' => - ($smsCount * 0.04),
+                        'sms_rate' => 0.40,
+                        'sms_text' => $sms,
+                        'sms_count' => $smsCount,
+                        'message_id' => @$responseDecoded->message_id,
+                        'note' => '',
+                    ];
+                    SmsBalance::create($data);
+                } catch (\Throwable $th) {
+                    LogHelper::saveLog('error while sms balance cut', $th->getMessage());
+                }
                 // $isSuccess = true;
             }
 
@@ -194,13 +200,16 @@ class SmsController extends Controller
             if (curl_errno($ch)) {
                 echo 'Error:' . curl_error($ch);
                 file_put_contents(__DIR__ . '/sms-error.log', 'Error:' . curl_error($ch));
+                LogHelper::saveLog('sms send error', 'Error:' . curl_error($ch));
             } else {
             }
 
             // Close cURL session
             curl_close($ch);
         } catch (\Throwable $th) {
-            //throw $th;
+            DB::rollBack();
+            LogHelper::saveLog('sms send error catch', $th->getMessage());
+            return $this->errorResponse('Failed to send message');
         }
 
         return $this->successResponse($responseDecoded, 'Sms sent successfully');
