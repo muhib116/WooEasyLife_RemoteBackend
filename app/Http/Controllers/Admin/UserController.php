@@ -66,8 +66,9 @@ class UserController extends Controller
                 ->where('is_active', true)
                 ->sum('remaining_order');
 
-            $user->order_limit_information = $userPackage + 0;
-            $user->notice = $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
+            $user->remaining_order = $userPackage + 0;
+            $user->notice = null; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
+
             return response()->json($user, 200);
         } catch (\Throwable $th) {
             return $this->errorResponse($th->getMessage());

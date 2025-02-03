@@ -28,6 +28,7 @@ class HubController extends Controller
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
+            LogHelper::saveLog('validation error on hub use', json_encode($validator->errors()));
             return $this->validationErrorResponse($validator->errors());
         }
 
@@ -36,6 +37,7 @@ class HubController extends Controller
         $accessToken = AccessToken::findToken($token);
         $host = $this->getDomainFromUrl($accessToken->domain);
         if (!$host) {
+            LogHelper::saveLog('invalid domain', 'domain mismatch');
             return $this->errorResponse('Invalid domain');
         }
 
@@ -46,7 +48,8 @@ class HubController extends Controller
             ->first();
 
         if (!$package) {
-            return $this->errorResponse('No package found or no remaining order');
+            LogHelper::saveLog('Order limit over', 'No package found or no remaining order');
+            return $this->errorResponse('No package found or no remaining order', 400, null, true);
         }
 
         try {
