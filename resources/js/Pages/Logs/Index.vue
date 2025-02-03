@@ -60,7 +60,22 @@
                             header="Timestamp"
                         />
                         <Column field="title" header="Title" />
-                        <Column field="message" header="Message" />
+                        <Column
+                            class="max-w-[30rem]"
+                            field="message"
+                            header="Message"
+                        >
+                            <template #body="{ data }">
+                                <div>
+                                    <div class="text-yellow-600">
+                                        {{ data?.endpoint }}
+                                    </div>
+                                    <div class="text-red-600 dark:text-red-400">
+                                        {{ data.message }}
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
                     </DataTable>
                     <p v-else class="text-gray-400">No logs available.</p>
                 </div>

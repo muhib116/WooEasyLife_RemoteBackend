@@ -193,6 +193,8 @@ class SmsController extends Controller
                     LogHelper::saveLog('error while sms balance cut', $th->getMessage());
                 }
                 // $isSuccess = true;
+            } else {
+                LogHelper::saveLog('error while sending sms', $response);
             }
 
             try {
@@ -253,9 +255,9 @@ class SmsController extends Controller
     {
         $userId = Auth::id();
 
-        $balanceHistory = SmsBalance::query()
+        $balanceHistory = SmsRecharge::query()
             ->where('user_id', $userId)
-            ->where('type', 'in')
+            // ->where('type', 'in')
             ->get();
 
         return $this->successResponse($balanceHistory);
