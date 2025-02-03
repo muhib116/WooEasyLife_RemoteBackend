@@ -2,12 +2,12 @@
     <Head :title="title" />
 
     <div
-        class="h-svh flex flex-col bg-[#f3f4f6] dark:bg-gray-800 dark:text-white"
+        class="flex h-svh flex-col bg-[#f3f4f6] dark:bg-gray-800 dark:text-white"
     >
         <div
-            class="bg-white flex-shrink-0 dark:bg-slate-800 dark:border-gray-600 px-4 h-[60px] flex items-center justify-between"
+            class="flex h-[60px] flex-shrink-0 items-center justify-between bg-white px-4 dark:border-gray-600 dark:bg-slate-800"
         >
-            <div class="text-xl font-semibold cursor-pointer">Natural Care</div>
+            <div class="cursor-pointer text-xl font-semibold">Natural Care</div>
             <div class="flex items-center gap-5">
                 <button @click="isDarkMode = !isDarkMode">
                     <Icon :name="isDarkMode ? 'PhSun' : 'PhMoonStars'" />
@@ -17,13 +17,13 @@
                 </button>
             </div>
         </div>
-        <div class="flex-1 flex">
+        <div class="flex flex-1">
             <div
-                class="w-[240px] h-[calc(100svh-60px)] bg-white dark:bg-slate-800 overflow-auto py-8"
+                class="h-[calc(100svh-60px)] w-[240px] overflow-auto bg-white py-8 dark:bg-slate-800"
             >
                 <LeftSidebar />
             </div>
-            <div class="flex-1 py-6 h-[calc(100svh-60px)] overflow-auto px-6">
+            <div class="h-[calc(100svh-60px)] flex-1 overflow-auto px-6 py-6">
                 <slot></slot>
             </div>
         </div>
@@ -33,21 +33,23 @@
             closeOnEscape
             blockScroll
             draggable
+            dismissableMask
             header="Primary Color"
             :style="{ width: '25rem' }"
         >
-            <div class="flex justify-center items-center mt-5 flex-wrap gap-5">
+            <div class="mt-5 flex flex-wrap items-center justify-center gap-5">
                 <div v-for="(color, name) in colors" :key="name">
                     <button
-                        class="border w-9 h-9 rounded select-none cursor-pointer hover:scale-105"
+                        class="h-9 w-9 cursor-pointer select-none rounded border hover:scale-105"
                         :class="{
                             'ring-2 ring-blue-500 ring-offset-2':
                                 primaryTheme == name,
                         }"
                         :style="{
-                            backgroundColor: get(color, '600'),
+                            backgroundColor: get(color, '500'),
                         }"
                         @click="changePrimaryColor(name)"
+                        :title="name"
                     ></button>
                 </div>
             </div>
@@ -72,7 +74,7 @@ withDefaults(
     }>(),
     {
         skipWrapper: false,
-    }
+    },
 );
 
 const toast = useToast();
@@ -114,7 +116,7 @@ watch(
             }
         }, 100);
     },
-    { deep: true }
+    { deep: true },
 );
 
 const themeDialog = ref(false);

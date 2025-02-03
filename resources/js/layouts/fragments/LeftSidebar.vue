@@ -6,7 +6,7 @@
                     :href="route(_route.name)"
                     class="group flex items-center rounded-lg p-2 text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                     :class="{
-                        'bg-gray-100 text-black dark:!bg-gray-900':
+                        'bg-[var(--p-primary-color)] text-white hover:bg-[var(--p-primary-color)] dark:!bg-gray-900':
                             route().current(_route.name),
                     }"
                 >
