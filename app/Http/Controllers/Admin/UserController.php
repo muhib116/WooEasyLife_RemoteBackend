@@ -167,9 +167,11 @@ class UserController extends Controller
         try {
             $recharge = SmsRecharge::find($sms_id);
             $recharge->update([
+                'updated_by' => Auth::id(),
                 'status' => 'approved',
             ]);
             $data = [
+                'created_by' => Auth::id(),
                 'user_id' => $recharge->user_id,
                 'type' => 'in',
                 'amount' => $recharge->total_amount - $recharge->transaction_charge,
@@ -193,7 +195,7 @@ class UserController extends Controller
     {
         $recharge = SmsRecharge::find($sms_id);
         $recharge->update([
-            'status' => 'reject',
+            'status' => 'cancelled',
         ]);
         return back()->with('success', 'Recharge reject successfully');
     }

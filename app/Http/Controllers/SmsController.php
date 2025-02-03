@@ -238,6 +238,7 @@ class SmsController extends Controller
         // $transactionCharge = number_format(($request->total_amount * 1.85) / 100, 2);
         $data = [
             'user_id' => Auth::id(),
+            'created_by' => Auth::id(),
             'total_amount' => number_format($request->total_amount, 2),
             'transaction_charge' => number_format($request->total_charge, 2),
             'transaction_method' => $request->transaction_method,
