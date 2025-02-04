@@ -9,18 +9,97 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use stdClass;
 
 class SmsController extends Controller
 {
 
-    public function calculateSMSDetails($message)
+    // public function calculateSMSDetails($message)
+    // {
+    //     $GSM_7BIT = "GSM_7BIT";
+    //     $GSM_7BIT_EX = "GSM_7BIT_EX";
+    //     $UTF16 = "UTF16";
+
+    //     $gsm7bitExChar = "\\^{}\\\\\\[~\\]|€\n";
+    //     $gsm7bitChars = file_get_contents(__DIR__ . '/Data/smsCharacters.txt');
+
+    //     $messageLength = [
+    //         $GSM_7BIT => 160,
+    //         $GSM_7BIT_EX => 160,
+    //         $UTF16 => 70
+    //     ];
+    //     $multiMessageLength = [
+    //         $GSM_7BIT => 153,
+    //         $GSM_7BIT_EX => 153,
+    //         $UTF16 => 67
+    //     ];
+
+    //     $gsm7bitRegExp = "/^[" . preg_quote($gsm7bitChars, '/') . "]*$/u";
+    //     $gsm7bitExRegExp = "/^[" . preg_quote($gsm7bitChars . $gsm7bitExChar, '/') . "]*$/u";
+    //     $gsm7bitExOnlyRegExp = "/[" . preg_quote($gsm7bitExChar, '/') . "]/u";
+
+    //     function detectEncoding($text, $gsm7bitRegExp, $gsm7bitExRegExp)
+    //     {
+    //         if (preg_match($gsm7bitRegExp, $text)) {
+    //             return "GSM_7BIT";
+    //         } elseif (preg_match($gsm7bitExRegExp, $text)) {
+    //             return "GSM_7BIT_EX";
+    //         }
+    //         return "UTF16";
+    //     }
+
+    //     function countGsm7bitEx($text, $gsm7bitExOnlyRegExp)
+    //     {
+    //         preg_match_all($gsm7bitExOnlyRegExp, $text, $matches);
+    //         return is_array($matches[0]) ? count($matches[0]) : 0;
+    //     }
+
+    //     // Ensure the message is a string and remove line breaks
+    //     $cleanMessage = is_string($message) ? str_replace(["\r\n", "\n", "\r"], " ", $message) : "";
+
+    //     // Detect encoding
+    //     $encoding = detectEncoding($cleanMessage, $gsm7bitRegExp, $gsm7bitExRegExp);
+
+    //     // Get the message length
+    //     $length = mb_strlen($cleanMessage, 'UTF-8');
+    //     $perMessage = $messageLength[$encoding] ?? 160; // Ensure a valid numeric value
+    //     $messages = 1;
+    //     $remaining = 0;
+
+    //     if ($encoding === $GSM_7BIT_EX) {
+    //         $length += countGsm7bitEx($cleanMessage, $gsm7bitExOnlyRegExp);
+    //     }
+
+    //     if ($length > $perMessage) {
+    //         $perMessage = $multiMessageLength[$encoding] ?? 153; // Ensure numeric value
+    //     }
+
+    //     return $perMessage;
+
+    //     // Ensure $length and $perMessage are numbers
+    //     $length = (int) $length;
+    //     $perMessage = (int) $perMessage;
+
+    //     // Calculate number of messages
+    //     $messages = (int) ceil($length / $perMessage);
+    //     $remaining = max(($perMessage * $messages) - $length, 0); // Avoid negative values
+
+    //     return [
+    //         'encoding' => $encoding,
+    //         'setSmsCharacterCount' => $length,
+    //         'setSmsRemainingCount' => $remaining,
+    //         'setSmsPartCount' => $messages
+    //     ];
+    // }
+
+    public function getTotalSmsCount($message)
     {
         $GSM_7BIT = "GSM_7BIT";
         $GSM_7BIT_EX = "GSM_7BIT_EX";
         $UTF16 = "UTF16";
 
-        $gsm7bitExChar = "\\^{}\\\\\\[~\\]|â‚¬\n";
-        $gsm7bitChars = "@Â£$Â¥Ã¨Ã©Ã¹Ã¬Ã²Ã‡\\nÃ˜Ã¸\\rÃ…Ã¥Î_Î¦ÎÎ›Î©Î Î¨Î£Î˜ÎžÃ†Ã¦ÃŸÃ‰ !\\\"#Â¤%&'()*+,-./0123456789:;<=>?Â¡ABCDEFGHIJKLMNOPQRSTUVWXYZÃ„ÃÃ‘ÃœÂ§Â¿abcdefghijklmnopqrstuvwxyzÃ¤Ã¶Ã±Ã¼Ã ";
+        $gsm7bitExChar = "\\^{}\\\\\\[~\\]|€\n";
+        $gsm7bitChars = file_get_contents(__DIR__ . '/Data/smsCharacters.txt');
 
         $messageLength = [
             $GSM_7BIT => 160,
@@ -33,14 +112,12 @@ class SmsController extends Controller
             $UTF16 => 67
         ];
 
-        $gsm7bitRegExp = "/^[{$gsm7bitChars}]*$/";
-        $gsm7bitExRegExp = "/^[{$gsm7bitChars}{$gsm7bitExChar}]*$/";
-        $gsm7bitExOnlyRegExp = "/^[\\{$gsm7bitExChar}]*$/";
+        $gsm7bitRegExp = "/^[" . preg_quote($gsm7bitChars, '/') . "]*$/u";
+        $gsm7bitExRegExp = "/^[" . preg_quote($gsm7bitChars . $gsm7bitExChar, '/') . "]*$/u";
+        $gsm7bitExOnlyRegExp = "/[" . preg_quote($gsm7bitExChar, '/') . "]/u";
 
-        function detectEncoding($text)
+        function detectEncoding($text, $gsm7bitRegExp, $gsm7bitExRegExp)
         {
-            global $gsm7bitRegExp, $gsm7bitExRegExp;
-
             if (preg_match($gsm7bitRegExp, $text)) {
                 return "GSM_7BIT";
             } elseif (preg_match($gsm7bitExRegExp, $text)) {
@@ -49,54 +126,48 @@ class SmsController extends Controller
             return "UTF16";
         }
 
-        function countGsm7bitEx($text)
+        function countGsm7bitEx($text, $gsm7bitExOnlyRegExp)
         {
-            global $gsm7bitExOnlyRegExp;
             preg_match_all($gsm7bitExOnlyRegExp, $text, $matches);
-            return count($matches[0]);
+            return is_array($matches[0]) ? count($matches[0]) : 0;
         }
 
-        // Remove line breaks from the input text
-        $props = str_replace(["\r\n", "\n", "\r"], " ", $props);
+        // Ensure the message is a string and remove line breaks
+        $cleanMessage = is_string($message) ? str_replace(["\r\n", "\n", "\r"], " ", $message) : "";
 
         // Detect encoding
-        $encoding = detectEncoding($props);
+        $encoding = detectEncoding($cleanMessage, $gsm7bitRegExp, $gsm7bitExRegExp);
 
         // Get the message length
-        $length = strlen($props);
-        $per_message = $messageLength[$encoding];
-        $messages = 1;
-        $remaining = 0;
+        $length = mb_strlen($cleanMessage, 'UTF-8');
+        $perMessage = $messageLength[$encoding] ?? 160; // Ensure valid numeric value
 
         if ($encoding === $GSM_7BIT_EX) {
-            $length += countGsm7bitEx($props);
+            $length += countGsm7bitEx($cleanMessage, $gsm7bitExOnlyRegExp);
         }
 
-        if ($length > $per_message) {
-            $per_message = $multiMessageLength[$encoding];
+        if ($length > $perMessage) {
+            $perMessage = $multiMessageLength[$encoding] ?? 153; // Ensure numeric value
         }
+
+        // Ensure $length and $perMessage are numbers
+        $length = (int) $length;
+        $perMessage = (int) $perMessage;
 
         // Calculate number of messages
-        $messages = ceil($length / $per_message);
-        $remaining = $per_message * $messages - $length;
+        $messages = (int) ceil($length / $perMessage);
+        // $remaining = max(($perMessage * $messages) - $length, 0); // Prevent negative values
 
-        if ($remaining == 0 && $messages == 0) {
-            $remaining = $per_message;
-        }
-
+        // **Returning only total SMS count as per your requirement**
         return $messages;
-
-        // return [
-        //     'encoding' => $encoding,
-        //     'setSmsCharacterCount' => $length,
-        //     'setSmsRemainingCount' => $remaining,
-        //     'setSmsPartCount' => $messages
-        // ];
     }
+
+
+
 
     private function countSmsSegments($text)
     {
-        return $this->calculateSMSDetails($text);
+        return $this->getTotalSmsCount($text);
         // Define character limits
         $englishLimit = 160; // Characters per SMS for English
         $banglaLimit = 63;   // Characters per SMS for Bangla
@@ -141,14 +212,14 @@ class SmsController extends Controller
             return $this->validationErrorResponse($validator->errors());
         }
 
+        $phone = $request->phone;
+        $sms = $request->content;
+
         // $isSuccess = false;
-        $responseDecoded = [];
+        $responseDecoded = new stdClass;
         DB::beginTransaction();
         try {
             $url = "http://bulksmsbd.net/api/smsapi";
-
-            $phone = $request->phone;
-            $sms = $request->content;
             $data = [
                 'api_key'   => $apiToken,
                 'type'      => 'text',
@@ -176,7 +247,7 @@ class SmsController extends Controller
                 // add success to content
                 // $smsLength = strlen($sms);
                 try {
-                    $smsCount = $this->countSmsSegments($sms);
+                    $smsCount = $this->getTotalSmsCount($sms);
                     // 63/145
                     $data = [
                         'user_id' => Auth::id(),
@@ -191,6 +262,7 @@ class SmsController extends Controller
                         'created_by' => Auth::id(),
                     ];
                     SmsBalance::create($data);
+                    DB::commit();
                 } catch (\Throwable $th) {
                     LogHelper::saveLog('error while sms balance cut', $th->getMessage());
                 }

@@ -89,7 +89,7 @@ class UserController extends Controller
             'active_package' => $package->where('is_active', 1)->count(),
             'remaining_orders' => $package->where('is_active', 1)->sum('remaining_order'),
         ];
-
+        // LogHelper::saveLog('ip', request()->ip());
         return Inertia::render('Users/View', compact('user', 'report'));
     }
 
