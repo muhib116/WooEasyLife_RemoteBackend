@@ -14,7 +14,7 @@ class LogHelper
      * @param string $message The detailed log message.
      * @param string $baseFileName The base name for the log file (e.g., 'errors.log').
      */
-    public static function saveLog(string $title, string $message, string $baseFileName = 'errors.log')
+    public static function saveLog($title, $message, $baseFileName = 'errors.log')
     {
         try {
             $logDirectory = storage_path('logs/hub-log');

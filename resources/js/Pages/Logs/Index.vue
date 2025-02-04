@@ -5,15 +5,23 @@
                 <div class="flex items-center justify-between gap-5">
                     Log Viewer
 
-                    <Dropdown
-                        v-model="selectedLogFile"
-                        :options="logFiles"
-                        optionLabel="name"
-                        optionValue="path"
-                        placeholder="Select Log File"
-                        class="w-[250px]"
-                        @change="fetchLogContent"
-                    />
+                    <div class="flex items-center gap-5">
+                        <Button
+                            label="Reload"
+                            icon="pi pi-refresh"
+                            @click="fetchLogContent"
+                            :loading="isLoading"
+                        />
+                        <Dropdown
+                            v-model="selectedLogFile"
+                            :options="logFiles"
+                            optionLabel="name"
+                            optionValue="path"
+                            placeholder="Select Log File"
+                            class="w-[250px]"
+                            @change="fetchLogContent"
+                        />
+                    </div>
                 </div>
             </template>
             <template #content>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\LogHelper;
 use Enan\PathaoCourier\Facades\PathaoCourier;
 use Enan\PathaoCourier\Requests\PathaoUserSuccessRateRequest;
 use Illuminate\Http\Request;
@@ -262,6 +263,7 @@ class FraudCheckController extends Controller
         ];
 
         // Send POST request
+        $response = null;
         try {
             $response = Http::withHeaders($headers)->post($url, $body);
             $jsonResponse = $response->json();
@@ -275,6 +277,10 @@ class FraudCheckController extends Controller
             $response_data['cancel'] = $returned;
             $response_data['success_rate'] = $success_rate;
         } catch (\Throwable $th) {
+            LogHelper::saveLog('paperfly froad check error', $th->getMessage());
+            if ($response) {
+                LogHelper::saveLog('paperfly froad check error resposne', $response);
+            }
         }
 
         return $response_data;
