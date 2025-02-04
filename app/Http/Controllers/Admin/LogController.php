@@ -11,9 +11,21 @@ use Inertia\Inertia;
 class LogController extends Controller
 {
 
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Logs/Index');
+        // LogHelper::saveLog('test', 'hi');
+        $im_super = $request->im_super;
+
+        return Inertia::render('Logs/Index', compact('im_super'));
+    }
+
+    public function clearAllLog()
+    {
+        $logDirectory = storage_path('logs/hub-log');
+        if (File::exists($logDirectory)) {
+            File::cleanDirectory($logDirectory); // Deletes all files but keeps the folder
+        }
+        return back()->with('success', 'All Log are cleared!');
     }
 
     /**

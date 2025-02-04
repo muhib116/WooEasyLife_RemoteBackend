@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [LogController::class, 'index'])->name('index');
         Route::get('/list', [LogController::class, 'listLogs'])->name('list');
         Route::post('/view', [LogController::class, 'viewLog'])->name('view');
+        Route::post('/clear-all-log', [LogController::class, 'clearAllLog'])->name('clearAllLog');
     });
 
     Route::group(['as' => 'products.', 'prefix' => 'products'], function () {

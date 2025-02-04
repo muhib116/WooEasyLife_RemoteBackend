@@ -7,6 +7,14 @@
 
                     <div class="flex items-center gap-5">
                         <Button
+                            v-if="im_super"
+                            label="Clear"
+                            severity="danger"
+                            icon="pi pi-times-circle"
+                            @click="handleClearAllLog"
+                            :loading="clearing"
+                        />
+                        <Button
                             label="Reload"
                             icon="pi pi-refresh"
                             @click="fetchLogContent"
@@ -98,6 +106,7 @@
                 </div>
             </template>
         </Card>
+        <ConfirmDialog />
     </AuthenticatedLayout>
 </template>
 
@@ -106,15 +115,24 @@ import { AuthenticatedLayout } from "@/layouts";
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import { format, parse } from "date-fns";
+import { router } from "@inertiajs/core";
+import { useConfirm } from "primevue";
 
 defineOptions({
     name: "LogViewer",
 });
 
+const props = defineProps({
+    im_super: Boolean,
+});
+
+const confirm = useConfirm();
+
 const isLoading = ref(false);
 const logFiles = ref<{ name: string; path: string }[]>([]);
 const selectedLogFile = ref<string | null>(null);
 const logs = ref<any[]>([]);
+const clearing = ref(false);
 
 const getTime = (dateString) => {
     let op = "";
@@ -153,6 +171,40 @@ const fetchLogContent = async () => {
         logs.value = [];
     }
     isLoading.value = false;
+};
+
+const handleClearAllLog = () => {
+    confirm.require({
+        header: "Are you sure to delete all logs?",
+        message: "This action cannot be undone.",
+        rejectProps: {
+            label: "Cancel",
+            icon: "pi pi-times",
+            // outlined: true,
+            severity: "primary",
+            size: "small",
+        },
+        acceptProps: {
+            label: "Clear Logs",
+            icon: "pi pi-check",
+            severity: "danger",
+            size: "small",
+        },
+        accept: () => {
+            clearing.value = true;
+            router.post(
+                route("logs.clearAllLog"),
+                {},
+                {
+                    async onFinish() {
+                        clearing.value = false;
+                        await fetchLogFiles();
+                        await fetchLogContent();
+                    },
+                },
+            );
+        },
+    });
 };
 
 onMounted(async () => {
