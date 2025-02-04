@@ -81,8 +81,12 @@ class UserController extends Controller
     {
         $user = User::find($userId);
 
+        $package = UserPackage::where('user_id', $userId);
         $report = [
-            'active_api_key' => AccessToken::where('tokenable_id', $userId)->count()
+            'active_api_key' => AccessToken::where('tokenable_id', $userId)->count(),
+            'sms_balance' => SmsBalance::where('user_id', $userId)->sum('amount'),
+            'active_package' => $package->where('is_active', 1)->count(),
+            'remaining_orders' => $package->where('is_active', 1)->sum('remaining_order'),
         ];
 
         return Inertia::render('Users/View', compact('user', 'report'));

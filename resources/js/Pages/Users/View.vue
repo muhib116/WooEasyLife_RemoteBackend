@@ -9,12 +9,22 @@
                     <UserNav :user="user" />
 
                     <div class="mt-5 flex flex-wrap gap-8">
-                        <div class="w-[300px] rounded border p-4">
-                            <h2>Personal Access Tokens</h2>
-                            <div class="text-4xl">
-                                {{ report.active_api_key }}
-                            </div>
-                        </div>
+                        <Widget
+                            title="Personal Access Tokens"
+                            :value="report.active_api_key"
+                        />
+                        <Widget
+                            title="Sms Balance"
+                            :value="`${report.sms_balance}TK`"
+                        />
+                        <Widget
+                            title="Active Package"
+                            :value="`${report.active_package}`"
+                        />
+                        <Widget
+                            title="Remaining Order"
+                            :value="`${report.remaining_orders}`"
+                        />
                     </div>
                 </div>
             </template>
@@ -26,6 +36,7 @@
 import { AuthenticatedLayout } from "@/layouts";
 import UserNav from "./UserNav.vue";
 import Header from "./Header.vue";
+import Widget from "./fragments/Widget.vue";
 
 defineOptions({
     name: "UserView",
