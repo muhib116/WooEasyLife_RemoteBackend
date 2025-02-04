@@ -22,7 +22,7 @@ class HubController extends Controller
     public function hubUse(Request $request)
     {
         $rules = [
-            'order_count' => 'integer|min:0',
+            'order_count' => 'required|integer|min:1',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -93,7 +93,7 @@ class HubController extends Controller
             return $this->successResponse($packageUse, 'History stored successfully');
         } catch (\Throwable $th) {
             LogHelper::saveLog('Package use error', $th->getMessage());
-            return $this->errorResponse($th->getMessage(), $th->getCode());
+            return $this->errorResponse($th->getMessage());
         }
     }
 }

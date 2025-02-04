@@ -171,7 +171,6 @@ class UserController extends Controller
             ->where('type', 'out')
             ->get();
         $user = User::find($userId);
-        LogHelper::saveLog('hi', 'test');
         return Inertia::render('Users/SmsHistory', compact('user', 'sms_history'));
     }
 
