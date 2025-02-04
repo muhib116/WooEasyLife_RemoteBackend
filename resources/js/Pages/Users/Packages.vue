@@ -9,7 +9,7 @@
                     <UserNav :user="user">
                         <button
                             @click="showForm = true"
-                            class="flex items-center gap-2 bg-indigo-500 px-4 py-1 text-white"
+                            class="flex items-center gap-2 bg-primary-500 px-4 py-1 text-white"
                         >
                             <span class="pi pi-plus"></span>
                             Activate Package
@@ -34,7 +34,11 @@
                             />
                             <Column field="is_active" header="Active">
                                 <template #body="{ data }">
-                                    <Badge severity="success" v-if="data?.is_active">Active</Badge>
+                                    <Badge
+                                        severity="success"
+                                        v-if="data?.is_active"
+                                        >Active</Badge
+                                    >
                                     <Badge v-else>Disabled</Badge>
                                 </template>
                             </Column>

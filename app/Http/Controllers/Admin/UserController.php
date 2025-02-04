@@ -164,6 +164,15 @@ class UserController extends Controller
         return Inertia::render('Users/SmsRecharge', compact('user', 'recharge'));
     }
 
+    public function smsUseHistory($userId)
+    {
+        $sms_history = SmsBalance::where('user_id', $userId)
+                        ->where('type', 'out')
+                        ->get();
+        $user = User::find($userId);
+        return Inertia::render('Users/SmsHistory', compact('user', 'sms_history'));
+    }
+
     public function approveSmsRecharge($sms_id)
     {
 

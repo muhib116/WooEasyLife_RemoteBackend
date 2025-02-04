@@ -101,6 +101,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/{id}/api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('/{id}/packages', [UserController::class, 'packages'])->name('packages');
         Route::get('/{id}/sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
+        Route::get('/{id}/sms-use-history', [UserController::class, 'smsUseHistory'])->name('smsUseHistory');
         Route::post('approve-sms-recharge/{sms_id}', [UserController::class, 'approveSmsRecharge'])->name('approveSmsRecharge');
         Route::post('reject-sms-recharge/{sms_id}', [UserController::class, 'rejectSmsRecharge'])->name('rejectSmsRecharge');
         Route::post('{id}/purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');

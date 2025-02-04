@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sms_balances', function (Blueprint $table) {
+            $table->string('phone')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
         });
@@ -23,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('sms_balances', function (Blueprint $table) {
-            $table->dropColumn(['created_by', 'updated_by']);
+            $table->dropColumn(['phone', 'created_by', 'updated_by']);
         });
     }
 };

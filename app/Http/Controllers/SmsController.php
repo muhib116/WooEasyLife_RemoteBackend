@@ -183,10 +183,12 @@ class SmsController extends Controller
                         'type' => 'out',
                         'amount' => - ($smsCount * 0.04),
                         'sms_rate' => 0.40,
+                        'phone' => $phone,
                         'sms_text' => $sms,
                         'sms_count' => $smsCount,
                         'message_id' => @$responseDecoded->message_id,
                         'note' => '',
+                        'created_by' => Auth::id(),
                     ];
                     SmsBalance::create($data);
                 } catch (\Throwable $th) {

@@ -132,6 +132,7 @@ class FraudCheckController extends Controller
             'success_rate' => 'No order history found!',
         ];
 
+        $response = null;
         try {
             /**
              * To Get User's success rate using phone number
@@ -152,6 +153,10 @@ class FraudCheckController extends Controller
                 }
             }
         } catch (\Throwable $th) {
+            LogHelper::saveLog('Pathao froad check error', $th->getMessage());
+            if ($response) {
+                LogHelper::saveLog('Pathao froad check error resposne', $response);
+            }
         }
 
         return $pathao_data;
@@ -165,6 +170,7 @@ class FraudCheckController extends Controller
             'cancel' => 0,
             'success_rate' => 'No order history found!',
         ];
+        $response = null;
         try {
             $response = Http::get('https://steadfast.com.bd');
 
@@ -218,6 +224,10 @@ class FraudCheckController extends Controller
             $response_data['cancel'] = $cancel_order;
             $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100) . '%';
         } catch (\Throwable $th) {
+            LogHelper::saveLog('steadfast froad check error', $th->getMessage());
+            if ($response) {
+                LogHelper::saveLog('steadfast froad check error resposne', $response);
+            }
         }
 
         return $response_data;

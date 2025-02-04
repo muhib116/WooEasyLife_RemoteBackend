@@ -1,41 +1,18 @@
 <template>
-    <div class="flex gap-3 border-b pb-2 justify-between">
-        <div class="flex flex-1 gap-3">
+    <div
+        class="flex justify-between gap-3 border-b border-gray-100 pb-2 dark:border-gray-700"
+    >
+        <div class="flex flex-1 flex-wrap gap-3">
             <Link
-                :href="route('users.view', user.id)"
-                class="py-1 px-4 hover:bg-indigo-500 hover:text-white"
+                v-for="(menu, index) in menus"
+                :key="index"
+                :href="menu.url"
+                class="rounded border border-gray-100 px-4 py-1 hover:bg-primary-500 hover:text-white dark:border-gray-700"
                 :class="{
-                    'bg-indigo-500 text-white': route().current('users.view'),
+                    'bg-primary-500 text-white': menu.isActive,
                 }"
             >
-                Overview
-            </Link>
-            <Link
-                :href="route('users.apiKeys', user.id)"
-                class="py-1 px-4 hover:bg-indigo-500 hover:text-white"
-                :class="{
-                    'bg-indigo-500 text-white': route().current('users.apiKeys'),
-                }"
-            >
-                Api Keys
-            </Link>
-            <Link
-                :href="route('users.packages', user.id)"
-                class="py-1 px-4 hover:bg-indigo-500 hover:text-white"
-                :class="{
-                    'bg-indigo-500 text-white': route().current('users.packages'),
-                }"
-            >
-                Packages
-            </Link>
-            <Link
-                :href="route('users.smsRecharge', user.id)"
-                class="py-1 px-4 hover:bg-indigo-500 hover:text-white"
-                :class="{
-                    'bg-indigo-500 text-white': route().current('users.smsRecharge'),
-                }"
-            >
-                SMS Balance
+                {{ menu.title }}
             </Link>
         </div>
         <div>
@@ -46,8 +23,37 @@
 
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
+import { ref } from "vue";
 
 const props = defineProps<{
     user: any;
 }>();
+
+const menus = ref([
+    {
+        title: "Overview",
+        url: route("users.view", props.user.id),
+        isActive: route().current("users.view"),
+    },
+    {
+        title: "Api Keys",
+        url: route("users.apiKeys", props.user.id),
+        isActive: route().current("users.apiKeys"),
+    },
+    {
+        title: "Packages",
+        url: route("users.packages", props.user.id),
+        isActive: route().current("users.packages"),
+    },
+    {
+        title: "SMS Balance",
+        url: route("users.smsRecharge", props.user.id),
+        isActive: route().current("users.smsRecharge"),
+    },
+    {
+        title: "SMS Use History",
+        url: route("users.smsUseHistory", props.user.id),
+        isActive: route().current("users.smsUseHistory"),
+    },
+]);
 </script>

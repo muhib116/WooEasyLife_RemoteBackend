@@ -1,9 +1,11 @@
 <template>
-    <div class="flex justify-between items-center gap-5 border-b pb-3">
+    <div
+        class="flex items-center justify-between gap-5 border-b border-gray-100 pb-3 dark:border-gray-700"
+    >
         User Details
         <Link :href="route('users.index')">
             <Button
-                severity="info"
+                severity="primary"
                 size="small"
                 icon="pi pi-arrow-left"
                 class="pointer-events-none"
