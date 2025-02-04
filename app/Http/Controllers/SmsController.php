@@ -203,7 +203,11 @@ class SmsController extends Controller
         $validator = Validator::make($request->all(), [
             'phone' => [
                 'required',
-                'regex:/^01[3-9]\d{8}$/'
+                // 'regex:/^01[3-9]\d{8}$/'
+                //                 validate phone.
+                // my phone will come like below:
+
+                // "01752360254,01770989591"
             ],
             'content' => 'required'
         ]);
@@ -212,6 +216,21 @@ class SmsController extends Controller
             return $this->validationErrorResponse($validator->errors());
         }
 
+        $phone = $request->phone;
+        $sms = $request->content;
+        $smsCount = 1;
+
+        try {
+            $smsCount = $this->getTotalSmsCount($sms);
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('sms counting issue', json_encode([
+                'error' => $th->getMessage(),
+                'sms' => $sms,
+                'phone' => $phone
+            ]));
+        }
+
+
         // check available sms balance
         $userId = Auth::id();
 
@@ -219,11 +238,22 @@ class SmsController extends Controller
 
         if ($balance <= 0) {
             LogHelper::saveLog('sms balance over', 'UserId: ' . $userId . ' sms balance is over');
-            return $this->errorResponse('Your sms balance is over');
+            return $this->errorResponse('Insufficient SMS balance.');
         }
 
-        $phone = $request->phone;
-        $sms = $request->content;
+        $amount = ($smsCount * 0.04);
+
+        try {
+            $phone_arr = explode(',', $phone);
+            if (is_array($phone_arr)) {
+                $phn_count = count($phone_arr);
+                if ($phn_count) {
+                    $amount = $amount * $phn_count;
+                }
+            }
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('sms count when multiple phone', 'Phone: (' . $phone . ') ' . $th->getMessage());
+        }
 
         // $isSuccess = false;
         $responseDecoded = new stdClass;
@@ -257,7 +287,6 @@ class SmsController extends Controller
                 // add success to content
                 // $smsLength = strlen($sms);
                 try {
-                    $smsCount = $this->getTotalSmsCount($sms);
                     // 63/145
                     $data = [
                         'user_id' => Auth::id(),
