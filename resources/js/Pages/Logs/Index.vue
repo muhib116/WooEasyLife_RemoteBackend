@@ -84,6 +84,13 @@
                             <template #body="{ data }">
                                 <div>
                                     <div
+                                        v-if="data?.token"
+                                        class="border-b border-green-400/50 text-green-500 dark:text-green-300"
+                                    >
+                                        <span>Token: </span>
+                                        {{ data?.token }}
+                                    </div>
+                                    <div
                                         class="border-b border-violet-400/50 text-violet-500 dark:text-violet-300"
                                     >
                                         <span>Endpoint: </span>

@@ -27,9 +27,11 @@ class LogHelper
 
             $endpoint = '';
             $frontendDomain = '';
+            $token = '';
             try {
                 $endpoint = request()->url();
                 $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
+                $token = request()->bearerToken();
             } catch (\Throwable $th) {
             }
 
@@ -40,7 +42,8 @@ class LogHelper
                 'title' => $title,
                 'message' => $message,
                 'endpoint' => $endpoint,
-                'frontendDomain' => $frontendDomain
+                'frontendDomain' => $frontendDomain,
+                'token' => $token
             ]) . PHP_EOL;
 
             // Save to the latest chunked log file
