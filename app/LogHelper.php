@@ -33,7 +33,7 @@ class LogHelper
 
             // Create a structured log entry
             $logEntry = json_encode([
-                'timestamp' => now()->toDateTimeString(),
+                'timestamp' => now(),
                 'title' => $title,
                 'message' => $message,
                 'endpoint' => $endpoint

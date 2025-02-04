@@ -110,10 +110,8 @@ const logs = ref<any[]>([]);
 const getTime = (dateString) => {
     let op = "";
     try {
-        const parsedDate = parse(dateString, "yyyy-MM-dd HH:mm:ss", new Date());
-
         // Format the date in a more readable format
-        op = format(parsedDate, "dd MMM yyyy, hh:mm a");
+        op = format(new Date(dateString), "dd MMM yyyy, hh:mm a");
     } catch (error) {}
     return op;
 };

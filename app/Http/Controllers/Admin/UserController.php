@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\LogHelper;
 use App\Models\AccessToken;
 use App\Models\PackageHub;
 use App\Models\SmsBalance;
@@ -167,9 +168,10 @@ class UserController extends Controller
     public function smsUseHistory($userId)
     {
         $sms_history = SmsBalance::where('user_id', $userId)
-                        ->where('type', 'out')
-                        ->get();
+            ->where('type', 'out')
+            ->get();
         $user = User::find($userId);
+        LogHelper::saveLog('hi', 'test');
         return Inertia::render('Users/SmsHistory', compact('user', 'sms_history'));
     }
 
