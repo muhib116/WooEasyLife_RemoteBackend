@@ -212,6 +212,16 @@ class SmsController extends Controller
             return $this->validationErrorResponse($validator->errors());
         }
 
+        // check available sms balance
+        $userId = Auth::id();
+
+        $balance = SmsBalance::query()->where('user_id', $userId)->sum('amount');
+
+        if ($balance <= 0) {
+            LogHelper::saveLog('sms balance over', 'UserId: ' . $userId . ' sms balance is over');
+            return $this->errorResponse('Your sms balance is over');
+        }
+
         $phone = $request->phone;
         $sms = $request->content;
 

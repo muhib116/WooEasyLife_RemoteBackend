@@ -15,7 +15,7 @@
                         />
                         <Widget
                             title="Sms Balance"
-                            :value="`${report.sms_balance}TK`"
+                            :value="`${Number(report.sms_balance || 0).toFixed(2)}TK`"
                         />
                         <Widget
                             title="Active Package"

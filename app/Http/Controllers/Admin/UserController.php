@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\UserPackage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +26,29 @@ class UserController extends Controller
         return Inertia::render('Users/Index', compact('users'));
     }
 
+    public $notices = [
+        ['type' => 'success', 'message' => 'You did an amazing job!'],
+        ['type' => 'warning', 'message' => 'Be careful! Something might go wrong.'],
+        ['type' => 'danger', 'message' => 'Oops! Something went wrong.'],
+        ['type' => 'info', 'message' => 'Just so you know, this is important.'],
+        ['type' => 'success', 'message' => 'Well done! Keep up the good work.'],
+        ['type' => 'warning', 'message' => 'Watch out! You might need to check this.'],
+        ['type' => 'danger', 'message' => 'Alert! Action is required immediately.'],
+        ['type' => 'info', 'message' => 'Heads up! Here’s some useful information.'],
+        ['type' => 'success', 'message' => 'Great work! Everything is running smoothly.'],
+        ['type' => 'warning', 'message' => 'This needs your attention before proceeding.'],
+        ['type' => 'danger', 'message' => 'Error detected! Fix it as soon as possible.'],
+        ['type' => 'info', 'message' => 'Here’s a quick update on your progress.'],
+        ['type' => 'success', 'message' => 'You nailed it! Fantastic result.'],
+        ['type' => 'warning', 'message' => 'This might not work as expected.'],
+        ['type' => 'danger', 'message' => 'Caution! Something is broken.'],
+        ['type' => 'info', 'message' => 'Did you know? This could be useful for you.'],
+        ['type' => 'success', 'message' => 'Perfect! Everything is on track.'],
+        ['type' => 'warning', 'message' => 'A minor issue was detected, please check.'],
+        ['type' => 'danger', 'message' => 'System failure! Take immediate action.'],
+        ['type' => 'info', 'message' => 'FYI: A new update is available.']
+    ];
+
     public function getUser(Request $request)
     {
         $token = $request->bearerToken();
@@ -37,31 +61,27 @@ class UserController extends Controller
             $user = $accessToken->tokenable;
             $types = ['success', 'warning', 'danger', 'info', null];
 
-            $notices = [
-                ['type' => 'success', 'message' => 'You did an amazing job!'],
-                ['type' => 'warning', 'message' => 'Be careful! Something might go wrong.'],
-                ['type' => 'danger', 'message' => 'Oops! Something went wrong.'],
-                ['type' => 'info', 'message' => 'Just so you know, this is important.'],
-                ['type' => 'success', 'message' => 'Well done! Keep up the good work.'],
-                ['type' => 'warning', 'message' => 'Watch out! You might need to check this.'],
-                ['type' => 'danger', 'message' => 'Alert! Action is required immediately.'],
-                ['type' => 'info', 'message' => 'Heads up! Here’s some useful information.'],
-                ['type' => 'success', 'message' => 'Great work! Everything is running smoothly.'],
-                ['type' => 'warning', 'message' => 'This needs your attention before proceeding.'],
-                ['type' => 'danger', 'message' => 'Error detected! Fix it as soon as possible.'],
-                ['type' => 'info', 'message' => 'Here’s a quick update on your progress.'],
-                ['type' => 'success', 'message' => 'You nailed it! Fantastic result.'],
-                ['type' => 'warning', 'message' => 'This might not work as expected.'],
-                ['type' => 'danger', 'message' => 'Caution! Something is broken.'],
-                ['type' => 'info', 'message' => 'Did you know? This could be useful for you.'],
-                ['type' => 'success', 'message' => 'Perfect! Everything is on track.'],
-                ['type' => 'warning', 'message' => 'A minor issue was detected, please check.'],
-                ['type' => 'danger', 'message' => 'System failure! Take immediate action.'],
-                ['type' => 'info', 'message' => 'FYI: A new update is available.']
-            ];
-
             if (!$user) {
                 return $this->errorResponse('User Not found', 401);
+            }
+
+            $notice = null;
+
+            $smsQuery = SmsBalance::query()->where('user_id', $user->id);
+            $smsBalance = $smsQuery->sum('amount');
+            $smsCount = $smsQuery->where('type', 'out')->count();
+
+            // Cache key for tracking last notice time
+            $smsNoticeCacheKey = 'sms_balance_notice_' . $user->id;
+
+            if ($smsBalance <= 20 && $smsCount > 0) {
+                // Check if the notice was shown in the last 2 hours
+                if (!Cache::has($smsNoticeCacheKey)) {
+                    $notice = ['type' => 'info', 'message' => 'Your SMS balance is less than 20.'];
+
+                    // Store a timestamp in cache for 2 hours (120 minutes)
+                    Cache::put($smsNoticeCacheKey, now(), now()->addHours(2));
+                }
             }
 
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
@@ -70,7 +90,7 @@ class UserController extends Controller
                 ->sum('remaining_order');
 
             $user->remaining_order = $userPackage + 0;
-            $user->notice = null; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
+            $user->notice = $notice; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
 
             return response()->json($user, 200);
         } catch (\Throwable $th) {
