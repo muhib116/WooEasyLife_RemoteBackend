@@ -201,6 +201,15 @@ class SmsController extends Controller
         $apiToken = 'GuN1Tp8ueoRJACAl072B';
 
         $validator = Validator::make($request->all(), [
+            // 'phone' => ['required', function ($attribute, $value, $fail) {
+            //     $numbers = explode(',', $value);
+            //     foreach ($numbers as $number) {
+            //         $number = trim($number);
+            //         if (!preg_match('/^01[3-9]\d{8}$/', $number)) {
+            //             $fail("The phone number {$number} is not valid.");
+            //         }
+            //     }
+            // }],
             'phone' => [
                 'required',
                 // 'regex:/^01[3-9]\d{8}$/'
