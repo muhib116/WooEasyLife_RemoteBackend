@@ -75,8 +75,17 @@
                         >
                             <template #body="{ data }">
                                 <div>
-                                    <div class="text-yellow-600">
+                                    <div
+                                        class="border-b border-violet-400/50 text-violet-500 dark:text-violet-300"
+                                    >
+                                        <span>Endpoint: </span>
                                         {{ data?.endpoint }}
+                                    </div>
+                                    <div
+                                        class="border-b border-teal-400/50 text-teal-500 dark:text-teal-300"
+                                    >
+                                        <span>Origin Url: </span>
+                                        {{ data?.frontendDomain }}
                                     </div>
                                     <div class="text-red-600 dark:text-red-400">
                                         {{ data.message }}

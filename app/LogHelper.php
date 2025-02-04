@@ -26,17 +26,21 @@ class LogHelper
             $chunkedFile = self::getChunkedFileName($logDirectory, $baseFileName);
 
             $endpoint = '';
+            $frontendDomain = '';
             try {
                 $endpoint = request()->url();
+                $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
             } catch (\Throwable $th) {
             }
+
 
             // Create a structured log entry
             $logEntry = json_encode([
                 'timestamp' => now(),
                 'title' => $title,
                 'message' => $message,
-                'endpoint' => $endpoint
+                'endpoint' => $endpoint,
+                'frontendDomain' => $frontendDomain
             ]) . PHP_EOL;
 
             // Save to the latest chunked log file
