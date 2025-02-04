@@ -2,7 +2,12 @@
     <div
         class="flex items-center justify-between gap-5 border-b border-gray-100 pb-3 dark:border-gray-700"
     >
-        User Details
+        <div>
+            User Details Of
+            <span class="text-primary-500">{{
+                get($page.props, "auth.user.name")
+            }}</span>
+        </div>
         <Link :href="route('users.index')">
             <Button
                 severity="primary"
@@ -16,4 +21,5 @@
 
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
+import { get } from "lodash";
 </script>
