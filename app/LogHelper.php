@@ -40,7 +40,7 @@ class LogHelper
                 $accessToken = AccessToken::findToken($token);
                 $user = $accessToken->tokenable;
                 if ($user) {
-                    $token .= 'ID: (' . $accessToken->tokenable_id . ') User: (' . $user->id . ') ' . $token;
+                    $token = 'ID: (' . $accessToken->tokenable_id . ') User: (' . $user->id . ') ' . $token;
                 }
             } catch (\Throwable $th) {
             }
