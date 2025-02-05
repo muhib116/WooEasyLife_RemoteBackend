@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\LogHelper;
 use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
+use App\Traits\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,8 @@ use stdClass;
 
 class SmsController extends Controller
 {
+
+    use Transaction;
 
     // public function calculateSMSDetails($message)
     // {
@@ -309,7 +312,15 @@ class SmsController extends Controller
                         'note' => '',
                         'created_by' => Auth::id(),
                     ];
-                    SmsBalance::create($data);
+
+
+                    $smsBalance = SmsBalance::create($data);
+                    $smsBalance->transactionHistory()->create([
+                        'user_id' => Auth::id(),
+                        'created_by' => Auth::id(),
+                        'amount' => - ($data['amount'] + 0),
+                        'type' => 'out',
+                    ]);
                     DB::commit();
                 } catch (\Throwable $th) {
                     LogHelper::saveLog('error while sms balance cut', $th->getMessage());
@@ -378,10 +389,18 @@ class SmsController extends Controller
     {
         $userId = Auth::id();
 
-        $balanceHistory = SmsRecharge::query()
+        $query = SmsRecharge::query()
             ->where('user_id', $userId)
-            // ->where('type', 'in')
-            ->get();
+            ->where('type', 'in');
+
+        if ($request->has('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+        $balanceHistory = $query->get()->toArray();
 
         return $this->successResponse($balanceHistory);
     }

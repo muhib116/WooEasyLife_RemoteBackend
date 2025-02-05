@@ -10,6 +10,7 @@ use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
 use App\Models\User;
 use App\Models\UserPackage;
+use App\Traits\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -20,6 +21,8 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
+    use Transaction;
+
     public function index()
     {
         $users = User::query()->where('role', 'user')->orderBy('id', 'desc')->get();
@@ -213,18 +216,18 @@ class UserController extends Controller
                 'amount' => $recharge->total_amount - $recharge->transaction_charge,
                 'note' => 'Recharge',
             ];
-            SmsBalance::create($data);
+            $smsBalance = SmsBalance::create($data);
+            $smsBalance->transactionHistory()->create([
+                'user_id' => Auth::id(),
+                'created_by' => Auth::id(),
+                'amount' => - ($data['amount'] + 0),
+                'type' => 'out',
+            ]);
             DB::commit();
         } catch (\Throwable $th) {
             DB::rollBack();
             throw $th;
-            // return back()->with('error', $th->getMessage());
         }
-        // SmsBalance::create([
-        //     'user_id' => $recharge->user_id,
-        //     'amount' => $recharge->amount,
-        //     'type' => 'in',
-        // ]);
         return back()->with('success', 'Recharge approved successfully');
     }
     public function rejectSmsRecharge($sms_id)

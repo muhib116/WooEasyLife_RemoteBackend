@@ -57,7 +57,7 @@ class HubController extends Controller
             $remaining_order = $package->remaining_order;
 
             DB::beginTransaction();
-            $cost = $package->per_order_rate * $request->order_count;
+            $cost = number_format($package->per_order_rate * $request->order_count, 2);
             $useDetails = null;
             try {
                 $useDetails = $request->use_details;
@@ -71,7 +71,7 @@ class HubController extends Controller
                 'user_package_id' => $package->id,
                 'use_details' => $useDetails,
                 'order_count' => $request->order_count,
-                'cost' => $cost,
+                'cost' => $cost + 0,
                 'total_order_handled' => $total_order_handled,
                 'remaining_order' => $remaining_order,
                 'created_by' => Auth::id(),
@@ -85,7 +85,7 @@ class HubController extends Controller
             $packageUse->transactionHistory()->create([
                 'user_id' => Auth::id(),
                 'created_by' => Auth::id(),
-                'amount' => $cost,
+                'amount' => - ($cost + 0),
                 'type' => 'out',
             ]);
             DB::commit();
