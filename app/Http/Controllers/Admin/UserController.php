@@ -22,7 +22,7 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    use Transaction, Util;
+    use Transaction;
 
     public function index()
     {
@@ -58,12 +58,12 @@ class UserController extends Controller
         $token = $request->bearerToken();
         $accessToken = AccessToken::findToken($token);
         if (!$accessToken) {
-            return $this->errorResponse('Invalid Token');
+            return $this->errorResponse('Invalid Token', 401);
         }
 
         try {
             $user = $accessToken->tokenable;
-            $types = ['success', 'warning', 'danger', 'info', null];
+            // $types = ['success', 'warning', 'danger', 'info', null];
 
             if (!$user) {
                 return $this->errorResponse('User Not found', 401);

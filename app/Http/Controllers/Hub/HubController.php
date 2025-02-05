@@ -38,7 +38,7 @@ class HubController extends Controller
         $host = $this->getDomainFromUrl($accessToken->domain);
         if (!$host) {
             LogHelper::saveLog('invalid domain', 'domain mismatch');
-            return $this->errorResponse('Invalid domain');
+            return $this->errorResponse('Invalid domain', 401);
         }
 
         $package = UserPackage::where('user_id', $user->id)

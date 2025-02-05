@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('sms_text')->nullable();
             $table->text('sms_count')->nullable();
             $table->text('message_id')->nullable();
+            $table->string('domain')->nullable();
             $table->text('note')->nullable();
             $table->timestamps();
         });

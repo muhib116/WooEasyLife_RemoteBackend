@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('transaction_method')->nullable();
             $table->string('transaction_id')->nullable();
             $table->string('account_number')->nullable();
+            $table->string('domain')->nullable();
             $table->string('status')->default('pending')->comment('pending, approved, cancelled, fake');
             $table->softDeletes();
             $table->timestamps();

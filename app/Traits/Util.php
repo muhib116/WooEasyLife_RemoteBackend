@@ -2,17 +2,26 @@
 
 namespace App\Traits;
 
+use App\Models\AccessToken;
 use App\Models\TransactionHistory;
 use Illuminate\Support\Facades\Auth;
 
 trait Util
 {
 
-    public function getRequestDomain() {
+    public function getRequestDomain()
+    {
         $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
         return $this->getDomainFromUrl($frontendDomain);
     }
-    
+
+    public function getTokenDomain()
+    {
+        $token = request()->bearerToken();
+        $accessToken = AccessToken::findToken($token);
+        return $this->getDomainFromUrl($accessToken->domain);
+    }
+
     public function getDomainFromUrl($url)
     {
         // Ensure the URL has a scheme, default to http:// if missing

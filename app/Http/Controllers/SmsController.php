@@ -377,6 +377,7 @@ class SmsController extends Controller
             'transaction_method' => $request->transaction_method,
             'transaction_id' => $request->transaction_id,
             'account_number' => $request->account_number,
+            'domain' => $this->getTokenDomain(),
             'status' => 'pending',
         ];
 

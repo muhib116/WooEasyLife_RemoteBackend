@@ -27,15 +27,15 @@ class ValidateTokenDomain
                 LogHelper::saveLog('Origin domain missing from header', $token);
                 return $this->errorResponse('Origin domain missing from header');
             }
-            if (!$accessToken->domain) {
-                return $next($request);
-            }
+            // if (!$accessToken->domain) {
+            //     return $next($request);
+            // }
             if (!$accessToken) {
-                LogHelper::saveLog('Invalid Token from', $token);
-                return $this->errorResponse('Invalid Token');
+                LogHelper::saveLog('Invalid Token from ValidateTokenDomain', $token);
+                return $this->errorResponse('Invalid Token', 401);
             }
 
-            $host = $this->getDomainFromUrl($accessToken->domain);
+            $host = $this->getTokenDomain();
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
                 ->where('domain', $accessToken->domain)
                 ->where('is_active', true)
@@ -50,18 +50,14 @@ class ValidateTokenDomain
                     }
                 }
             }
-            // if ($userPackage <= 0) {
-            //     LogHelper::saveLog('Order limit is over', '(' . $accessToken->tokenable_id . ') user order limit is over');
-            //     return $this->errorResponse('Your order limit is over.', 400, null, true);
-            // }
-            // return response($userPackage);
             $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
-            $requestDomain = $this->getDomainFromUrl($frontendDomain);
+            $requestDomain = $this->getRequestDomain();
             if ($requestDomain !== $host) {
-                return $this->errorResponse('Invalid domain');
+                return $this->errorResponse('Invalid domain', 401);
             }
         } catch (\Throwable $th) {
-            throw $th;
+            LogHelper::saveLog('Middleware ValidateTokenDomain', $th->getMessage());
+            return $this->errorResponse('Unauthenticated', 401);
         }
 
         return $next($request);
