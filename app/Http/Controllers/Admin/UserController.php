@@ -66,7 +66,7 @@ class UserController extends Controller
             // $types = ['success', 'warning', 'danger', 'info', null];
 
             if (!$user) {
-                return $this->errorResponse('User Not found', 401);
+                return $this->errorResponse('Unauthenticated', 401);
             }
 
             $notice = null;
@@ -103,7 +103,8 @@ class UserController extends Controller
 
             return response()->json($user, 200);
         } catch (\Throwable $th) {
-            return $this->errorResponse('Theres an error', 401);
+            LogHelper::saveLog('Get user catch', $th->getMessage());
+            return $this->errorResponse('Token not found', 401);
         }
     }
 
