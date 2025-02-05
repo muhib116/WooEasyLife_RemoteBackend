@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Models\AccessToken;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
@@ -32,6 +33,15 @@ class LogHelper
                 $endpoint = request()->url();
                 $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
                 $token = request()->bearerToken();
+            } catch (\Throwable $th) {
+            }
+            try {
+                $token = request()->bearerToken();
+                $accessToken = AccessToken::findToken($token);
+                $user = $accessToken->tokenable;
+                if ($user) {
+                    $token .= 'ID: (' . $accessToken->tokenable_id . ') User: (' . $user->id . ') ' . $token;
+                }
             } catch (\Throwable $th) {
             }
 

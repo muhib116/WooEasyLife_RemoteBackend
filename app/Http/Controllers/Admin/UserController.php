@@ -77,7 +77,9 @@ class UserController extends Controller
             if ($smsBalance <= 20 && $smsCount > 0) {
                 // Check if the notice was shown in the last 2 hours
                 if (!Cache::has($smsNoticeCacheKey)) {
-                    $notice = ['type' => 'info', 'message' => 'Your SMS balance is less than 20.'];
+                    $notice = [
+                        ['type' => 'info', 'message' => 'Your SMS balance is less than 20TK.']
+                    ];
 
                     // Store a timestamp in cache for 2 hours (120 minutes)
                     Cache::put($smsNoticeCacheKey, now(), now()->addHours(2));
