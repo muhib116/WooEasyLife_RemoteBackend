@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\Auth;
 
 trait Util
 {
+
+    public function getRequestDomain() {
+        $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
+        return $this->getDomainFromUrl($frontendDomain);
+    }
+    
     public function getDomainFromUrl($url)
     {
         // Ensure the URL has a scheme, default to http:// if missing

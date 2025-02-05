@@ -11,6 +11,7 @@ use App\Models\SmsRecharge;
 use App\Models\User;
 use App\Models\UserPackage;
 use App\Traits\Transaction;
+use App\Traits\Util;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -21,7 +22,7 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    use Transaction;
+    use Transaction, Util;
 
     public function index()
     {
@@ -92,14 +93,19 @@ class UserController extends Controller
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
                 ->where('domain', $accessToken->domain)
                 ->where('is_active', true)
-                ->sum('remaining_order');
-
-            $user->remaining_order = $userPackage + 0;
+                ->get();
+            $frontendDomain = $this->getRequestDomain();
+            $remainingOrders = collect($userPackage)->filter(function ($item) use ($frontendDomain) {
+                return $this->getDomainFromUrl($item->domain) == $frontendDomain;
+            })->sum('remaining_order');
+            $user->remaining_order = $remainingOrders + 0;
             $user->notice = $notice; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
 
             return response()->json($user, 200);
         } catch (\Throwable $th) {
-            return $this->errorResponse($th->getMessage());
+            return $this->errorResponse('Theres an error');
+            // throw $th;
+            // return $this->errorResponse($th->getMessage());
         }
     }
 
