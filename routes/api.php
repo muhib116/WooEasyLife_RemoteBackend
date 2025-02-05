@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Route;
 // Route::middleware('auth:sanctum')->get('/validate-token', function (Request $request) {
 //     return true;
 // });
-Route::group(['prefix' => 'api'], function () {
+Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], function () {
     Route::get('/get-user', [UserController::class, 'getUser']);
 });
 
