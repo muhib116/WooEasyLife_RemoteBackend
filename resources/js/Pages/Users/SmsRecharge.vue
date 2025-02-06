@@ -23,6 +23,10 @@
                             showGridlines
                         >
                             <Column
+                                field="domain"
+                                header="Domain"
+                            />
+                            <Column
                                 field="account_number"
                                 header="Account Number"
                             />

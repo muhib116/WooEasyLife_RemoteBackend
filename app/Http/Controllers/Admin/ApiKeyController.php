@@ -54,6 +54,25 @@ class ApiKeyController extends Controller
         //     ],
         // ]);
 
+        $request->validate([
+            'domain' => 'required'
+        ]);
+
+        $domain = $this->getDomainFromUrl($request->domain);
+        if(!$domain) {
+            return back()->withErrors([
+                'domain' => 'Invalid Domain'
+            ]);
+        }
+        
+        $dnsRecords = dns_get_record($domain, DNS_A);
+        
+        if(empty($dnsRecords)) {
+            return back()->withErrors([
+                'domain' => 'Invalid Domain'
+            ]);
+        }
+
         if (!$request->tokenable_id) {
             return back()->with('error', 'No selected user found');
         }
@@ -75,7 +94,7 @@ class ApiKeyController extends Controller
             $accessToken->update([
                 'access_key' => $this->encodeToken($plainTextToken),
                 'title' => $title,
-                'domain' => $request->domain ?? null,
+                'domain' => $domain ?? null,
                 'expires_at' => $request->expires_at ?? null
             ]);
             DB::commit();

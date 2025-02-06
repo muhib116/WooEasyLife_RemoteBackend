@@ -431,7 +431,11 @@ class SmsController extends Controller
     {
         $userId = Auth::id();
 
-        $balance = SmsBalance::query()->where('user_id', $userId)->sum('amount');
+        $domain = $this->getTokenDomain();
+        $balance = SmsBalance::query()
+            ->where('user_id', $userId)
+            ->where('domain', $domain)
+            ->sum('amount');
         return $this->successResponse($balance);
     }
 }

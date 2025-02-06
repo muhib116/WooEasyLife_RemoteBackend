@@ -23,6 +23,10 @@
                             showGridlines
                         >
                             <Column
+                                field="domain"
+                                header="Domain"
+                            />
+                            <Column
                                 field="amount"
                                 header="Amount Cost"
                             />

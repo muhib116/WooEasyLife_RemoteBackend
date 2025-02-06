@@ -55,6 +55,7 @@ class UserController extends Controller
 
     public function getUser(Request $request)
     {
+        // return $this->getDomainFromUrl('localhost');
         // return dns_get_record($this->getRequestDomain(), DNS_A);
         $token = $request->bearerToken();
         $accessToken = AccessToken::findToken($token);
@@ -75,8 +76,7 @@ class UserController extends Controller
 
             $smsQuery = SmsBalance::query()
                 ->where('user_id', $user->id)
-                ->where('domain', $accessToken->domain);
-
+                ->where('domain', $this->getDomainFromUrl($accessToken->domain));
             $smsBalance = $smsQuery->sum('amount');
             $smsCount = $smsQuery->where('type', 'out')->count();
 
@@ -95,10 +95,12 @@ class UserController extends Controller
                 }
             }
 
+            // return $accessToken->domain;
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
-                ->where('domain', $accessToken->domain)
+                ->where('domain', 'LIKE', '%' . $this->getDomainFromUrl($accessToken->domain) . '%')
                 ->where('is_active', true)
                 ->get();
+            // return $userPackage;
             $remainingOrders = collect($userPackage)->filter(function ($item) use ($frontendDomain) {
                 return $this->getDomainFromUrl($item->domain) == $frontendDomain;
             })->sum('remaining_order');
