@@ -104,6 +104,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::group(['as' => 'users.', 'prefix' => 'users/{user_id}'], function () {
+        Route::group(['as' => 'business.', 'prefix' => 'business'], function () {
+            Route::get('/', [BusinessController::class, 'index'])->name('index');
+            Route::post('/store', [BusinessController::class, 'store'])->name('store');
+        });
         Route::get('view', [UserController::class, 'view'])->name('view');
         Route::get('api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('packages', [UserController::class, 'packages'])->name('packages');
@@ -111,10 +115,6 @@ Route::middleware('auth')->group(function () {
         Route::get('sms-use-history', [UserController::class, 'smsUseHistory'])->name('smsUseHistory');
         Route::post('purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
         Route::post('update-purchase-package', [UserController::class, 'updatePurchasePackage'])->name('updatePurchasePackage');
-
-        Route::group(['as' => 'business.', 'prefix' => 'business'], function () {
-            Route::get('/', [BusinessController::class, 'index'])->name('index');
-        });
     });
 
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {

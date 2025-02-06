@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->text('domain')->nullable();
             $table->text('ip')->nullable();
+            $table->boolean('status')->default(true);
             $table->json('settings')->nullable();
             $table->timestamps();
         });

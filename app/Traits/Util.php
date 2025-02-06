@@ -11,6 +11,8 @@ trait Util
 
     public function getRequestDomain()
     {
+        // $ip = $_SERVER['REMOTE_ADDR'];
+        // return gethostbyaddr($ip);
         $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
         return $this->getDomainFromUrl($frontendDomain);
     }
