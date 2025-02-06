@@ -5,10 +5,14 @@
         class="flex h-svh flex-col bg-[#f3f4f6] dark:bg-gray-800 dark:text-white"
     >
         <div
-            class="flex h-[60px] flex-shrink-0 items-center justify-between bg-white px-4 dark:border-gray-600 dark:bg-slate-800"
+            class="flex h-[60px] flex-shrink-0 items-center justify-between bg-white dark:border-gray-600 dark:bg-slate-800"
         >
-            <div class="cursor-pointer text-xl font-semibold">Natural Care</div>
-            <div class="flex items-center gap-5">
+            <div
+                class="w-[240px] cursor-pointer px-4 text-xl font-semibold"
+            >
+                WooEasyLife
+            </div>
+            <div class="flex items-center gap-5 px-4">
                 <button @click="isDarkMode = !isDarkMode">
                     <Icon :name="isDarkMode ? 'PhSun' : 'PhMoonStars'" />
                 </button>

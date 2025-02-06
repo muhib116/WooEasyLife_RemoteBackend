@@ -70,8 +70,12 @@ class UserController extends Controller
             }
 
             $notice = null;
+            $frontendDomain = $this->getRequestDomain();
 
-            $smsQuery = SmsBalance::query()->where('user_id', $user->id);
+            $smsQuery = SmsBalance::query()
+                ->where('user_id', $user->id)
+                ->where('domain', $accessToken->domain);
+
             $smsBalance = $smsQuery->sum('amount');
             $smsCount = $smsQuery->where('type', 'out')->count();
 
@@ -94,12 +98,12 @@ class UserController extends Controller
                 ->where('domain', $accessToken->domain)
                 ->where('is_active', true)
                 ->get();
-            $frontendDomain = $this->getRequestDomain();
             $remainingOrders = collect($userPackage)->filter(function ($item) use ($frontendDomain) {
                 return $this->getDomainFromUrl($item->domain) == $frontendDomain;
             })->sum('remaining_order');
             $user->remaining_order = $remainingOrders + 0;
             $user->notice = $notice; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
+            $user->sms_balance = number_format($smsBalance, 2) + 0; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
 
             return response()->json($user, 200);
         } catch (\Throwable $th) {

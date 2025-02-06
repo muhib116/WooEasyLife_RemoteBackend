@@ -5,7 +5,7 @@
         <div>
             User Details Of
             <span class="text-primary-500">{{
-                get($page.props, "auth.user.name")
+                get($page.props, "user.name")
             }}</span>
         </div>
         <Link :href="route('users.index')">

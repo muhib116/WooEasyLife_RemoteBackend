@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ApiKeyController;
+use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\LogController;
@@ -98,15 +99,22 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'users.', 'prefix' => 'users'], function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::post('/store', [UserController::class, 'store'])->name('store');
-        Route::get('/{id}/view', [UserController::class, 'view'])->name('view');
-        Route::get('/{id}/api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
-        Route::get('/{id}/packages', [UserController::class, 'packages'])->name('packages');
-        Route::get('/{id}/sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
-        Route::get('/{id}/sms-use-history', [UserController::class, 'smsUseHistory'])->name('smsUseHistory');
         Route::post('approve-sms-recharge/{sms_id}', [UserController::class, 'approveSmsRecharge'])->name('approveSmsRecharge');
         Route::post('reject-sms-recharge/{sms_id}', [UserController::class, 'rejectSmsRecharge'])->name('rejectSmsRecharge');
-        Route::post('{id}/purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
-        Route::post('{id}/update-purchase-package', [UserController::class, 'updatePurchasePackage'])->name('updatePurchasePackage');
+    });
+
+    Route::group(['as' => 'users.', 'prefix' => 'users/{user_id}'], function () {
+        Route::get('view', [UserController::class, 'view'])->name('view');
+        Route::get('api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
+        Route::get('packages', [UserController::class, 'packages'])->name('packages');
+        Route::get('sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
+        Route::get('sms-use-history', [UserController::class, 'smsUseHistory'])->name('smsUseHistory');
+        Route::post('purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
+        Route::post('update-purchase-package', [UserController::class, 'updatePurchasePackage'])->name('updatePurchasePackage');
+
+        Route::group(['as' => 'business.', 'prefix' => 'business'], function () {
+            Route::get('/', [BusinessController::class, 'index'])->name('index');
+        });
     });
 
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {
