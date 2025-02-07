@@ -59,6 +59,8 @@ class UserController extends Controller
         // 104.18.32.47
         // 172.64.155.209
         // return $this->getDomainFromUrl('localhost');
+        // LogHelper::saveLog('hi', 'hi');
+        // echo "Called from line: " . $backtrace[0]['line'] . PHP_EOL;
         $token = $request->bearerToken();
         $accessToken = AccessToken::findToken($token);
         if (!$accessToken) {

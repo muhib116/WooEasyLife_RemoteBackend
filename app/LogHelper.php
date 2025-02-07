@@ -29,6 +29,8 @@ class LogHelper
             $endpoint = '';
             $frontendDomain = '';
             $token = '';
+            $lineInfo = null;
+
             try {
                 $endpoint = request()->url();
                 $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
@@ -45,6 +47,16 @@ class LogHelper
             } catch (\Throwable $th) {
             }
 
+            try {
+                $backtrace = debug_backtrace();
+                $lineInfo = [
+                    'line' => $backtrace[1]['line'],
+                    'function' => $backtrace[1]['function'],
+                    'class' => $backtrace[1]['class'],
+                ];
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
 
             // Create a structured log entry
             $logEntry = json_encode([
@@ -53,7 +65,8 @@ class LogHelper
                 'message' => $message,
                 'endpoint' => $endpoint,
                 'frontendDomain' => $frontendDomain,
-                'token' => $token
+                'token' => $token,
+                'lineInfo' => $lineInfo
             ]) . PHP_EOL;
 
             // Save to the latest chunked log file

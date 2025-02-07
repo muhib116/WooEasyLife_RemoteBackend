@@ -82,7 +82,15 @@
                             header="Message"
                         >
                             <template #body="{ data }">
+                                <!-- lineInfo -->
                                 <div>
+                                    <Button
+                                        @click="displayProduct($event, data)"
+                                        icon="pi pi-info-circle"
+                                        severity="help"
+                                        size="small"
+                                    />
+
                                     <div
                                         v-if="data?.token"
                                         class="border-b border-green-400/50 text-green-500 dark:text-green-300"
@@ -114,12 +122,19 @@
             </template>
         </Card>
         <ConfirmDialog />
+        <Popover ref="op" @hide="hidePopover">
+            <div class="min-w-[20rem] rounded">
+                <!-- {{ selectedItem?.lineInfo }} -->
+                <div>Line Number: {{ selectedItem?.lineInfo?.line }}</div>
+                <div>Class: {{ selectedItem?.lineInfo?.class }}</div>
+            </div>
+        </Popover>
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick } from "vue";
 import axios from "axios";
 import { format, parse } from "date-fns";
 import { router } from "@inertiajs/core";
@@ -135,11 +150,30 @@ const props = defineProps({
 
 const confirm = useConfirm();
 
+const selectedItem = ref();
+
+const op = ref();
+
 const isLoading = ref(false);
 const logFiles = ref<{ name: string; path: string }[]>([]);
 const selectedLogFile = ref<string | null>(null);
 const logs = ref<any[]>([]);
 const clearing = ref(false);
+
+const displayProduct = (event, item) => {
+    if (selectedItem.value) {
+        selectedItem.value = null;
+        op.value.hide();
+    } else {
+        selectedItem.value = item;
+        op.value.show(event);
+    }
+};
+
+const hidePopover = () => {
+    selectedItem.value = null;
+    op.value.hide();
+};
 
 const getTime = (dateString) => {
     let op = "";
