@@ -113,8 +113,9 @@ class RedXController extends Controller
         $config = $this->getConfig();
 
         if (!$config) {
-            return $this->errorResponse('The SteadFast settings are not configured properly.');
+            return $this->errorResponse('The Redx settings are not configured properly.');
         }
+
 
         $trackId = $request->track_id;
         $link = $this->baseUrl . '/v1.0.0-beta/parcel/track/';

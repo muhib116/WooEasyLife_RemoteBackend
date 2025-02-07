@@ -287,10 +287,10 @@ class FraudCheckController extends Controller
             $response_data['cancel'] = $returned;
             $response_data['success_rate'] = $success_rate;
         } catch (\Throwable $th) {
-            LogHelper::saveLog('paperfly froad check error', $th->getMessage());
-            if ($response) {
-                LogHelper::saveLog('paperfly froad check error resposne', $response);
-            }
+            // LogHelper::saveLog('paperfly froad check error', $th->getMessage());
+            // if ($response) {
+            //     LogHelper::saveLog('paperfly froad check error resposne', $response);
+            // }
         }
 
         return $response_data;

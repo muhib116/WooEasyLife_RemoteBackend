@@ -22,7 +22,7 @@ class ValidateTokenDomain
         try {
             $token = $request->bearerToken();
             $accessToken = AccessToken::findToken($token);
-            $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
+            $frontendDomain = $this->getRequestDomain();
             if (!$frontendDomain) {
                 LogHelper::saveLog('Origin domain missing from header', $token);
                 return $this->errorResponse('Origin domain missing from header');
@@ -35,7 +35,10 @@ class ValidateTokenDomain
                 return $this->errorResponse('Invalid Token', 401);
             }
 
-            $host = $this->getTokenDomain();
+            $host = $this->getDomainFromUrl($accessToken->domain);
+            if ($frontendDomain !== $host) {
+                return $this->errorResponse('Invalid domain', 401);
+            }
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
                 ->where('domain', $accessToken->domain)
                 ->where('is_active', true)
@@ -49,11 +52,6 @@ class ValidateTokenDomain
                         ]);
                     }
                 }
-            }
-            $frontendDomain = $request->headers->get('origin') ?? $request->headers->get('referer');
-            $requestDomain = $this->getRequestDomain();
-            if ($requestDomain !== $host) {
-                return $this->errorResponse('Invalid domain', 401);
             }
         } catch (\Throwable $th) {
             LogHelper::saveLog('Middleware ValidateTokenDomain', $th->getMessage());
