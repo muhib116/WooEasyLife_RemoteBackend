@@ -31,10 +31,10 @@ class ConfigurationController extends Controller
             //     'slug' => 'paperfly',
             //     'title' => 'Paperfly',
             // ],
-            // [
-            //     'slug' => 'redx',
-            //     'title' => 'RedX',
-            // ],
+            [
+                'slug' => 'redx',
+                'title' => 'RedX',
+            ],
         ];
 
         return $this->successResponse($formatted);
