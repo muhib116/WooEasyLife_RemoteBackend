@@ -22,19 +22,24 @@ class ConfigurationController extends Controller
             [
                 'slug' => 'steadfast',
                 'title' => 'Steadfast',
+                'logo' => asset('images/steadfast.png')
+                // "logo": "http://localhost:8000/images/steadfast.png",
             ],
             // [
             //     'slug' => 'pathao',
             //     'title' => 'Pathao',
+            //     'logo' => asset('images/pathao.png')
             // ],
             // [
             //     'slug' => 'paperfly',
             //     'title' => 'Paperfly',
+            //     'logo' => asset('images/paperfly.png')
             // ],
-            [
-                'slug' => 'redx',
-                'title' => 'RedX',
-            ],
+            // [
+            //     'slug' => 'redx',
+            //     'title' => 'RedX',
+            //     'logo' => asset('images/redx.png')
+            // ],
         ];
 
         return $this->successResponse($formatted);
