@@ -303,7 +303,7 @@ class SmsController extends Controller
                     $data = [
                         'user_id' => Auth::id(),
                         'type' => 'out',
-                        'amount' => - ($smsCount * 0.04),
+                        'amount' => - ($smsCount * 0.40),
                         'sms_rate' => 0.40,
                         'phone' => $phone,
                         'sms_text' => $sms,
