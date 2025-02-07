@@ -29,6 +29,7 @@ declare module 'vue' {
     InputMask: typeof import('primevue/inputmask')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
+    Popover: typeof import('primevue/popover')['default']
     RadioButton: typeof import('primevue/radiobutton')['default']
     Rating: typeof import('primevue/rating')['default']
     Select: typeof import('primevue/select')['default']
