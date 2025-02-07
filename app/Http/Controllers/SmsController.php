@@ -310,6 +310,7 @@ class SmsController extends Controller
                         'sms_count' => $smsCount,
                         'message_id' => @$responseDecoded->message_id,
                         'note' => '',
+                        'domain' => $this->getTokenDomain(),
                         'created_by' => Auth::id(),
                     ];
 
