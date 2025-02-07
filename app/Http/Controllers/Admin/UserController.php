@@ -55,8 +55,10 @@ class UserController extends Controller
 
     public function getUser(Request $request)
     {
+        // return dns_get_record('localhost', DNS_A);
+        // 104.18.32.47
+        // 172.64.155.209
         // return $this->getDomainFromUrl('localhost');
-        // return dns_get_record($this->getRequestDomain(), DNS_A);
         $token = $request->bearerToken();
         $accessToken = AccessToken::findToken($token);
         if (!$accessToken) {
