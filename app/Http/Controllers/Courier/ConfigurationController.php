@@ -65,6 +65,7 @@ class ConfigurationController extends Controller
             'api_key' => trim($request->api_key),
             'secret_key' => trim($request->secret_key),
             'is_active' => $request->is_active,
+            'logo' => 'images/'.trim($request->slug).'.png',
             'user_id' => Auth::id(),
         ];
 
@@ -116,7 +117,7 @@ class ConfigurationController extends Controller
 
         foreach ($config as $item) {
             if ($item->logo) {
-                $item->logo = asset($item->logo);
+                $item->logo = asset('images/'.$item->slug.'.png');
             }
             $data[$item->slug] = $item;
         }
