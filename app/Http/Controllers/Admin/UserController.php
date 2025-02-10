@@ -26,7 +26,14 @@ class UserController extends Controller
 
     public function index()
     {
-        $users = User::query()->where('role', 'user')->orderBy('id', 'desc')->get();
+        $users = User::query()
+            ->where('role', 'user')
+            ->withSum(['userPackage as remaining_order' => function ($query) {
+                $query->where('is_active', 1);
+            }], 'remaining_order')
+            ->orderBy('id', 'desc')
+            ->get();
+        // return $users;
         return Inertia::render('Users/Index', compact('users'));
     }
 

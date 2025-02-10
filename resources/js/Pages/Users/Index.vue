@@ -2,7 +2,7 @@
     <AuthenticatedLayout title="Orders">
         <Card class="dark:bg-slate-900 dark:text-white">
             <template #title>
-                <div class="flex justify-between items-center gap-5">
+                <div class="flex items-center justify-between gap-5">
                     User list
 
                     <Button
@@ -22,6 +22,10 @@
                         <Column field="name" header="Name" />
                         <Column field="email" header="Email" />
                         <Column field="phone" header="Phone" />
+                        <Column
+                            field="remaining_order"
+                            header="Remaining Orders"
+                        />
                         <Column
                             header="Action"
                             headerClass="text-right w-[12rem]"
