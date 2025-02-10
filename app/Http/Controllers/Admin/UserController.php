@@ -289,10 +289,11 @@ class UserController extends Controller
 
         $package = PackageHub::find($request->package_id);
 
+        $domain = $this->getDomainFromUrl($request->domain);
         $data = [
             'title' => $package->title,
             'description' => $package->description,
-            'domain' => $request->domain,
+            'domain' => $domain,
             'user_id' => $user->id,
             'package_hub_id' => $package->id,
             'total_order_can_handle' => $request->limit,
@@ -300,11 +301,10 @@ class UserController extends Controller
             'total_order_handled' => 0,
             'per_order_rate' => $package->per_order_rate,
             'transaction_method' => $package->transaction_method,
-            'transaction_number' => $package->transaction_method,
+            'transaction_number' => $package->transaction_number,
             'transaction_id' => $package->transaction_id,
             'total_cost' => $package->per_order_rate * $request->limit,
             'transaction_charge' => $request->transaction_charge,
-            'transaction_method' => $request->transaction_method,
             'is_active' => true,
             'note' => $request->note,
             'created_by' => Auth::id(),
