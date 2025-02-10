@@ -27,6 +27,8 @@ then other information
 local whitelisted ip in sms panel:
 37.111.218.58 // eta ami barite aschi somoy phone data use korar somoy lagaici
 
+# api key enable disable
+
 <!--
 sms_recharges
 sms_balances
