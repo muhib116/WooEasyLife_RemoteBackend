@@ -23,8 +23,6 @@ class DataController extends Controller
         $infos = collect($decoded_data)->map(function($item) {
             return [
                 "icon" => asset("images/contacts/".$item->icon),
-                "bg" => $item->bg,
-                "color" => $item->color,
                 "content" => $item->content
             ];
         });

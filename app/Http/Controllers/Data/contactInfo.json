@@ -1,14 +1,18 @@
 [
     {
-        "icon": "whatsapp.png",
-        "bg": "#22d366",
-        "color": "#ffffff",
-        "content": "01770989591"
+        "icon": "phone.webp",
+        "content": "+8801789909958"
     },
     {
-        "icon": "facebook.png",
-        "bg": "#009be5",
-        "color": "#ffffff",
+        "icon": "whatsapp.webp",
+        "content": "+8801789909958"
+    },
+    {
+        "icon": "facebook.webp",
         "content": "https://www.facebook.com"
+    },
+    {
+        "icon": "email.webp",
+        "content": "info@wpsalehub.com"
     }
 ]

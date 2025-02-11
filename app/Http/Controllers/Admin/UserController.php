@@ -215,18 +215,22 @@ class UserController extends Controller
             'user_id' => $userId,
             'user_package_id' => $packageId
         ])
-        ->orderBy('id', 'desc')
-        ->get();
+            ->orderBy('id', 'desc')
+            ->get();
 
-        // $ledger = [];
-        // $totalCanHandle = $userPackage->total_order_can_handle;
-        // foreach(collect($history) as $record) {
-        //     // $totalCanHandle
-        //     $record->total_can_handle = $totalCanHandle;
-        //     $totalCanHandle = $totalCanHandle - $record->total_order_handled;
-        //     $ledger[] = $record;
-        // }
-        
+        // $modifiedHistory = collect($history)->map(function ($record) {
+        //     // return $record->use_details;
+        //     $useDetails = collect($record->use_details);
+        //     $record->use_details = $useDetails->map(function($item) {
+        //         return $item;
+        //     });
+        //     if (is_string($record->cart_contents) && @unserialize($record->cart_contents) !== false) {
+        //         $record->cart_contents = unserialize($record->cart_contents);
+        //     }
+
+        //     return $record;
+        // });
+
         return response()->json($history);
     }
 
