@@ -17,6 +17,7 @@ return new class extends Migration
             $table->text('access_key')->nullable()->after('description');
             $table->text('api_token')->nullable()->after('access_key');
             $table->text('domain')->nullable()->after('api_token');
+            $table->boolean('status')->default(true)->after('domain');
             $table->unsignedBigInteger('user_package_id')->nullable()->after('domain');
         });
     }

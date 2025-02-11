@@ -74,6 +74,10 @@
                 >
             </div>
         </div>
+        <label class="flex items-center gap-5">
+            <ToggleSwitch v-model="tokenForm.status" />
+            Is Active
+        </label>
         <div class="flex justify-end gap-2">
             <Button
                 type="button"

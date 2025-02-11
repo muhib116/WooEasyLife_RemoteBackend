@@ -32,6 +32,16 @@
                                     {{ formatExpiresAt(data?.expires_at) }}
                                 </template>
                             </Column>
+                            <Column field="expires_at" header="Expires At">
+                                <template #body="{ data }">
+                                    <Badge
+                                        severity="success"
+                                        v-if="data?.status"
+                                        >Active</Badge
+                                    >
+                                    <Badge v-else>Disabled</Badge>
+                                </template>
+                            </Column>
                             <Column
                                 header="Action"
                                 headerClass="text-right w-[12rem]"
@@ -125,6 +135,7 @@ const tokenForm = useForm({
     abilities: null,
     description: null,
     domain: null,
+    status: false,
     referred_by: null,
 });
 
@@ -133,8 +144,8 @@ const handleEdit = (item) => {
     tokenForm.title = item.title;
     tokenForm.expires_at = item.expires_at;
     tokenForm.tokenable_id = item.tokenable_id;
-
-    const selectedPackage = props.user_packages.find(
+console.log(props.user_packages)
+    const selectedPackage = props.user_packages?.find(
         (_item) => (_item.domain == item.domain)
     );
     if (selectedPackage && selectedPackage?.domain) {
@@ -150,6 +161,7 @@ const handleEdit = (item) => {
     tokenForm.abilities = item.abilities;
     tokenForm.description = item.description;
     tokenForm.domain = item.domain;
+    tokenForm.status = Boolean(item?.status);
     showForm.value = true;
 };
 

@@ -18,6 +18,7 @@ class AccessToken extends Model implements HasAbilities
         'abilities' => 'json',
         'last_used_at' => 'datetime',
         'expires_at' => 'datetime',
+        'status' => 'boolean',
     ];
 
     /**
@@ -32,9 +33,11 @@ class AccessToken extends Model implements HasAbilities
         'access_key',
         'api_key',
         'domain',
+        'status',
         'token',
         'abilities',
         'expires_at',
+        'last_used_at',
     ];
 
     /**
