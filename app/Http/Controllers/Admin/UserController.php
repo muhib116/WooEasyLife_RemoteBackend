@@ -218,20 +218,20 @@ class UserController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        // $modifiedHistory = collect($history)->map(function ($record) {
-        //     // return $record->use_details;
-        //     $useDetails = collect($record->use_details);
-        //     $record->use_details = $useDetails->map(function($item) {
-        //         return $item;
-        //     });
-        //     if (is_string($record->cart_contents) && @unserialize($record->cart_contents) !== false) {
-        //         $record->cart_contents = unserialize($record->cart_contents);
-        //     }
+        $modifiedHistory = collect($history)->map(function ($record) {
+            // return $record->use_details;
+            $useDetails = collect($record->use_details);
+            $record->use_details = $useDetails->map(function($item) {
+                if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
+                    $item['cart_contents'] = unserialize($item['cart_contents']);
+                }
+                return $item;
+            });
 
-        //     return $record;
-        // });
+            return $record;
+        });
 
-        return response()->json($history);
+        return response()->json($modifiedHistory);
     }
 
     public function smsRecharge($userId)

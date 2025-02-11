@@ -7,6 +7,11 @@
             :value="useDetails"
             tableStyle="min-width: 50rem"
             showGridlines
+            :rows="5"
+            paginator
+            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+            :rowsPerPageOptions="[5, 10, 25, 50, 100, 200]"
+            currentPageReportTemplate="{first} to {last} of {totalRecords} Record &nbsp;"
         >
             <!-- <Column field="total_can_handle" header="Total Can" /> -->
             <Column field="order_count" header="Order Count" />
@@ -44,7 +49,6 @@
                     :value="item?.cart_contents || []"
                     scrollable
                     scrollHeight="flex"
-                    dismissableMask
                     tableStyle="min-width: 50rem"
                 >
                     <Column field="order_id" header="Id"></Column>
@@ -102,7 +106,7 @@ const showUseDetails = ref(false);
 const showSales = (item) => {
     const d = (item.use_details || []).map((item) => {
         if (isString(item.cart_contents)) {
-            console.log(item.cart_contents)
+            console.log(item.cart_contents);
             item.cart_contents = [];
         }
         return item;
