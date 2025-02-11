@@ -19,6 +19,7 @@ class ValidateTokenDomain
 
     public function handle(Request $request, Closure $next)
     {
+        return response($this->getDomainFromUrl('localhost:8080'));
         try {
             $token = $request->bearerToken();
             $accessToken = AccessToken::findToken($token);
@@ -33,6 +34,14 @@ class ValidateTokenDomain
             if (!$accessToken) {
                 LogHelper::saveLog('Invalid Token from ValidateTokenDomain', $token);
                 return $this->errorResponse('Invalid Token', 401);
+            }
+            $accessToken->update([
+                'last_used_at' => now()
+            ]);
+            if (!$accessToken->status) {
+                return $this->errorResponse('Unauthenticated', 401, [
+                    'token' => 'Token is disabled'
+                ]);
             }
 
             $host = $this->getDomainFromUrl($accessToken->domain);

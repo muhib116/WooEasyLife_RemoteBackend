@@ -95,6 +95,7 @@ class ApiKeyController extends Controller
                 'access_key' => $this->encodeToken($plainTextToken),
                 'title' => $title,
                 'domain' => $domain ?? null,
+                'status' => $request->status,
                 'expires_at' => $request->expires_at ?? null
             ]);
             DB::commit();
@@ -118,6 +119,7 @@ class ApiKeyController extends Controller
             'title' => $request->title,
             'description' => $request->description ?? null,
             'domain' => $request->domain ?? null,
+            'status' => $request->status,
             'expires_at' => $request->expires_at ? Carbon::parse($request->expires_at) : null
         ]);
 

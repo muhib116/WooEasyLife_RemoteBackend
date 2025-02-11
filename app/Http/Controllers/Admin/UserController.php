@@ -190,11 +190,14 @@ class UserController extends Controller
             ];
         });
 
-        $user_packages = UserPackage::where('user_id', $user->id)
+        $packages = UserPackage::where('user_id', $user->id)
             ->orderBy('id', 'desc')
             ->get()
             ->unique('domain');
-        // return $user_packages;
+        $user_packages = [];
+        foreach(collect($packages) as $v) {
+            $user_packages[] = $v;
+        }
         return Inertia::render('Users/ApiKeys', compact('user', 'tokens', 'user_packages'));
     }
 
