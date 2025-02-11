@@ -19,7 +19,7 @@ class ValidateTokenDomain
 
     public function handle(Request $request, Closure $next)
     {
-        return response($this->getDomainFromUrl('localhost:8080'));
+        // return response($this->getDomainFromUrl('localhost:8080'));
         try {
             $token = $request->bearerToken();
             $accessToken = AccessToken::findToken($token);
