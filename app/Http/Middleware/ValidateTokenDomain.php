@@ -39,6 +39,7 @@ class ValidateTokenDomain
                 'last_used_at' => now()
             ]);
             if (!$accessToken->status) {
+                LogHelper::saveLog('Disabled token access', $token);
                 return $this->errorResponse('Unauthenticated', 401, [
                     'token' => 'Token is disabled'
                 ]);
