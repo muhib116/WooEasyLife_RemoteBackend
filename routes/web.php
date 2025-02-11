@@ -111,6 +111,7 @@ Route::middleware('auth')->group(function () {
         Route::get('view', [UserController::class, 'view'])->name('view');
         Route::get('api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('packages', [UserController::class, 'packages'])->name('packages');
+        Route::get('packages/{package_id}/use-details', [UserController::class, 'useDetails'])->name('useDetails');
         Route::get('sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
         Route::get('sms-use-history', [UserController::class, 'smsUseHistory'])->name('smsUseHistory');
         Route::post('purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');

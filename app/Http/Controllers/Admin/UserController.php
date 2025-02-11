@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\LogHelper;
 use App\Models\AccessToken;
 use App\Models\PackageHub;
+use App\Models\PackageUseHistory;
 use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
 use App\Models\User;
@@ -206,6 +207,29 @@ class UserController extends Controller
         ])->orderBy('created_at', 'desc')->get();
         return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
     }
+
+    public function useDetails($userId, $packageId)
+    {
+        $userPackage = UserPackage::find($packageId);
+        $history = PackageUseHistory::where([
+            'user_id' => $userId,
+            'user_package_id' => $packageId
+        ])
+        ->orderBy('id', 'desc')
+        ->get();
+
+        // $ledger = [];
+        // $totalCanHandle = $userPackage->total_order_can_handle;
+        // foreach(collect($history) as $record) {
+        //     // $totalCanHandle
+        //     $record->total_can_handle = $totalCanHandle;
+        //     $totalCanHandle = $totalCanHandle - $record->total_order_handled;
+        //     $ledger[] = $record;
+        // }
+        
+        return response()->json($history);
+    }
+
     public function smsRecharge($userId)
     {
         $user = User::find($userId);

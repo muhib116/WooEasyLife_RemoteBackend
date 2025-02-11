@@ -63,6 +63,12 @@
                                             size="small"
                                             icon="pi pi-eye"
                                         />
+                                        <Button
+                                            @click="showUseDetails = data.id"
+                                            severity="warn"
+                                            size="small"
+                                            label="Use Details"
+                                        />
                                     </div>
                                 </template>
                             </Column>
@@ -106,6 +112,22 @@
                 @handleSave="handleSave"
             />
         </Dialog>
+        <Dialog
+            v-model:visible="showUseDetails"
+            header="Use Details"
+            modal
+            maximizable
+            :style="{ width: '90%' }"
+            draggable
+            dismissableMask
+            @hide="() => {}"
+        >
+            <UseDetails
+                v-if="showUseDetails"
+                :user="user"
+                :id="showUseDetails"
+            />
+        </Dialog>
 
         <Toast />
         <ConfirmDialog id="confirm" />
@@ -117,8 +139,10 @@ import { AuthenticatedLayout } from "@/layouts";
 import UserNav from "./UserNav.vue";
 import Header from "./Header.vue";
 import PackageForm from "./fragments/PackageForm.vue";
+import UseDetails from "./fragments/UseDetails.vue";
 import { ref } from "vue";
 import { useForm } from "@inertiajs/vue3";
+import axios from "axios";
 
 defineOptions({
     name: "Packages",
@@ -131,6 +155,7 @@ const props = defineProps<{
 }>();
 
 const selectedItem = ref(false);
+const showUseDetails = ref(false)
 
 // title
 // description

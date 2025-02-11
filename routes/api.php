@@ -46,6 +46,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         })->name('apiValidate');
 
         Route::any('get-tutorials', [DataController::class, 'getTutorials']);
+        Route::any('get-contact-info', [DataController::class, 'getContactInfo']);
 
         // use of package order limit
         Route::post('package-order-use', [HubController::class, 'hubUse']);
