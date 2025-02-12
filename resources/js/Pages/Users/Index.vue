@@ -4,7 +4,7 @@
             <template #title>
                 <div class="flex items-center justify-between gap-5">
                     User list
-
+                    {{ showForm }}
                     <Button
                         label="Create User"
                         icon="pi pi-plus"
@@ -59,6 +59,7 @@
         <UserForm
             v-if="showForm"
             v-model="showForm"
+            @update:model-value="!showForm && (selectedUser = null)"
             :selectedUser="selectedUser"
         />
     </AuthenticatedLayout>
