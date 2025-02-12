@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PackageHubController;
 use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
@@ -74,6 +75,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/list', [LogController::class, 'listLogs'])->name('list');
         Route::post('/view', [LogController::class, 'viewLog'])->name('view');
         Route::post('/clear-all-log', [LogController::class, 'clearAllLog'])->name('clearAllLog');
+    });
+
+    Route::group(['as' => 'sessions.', 'prefix' => 'sessions'], function () {
+        Route::get('/', [SessionController::class, 'sessions'])->name('index');
+        Route::get('/get-sessions', [SessionController::class, 'getSessions'])->name('getSessions');
+        Route::post('/clear-session', [SessionController::class, 'clearSession'])->name('clearSession');
     });
 
     Route::group(['as' => 'products.', 'prefix' => 'products'], function () {
