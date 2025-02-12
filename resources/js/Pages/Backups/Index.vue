@@ -3,20 +3,20 @@
         <Card class="dark:bg-slate-900 dark:text-white">
             <template #title>
                 <div class="flex items-center justify-between gap-5">
-                    Sessions
+                    Database Backups
 
                     <div class="flex items-center gap-5">
                         <Button
-                            label="Clear"
-                            severity="danger"
-                            icon="pi pi-times-circle"
-                            @click="deleteSession"
-                            :loading="clearing"
+                            label="Dump the Database"
+                            severity="success"
+                            icon="pi pi-save"
+                            @click="createBackup"
+                            :loading="dumping"
                         />
                         <Button
                             label="Reload"
                             icon="pi pi-refresh"
-                            @click="getSessions"
+                            @click="getBackups"
                             :loading="isLoading"
                         />
                     </div>
@@ -47,8 +47,8 @@
                         </Column>
                     </DataTable>
                     <DataTable
-                        v-else-if="sessions.length"
-                        :value="sessions"
+                        v-else-if="backups.length"
+                        :value="backups"
                         :rows="10"
                         paginator
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
@@ -61,24 +61,35 @@
                                 {{ slotProps.index + 1 }}
                             </template>
                         </Column>
-                        <Column field="id" header="Id" />
-                        <Column field="user_id" header="User Id" />
-                        <Column field="ip_address" header="Ip Address" />
-                        <Column field="user_agent" header="User Agent" />
-                        <!-- <Column field="payload" header="Payload" /> -->
-                        <Column field="last_activity" header="Last Activity">
+                        <Column field="name" header="File Name" />
+                        <Column field="size" header="File Size" />
+                        <Column field="time" header="Created At">
                             <template #body="{ data }">
-                                {{ getTime(data.last_activity) }}
+                                {{ getTime(data.time) }}
                             </template>
                         </Column>
-                        <!-- id
-                        user_id
-                        ip_address
-                        user_agent
-                        payload
-                        last_activity -->
+                        <Column field="time" header="Created At">
+                            <template #body="{ data }">
+                                <Button 
+                                    as="a"
+                                    size="small"
+                                    rounded
+                                    icon="pi pi-download"
+                                    :href="data.path"
+                                    download
+                                />
+                                <Button 
+                                    size="small"
+                                    rounded
+                                    @click="() => deleteFile(data.name)"
+                                    icon="pi pi-trash"
+                                    severity="danger"
+                                    class="ml-4"
+                                />
+                            </template>
+                        </Column>
                     </DataTable>
-                    <p v-else class="text-gray-400">No logs available.</p>
+                    <p v-else class="text-gray-400">No backups available.</p>
                 </div>
             </template>
         </Card>
@@ -95,11 +106,7 @@ import { router } from "@inertiajs/core";
 import { useConfirm } from "primevue";
 
 defineOptions({
-    name: "Sessions",
-});
-
-const props = defineProps({
-    im_super: Boolean,
+    name: "Backups",
 });
 
 const confirm = useConfirm();
@@ -111,8 +118,8 @@ const op = ref();
 const isLoading = ref(false);
 const logFiles = ref<{ name: string; path: string }[]>([]);
 const selectedLogFile = ref<string | null>(null);
-const sessions = ref<any[]>([]);
-const clearing = ref(false);
+const backups = ref<any[]>([]);
+const dumping = ref(false);
 
 const getTime = (dateString) => {
     // Parse the date string for 1739376048 record
@@ -124,16 +131,46 @@ const getTime = (dateString) => {
     return op;
 };
 
-const getSessions = async () => {
+const getBackups = async () => {
     isLoading.value = true;
     try {
-        const { data } = await axios.get(route("sessions.getSessions"));
-        sessions.value = data || [];
+        const { data } = await axios.get(route("backups.getBackups"));
+        backups.value = data || [];
     } catch (error) {
         console.error(error);
     } finally {
         isLoading.value = false;
     }
+};
+
+const deleteFile = async (fileName) => {
+    confirm.require({
+        header: "Are you sure to delete this backup file?",
+        message: "This action cannot be undone.",
+        rejectProps: {
+            label: "Cancel",
+            icon: "pi pi-times",
+            severity: "primary",
+            size: "small",
+        },
+        acceptProps: {
+            label: "Delete",
+            icon: "pi pi-check",
+            severity: "danger",
+            size: "small",
+        },
+        accept: async () => {
+            await axios.post(route("backups.deleteFile", fileName));
+            getBackups();
+        },
+    });
+};
+
+const createBackup = async () => {
+    dumping.value = true;
+    await axios.post(route("backups.dumpDatabase"));
+    getBackups();
+    dumping.value = false;
 };
 
 const deleteSession = async () => {
@@ -155,12 +192,12 @@ const deleteSession = async () => {
         },
         accept: async () => {
             await axios.post(route("sessions.clearSession"));
-            getSessions();
+            getBackups();
         },
     });
 };
 
 onMounted(async () => {
-    await getSessions();
+    await getBackups();
 });
 </script>

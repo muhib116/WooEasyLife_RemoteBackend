@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ApiKeyController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FollowUpController;
@@ -81,6 +82,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [SessionController::class, 'sessions'])->name('index');
         Route::get('/get-sessions', [SessionController::class, 'getSessions'])->name('getSessions');
         Route::post('/clear-session', [SessionController::class, 'clearSession'])->name('clearSession');
+    });
+
+    Route::group(['as' => 'backups.', 'prefix' => 'backups'], function () {
+        Route::get('/', [BackupController::class, 'index'])->name('index');
+        Route::get('/get-backups', [BackupController::class, 'getBackups'])->name('getBackups');
+        Route::post('/dump-database', [BackupController::class, 'dumpDatabase'])->name('dumpDatabase');
+        Route::get('/download-backup/{file_name}', [BackupController::class, 'downloadBackup'])->name('downloadBackup');
+        Route::post('/delete-file/{file_name}', [BackupController::class, 'deleteFile'])->name('deleteFile');
     });
 
     Route::group(['as' => 'products.', 'prefix' => 'products'], function () {

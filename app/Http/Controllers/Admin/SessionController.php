@@ -10,20 +10,22 @@ use Inertia\Inertia;
 
 class SessionController extends Controller
 {
-    public function sessions() {
+    public function sessions()
+    {
         return Inertia::render('Sessions/Index');
     }
 
-    public function getSessions() {
+    public function getSessions()
+    {
         $sessions = DB::table('sessions')->get();
         return response()->json($sessions);
     }
 
-    public function clearSession() {
+    public function clearSession()
+    {
         DB::table('sessions')
-        ->where('last_activity', '<', now()->subMinutes(config('session.lifetime'))->timestamp)
-        ->delete();
+            ->where('last_activity', '<', now()->subMinutes(config('session.lifetime'))->timestamp)
+            ->delete();
         return response()->json(['success' => true]);
     }
-    
 }
