@@ -27,7 +27,7 @@
                     </div>
 
                     <div
-                        class="grid min-h-[300px] place-content-center pt-[50px] pb-10"
+                        class="grid min-h-[300px] place-content-center pb-10 pt-[50px]"
                     >
                         <div v-if="isLoading" class="loader mb-5"></div>
                         <Image
@@ -38,21 +38,21 @@
                         />
                         <div
                             v-else
-                            class="grid grid-cols-2 gap-5 max-w-[400px]"
+                            class="grid max-w-[400px] grid-cols-2 gap-5"
                         >
                             <div
-                                class="rounded flex flex-col text-green-600 border border-current justify-center items-center"
+                                class="flex flex-col items-center justify-center rounded border border-current text-green-600"
                             >
                                 <span class="font-bold">Success</span>
-                                <p class="text-3xl font-bold text-center">
+                                <p class="text-center text-3xl font-bold">
                                     {{ response?.confirmed }}
                                 </p>
                             </div>
                             <div
-                                class="rounded flex flex-col text-red-600 border border-current justify-center items-center"
+                                class="flex flex-col items-center justify-center rounded border border-current text-red-600"
                             >
-                                <span class="font-bold p-2">Cancellation</span>
-                                <p class="m-0 text-3xl font-bold text-center">
+                                <span class="p-2 font-bold">Cancellation</span>
+                                <p class="m-0 text-center text-3xl font-bold">
                                     {{ response?.cancel }}
                                 </p>
                             </div>
@@ -93,7 +93,7 @@ const postStreamRequest = async (url: string, payload: any, config: any) => {
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
                 Authorization: String(
-                    axios.defaults?.headers?.common["Authorization"]
+                    axios.defaults?.headers?.common["Authorization"],
                 ),
             },
             body: JSON.stringify(payload),
@@ -119,7 +119,7 @@ const postStreamRequest = async (url: string, payload: any, config: any) => {
                     .map((line) => line.split(": ")[1]);
                 if (!type || !data) return;
                 (type === "user_report" ? config?.onData : config?.onDone)?.(
-                    JSON.parse(data)
+                    JSON.parse(data),
                 );
             });
 
@@ -131,53 +131,53 @@ const postStreamRequest = async (url: string, payload: any, config: any) => {
 };
 
 const handleSearch = async () => {
-    postStreamRequest(
-        route("checkStream"),
-        {
-            data: [
-                {
-                    id: 535,
-                    phone: "01727897763",
-                },
-                {
-                    id: 534,
-                    phone: "01700501035",
-                },
-            ],
-        },
-        {
-            onData: ({ data, progress }) => {
-                console.log({ data, progress });
-            },
-            onDone: (data) => {
-                console.log(data);
-            },
-        }
-    );
-    if (form.phone) {
-        // isLoading.value = true;
-        // const { data } = await axios.post(route("adminCheckStream"), {
-        //     data: [
-        //         {
-        //             id: 535,
-        //             phone: "01727897763",
-        //         },
-        //         {
-        //             id: 534,
-        //             phone: "01700501035",
-        //         },
-        //     ],
-        // });
-    }
+    // postStreamRequest(
+    //     route("checkStream"),
+    //     {
+    //         data: [
+    //             {
+    //                 id: 535,
+    //                 phone: "01727897763",
+    //             },
+    //             {
+    //                 id: 534,
+    //                 phone: "01700501035",
+    //             },
+    //         ],
+    //     },
+    //     {
+    //         onData: ({ data, progress }) => {
+    //             console.log({ data, progress });
+    //         },
+    //         onDone: (data) => {
+    //             console.log(data);
+    //         },
+    //     }
+    // );
     // if (form.phone) {
     //     isLoading.value = true;
-    //     const phone = String(form.phone).replace("-", "");
-    //     const { data } = await axios.post(route("adminFraudCheck"), {
-    //         phone,
+    //     const { data } = await axios.post(route("adminCheckStream"), {
+    //         data: [
+    //             {
+    //                 id: 535,
+    //                 phone: "01727897763",
+    //             },
+    //             {
+    //                 id: 534,
+    //                 phone: "01700501035",
+    //             },
+    //         ],
     //     });
-    //     isLoading.value = false;
-    //     response.value = data;
     // }
+    if (form.phone) {
+        isLoading.value = true;
+        const phone = String(form.phone).replace("-", "");
+        const { data } = await axios.post(route("adminFraudCheck"), {
+            phone,
+        });
+        isLoading.value = false;
+        response.value = data;
+    }
 };
 </script>
 
