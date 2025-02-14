@@ -25,7 +25,7 @@
                                     {{
                                         format(
                                             new Date(data?.created_at || null),
-                                            "do MMMM yyyy, h:mm a"
+                                            "do MMMM yyyy, h:mm a",
                                         )
                                     }}
                                 </template>
@@ -35,7 +35,7 @@
                                     {{
                                         format(
                                             new Date(data?.updated_at || null),
-                                            "do MMMM yyyy, h:mm a"
+                                            "do MMMM yyyy, h:mm a",
                                         )
                                     }}
                                 </template>
@@ -43,7 +43,7 @@
                             <Column field="created_by" header="Created By">
                                 <template #body="{ data }">
                                     <span
-                                        class="py-1 px-4 bg-blue-100 text-blue-800 rounded-full"
+                                        class="rounded-full bg-blue-100 px-4 py-1 text-blue-800"
                                     >
                                         {{ data.creator?.name }}
                                     </span>
@@ -56,7 +56,7 @@
                                             :href="
                                                 route(
                                                     'plugins.downloadVersion',
-                                                    data.version
+                                                    data.version,
                                                 )
                                             "
                                             download
@@ -95,9 +95,9 @@
             :draggable="true"
         >
             <form @submit.prevent="handleCreate">
-                <div class="flex items-center gap-4 mb-8">
-                    <div for="version" class="font-semibold w-24">Version</div>
-                    <div class="flex-auto relative">
+                <div class="mb-8 flex items-center gap-4">
+                    <div for="version" class="w-24 font-semibold">Version</div>
+                    <div class="relative flex-auto">
                         <InputText
                             v-model="form.version"
                             @update:model-value="
@@ -114,9 +114,9 @@
                         >
                     </div>
                 </div>
-                <div class="flex items-center gap-4 mb-8">
-                    <div for="version" class="font-semibold w-24">Version</div>
-                    <div class="flex-auto relative">
+                <div class="mb-8 flex items-center gap-4">
+                    <div for="version" class="w-24 font-semibold">Version</div>
+                    <div class="relative flex-auto">
                         <!-- <CodeEditor.Base
                             class="w-full"
                             v-model="form.settings"
@@ -138,17 +138,18 @@
                         >
                     </div>
                 </div>
-                <div class="flex items-center gap-4 mb-8">
-                    <div for="version" class="font-semibold w-24">File</div>
-                    <div class="flex-auto relative">
+                <div class="mb-8 flex items-center gap-4">
+                    <div for="version" class="w-24 font-semibold">File</div>
+                    <div class="relative flex-auto">
                         <label
-                            class="inline-flex items-center gap-2 bg-slate-200 dark:bg-indigo-600 px-4 py-1 rounded hover:bg-slate-300 cursor-pointer"
+                            class="inline-flex cursor-pointer items-center gap-2 rounded bg-slate-200 px-4 py-1 hover:bg-slate-300 dark:bg-indigo-600"
                         >
                             <i class="pi pi-cloud-upload !text-xl" />
                             Browse
                             <input
                                 type="file"
                                 class="hidden"
+                                accept=".zip"
                                 @change="handleFileSelect"
                             />
                         </label>

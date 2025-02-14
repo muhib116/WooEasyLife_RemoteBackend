@@ -132,6 +132,7 @@ class PluginsController extends Controller
         if (!$plugins) {
             abort(404);
         }
+        $plugins->increment('download_count');
         $path = $plugins->path;
         $path = storage_path($plugins->path);
 
