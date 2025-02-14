@@ -7,14 +7,24 @@
 
                     <div class="flex items-center gap-5">
                         <Button
-                            label="Clear"
+                            label="Delete All Session"
                             severity="danger"
+                            size="small"
+                            icon="pi pi-times-circle"
+                            @click="deleteAllSession"
+                            :loading="clearing"
+                        />
+                        <Button
+                            label="Delete expired session"
+                            severity="warn"
+                            size="small"
                             icon="pi pi-times-circle"
                             @click="deleteSession"
                             :loading="clearing"
                         />
                         <Button
                             label="Reload"
+                            size="small"
                             icon="pi pi-refresh"
                             @click="getSessions"
                             :loading="isLoading"
@@ -155,6 +165,29 @@ const deleteSession = async () => {
         },
         accept: async () => {
             await axios.post(route("sessions.clearSession"));
+            getSessions();
+        },
+    });
+};
+const deleteAllSession = async () => {
+    confirm.require({
+        header: "Are you sure to delete all?",
+        message: "This action cannot be undone.",
+        rejectProps: {
+            label: "Cancel",
+            icon: "pi pi-times",
+            // outlined: true,
+            severity: "primary",
+            size: "small",
+        },
+        acceptProps: {
+            label: "Clear Logs",
+            icon: "pi pi-check",
+            severity: "danger",
+            size: "small",
+        },
+        accept: async () => {
+            await axios.post(route("sessions.clearAllSession"));
             getSessions();
         },
     });

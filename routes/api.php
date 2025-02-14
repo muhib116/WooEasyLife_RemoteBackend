@@ -34,6 +34,10 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
     Route::get('/get-user', [UserController::class, 'getUser']);
 });
 
+Route::get('app-logo', [PluginsController::class, 'appLogo']);
+Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
+Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
+
 Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () {
 
     Route::middleware(['auth:sanctum'])->group(function () {

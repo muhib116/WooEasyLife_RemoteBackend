@@ -43,10 +43,6 @@ Route::get('/', function () {
 
 Route::get('/curl', [CurlController::class, 'index']);
 
-Route::get('app-logo', [PluginsController::class, 'appLogo']);
-Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
-Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
-
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -82,6 +78,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [SessionController::class, 'sessions'])->name('index');
         Route::get('/get-sessions', [SessionController::class, 'getSessions'])->name('getSessions');
         Route::post('/clear-session', [SessionController::class, 'clearSession'])->name('clearSession');
+        Route::post('/clear-all-session', [SessionController::class, 'clearAllSession'])->name('clearAllSession');
     });
 
     Route::group(['as' => 'backups.', 'prefix' => 'backups'], function () {

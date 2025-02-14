@@ -28,4 +28,10 @@ class SessionController extends Controller
             ->delete();
         return response()->json(['success' => true]);
     }
+    public function clearAllSession()
+    {
+        DB::table('sessions')
+            ->delete();
+        return response()->json(['success' => true]);
+    }
 }
