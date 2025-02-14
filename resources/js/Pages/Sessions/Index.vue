@@ -35,7 +35,7 @@
             <template #content>
                 <!-- <div></div> -->
                 <div class="min-h-[400px]">
-                    <DataTable
+                    <!-- <DataTable
                         v-if="isLoading"
                         :value="new Array(4)"
                         tableStyle="min-width: 50rem;"
@@ -55,9 +55,9 @@
                                 <Skeleton></Skeleton>
                             </template>
                         </Column>
-                    </DataTable>
+                    </DataTable> -->
                     <DataTable
-                        v-else-if="sessions.length"
+                        v-if="sessions.length"
                         :value="sessions"
                         :rows="10"
                         paginator
@@ -81,6 +81,16 @@
                                 {{ getTime(data.last_activity) }}
                             </template>
                         </Column>
+                        <Column header="Action">
+                            <template #body="{ data }">
+                                <Button
+                                    v-tooltip.left="'Show payload information'"
+                                    @click="selectedItem = data"
+                                    size="small"
+                                    icon="pi pi-eye"
+                                />
+                            </template>
+                        </Column>
                         <!-- id
                         user_id
                         ip_address
@@ -93,6 +103,17 @@
             </template>
         </Card>
         <ConfirmDialog />
+        <Dialog
+            v-model:visible="selectedItem"
+            header="Details"
+            modal
+            maximizable
+            :style="{ width: '35rem' }"
+            draggable
+            dismissableMask
+        >
+            <pre>{{ selectedItem?.decoded_payload }}</pre>
+        </Dialog>
     </AuthenticatedLayout>
 </template>
 

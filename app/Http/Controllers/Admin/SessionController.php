@@ -15,9 +15,25 @@ class SessionController extends Controller
         return Inertia::render('Sessions/Index');
     }
 
+    private function decodeSessionPayload($payload)
+    {
+        $sessionData = null;
+        try {
+            $payload = base64_decode($payload);
+            $sessionData = unserialize($payload);
+        } catch (\Throwable $th) {
+        }
+        return $sessionData;
+    }
+
     public function getSessions()
     {
         $sessions = DB::table('sessions')->get();
+        $sessions = $sessions->map(function ($item) {
+            $item->decoded_payload = $this->decodeSessionPayload($item->payload);
+            return $item;
+        });
+        return $sessions;
         return response()->json($sessions);
     }
 
