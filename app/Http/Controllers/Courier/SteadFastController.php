@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
+use App\LogHelper;
 use App\Models\CourierConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -230,6 +231,7 @@ class SteadFastController extends Controller
         $config = $this->getConfig();
 
         if (!$config) {
+            LogHelper::saveLog('steadfast bulk configuration issue', 'not configured properly');
             return $this->errorResponse('The SteadFast settings are not configured properly.');
         }
 
@@ -242,6 +244,12 @@ class SteadFastController extends Controller
         ]);
 
         if ($validator->fails()) {
+            try {
+                LogHelper::saveLog('steadfast bulk', 'issue on validate');
+                LogHelper::saveLog('steadfast bulk validation errors', json_decode($validator->messages()));LogHelper::saveLog('steadfast bulk validation error', 'Validation Issue'. json_decode($validator->messages()));
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
             return $this->validationErrorResponse($validator->messages());
         }
 
@@ -282,6 +290,14 @@ class SteadFastController extends Controller
                 // } catch (\Throwable $th) {}
                 return $this->successResponse($data);
             } else {
+
+                try {
+                    LogHelper::saveLog('steadfast status not 200 and response was', $response->json());
+                } catch (\Throwable $th) {
+                    //throw $th;
+                }
+                
+                LogHelper::saveLog('steadfast bulk', 'The SteadFast configuration is not valid.');
                 $errorMessage = $response->getBody()->getContents();
                 if ($statusCode == 401) {
                     $errorMessage = 'The SteadFast configuration is not valid.';
@@ -292,6 +308,7 @@ class SteadFastController extends Controller
                 );
             }
         } catch (\Throwable $th) {
+            LogHelper::saveLog('steadfast bulk bulk add error', $th->getMessage());
             //throw $th;
             // return $this->errorResponse("There's an error while creating error");
             return $this->errorResponse($th->getMessage());
