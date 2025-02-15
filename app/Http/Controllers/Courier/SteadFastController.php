@@ -246,7 +246,8 @@ class SteadFastController extends Controller
         if ($validator->fails()) {
             try {
                 LogHelper::saveLog('steadfast bulk', 'issue on validate');
-                LogHelper::saveLog('steadfast bulk validation errors', json_decode($validator->messages()));LogHelper::saveLog('steadfast bulk validation error', 'Validation Issue'. json_decode($validator->messages()));
+                LogHelper::saveLog('steadfast bulk request was', json_encode($request->all()));
+                LogHelper::saveLog('steadfast bulk validation error', 'Validation Issue'. json_encode($validator->messages()));
             } catch (\Throwable $th) {
                 //throw $th;
             }
