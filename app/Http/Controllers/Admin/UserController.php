@@ -178,12 +178,10 @@ class UserController extends Controller
         return back()->with('success', 'User Saved Successfully!');
     }
 
-    public function apiKeys($userId, $businessId)
+    public function apiKeys($userId)
     {
         $user = User::findOrFail($userId);
-        $tokens = AccessToken::where('tokenable_id', $user->id)
-            ->where('business_id', $businessId)
-            ->get();
+        $tokens = AccessToken::where('tokenable_id', $user->id)->get();
         $tokens = $tokens->map(function ($token) {
             return [
                 ...$token->toArray(),
@@ -191,30 +189,25 @@ class UserController extends Controller
                 'last_used_ago' => optional($token->last_used_at)->diffForHumans()
             ];
         });
-        $user_packages = UserPackage::where('user_id', $user->id)
-            ->where('business_id', $businessId)
+
+        $packages = UserPackage::where('user_id', $user->id)
             ->orderBy('id', 'desc')
             ->get()
             ->unique('domain');
         $user_packages = [];
-        foreach(collect($user_packages) as $v) {
+        foreach(collect($packages) as $v) {
             $user_packages[] = $v;
         }
         return Inertia::render('Users/ApiKeys', compact('user', 'tokens', 'user_packages'));
     }
 
-    public function packages($userId, $businessId)
+    public function packages($userId)
     {
         $user = User::find($userId);
-        $packages = PackageHub::where('is_active', true)
-            ->orderBy('id', 'desc')
-            ->get();
+        $packages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
         $user_packages = UserPackage::where([
             'user_id' => $userId,
-            'business_id' => $businessId
-        ])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        ])->orderBy('created_at', 'desc')->get();
         return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
     }
 
