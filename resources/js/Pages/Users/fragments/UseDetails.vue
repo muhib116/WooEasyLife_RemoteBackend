@@ -17,6 +17,11 @@
             <Column field="order_count" header="Order Count" />
             <Column field="total_order_handled" header="Total Handled" />
             <Column field="remaining_order" header="Remaining" />
+            <Column field="created_at" header="Created">
+                <template #body="{ data }">
+                    {{ formatExpiresAt(data?.created_at) }}
+                </template>
+            </Column>
             <Column header="Remaining">
                 <template #body="{ data }">
                     <Button
@@ -89,6 +94,7 @@
 import axios from "axios";
 import { onMounted, ref } from "vue";
 import { isString, isArray, set } from "lodash";
+import { format, parseISO } from "date-fns";
 
 // showUseDetails
 const props = defineProps<{
@@ -102,6 +108,13 @@ const saleInfo = ref([]);
 
 const useDetails = ref<any[]>([]);
 const showUseDetails = ref(false);
+
+function formatExpiresAt(expiresAt) {
+    if (expiresAt === null) {
+        return "";
+    }
+    return format(parseISO(expiresAt), "dd MMM yyyy, hh:mm a"); // Example: Jan 18, 2025, 12:00 AM
+}
 
 const showSales = (item) => {
     if (!isArray(item?.use_details)) {
