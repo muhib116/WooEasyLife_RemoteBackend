@@ -195,7 +195,7 @@ class UserController extends Controller
             ->get()
             ->unique('domain');
         $user_packages = [];
-        foreach(collect($packages) as $v) {
+        foreach (collect($packages) as $v) {
             $user_packages[] = $v;
         }
         return Inertia::render('Users/ApiKeys', compact('user', 'tokens', 'user_packages'));
@@ -224,9 +224,12 @@ class UserController extends Controller
         $modifiedHistory = collect($history)->map(function ($record) {
             // return $record->use_details;
             $useDetails = collect($record->use_details);
-            $record->use_details = $useDetails->map(function($item) {
-                if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
-                    $item['cart_contents'] = unserialize($item['cart_contents']);
+            $record->use_details = $useDetails->map(function ($item) {
+                try {
+                    if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
+                        $item['cart_contents'] = unserialize($item['cart_contents']);
+                    }
+                } catch (\Throwable $th) {
                 }
                 return $item;
             });
