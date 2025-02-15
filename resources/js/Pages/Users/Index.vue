@@ -15,10 +15,31 @@
             </template>
             <template #content>
                 <div class="min-h-[400px]">
+                    <!-- v-model:filters="filters"
+                    filterDisplay="row"
+                    :globalFilterFields="['name', 'email', 'phone']"
+                    :rows="10"
+                    paginator
+                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                    :rowsPerPageOptions="[10, 25, 50, 100, 200]"
+                    currentPageReportTemplate="{first} to {last} of {totalRecords} Users &nbsp;" -->
                     <DataTable
                         :value="users"
                         tableStyle="min-width: 50rem;background:black;"
                     >
+                        <template #header>
+                            <div class="flex justify-end">
+                                <IconField>
+                                    <InputIcon>
+                                        <i class="pi pi-search" />
+                                    </InputIcon>
+                                    <InputText
+                                        v-model="filters['global'].value"
+                                        placeholder="Keyword Search"
+                                    />
+                                </IconField>
+                            </div>
+                        </template>
                         <Column field="name" header="Name" />
                         <Column field="email" header="Email" />
                         <Column field="phone" header="Phone" />
@@ -70,6 +91,7 @@ import { AuthenticatedLayout } from "@/layouts";
 import { Link } from "@inertiajs/vue3";
 import { ref } from "vue";
 import UserForm from "./fragments/UserForm.vue";
+import { FilterMatchMode } from "@primevue/core/api";
 
 defineOptions({
     name: "Users",
@@ -78,6 +100,13 @@ defineOptions({
 const props = defineProps<{
     users: any[];
 }>();
+
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    // name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    // email: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    // phone: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+});
 
 const showForm = ref(false);
 const selectedUser = ref();
