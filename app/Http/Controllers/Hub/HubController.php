@@ -32,6 +32,12 @@ class HubController extends Controller
             return $this->validationErrorResponse($validator->errors());
         }
 
+        try {
+            LogHelper::saveLog('request all ', $request->all());
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+
         $user = User::find(Auth::id());
         $token = $request->bearerToken();
         $accessToken = AccessToken::findToken($token);

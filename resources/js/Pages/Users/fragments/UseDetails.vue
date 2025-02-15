@@ -88,7 +88,7 @@
 <script setup lang="ts">
 import axios from "axios";
 import { onMounted, ref } from "vue";
-import { isString } from "lodash";
+import { isString, isArray, set } from "lodash";
 
 // showUseDetails
 const props = defineProps<{
@@ -104,8 +104,11 @@ const useDetails = ref<any[]>([]);
 const showUseDetails = ref(false);
 
 const showSales = (item) => {
-    const d = (item.use_details || []).map((item) => {
-        if (isString(item.cart_contents)) {
+    if (!isArray(item?.use_details)) {
+        set(item, "use_details", []);
+    }
+    const d = (item?.use_details || []).map((item) => {
+        if (isString(item?.cart_contents)) {
             console.log(item.cart_contents);
             item.cart_contents = [];
         }
