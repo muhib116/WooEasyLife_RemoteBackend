@@ -1,4 +1,5 @@
 import { format, parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 
 export function dateFormat(inputDate) {
@@ -6,5 +7,6 @@ export function dateFormat(inputDate) {
         return "N/A";
     }
 
-    return format(parseISO(inputDate), "dd MMM yyyy, hh:mm a"); // Example: Jan 18, 2025, 12:00 AM
+    // const utcDate = utcToZonedTime(parseISO(inputDate), "UTC");
+    return formatInTimeZone(parseISO(inputDate), "UTC", "dd MMM yyyy, hh:mm a");
 }
