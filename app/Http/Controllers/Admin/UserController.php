@@ -251,6 +251,7 @@ class UserController extends Controller
     {
         $sms_history = SmsBalance::where('user_id', $userId)
             ->where('type', 'out')
+            ->orderBy('id', 'desc')
             ->get();
         $user = User::find($userId);
         return Inertia::render('Users/SmsHistory', compact('user', 'sms_history'));
