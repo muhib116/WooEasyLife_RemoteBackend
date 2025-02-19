@@ -253,7 +253,8 @@ class SmsController extends Controller
             return $this->errorResponse('Insufficient SMS balance.');
         }
 
-        $amount = ($smsCount * 0.04);
+        $amount = ($smsCount * 0.40);
+
 
         try {
             $phone_arr = explode(',', $phone);
@@ -303,7 +304,7 @@ class SmsController extends Controller
                     $data = [
                         'user_id' => Auth::id(),
                         'type' => 'out',
-                        'amount' => - ($smsCount * 0.40),
+                        'amount' => - ($amount + 0),
                         'sms_rate' => 0.40,
                         'phone' => $phone,
                         'sms_text' => $sms,
@@ -319,7 +320,7 @@ class SmsController extends Controller
                     $smsBalance->transactionHistory()->create([
                         'user_id' => Auth::id(),
                         'created_by' => Auth::id(),
-                        'amount' => - ($data['amount'] + 0),
+                        'amount' => - ($amount + 0),
                         'type' => 'out',
                     ]);
                     DB::commit();
