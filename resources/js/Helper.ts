@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 
 export function dateFormat(inputDate) {
@@ -6,5 +6,5 @@ export function dateFormat(inputDate) {
         return "N/A";
     }
 
-    return format(new Date(inputDate), "PPp"); // Example: Jan 18, 2025, 12:00 AM
+    return format(parseISO(inputDate), "dd MMM yyyy, hh:mm a"); // Example: Jan 18, 2025, 12:00 AM
 }
