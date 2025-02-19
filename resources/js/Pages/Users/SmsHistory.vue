@@ -22,9 +22,13 @@
                             tableStyle="min-width: 50rem"
                             showGridlines
                         >
-                            <Column
+                            <!-- <Column
                                 field="domain"
                                 header="Domain"
+                            /> -->
+                            <Column
+                                :field="(data) => dateFormat(data?.created_at)"
+                                header="Created"
                             />
                             <Column
                                 field="amount"
@@ -62,11 +66,12 @@
 import { AuthenticatedLayout } from "@/layouts";
 import UserNav from "./UserNav.vue";
 import Header from "./Header.vue";
-import PackageForm from "./fragments/PackageForm.vue";
+// import PackageForm from "./fragments/PackageForm.vue";
 import { ref } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue";
+import { dateFormat } from "@/Helper";
 
 defineOptions({
     name: "Packages",
