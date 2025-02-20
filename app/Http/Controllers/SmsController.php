@@ -264,8 +264,13 @@ class SmsController extends Controller
             LogHelper::saveLog('sms count when multiple phone', 'Phone: (' . $phone . ') ' . $th->getMessage());
         }
 
-        if (($balance + $amount) <= 0) {
-            LogHelper::saveLog('sms balance over', 'UserId: ' . $userId . ' sms balance is over');
+        if ($balance <= 0) {
+            LogHelper::saveLog('sms balance over 1', 'UserId: ' . $userId . ' sms balance is over');
+            return $this->errorResponse('Insufficient SMS balance.');
+        }
+
+        if ($balance < $amount) {
+            LogHelper::saveLog('sms balance Insufficient', 'UserId: ' . $userId . ' sms balance is over');
             return $this->errorResponse('Insufficient SMS balance.');
         }
 
