@@ -15,4 +15,18 @@ class DataController extends Controller
 
         return $this->successResponse($decoded_data);
     }
+    public function getContactInfo()
+    {
+        $tutorials = file_get_contents(__DIR__ . '/contactInfo.json');
+
+        $decoded_data = json_decode($tutorials);
+        $infos = collect($decoded_data)->map(function($item) {
+            return [
+                "icon" => asset("images/contacts/".$item->icon),
+                "content" => $item->content
+            ];
+        });
+
+        return $this->successResponse($infos);
+    }
 }

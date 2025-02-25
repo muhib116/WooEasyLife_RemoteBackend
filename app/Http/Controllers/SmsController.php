@@ -248,12 +248,8 @@ class SmsController extends Controller
 
         $balance = SmsBalance::query()->where('user_id', $userId)->sum('amount');
 
-        if ($balance <= 0) {
-            LogHelper::saveLog('sms balance over', 'UserId: ' . $userId . ' sms balance is over');
-            return $this->errorResponse('Insufficient SMS balance.');
-        }
+        $amount = ($smsCount * 0.40);
 
-        $amount = ($smsCount * 0.04);
 
         try {
             $phone_arr = explode(',', $phone);
@@ -261,10 +257,21 @@ class SmsController extends Controller
                 $phn_count = count($phone_arr);
                 if ($phn_count) {
                     $amount = $amount * $phn_count;
+                    $smsCount = $smsCount * $phn_count;
                 }
             }
         } catch (\Throwable $th) {
             LogHelper::saveLog('sms count when multiple phone', 'Phone: (' . $phone . ') ' . $th->getMessage());
+        }
+
+        if ($balance <= 0) {
+            LogHelper::saveLog('sms balance over 1', 'UserId: ' . $userId . ' sms balance is over');
+            return $this->errorResponse('Insufficient SMS balance.');
+        }
+
+        if ($balance < $amount) {
+            LogHelper::saveLog('sms balance Insufficient', 'UserId: ' . $userId . ' sms balance is over');
+            return $this->errorResponse('Insufficient SMS balance.');
         }
 
         // $isSuccess = false;
@@ -303,7 +310,7 @@ class SmsController extends Controller
                     $data = [
                         'user_id' => Auth::id(),
                         'type' => 'out',
-                        'amount' => - ($smsCount * 0.40),
+                        'amount' => - ($amount + 0),
                         'sms_rate' => 0.40,
                         'phone' => $phone,
                         'sms_text' => $sms,
@@ -319,7 +326,7 @@ class SmsController extends Controller
                     $smsBalance->transactionHistory()->create([
                         'user_id' => Auth::id(),
                         'created_by' => Auth::id(),
-                        'amount' => - ($data['amount'] + 0),
+                        'amount' => - ($amount + 0),
                         'type' => 'out',
                     ]);
                     DB::commit();

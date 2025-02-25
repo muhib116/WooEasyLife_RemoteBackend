@@ -33,7 +33,18 @@ class LogHelper
 
             try {
                 $endpoint = request()->url();
+                // $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
                 $frontendDomain = request()->headers->get('origin') ?? request()->headers->get('referer');
+                if (!$frontendDomain) {
+                    try {
+                        $frontendDomain = $_SERVER['HTTP_ORIGIN']
+                            ?? $_SERVER['HTTP_REFERER']
+                            ?? gethostbyaddr($_SERVER['REMOTE_ADDR'])
+                            ?? null;
+                    } catch (\Throwable $th) {
+                        //throw $th;
+                    }
+                }
                 $token = request()->bearerToken();
             } catch (\Throwable $th) {
             }

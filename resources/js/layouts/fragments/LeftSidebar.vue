@@ -73,6 +73,11 @@ const routes: SidebarRoutes[] = [
         icon: "PhBug",
     },
     {
+        title: "Database Backups",
+        name: "backups.index",
+        icon: "PhFloppyDiskBack",
+    },
+    {
         title: "Phosphor Icons",
         name: "icons",
         icon: "PhListHeart",

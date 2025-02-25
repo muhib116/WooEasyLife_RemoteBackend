@@ -34,6 +34,10 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
     Route::get('/get-user', [UserController::class, 'getUser']);
 });
 
+Route::get('app-logo', [PluginsController::class, 'appLogo']);
+Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
+Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
+
 Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () {
 
     Route::middleware(['auth:sanctum'])->group(function () {
@@ -46,6 +50,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         })->name('apiValidate');
 
         Route::any('get-tutorials', [DataController::class, 'getTutorials']);
+        Route::any('get-contact-info', [DataController::class, 'getContactInfo']);
 
         // use of package order limit
         Route::post('package-order-use', [HubController::class, 'hubUse']);

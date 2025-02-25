@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\LogHelper;
 use App\Models\AccessToken;
 use App\Models\PackageHub;
+use App\Models\PackageUseHistory;
 use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
 use App\Models\User;
@@ -194,7 +195,7 @@ class UserController extends Controller
             ->get()
             ->unique('domain');
         $user_packages = [];
-        foreach(collect($packages) as $v) {
+        foreach (collect($packages) as $v) {
             $user_packages[] = $v;
         }
         return Inertia::render('Users/ApiKeys', compact('user', 'tokens', 'user_packages'));
@@ -209,6 +210,36 @@ class UserController extends Controller
         ])->orderBy('created_at', 'desc')->get();
         return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
     }
+
+    public function useDetails($userId, $packageId)
+    {
+        $userPackage = UserPackage::find($packageId);
+        $history = PackageUseHistory::where([
+            'user_id' => $userId,
+            'user_package_id' => $packageId
+        ])
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $modifiedHistory = collect($history)->map(function ($record) {
+            // return $record->use_details;
+            $useDetails = collect($record->use_details);
+            $record->use_details = $useDetails->map(function ($item) {
+                try {
+                    if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
+                        $item['cart_contents'] = unserialize($item['cart_contents']);
+                    }
+                } catch (\Throwable $th) {
+                }
+                return $item;
+            });
+
+            return $record;
+        });
+
+        return response()->json($modifiedHistory);
+    }
+
     public function smsRecharge($userId)
     {
         $user = User::find($userId);
@@ -220,6 +251,7 @@ class UserController extends Controller
     {
         $sms_history = SmsBalance::where('user_id', $userId)
             ->where('type', 'out')
+            ->orderBy('id', 'desc')
             ->get();
         $user = User::find($userId);
         return Inertia::render('Users/SmsHistory', compact('user', 'sms_history'));
