@@ -1,15 +1,11 @@
 <template>
     <Head :title="title" />
 
-    <div
-        class="flex h-svh flex-col bg-[#f3f4f6] dark:bg-gray-800 dark:text-white"
-    >
+    <div class="flex h-svh flex-col bg-white dark:bg-slate-800 dark:text-white">
         <div
             class="flex h-[60px] flex-shrink-0 items-center justify-between bg-white dark:border-gray-600 dark:bg-slate-800"
         >
-            <div
-                class="w-[240px] cursor-pointer px-4 text-xl font-semibold"
-            >
+            <div class="w-[240px] cursor-pointer px-4 text-xl font-semibold">
                 WooEasyLife
             </div>
             <div class="flex items-center gap-5 px-4">
@@ -27,7 +23,10 @@
             >
                 <LeftSidebar />
             </div>
-            <div class="h-[calc(100svh-60px)] flex-1 overflow-auto px-6 py-6">
+            <div
+                class="box-border h-[calc(100svh-60px)] flex-1 overflow-auto rounded-tl-xl border-l border-t bg-slate-100 px-6 py-6 dark:bg-slate-900"
+                :class="wrapperClass"
+            >
                 <slot></slot>
             </div>
         </div>
@@ -75,6 +74,7 @@ withDefaults(
     defineProps<{
         title?: string;
         skipWrapper?: boolean;
+        wrapperClass?: string;
     }>(),
     {
         skipWrapper: false,

@@ -1,8 +1,9 @@
 import defaultTheme from 'tailwindcss/defaultTheme'
 import forms from '@tailwindcss/forms'
 import * as themeOption from '@/theme'
-import plugin from 'tailwindcss'
+import plugin from 'tailwindcss/plugin'
 import Typography from '@tailwindcss/typography'
+import theme from 'tailwindcss/defaultTheme'
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -92,8 +93,32 @@ export default {
     },
 
     plugins: [
+        plugin(function ({ addUtilities, theme }) {
+            addUtilities({
+                '.box-border': {
+                    'border-color': theme('colors.gray.200'),
+                },
+                '.dark .box-border': {
+                    'border-color': theme('colors.gray.800'),
+                },
+                '.box-bg': {
+                    'background-color': theme('colors.white')
+                },
+                '.dark .box-bg': {
+                    'background-color': theme('colors.slate.800')
+                },
+                '.box-color': {
+                    'color': theme('colors.black')
+                },
+                '.dark .box-color': {
+                    'color': theme('colors.white')
+                },
+            });
+        }),
         forms,
-        Typography
+        Typography,
+
+        // border-gray-200 bg-white p-4 dark:border-gray-800
         // plugin(function({ addComponents }) {
         //     addComponents(applicationComponents)
         // })
