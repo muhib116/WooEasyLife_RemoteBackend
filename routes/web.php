@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
@@ -48,8 +49,6 @@ Route::get('app-logo', [PluginsController::class, 'appLogo']);
 Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
-Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
-
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -69,6 +68,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/primeicons', function () {
         return Inertia::render('Icons/Prime');
     })->name('icons.prime');
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/token-ledger', [TokenLedgerController::class, 'tokenLedger'])->name('tokenLedger');
 
     Route::group(['as' => 'logs.', 'prefix' => 'logs'], function () {
         Route::get('/', [LogController::class, 'index'])->name('index');
