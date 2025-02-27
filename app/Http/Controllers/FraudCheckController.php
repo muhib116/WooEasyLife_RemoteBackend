@@ -39,10 +39,27 @@ class FraudCheckController extends Controller
         // return DB::table(env('PATHAO_DB_TABLE_NAME'))
         // ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
         // ->get();
-        $data = StandardResponseService::RESPONSE_OUTPUT((new PathaoAuth)->getNewAccessToken());
-        $token = Arr::get($data, 'data.access_token');
-        $refresh_token = Arr::get($data, 'data.refresh_token');
-        $expires_in = time() + Arr::get($data, 'data.expires_in');
+        $pathao_data = DB::table(env('PATHAO_DB_TABLE_NAME'))
+            ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))->first();
+        $headers = [
+            "accept" => "application/json",
+            "content-type" => 'application/json',
+        ];
+        $data = [
+            "client_id" => config('pathao-courier.pathao_client_id'),
+            "client_secret" => config('pathao-courier.pathao_client_secret'),
+            "grant_type" => config('pathao-courier.pathao_grant_type_password'),
+            "username" => 'naturalcare.help@gmail.com',
+            "password" => '8a1!$H$9',
+        ];
+        // return $data;
+        $httpUrl = 'https://api-hermes.pathao.com/aladdin/api/v1/issue-token';
+        $httpClient = Http::withHeaders($headers);
+        $pathaoResponse = $httpClient->post($httpUrl, $data);
+
+        $token = Arr::get($pathaoResponse, 'access_token');
+        $refresh_token = Arr::get($pathaoResponse, 'refresh_token');
+        $expires_in = time() + Arr::get($pathaoResponse, 'expires_in');
 
         $newToken = [
             "token" => $token,
@@ -50,21 +67,19 @@ class FraudCheckController extends Controller
             "expires_in" => $expires_in,
             "updated_at" => now(),
         ];
-        if($token && $refresh_token) {
+        $isUpdated = false;
+        if ($token && $refresh_token) {
             DB::table(env('PATHAO_DB_TABLE_NAME'))
-                    ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
-                    ->update($newToken);
+                ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
+                ->update($newToken);
+            $isUpdated = true;
         }
-        
+
         return [
             'message' => 'Token has been renewed successfully!',
             'token' => $newToken,
-            'response' => $data
+            'db_update_status' => $isUpdated
         ];
-        // getNewAccesstoken
-
-        // $pathao_data['time_left'] = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
-        // GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT
     }
 
     private function getReport(PathaoUserSuccessRateRequest $request, $phone)
