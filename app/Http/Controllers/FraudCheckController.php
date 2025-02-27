@@ -8,6 +8,8 @@ use Enan\PathaoCourier\Facades\PathaoCourier;
 use Enan\PathaoCourier\Requests\PathaoUserSuccessRateRequest;
 use Enan\PathaoCourier\Services\StandardResponseService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
@@ -27,6 +29,40 @@ class FraudCheckController extends Controller
     {
         $time_left = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
         return $time_left;
+    }
+    public function renewExpire()
+    {
+        // $pAuth = PathaoAuth::getNewAccessToken();
+        // $pAuth = new PathaoAuth;
+        // $pAuth->getNewAccessToken();
+        // return 'Hi';
+        // return DB::table(env('PATHAO_DB_TABLE_NAME'))
+        // ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
+        // ->get();
+        $data = StandardResponseService::RESPONSE_OUTPUT((new PathaoAuth)->getNewAccessToken());
+        $token = Arr::get($data, 'data.access_token');
+        $refresh_token = Arr::get($data, 'data.refresh_token');
+        $expires_in = time() + Arr::get($data, 'data.expires_in');
+
+        $newToken = [
+            "token" => $token,
+            "refresh_token" => $refresh_token,
+            "expires_in" => $expires_in,
+            "updated_at" => now(),
+        ];
+        DB::table(env('PATHAO_DB_TABLE_NAME'))
+                ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
+                ->update($newToken);
+        
+        return [
+            'message' => 'Token has been renewed successfully!',
+            'token' => $newToken,
+            'response' => $data
+        ];
+        // getNewAccesstoken
+
+        // $pathao_data['time_left'] = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
+        // GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT
     }
 
     private function getReport(PathaoUserSuccessRateRequest $request, $phone)

@@ -5,12 +5,21 @@
                 <div class="min-h-[400px]">
                     <div class="flex justify-between">
                         Pathao time
-                        <Button
-                            @click="getExpire"
-                            size="small"
-                            icon="pi pi-clock"
-                            label="Time Left"
-                        />
+                        <div class="space-x-4">
+                            <Button
+                                @click="getExpire"
+                                size="small"
+                                icon="pi pi-clock"
+                                label="Time Left"
+                            />
+                            <Button
+                                severity="success"
+                                @click="renewExpireExpire"
+                                size="small"
+                                icon="pi pi-refresh"
+                                label="Re new"
+                            />
+                        </div>
                     </div>
                     <div>
                         <pre>{{ time_left }}</pre>
@@ -44,6 +53,10 @@ const form = useForm({
 
 const getExpire = async () => {
     const { data } = await axios.post(route("frauds.getExpire"));
+    time_left.value = data;
+};
+const renewExpireExpire = async () => {
+    const { data } = await axios.post(route("frauds.renewExpire"));
     time_left.value = data;
 };
 </script>
