@@ -61,12 +61,15 @@
                 </div>
             </template>
         </Card>
+        <div>
+            <Link :href="route('frauds.expire')">Click</Link>
+        </div>
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { useForm } from "@inertiajs/vue3";
+import { useForm, Link } from "@inertiajs/vue3";
 import SecurityOn from "@/images/security_on.svg";
 import { ref } from "vue";
 import axios from "axios";

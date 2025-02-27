@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\LogHelper;
+use Enan\PathaoCourier\APIBase\PathaoAuth;
 use Enan\PathaoCourier\Facades\PathaoCourier;
 use Enan\PathaoCourier\Requests\PathaoUserSuccessRateRequest;
+use Enan\PathaoCourier\Services\StandardResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
@@ -14,6 +16,17 @@ class FraudCheckController extends Controller
     public function index()
     {
         return Inertia::render('FraudCheck/Index');
+    }
+    public function expire()
+    {
+        // PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT()
+        $time_left = null;
+        return Inertia::render('FraudCheck/Expire', compact('time_left'));
+    }
+    public function getExpire()
+    {
+        $time_left = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
+        return $time_left;
     }
 
     private function getReport(PathaoUserSuccessRateRequest $request, $phone)
@@ -140,6 +153,15 @@ class FraudCheckController extends Controller
              * @param string $phone
              */
             $pathao_response = PathaoCourier::GET_USER_SUCCESS_RATE($request);
+            // $pAuth = PathaoAuth::getNewAccessToken()
+            // $pAuth = new PathaoAuth;
+            // getNewAccesstoken
+            // DB::table($this->table_name)
+            //         ->where('secret_token', '=', $this->pathao_token_data->secret_token)
+            //         ->update($response);
+
+            // $pathao_data['time_left'] = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
+            // GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT
 
             if (!$pathao_response['data']['is_new']) {
                 $data = $pathao_response['data'];

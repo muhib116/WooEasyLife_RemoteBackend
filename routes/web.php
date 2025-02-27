@@ -141,6 +141,8 @@ Route::middleware('auth')->group(function () {
     });
     Route::group(['as' => 'frauds.', 'prefix' => 'frauds'], function () {
         Route::get('/', [FraudCheckController::class, 'index'])->name('index');
+        Route::get('/expire', [FraudCheckController::class, 'expire'])->name('expire');
+        Route::post('/get-expire', [FraudCheckController::class, 'getExpire'])->name('getExpire');
         Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
     });
     Route::group(['as' => 'apiKeys.', 'prefix' => 'api-keys'], function () {
