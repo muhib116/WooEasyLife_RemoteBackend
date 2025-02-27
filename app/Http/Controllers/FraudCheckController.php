@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\LogHelper;
+use Enan\PathaoCourier\APIBase\PathaoAuth;
 use Enan\PathaoCourier\Facades\PathaoCourier;
 use Enan\PathaoCourier\Requests\PathaoUserSuccessRateRequest;
+use Enan\PathaoCourier\Services\StandardResponseService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
@@ -14,6 +18,68 @@ class FraudCheckController extends Controller
     public function index()
     {
         return Inertia::render('FraudCheck/Index');
+    }
+    public function expire()
+    {
+        // PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT()
+        $time_left = null;
+        return Inertia::render('FraudCheck/Expire', compact('time_left'));
+    }
+    public function getExpire()
+    {
+        $time_left = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
+        return $time_left;
+    }
+    public function renewExpire()
+    {
+        // $pAuth = PathaoAuth::getNewAccessToken();
+        // $pAuth = new PathaoAuth;
+        // $pAuth->getNewAccessToken();
+        // return 'Hi';
+        // return DB::table(env('PATHAO_DB_TABLE_NAME'))
+        // ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
+        // ->get();
+        $pathao_data = DB::table(env('PATHAO_DB_TABLE_NAME'))
+            ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))->first();
+        $headers = [
+            "accept" => "application/json",
+            "content-type" => 'application/json',
+        ];
+        $data = [
+            "client_id" => config('pathao-courier.pathao_client_id'),
+            "client_secret" => config('pathao-courier.pathao_client_secret'),
+            "grant_type" => config('pathao-courier.pathao_grant_type_password'),
+            "username" => 'naturalcare.help@gmail.com',
+            "password" => '8a1!$H$9',
+        ];
+        // return $data;
+        $httpUrl = 'https://api-hermes.pathao.com/aladdin/api/v1/issue-token';
+        $httpClient = Http::withHeaders($headers);
+        $pathaoResponse = $httpClient->post($httpUrl, $data);
+
+        $token = Arr::get($pathaoResponse, 'access_token');
+        $refresh_token = Arr::get($pathaoResponse, 'refresh_token');
+        $expires_in = time() + Arr::get($pathaoResponse, 'expires_in');
+
+        $newToken = [
+            "token" => $token,
+            "refresh_token" => $refresh_token,
+            "expires_in" => $expires_in,
+            "updated_at" => now(),
+        ];
+        $isUpdated = false;
+        if ($token && $refresh_token) {
+            DB::table(env('PATHAO_DB_TABLE_NAME'))
+                ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
+                ->update($newToken);
+            $isUpdated = true;
+        }
+
+        return [
+            'message' => 'Token has been renewed successfully!',
+            'token' => $newToken,
+            'db_update_status' => $isUpdated
+        ];
     }
 
     private function getReport(PathaoUserSuccessRateRequest $request, $phone)
@@ -140,6 +206,15 @@ class FraudCheckController extends Controller
              * @param string $phone
              */
             $pathao_response = PathaoCourier::GET_USER_SUCCESS_RATE($request);
+            // $pAuth = PathaoAuth::getNewAccessToken()
+            // $pAuth = new PathaoAuth;
+            // getNewAccesstoken
+            // DB::table($this->table_name)
+            //         ->where('secret_token', '=', $this->pathao_token_data->secret_token)
+            //         ->update($response);
+
+            // $pathao_data['time_left'] = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
+            // GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT
 
             if (!$pathao_response['data']['is_new']) {
                 $data = $pathao_response['data'];
