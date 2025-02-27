@@ -50,9 +50,11 @@ class FraudCheckController extends Controller
             "expires_in" => $expires_in,
             "updated_at" => now(),
         ];
-        DB::table(env('PATHAO_DB_TABLE_NAME'))
-                ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
-                ->update($newToken);
+        if($token && $refresh_token) {
+            DB::table(env('PATHAO_DB_TABLE_NAME'))
+                    ->where('secret_token', '=', env('PATHAO_SECRET_TOKEN'))
+                    ->update($newToken);
+        }
         
         return [
             'message' => 'Token has been renewed successfully!',
