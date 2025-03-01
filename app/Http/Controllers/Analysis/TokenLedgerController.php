@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Analysis;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\UserPackage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -27,12 +28,16 @@ class TokenLedgerController extends Controller
             ? Carbon::parse($request->input('end_date'))->endOfDay()
             : Carbon::now()->endOfDay();
 
+        // $query = UserPackage::query();
+        $adminUserIds = User::where('role', 'admin')->pluck('id');
+        $query = UserPackage::query()->whereNotIn('user_id', $adminUserIds);
+
         // Get Opening Balance (sum of all transactions before start_date)
-        $openingBalance = UserPackage::where('created_at', '<', $startDate)
+        $openingBalance = (clone $query)->where('created_at', '<', $startDate)
             ->sum('total_cost');
 
         // Fetch Transactions within the selected date range
-        $transactionsQuery = UserPackage::with('user:id,name,role,email,phone')->whereBetween('created_at', [$startDate, $endDate])
+        $transactionsQuery = (clone $query)->with('user:id,name,role,email,phone')->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'asc')
             ->get()
             ->groupBy(fn($transaction) => Carbon::parse($transaction->created_at)->format('Y-M-d'));
