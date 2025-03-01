@@ -48,8 +48,10 @@ class TokenLedgerController extends Controller
             $formattedTransactions[] = [
                 'date' => $date,
                 'opening_balance' => $runningBalance,
+                'total_transaction_amount' => $dailyTotal,
                 'closing_balance' => $closingBalance,
-                'total_token' => $dailyTransactions->sum('total_order_can_handle'),
+                'total_token' => (clone $dailyTransactions)->sum('total_order_can_handle'),
+                'transaction_length' => (clone $dailyTransactions)->count(),
                 'transactions' => $dailyTransactions->map(function ($transaction) {
                     return [
                         'id' => $transaction->id,

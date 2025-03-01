@@ -51,22 +51,47 @@
                 <DataTable
                     v-else-if="ledger.transactions.length"
                     :value="ledger.transactions"
+                    v-model:expandedRows="expandedRows"
+                    dataKey="date"
+                    scrollable
+                    scrollHeight="400px"
                     responsiveLayout="scroll"
                 >
+                    <Column expander style="width: 5rem" />
                     <Column field="date" header="Date" sortable></Column>
-                    <Column field="total_token" header="Total Token"></Column>
+                    <Column
+                        field="transaction_length"
+                        header="Total Order"
+                        sortable
+                    />
+                    <Column
+                        field="total_token"
+                        header="Total Token"
+                        sortable
+                    ></Column>
                     <Column field="opening_balance" header="Opening Balance">
                         <template #body="{ data }">
                             {{ formatCurrency(data.opening_balance) }}
                         </template>
                     </Column>
-                    <Column field="closing_balance" header="Closing Balance">
+                    <Column field="total_transaction_amount" header="Transaction this day">
                         <template #body="{ data }">
-                            {{ formatCurrency(data.closing_balance) }}
+                            {{ formatCurrency(data.total_transaction_amount) }}
                         </template>
                     </Column>
-                    <Column header="Transactions">
+                    <Column field="closing_balance">
+                        <template #header>
+                            <div class="text-end w-full">Closing Balance</div>
+                        </template>
                         <template #body="{ data }">
+                            <div class="text-end">
+                                {{ formatCurrency(data.closing_balance) }}
+                            </div>
+                        </template>
+                    </Column>
+                    <template #expansion="{ data }">
+                        <div class="px-4 pb-4">
+                            <!-- <h5>Transaction Details</h5> -->
                             <DataTable :value="data.transactions">
                                 <Column field="title" header="Package"></Column>
                                 <Column field="per_order_rate" header="Rate">
@@ -113,15 +138,15 @@
                                     header="Method"
                                 ></Column>
                             </DataTable>
-                        </template>
-                    </Column>
+                        </div>
+                    </template>
                 </DataTable>
 
                 <p v-else>No transactions found for the selected date range.</p>
             </template>
 
             <template #footer>
-                <div class="text-right">
+                <div class="text-right pr-4">
                     <strong
                         >Final Closing Balance:
                         {{
@@ -153,6 +178,7 @@ const ledger = ref({
 });
 
 const loading = ref(false);
+const expandedRows = ref({});
 
 const getLedger = async () => {
     loading.value = true;
@@ -178,7 +204,7 @@ const getLedger = async () => {
     } finally {
         setTimeout(() => {
             loading.value = false;
-        }, 1000);
+        }, 400);
     }
 };
 
