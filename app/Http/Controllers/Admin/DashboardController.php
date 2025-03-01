@@ -50,7 +50,7 @@ class DashboardController extends Controller
             'tokens' => [
                 'col_span' => 2,
                 'title' => 'Tokens',
-                'link' => route('users.index'),
+                'link' => route('tokenLedger'),
                 'link_text' => 'See Detail Token Ledger',
                 'data' => $this->packagePurchaseInfo()
             ],

@@ -71,6 +71,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/token-ledger', [TokenLedgerController::class, 'tokenLedger'])->name('tokenLedger');
+    Route::any('/get-token-ledger', [TokenLedgerController::class, 'getTokenLedger'])->name('getTokenLedger');
 
     Route::group(['as' => 'logs.', 'prefix' => 'logs'], function () {
         Route::get('/', [LogController::class, 'index'])->name('index');
