@@ -3,6 +3,12 @@
         <!-- <div class="grid place-content-center">
             <ProgressSpinner />
         </div> -->
+        <div class="mb-5 flex gap-4">
+            <Badge severity="info" :value="`Total Order: ${analyze?.totalOrder}`" />
+            <Badge severity="info" :value="`Total Value: ${analyze?.totalValue}TK`" />
+            <Badge severity="danger" :value="`Total Missing Order: ${analyze?.totalMissingOrder}`" />
+            <Badge severity="danger" :value="`Total Missing Value: ${analyze?.totalMissingValue}TK`" />
+        </div>
         <DataTable
             :value="useDetails"
             tableStyle="min-width: 50rem"
@@ -15,6 +21,11 @@
         >
             <!-- <Column field="total_can_handle" header="Total Can" /> -->
             <Column field="order_count" header="Order Count" />
+            <Column field="order_count" header="From">
+                <template #body="{data}">
+                    {{ get(data, 'use_details[0].from') }}
+                </template>
+            </Column>
             <Column field="total_order_handled" header="Total Handled" />
             <Column field="remaining_order" header="Remaining" />
             <Column field="created_at" header="Created">
@@ -49,9 +60,10 @@
                     Order ({{ index + 1 }}) with order value of ({{
                         item?.total_value
                     }})
+                    <Badge :value="item?.from" />
                 </div>
                 <DataTable
-                    :value="item?.cart_contents || []"
+                    :value="item?.from == 'missing_order' ? item?.cart_contents?.products || [] : item?.cart_contents || []"
                     scrollable
                     scrollHeight="flex"
                     tableStyle="min-width: 50rem"
@@ -59,7 +71,6 @@
                     <Column field="order_id" header="Id"></Column>
                     <Column field="product_url" header="Product Link">
                         <template #body="{ data }">
-                            <!-- {{ data?.product_url }} -->
                             <Button
                                 as="a"
                                 size="small"
@@ -69,8 +80,6 @@
                                 :href="data?.product_url"
                                 >Look Product</Button
                             >
-                            <!-- <img :src="data?.product_url" alt=""> -->
-                            <!-- <Image :src="data?.product_url" width="80" /> -->
                         </template>
                     </Column>
                     <Column field="name" header="Name"></Column>
@@ -93,7 +102,7 @@
 <script setup lang="ts">
 import axios from "axios";
 import { onMounted, ref } from "vue";
-import { isString, isArray, set } from "lodash";
+import { isString, isArray, set, get, each } from "lodash";
 import { format, parseISO } from "date-fns";
 
 // showUseDetails
@@ -108,12 +117,41 @@ const saleInfo = ref([]);
 
 const useDetails = ref<any[]>([]);
 const showUseDetails = ref(false);
+const analyze = ref<any>({})
 
 function formatExpiresAt(expiresAt) {
     if (expiresAt === null) {
         return "";
     }
     return format(parseISO(expiresAt), "dd MMM yyyy, hh:mm a"); // Example: Jan 18, 2025, 12:00 AM
+}
+
+const getTotalMissingOrder = (useDetails) => {
+    // {{ get(data, 'use_details[0].from') }}
+    let totalMissingOrder = 0
+    let totalOrder = 0
+    let totalValue = 0
+    let totalMissingValue = 0
+    each(useDetails, item => {
+        if(get(item, 'use_details[0].from') == 'missing_order') {
+            totalMissingOrder++
+        } else {
+            totalOrder++
+        }
+        get(item, 'use_details')?.forEach(i => {
+            if(i?.from == "missing_order") {
+                totalMissingValue += Number(i?.total_value) || 0
+            } else {
+                totalValue += Number(i?.total_value) || 0
+            }
+        })
+    })
+    return {
+        totalMissingOrder,
+        totalOrder,
+        totalValue,
+        totalMissingValue
+    }
 }
 
 const showSales = (item) => {
@@ -128,7 +166,7 @@ const showSales = (item) => {
         return item;
     });
     dialogVisible.value = true;
-    console.log(d);
+    // console.log(d);
     saleInfo.value = d;
 };
 
@@ -144,7 +182,8 @@ const getUseDetails = async (packageId: any) => {
     );
     useDetails.value = data || [];
     loading.value = false;
-    console.log(data);
+    analyze.value = getTotalMissingOrder(data || [])
+    // console.log(data);
 };
 
 onMounted(() => {
