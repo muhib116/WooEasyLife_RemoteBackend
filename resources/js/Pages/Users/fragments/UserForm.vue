@@ -11,20 +11,20 @@
     >
         <div class="p-4">
             <div class="mb-4">
-                <label for="name" class="block font-semibold mb-1">Name</label>
+                <label for="name" class="mb-1 block font-semibold">Name</label>
                 <InputText
                     v-model="userForm.name"
                     id="name"
                     placeholder="Enter name"
                     class="!w-full"
                 />
-                <span v-if="userForm.errors.name" class="text-red-500 text-sm">
+                <span v-if="userForm.errors.name" class="text-sm text-red-500">
                     {{ userForm.errors.name }}
                 </span>
             </div>
 
             <div class="mb-4">
-                <label for="email" class="block font-semibold mb-1"
+                <label for="email" class="mb-1 block font-semibold"
                     >Email (optional)</label
                 >
                 <InputText
@@ -33,12 +33,12 @@
                     placeholder="Enter email"
                     class="!w-full"
                 />
-                <span v-if="userForm.errors.email" class="text-red-500 text-sm">
+                <span v-if="userForm.errors.email" class="text-sm text-red-500">
                     {{ userForm.errors.email }}
                 </span>
             </div>
             <div class="mb-4">
-                <label for="password" class="block font-semibold mb-1"
+                <label for="password" class="mb-1 block font-semibold"
                     >Password</label
                 >
                 <InputText
@@ -49,14 +49,14 @@
                 />
                 <span
                     v-if="userForm.errors.password"
-                    class="text-red-500 text-sm"
+                    class="text-sm text-red-500"
                 >
                     {{ userForm.errors.password }}
                 </span>
             </div>
 
             <div class="mb-4">
-                <label for="phone" class="block font-semibold mb-1"
+                <label for="phone" class="mb-1 block font-semibold"
                     >Phone</label
                 >
                 <InputText
@@ -65,13 +65,13 @@
                     placeholder="Enter phone number"
                     class="!w-full"
                 />
-                <span v-if="userForm.errors.phone" class="text-red-500 text-sm">
+                <span v-if="userForm.errors.phone" class="text-sm text-red-500">
                     {{ userForm.errors.phone }}
                 </span>
             </div>
 
             <div class="mb-4">
-                <label for="whatsapp_phone" class="block font-semibold mb-1"
+                <label for="whatsapp_phone" class="mb-1 block font-semibold"
                     >WhatsApp Phone (optional)</label
                 >
                 <InputText
@@ -82,14 +82,14 @@
                 />
                 <span
                     v-if="userForm.errors.whatsapp_phone"
-                    class="text-red-500 text-sm"
+                    class="text-sm text-red-500"
                 >
                     {{ userForm.errors.whatsapp_phone }}
                 </span>
             </div>
 
             <div class="mb-4">
-                <label for="facebook_page_link" class="block font-semibold mb-1"
+                <label for="facebook_page_link" class="mb-1 block font-semibold"
                     >Facebook Page Link (optional)</label
                 >
                 <InputText
@@ -100,13 +100,13 @@
                 />
                 <span
                     v-if="userForm.errors.facebook_page_link"
-                    class="text-red-500 text-sm"
+                    class="text-sm text-red-500"
                 >
                     {{ userForm.errors.facebook_page_link }}
                 </span>
             </div>
             <div class="mb-4">
-                <label for="facebook_page_link" class="block font-semibold mb-1"
+                <label for="facebook_page_link" class="mb-1 block font-semibold"
                     >Address (optional)</label
                 >
                 <InputText
@@ -117,7 +117,7 @@
                 />
                 <span
                     v-if="userForm.errors.address"
-                    class="text-red-500 text-sm"
+                    class="text-sm text-red-500"
                 >
                     {{ userForm.errors.address }}
                 </span>
@@ -127,7 +127,7 @@
                 <div
                     for="status"
                     @click="userForm.status = !userForm.status"
-                    class="inline-flex gap-3 items-center mb-1 cursor-pointer select-none"
+                    class="mb-1 inline-flex cursor-pointer select-none items-center gap-3"
                 >
                     <ToggleSwitch
                         v-model="userForm.status"
@@ -138,9 +138,29 @@
                 </div>
                 <span
                     v-if="userForm.errors.status"
-                    class="text-red-500 text-sm"
+                    class="text-sm text-red-500"
                 >
                     {{ userForm.errors.status }}
+                </span>
+            </div>
+            <div class="mb-4" v-if="im_super">
+                <div
+                    for="is_test"
+                    @click="userForm.is_test = !userForm.is_test"
+                    class="mb-1 inline-flex cursor-pointer select-none items-center gap-3"
+                >
+                    <ToggleSwitch
+                        v-model="userForm.is_test"
+                        class="pointer-events-none"
+                        size="small"
+                    />
+                    Is Test
+                </div>
+                <span
+                    v-if="userForm.errors.is_test"
+                    class="text-sm text-red-500"
+                >
+                    {{ userForm.errors.is_test }}
                 </span>
             </div>
 
@@ -162,12 +182,20 @@
 </template>
 
 <script setup lang="ts">
-import { useForm } from "@inertiajs/vue3";
-import { onMounted } from "vue";
+import { router, useForm } from "@inertiajs/vue3";
+import { computed, onMounted } from "vue";
 
 const props = defineProps<{
     selectedUser: object;
 }>();
+
+const im_super = computed(() => {
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get("im_super");
+    return value;
+});
+
+// im_super: boolean
 
 // Sync dialog state with modelValue
 const dialog = defineModel({
@@ -184,6 +212,7 @@ const userForm = useForm({
     whatsapp_phone: "",
     facebook_page_link: "",
     status: true,
+    is_test: false,
 });
 
 const closeForm = () => {
@@ -191,7 +220,7 @@ const closeForm = () => {
     dialog.value = false;
 };
 
-const submitForm = () => {
+const submitForm = async () => {
     userForm.post(route("users.store"), {
         onSuccess: () => {
             userForm.reset();
@@ -211,6 +240,7 @@ onMounted(() => {
         userForm.whatsapp_phone = user.whatsapp_phone;
         userForm.facebook_page_link = user.facebook_page_link;
         userForm.status = user.status;
+        userForm.is_test = user.is_test;
     }
 });
 </script>

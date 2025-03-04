@@ -19,6 +19,7 @@ return new class extends Migration
             $table->text('facebook_page_link')->nullable()->after('whatsapp_phone');
             $table->text('address')->nullable()->after('facebook_page_link');
             $table->boolean('status')->nullable()->after('address');
+            $table->boolean('is_test')->nullable()->after('status');
         });
     }
 

@@ -4,7 +4,36 @@
             <template #title>
                 <div class="flex items-center justify-between gap-5">
                     User list
-                    {{ showForm }}
+
+                    <div class="flex flex-wrap gap-4">
+                        <div class="flex items-center gap-2">
+                            <RadioButton
+                                v-model="mode"
+                                inputId="all"
+                                name="all"
+                                value=""
+                            />
+                            <label for="all">All</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <RadioButton
+                                v-model="mode"
+                                inputId="admin"
+                                name="Admin"
+                                value="admin"
+                            />
+                            <label for="admin">Admin</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <RadioButton
+                                v-model="mode"
+                                inputId="user"
+                                name="user"
+                                value="user"
+                            />
+                            <label for="user">User</label>
+                        </div>
+                    </div>
                     <Button
                         label="Create User"
                         icon="pi pi-plus"
@@ -24,7 +53,7 @@
                     :rowsPerPageOptions="[10, 25, 50, 100, 200]"
                     currentPageReportTemplate="{first} to {last} of {totalRecords} Users &nbsp;" -->
                     <DataTable
-                        :value="users"
+                        :value="getFilterData(mode, users)"
                         tableStyle="min-width: 50rem;background:black;"
                     >
                         <template #header>
@@ -40,7 +69,47 @@
                                 </IconField>
                             </div>
                         </template>
-                        <Column field="name" header="Name" />
+                        <Column field="name" header="Name">
+                            <template #body="{data}">
+                                <Badge
+                                    size="small"
+                                    :severity="
+                                        data?.role == 'admin'
+                                            ? 'success'
+                                            : 'secondary'
+                                    "
+                                    :value="data?.role"
+                                />
+                                {{ data.name }}
+                            </template>
+                        </Column>
+                        <Column field="status" header="Status">
+                            <template #body="{ data }">
+                                <Badge
+                                    :severity="
+                                        data?.status
+                                            ? 'success'
+                                            : 'danger'
+                                    "
+                                    :value="data?.status
+                                            ? 'Active'
+                                            : 'Disabled'"
+                                />
+                            </template>
+                        </Column>
+                        <Column field="is_test" header="Test User?">
+                            <template #body="{ data }">
+                                <Badge
+                                    v-if="data?.role != 'admin'"
+                                    :severity="
+                                        data?.is_test
+                                            ? 'info'
+                                            : 'contrast'
+                                    "
+                                    :value="data?.is_test ? 'Yes' : 'No'"
+                                />
+                            </template>
+                        </Column>
                         <Column field="email" header="Email" />
                         <Column field="phone" header="Phone" />
                         <Column
@@ -54,6 +123,7 @@
                             <template #body="{ data }">
                                 <div class="flex gap-2">
                                     <Button
+                                        v-if="data?.role == 'user'"
                                         @click="handleEdit(data)"
                                         severity="primary"
                                         size="small"
@@ -100,6 +170,18 @@ defineOptions({
 const props = defineProps<{
     users: any[];
 }>();
+
+const mode = ref("");
+
+const getFilterData = (_mode, _users) => {
+    if (_mode == "admin") {
+        return (_users || []).filter((item) => item?.role == "admin");
+    }
+    if (_mode == "user") {
+        return (_users || []).filter((item) => item?.role == "user");
+    }
+    return _users || [];
+};
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },

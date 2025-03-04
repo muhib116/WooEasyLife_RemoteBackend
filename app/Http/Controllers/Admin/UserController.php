@@ -28,7 +28,7 @@ class UserController extends Controller
     public function index()
     {
         $users = User::query()
-            ->where('role', 'user')
+            // ->where('role', 'user')
             ->withSum(['userPackage as remaining_order' => function ($query) {
                 $query->where('is_active', 1);
             }], 'remaining_order')
@@ -80,6 +80,11 @@ class UserController extends Controller
             // $types = ['success', 'warning', 'danger', 'info', null];
 
             if (!$user) {
+                return $this->errorResponse('Unauthenticated', 401);
+            }
+
+            if (!$user->status) {
+                LogHelper::saveLog('disabled user', 'This user is disabled');
                 return $this->errorResponse('Unauthenticated', 401);
             }
 
@@ -169,10 +174,22 @@ class UserController extends Controller
         if ($request->password) {
             $data['password'] = Hash::make($request->password);
         }
+        $admin_user = Auth::user();
+        if(@$admin_user->role == 'admin') {
+            if($request->is_test) {
+                $data['is_test'] = $request->is_test;
+            }
+        }
         if ($request->id) {
             $user = User::findOrFail($request->id);
+            if(@$user->role == 'admin') {
+                return back()->with('error', 'Admin User cannot be update.');
+            }
             $user->update($data);
         } else {
+            if(@$data['role'] == 'admin') {
+                return back()->with('error', 'Admin User cannot be create.');
+            }
             User::create($data);
         }
         return back()->with('success', 'User Saved Successfully!');
