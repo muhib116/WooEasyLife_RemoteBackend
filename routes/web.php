@@ -46,9 +46,9 @@ Route::get('/', function () {
 
 Route::get('/curl', [CurlController::class, 'index']);
 
-Route::get('app-logo', [PluginsController::class, 'appLogo']);
-Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
-Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
+// Route::get('app-logo', [PluginsController::class, 'appLogo']);
+// Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
+// Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
