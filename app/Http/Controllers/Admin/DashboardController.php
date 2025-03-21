@@ -67,7 +67,7 @@ class DashboardController extends Controller
         $testUsers = User::where('is_test', 1)->pluck('id');
         $adminUserIds = User::where('role', 'admin')->pluck('id');
         $testUsers = User::where('is_test', 1)->pluck('id');
-        $ids = [...$adminUserIds ?? [], ...$testUsers ?? []];
+        $ids = [...($adminUserIds ?? []), ...($testUsers ?? [])];
         $query = UserPackage::query()->whereNotIn('user_id', $ids);
 
         $token_sell = (clone $query)->sum('total_order_can_handle');
