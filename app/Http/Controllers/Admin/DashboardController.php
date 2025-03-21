@@ -111,7 +111,7 @@ class DashboardController extends Controller
             getBoxData('Total User', $totalUser),
             getBoxData('New User Of This Month', $currentMonthUsers),
             getBoxData('Prev Month User', $previousMonthUsers),
-            getBoxData('Increase / Decrease', $percentageChange, '%'),
+            getBoxData('Increase / Decrease', number_format($percentageChange, 2), '%'),
             // 'total_user' => $totalUser,
             // 'this_month_user' => $currentMonthUsers,
             // 'previous_month_user' => $previousMonthUsers,

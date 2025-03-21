@@ -1,55 +1,45 @@
 <template>
     <div
-        class="box-bg box-color col-[span_var(--span)_/_span_var(--span)] box-border rounded-2xl border p-4 md:p-6"
+        class="box-bg flex flex-col justify-between box-color col-[span_var(--span)_/_span_var(--span)] box-border rounded-2xl border p-4 md:p-6"
         :style="`--span: ${data?.col_span || 1}`"
     >
-        <div
-            class="flex items-start justify-between text-lg font-semibold text-gray-800 dark:text-white/90"
-        >
-            {{ data?.title }}
-        </div>
-
-        <AutoScrollTop
-            :offset="0"
-            :autoScroll="false"
-            class="my-4 max-h-[213px] overflow-y-auto"
-        >
+        <div>
             <div
-                v-for="(item, index) in data?.data || []"
-                :key="index"
-                class="box-border flex items-center justify-between border-b pb-4"
-                :class="{
-                    'pt-4': index > 0,
-                }"
+                class="flex items-start justify-between text-lg font-semibold text-gray-800 dark:text-white/90"
             >
-                <span class="text-theme-xs text-gray-400">
-                    {{ item?.title }}
-                </span>
-                <span class="text-right font-bold">
-                    {{
-                        item?.modifier && item?.modifier_position == "left"
-                            ? item?.modifier
-                            : ""
-                    }}
-                    {{ item?.value }}
-                    {{
-                        item?.modifier && item?.modifier_position == "right"
-                            ? item?.modifier
-                            : ""
-                    }}
-                </span>
+                {{ data?.title }}
             </div>
-            <!-- <div
-                class="box-color sticky bottom-0 z-20 grid place-content-center"
+    
+            <div
+                class="my-4"
             >
-                <button
-                    class="box-bg box-border grid h-10 w-10 place-content-center rounded-full border shadow-box"
+                <div
+                    v-for="(item, index) in data?.data || []"
+                    :key="index"
+                    class="box-border flex items-center justify-between border-b pb-4"
+                    :class="{
+                        'pt-4': index > 0,
+                    }"
                 >
-                    <Icon name="PhCaretDown" />
-                </button>
-            </div> -->
-        </AutoScrollTop>
-
+                    <span class="text-theme-xs text-gray-400">
+                        {{ item?.title }}
+                    </span>
+                    <span class="text-right font-bold">
+                        {{
+                            item?.modifier && item?.modifier_position == "left"
+                                ? item?.modifier
+                                : ""
+                        }}
+                        {{ item?.value }}
+                        {{
+                            item?.modifier && item?.modifier_position == "right"
+                                ? item?.modifier
+                                : ""
+                        }}
+                    </span>
+                </div>
+            </div>
+        </div>
         <Link
             v-if="data?.link"
             :href="data?.link"
