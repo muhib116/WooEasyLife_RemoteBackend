@@ -361,6 +361,33 @@ class SmsController extends Controller
         return $this->successResponse($responseDecoded, 'Sms sent successfully');
     }
 
+    public function smsAdminRecharge(Request $request, $userId)
+    {
+        $request->validate([
+            'total_amount' => 'required',
+            'transaction_charge' => 'required',
+            'transaction_method' => 'required',
+        ]);
+
+        // transaction charge will be 1.85% of the amount
+        // $transactionCharge = number_format(($request->total_amount * 1.85) / 100, 2);
+        $data = [
+            'user_id' => $userId,
+            'created_by' => Auth::id(),
+            'total_amount' => number_format($request->total_amount ?? 0, 2),
+            'transaction_charge' => number_format($request->transaction_charge ?? 0, 2),
+            'transaction_method' => $request->transaction_method,
+            'transaction_id' => $request->transaction_id,
+            'account_number' => $request->account_number,
+            'domain' => $request->domain,
+            'status' => 'pending',
+        ];
+
+        $recharge = SmsRecharge::create($data);
+
+        return back()->with('success', 'Recharge request submitted successfully.');
+    }
+
     public function recharge(Request $request)
     {
         $validator = Validator::make($request->all(), [

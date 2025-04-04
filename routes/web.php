@@ -18,6 +18,7 @@ use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SmsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -133,6 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::get('packages', [UserController::class, 'packages'])->name('packages');
         Route::get('packages/{package_id}/use-details', [UserController::class, 'useDetails'])->name('useDetails');
         Route::get('sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
+        Route::post('sms-admin-recharge', [SmsController::class, 'smsAdminRecharge'])->name('smsAdminRecharge');
         Route::get('sms-use-history', [UserController::class, 'smsUseHistory'])->name('smsUseHistory');
         Route::post('purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
         Route::post('update-purchase-package', [UserController::class, 'updatePurchasePackage'])->name('updatePurchasePackage');

@@ -261,7 +261,11 @@ class UserController extends Controller
     {
         $user = User::find($userId);
         $recharge = SmsRecharge::where('user_id', $userId)->orderBy('id', 'desc')->get();
-        return Inertia::render('Users/SmsRecharge', compact('user', 'recharge'));
+        $user_packages = UserPackage::where('user_id', $userId)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->unique('domain');
+        return Inertia::render('Users/SmsRecharge', compact('user', 'recharge', 'user_packages'));
     }
 
     public function smsUseHistory($userId)

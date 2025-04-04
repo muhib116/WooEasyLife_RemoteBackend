@@ -7,13 +7,13 @@
             <template #content>
                 <div class="min-h-[400px]">
                     <UserNav :user="user">
-                        <!-- <button
-                            @click="showForm = true"
+                        <button
+                            @click="showRechargeForm = true"
                             class="py-1 px-4 bg-indigo-500 text-white flex items-center gap-2"
                         >
                             <span class="pi pi-plus"></span>
-                            Activate Package
-                        </button> -->
+                            Add Recharge
+                        </button>
                     </UserNav>
 
                     <div class="pt-4">
@@ -77,6 +77,25 @@
             </template>
         </Card>
 
+        <Dialog
+            v-model:visible="showRechargeForm"
+            header="Add SMS Recharge"
+            modal
+            maximizable
+            :style="{ width: '50%' }"
+            draggable
+            dismissableMask
+            @hide="() => {}"
+        >
+            <RechargeForm
+                v-if="showRechargeForm"
+                :rechargeForm="rechargeForm"
+                :user_packages="user_packages"
+                @onClose="showRechargeForm = false"
+                @onSubmit="handleRecharge"
+            />
+        </Dialog>
+
         <Toast />
         <ConfirmDialog id="confirm" class="min-w-[20rem]" />
     </AuthenticatedLayout>
@@ -87,6 +106,7 @@ import { AuthenticatedLayout } from "@/layouts";
 import UserNav from "./UserNav.vue";
 import Header from "./Header.vue";
 import PackageForm from "./fragments/PackageForm.vue";
+import RechargeForm from "./fragments/RechargeForm.vue";
 import { ref } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";
@@ -99,29 +119,48 @@ defineOptions({
 const props = defineProps<{
     user: any;
     recharge: any[];
+    user_packages: any[];
 }>();
 
 const toast = useToast();
 
 const confirm = useConfirm();
 
+const showRechargeForm = ref(false);
+
+const rechargeForm = useForm({
+    id: null,
+    user_id: null,
+    total_amount: null,
+    transaction_charge: null,
+    transaction_method: 'Cash',
+    transaction_id: null,
+    account_number: null,
+    domain: null,
+    status: null,
+});
+
 const showForm = ref(false);
 const activeData = ref();
 
-const getItems = (data) => {
-    const items = [
-        {
-            label: "Approve",
-            command: async () => {},
+const handleRecharge = () => {
+    rechargeForm.post(route("users.smsAdminRecharge", {
+        user_id: props.user.id,
+    }), {
+        onSuccess: (response) => {
+            rechargeForm.reset();
+            showRechargeForm.value = false;
         },
-        {
-            label: "Reject",
-            command: () => {},
+        onError: (error) => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: 'Recharge failed',
+                life: 3000,
+            });
         },
-    ];
-
-    return items;
-};
+    });
+}
 
 const handleApprove = (item) => {
     confirm.require({
