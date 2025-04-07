@@ -33,7 +33,7 @@ class TrackRouteHit
         }
 
         try {
-            $userId = Auth::id() ?? 0;
+            $userId = Auth::id() ?? null;
             // $group = $request->route()?->getAction('prefix') ?? null;
             $path = $request->path();
             $domain = $this->getRequestDomain();
