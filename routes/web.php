@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VisitorController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
@@ -148,6 +149,13 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'builder.', 'prefix' => 'builder'], function () {
         Route::get('/', [PageBuilder::class, 'index'])->name('index');
     });
+
+    Route::group(['as' => 'visitor.', 'prefix' => 'visitor'], function () {
+        Route::get('/', [VisitorController::class, 'index'])->name('index');
+        Route::get('/visitor/report', [VisitorController::class, 'getRouteHitReport'])->name('report');
+    });
+
+    
     Route::group(['as' => 'frauds.', 'prefix' => 'frauds'], function () {
         Route::get('/', [FraudCheckController::class, 'index'])->name('index');
         Route::get('/expire', [FraudCheckController::class, 'expire'])->name('expire');

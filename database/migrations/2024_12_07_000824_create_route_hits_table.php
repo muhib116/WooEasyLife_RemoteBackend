@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('route_hits', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('group')->nullable();
             $table->string('path')->nullable();
             $table->string('domain')->nullable();
