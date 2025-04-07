@@ -16,8 +16,10 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->string('group')->nullable();
             $table->string('path')->nullable();
+            $table->string('domain')->nullable();
             $table->string('status')->nullable();
-            $table->integer('hit_count')->default(0);
+            $table->text('error')->nullable();
+            $table->unsignedBigInteger('hit_count')->default(0);
             $table->timestamps();
         });
     }
