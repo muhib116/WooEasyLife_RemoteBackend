@@ -370,12 +370,12 @@ class SmsController extends Controller
         ]);
 
         // transaction charge will be 1.85% of the amount
-        // $transactionCharge = number_format(($request->total_amount * 1.85) / 100, 2);
+        // $transactionCharge = round(($request->total_amount * 1.85) / 100, 2);
         $data = [
             'user_id' => $userId,
             'created_by' => Auth::id(),
-            'total_amount' => number_format($request->total_amount ?? 0, 2),
-            'transaction_charge' => number_format($request->transaction_charge ?? 0, 2),
+            'total_amount' => round($request->total_amount ?? 0, 2),
+            'transaction_charge' => round($request->transaction_charge ?? 0, 2),
             'transaction_method' => $request->transaction_method,
             'transaction_id' => $request->transaction_id,
             'account_number' => $request->account_number,
@@ -407,8 +407,8 @@ class SmsController extends Controller
         $data = [
             'user_id' => Auth::id(),
             'created_by' => Auth::id(),
-            'total_amount' => number_format($request->total_amount, 2),
-            'transaction_charge' => number_format($request->total_charge, 2),
+            'total_amount' => round($request->total_amount, 2),
+            'transaction_charge' => round($request->total_charge, 2),
             'transaction_method' => $request->transaction_method,
             'transaction_id' => $request->transaction_id,
             'account_number' => $request->account_number,
