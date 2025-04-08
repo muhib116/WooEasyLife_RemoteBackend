@@ -123,7 +123,7 @@ class UserController extends Controller
             })->sum('remaining_order');
             $user->remaining_order = $remainingOrders + 0;
             $user->notice = $notice; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
-            $user->sms_balance = number_format($smsBalance, 2) + 0; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
+            $user->sms_balance = round($smsBalance, 2) + 0; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
 
             return response()->json($user, 200);
         } catch (\Throwable $th) {
