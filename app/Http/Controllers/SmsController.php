@@ -403,7 +403,7 @@ class SmsController extends Controller
         }
 
         // transaction charge will be 1.85% of the amount
-        // $transactionCharge = number_format(($request->total_amount * 1.85) / 100, 2);
+        // $transactionCharge = round(($request->total_amount * 1.85) / 100, 2);
         $data = [
             'user_id' => Auth::id(),
             'created_by' => Auth::id(),

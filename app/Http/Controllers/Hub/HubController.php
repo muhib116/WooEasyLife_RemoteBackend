@@ -57,7 +57,7 @@ class HubController extends Controller
             $remaining_order = $package->remaining_order;
 
             DB::beginTransaction();
-            $cost = number_format($package->per_order_rate * $request->order_count, 2);
+            $cost = round($package->per_order_rate * $request->order_count, 2);
             $useDetails = null;
             try {
                 $useDetails = $request->use_details;
