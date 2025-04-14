@@ -26,9 +26,20 @@
 
             <template #content>
                 <div v-for="item in uniqueLinksItems || []">
+                    <template v-if="item?.products">
+                        <a
+                            v-for="product in item?.products || []"
+                            :href="product?.product_url"
+                            class="mb-5 block border px-4 py-2 hover:bg-slate-500/20"
+                            target="_blank"
+                            >{{ product?.name }}</a
+                        >
+                    </template>
                     <a
+                        v-else
                         :href="item?.product_url"
-                        class="mb-5 block border px-4 py-2"
+                        class="mb-5 block border px-4 py-2 hover:bg-slate-500/20"
+                        target="_blank"
                         >{{ item?.name }}</a
                     >
                 </div>
