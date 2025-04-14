@@ -78,6 +78,11 @@ const routes: SidebarRoutes[] = [
         icon: "PhCircuitry",
     },
     {
+        title: "Use Analysis",
+        name: "useAnalysis.index",
+        icon: "PhChartScatter",
+    },
+    {
         title: "Database Backups",
         name: "backups.index",
         icon: "PhFloppyDiskBack",

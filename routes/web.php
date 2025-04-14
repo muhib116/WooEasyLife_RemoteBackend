@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitorController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
+use App\Http\Controllers\Analysis\UseAnalysisController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
@@ -153,6 +154,10 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'visitor.', 'prefix' => 'visitor'], function () {
         Route::get('/', [VisitorController::class, 'index'])->name('index');
         Route::get('/visitor/report', [VisitorController::class, 'getRouteHitReport'])->name('report');
+    });
+    Route::group(['as' => 'useAnalysis.', 'prefix' => 'use-analysis'], function () {
+        Route::get('/', [UseAnalysisController::class, 'index'])->name('index');
+        Route::post('/get-use-report', [UseAnalysisController::class, 'getUseReport'])->name('getUseReport');
     });
 
     
