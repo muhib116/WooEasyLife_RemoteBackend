@@ -45,10 +45,15 @@
                         {{ item?.item?.name }}
                     </a>
                     <div>
-                        {{ item?.total_quantity }}
-                        <span class="text-yellow-500">
-                            ({{ item?.missing_count || 0 }} from abandon)
-                        </span>
+                        <div class="text-green-500">
+                            Order: {{ (item?.total_quantity || 0) - (item?.missing_count || 0) }}
+                        </div>
+                        <div class="text-yellow-500">
+                            Abandon: {{ item?.missing_count || 0 }}
+                        </div>
+                        <div>
+                            Total: {{ item?.total_quantity || 0 }}
+                        </div>
                     </div>
                 </div>
                 <!-- <div v-for="item in uniqueLinksItems || []">
