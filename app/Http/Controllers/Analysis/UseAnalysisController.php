@@ -70,7 +70,7 @@ class UseAnalysisController extends Controller
         //             $quantity = isset($content_item['quantity']) ? intval($content_item['quantity']) : 0;
         //             if($quantity < 500) {
         //                 $product_sale[$url]['total_quantity'] += $quantity;
-    
+
         //                 if (($item['from'] ?? '') === 'missing_order') {
         //                     $product_sale[$url]['missing_count'] += 1;
         //                 }
@@ -105,7 +105,13 @@ class UseAnalysisController extends Controller
     public function getUseReport(Request $request)
     {
         $query = PackageUseHistory::where('user_id', $request->user_id);
+        if ($request->start_date) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
 
+        if ($request->end_date) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
         $history = $query->get();
 
         $modifiedHistory = collect($history)->map(function ($record) {
