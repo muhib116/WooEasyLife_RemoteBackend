@@ -5,6 +5,14 @@
                 <div class="flex items-center justify-between">
                     Use Report
                     <div class="flex gap-3">
+                        <div class="relative">
+                            <div class="absolute -top-8">End Date</div>
+                            <DatePicker v-model="form.start_date" />
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -top-8">End Date</div>
+                            <DatePicker v-model="form.end_date" />
+                        </div>
                         <Dropdown
                             v-model="selectedUserId"
                             :options="users"
@@ -73,6 +81,11 @@ const props = defineProps({
     users: Array,
 });
 
+const form = ref({
+    start_date: null,
+    end_date: null,
+});
+
 const loading = ref(false);
 const selectedUserId = ref();
 const report = ref([]);
@@ -87,6 +100,7 @@ const fetchReport = async () => {
     loading.value = true;
     const { data } = await axios.post(route("useAnalysis.getUseReport"), {
         user_id: selectedUserId.value,
+        ...(form.value || {}),
     });
     loading.value = false;
 
