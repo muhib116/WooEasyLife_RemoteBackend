@@ -174,21 +174,20 @@ const getUniqueLinks = (data) => {
 
             const quantity = parseInt(content_item.quantity) || 0;
 
-            product_sale.value[url].value.push({
-                quantity: quantity,
-                item: content_item,
-                product_url: url,
-            });
-
-            product_sale.value[url].total_quantity += quantity;
-
-            if (item.from === "missing_order") {
-                product_sale.value[url].missing_count += 1;
+            if(quantity < 500) {
+                product_sale.value[url].value.push({
+                    quantity: quantity,
+                    item: content_item,
+                    product_url: url,
+                });
+    
+                product_sale.value[url].total_quantity += quantity;
+    
+                if (item.from === "missing_order") {
+                    product_sale.value[url].missing_count += quantity;
+                }
             }
         });
     });
-    // console.log(product_sale.value)
-    // console.log(uniqueLinks.value);
-    // console.log(product_sale.value);
 };
 </script>
