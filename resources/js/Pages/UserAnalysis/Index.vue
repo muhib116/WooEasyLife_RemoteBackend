@@ -46,6 +46,9 @@
                     </a>
                     <div>
                         {{ item?.total_quantity }}
+                        <span class="text-yellow-500">
+                            ({{ item?.missing_count || 0 }} from abandon)
+                        </span>
                     </div>
                 </div>
                 <!-- <div v-for="item in uniqueLinksItems || []">
@@ -133,32 +136,53 @@ const getUniqueLinks = (data) => {
         }
 
         // =======================================
-        const contents = item.cart_contents;
+        const contents = (() => {
+            if (Array.isArray(item.cart_contents)) {
+                return item.cart_contents;
+            }
 
-        const items = Array.isArray(contents) ? contents : [contents];
+            if (Array.isArray(item.cart_contents?.products)) {
+                return item.cart_contents.products;
+            }
 
-        items.forEach((item) => {
-            const url = item.product_url;
+            if (
+                typeof item.cart_contents === "object" &&
+                item.cart_contents !== null
+            ) {
+                return [item.cart_contents]; // single object wrapped in array
+            }
+
+            return []; // fallback if structure is weird
+        })();
+
+        contents.forEach((content_item) => {
+            const url = content_item.product_url;
 
             if (!product_sale.value[url]) {
                 product_sale.value[url] = {
                     value: [],
-                    item,
+                    item: content_item,
                     total_quantity: 0,
+                    missing_count: 0,
                 };
             }
 
-            const quantity = parseInt(item.quantity);
+            const quantity = parseInt(content_item.quantity) || 0;
 
             product_sale.value[url].value.push({
                 quantity: quantity,
-                item: item,
+                item: content_item,
                 product_url: url,
             });
 
             product_sale.value[url].total_quantity += quantity;
+
+            if (item.from === "missing_order") {
+                product_sale.value[url].missing_count += 1;
+            }
         });
     });
+    // console.log(product_sale.value)
     // console.log(uniqueLinks.value);
     // console.log(product_sale.value);
 };
