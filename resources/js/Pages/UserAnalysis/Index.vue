@@ -30,6 +30,18 @@
                         />
                     </div>
                 </div>
+                <div class="grid grid-cols-3 gap-5 mb-5 mt-5">
+                    <!-- rightText="Sms was sent" -->
+                    <Widget
+                        title="Total Order"
+                        :value="total_order - total_abandon"
+                    />
+                    <Widget title="Total Abandon" :value="total_abandon" />
+                    <Widget title="All Total" :value="total_order" />
+                    <!-- <div>Total Order: {{ total_order - total_abandon }}</div>
+                    <div>Total Abandon: {{ total_abandon }}</div>
+                    <div>All Total: {{ total_order }}</div> -->
+                </div>
             </template>
 
             <template #content>
@@ -46,14 +58,16 @@
                     </a>
                     <div>
                         <div class="text-green-500">
-                            Order: {{ (item?.total_quantity || 0) - (item?.missing_count || 0) }}
+                            Order:
+                            {{
+                                (item?.total_quantity || 0) -
+                                (item?.missing_count || 0)
+                            }}
                         </div>
                         <div class="text-yellow-500">
                             Abandon: {{ item?.missing_count || 0 }}
                         </div>
-                        <div>
-                            Total: {{ item?.total_quantity || 0 }}
-                        </div>
+                        <div>Total: {{ item?.total_quantity || 0 }}</div>
                     </div>
                 </div>
                 <!-- <div v-for="item in uniqueLinksItems || []">
@@ -84,6 +98,7 @@ import { ref, onMounted } from "vue";
 import axios from "axios";
 import { AuthenticatedLayout } from "@/layouts";
 import { isString, each, isArray } from "lodash";
+import { Widget } from "@/plugins";
 
 const props = defineProps({
     users: Array,
@@ -100,6 +115,8 @@ const report = ref([]);
 const uniqueLinks = ref([]);
 const uniqueLinksItems = ref([]);
 const product_sale = ref({});
+const total_order = ref(0);
+const total_abandon = ref(0);
 
 const fetchReport = async () => {
     if (!selectedUserId.value) {
@@ -120,6 +137,8 @@ const fetchReport = async () => {
 const getUniqueLinks = (data) => {
     uniqueLinks.value = [];
     product_sale.value = {};
+    total_abandon.value = 0
+    total_order.value = 0
     const useDetails = data.flatMap((item) => item.use_details);
     // console.log(useDetails)
     each(useDetails, (item) => {
@@ -174,17 +193,20 @@ const getUniqueLinks = (data) => {
 
             const quantity = parseInt(content_item.quantity) || 0;
 
-            if(quantity < 500) {
+            if (quantity < 500) {
                 product_sale.value[url].value.push({
                     quantity: quantity,
                     item: content_item,
                     product_url: url,
                 });
-    
+
                 product_sale.value[url].total_quantity += quantity;
-    
+
+                total_order.value += quantity;
+
                 if (item.from === "missing_order") {
                     product_sale.value[url].missing_count += quantity;
+                    total_abandon.value += quantity;
                 }
             }
         });
