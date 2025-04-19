@@ -191,6 +191,10 @@ Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 
 require __DIR__ . '/auth.php';
 
+Route::get('/get-ip', function(){
+    return request()->ip();
+});
+
 Route::get('/run-migration', function () {
     Artisan::call('migrate');
     echo 'Success';
