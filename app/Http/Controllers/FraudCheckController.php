@@ -105,6 +105,7 @@ class FraudCheckController extends Controller
         $response_data = [
             'total_order' => $total_order,
             'confirmed' => $confirm_order,
+            'frauds' => @$steadfast_response['frauds'],
             'cancel' => ceil(($steadfast_response['cancel'] + $pathao_response['cancel'] + $paper_fly_response['cancel'])),
             'success_rate' => $success_rate,
 
@@ -347,7 +348,8 @@ class FraudCheckController extends Controller
             $curl_response = shell_exec($command);
 
             $response = json_decode($curl_response);
-            $response_data['some'] = $response;
+            // $response_data['some'] = @$response->frauds ?? [];
+            $response_data['frauds'] = @$response->frauds ?? [];
 
             LogHelper::saveLog('hi', $curl_response);
             $confirm_order = @$response->total_delivered;

@@ -224,19 +224,11 @@ const handleSearch = async () => {
         isLoading.value = false;
         response.value = data;
 
-        try {
-            console.log(data?.courier)
-            if (data?.courier) {
-                const steadFast = (data?.courier || []).find(
-                    (item) => String(item?.title).toLowerCase() == String("Stead Fast").toLowerCase(),
-                );
-                console.log(steadFast);
-                
-                slangs.value = get(steadFast, "report.some.frauds") || [];
-            }
-        } catch (err) {
-        } finally {
-        }
+        // @ts-ignore
+
+
+        
+        slangs.value = responseData?.frauds || [];
     }
 };
 </script>
