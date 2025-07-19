@@ -19,11 +19,21 @@ class FraudCheckController extends Controller
     {
         return Inertia::render('FraudCheck/Index');
     }
+
+    public function saveSteadfastCurl(Request $request)
+    {
+        if ($request->curl_text) {
+            file_put_contents(__DIR__ . '/curlcode.txt', $request->curl_text);
+        }
+        return back()->with('success', 'Steadfast CURL code is saved successfully!');
+    }
+
     public function expire()
     {
         // PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT()
         $time_left = null;
-        return Inertia::render('FraudCheck/Expire', compact('time_left'));
+        $steadfast_curl = file_get_contents(__DIR__ . '/curlcode.txt');
+        return Inertia::render('FraudCheck/Expire', compact('time_left', 'steadfast_curl'));
     }
     public function getExpire()
     {
@@ -258,47 +268,97 @@ class FraudCheckController extends Controller
             // Extract the token value
             $xsrfToken = $tokenPart[1];
 
-            $curl = curl_init();
-            curl_setopt_array($curl, [
-                CURLOPT_URL => "https://steadfast.com.bd/user/frauds/check/" . $phone,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => "GET",
-                CURLOPT_HTTPHEADER => [
-                    "accept: application/json, text/plain, */*",
-                    "accept-language: en-US,en;q=0.9",
-                    "cookie: remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6Ii9FRDAwRzZkSmlYL3o0OFBSSUtDWGc9PSIsInZhbHVlIjoiamt4VE9iRlpYc0NHcWN1bXM3TDlMTzFDT2o4bG01a3M3eFhHSVhzY0xIVGNSQVRYRmtieDBRVzE2WlZPU3dIb3ErSzAvRHgvZkRzWkxpUWZnY21iQUh4aVhtcGVIaU9kVWUyaGtYMm5hdWlYdmdlOVhHRGw0RTNZcDJ5RDBJLzFBOC82NUpaWkU4NS93cks1d0hkcXpEZFZIK2Zyam9URFlkNDQxcW9jSmZNMFlnV0s4TUNOODROdm1NckUwQWdvd1BiMitiS3lmbTl4VkFzT1E5R055MUxEOEE2QUNPdGZFUzU1MDNwakJmMD0iLCJtYWMiOiIxYmY5YjExZjIwNjA4NzRkY2Q4OTg1MWZhYWNjZDQ3YWEwYzU5MzI4MjU2YzUzMTdmMzY2Mjk3NDk5YTE2ZjRlIiwidGFnIjoiIn0%3D; XSRF-TOKEN=" . urlencode($xsrfToken) . "; steadfast_merchant_session=eyJpdiI6ImkvWnVvcVZmMXNUZ21aVU9LbFA5aFE9PSIsInZhbHVlIjoibFpJRFo3WHQzcjZZNis2NjNwY0JZZ1ludWxsQ2g0cjI5N2pmeGdyWWJvUUxRRmRGeEVhTEtMNmZHdUg0dFYzQk56MWQ4TTF0UWIrTGtpY3lkZVpIaUhrTktwL0hlQmxUaG1CU2ZGTkFXR2p0WExlZDMzV2VpQW9oeDE1bytNYUwiLCJtYWMiOiI4OTE3ZmJkZDNjMzNkZTJlNWQxYjZiNWJiZmUyYWE3NDk5YmExNTkyMzE0NGI3MWY4MjBjY2JjMmQ3YmQ1NzA1IiwidGFnIjoiIn0%3D",
-                    "priority: u=1, i",
-                    "referer: https://steadfast.com.bd/user/frauds/check",
-                    "sec-ch-ua: \"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"",
-                    "sec-ch-ua-mobile: ?0",
-                    "sec-ch-ua-platform: \"macOS\"",
-                    "sec-fetch-dest: empty",
-                    "sec-fetch-mode: cors",
-                    "sec-fetch-site: same-origin",
-                    "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-                    "x-requested-with: XMLHttpRequest",
-                    "x-xsrf-token: " . $xsrfToken
-                ],
-            ]);
+            $curl_string = file_get_contents(__DIR__ . '/curlcode.txt');
 
-            $curl_response = curl_exec($curl);
-            $err = curl_error($curl);
+            // $curl = curl_init();
+            // curl_setopt_array($curl, [
+            //     CURLOPT_URL => "https://steadfast.com.bd/user/frauds/check/" . $phone,
+            //     CURLOPT_RETURNTRANSFER => true,
+            //     CURLOPT_ENCODING => "",
+            //     CURLOPT_MAXREDIRS => 10,
+            //     CURLOPT_TIMEOUT => 30,
+            //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            //     CURLOPT_CUSTOMREQUEST => "GET",
+            //     CURLOPT_HTTPHEADER => [
+            //         "accept: application/json, text/plain, */*",
+            //         "accept-language: en-US,en;q=0.9",
+            //         "cookie: remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6ImZKclk5ZHhtTzZPcU1KWVVSUzU3Z0E9PSIsInZhbHVlIjoiYWtxZDhzR2Y1dVM4Z2RpZUx2UjhDSW1XUFBnOTh1VXJNalJYbGQ3QndLalB3R3Y3VG5lWG9zakJzOFJCemczOUlHZmZXa3FCVkppWjdPRlJadW5vK3FMVkxJc2d3VEtTbW5XSTZSWXI3cFhmMGR5c3pTclJPREZGaytoallPdzhLSm5tdi9Xa2VyOU5tdzFZcUdtSUYrU095K0NlZGx2MmdDZXVINFhVeXd2SUhRREFmNkZ4elcrNWxXcVk4a3hpVWxhQ0pMZmh6YXB3THAwWjVGWWhSbjZGYURJcDI5cW9qSG54NkR3YnVXQT0iLCJtYWMiOiIzMjRlYjM2ZjIwMzg0NjhlNGRiMzI1MWVlZDUzZGUyNmRiMmEzMWQyZGNiNDMyMGVjMzI2NjJlZDQ4ZjU1OTgwIiwidGFnIjoiIn0%3D; XSRF-TOKEN=" . urlencode($xsrfToken) . "; steadfast_merchant_session=eyJpdiI6ImtpRDdtMDlmdlE5SWF6Rmo1dkJUQWc9PSIsInZhbHVlIjoiZHUxZGI2b21JUytjbVZQSVE1ZnQ0ZC9iNkU1SlRtaGE0ZXpNT2xRckhsazRUMjAvWjVDZ3NFWDEzYkVpdDZrY0tlRmJRS3NwdjN5citDOGJ3MmFzVWFTaUo0Z0htdlZjeVBDUDA1aE8rTURKM1IrR2U1bEdRZ3JGVlJ1NjduK2MiLCJtYWMiOiI2NjAyMjg0N2Y0Mjg3Y2E0NTliODNhOTA1ZDBkMTMzMzQ4NDRkNzczNDFiZWUwMTM1MTE5ZjYwODUyNmQyMjA1IiwidGFnIjoiIn0%3D",
+            //         "priority: u=1, i",
+            //         "referer: https://steadfast.com.bd/user/frauds/check",
+            //         'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+            //         "sec-ch-ua-mobile: ?0",
+            //         "sec-ch-ua-platform: \"macOS\"",
+            //         "sec-fetch-dest: empty",
+            //         "sec-fetch-mode: cors",
+            //         "sec-fetch-site: same-origin",
+            //         "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+            //         "x-requested-with: XMLHttpRequest",
+            //         "x-xsrf-token: " . $xsrfToken
+            //     ],
+            // ]);
 
-            curl_close($curl);
-            LogHelper::saveLog('hi', $curl_response);
+            // $curl_response = curl_exec($curl);
+            // $err = curl_error($curl);
+
+            // curl_close($curl);
+            $curl_response = "{}";
+            $curl_string = preg_replace(
+                '#https://steadfast\.com\.bd/user/frauds/check/\d+#',
+                "https://steadfast.com.bd/user/frauds/check/" . $phone,
+                $curl_string
+            );
+            // 3️⃣ Remove unwanted cookies from -b argument
+            $curl_string = preg_replace_callback(
+                "/-b\s+'([^']+)'/",
+                function ($matches) {
+                    $cookieStr = $matches[1];
+                    $cookies = explode(';', $cookieStr);
+                    $filtered = [];
+                    foreach ($cookies as $cookie) {
+                        $cookie = trim($cookie);
+                        if (
+                            stripos($cookie, '_fbp=') === 0 ||
+                            stripos($cookie, '_ga=') === 0 ||
+                            stripos($cookie, '_gid=') === 0 ||
+                            stripos($cookie, 'cf_clearance=') === 0
+                        ) {
+                            continue; // Skip this cookie
+                        }
+                        $filtered[] = $cookie;
+                    }
+                    $newCookieStr = implode('; ', $filtered);
+                    return "-b '$newCookieStr'";
+                },
+                $curl_string
+            );
+            // 4️⃣ Replace the `x-xsrf-token` header with your new value
+            $curl_string = preg_replace(
+                "/-H\s+'x-xsrf-token:[^']*'/",
+                "-H 'x-xsrf-token: $xsrfToken'",
+                $curl_string
+            );
+
+            $command = $curl_string;
+
+            // Add -s if not present already
+            if (!preg_match('/\s\-s\b/', $command)) {
+                $command = preg_replace('/^curl\s/', 'curl -s ', $command);
+            }
+            $curl_response = shell_exec($command);
+
             $response = json_decode($curl_response);
-            $confirm_order = @$response[0];
-            $cancel_order = $response[1];
+            $response_data['some'] = $response;
+
+            LogHelper::saveLog('hi', $curl_response);
+            $confirm_order = @$response->total_delivered;
+            $cancel_order = @$response->total_cancelled;
             $total_order = $cancel_order + $confirm_order;
             $response_data['total_order'] = $total_order;
             $response_data['confirmed'] = $confirm_order;
             $response_data['cancel'] = $cancel_order;
             $response_data['success_rate'] = $total_order == 0 ? 'No order history found!' : ceil(($confirm_order / $total_order) * 100) . '%';
         } catch (\Throwable $th) {
+            $response_data['errrr'] = $th->getMessage();
             LogHelper::saveLog('steadfast froad check error', $th->getMessage());
             if ($response) {
                 LogHelper::saveLog('steadfast froad check error resposne', $response);

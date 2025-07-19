@@ -1,0 +1,16 @@
+curl 'https://steadfast.com.bd/user/frauds/check/01770989591' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -b '_fbp=fb.2.1735757997721.81655536481203583; _ga=GA1.3.1226391132.1735757998; _gid=GA1.3.2089489048.1752947621; _ga_B2HHRLS251=GS2.3.s1752947621$o9$g1$t1752947624$j57$l0$h0; cf_clearance=IFqyfGdV000b8CexBG2Rcvue_jW0EE2BKT_c1AYq1QE-1752947630-1.2.1.1-WePXKNkACMMOuFZeyEQhW0loCdnqX6UxR5E71f1GUdzySfbUSYkYHWv83haY2OUdKETkczZqt9stqvYzJHDX2IIHe1cT0i21Zpx0d.srxaehbq_kgeFUkZKSdyJQrRyTZQsk62VSyhQWAWgN9X_l1clVVIrg8tEWtBsCBk.KWJ204ujcZoQzTOqgGyhERCH_KpysqrnfPeodTbRSF7OKbro4Jy4twF1m8EClZhNKkk0; remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6ImZKclk5ZHhtTzZPcU1KWVVSUzU3Z0E9PSIsInZhbHVlIjoiYWtxZDhzR2Y1dVM4Z2RpZUx2UjhDSW1XUFBnOTh1VXJNalJYbGQ3QndLalB3R3Y3VG5lWG9zakJzOFJCemczOUlHZmZXa3FCVkppWjdPRlJadW5vK3FMVkxJc2d3VEtTbW5XSTZSWXI3cFhmMGR5c3pTclJPREZGaytoallPdzhLSm5tdi9Xa2VyOU5tdzFZcUdtSUYrU095K0NlZGx2MmdDZXVINFhVeXd2SUhRREFmNkZ4elcrNWxXcVk4a3hpVWxhQ0pMZmh6YXB3THAwWjVGWWhSbjZGYURJcDI5cW9qSG54NkR3YnVXQT0iLCJtYWMiOiIzMjRlYjM2ZjIwMzg0NjhlNGRiMzI1MWVlZDUzZGUyNmRiMmEzMWQyZGNiNDMyMGVjMzI2NjJlZDQ4ZjU1OTgwIiwidGFnIjoiIn0%3D; XSRF-TOKEN=eyJpdiI6ImZBemthR3lFT0hjcy9HL3E5T3M2Rmc9PSIsInZhbHVlIjoiYkg3ck55V0VMLzYxa2VhZWhxYnl6a0xNaVFRU3VRVFhzeDJhZzVTc1doUGxzT1k4STVZUWF4cVU3a2RyOWJNeEs1bHlyTStyL0JQdlNudzB2d21JaEl4aW44eXFFYjF3bzd0L1QwbldDSmdvUnNyL2NUN2xCNGdMN2JrVUZVbkoiLCJtYWMiOiJiNzcwYzM0YTkyZTYxNTZiN2UzZTY0ZTM2OTc1YmQzYjMyMGM0NjNhYThmYzRiNzI5NGIzMzQxNGQ5MTFmMWM2IiwidGFnIjoiIn0%3D; steadfast_courier_session=eyJpdiI6ImtpRDdtMDlmdlE5SWF6Rmo1dkJUQWc9PSIsInZhbHVlIjoiZHUxZGI2b21JUytjbVZQSVE1ZnQ0ZC9iNkU1SlRtaGE0ZXpNT2xRckhsazRUMjAvWjVDZ3NFWDEzYkVpdDZrY0tlRmJRS3NwdjN5citDOGJ3MmFzVWFTaUo0Z0htdlZjeVBDUDA1aE8rTURKM1IrR2U1bEdRZ3JGVlJ1NjduK2MiLCJtYWMiOiI2NjAyMjg0N2Y0Mjg3Y2E0NTliODNhOTA1ZDBkMTMzMzQ4NDRkNzczNDFiZWUwMTM1MTE5ZjYwODUyNmQyMjA1IiwidGFnIjoiIn0%3D' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://steadfast.com.bd/user/frauds/check' \
+  -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36' \
+  -H 'x-requested-with: XMLHttpRequest' \
+  -H 'x-socket-id: 512503357.273197536' \
+  -H 'x-xsrf-token: eyJpdiI6ImZBemthR3lFT0hjcy9HL3E5T3M2Rmc9PSIsInZhbHVlIjoiYkg3ck55V0VMLzYxa2VhZWhxYnl6a0xNaVFRU3VRVFhzeDJhZzVTc1doUGxzT1k4STVZUWF4cVU3a2RyOWJNeEs1bHlyTStyL0JQdlNudzB2d21JaEl4aW44eXFFYjF3bzd0L1QwbldDSmdvUnNyL2NUN2xCNGdMN2JrVUZVbkoiLCJtYWMiOiJiNzcwYzM0YTkyZTYxNTZiN2UzZTY0ZTM2OTc1YmQzYjMyMGM0NjNhYThmYzRiNzI5NGIzMzQxNGQ5MTFmMWM2IiwidGFnIjoiIn0='

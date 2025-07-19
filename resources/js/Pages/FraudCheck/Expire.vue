@@ -24,6 +24,18 @@
                     <div>
                         <pre>{{ time_left }}</pre>
                     </div>
+
+                    <div>
+                        <div>Steadfast Curl Code</div>
+                        <Textarea
+                            v-model="curlForm.curl_text"
+                            class="w-full h-[400px]"
+                        />
+                        <div>
+                            <Button @click="saveCurl">Save</Button>
+                        </div>
+                    </div>
+                    
                 </div>
             </template>
         </Card>
@@ -42,13 +54,28 @@ defineOptions({
     name: "FraudCheck",
 });
 
+const props = defineProps({
+    steadfast_curl: String
+})
+
 const isLoading = ref(false);
+
+const curlText = ref(props.steadfast_curl || '')
 
 const time_left = ref();
 
 const form = useForm({
     phone: "",
 });
+
+const curlForm = useForm({
+    curl_text: props.steadfast_curl
+})
+
+const saveCurl = () => {
+    curlForm.post(route('frauds.saveSteadfastCurl'))
+}
+
 // 01752-360254
 
 const getExpire = async () => {

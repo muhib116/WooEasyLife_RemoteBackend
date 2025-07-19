@@ -7,10 +7,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AutoComplete: typeof import('primevue/autocomplete')['default']
     Badge: typeof import('primevue/badge')['default']
     Button: typeof import('primevue/button')['default']
-    Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
     Column: typeof import('primevue/column')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
@@ -28,7 +26,6 @@ declare module 'vue' {
     Popover: typeof import('primevue/popover')['default']
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
     RadioButton: typeof import('primevue/radiobutton')['default']
-    Select: typeof import('primevue/select')['default']
     Skeleton: typeof import('primevue/skeleton')['default']
     Textarea: typeof import('primevue/textarea')['default']
     Toast: typeof import('primevue/toast')['default']

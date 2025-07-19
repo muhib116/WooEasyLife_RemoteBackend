@@ -61,7 +61,7 @@
                 </div>
             </template>
         </Card>
-        <div>
+        <div v-if="showClick">
             <Link :href="route('frauds.expire')">Click</Link>
         </div>
     </AuthenticatedLayout>
@@ -71,7 +71,7 @@
 import { AuthenticatedLayout } from "@/layouts";
 import { useForm, Link } from "@inertiajs/vue3";
 import SecurityOn from "@/images/security_on.svg";
-import { ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import axios from "axios";
 import { find } from "lodash";
 
@@ -81,6 +81,36 @@ defineOptions({
 
 const isLoading = ref(false);
 const response = ref();
+
+const showClick = ref(false);
+let clickCount = 0;
+let timer: ReturnType<typeof setTimeout> | null = null;
+
+function handleWindowClick() {
+    clickCount++;
+
+    if (timer) clearTimeout(timer);
+
+    timer = setTimeout(() => {
+        clickCount = 0;
+    }, 200); // 1 second window
+
+    if (clickCount >= 6) {
+        showClick.value = true;
+        clickCount = 0; // reset after triggering
+        clearTimeout(timer);
+        timer = null;
+    }
+}
+
+onMounted(() => {
+    window.addEventListener("click", handleWindowClick);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener("click", handleWindowClick);
+    if (timer) clearTimeout(timer);
+});
 
 const form = useForm({
     phone: "",
