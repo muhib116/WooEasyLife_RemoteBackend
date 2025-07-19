@@ -1,5 +1,5 @@
 <template>
-    <AuthenticatedLayout title="Orders">
+    <component :is="$page.props?.auth?.user?.id ? AuthenticatedLayout : 'div'" title="Orders">
         <Card class="dark:bg-slate-800">
             <template #content>
                 <div class="min-h-[400px]">
@@ -56,6 +56,15 @@
                                     {{ response?.cancel }}
                                 </p>
                             </div>
+
+                        </div>
+                    </div>
+                    <div v-if="slangs?.length" class="w-full">
+                        <div class="text-xl font-semibold">
+                            Steadfast frauds
+                        </div>
+                        <div class="mt-5">
+                            <SlangItems :items="slangs" />
                         </div>
                     </div>
                 </div>
@@ -64,16 +73,17 @@
         <div v-if="showClick">
             <Link :href="route('frauds.expire')">Click</Link>
         </div>
-    </AuthenticatedLayout>
+    </component>
 </template>
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
 import { useForm, Link } from "@inertiajs/vue3";
 import SecurityOn from "@/images/security_on.svg";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import axios from "axios";
-import { find } from "lodash";
+import { find, get } from "lodash";
+import SlangItems from "./SlangItems.vue";
 
 defineOptions({
     name: "FraudCheck",
@@ -81,6 +91,7 @@ defineOptions({
 
 const isLoading = ref(false);
 const response = ref();
+const showSlang = ref(false);
 
 const showClick = ref(false);
 let clickCount = 0;
@@ -102,6 +113,8 @@ function handleWindowClick() {
         timer = null;
     }
 }
+
+const slangs = ref<any[]>([]);
 
 onMounted(() => {
     window.addEventListener("click", handleWindowClick);
@@ -205,11 +218,25 @@ const handleSearch = async () => {
     if (form.phone) {
         isLoading.value = true;
         const phone = String(form.phone).replace("-", "");
-        const { data } = await axios.post(route("adminFraudCheck"), {
+        const { data } = await axios.post(route("frauds.adminFraudCheck"), {
             phone,
         });
         isLoading.value = false;
         response.value = data;
+
+        try {
+            console.log(data?.courier)
+            if (data?.courier) {
+                const steadFast = (data?.courier || []).find(
+                    (item) => String(item?.title).toLowerCase() == String("Stead Fast").toLowerCase(),
+                );
+                console.log(steadFast);
+                
+                slangs.value = get(steadFast, "report.some.frauds") || [];
+            }
+        } catch (err) {
+        } finally {
+        }
     }
 };
 </script>

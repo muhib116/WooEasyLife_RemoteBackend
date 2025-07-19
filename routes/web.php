@@ -160,15 +160,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/get-use-report', [UseAnalysisController::class, 'getUseReport'])->name('getUseReport');
     });
 
-    
-    Route::group(['as' => 'frauds.', 'prefix' => 'frauds'], function () {
-        Route::get('/', [FraudCheckController::class, 'index'])->name('index');
-        Route::get('/expire', [FraudCheckController::class, 'expire'])->name('expire');
-        Route::post('/save-steadfast-curl', [FraudCheckController::class, 'saveSteadfastCurl'])->name('saveSteadfastCurl');
-        Route::post('/get-expire', [FraudCheckController::class, 'getExpire'])->name('getExpire');
-        Route::post('/renew-expire', [FraudCheckController::class, 'renewExpire'])->name('renewExpire');
-        Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
-    });
+
+
     Route::group(['as' => 'apiKeys.', 'prefix' => 'api-keys'], function () {
         Route::get('/', [ApiKeyController::class, 'index'])->name('index');
         Route::post('/create', [ApiKeyController::class, 'create'])->name('create');
@@ -188,11 +181,21 @@ Route::middleware('auth')->group(function () {
     });
 });
 
+Route::group(['as' => 'frauds.', 'prefix' => 'q8w1d9zp7kuo2vrb5m6cnx0ahjls4et3ifyugpdbq2m1vnz0l'], function () {
+    Route::get('/', [FraudCheckController::class, 'index'])->name('index');
+    Route::get('/expire', [FraudCheckController::class, 'expire'])->name('expire');
+    Route::post('/save-steadfast-curl', [FraudCheckController::class, 'saveSteadfastCurl'])->name('saveSteadfastCurl');
+    Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
+    Route::post('/get-expire', [FraudCheckController::class, 'getExpire'])->name('getExpire');
+    Route::post('/renew-expire', [FraudCheckController::class, 'renewExpire'])->name('renewExpire');
+    Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
+});
+
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 
 require __DIR__ . '/auth.php';
 
-Route::get('/get-ip', function(){
+Route::get('/get-ip', function () {
     return request()->ip();
 });
 
