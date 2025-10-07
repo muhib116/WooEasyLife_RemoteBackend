@@ -7,6 +7,12 @@
 
                     <div class="flex items-center gap-5">
                         <Button
+                            label="Check Schedule"
+                            icon="pi pi-refresh"
+                            @click="fetchSchedule"
+                            :loading="isLoadingSchedule"
+                        />
+                        <Button
                             v-if="im_super"
                             label="Clear"
                             severity="danger"
@@ -20,6 +26,7 @@
                             @click="fetchLogContent"
                             :loading="isLoading"
                         />
+                        
                         <Dropdown
                             v-model="selectedLogFile"
                             :options="logFiles"
@@ -30,6 +37,9 @@
                             @change="fetchLogContent"
                         />
                     </div>
+                </div>
+                <div>
+                    {{ scheduleText }}
                 </div>
             </template>
             <template #content>
@@ -155,6 +165,8 @@ const selectedItem = ref();
 const op = ref();
 
 const isLoading = ref(false);
+const scheduleText = ref('')
+const isLoadingSchedule = ref(false);
 const logFiles = ref<{ name: string; path: string }[]>([]);
 const selectedLogFile = ref<string | null>(null);
 const logs = ref<any[]>([]);
@@ -197,6 +209,17 @@ const fetchLogFiles = async () => {
         console.error("Error fetching log files:", error);
     }
     isLoading.value = false;
+};
+const fetchSchedule = async () => {
+    try {
+        isLoadingSchedule.value = true
+        const { data } = await axios.get(route("logs.schedule"));
+        scheduleText.value = data
+    } catch (error) {
+        console.error("Error fetching log files:", error);
+    } finally {
+        isLoadingSchedule.value = false
+    }
 };
 
 const fetchLogContent = async () => {

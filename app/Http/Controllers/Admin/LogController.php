@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\LogHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 
@@ -17,6 +18,13 @@ class LogController extends Controller
         $im_super = $request->im_super;
 
         return Inertia::render('Logs/Index', compact('im_super'));
+    }
+
+    public function schedule()
+    {
+        Artisan::call('schedule:list');
+        $output = Artisan::output();
+        return $output;
     }
 
     public function clearAllLog()
