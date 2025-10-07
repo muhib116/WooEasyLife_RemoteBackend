@@ -53,9 +53,11 @@ if (!function_exists('saveLog')) {
     }
 }
 
-function generateKey($prefix = 'SF')
-{
-    return $prefix . time();
+if (!function_exists('generateKey')) {
+    function generateKey($prefix = 'SF')
+    {
+        return $prefix . time();
+    }
 }
 
 if (!function_exists('getLog')) {
@@ -69,26 +71,30 @@ if (!function_exists('getLog')) {
         }
     }
 }
-
-function decodeToken($encryptedToken)
-{
-    try {
-        return Crypt::decryptString($encryptedToken);
-    } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-        // Handle decryption error (e.g., log the error, throw an exception, etc.)
-        return null;
+if (!function_exists('decodeToken')) {
+    function decodeToken($encryptedToken)
+    {
+        try {
+            return Crypt::decryptString($encryptedToken);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            // Handle decryption error (e.g., log the error, throw an exception, etc.)
+            return null;
+        }
+    }
+}
+if (!function_exists('encodeToken')) {
+    function encodeToken($token)
+    {
+        return Crypt::encryptString($token);
     }
 }
 
-function encodeToken($token)
-{
-    return Crypt::encryptString($token);
-}
-
-function generateUniqueApiKey()
-{
-    $randomString = str()->random(16);
-    $timestamp = microtime(true);
-    $hash = hash_hmac('md5', $randomString . $timestamp, config('app.key'));
-    return $hash;
+if (!function_exists('generateUniqueApiKey')) {
+    function generateUniqueApiKey()
+    {
+        $randomString = str()->random(16);
+        $timestamp = microtime(true);
+        $hash = hash_hmac('md5', $randomString . $timestamp, config('app.key'));
+        return $hash;
+    }
 }

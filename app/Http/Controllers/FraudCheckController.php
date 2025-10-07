@@ -304,8 +304,8 @@ class FraudCheckController extends Controller
             // curl_close($curl);
             $curl_response = "{}";
             $curl_string = preg_replace(
-                '#https://steadfast\.com\.bd/user/frauds/check/\d+#',
-                "https://steadfast.com.bd/user/frauds/check/" . $phone,
+                '#https://(?:www\.)?steadfast\.com\.bd/user/frauds/check/\d+#',
+                "https://www.steadfast.com.bd/user/frauds/check/" . $phone,
                 $curl_string
             );
             // 3️⃣ Remove unwanted cookies from -b argument
