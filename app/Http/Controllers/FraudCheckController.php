@@ -219,7 +219,6 @@ class FraudCheckController extends Controller
             $pathao_response = PathaoCourier::GET_USER_SUCCESS_RATE($request);
             // $pAuth = PathaoAuth::getNewAccessToken()
             // $pAuth = new PathaoAuth;
-            // getNewAccesstoken
             // DB::table($this->table_name)
             //         ->where('secret_token', '=', $this->pathao_token_data->secret_token)
             //         ->update($response);
