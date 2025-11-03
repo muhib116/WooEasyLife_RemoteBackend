@@ -175,19 +175,19 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
         $admin_user = Auth::user();
-        if(@$admin_user->role == 'admin') {
-            if($request->is_test) {
+        if (@$admin_user->role == 'admin') {
+            if ($request->is_test) {
                 $data['is_test'] = $request->is_test;
             }
         }
         if ($request->id) {
             $user = User::findOrFail($request->id);
-            if(@$user->role == 'admin') {
+            if (@$user->role == 'admin') {
                 return back()->with('error', 'Admin User cannot be update.');
             }
             $user->update($data);
         } else {
-            if(@$data['role'] == 'admin') {
+            if (@$data['role'] == 'admin') {
                 return back()->with('error', 'Admin User cannot be create.');
             }
             User::create($data);
@@ -228,6 +228,34 @@ class UserController extends Controller
         return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
     }
 
+    public function packagesOrders($userId)
+    {
+        // $pkg = UserPackage::where('user_id', $userId)->get();
+
+        $history = PackageUseHistory::where([
+            'user_id' => $userId,
+        ])
+        ->whereDate('created_at', now())
+        ->orderBy('created_at', 'desc')
+        ->get();
+        $modifiedHistory = collect($history)->map(function ($record) {
+            // return $record->use_details;
+            $useDetails = collect($record->use_details);
+            $record->use_details = $useDetails->map(function ($item) {
+                try {
+                    if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
+                        $item['cart_contents'] = unserialize($item['cart_contents']);
+                    }
+                } catch (\Throwable $th) {
+                }
+                return $item;
+            });
+
+            return $record;
+        });
+
+        return Inertia::render('Users/PackageOrders', compact('modifiedHistory'));
+    }
     public function useDetails($userId, $packageId)
     {
         $userPackage = UserPackage::find($packageId);
