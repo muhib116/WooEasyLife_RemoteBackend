@@ -7,20 +7,39 @@
             <template #content>
                 <div class="min-h-[400px]">
                     <div class="flex gap-3">
-                        <div class="relative">
+                        <div class="relative min-w-[300px]">
                             <div class="absolute -top-8">End Date</div>
-                            <DatePicker v-model="form.start_date" />
+                            <DatePicker 
+                                class="w-full"
+                                v-model="form.start_date" 
+                                showTime
+                                hourFormat="12"
+                            />
                         </div>
-                        <div class="relative">
+                        <div class="relative min-w-[300px]">
                             <div class="absolute -top-8">End Date</div>
-                            <DatePicker v-model="form.end_date" />
+                            <DatePicker 
+                                class="w-full"
+                                v-model="form.end_date" 
+                                showTime
+                                hourFormat="12"
+                            />
                         </div>
+                        <Button @click="() => {
+                            form.start_date = null
+                            form.end_date = null
+                            handleSubmit()
+                        }">Clear</Button>
+                        <Button @click="handleSubmit" severity="secondary">Submit</Button>
                     </div>
 <pre>
 {{ overview }}
 </pre>
                     <div v-for="(item, index) in modifiedHistory">
-                        <PackageOrderDetails :saleInfo="showSales(item)" />
+                        <PackageOrderDetails
+                            :orderItem="item"
+                            :saleInfo="showSales(item)"
+                        />
                     </div>
                 </div>
             </template>
@@ -37,6 +56,7 @@ import PackageForm from "./fragments/PackageForm.vue";
 import UseDetails from "./fragments/UseDetails.vue";
 import { isString, isArray, set, sumBy, get, each } from "lodash";
 import { computed, ref } from "vue";
+import { useForm } from "@inertiajs/vue3";
 
 defineOptions({
     name: "PackagesOrders",
@@ -44,12 +64,19 @@ defineOptions({
 
 const props = defineProps<{
     modifiedHistory: any[];
+    userId: any
+    end_date: any,
+    start_date: any
 }>();
 
-const form = ref({
-    start_date: null,
-    end_date: null,
+const form = useForm({
+    start_date: props.start_date,
+    end_date: props.end_date,
 })
+
+const handleSubmit = () => {
+    form.get(route('users.packagesOrders', props.userId))
+}
 
 const overview = computed(() => {
     let total_order_count = props.modifiedHistory.length

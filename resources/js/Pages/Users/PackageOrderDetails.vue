@@ -31,6 +31,11 @@
                 </template>
             </Column>
             <Column field="name" header="Name"></Column>
+            <Column header="Date">
+                <template #body>
+                    {{ orderItem?.create_time }}
+                </template>
+            </Column>
             <Column field="quantity" header="Quantity"></Column>
             <Column field="price" header="Price"></Column>
             <Column field="total_price" header="Total Price"></Column>
@@ -50,6 +55,7 @@ defineOptions({
 });
 
 const props = defineProps<{
+    orderItem: any
     saleInfo: any[];
 }>();
 </script>

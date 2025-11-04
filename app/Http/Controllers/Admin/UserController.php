@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\UserPackage;
 use App\Traits\Transaction;
 use App\Traits\Util;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -228,19 +229,31 @@ class UserController extends Controller
         return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
     }
 
-    public function packagesOrders($userId)
+    public function packagesOrders(Request $request, $userId)
     {
         // $pkg = UserPackage::where('user_id', $userId)->get();
 
-        $history = PackageUseHistory::where([
+        $query = PackageUseHistory::where([
             'user_id' => $userId,
-        ])
-        ->whereDate('created_at', now())
-        ->orderBy('created_at', 'desc')
-        ->get();
+        ]);
+        $start_date = $request->start_date;
+        $end_date = $request->end_date;
+
+        if ($start_date && $end_date) {
+            $query->whereBetween('created_at', [$start_date, $end_date]);
+        } elseif ($start_date) {
+            $query->where('created_at', '>=', $start_date);
+        } elseif ($end_date) {
+            $query->where('created_at', '<=', $end_date);
+        } else {
+            $query->whereDate('created_at', now());
+        }
+
+        $history = $query->orderBy('created_at', 'desc')->get();
         $modifiedHistory = collect($history)->map(function ($record) {
-            // return $record->use_details;
             $useDetails = collect($record->use_details);
+            $record->create_time = Carbon::parse($record->created_at)
+                ->format('j M Y g:i a');
             $record->use_details = $useDetails->map(function ($item) {
                 try {
                     if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
@@ -253,8 +266,15 @@ class UserController extends Controller
 
             return $record;
         });
-
-        return Inertia::render('Users/PackageOrders', compact('modifiedHistory'));
+        if($start_date) {
+            $start_date = Carbon::parse($start_date)
+                ->format('m/d/Y h:i a');
+        }
+        if($end_date) {
+            $end_date = Carbon::parse($end_date)
+                ->format('m/d/Y h:i a');
+        }
+        return Inertia::render('Users/PackageOrders', compact('modifiedHistory', 'userId', 'start_date', 'end_date'));
     }
     public function useDetails($userId, $packageId)
     {
