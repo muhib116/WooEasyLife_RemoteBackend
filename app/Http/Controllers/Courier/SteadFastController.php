@@ -94,7 +94,8 @@ class SteadFastController extends Controller
                 }
                 $response_data[$id] = $status;
             }
-        } else if (count($invoiceIds)) {
+        }
+        if (count($invoiceIds)) {
             foreach ($invoiceIds as $id) {
                 $response = Http::withHeaders([
                     'Api-Key' => $config->api_key,
