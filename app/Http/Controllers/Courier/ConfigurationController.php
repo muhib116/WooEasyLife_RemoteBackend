@@ -25,11 +25,11 @@ class ConfigurationController extends Controller
                 'logo' => asset('images/steadfast.png')
                 // "logo": "http://localhost:8000/images/steadfast.png",
             ],
-            // [
-            //     'slug' => 'pathao',
-            //     'title' => 'Pathao',
-            //     'logo' => asset('images/pathao.png')
-            // ],
+            [
+                'slug' => 'pathao',
+                'title' => 'Pathao',
+                'logo' => asset('images/pathao.png')
+            ],
             // [
             //     'slug' => 'paperfly',
             //     'title' => 'Paperfly',
