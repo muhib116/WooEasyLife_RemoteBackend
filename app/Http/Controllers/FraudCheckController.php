@@ -268,37 +268,7 @@ class FraudCheckController extends Controller
             // Extract the token value
             $xsrfToken = $tokenPart[1];
 
-            $curl_string = file_get_contents(__DIR__ . '/curlcode.txt');
-
-            // $curl = curl_init();
-            // curl_setopt_array($curl, [
-            //     CURLOPT_URL => "https://steadfast.com.bd/user/frauds/check/" . $phone,
-            //     CURLOPT_RETURNTRANSFER => true,
-            //     CURLOPT_ENCODING => "",
-            //     CURLOPT_MAXREDIRS => 10,
-            //     CURLOPT_TIMEOUT => 30,
-            //     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            //     CURLOPT_CUSTOMREQUEST => "GET",
-            //     CURLOPT_HTTPHEADER => [
-            //         "accept: application/json, text/plain, */*",
-            //         "accept-language: en-US,en;q=0.9",
-            //         "cookie: remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=eyJpdiI6ImZKclk5ZHhtTzZPcU1KWVVSUzU3Z0E9PSIsInZhbHVlIjoiYWtxZDhzR2Y1dVM4Z2RpZUx2UjhDSW1XUFBnOTh1VXJNalJYbGQ3QndLalB3R3Y3VG5lWG9zakJzOFJCemczOUlHZmZXa3FCVkppWjdPRlJadW5vK3FMVkxJc2d3VEtTbW5XSTZSWXI3cFhmMGR5c3pTclJPREZGaytoallPdzhLSm5tdi9Xa2VyOU5tdzFZcUdtSUYrU095K0NlZGx2MmdDZXVINFhVeXd2SUhRREFmNkZ4elcrNWxXcVk4a3hpVWxhQ0pMZmh6YXB3THAwWjVGWWhSbjZGYURJcDI5cW9qSG54NkR3YnVXQT0iLCJtYWMiOiIzMjRlYjM2ZjIwMzg0NjhlNGRiMzI1MWVlZDUzZGUyNmRiMmEzMWQyZGNiNDMyMGVjMzI2NjJlZDQ4ZjU1OTgwIiwidGFnIjoiIn0%3D; XSRF-TOKEN=" . urlencode($xsrfToken) . "; steadfast_merchant_session=eyJpdiI6ImtpRDdtMDlmdlE5SWF6Rmo1dkJUQWc9PSIsInZhbHVlIjoiZHUxZGI2b21JUytjbVZQSVE1ZnQ0ZC9iNkU1SlRtaGE0ZXpNT2xRckhsazRUMjAvWjVDZ3NFWDEzYkVpdDZrY0tlRmJRS3NwdjN5citDOGJ3MmFzVWFTaUo0Z0htdlZjeVBDUDA1aE8rTURKM1IrR2U1bEdRZ3JGVlJ1NjduK2MiLCJtYWMiOiI2NjAyMjg0N2Y0Mjg3Y2E0NTliODNhOTA1ZDBkMTMzMzQ4NDRkNzczNDFiZWUwMTM1MTE5ZjYwODUyNmQyMjA1IiwidGFnIjoiIn0%3D",
-            //         "priority: u=1, i",
-            //         "referer: https://steadfast.com.bd/user/frauds/check",
-            //         'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
-            //         "sec-ch-ua-mobile: ?0",
-            //         "sec-ch-ua-platform: \"macOS\"",
-            //         "sec-fetch-dest: empty",
-            //         "sec-fetch-mode: cors",
-            //         "sec-fetch-site: same-origin",
-            //         "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-            //         "x-requested-with: XMLHttpRequest",
-            //         "x-xsrf-token: " . $xsrfToken
-            //     ],
-            // ]);
-
-            // $curl_response = curl_exec($curl);
-            // $err = curl_error($curl);
+            $curl_string = file_get_contents(__DIR__ . '/curlcode-2.txt');
 
             // curl_close($curl);
             $curl_response = "{}";
