@@ -268,7 +268,7 @@ class FraudCheckController extends Controller
             // Extract the token value
             $xsrfToken = $tokenPart[1];
 
-            $curl_string = file_get_contents(__DIR__ . '/curlcode-2.txt');
+            $curl_string = file_get_contents(__DIR__ . '/curlcode.txt');
 
             // curl_close($curl);
             $curl_response = "{}";
