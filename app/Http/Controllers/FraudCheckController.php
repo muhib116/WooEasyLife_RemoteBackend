@@ -226,8 +226,8 @@ class FraudCheckController extends Controller
             // $pathao_data['time_left'] = PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
             // GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT
 
-            if (!$pathao_response['data']['is_new']) {
-                $data = $pathao_response['data'];
+            if (!Arr::get($pathao_response, 'data.is_new', false)) {
+                $data = Arr::get($pathao_response, 'data', []);
                 $pathao_data['success_rate'] = 'No order history found!';
                 if (isset($data['customer'])) {
                     $customer = $data['customer'];
