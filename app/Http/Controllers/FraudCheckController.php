@@ -144,13 +144,7 @@ class FraudCheckController extends Controller
     }
 
     public function check(Request $request)
-    {
-        $white_listed_domain = ['dailycare.space', 'chainaecom.com'];
-        $domain = parse_url($request->getHost(), PHP_URL_HOST);
-        if (!in_array($domain, $white_listed_domain)) {
-            return response()->json(['message' => 'Unauthorized domain'], 403);
-        }
-        
+    {        
         $phone = $request->phone;
         if (is_array(@$request->data)) {
             return $this->successResponse($this->checkMultiple($request->data));
