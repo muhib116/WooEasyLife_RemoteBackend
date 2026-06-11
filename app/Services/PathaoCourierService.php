@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CourierConfiguration;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class PathaoCourierService
@@ -98,6 +99,14 @@ class PathaoCourierService
 
     public function getAccessToken(CourierConfiguration $config): ?string
     {
+        if (!$config->exists) {
+            $cachedToken = $this->getCachedAccessToken($config);
+
+            if ($cachedToken) {
+                return $cachedToken;
+            }
+        }
+
         $settings = $this->normalizeSettings($config->settings);
         $expiresAt = (int) ($settings['expires_at'] ?? 0);
 
@@ -226,7 +235,7 @@ class PathaoCourierService
 
                 $lastPage = (int) ($json['data']['last_page'] ?? 1);
                 $page++;
-            } while ($page <= $lastPage);
+            } while ($page <= $lastPage && $page <= 5);
         } catch (\Throwable $th) {
             return $stores;
         }
@@ -361,26 +370,88 @@ class PathaoCourierService
             return [];
         }
 
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $token,
-                'Accept' => 'application/json',
-            ])->get($this->getBaseUrl() . $path);
+        $url = $this->getBaseUrl() . $path;
 
-            if (!$response->successful()) {
-                return [];
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            try {
+                $response = Http::timeout(25)
+                    ->withHeaders([
+                        'Authorization' => 'Bearer ' . $token,
+                        'Accept' => 'application/json',
+                    ])->get($url);
+
+                if (!$response->successful()) {
+                    if ($attempt < 3) {
+                        usleep(250000 * $attempt);
+                        continue;
+                    }
+
+                    return [];
+                }
+
+                $json = $response->json();
+
+                if (!is_array($json)) {
+                    return [];
+                }
+
+                $list = $this->extractPathaoList($json);
+
+                if ($list !== [] || (int) ($json['code'] ?? 0) === 200) {
+                    return $list;
+                }
+
+                if ($attempt < 3) {
+                    usleep(250000 * $attempt);
+                }
+            } catch (\Throwable $th) {
+                if ($attempt >= 3) {
+                    return [];
+                }
+
+                usleep(250000 * $attempt);
             }
-
-            $json = $response->json();
-
-            if (!is_array($json)) {
-                return [];
-            }
-
-            return $this->extractPathaoList($json);
-        } catch (\Throwable $th) {
-            return [];
         }
+
+        return [];
+    }
+
+    private function tokenCacheKey(CourierConfiguration $config): string
+    {
+        $settings = $this->normalizeSettings($config->settings);
+
+        return 'pathao_token:' . hash('sha256', implode('|', [
+            (string) $config->api_key,
+            (string) ($settings['username'] ?? ''),
+            (string) ($settings['environment'] ?? 'sandbox'),
+        ]));
+    }
+
+    private function getCachedAccessToken(CourierConfiguration $config): ?string
+    {
+        $cached = Cache::get($this->tokenCacheKey($config));
+
+        if (!is_array($cached) || empty($cached['access_token'])) {
+            return null;
+        }
+
+        if ((int) ($cached['expires_at'] ?? 0) <= time() + 120) {
+            return null;
+        }
+
+        return (string) $cached['access_token'];
+    }
+
+    private function cacheAccessToken(CourierConfiguration $config, array $settings): void
+    {
+        $expiresAt = (int) ($settings['expires_at'] ?? 0);
+        $ttlSeconds = max(300, $expiresAt - time());
+
+        Cache::put($this->tokenCacheKey($config), [
+            'access_token' => $settings['access_token'] ?? null,
+            'refresh_token' => $settings['refresh_token'] ?? null,
+            'expires_at' => $expiresAt,
+        ], now()->addSeconds($ttlSeconds));
     }
 
     private function extractPathaoList(array $json): array
@@ -436,6 +507,8 @@ class PathaoCourierService
 
             if ($config->exists) {
                 $config->save();
+            } else {
+                $this->cacheAccessToken($config, $settings);
             }
 
             return $json['access_token'];
