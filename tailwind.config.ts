@@ -102,10 +102,12 @@ export default {
                     'border-color': theme('colors.gray.800'),
                 },
                 '.box-bg': {
-                    'background-color': theme('colors.white')
+                    'background-color': theme('colors.white'),
+                    'box-shadow': '0 1px 2px 0 rgb(0 0 0 / 0.04)',
                 },
                 '.dark .box-bg': {
-                    'background-color': theme('colors.slate.800')
+                    'background-color': theme('colors.slate.800'),
+                    'box-shadow': '0 1px 2px 0 rgb(0 0 0 / 0.2)',
                 },
                 '.box-color': {
                     'color': theme('colors.black')

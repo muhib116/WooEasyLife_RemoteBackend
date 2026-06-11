@@ -45,6 +45,10 @@ class ValidateTokenDomain
                 ]);
             }
 
+            if ($accessToken->expires_at && now()->greaterThan($accessToken->expires_at)) {
+                return $this->errorResponse('Expired', 401);
+            }
+
             $host = $this->getDomainFromUrl($accessToken->domain);
             if ($frontendDomain !== $host) {
                 return $this->errorResponse('Invalid domain', 401);

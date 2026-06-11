@@ -58,7 +58,7 @@ class RedXController extends Controller
         $config = $this->getConfig();
 
         if (!$config) {
-            return $this->errorResponse('The SteadFast settings are not configured properly.');
+            return $this->errorResponse('The RedX settings are not configured properly.');
         }
 
         $validator = Validator::make($request->all(), [
@@ -118,32 +118,44 @@ class RedXController extends Controller
 
 
         $trackId = $request->track_id;
-        $link = $this->baseUrl . '/v1.0.0-beta/parcel/track/';
+        $baseTrackUrl = $this->baseUrl . '/v1.0.0-beta/parcel/track/';
         $parcels = [];
 
         if (is_array($trackId)) {
-            try {
-                foreach ($trackId as $id) {
-                    $link = $link . $id;
-                    $response = Http::withHeaders($this->token)->get($link);
-                    $response = $response->json();
-                    $parcels[$id] = @$response['tracking'] ?? [];
+            foreach ($trackId as $id) {
+                try {
+                    $response = Http::withHeaders($this->token)->get($baseTrackUrl . $id);
+                    $parcels[$id] = @$response->json()['tracking'] ?? [];
+                } catch (\Throwable $th) {
+                    $parcels[$id] = [];
                 }
-            } catch (\Throwable $th) {
             }
         } else {
             try {
-                $link = $link . $trackId;
-                $response = Http::withHeaders($this->token)->get($link);
-                $response = $response->json();
-                $parcels[$trackId] = @$response['tracking'] ?? [];
-                // 20A316MOG0DI
+                $response = Http::withHeaders($this->token)->get($baseTrackUrl . $trackId);
+                $parcels[$trackId] = @$response->json()['tracking'] ?? [];
             } catch (\Throwable $th) {
                 return $this->errorResponse('An issue occurred while processing the order.');
             }
         }
+
         return $this->successResponse($parcels);
         // https://sandbox.redx.com.bd/v1.0.0-beta/parcel/info/21A427TU4BN3R
+    }
+
+    public function checkBalance()
+    {
+        $config = $this->getConfig();
+
+        if (!$config) {
+            return $this->errorResponse('The RedX settings are not configured properly.');
+        }
+
+        return $this->successResponse([
+            'balance' => null,
+            'balance_available' => false,
+            'message' => 'RedX does not expose a merchant balance API.',
+        ]);
     }
 
     public function createBulkOrder(Request $request)

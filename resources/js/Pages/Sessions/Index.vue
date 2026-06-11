@@ -1,158 +1,151 @@
 <template>
-    <AuthenticatedLayout title="Log Viewer">
-        <Card class="dark:bg-slate-900 dark:text-white">
-            <template #title>
-                <div class="flex items-center justify-between gap-5">
-                    Sessions
+    <AuthenticatedLayout title="Sessions">
+        <div class="space-y-5">
+            <PageHeader
+                title="Active Sessions"
+                description="Monitor and manage database-stored user sessions"
+                icon="PhDevices"
+                icon-bg-class="bg-violet-50 dark:bg-violet-500/15"
+                icon-class="text-violet-600 dark:text-violet-400"
+            >
+                <template #actions>
+                    <Button
+                        label="Clear Expired"
+                        icon="pi pi-clock"
+                        severity="warn"
+                        outlined
+                        size="small"
+                        :loading="clearing"
+                        @click="deleteSession"
+                    />
+                    <Button
+                        label="Clear All"
+                        icon="pi pi-trash"
+                        severity="danger"
+                        size="small"
+                        :loading="clearing"
+                        @click="deleteAllSession"
+                    />
+                    <Button
+                        label="Reload"
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        outlined
+                        size="small"
+                        :loading="isLoading"
+                        @click="getSessions"
+                    />
+                </template>
+            </PageHeader>
 
-                    <div class="flex items-center gap-5">
-                        <Button
-                            label="Delete All Session"
-                            severity="danger"
-                            size="small"
-                            icon="pi pi-times-circle"
-                            @click="deleteAllSession"
-                            :loading="clearing"
-                        />
-                        <Button
-                            label="Delete expired session"
-                            severity="warn"
-                            size="small"
-                            icon="pi pi-times-circle"
-                            @click="deleteSession"
-                            :loading="clearing"
-                        />
-                        <Button
-                            label="Reload"
-                            size="small"
-                            icon="pi pi-refresh"
-                            @click="getSessions"
-                            :loading="isLoading"
-                        />
-                    </div>
-                </div>
-            </template>
-            <template #content>
-                <!-- <div></div> -->
-                <div class="min-h-[400px]">
-                    <!-- <DataTable
-                        v-if="isLoading"
-                        :value="new Array(4)"
-                        tableStyle="min-width: 50rem;"
-                    >
-                        <Column header="Timestamp">
-                            <template #body>
-                                <Skeleton></Skeleton>
-                            </template>
-                        </Column>
-                        <Column header="Title">
-                            <template #body>
-                                <Skeleton></Skeleton>
-                            </template>
-                        </Column>
-                        <Column header="Message">
-                            <template #body>
-                                <Skeleton></Skeleton>
-                            </template>
-                        </Column>
-                    </DataTable> -->
-                    <DataTable
-                        v-if="sessions.length"
-                        :value="sessions"
-                        :rows="10"
-                        paginator
-                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                        :rowsPerPageOptions="[10, 25, 50, 100, 200]"
-                        currentPageReportTemplate="{first} to {last} of {totalRecords} Sessions &nbsp;"
-                        tableStyle="min-width: 50rem;"
-                    >
-                        <Column header="SL" headerStyle="width:3rem">
-                            <template #body="slotProps">
-                                {{ slotProps.index + 1 }}
-                            </template>
-                        </Column>
-                        <Column field="id" header="Id" />
-                        <Column field="user_id" header="User Id" />
-                        <Column field="ip_address" header="Ip Address" />
-                        <Column field="user_agent" header="User Agent" />
-                        <!-- <Column field="payload" header="Payload" /> -->
-                        <Column field="last_activity" header="Last Activity">
-                            <template #body="{ data }">
-                                {{ getTime(data.last_activity) }}
-                            </template>
-                        </Column>
-                        <Column header="Action">
-                            <template #body="{ data }">
-                                <Button
-                                    v-tooltip.left="'Show payload information'"
-                                    @click="selectedItem = data"
-                                    size="small"
-                                    icon="pi pi-eye"
-                                />
-                            </template>
-                        </Column>
-                        <!-- id
-                        user_id
-                        ip_address
-                        user_agent
-                        payload
-                        last_activity -->
-                    </DataTable>
-                    <p v-else class="text-gray-400">No logs available.</p>
-                </div>
-            </template>
-        </Card>
+            <StatCard
+                title="Active Sessions"
+                :value="sessions.length"
+                icon="PhMonitor"
+                subtitle="Currently stored in database"
+            />
+
+            <PageCard
+                title="Session Records"
+                :description="`${sessions.length} session${sessions.length === 1 ? '' : 's'}`"
+                no-padding
+            >
+                <DataTable
+                    v-if="isLoading"
+                    :value="new Array(5)"
+                    class="professional-table text-sm"
+                >
+                    <Column header="SL"><template #body><Skeleton /></template></Column>
+                    <Column header="User"><template #body><Skeleton /></template></Column>
+                    <Column header="IP"><template #body><Skeleton /></template></Column>
+                </DataTable>
+
+                <DataTable
+                    v-else-if="sessions.length"
+                    :value="sessions"
+                    :rows="15"
+                    paginator
+                    class="professional-table text-sm"
+                >
+                    <Column header="SL" headerStyle="width:3rem">
+                        <template #body="slotProps">
+                            {{ slotProps.index + 1 }}
+                        </template>
+                    </Column>
+                    <Column field="id" header="ID" />
+                    <Column field="user_id" header="User" />
+                    <Column field="ip_address" header="IP Address" />
+                    <Column field="user_agent" header="User Agent" style="min-width: 12rem" />
+                    <Column header="Last Activity">
+                        <template #body="{ data }">
+                            {{ getTime(data.last_activity) }}
+                        </template>
+                    </Column>
+                    <Column header="Actions" headerStyle="width:5rem">
+                        <template #body="{ data }">
+                            <Button
+                                v-tooltip.left="'View payload'"
+                                icon="pi pi-eye"
+                                size="small"
+                                severity="secondary"
+                                text
+                                rounded
+                                @click="selectedItem = data"
+                            />
+                        </template>
+                    </Column>
+                </DataTable>
+
+                <EmptyState
+                    v-else
+                    icon="PhDevices"
+                    title="No sessions found"
+                    description="Reload to fetch current session records"
+                />
+            </PageCard>
+        </div>
+
         <ConfirmDialog />
         <Dialog
             v-model:visible="selectedItem"
-            header="Details"
+            header="Session Payload"
             modal
             maximizable
-            :style="{ width: '35rem' }"
-            draggable
+            :style="{ width: '40rem' }"
             dismissableMask
         >
-            <pre>{{ selectedItem?.decoded_payload }}</pre>
+            <pre class="max-h-96 overflow-auto rounded-lg bg-slate-900 p-4 text-xs text-slate-100">{{ selectedItem?.decoded_payload }}</pre>
         </Dialog>
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { ref, onMounted, nextTick } from "vue";
+import { ref, onMounted } from "vue";
 import axios from "axios";
-import { format, parse } from "date-fns";
-import { router } from "@inertiajs/core";
+import { format } from "date-fns";
 import { useConfirm } from "primevue";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
+import PageCard from "@/Pages/Users/fragments/PageCard.vue";
+import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 defineOptions({
     name: "Sessions",
 });
 
-const props = defineProps({
-    im_super: Boolean,
-});
-
 const confirm = useConfirm();
-
 const selectedItem = ref();
-
-const op = ref();
-
 const isLoading = ref(false);
-const logFiles = ref<{ name: string; path: string }[]>([]);
-const selectedLogFile = ref<string | null>(null);
 const sessions = ref<any[]>([]);
 const clearing = ref(false);
 
-const getTime = (dateString) => {
-    // Parse the date string for 1739376048 record
-    let op = "";
+const getTime = (dateString: number) => {
     try {
-        // Format the date in a more readable format
-        op = format(new Date(dateString * 1000), "dd MMM yyyy, hh:mm a");
-    } catch (error) {}
-    return op;
+        return format(new Date(dateString * 1000), "dd MMM yyyy, hh:mm a");
+    } catch {
+        return "";
+    }
 };
 
 const getSessions = async () => {
@@ -167,54 +160,41 @@ const getSessions = async () => {
     }
 };
 
-const deleteSession = async () => {
+const deleteSession = () => {
     confirm.require({
-        header: "Are you sure to delete all expire logs?",
+        header: "Clear expired sessions?",
         message: "This action cannot be undone.",
-        rejectProps: {
-            label: "Cancel",
-            icon: "pi pi-times",
-            // outlined: true,
-            severity: "primary",
-            size: "small",
-        },
-        acceptProps: {
-            label: "Clear Logs",
-            icon: "pi pi-check",
-            severity: "danger",
-            size: "small",
-        },
+        rejectProps: { label: "Cancel", severity: "secondary", size: "small" },
+        acceptProps: { label: "Clear", severity: "danger", size: "small" },
         accept: async () => {
-            await axios.post(route("sessions.clearSession"));
-            getSessions();
-        },
-    });
-};
-const deleteAllSession = async () => {
-    confirm.require({
-        header: "Are you sure to delete all?",
-        message: "This action cannot be undone.",
-        rejectProps: {
-            label: "Cancel",
-            icon: "pi pi-times",
-            // outlined: true,
-            severity: "primary",
-            size: "small",
-        },
-        acceptProps: {
-            label: "Clear Logs",
-            icon: "pi pi-check",
-            severity: "danger",
-            size: "small",
-        },
-        accept: async () => {
-            await axios.post(route("sessions.clearAllSession"));
-            getSessions();
+            clearing.value = true;
+            try {
+                await axios.post(route("sessions.clearSession"));
+                await getSessions();
+            } finally {
+                clearing.value = false;
+            }
         },
     });
 };
 
-onMounted(async () => {
-    await getSessions();
-});
+const deleteAllSession = () => {
+    confirm.require({
+        header: "Clear all sessions?",
+        message: "This action cannot be undone.",
+        rejectProps: { label: "Cancel", severity: "secondary", size: "small" },
+        acceptProps: { label: "Clear All", severity: "danger", size: "small" },
+        accept: async () => {
+            clearing.value = true;
+            try {
+                await axios.post(route("sessions.clearAllSession"));
+                await getSessions();
+            } finally {
+                clearing.value = false;
+            }
+        },
+    });
+};
+
+onMounted(getSessions);
 </script>

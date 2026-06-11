@@ -68,7 +68,7 @@ class PaperflyController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'invoice' => 'required|string|regex:/^[a-zA-Z0-9_-]+$/|max:255,invoice',
+            'invoice' => 'required|string|regex:/^[a-zA-Z0-9_-]+$/|max:255',
             'recipient_name' => 'required|string|max:100',
             'recipient_phone' => 'required|digits:11|regex:/^01[0-9]{9}$/',
             'recipient_address' => 'required|string|max:250',

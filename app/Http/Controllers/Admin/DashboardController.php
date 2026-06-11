@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccessToken;
 use App\Models\SmsBalance;
 use App\Models\User;
 use App\Models\UserPackage;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 function getBoxData($title, $value, $modifier = null, $modifier_position = 'right', ...$others)
@@ -55,7 +55,8 @@ class DashboardController extends Controller
                 'data' => $this->packagePurchaseInfo()
             ],
             'sms' => $this->getSmsInfo(),
-            'package_purchase' => $this->packagePurchaseInfo()
+            'package_purchase' => $this->packagePurchaseInfo(),
+            'expired_tokens' => $this->getExpiredTokenInfo(),
         ];
 
         return Inertia::render('Dashboard/Dashboard', compact('data'));
@@ -134,6 +135,70 @@ class DashboardController extends Controller
             'total_balance' => number_format($totalBalance, 2),
             'total_sms_sent' => number_format($totalSmsSent, 2),
             'total_sms_recharge' => number_format($totalSmsRecharge, 2),
+        ];
+    }
+
+    private function getExpiredTokenInfo()
+    {
+        $baseQuery = AccessToken::query()
+            ->where('tokenable_type', User::class)
+            ->whereHasMorph('tokenable', [User::class], function ($query) {
+                $query->where('role', 'user');
+            });
+
+        $total = (clone $baseQuery)->count();
+        $expired = (clone $baseQuery)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->count();
+        $active = (clone $baseQuery)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', now());
+            })
+            ->count();
+        $expiringSoon = (clone $baseQuery)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '>=', now())
+            ->where('expires_at', '<=', now()->addDays(7))
+            ->count();
+
+        $recentExpired = (clone $baseQuery)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->with(['tokenable:id,name,email'])
+            ->orderByDesc('expires_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($token) {
+                return [
+                    'id' => $token->id,
+                    'title' => $token->title ?? $token->name,
+                    'domain' => $token->domain,
+                    'user_name' => $token->tokenable?->name,
+                    'user_email' => $token->tokenable?->email,
+                    'expires_at' => $token->expires_at?->format('Y-m-d H:i'),
+                    'expired_ago' => $token->expires_at?->diffForHumans(),
+                    'status' => (bool) $token->status,
+                ];
+            })
+            ->values();
+
+        return [
+            'title' => 'API Token Expiry',
+            'link' => route('apiKeys.index'),
+            'link_text' => 'Manage API Keys',
+            'total' => $total,
+            'expired' => $expired,
+            'active' => $active,
+            'expiring_soon' => $expiringSoon,
+            'recent' => $recentExpired,
+            'summary' => [
+                getBoxData('Total API Tokens', $total),
+                getBoxData('Expired Tokens', $expired),
+                getBoxData('Expiring Soon', $expiringSoon),
+                getBoxData('Active Tokens', $active),
+            ],
         ];
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Courier;
 use App\Http\Controllers\Controller;
 use App\LogHelper;
 use App\Models\CourierConfiguration;
+use App\Services\PathaoCourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -151,18 +152,31 @@ class SteadFastController extends Controller
     {
 
         $steadfastBalance = 0;
+        $pathaoBalance = 0;
 
         try {
             $config = $this->getConfig();
-            $response = Http::withHeaders([
-                'Api-Key' => $config->api_key,
-                'Secret-Key' => $config->secret_key,
-                'Content-Type' => 'application/json',
-            ])->get($this->baseUrl . '/get_balance');
-            $jsonResponse = $response->json();
-            $steadfastBalance = $jsonResponse['current_balance'];
+            if ($config) {
+                $response = Http::withHeaders([
+                    'Api-Key' => $config->api_key,
+                    'Secret-Key' => $config->secret_key,
+                    'Content-Type' => 'application/json',
+                ])->get($this->baseUrl . '/get_balance');
+                $jsonResponse = $response->json();
+                $steadfastBalance = $jsonResponse['current_balance'];
+            }
         } catch (\Throwable $th) {
             //throw $th;
+        }
+
+        try {
+            $pathaoService = app(PathaoCourierService::class);
+            $pathaoConfig = $pathaoService->getConfig(Auth::id());
+
+            if ($pathaoConfig && $pathaoConfig->is_active) {
+                $pathaoBalance = 0;
+            }
+        } catch (\Throwable $th) {
         }
 
         $responseData = [
@@ -180,9 +194,10 @@ class SteadFastController extends Controller
             ],
             'pathao' => [
                 'logo' => asset('images/pathao.png'),
-                'balance' => 0
+                'balance' => null,
+                'balance_available' => false,
             ],
-            'total' => $steadfastBalance,
+            'total' => $steadfastBalance + ($pathaoBalance ?: 0),
         ];
 
         return $this->successResponse($responseData);
@@ -197,7 +212,7 @@ class SteadFastController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'invoice' => 'required|string|regex:/^[a-zA-Z0-9_-]+$/|max:255,invoice',
+            'invoice' => 'required|string|regex:/^[a-zA-Z0-9_-]+$/|max:255',
             'recipient_name' => 'required|string|max:100',
             'recipient_phone' => 'required|digits:11|regex:/^01[0-9]{9}$/',
             'recipient_address' => 'required|string|max:250',

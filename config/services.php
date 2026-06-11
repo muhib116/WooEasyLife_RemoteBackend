@@ -31,4 +31,9 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'bulksms' => [
+        'api_key' => env('BULKSMS_API_KEY'),
+        'sender_id' => env('BULKSMS_SENDER_ID', '8809617619992'),
+    ],
+
 ];

@@ -47,13 +47,26 @@ class ConfigurationController extends Controller
 
     public function saveConfiguration(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'id' => 'nullable|integer|exists:courier_configurations,id',
             'title' => ['required', 'string'],
             'slug' => ['required', 'string', Rule::in($this->vendors)],
             'api_key' => 'required|string',
             'secret_key' => 'required|string',
-        ]);
+        ];
+
+        if ($request->slug === 'pathao') {
+            $rules['settings.store_id'] = 'required';
+            $rules['settings.username'] = 'required|string';
+            $rules['settings.password'] = 'nullable|string';
+            $rules['settings.sender_name'] = 'required|string';
+            $rules['settings.sender_phone'] = 'required|string';
+            $rules['settings.recipient_city'] = 'required|integer|min:1';
+            $rules['settings.recipient_zone'] = 'required|integer|min:1';
+            $rules['settings.recipient_area'] = 'required|integer|min:1';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
@@ -68,6 +81,38 @@ class ConfigurationController extends Controller
             'logo' => 'images/'.trim($request->slug).'.png',
             'user_id' => Auth::id(),
         ];
+
+        if ($request->slug === 'pathao' && is_array($request->settings)) {
+            $existingSettings = [];
+
+            if ($request->filled('id')) {
+                $existing = CourierConfiguration::find($request->id);
+                $existingSettings = is_array($existing?->settings) ? $existing->settings : [];
+            }
+
+            $password = $request->input('settings.password') ?: ($existingSettings['password'] ?? '');
+
+            if (empty($password)) {
+                return $this->validationErrorResponse([
+                    'settings.password' => ['Pathao login password is required.'],
+                ]);
+            }
+
+            $data['settings'] = array_merge($existingSettings, [
+                'store_id' => $request->input('settings.store_id'),
+                'username' => $request->input('settings.username'),
+                'password' => $password,
+                'sender_name' => $request->input('settings.sender_name'),
+                'sender_phone' => $request->input('settings.sender_phone'),
+                'recipient_city' => (int) $request->input('settings.recipient_city'),
+                'recipient_zone' => (int) $request->input('settings.recipient_zone'),
+                'recipient_area' => (int) $request->input('settings.recipient_area'),
+                'delivery_type' => (int) ($request->input('settings.delivery_type') ?: 48),
+                'item_type' => (int) ($request->input('settings.item_type') ?: 2),
+                'item_weight' => (float) ($request->input('settings.item_weight') ?: 0.5),
+                'item_quantity' => (int) ($request->input('settings.item_quantity') ?: 1),
+            ]);
+        }
 
         // $statusCode = 200;
         // try {
@@ -102,7 +147,7 @@ class ConfigurationController extends Controller
     {
         $query = CourierConfiguration::query();
 
-        $query->where('slug', 'steadfast');
+        $query->whereIn('slug', ['steadfast', 'pathao']);
 
         $query->where(['user_id' => Auth::id()]);
 
@@ -110,15 +155,21 @@ class ConfigurationController extends Controller
 
         $data = [
             'steadfast' => new \stdClass(),
-            // 'pathao' => new \stdClass(),
-            // 'paperfly' => new \stdClass(),
-            // 'redx' => new \stdClass(),
+            'pathao' => new \stdClass(),
         ];
 
         foreach ($config as $item) {
             if ($item->logo) {
                 $item->logo = asset('images/'.$item->slug.'.png');
             }
+
+            if ($item->slug === 'pathao' && is_array($item->settings)) {
+                $settings = $item->settings;
+                unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
+                $settings['password'] = '';
+                $item->settings = $settings;
+            }
+
             $data[$item->slug] = $item;
         }
         return $this->successResponse($data);

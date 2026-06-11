@@ -1,134 +1,164 @@
 <template>
-    <AuthenticatedLayout>
-        <Card>
-            <template #title>
-                <div class="flex justify-between">
-                    <div>Token Ledger</div>
-                    <div class="flex gap-5">
-                        <div class="grid">
-                            <label class="mb-2 block text-sm font-bold">
+    <AuthenticatedLayout title="Token Ledger">
+        <div class="space-y-5">
+            <PageHeader
+                title="Token Ledger"
+                description="Daily token balance and transaction history"
+                icon="PhCoins"
+                icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
+                icon-class="text-amber-600 dark:text-amber-400"
+            >
+                <template #actions>
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs text-gray-500 dark:text-gray-400">
                                 Start Date
                             </label>
                             <DatePicker
-                                size="small"
                                 v-model="ledgerForm.start_date"
+                                size="small"
                             />
                         </div>
-                        <div class="grid">
-                            <label class="mb-2 block text-sm font-bold">
+                        <div>
+                            <label class="mb-1 block text-xs text-gray-500 dark:text-gray-400">
                                 End Date
                             </label>
                             <DatePicker
-                                size="small"
                                 v-model="ledgerForm.end_date"
+                                size="small"
                             />
                         </div>
-                        <div class="flex items-end gap-3">
-                            <Button
-                                @click="
-                                    () => {
-                                        ledgerForm.end_date = null;
-                                        ledgerForm.start_date = null;
-                                        getLedger();
-                                    }
-                                "
-                                severity="danger"
-                                size="small"
-                                >Clear</Button
-                            >
-                            <Button @click="getLedger" size="small"
-                                >Submit</Button
-                            >
-                        </div>
+                        <Button
+                            label="Clear"
+                            severity="secondary"
+                            outlined
+                            size="small"
+                            @click="clearFilters"
+                        />
+                        <Button
+                            label="Apply"
+                            icon="pi pi-search"
+                            size="small"
+                            :loading="loading"
+                            @click="getLedger"
+                        />
                     </div>
-                </div>
-            </template>
+                </template>
+            </PageHeader>
 
-            <template #content>
-                <div v-if="loading" class="grid place-content-center pt-20">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <StatCard
+                    title="Opening Balance"
+                    :value="formatCurrency(ledger.initial_opening_balance)"
+                    icon="PhWallet"
+                    subtitle="At period start"
+                />
+                <StatCard
+                    title="Days with Activity"
+                    :value="ledger.transactions.length"
+                    icon="PhCalendar"
+                    accent-class="bg-sky-500"
+                    icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
+                    icon-class="text-sky-600 dark:text-sky-400"
+                />
+                <StatCard
+                    title="Closing Balance"
+                    :value="formatCurrency(ledger.final_closing_balance)"
+                    icon="PhCoinVertical"
+                    accent-class="bg-emerald-500"
+                    icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
+                    icon-class="text-emerald-600 dark:text-emerald-400"
+                />
+            </div>
+
+            <PageCard
+                title="Daily Ledger"
+                :description="`${ledger.transactions.length} day${ledger.transactions.length === 1 ? '' : 's'} in range`"
+                no-padding
+            >
+                <div v-if="loading" class="flex justify-center py-16">
                     <ProgressSpinner />
                 </div>
+
                 <DataTable
                     v-else-if="ledger.transactions.length"
                     :value="ledger.transactions"
                     v-model:expandedRows="expandedRows"
                     dataKey="date"
                     scrollable
-                    scrollHeight="400px"
-                    responsiveLayout="scroll"
+                    scrollHeight="420px"
+                    class="professional-table text-sm"
                 >
-                    <Column expander style="width: 5rem" />
-                    <Column field="date" header="Date" sortable></Column>
+                    <Column expander style="width: 3rem" />
+                    <Column field="date" header="Date" sortable />
                     <Column
                         field="transaction_length"
-                        header="Total Order"
+                        header="Orders"
                         sortable
                     />
+                    <Column field="total_token" header="Tokens" sortable />
+                    <Column field="opening_balance" header="Opening">
+                        <template #body="{ data }">
+                            <span class="tabular-nums">{{
+                                formatCurrency(data.opening_balance)
+                            }}</span>
+                        </template>
+                    </Column>
                     <Column
-                        field="total_token"
-                        header="Total Token"
-                        sortable
-                    ></Column>
-                    <Column field="opening_balance" header="Opening Balance">
+                        field="total_transaction_amount"
+                        header="Day Total"
+                    >
                         <template #body="{ data }">
-                            {{ formatCurrency(data.opening_balance) }}
+                            <span class="tabular-nums">{{
+                                formatCurrency(data.total_transaction_amount)
+                            }}</span>
                         </template>
                     </Column>
-                    <Column field="total_transaction_amount" header="Transaction this day">
+                    <Column field="closing_balance" header="Closing">
                         <template #body="{ data }">
-                            {{ formatCurrency(data.total_transaction_amount) }}
-                        </template>
-                    </Column>
-                    <Column field="closing_balance">
-                        <template #header>
-                            <div class="text-end w-full">Closing Balance</div>
-                        </template>
-                        <template #body="{ data }">
-                            <div class="text-end">
-                                {{ formatCurrency(data.closing_balance) }}
-                            </div>
+                            <span class="tabular-nums font-medium">{{
+                                formatCurrency(data.closing_balance)
+                            }}</span>
                         </template>
                     </Column>
                     <template #expansion="{ data }">
-                        <div class="px-4 pb-4">
-                            <!-- <h5>Transaction Details</h5> -->
-                            <DataTable :value="data.transactions">
-                                <Column field="title" header="Package"></Column>
+                        <div class="bg-slate-50/80 px-4 py-3 dark:bg-slate-900/40">
+                            <DataTable
+                                :value="data.transactions"
+                                class="professional-table text-sm"
+                            >
+                                <Column field="title" header="Package" />
                                 <Column field="per_order_rate" header="Rate">
-                                    <template #body="{ data }">
-                                        {{
-                                            formatCurrency(data.per_order_rate)
-                                        }}
+                                    <template #body="{ data: row }">
+                                        {{ formatCurrency(row.per_order_rate) }}
                                     </template>
                                 </Column>
                                 <Column
                                     field="total_order_can_handle"
-                                    header="Token"
-                                ></Column>
+                                    header="Tokens"
+                                />
                                 <Column field="total_cost" header="Cost">
-                                    <template #body="{ data }">
+                                    <template #body="{ data: row }">
                                         <Badge
-                                            :value="
-                                                formatCurrency(data.total_cost)
-                                            "
+                                            :value="formatCurrency(row.total_cost)"
                                             :severity="
-                                                data?.per_order_rate *
-                                                    data?.total_order_can_handle ==
-                                                data.total_cost
+                                                row?.per_order_rate *
+                                                    row?.total_order_can_handle ==
+                                                row.total_cost
                                                     ? 'success'
                                                     : 'danger'
                                             "
-                                        ></Badge>
+                                        />
                                     </template>
                                 </Column>
                                 <Column
                                     field="transaction_charge"
                                     header="Charge"
                                 >
-                                    <template #body="{ data }">
+                                    <template #body="{ data: row }">
                                         {{
                                             formatCurrency(
-                                                data.transaction_charge,
+                                                row.transaction_charge,
                                             )
                                         }}
                                     </template>
@@ -136,34 +166,31 @@
                                 <Column
                                     field="transaction_method"
                                     header="Method"
-                                ></Column>
+                                />
                             </DataTable>
                         </div>
                     </template>
                 </DataTable>
 
-                <p v-else>No transactions found for the selected date range.</p>
-            </template>
-
-            <template #footer>
-                <div class="text-right pr-4">
-                    <strong
-                        >Final Closing Balance:
-                        {{
-                            formatCurrency(ledger.final_closing_balance)
-                        }}</strong
-                    >
-                </div>
-            </template>
-        </Card>
+                <EmptyState
+                    v-else
+                    icon="PhCoins"
+                    title="No transactions"
+                    description="Adjust the date range or reload the ledger"
+                />
+            </PageCard>
+        </div>
     </AuthenticatedLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { debounce } from "lodash";
 import axios from "axios";
 import { AuthenticatedLayout } from "@/layouts";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
+import PageCard from "@/Pages/Users/fragments/PageCard.vue";
+import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 const ledgerForm = ref({
     start_date: null,
@@ -179,6 +206,12 @@ const ledger = ref({
 
 const loading = ref(false);
 const expandedRows = ref({});
+
+const clearFilters = () => {
+    ledgerForm.value.end_date = null;
+    ledgerForm.value.start_date = null;
+    getLedger();
+};
 
 const getLedger = async () => {
     loading.value = true;
@@ -217,47 +250,3 @@ const formatCurrency = (value) => {
 
 onMounted(getLedger);
 </script>
-
-<style scoped>
-.p-datatable {
-    margin-top: 1rem;
-}
-
-/* HTML: <div class="loader"></div> */
-.loader {
-    width: 100px;
-    aspect-ratio: 1;
-    padding: 10px;
-    box-sizing: border-box;
-    display: grid;
-    background: #fff;
-    filter: blur(3px) contrast(7) hue-rotate(290deg);
-    mix-blend-mode: darken;
-}
-.loader:before {
-    content: "";
-    margin: auto;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    color: #ff0000;
-    background: currentColor;
-    box-shadow:
-        -30px 0,
-        30px 0,
-        0 30px,
-        0 -30px;
-    animation: l6 1s infinite alternate;
-}
-@keyframes l6 {
-    90%,
-    100% {
-        box-shadow:
-            -10px 0,
-            10px 0,
-            0 10px,
-            0 -10px;
-        transform: rotate(180deg);
-    }
-}
-</style>

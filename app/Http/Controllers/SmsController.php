@@ -201,7 +201,12 @@ class SmsController extends Controller
 
     public function send(Request $request)
     {
-        $apiToken = 'GuN1Tp8ueoRJACAl072B';
+        $apiToken = config('services.bulksms.api_key');
+
+        if (!$apiToken) {
+            LogHelper::saveLog('sms provider missing', 'BULKSMS_API_KEY is not configured');
+            return $this->errorResponse('SMS provider is not configured.');
+        }
 
         $validator = Validator::make($request->all(), [
             // 'phone' => ['required', function ($attribute, $value, $fail) {
@@ -283,7 +288,7 @@ class SmsController extends Controller
                 'api_key'   => $apiToken,
                 'type'      => 'text',
                 'number'    => $phone,
-                'senderid'  => '8809617619992',
+                'senderid'  => config('services.bulksms.sender_id'),
                 'message'   => $sms
             ];
 

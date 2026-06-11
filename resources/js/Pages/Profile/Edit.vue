@@ -1,46 +1,43 @@
-<script setup>
-import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
-import DeleteUserForm from './Partials/DeleteUserForm.vue';
-import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
-import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
-import { Head } from '@inertiajs/vue3';
-
-defineProps({
-    mustVerifyEmail: {
-        type: Boolean,
-    },
-    status: {
-        type: String,
-    },
-});
-</script>
-
 <template>
-    <Head title="Profile" />
+    <AuthenticatedLayout title="Profile">
+        <div class="space-y-5">
+            <PageHeader
+                title="Account Settings"
+                description="Manage your profile, password, and account security"
+                icon="PhUserCircle"
+                icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
+                icon-class="text-sky-600 dark:text-sky-400"
+            />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Profile</h2>
-        </template>
+            <PageCard title="Profile Information" description="Update your name and email address">
+                <UpdateProfileInformationForm
+                    :must-verify-email="mustVerifyEmail"
+                    :status="status"
+                    class="max-w-xl"
+                />
+            </PageCard>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                    <UpdateProfileInformationForm
-                        :must-verify-email="mustVerifyEmail"
-                        :status="status"
-                        class="max-w-xl"
-                    />
-                </div>
+            <PageCard title="Password" description="Ensure your account uses a strong password">
+                <UpdatePasswordForm class="max-w-xl" />
+            </PageCard>
 
-                <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                    <UpdatePasswordForm class="max-w-xl" />
-                </div>
-
-                <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                    <DeleteUserForm class="max-w-xl" />
-                </div>
-            </div>
+            <PageCard title="Delete Account" description="Permanently remove your account and data">
+                <DeleteUserForm class="max-w-xl" />
+            </PageCard>
         </div>
     </AuthenticatedLayout>
 </template>
+
+<script setup>
+import AuthenticatedLayout from "@/layouts/AuthenticatedLayout.vue";
+import DeleteUserForm from "./Partials/DeleteUserForm.vue";
+import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
+import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
+import PageCard from "@/Pages/Users/fragments/PageCard.vue";
+
+defineProps({
+    mustVerifyEmail: Boolean,
+    status: String,
+});
+</script>

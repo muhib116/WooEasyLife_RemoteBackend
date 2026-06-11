@@ -1,107 +1,114 @@
 <template>
-    <AuthenticatedLayout title="Orders">
-        <Card class="dark:bg-slate-900 dark:text-white">
-            <template #title>
-                <Header />
-            </template>
-            <template #content>
-                <div class="min-h-[400px]">
-                    <UserNav :user="user">
-                        <button
-                            @click="showForm = true"
-                            class="py-1 px-4 bg-indigo-500 text-white flex items-center gap-2"
+    <UserLayout
+        title="API Keys"
+        section="API Keys"
+        subtitle="Manage personal access tokens for this merchant"
+        :user="user"
+    >
+        <template #actions>
+            <Button
+                label="Generate Token"
+                icon="pi pi-plus"
+                size="small"
+                @click="showForm = true"
+            />
+        </template>
+
+        <PageCard
+            title="Access Tokens"
+            :description="`${tokens.length} token${tokens.length === 1 ? '' : 's'} configured`"
+            no-padding
+        >
+            <DataTable
+                :value="tokens"
+                paginator
+                :rows="10"
+                :rows-per-page-options="[10, 25, 50]"
+                responsive-layout="scroll"
+                class="professional-table text-sm"
+            >
+                <Column field="title" header="Title" />
+                <Column field="last_used_ago" header="Last Used" />
+                <Column field="domain" header="Domain">
+                    <template #body="{ data }">
+                        <span
+                            class="inline-block max-w-[220px] break-all rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-gray-700 dark:bg-slate-800 dark:text-gray-300"
                         >
-                            <span class="pi pi-plus"></span>
-                            Generate
-                        </button>
-                    </UserNav>
-                    <div class="pt-4">
-                        <DataTable
-                            :value="tokens"
-                            tableStyle="min-width: 50rem"
-                            showGridlines
-                        >
-                            <Column field="title" header="Title" />
-                            <Column
-                                field="last_used_ago"
-                                header="Last used ago"
+                            {{ data.domain || "—" }}
+                        </span>
+                    </template>
+                </Column>
+                <Column field="expires_at" header="Expires At">
+                    <template #body="{ data }">
+                        {{ formatExpiresAt(data?.expires_at) }}
+                    </template>
+                </Column>
+                <Column field="status" header="Status">
+                    <template #body="{ data }">
+                        <StatusBadge
+                            :label="data?.status ? 'Enabled' : 'Disabled'"
+                            :variant="data?.status ? 'success' : 'neutral'"
+                        />
+                    </template>
+                </Column>
+                <Column header="Actions" header-class="text-right">
+                    <template #body="{ data }">
+                        <div class="flex justify-end gap-2">
+                            <Button
+                                severity="secondary"
+                                size="small"
+                                icon="pi pi-copy"
+                                outlined
+                                v-tooltip.top="'Copy token'"
+                                @click="handleCopy(data)"
                             />
-                            <Column field="domain" header="Accessed Domain" />
-                            <Column field="expires_at" header="Expires At">
-                                <template #body="{ data }">
-                                    {{ formatExpiresAt(data?.expires_at) }}
-                                </template>
-                            </Column>
-                            <Column field="expires_at" header="Expires At">
-                                <template #body="{ data }">
-                                    <Badge
-                                        severity="success"
-                                        v-if="data?.status"
-                                        >Active</Badge
-                                    >
-                                    <Badge v-else>Disabled</Badge>
-                                </template>
-                            </Column>
-                            <Column
-                                header="Action"
-                                headerClass="text-right w-[12rem]"
-                            >
-                                <template #body="{ data }">
-                                    <div class="flex gap-2">
-                                        <Button
-                                            severity="info"
-                                            size="small"
-                                            @click="handleCopy(data)"
-                                            icon="pi pi-copy"
-                                        />
-                                        <Button
-                                            severity="info"
-                                            size="small"
-                                            @click="handleEdit(data)"
-                                            icon="pi pi-pencil"
-                                        />
-                                        <Button
-                                            severity="danger"
-                                            :loading="data?.loading"
-                                            size="small"
-                                            @click="handleDeleteToken(data)"
-                                            icon="pi pi-trash"
-                                        />
-                                    </div>
-                                </template>
-                            </Column>
-                        </DataTable>
-                    </div>
-                </div>
-            </template>
-        </Card>
+                            <Button
+                                severity="secondary"
+                                size="small"
+                                icon="pi pi-pencil"
+                                outlined
+                                @click="handleEdit(data)"
+                            />
+                            <Button
+                                severity="danger"
+                                size="small"
+                                icon="pi pi-trash"
+                                outlined
+                                :loading="data?.loading"
+                                @click="handleDeleteToken(data)"
+                            />
+                        </div>
+                    </template>
+                </Column>
+            </DataTable>
+        </PageCard>
+
         <Dialog
             v-model:visible="showForm"
-            :header="`${tokenForm.id ? 'Edit' : 'Create'} Api Token`"
+            :header="`${tokenForm.id ? 'Edit' : 'Create'} API Token`"
             modal
-            maximizable
             :style="{ width: '35rem' }"
             draggable
+            dismissable-mask
             @hide="tokenForm.reset()"
         >
-
             <TokenForm
-                :tokenForm="tokenForm"
+                :token-form="tokenForm"
                 :user_packages="user_packages"
-                @onClose="showForm = false"
-                @handleSave="handleSave"
+                @on-close="showForm = false"
+                @handle-save="handleSave"
             />
         </Dialog>
 
         <Toast />
         <ConfirmDialog id="confirm" />
-    </AuthenticatedLayout>
+    </UserLayout>
 </template>
 
 <script setup lang="ts">
-import { AuthenticatedLayout } from "@/layouts";
-import UserNav from "./UserNav.vue";
-import Header from "./Header.vue";
+import UserLayout from "./UserLayout.vue";
+import PageCard from "./fragments/PageCard.vue";
+import StatusBadge from "./fragments/StatusBadge.vue";
 import TokenForm from "./fragments/TokenForm.vue";
 import { format, parseISO } from "date-fns";
 import { router, useForm } from "@inertiajs/vue3";
@@ -139,25 +146,24 @@ const tokenForm = useForm({
     referred_by: null,
 });
 
-const handleEdit = (item) => {
+const handleEdit = (item: any) => {
     tokenForm.id = item.id;
     tokenForm.title = item.title;
     tokenForm.expires_at = item.expires_at;
     tokenForm.tokenable_id = item.tokenable_id;
-console.log(props.user_packages)
+
     const selectedPackage = props.user_packages?.find(
-        (_item) => (_item.domain == item.domain)
+        (_item) => _item.domain == item.domain,
     );
-    if (selectedPackage && selectedPackage?.domain) {
-        // tokenForm.domain = selectedPackage.domain;
+
+    if (selectedPackage?.domain) {
         tokenForm.user_package_id = selectedPackage.id;
     }
 
     if (item.expires_at) {
-        const parsedDate = parseISO(item.expires_at);
-        tokenForm.expires_at = parsedDate; // format(parsedDate, "MM/dd/yyyy hh:mm a");
+        tokenForm.expires_at = parseISO(item.expires_at);
     }
-    // MM/dd/yyyy hh:mm a
+
     tokenForm.abilities = item.abilities;
     tokenForm.description = item.description;
     tokenForm.domain = item.domain;
@@ -176,10 +182,12 @@ const handleSave = () => {
         });
         return;
     }
+
     const selectedPackage = props.user_packages.find(
-        (item) => item.id == tokenForm.user_package_id
+        (item) => item.id == tokenForm.user_package_id,
     );
-    if (selectedPackage && selectedPackage?.domain) {
+
+    if (selectedPackage?.domain) {
         tokenForm.domain = selectedPackage.domain;
     }
 
@@ -205,43 +213,44 @@ const handleSave = () => {
     }
 };
 
-const handleCopy = (item) => {
+const handleCopy = (item: any) => {
     copy(item.bearer_token);
     toast.add({
         severity: "success",
-        summary: "Success",
-        detail: "Token created successfully",
+        summary: "Copied",
+        detail: "Token copied to clipboard",
         life: 3000,
     });
 };
 
-const handleDeleteToken = async (item) => {
+const handleDeleteToken = async (item: any) => {
     confirm.require({
-        message: "Are you sure you want to delete this?",
-        header: "Confirmation",
+        message: "Are you sure you want to delete this token?",
+        header: "Delete Token",
         icon: "pi pi-exclamation-triangle",
         rejectProps: {
             label: "Cancel",
-            severity: "danger",
+            severity: "secondary",
+            outlined: true,
             size: "small",
         },
         acceptProps: {
             label: "Delete",
+            severity: "danger",
             size: "small",
         },
         accept: () => {
             item.loading = true;
             router.post(route("apiKeys.delete", item.id));
         },
-        reject: () => {},
     });
 };
 
-function formatExpiresAt(expiresAt) {
+function formatExpiresAt(expiresAt: string | null) {
     if (expiresAt === null) {
         return "No Expiration";
     }
 
-    return format(new Date(expiresAt), "PPp"); // Example: Jan 18, 2025, 12:00 AM
+    return format(new Date(expiresAt), "PPp");
 }
 </script>

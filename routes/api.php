@@ -9,7 +9,6 @@ use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\Data\DataController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Hub\HubController;
-use App\Http\Controllers\PackageHub\PackageController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -38,9 +37,27 @@ Route::get('app-logo', [PluginsController::class, 'appLogo']);
 Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
-Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () {
+$pathaoDevCatalog = app()->environment('local')
+    || filter_var(env('PATHAO_DEV_CATALOG', false), FILTER_VALIDATE_BOOLEAN);
 
-    Route::middleware(['auth:sanctum'])->group(function () {
+/*
+| Dev Pathao catalog proxy using credentials sent in the request body.
+| Enable with APP_ENV=local OR PATHAO_DEV_CATALOG=true in .env
+*/
+if ($pathaoDevCatalog) {
+    Route::prefix('api/pathao')->group(function () {
+        Route::post('/stores', [PathaoController::class, 'getStores']);
+        Route::post('/cities', [PathaoController::class, 'getCities']);
+        Route::post('/zones', [PathaoController::class, 'getZones']);
+        Route::post('/areas', [PathaoController::class, 'getAreas']);
+        Route::post('/create-store', [PathaoController::class, 'createStore']);
+        Route::post('/price-plan', [PathaoController::class, 'pricePlan']);
+    });
+}
+
+Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () use ($pathaoDevCatalog) {
+
+    Route::middleware(['auth:sanctum'])->group(function () use ($pathaoDevCatalog) {
         Route::get('/get-user-data', function (Request $request) {
             return $request->user();
         })->name('getUserData');
@@ -71,10 +88,21 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
         });
 
-        Route::group(['as' => 'pathao.', 'prefix' => 'pathao'], function () {
+        Route::group(['as' => 'pathao.', 'prefix' => 'pathao'], function () use ($pathaoDevCatalog) {
             Route::post('/create-order', [PathaoController::class, 'createOrder']);
             Route::post('/create-bulk-order', [PathaoController::class, 'createBulkOrder']);
+            Route::post('/check-status', [PathaoController::class, 'checkStatus']);
+            Route::post('/bulk-check-status', [PathaoController::class, 'bulkCheckStatus']);
             Route::post('/check-balance', [PathaoController::class, 'checkBalance']);
+
+            if (!$pathaoDevCatalog) {
+                Route::post('/stores', [PathaoController::class, 'getStores']);
+                Route::post('/cities', [PathaoController::class, 'getCities']);
+                Route::post('/zones', [PathaoController::class, 'getZones']);
+                Route::post('/areas', [PathaoController::class, 'getAreas']);
+                Route::post('/create-store', [PathaoController::class, 'createStore']);
+                Route::post('/price-plan', [PathaoController::class, 'pricePlan']);
+            }
         });
 
         Route::group(['as' => 'redx.', 'prefix' => 'redx'], function () {

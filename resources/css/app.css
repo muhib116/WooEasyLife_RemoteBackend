@@ -51,6 +51,86 @@
         box-shadow: var(--p-inputtext-shadow);
     }
 
+    .professional-table .p-datatable-thead > tr > th {
+        background: rgb(248 250 252);
+        color: rgb(100 116 139);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border-color: rgb(241 245 249);
+        padding: 0.875rem 1.25rem;
+    }
+
+    .dark .professional-table .p-datatable-thead > tr > th {
+        background: rgb(15 23 42 / 0.4);
+        color: rgb(148 163 184);
+        border-color: rgb(51 65 85);
+    }
+
+    .professional-table .p-datatable-tbody > tr > td {
+        padding: 1rem 1.25rem;
+        border-color: rgb(241 245 249);
+        color: rgb(51 65 85);
+    }
+
+    .dark .professional-table .p-datatable-tbody > tr > td {
+        background: rgb(30 41 59);
+        border-color: rgb(51 65 85 / 0.8);
+        color: rgb(226 232 240);
+    }
+
+    .professional-table .p-datatable-tbody > tr:hover > td {
+        background: rgb(248 250 252);
+    }
+
+    .dark .professional-table .p-datatable-tbody > tr:hover > td {
+        background: rgb(51 65 85 / 0.5);
+    }
+
+    .professional-table .p-paginator {
+        border: none;
+        border-top: 1px solid rgb(241 245 249);
+        background: rgb(248 250 252 / 0.8);
+        padding: 0.75rem 1.25rem;
+    }
+
+    .dark .professional-table .p-paginator {
+        border-top-color: rgb(51 65 85);
+        background: rgb(15 23 42 / 0.4);
+    }
+
+    .admin-shell {
+        color: rgb(15 23 42);
+    }
+
+    .dark .admin-shell {
+        color: rgb(226 232 240);
+    }
+
+    .admin-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(203 213 225) transparent;
+    }
+
+    .dark .admin-scrollbar {
+        scrollbar-color: rgb(71 85 105) transparent;
+    }
+
+    .admin-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .admin-scrollbar::-webkit-scrollbar-thumb {
+        background: rgb(203 213 225);
+        border-radius: 9999px;
+    }
+
+    .dark .admin-scrollbar::-webkit-scrollbar-thumb {
+        background: rgb(71 85 105);
+    }
+
     .dark {
         --p-content-background: #2a3136 !important;
         --p-overlay-modal-background: #2a3136 !important;

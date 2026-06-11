@@ -1,77 +1,94 @@
 <template>
-    <component :is="$page.props?.auth?.user?.id ? AuthenticatedLayout : 'div'" title="Orders">
-        <Card class="dark:bg-slate-800">
-            <template #content>
-                <div class="min-h-[400px]">
-                    <div class="relative flex justify-center">
-                        <InputGroup class="max-w-[400px]">
-                            <InputMask
-                                id="basic"
-                                v-model="form.phone"
-                                mask="99999-999999"
-                                placeholder="99999-999999"
-                            />
-                            <!-- <Button @click="handleSearch" :loading="isLoading">
-                                <i class=""></i>
-                                Check
-                            </Button> -->
+    <component
+        :is="$page.props?.auth?.user?.id ? AuthenticatedLayout : 'div'"
+        title="Fraud Checker"
+    >
+        <div class="space-y-5">
+            <PageHeader
+                v-if="$page.props?.auth?.user?.id"
+                title="Fraud Checker"
+                description="Check customer delivery success rate across couriers"
+                icon="PhUserCheck"
+            />
 
-                            <Button
-                                type="button"
-                                label="Search"
-                                icon="pi pi-check"
-                                :loading="isLoading"
-                                @click="handleSearch"
-                            />
-                        </InputGroup>
-                    </div>
-
-                    <div
-                        class="grid min-h-[300px] place-content-center pb-10 pt-[50px]"
-                    >
-                        <div v-if="isLoading" class="loader mb-5"></div>
-                        <Image
-                            v-else-if="!response"
-                            :src="SecurityOn"
-                            alt=""
-                            class="max-w-[250px]"
+            <PageCard title="Phone Lookup" description="Enter a Bangladesh mobile number to check">
+                <div class="mx-auto max-w-md">
+                    <InputGroup>
+                        <InputMask
+                            v-model="form.phone"
+                            mask="99999-999999"
+                            placeholder="01XXX-XXXXXX"
+                            class="w-full"
                         />
-                        <div
-                            v-else
-                            class="grid max-w-[400px] grid-cols-2 gap-5"
-                        >
-                            <div
-                                class="flex flex-col items-center justify-center rounded border border-current text-green-600"
-                            >
-                                <span class="font-bold">Success</span>
-                                <p class="text-center text-3xl font-bold">
-                                    {{ response?.confirmed }}
-                                </p>
-                            </div>
-                            <div
-                                class="flex flex-col items-center justify-center rounded border border-current text-red-600"
-                            >
-                                <span class="p-2 font-bold">Cancellation</span>
-                                <p class="m-0 text-center text-3xl font-bold">
-                                    {{ response?.cancel }}
-                                </p>
-                            </div>
+                        <Button
+                            label="Check"
+                            icon="pi pi-search"
+                            :loading="isLoading"
+                            @click="handleSearch"
+                        />
+                    </InputGroup>
+                </div>
 
+                <div class="flex min-h-[280px] flex-col items-center justify-center py-8">
+                    <div v-if="isLoading" class="loader mb-4" />
+                    <img
+                        v-else-if="!response"
+                        :src="SecurityOn"
+                        alt=""
+                        class="max-w-[220px] opacity-80"
+                    />
+                    <div
+                        v-else
+                        class="grid w-full max-w-lg grid-cols-2 gap-4"
+                    >
+                        <div
+                            class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-500/30 dark:bg-emerald-500/10"
+                        >
+                            <p
+                                class="text-sm font-medium text-emerald-700 dark:text-emerald-300"
+                            >
+                                Successful Deliveries
+                            </p>
+                            <p
+                                class="mt-2 text-4xl font-bold text-emerald-600 dark:text-emerald-400"
+                            >
+                                {{ response?.confirmed ?? 0 }}
+                            </p>
                         </div>
-                    </div>
-                    <div v-if="slangs?.length" class="w-full">
-                        <div class="text-xl font-semibold">
-                            Steadfast frauds
-                        </div>
-                        <div class="mt-5">
-                            <SlangItems :items="slangs" />
+                        <div
+                            class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-500/30 dark:bg-rose-500/10"
+                        >
+                            <p
+                                class="text-sm font-medium text-rose-700 dark:text-rose-300"
+                            >
+                                Cancellations
+                            </p>
+                            <p
+                                class="mt-2 text-4xl font-bold text-rose-600 dark:text-rose-400"
+                            >
+                                {{ response?.cancel ?? 0 }}
+                            </p>
                         </div>
                     </div>
                 </div>
-            </template>
-        </Card>
-        <div v-if="showClick">
-            <Link :href="route('frauds.expire')">Click</Link>
+            </PageCard>
+
+            <PageCard
+                v-if="slangs?.length"
+                title="Steadfast Fraud Reports"
+                :description="`${slangs.length} reported issue${slangs.length === 1 ? '' : 's'}`"
+            >
+                <SlangItems :items="slangs" />
+            </PageCard>
+        </div>
+
+        <div v-if="showClick" class="mt-4 text-center">
+            <Link
+                :href="route('frauds.expire')"
+                class="text-sm text-primary-600 hover:underline dark:text-primary-400"
+            >
+                Admin: Token & CURL settings
+            </Link>
         </div>
     </component>
 </template>
@@ -80,41 +97,37 @@
 import { AuthenticatedLayout } from "@/layouts";
 import { useForm, Link } from "@inertiajs/vue3";
 import SecurityOn from "@/images/security_on.svg";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import axios from "axios";
-import { find, get } from "lodash";
 import SlangItems from "./SlangItems.vue";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
+import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 
 defineOptions({
     name: "FraudCheck",
 });
 
 const isLoading = ref(false);
-const response = ref();
-const showSlang = ref(false);
-
+const response = ref<any>(null);
 const showClick = ref(false);
+const slangs = ref<any[]>([]);
+
 let clickCount = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 function handleWindowClick() {
     clickCount++;
-
     if (timer) clearTimeout(timer);
-
     timer = setTimeout(() => {
         clickCount = 0;
-    }, 200); // 1 second window
-
+    }, 200);
     if (clickCount >= 6) {
         showClick.value = true;
-        clickCount = 0; // reset after triggering
-        clearTimeout(timer);
+        clickCount = 0;
+        if (timer) clearTimeout(timer);
         timer = null;
     }
 }
-
-const slangs = ref<any[]>([]);
 
 onMounted(() => {
     window.addEventListener("click", handleWindowClick);
@@ -128,112 +141,30 @@ onBeforeUnmount(() => {
 const form = useForm({
     phone: "",
 });
-// 01752-360254
-
-const postStreamRequest = async (url: string, payload: any, config: any) => {
-    const axiosDefaultUrl = axios.defaults?.baseURL || "";
-    try {
-        const response = await fetch(`${axiosDefaultUrl}${url}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                Authorization: String(
-                    axios.defaults?.headers?.common["Authorization"],
-                ),
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok)
-            throw new Error(`HTTP error! Status: ${response.status}`);
-
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("Failed to get response reader.");
-
-        let buffer = "",
-            decoder = new TextDecoder();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            buffer.split("\n\n").forEach((event) => {
-                const [type, data] = event
-                    .split("\n")
-                    .map((line) => line.split(": ")[1]);
-                if (!type || !data) return;
-                (type === "user_report" ? config?.onData : config?.onDone)?.(
-                    JSON.parse(data),
-                );
-            });
-
-            buffer = buffer.slice(buffer.lastIndexOf("\n\n") + 2);
-        }
-    } catch (error) {
-        config?.onError?.(error);
-    }
-};
 
 const handleSearch = async () => {
-    // postStreamRequest(
-    //     route("checkStream"),
-    //     {
-    //         data: [
-    //             {
-    //                 id: 535,
-    //                 phone: "01727897763",
-    //             },
-    //             {
-    //                 id: 534,
-    //                 phone: "01700501035",
-    //             },
-    //         ],
-    //     },
-    //     {
-    //         onData: ({ data, progress }) => {
-    //             console.log({ data, progress });
-    //         },
-    //         onDone: (data) => {
-    //             console.log(data);
-    //         },
-    //     }
-    // );
-    // if (form.phone) {
-    //     isLoading.value = true;
-    //     const { data } = await axios.post(route("adminCheckStream"), {
-    //         data: [
-    //             {
-    //                 id: 535,
-    //                 phone: "01727897763",
-    //             },
-    //             {
-    //                 id: 534,
-    //                 phone: "01700501035",
-    //             },
-    //         ],
-    //     });
-    // }
-    if (form.phone) {
-        isLoading.value = true;
+    if (!form.phone) {
+        return;
+    }
+
+    isLoading.value = true;
+    response.value = null;
+    slangs.value = [];
+
+    try {
         const phone = String(form.phone).replace("-", "");
         const { data } = await axios.post(route("frauds.adminFraudCheck"), {
             phone,
         });
-        isLoading.value = false;
         response.value = data;
-
-        // @ts-ignore
-
-
-        
-        slangs.value = responseData?.frauds || [];
+        slangs.value = data?.frauds || [];
+    } finally {
+        isLoading.value = false;
     }
 };
 </script>
 
-<style>
+<style scoped>
 .loader {
     width: 120px;
     height: 22px;
@@ -252,9 +183,9 @@ const handleSearch = async () => {
     left: 0;
     border-radius: inherit;
     background: currentColor;
-    animation: l3 1s infinite linear;
+    animation: fraud-loader 1s infinite linear;
 }
-@keyframes l3 {
+@keyframes fraud-loader {
     50% {
         left: 100%;
         transform: translateX(calc(-100% - 4px));

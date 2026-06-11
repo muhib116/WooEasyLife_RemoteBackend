@@ -1,35 +1,37 @@
 <template>
     <Head :title="title" />
 
-    <div class="flex h-svh flex-col bg-white dark:bg-slate-800 dark:text-white">
+    <div class="admin-shell flex min-h-svh bg-slate-100 dark:bg-slate-950">
         <div
-            class="flex h-[60px] flex-shrink-0 items-center justify-between bg-white dark:border-gray-600 dark:bg-slate-800"
+            v-if="sidebarOpen"
+            class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+            @click="sidebarOpen = false"
+        />
+
+        <div
+            class="fixed inset-y-0 left-0 z-50 w-[272px] -translate-x-full border-r border-gray-200/80 bg-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 dark:border-gray-800 dark:bg-slate-900"
+            :class="{ '!translate-x-0': sidebarOpen }"
         >
-            <div class="w-[240px] cursor-pointer px-4 text-xl font-semibold">
-                WooEasyLife
-            </div>
-            <div class="flex items-center gap-5 px-4">
-                <button @click="isDarkMode = !isDarkMode">
-                    <Icon :name="isDarkMode ? 'PhSun' : 'PhMoonStars'" />
-                </button>
-                <button @click="themeDialog = true">
-                    <Icon name="PhPalette" />
-                </button>
-            </div>
+            <LeftSidebar @close="sidebarOpen = false" />
         </div>
-        <div class="flex flex-1">
-            <div
-                class="h-[calc(100svh-60px)] w-[240px] overflow-auto bg-white py-8 dark:bg-slate-800"
-            >
-                <LeftSidebar />
-            </div>
-            <div
-                class="box-border h-[calc(100svh-60px)] flex-1 overflow-auto rounded-tl-xl border-l border-t bg-slate-100 px-6 py-6 dark:bg-slate-900"
+
+        <div class="flex min-w-0 flex-1 flex-col">
+            <AppHeader
+                :title="title"
+                @toggle-sidebar="sidebarOpen = !sidebarOpen"
+                @open-theme="themeDialog = true"
+            />
+
+            <main
+                class="admin-scrollbar flex-1 overflow-auto px-4 py-5 lg:px-6 lg:py-6"
                 :class="wrapperClass"
             >
-                <slot></slot>
-            </div>
+                <div class="mx-auto w-full max-w-[1600px]">
+                    <slot />
+                </div>
+            </main>
         </div>
+
         <Dialog
             v-model:visible="themeDialog"
             modal
@@ -37,35 +39,38 @@
             blockScroll
             draggable
             dismissableMask
-            header="Primary Color"
+            header="Brand Color"
             :style="{ width: '25rem' }"
         >
-            <div class="mt-5 flex flex-wrap items-center justify-center gap-5">
-                <div v-for="(color, name) in colors" :key="name">
-                    <button
-                        class="h-9 w-9 cursor-pointer select-none rounded border hover:scale-105"
-                        :class="{
-                            'ring-2 ring-blue-500 ring-offset-2':
-                                primaryTheme == name,
-                        }"
-                        :style="{
-                            backgroundColor: get(color, '500'),
-                        }"
-                        @click="changePrimaryColor(name)"
-                        :title="name"
-                    ></button>
-                </div>
+            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                Choose the primary accent color for the admin panel.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <button
+                    v-for="(color, name) in colors"
+                    :key="name"
+                    type="button"
+                    class="h-9 w-9 cursor-pointer rounded-full border-2 border-transparent transition hover:scale-110"
+                    :class="{
+                        'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-slate-900':
+                            primaryTheme == name,
+                    }"
+                    :style="{ backgroundColor: get(color, '500') }"
+                    :title="String(name)"
+                    @click="changePrimaryColor(name)"
+                />
             </div>
         </Dialog>
+
         <Toast position="bottom-right" group="br" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { Icon } from "@/plugins";
 import LeftSidebar from "./fragments/LeftSidebar.vue";
+import AppHeader from "./fragments/AppHeader.vue";
 import { Head, usePage } from "@inertiajs/vue3";
-import { useLayout, useTheme } from "@/composable";
+import { useTheme } from "@/composable";
 import { ref, watch } from "vue";
 import { get } from "lodash";
 import { useToast } from "primevue/usetoast";
@@ -83,38 +88,41 @@ withDefaults(
 
 const toast = useToast();
 const page = usePage();
-let timeout;
+const sidebarOpen = ref(false);
+const themeDialog = ref(false);
+const { colors, primaryTheme, changePrimaryColor } = useTheme();
+
+let timeout: ReturnType<typeof setTimeout>;
 watch(
     page,
     () => {
-        const props = usePage().props;
         clearTimeout(timeout);
         timeout = setTimeout(() => {
             // @ts-ignore
-            if (props.flash?.success) {
-                let data = {
+            if (page.props.flash?.success) {
+                const data: Record<string, unknown> = {
                     summary: "Success",
                     severity: "success",
-                    // @ts-ignore
-                    detail: props.flash?.success,
-                    // detail: "Message Content",
                     life: 3000,
                     group: "br",
                 };
-                if (typeof props.flash?.success == "object") {
-                    data.detail = props.flash?.success?.message;
-                    data.detail = props.flash?.success?.detail;
+                // @ts-ignore
+                if (typeof page.props.flash?.success == "object") {
+                    // @ts-ignore
+                    data.detail = page.props.flash?.success?.detail;
+                } else {
+                    // @ts-ignore
+                    data.detail = page.props.flash?.success;
                 }
-                toast.add(data);
+                toast.add(data as never);
             }
             // @ts-ignore
-            if (props.flash?.error) {
+            if (page.props.flash?.error) {
                 toast.add({
                     severity: "error",
                     summary: "Error",
                     // @ts-ignore
-                    detail: props.flash?.error,
-                    // detail: "Message Content",
+                    detail: page.props.flash?.error,
                     life: 3000,
                 });
             }
@@ -122,8 +130,4 @@ watch(
     },
     { deep: true },
 );
-
-const themeDialog = ref(false);
-const { showLeftSidebar } = useLayout();
-const { isDarkMode, colors, primaryTheme, changePrimaryColor } = useTheme();
 </script>

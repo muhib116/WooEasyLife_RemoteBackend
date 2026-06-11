@@ -1,157 +1,253 @@
 <template>
-    <AuthenticatedLayout title="Orders">
-        <Card class="dark:bg-slate-900 dark:text-white">
-            <template #title>
-                <div class="flex items-center justify-between gap-5">
-                    User list
-
-                    <div class="flex flex-wrap gap-4">
-                        <div class="flex items-center gap-2">
-                            <RadioButton
-                                v-model="mode"
-                                inputId="all"
-                                name="all"
-                                value=""
-                            />
-                            <label for="all">All</label>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <RadioButton
-                                v-model="mode"
-                                inputId="admin"
-                                name="Admin"
-                                value="admin"
-                            />
-                            <label for="admin">Admin</label>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <RadioButton
-                                v-model="mode"
-                                inputId="user"
-                                name="user"
-                                value="user"
-                            />
-                            <label for="user">User</label>
-                        </div>
+    <AuthenticatedLayout title="Users">
+        <div class="space-y-5">
+            <div
+                class="box-bg box-color box-border rounded-2xl border px-5 py-4 shadow-sm md:px-6"
+            >
+                <div
+                    class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center"
+                >
+                    <div>
+                        <h1
+                            class="text-xl font-semibold text-gray-900 dark:text-white"
+                        >
+                            User Management
+                        </h1>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Manage merchant accounts, access, and billing
+                        </p>
                     </div>
                     <Button
                         label="Create User"
                         icon="pi pi-plus"
-                        size="small"
-                        @click="showForm = true"
+                        @click="openCreateForm"
                     />
                 </div>
-            </template>
-            <template #content>
-                <div class="min-h-[400px]">
-                    <!-- v-model:filters="filters"
-                    filterDisplay="row"
-                    :globalFilterFields="['name', 'email', 'phone']"
-                    :rows="10"
-                    paginator
-                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    :rowsPerPageOptions="[10, 25, 50, 100, 200]"
-                    currentPageReportTemplate="{first} to {last} of {totalRecords} Users &nbsp;" -->
-                    <DataTable
-                        :value="getFilterData(mode, users)"
-                        tableStyle="min-width: 50rem;background:black;"
-                    >
-                        <template #header>
-                            <div class="flex justify-end">
-                                <IconField>
-                                    <InputIcon>
-                                        <i class="pi pi-search" />
-                                    </InputIcon>
-                                    <InputText
-                                        v-model="filters['global'].value"
-                                        placeholder="Keyword Search"
-                                    />
-                                </IconField>
-                            </div>
-                        </template>
-                        <Column field="name" header="Name">
-                            <template #body="{data}">
-                                <Badge
-                                    size="small"
-                                    :severity="
-                                        data?.role == 'admin'
-                                            ? 'success'
-                                            : 'secondary'
-                                    "
-                                    :value="data?.role"
-                                />
-                                {{ data.name }}
-                            </template>
-                        </Column>
-                        <Column field="status" header="Status">
-                            <template #body="{ data }">
-                                <Badge
-                                    :severity="
-                                        data?.status
-                                            ? 'success'
-                                            : 'danger'
-                                    "
-                                    :value="data?.status
-                                            ? 'Active'
-                                            : 'Disabled'"
-                                />
-                            </template>
-                        </Column>
-                        <Column field="is_test" header="Test User?">
-                            <template #body="{ data }">
-                                <Badge
-                                    v-if="data?.role != 'admin'"
-                                    :severity="
-                                        data?.is_test
-                                            ? 'info'
-                                            : 'contrast'
-                                    "
-                                    :value="data?.is_test ? 'Yes' : 'No'"
-                                />
-                            </template>
-                        </Column>
-                        <Column field="email" header="Email" />
-                        <Column field="phone" header="Phone" />
-                        <Column
-                            field="remaining_order"
-                            header="Remaining Orders"
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <StatCard
+                    title="Total Accounts"
+                    :value="stats.total"
+                    icon="PhUsers"
+                    accent-class="bg-primary-500"
+                    icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                    icon-class="text-primary-600 dark:text-primary-400"
+                />
+                <StatCard
+                    title="Active Users"
+                    :value="stats.active"
+                    icon="PhUserCheck"
+                    subtitle="Merchant accounts enabled"
+                    accent-class="bg-emerald-500"
+                    icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
+                    icon-class="text-emerald-600 dark:text-emerald-400"
+                />
+                <StatCard
+                    title="Orders Available"
+                    :value="stats.remainingOrders"
+                    icon="PhCoins"
+                    subtitle="Across all active packages"
+                    accent-class="bg-amber-500"
+                    icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
+                    icon-class="text-amber-600 dark:text-amber-400"
+                />
+            </div>
+
+            <PageCard
+                title="All Users"
+                :description="`${filteredUsers.length} accounts found`"
+                no-padding
+            >
+                <div
+                    class="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-700/80 md:flex-row md:items-center md:justify-between md:px-6"
+                >
+                    <IconField class="w-full md:max-w-sm">
+                        <InputIcon>
+                            <i class="pi pi-search" />
+                        </InputIcon>
+                        <InputText
+                            v-model="search"
+                            placeholder="Search by name, email, or phone..."
+                            class="w-full"
                         />
-                        <Column
-                            header="Action"
-                            headerClass="text-right w-[12rem]"
-                        >
-                            <template #body="{ data }">
-                                <div class="flex gap-2">
-                                    <Button
-                                        v-if="data?.role == 'user'"
-                                        @click="handleEdit(data)"
-                                        severity="primary"
-                                        size="small"
-                                        label="Edit"
-                                        iconPos="right"
-                                    />
-                                    <Link :href="route('users.view', data.id)">
-                                        <Button
-                                            severity="help"
-                                            size="small"
-                                            label="Details"
-                                            icon="pi pi-angle-right"
-                                            iconPos="right"
-                                            as="span"
-                                        />
-                                    </Link>
-                                </div>
-                            </template>
-                        </Column>
-                    </DataTable>
+                    </IconField>
+                    <SelectButton
+                        v-model="mode"
+                        :options="roleOptions"
+                        option-label="label"
+                        option-value="value"
+                        aria-labelledby="role-filter"
+                    />
                 </div>
-            </template>
-        </Card>
+
+                <EmptyState
+                    v-if="!paginatedUsers.length"
+                    title="No users found"
+                    description="Try adjusting your search or filter criteria."
+                    icon="PhUsers"
+                />
+
+                <div v-else class="overflow-x-auto">
+                    <table class="w-full min-w-[720px] text-left text-sm">
+                        <thead>
+                            <tr
+                                class="border-b border-gray-100 bg-slate-50/80 dark:border-gray-700 dark:bg-slate-900/40"
+                            >
+                                <th
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    User
+                                </th>
+                                <th
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Phone
+                                </th>
+                                <th
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Status
+                                </th>
+                                <th
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Orders Left
+                                </th>
+                                <th
+                                    class="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            <tr
+                                v-for="user in paginatedUsers"
+                                :key="user.id"
+                                class="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
+                            >
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <UserAvatar :name="user.name" size="sm" />
+                                        <div>
+                                            <Link
+                                                :href="route('users.view', user.id)"
+                                                class="font-medium text-gray-900 hover:text-primary-600 dark:text-gray-100 dark:hover:text-primary-400"
+                                            >
+                                                {{ user.name }}
+                                            </Link>
+                                            <div
+                                                class="mt-1 flex flex-wrap items-center gap-1.5"
+                                            >
+                                                <StatusBadge
+                                                    :label="user.role"
+                                                    :variant="
+                                                        user.role === 'admin'
+                                                            ? 'primary'
+                                                            : 'neutral'
+                                                    "
+                                                />
+                                                <StatusBadge
+                                                    v-if="user.is_test"
+                                                    label="Test"
+                                                    variant="info"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-gray-600 dark:text-gray-300"
+                                >
+                                    {{ user.phone || "—" }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <StatusBadge
+                                        :label="user.status ? 'Active' : 'Disabled'"
+                                        :variant="user.status ? 'success' : 'danger'"
+                                    />
+                                </td>
+                                <td
+                                    class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200"
+                                >
+                                    {{ user.remaining_order ?? 0 }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div
+                                        class="flex items-center justify-end gap-2"
+                                    >
+                                        <Button
+                                            v-if="user.role === 'user'"
+                                            icon="pi pi-pencil"
+                                            size="small"
+                                            severity="secondary"
+                                            outlined
+                                            v-tooltip.top="'Edit user'"
+                                            @click="handleEdit(user)"
+                                        />
+                                        <Link
+                                            :href="route('users.view', user.id)"
+                                        >
+                                            <Button
+                                                label="View"
+                                                size="small"
+                                                icon="pi pi-arrow-right"
+                                                icon-pos="right"
+                                                as="span"
+                                            />
+                                        </Link>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div
+                    v-if="filteredUsers.length"
+                    class="flex flex-col items-center justify-between gap-3 border-t border-gray-100 px-6 py-4 text-sm dark:border-gray-700/80 sm:flex-row"
+                >
+                    <span class="text-gray-500 dark:text-gray-400">
+                        {{ paginationLabel }}
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <Button
+                            icon="pi pi-chevron-left"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            :disabled="currentPage <= 1"
+                            @click="currentPage--"
+                        />
+                        <span
+                            class="min-w-[110px] text-center text-gray-700 dark:text-gray-300"
+                        >
+                            Page {{ currentPage }} of {{ totalPages }}
+                        </span>
+                        <Button
+                            icon="pi pi-chevron-right"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            :disabled="currentPage >= totalPages"
+                            @click="currentPage++"
+                        />
+                        <Select
+                            v-model="rowsPerPage"
+                            :options="[10, 25, 50]"
+                            class="w-20"
+                        />
+                    </div>
+                </div>
+            </PageCard>
+        </div>
+
         <UserForm
             v-if="showForm"
             v-model="showForm"
             @update:model-value="!showForm && (selectedUser = null)"
-            :selectedUser="selectedUser"
+            :selected-user="selectedUser"
         />
     </AuthenticatedLayout>
 </template>
@@ -159,9 +255,13 @@
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
 import { Link } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import UserForm from "./fragments/UserForm.vue";
-import { FilterMatchMode } from "@primevue/core/api";
+import StatCard from "./fragments/StatCard.vue";
+import PageCard from "./fragments/PageCard.vue";
+import StatusBadge from "./fragments/StatusBadge.vue";
+import EmptyState from "./fragments/EmptyState.vue";
+import UserAvatar from "./fragments/UserAvatar.vue";
 
 defineOptions({
     name: "Users",
@@ -171,27 +271,88 @@ const props = defineProps<{
     users: any[];
 }>();
 
+const roleOptions = [
+    { label: "All", value: "" },
+    { label: "Users", value: "user" },
+    { label: "Admins", value: "admin" },
+];
+
 const mode = ref("");
+const search = ref("");
+const currentPage = ref(1);
+const rowsPerPage = ref(10);
+const showForm = ref(false);
+const selectedUser = ref<any>(null);
 
-const getFilterData = (_mode, _users) => {
-    if (_mode == "admin") {
-        return (_users || []).filter((item) => item?.role == "admin");
-    }
-    if (_mode == "user") {
-        return (_users || []).filter((item) => item?.role == "user");
-    }
-    return _users || [];
-};
+const stats = computed(() => {
+    const merchants = (props.users || []).filter((u) => u.role === "user");
 
-const filters = ref({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    // name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    // email: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    // phone: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    return {
+        total: props.users?.length ?? 0,
+        active: merchants.filter((u) => u.status).length,
+        remainingOrders: merchants.reduce(
+            (sum, u) => sum + (Number(u.remaining_order) || 0),
+            0,
+        ),
+    };
 });
 
-const showForm = ref(false);
-const selectedUser = ref();
+const filteredUsers = computed(() => {
+    let list = props.users || [];
+
+    if (mode.value === "admin") {
+        list = list.filter((item) => item?.role === "admin");
+    } else if (mode.value === "user") {
+        list = list.filter((item) => item?.role === "user");
+    }
+
+    const keyword = search.value.trim().toLowerCase();
+
+    if (!keyword) {
+        return list;
+    }
+
+    return list.filter((user) => {
+        const haystack = [user.name, user.email, user.phone]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+        return haystack.includes(keyword);
+    });
+});
+
+const totalPages = computed(() =>
+    Math.max(1, Math.ceil(filteredUsers.value.length / rowsPerPage.value)),
+);
+
+const paginatedUsers = computed(() => {
+    const start = (currentPage.value - 1) * rowsPerPage.value;
+
+    return filteredUsers.value.slice(start, start + rowsPerPage.value);
+});
+
+const paginationLabel = computed(() => {
+    const total = filteredUsers.value.length;
+
+    if (!total) {
+        return "0 users";
+    }
+
+    const start = (currentPage.value - 1) * rowsPerPage.value + 1;
+    const end = Math.min(currentPage.value * rowsPerPage.value, total);
+
+    return `Showing ${start}–${end} of ${total}`;
+});
+
+watch([mode, search, rowsPerPage], () => {
+    currentPage.value = 1;
+});
+
+const openCreateForm = () => {
+    selectedUser.value = null;
+    showForm.value = true;
+};
 
 const handleEdit = (user: any) => {
     selectedUser.value = user;

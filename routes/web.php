@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DeveloperController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\OrderController;
@@ -163,6 +164,11 @@ Route::middleware('auth')->group(function () {
     });
 
 
+
+    Route::group(['as' => 'developer.', 'prefix' => 'developer'], function () {
+        Route::get('/', [DeveloperController::class, 'index'])->name('index');
+        Route::post('/proxy', [DeveloperController::class, 'proxy'])->name('proxy');
+    });
 
     Route::group(['as' => 'apiKeys.', 'prefix' => 'api-keys'], function () {
         Route::get('/', [ApiKeyController::class, 'index'])->name('index');

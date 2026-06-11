@@ -76,6 +76,10 @@ class UserController extends Controller
             return $this->errorResponse('Invalid Token', 401);
         }
 
+        if ($accessToken->expires_at && now()->greaterThan($accessToken->expires_at)) {
+            return $this->errorResponse('Expired', 401);
+        }
+
         try {
             $user = $accessToken->tokenable;
             // $types = ['success', 'warning', 'danger', 'info', null];
@@ -274,7 +278,9 @@ class UserController extends Controller
             $end_date = Carbon::parse($end_date)
                 ->format('m/d/Y h:i a');
         }
-        return Inertia::render('Users/PackageOrders', compact('modifiedHistory', 'userId', 'start_date', 'end_date'));
+        $user = User::find($userId);
+
+        return Inertia::render('Users/PackageOrders', compact('modifiedHistory', 'userId', 'start_date', 'end_date', 'user'));
     }
     public function useDetails($userId, $packageId)
     {

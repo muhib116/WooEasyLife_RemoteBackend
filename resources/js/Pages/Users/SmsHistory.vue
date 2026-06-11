@@ -1,148 +1,66 @@
 <template>
-    <AuthenticatedLayout title="Orders">
-        <Card class="dark:bg-slate-900 dark:text-white">
-            <template #title>
-                <Header />
-            </template>
-            <template #content>
-                <div class="min-h-[400px]">
-                    <UserNav :user="user">
-                        <!-- <button
-                            @click="showForm = true"
-                            class="py-1 px-4 bg-indigo-500 text-white flex items-center gap-2"
+    <UserLayout
+        title="SMS History"
+        section="SMS History"
+        subtitle="Outbound SMS usage and delivery records"
+        :user="user"
+    >
+        <PageCard
+            title="SMS Usage Log"
+            :description="`${sms_history.length} sent message${sms_history.length === 1 ? '' : 's'}`"
+            no-padding
+        >
+            <DataTable
+                :value="sms_history"
+                paginator
+                :rows="10"
+                :rows-per-page-options="[10, 25, 50]"
+                responsive-layout="scroll"
+                class="professional-table text-sm"
+            >
+                <Column header="Created">
+                    <template #body="{ data }">
+                        {{ dateFormat(data?.created_at) }}
+                    </template>
+                </Column>
+                <Column field="amount" header="Cost">
+                    <template #body="{ data }">
+                        {{ data.amount }} TK
+                    </template>
+                </Column>
+                <Column field="sms_count" header="Count" />
+                <Column field="sms_rate" header="Rate" />
+                <Column field="sms_text" header="Message">
+                    <template #body="{ data }">
+                        <span
+                            class="line-clamp-2 max-w-xs text-gray-700 dark:text-gray-300"
+                            :title="data.sms_text"
                         >
-                            <span class="pi pi-plus"></span>
-                            Activate Package
-                        </button> -->
-                    </UserNav>
-
-                    <div class="pt-4">
-                        <DataTable
-                            :value="sms_history"
-                            tableStyle="min-width: 50rem"
-                            showGridlines
-                        >
-                            <!-- <Column
-                                field="domain"
-                                header="Domain"
-                            /> -->
-                            <Column
-                                :field="(data) => dateFormat(data?.created_at)"
-                                header="Created"
-                            />
-                            <Column
-                                field="amount"
-                                header="Amount Cost"
-                            />
-                            <Column
-                                field="sms_rate"
-                                header="Sms Rate"
-                            />
-                            <Column
-                                field="sms_text"
-                                header="SMS Text"
-                            />
-                            <Column
-                                field="sms_count"
-                                header="SMS Count"
-                            />
-                            <Column
-                                field="message_id"
-                                header="SMS id"
-                            />
-                            <Column field="note" header="Note" />
-                        </DataTable>
-                    </div>
-                </div>
-            </template>
-        </Card>
+                            {{ data.sms_text || "—" }}
+                        </span>
+                    </template>
+                </Column>
+                <Column field="message_id" header="Message ID" />
+                <Column field="note" header="Note" />
+            </DataTable>
+        </PageCard>
 
         <Toast />
-        <ConfirmDialog id="confirm" class="min-w-[20rem]" />
-    </AuthenticatedLayout>
+        <ConfirmDialog id="confirm" />
+    </UserLayout>
 </template>
 
 <script setup lang="ts">
-import { AuthenticatedLayout } from "@/layouts";
-import UserNav from "./UserNav.vue";
-import Header from "./Header.vue";
-// import PackageForm from "./fragments/PackageForm.vue";
-import { ref } from "vue";
-import { router, useForm } from "@inertiajs/vue3";
-import { useToast } from "primevue/usetoast";
-import { useConfirm } from "primevue";
+import UserLayout from "./UserLayout.vue";
+import PageCard from "./fragments/PageCard.vue";
 import { dateFormat } from "@/Helper";
 
 defineOptions({
-    name: "Packages",
+    name: "SmsHistory",
 });
 
-const props = defineProps<{
+defineProps<{
     user: any;
     sms_history: any[];
 }>();
-
-const toast = useToast();
-
-const confirm = useConfirm();
-
-const showForm = ref(false);
-const activeData = ref();
-
-const getItems = (data) => {
-    const items = [
-        {
-            label: "Approve",
-            command: async () => {},
-        },
-        {
-            label: "Reject",
-            command: () => {},
-        },
-    ];
-
-    return items;
-};
-
-const handleApprove = (item) => {
-    confirm.require({
-        header: "Approve this?",
-        rejectProps: {
-            label: "Cancel",
-            severity: "secondary",
-            outlined: true,
-        },
-        acceptProps: {
-            label: "Approve",
-        },
-        accept: () => {
-            router.post(
-                route("users.approveSmsRecharge", {
-                    sms_id: item.id,
-                }),
-            );
-        },
-    });
-};
-const handleReject = (item) => {
-    confirm.require({
-        header: "Reject this?",
-        rejectProps: {
-            label: "Cancel",
-            severity: "secondary",
-            outlined: true,
-        },
-        acceptProps: {
-            label: "Reject",
-            severity: "danger",
-        },
-        accept: () => {
-            router.post(
-                route("users.rejectSmsRecharge", {
-                    sms_id: item.id,
-                }),
-            );
-        },
-    });
-};
 </script>
