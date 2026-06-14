@@ -229,6 +229,20 @@ Route::get('/migration-rollback', function () {
     echo 'Rollback successfully';
 });
 
+Route::get('/clear-cache', function () {
+    Artisan::call('cache:clear');
+    Artisan::call('config:clear');
+    Artisan::call('route:clear');
+    Artisan::call('view:clear');
+    Artisan::call('optimize:clear');    
+    echo 'Cache cleared successfully';
+});
+
+Route::get('/clear-route', function () {
+    Artisan::call('route:clear');
+    echo 'Route cleared successfully';
+});
+
 
 // https://inertiaui.com/inertia-tables
 
