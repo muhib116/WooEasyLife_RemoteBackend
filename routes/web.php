@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitorController;
+use App\Http\Controllers\Admin\WhitelistedDomainController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\Analysis\UseAnalysisController;
 use App\Http\Controllers\CurlController;
@@ -54,7 +55,7 @@ Route::get('/curl', [CurlController::class, 'index']);
 // Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 // Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'auth.active'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -64,7 +65,7 @@ Route::middleware('auth')->group(function () {
     })->name('icons');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'auth.active'])->group(function () {
     Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
     Route::post('/fraud-stream', [FraudCheckController::class, 'checkStream'])->name('adminCheckStream');
     Route::get('/icons', function () {
@@ -123,7 +124,11 @@ Route::middleware('auth')->group(function () {
 
     Route::group(['as' => 'users.', 'prefix' => 'users'], function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/trashed', [UserController::class, 'trashed'])->name('trashed');
         Route::post('/store', [UserController::class, 'store'])->name('store');
+        Route::post('/{user_id}/restore', [UserController::class, 'restore'])->name('restore');
+        Route::delete('/{user_id}/force', [UserController::class, 'forceDestroy'])->name('forceDestroy');
+        Route::delete('/{user_id}', [UserController::class, 'destroy'])->name('destroy');
         Route::post('approve-sms-recharge/{sms_id}', [UserController::class, 'approveSmsRecharge'])->name('approveSmsRecharge');
         Route::post('reject-sms-recharge/{sms_id}', [UserController::class, 'rejectSmsRecharge'])->name('rejectSmsRecharge');
     });
@@ -186,6 +191,13 @@ Route::middleware('auth')->group(function () {
     Route::group(['as' => 'packages.', 'prefix' => 'packages'], function () {
         Route::get('/', [PackageHubController::class, 'index'])->name('index');
         Route::post('/create', [PackageHubController::class, 'create'])->name('create');
+    });
+
+    Route::group(['as' => 'whitelistedDomains.', 'prefix' => 'whitelisted-domains'], function () {
+        Route::get('/', [WhitelistedDomainController::class, 'index'])->name('index');
+        Route::post('/', [WhitelistedDomainController::class, 'store'])->name('store');
+        Route::put('/{whitelistedDomain}', [WhitelistedDomainController::class, 'update'])->name('update');
+        Route::delete('/{whitelistedDomain}', [WhitelistedDomainController::class, 'destroy'])->name('destroy');
     });
 });
 

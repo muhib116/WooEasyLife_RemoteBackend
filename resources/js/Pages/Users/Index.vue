@@ -1,5 +1,5 @@
 <template>
-    <AuthenticatedLayout title="Users">
+    <AuthenticatedLayout :title="trashed ? 'Trashed Users' : 'Users'">
         <div class="space-y-5">
             <div
                 class="box-bg box-color box-border rounded-2xl border px-5 py-4 shadow-sm md:px-6"
@@ -11,13 +11,18 @@
                         <h1
                             class="text-xl font-semibold text-gray-900 dark:text-white"
                         >
-                            User Management
+                            {{ trashed ? "Trashed Users" : "User Management" }}
                         </h1>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Manage merchant accounts, access, and billing
+                            {{
+                                trashed
+                                    ? "Restore deleted accounts or remove them permanently"
+                                    : "Manage merchant accounts, access, and billing"
+                            }}
                         </p>
                     </div>
                     <Button
+                        v-if="!trashed"
                         label="Create User"
                         icon="pi pi-plus"
                         @click="openCreateForm"
@@ -25,7 +30,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div v-if="!trashed" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard
                     title="Total Accounts"
                     :value="stats.total"
@@ -55,7 +60,7 @@
             </div>
 
             <PageCard
-                title="All Users"
+                :title="trashed ? 'Trashed Users' : 'All Users'"
                 :description="`${filteredUsers.length} accounts found`"
                 no-padding
             >
@@ -83,8 +88,12 @@
 
                 <EmptyState
                     v-if="!paginatedUsers.length"
-                    title="No users found"
-                    description="Try adjusting your search or filter criteria."
+                    :title="trashed ? 'No trashed users' : 'No users found'"
+                    :description="
+                        trashed
+                            ? 'Deleted users will appear here.'
+                            : 'Try adjusting your search or filter criteria.'
+                    "
                     icon="PhUsers"
                 />
 
@@ -105,11 +114,19 @@
                                     Phone
                                 </th>
                                 <th
+                                    v-if="trashed"
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Deleted At
+                                </th>
+                                <th
+                                    v-if="!trashed"
                                     class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
                                 >
                                     Status
                                 </th>
                                 <th
+                                    v-if="!trashed"
                                     class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
                                 >
                                     Orders Left
@@ -132,11 +149,18 @@
                                         <UserAvatar :name="user.name" size="sm" />
                                         <div>
                                             <Link
+                                                v-if="!trashed"
                                                 :href="route('users.view', user.id)"
                                                 class="font-medium text-gray-900 hover:text-primary-600 dark:text-gray-100 dark:hover:text-primary-400"
                                             >
                                                 {{ user.name }}
                                             </Link>
+                                            <span
+                                                v-else
+                                                class="font-medium text-gray-900 dark:text-gray-100"
+                                            >
+                                                {{ user.name }}
+                                            </span>
                                             <div
                                                 class="mt-1 flex flex-wrap items-center gap-1.5"
                                             >
@@ -162,13 +186,20 @@
                                 >
                                     {{ user.phone || "—" }}
                                 </td>
-                                <td class="px-6 py-4">
+                                <td
+                                    v-if="trashed"
+                                    class="px-6 py-4 text-gray-600 dark:text-gray-300"
+                                >
+                                    {{ formatDeletedAt(user.deleted_at) }}
+                                </td>
+                                <td v-if="!trashed" class="px-6 py-4">
                                     <StatusBadge
                                         :label="user.status ? 'Active' : 'Disabled'"
                                         :variant="user.status ? 'success' : 'danger'"
                                     />
                                 </td>
                                 <td
+                                    v-if="!trashed"
                                     class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200"
                                 >
                                     {{ user.remaining_order ?? 0 }}
@@ -177,26 +208,65 @@
                                     <div
                                         class="flex items-center justify-end gap-2"
                                     >
-                                        <Button
-                                            v-if="user.role === 'user'"
-                                            icon="pi pi-pencil"
-                                            size="small"
-                                            severity="secondary"
-                                            outlined
-                                            v-tooltip.top="'Edit user'"
-                                            @click="handleEdit(user)"
-                                        />
-                                        <Link
-                                            :href="route('users.view', user.id)"
-                                        >
+                                        <template v-if="trashed">
                                             <Button
-                                                label="View"
+                                                label="Restore"
+                                                icon="pi pi-replay"
                                                 size="small"
-                                                icon="pi pi-arrow-right"
-                                                icon-pos="right"
-                                                as="span"
+                                                severity="success"
+                                                outlined
+                                                :loading="restoringUserId === user.id"
+                                                @click="handleRestore(user)"
                                             />
-                                        </Link>
+                                            <Button
+                                                label="Delete Forever"
+                                                icon="pi pi-trash"
+                                                size="small"
+                                                severity="danger"
+                                                outlined
+                                                :loading="deletingUserId === user.id"
+                                                :disabled="
+                                                    Number(user.id) ===
+                                                    Number(currentUserId)
+                                                "
+                                                @click="handleForceDelete(user)"
+                                            />
+                                        </template>
+                                        <template v-else>
+                                            <Button
+                                                v-if="user.role === 'user'"
+                                                icon="pi pi-pencil"
+                                                size="small"
+                                                severity="secondary"
+                                                outlined
+                                                v-tooltip.top="'Edit user'"
+                                                @click="handleEdit(user)"
+                                            />
+                                            <Button
+                                                label="Delete"
+                                                icon="pi pi-trash"
+                                                size="small"
+                                                severity="danger"
+                                                outlined
+                                                :loading="deletingUserId === user.id"
+                                                :disabled="
+                                                    Number(user.id) ===
+                                                    Number(currentUserId)
+                                                "
+                                                @click="handleDelete(user)"
+                                            />
+                                            <Link
+                                                :href="route('users.view', user.id)"
+                                            >
+                                                <Button
+                                                    label="View"
+                                                    size="small"
+                                                    icon="pi pi-arrow-right"
+                                                    icon-pos="right"
+                                                    as="span"
+                                                />
+                                            </Link>
+                                        </template>
                                     </div>
                                 </td>
                             </tr>
@@ -249,13 +319,17 @@
             @update:model-value="!showForm && (selectedUser = null)"
             :selected-user="selectedUser"
         />
+
+        <ConfirmDialog />
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { Link } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
+import { useConfirm } from "primevue";
 import { computed, ref, watch } from "vue";
+import { format, parseISO } from "date-fns";
 import UserForm from "./fragments/UserForm.vue";
 import StatCard from "./fragments/StatCard.vue";
 import PageCard from "./fragments/PageCard.vue";
@@ -267,9 +341,20 @@ defineOptions({
     name: "Users",
 });
 
-const props = defineProps<{
-    users: any[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        users: any[];
+        trashed?: boolean;
+    }>(),
+    {
+        trashed: false,
+    },
+);
+
+const confirm = useConfirm();
+const page = usePage();
+
+const currentUserId = computed(() => page.props.auth?.user?.id ?? null);
 
 const roleOptions = [
     { label: "All", value: "" },
@@ -283,6 +368,8 @@ const currentPage = ref(1);
 const rowsPerPage = ref(10);
 const showForm = ref(false);
 const selectedUser = ref<any>(null);
+const deletingUserId = ref<number | null>(null);
+const restoringUserId = ref<number | null>(null);
 
 const stats = computed(() => {
     const merchants = (props.users || []).filter((u) => u.role === "user");
@@ -349,6 +436,18 @@ watch([mode, search, rowsPerPage], () => {
     currentPage.value = 1;
 });
 
+const formatDeletedAt = (value?: string | null) => {
+    if (!value) {
+        return "—";
+    }
+
+    try {
+        return format(parseISO(value), "d MMM yyyy, h:mm a");
+    } catch {
+        return value;
+    }
+};
+
 const openCreateForm = () => {
     selectedUser.value = null;
     showForm.value = true;
@@ -357,5 +456,94 @@ const openCreateForm = () => {
 const handleEdit = (user: any) => {
     selectedUser.value = user;
     showForm.value = true;
+};
+
+const handleDelete = (user: any) => {
+    if (Number(user.id) === Number(currentUserId.value)) {
+        return;
+    }
+
+    confirm.require({
+        header: "Move user to trash?",
+        message: `${user.name} will be moved to trash. You can restore the account later from Trashed Users.`,
+        icon: "pi pi-exclamation-triangle",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Move to Trash",
+            severity: "danger",
+            size: "small",
+        },
+        accept: () => {
+            deletingUserId.value = user.id;
+            router.delete(route("users.destroy", user.id), {
+                onFinish: () => {
+                    deletingUserId.value = null;
+                },
+            });
+        },
+    });
+};
+
+const handleRestore = (user: any) => {
+    confirm.require({
+        header: "Restore user?",
+        message: `Restore ${user.name} and bring the account back to All Users.`,
+        icon: "pi pi-replay",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Restore",
+            severity: "success",
+            size: "small",
+        },
+        accept: () => {
+            restoringUserId.value = user.id;
+            router.post(route("users.restore", user.id), {}, {
+                onFinish: () => {
+                    restoringUserId.value = null;
+                },
+            });
+        },
+    });
+};
+
+const handleForceDelete = (user: any) => {
+    if (Number(user.id) === Number(currentUserId.value)) {
+        return;
+    }
+
+    confirm.require({
+        header: "Permanently delete user?",
+        message: `This will permanently delete ${user.name} and all related packages, API keys, and SMS records. This cannot be undone.`,
+        icon: "pi pi-exclamation-triangle",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Delete Forever",
+            severity: "danger",
+            size: "small",
+        },
+        accept: () => {
+            deletingUserId.value = user.id;
+            router.delete(route("users.forceDestroy", user.id), {
+                onFinish: () => {
+                    deletingUserId.value = null;
+                },
+            });
+        },
+    });
 };
 </script>

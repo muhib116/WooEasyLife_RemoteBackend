@@ -71,5 +71,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'check.token' => \App\Http\Middleware\CustomAuthMiddleware::class,
         'check.tokenDomain' => \App\Http\Middleware\ValidateTokenDomain::class,
+        'check.fraudWhitelist' => \App\Http\Middleware\ValidateWhitelistedFraudDomain::class,
+        'auth.active' => \App\Http\Middleware\EnsureActiveAuthenticatedUser::class,
     ];
 }

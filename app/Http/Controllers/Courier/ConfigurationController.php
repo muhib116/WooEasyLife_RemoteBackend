@@ -56,14 +56,23 @@ class ConfigurationController extends Controller
         ];
 
         if ($request->slug === 'pathao') {
-            $rules['settings.store_id'] = 'required';
             $rules['settings.username'] = 'required|string';
             $rules['settings.password'] = 'nullable|string';
-            $rules['settings.sender_name'] = 'required|string';
-            $rules['settings.sender_phone'] = 'required|string';
-            $rules['settings.recipient_city'] = 'required|integer|min:1';
-            $rules['settings.recipient_zone'] = 'required|integer|min:1';
-            $rules['settings.recipient_area'] = 'required|integer|min:1';
+            $rules['settings.sender_name'] = 'nullable|string';
+            $rules['settings.sender_phone'] = 'nullable|string';
+            $rules['settings.store_id'] = 'nullable';
+            $rules['settings.recipient_city'] = 'nullable|integer|min:0';
+            $rules['settings.recipient_zone'] = 'nullable|integer|min:0';
+            $rules['settings.recipient_area'] = 'nullable|integer|min:0';
+
+            if ($request->boolean('is_active')) {
+                $rules['settings.store_id'] = 'required';
+                $rules['settings.sender_name'] = 'required|string';
+                $rules['settings.sender_phone'] = 'required|string';
+                $rules['settings.recipient_city'] = 'required|integer|min:1';
+                $rules['settings.recipient_zone'] = 'required|integer|min:1';
+                $rules['settings.recipient_area'] = 'required|integer|min:1';
+            }
         }
 
         $validator = Validator::make($request->all(), $rules);
@@ -99,18 +108,37 @@ class ConfigurationController extends Controller
             }
 
             $data['settings'] = array_merge($existingSettings, [
-                'store_id' => $request->input('settings.store_id'),
+                'environment' => $request->input('settings.environment') === 'live' ? 'live' : 'sandbox',
+                'store_id' => $this->pathaoStringSetting(
+                    $request->input('settings.store_id'),
+                    $existingSettings['store_id'] ?? ''
+                ),
                 'username' => $request->input('settings.username'),
                 'password' => $password,
-                'sender_name' => $request->input('settings.sender_name'),
-                'sender_phone' => $request->input('settings.sender_phone'),
-                'recipient_city' => (int) $request->input('settings.recipient_city'),
-                'recipient_zone' => (int) $request->input('settings.recipient_zone'),
-                'recipient_area' => (int) $request->input('settings.recipient_area'),
-                'delivery_type' => (int) ($request->input('settings.delivery_type') ?: 48),
-                'item_type' => (int) ($request->input('settings.item_type') ?: 2),
-                'item_weight' => (float) ($request->input('settings.item_weight') ?: 0.5),
-                'item_quantity' => (int) ($request->input('settings.item_quantity') ?: 1),
+                'sender_name' => $this->pathaoStringSetting(
+                    $request->input('settings.sender_name'),
+                    $existingSettings['sender_name'] ?? ''
+                ),
+                'sender_phone' => $this->pathaoStringSetting(
+                    $request->input('settings.sender_phone'),
+                    $existingSettings['sender_phone'] ?? ''
+                ),
+                'recipient_city' => $this->pathaoIntSetting(
+                    $request->input('settings.recipient_city'),
+                    $existingSettings['recipient_city'] ?? null
+                ),
+                'recipient_zone' => $this->pathaoIntSetting(
+                    $request->input('settings.recipient_zone'),
+                    $existingSettings['recipient_zone'] ?? null
+                ),
+                'recipient_area' => $this->pathaoIntSetting(
+                    $request->input('settings.recipient_area'),
+                    $existingSettings['recipient_area'] ?? null
+                ),
+                'delivery_type' => (int) ($request->input('settings.delivery_type') ?: ($existingSettings['delivery_type'] ?? 48)),
+                'item_type' => (int) ($request->input('settings.item_type') ?: ($existingSettings['item_type'] ?? 2)),
+                'item_weight' => (float) ($request->input('settings.item_weight') ?: ($existingSettings['item_weight'] ?? 0.5)),
+                'item_quantity' => (int) ($request->input('settings.item_quantity') ?: ($existingSettings['item_quantity'] ?? 1)),
             ]);
         }
 
@@ -173,5 +201,25 @@ class ConfigurationController extends Controller
             $data[$item->slug] = $item;
         }
         return $this->successResponse($data);
+    }
+
+    private function pathaoStringSetting($value, $fallback = '')
+    {
+        if ($value === null) {
+            return (string) $fallback;
+        }
+
+        $next = trim((string) $value);
+
+        return $next !== '' ? $next : (string) $fallback;
+    }
+
+    private function pathaoIntSetting($value, $fallback = null)
+    {
+        if ($value === null || $value === '') {
+            return $fallback !== null && $fallback !== '' ? (int) $fallback : null;
+        }
+
+        return (int) $value;
     }
 }

@@ -150,55 +150,56 @@ class SteadFastController extends Controller
 
     public function checkCourierBalance(Request $request)
     {
-
-        $steadfastBalance = 0;
-        $pathaoBalance = 0;
+        $steadfastBalance = null;
+        $steadfastConfigured = false;
+        $pathaoConfigured = false;
 
         try {
             $config = $this->getConfig();
             if ($config) {
+                $steadfastConfigured = true;
                 $response = Http::withHeaders([
                     'Api-Key' => $config->api_key,
                     'Secret-Key' => $config->secret_key,
                     'Content-Type' => 'application/json',
                 ])->get($this->baseUrl . '/get_balance');
                 $jsonResponse = $response->json();
-                $steadfastBalance = $jsonResponse['current_balance'];
+                $steadfastBalance = $jsonResponse['current_balance'] ?? 0;
             }
         } catch (\Throwable $th) {
-            //throw $th;
         }
 
         try {
             $pathaoService = app(PathaoCourierService::class);
-            $pathaoConfig = $pathaoService->getConfig(Auth::id());
+            $pathaoConfig = $pathaoService->getAuthConfig((int) (Auth::id() ?? 0));
 
             if ($pathaoConfig && $pathaoConfig->is_active) {
-                $pathaoBalance = 0;
+                $pathaoConfigured = true;
             }
         } catch (\Throwable $th) {
         }
 
         $responseData = [
-            'steadfast' => [
+            'total' => $steadfastConfigured ? (float) ($steadfastBalance ?? 0) : 0,
+            'total_includes_pathao' => false,
+        ];
+
+        if ($steadfastConfigured) {
+            $responseData['steadfast'] = [
                 'logo' => asset('images/steadfast.png'),
-                'balance' => $steadfastBalance
-            ],
-            'paperfly' => [
-                'logo' => asset('images/paperfly.png'),
-                'balance' => 0
-            ],
-            'redx' => [
-                'logo' => asset('images/redx.png'),
-                'balance' => 0
-            ],
-            'pathao' => [
+                'balance' => $steadfastBalance ?? 0,
+                'balance_available' => true,
+            ];
+        }
+
+        if ($pathaoConfigured) {
+            $responseData['pathao'] = [
                 'logo' => asset('images/pathao.png'),
                 'balance' => null,
                 'balance_available' => false,
-            ],
-            'total' => $steadfastBalance + ($pathaoBalance ?: 0),
-        ];
+                'message' => 'Pathao does not expose a merchant balance API.',
+            ];
+        }
 
         return $this->successResponse($responseData);
     }

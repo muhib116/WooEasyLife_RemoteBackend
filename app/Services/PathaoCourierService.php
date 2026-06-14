@@ -43,7 +43,19 @@ class PathaoCourierService
     {
         $config = null;
 
-        if ($userId > 0) {
+        if (!empty($override['courier_config_id'])) {
+            $query = CourierConfiguration::query()
+                ->where('id', (int) $override['courier_config_id'])
+                ->where('slug', 'pathao');
+
+            if ($userId > 0) {
+                $query->where('user_id', $userId);
+            }
+
+            $config = $query->first();
+        }
+
+        if (!$config && $userId > 0) {
             $config = CourierConfiguration::where('user_id', $userId)
                 ->where('slug', 'pathao')
                 ->first();
@@ -61,17 +73,28 @@ class PathaoCourierService
             $config->secret_key = trim((string) ($override['secret_key'] ?? $config->secret_key ?? ''));
 
             $settings = $this->normalizeSettings($config->settings);
+            $authChanged = false;
 
             if (!empty($override['username'])) {
                 $settings['username'] = trim((string) $override['username']);
+                $authChanged = true;
             }
 
             if (!empty($override['password'])) {
                 $settings['password'] = (string) $override['password'];
+                $authChanged = true;
             }
 
             if (!empty($override['environment'])) {
-                $settings['environment'] = $override['environment'] === 'live' ? 'live' : 'sandbox';
+                $nextEnvironment = $override['environment'] === 'live' ? 'live' : 'sandbox';
+                if (($settings['environment'] ?? 'sandbox') !== $nextEnvironment) {
+                    $authChanged = true;
+                }
+                $settings['environment'] = $nextEnvironment;
+            }
+
+            if ($authChanged) {
+                unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
             }
 
             $config->settings = $settings;
@@ -92,9 +115,34 @@ class PathaoCourierService
         return $config;
     }
 
-    public function getBaseUrl(): string
+    public function getBaseUrl(?CourierConfiguration $config = null): string
     {
-        return rtrim(env('PATHAO_BASE_URL', 'https://courier-api-sandbox.pathao.com'), '/');
+        if ($config) {
+            $settings = $this->normalizeSettings($config->settings);
+
+            if (($settings['environment'] ?? 'sandbox') === 'live') {
+                return rtrim(env('PATHAO_LIVE_BASE_URL', 'https://api-hermes.pathao.com'), '/');
+            }
+        }
+
+        return rtrim(
+            env('PATHAO_SANDBOX_BASE_URL', env('PATHAO_BASE_URL', 'https://courier-api-sandbox.pathao.com')),
+            '/'
+        );
+    }
+
+    /**
+     * Pathao's sandbox gateway resets HTTP/2 connections from PHP/cURL.
+     * Force HTTP/1.1 for all merchant API calls.
+     */
+    private function pathaoClient(int $timeout = 25): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::withOptions([
+            'version' => 1.1,
+            'curl' => [
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            ],
+        ])->timeout($timeout);
     }
 
     public function getAccessToken(CourierConfiguration $config): ?string
@@ -140,7 +188,7 @@ class PathaoCourierService
         }
 
         $payload = [
-            'store_id' => (int) $settings['store_id'],
+            'store_id' => (int) ($order['store_id'] ?? $settings['store_id']),
             'merchant_order_id' => (string) ($order['invoice'] ?? ''),
             'sender_name' => (string) $settings['sender_name'],
             'sender_phone' => $this->normalizePhone($settings['sender_phone']),
@@ -150,31 +198,49 @@ class PathaoCourierService
             'recipient_city' => (int) ($order['recipient_city'] ?? $settings['recipient_city']),
             'recipient_zone' => (int) ($order['recipient_zone'] ?? $settings['recipient_zone']),
             'recipient_area' => (int) ($order['recipient_area'] ?? $settings['recipient_area']),
-            'delivery_type' => (int) ($settings['delivery_type'] ?? self::DELIVERY_TYPE_NORMAL),
-            'item_type' => (int) ($settings['item_type'] ?? self::ITEM_TYPE_PARCEL),
-            'item_quantity' => (int) ($settings['item_quantity'] ?? 1),
-            'item_weight' => (float) ($settings['item_weight'] ?? 0.5),
+            'delivery_type' => (int) ($order['delivery_type'] ?? $settings['delivery_type'] ?? self::DELIVERY_TYPE_NORMAL),
+            'item_type' => (int) ($order['item_type'] ?? $settings['item_type'] ?? self::ITEM_TYPE_PARCEL),
+            'item_quantity' => (int) ($order['item_quantity'] ?? $settings['item_quantity'] ?? 1),
+            'item_weight' => (float) ($order['item_weight'] ?? $settings['item_weight'] ?? 0.5),
             'amount_to_collect' => (int) round($order['cod_amount'] ?? 0),
             'special_instruction' => $order['note'] ?? null,
-            'item_description' => $order['note'] ?? null,
+            'item_description' => $order['item_description'] ?? $order['note'] ?? null,
         ];
 
-        try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $token,
-            ])->post($this->getBaseUrl() . '/aladdin/api/v1/orders', $payload);
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            try {
+                $response = $this->pathaoClient()->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $token,
+                ])->post($this->getBaseUrl($config) . '/aladdin/api/v1/orders', $payload);
 
-            $json = $response->json();
+                $json = $response->json();
 
-            if ($response->successful() && ($json['code'] ?? null) == 200 && !empty($json['data']['consignment_id'])) {
-                return $this->successOrderRow($order, $json['data']);
+                if ($response->successful() && ($json['code'] ?? null) == 200 && !empty($json['data']['consignment_id'])) {
+                    return $this->successOrderRow($order, $json['data']);
+                }
+
+                return $this->failedOrderRow($order, $this->parseApiError($json, $response->body()));
+            } catch (\Throwable $th) {
+                if ($attempt >= 3 || !$this->isRetryableNetworkError($th->getMessage())) {
+                    return $this->failedOrderRow($order, $this->formatNetworkError($th->getMessage()));
+                }
+
+                usleep(250000 * $attempt);
             }
-
-            return $this->failedOrderRow($order, $this->parseApiError($json, $response->body()));
-        } catch (\Throwable $th) {
-            return $this->failedOrderRow($order, $th->getMessage());
         }
+
+        return $this->failedOrderRow($order, 'Pathao order creation failed.');
+    }
+
+    private function isRetryableNetworkError(string $message): bool
+    {
+        return str_contains($message, 'cURL error 56')
+            || str_contains($message, 'cURL error 52')
+            || str_contains($message, 'cURL error 28')
+            || str_contains($message, 'Connection reset by peer')
+            || str_contains($message, 'Broken pipe')
+            || str_contains($message, 'Operation timed out');
     }
 
     public function getOrderStatus(CourierConfiguration $config, string $consignmentId): string
@@ -186,16 +252,16 @@ class PathaoCourierService
         }
 
         try {
-            $response = Http::withHeaders([
+            $response = $this->pathaoClient()->withHeaders([
                 'Authorization' => 'Bearer ' . $token,
-            ])->get($this->getBaseUrl() . '/aladdin/api/v1/orders/' . $consignmentId . '/info');
+            ])->get($this->getBaseUrl($config) . '/aladdin/api/v1/orders/' . $consignmentId . '/info');
 
             $json = $response->json();
 
             if ($response->successful() && ($json['code'] ?? null) == 200) {
                 $status = $json['data']['order_status_slug'] ?? $json['data']['order_status'] ?? '';
 
-                return is_string($status) ? strtolower($status) : '';
+                return $this->normalizeOrderStatus(is_string($status) ? $status : '');
             }
         } catch (\Throwable $th) {
             return '';
@@ -204,7 +270,78 @@ class PathaoCourierService
         return '';
     }
 
-    public function getStores(CourierConfiguration $config): array
+    public function normalizeOrderStatus(string $status): string
+    {
+        $raw = strtolower(trim(str_replace(['-', ' '], '_', $status)));
+        $raw = preg_replace('/^order\./', '', $raw);
+
+        if ($raw === '') {
+            return '';
+        }
+
+        $aliases = [
+            'success' => 'delivered',
+            'complete' => 'delivered',
+            'completed' => 'delivered',
+            'picked_up' => 'in_transit',
+            'picked' => 'in_transit',
+            'pickup_requested' => 'pending',
+            'on_hold' => 'hold',
+            'returned' => 'cancelled',
+            'canceled' => 'cancelled',
+        ];
+
+        if (isset($aliases[$raw])) {
+            return $aliases[$raw];
+        }
+
+        return $raw;
+    }
+
+    public function getStores(
+        CourierConfiguration $config,
+        int $maxPages = 3,
+        int $maxItems = 100,
+        ?int $includeStoreId = null
+    ): array {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $stores = $this->fetchStorePages($config, $maxPages);
+
+            if ($stores !== []) {
+                $stores = array_slice($stores, 0, max(1, $maxItems));
+
+                if ($includeStoreId && !$this->storeListContains($stores, $includeStoreId)) {
+                    $matched = $this->findStoreById($config, $includeStoreId, $maxPages);
+
+                    if ($matched) {
+                        array_unshift($stores, $matched);
+                    } else {
+                        array_unshift($stores, [
+                            'store_id' => $includeStoreId,
+                            'store_name' => 'Saved store',
+                        ]);
+                    }
+                }
+
+                return $stores;
+            }
+
+            if ($attempt < 3) {
+                usleep(300000 * $attempt);
+            }
+        }
+
+        if ($includeStoreId) {
+            return [[
+                'store_id' => $includeStoreId,
+                'store_name' => 'Saved store',
+            ]];
+        }
+
+        return [];
+    }
+
+    private function fetchStorePages(CourierConfiguration $config, int $maxPages): array
     {
         $token = $this->getAccessToken($config);
 
@@ -218,15 +355,21 @@ class PathaoCourierService
 
         try {
             do {
-                $response = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $token,
-                ])->get($this->getBaseUrl() . '/aladdin/api/v1/stores', [
-                    'page' => $page,
-                ]);
+                $response = $this->pathaoClient(25)
+                    ->withHeaders([
+                        'Authorization' => 'Bearer ' . $token,
+                        'Accept' => 'application/json',
+                    ])->get($this->getBaseUrl($config) . '/aladdin/api/v1/stores', [
+                        'page' => $page,
+                    ]);
+
+                if (!$response->successful()) {
+                    break;
+                }
 
                 $json = $response->json();
 
-                if (!$response->successful() || ($json['code'] ?? null) != 200) {
+                if (($json['code'] ?? null) != 200) {
                     break;
                 }
 
@@ -235,7 +378,7 @@ class PathaoCourierService
 
                 $lastPage = (int) ($json['data']['last_page'] ?? 1);
                 $page++;
-            } while ($page <= $lastPage && $page <= 5);
+            } while ($page <= $lastPage && $page <= max(1, $maxPages));
         } catch (\Throwable $th) {
             return $stores;
         }
@@ -243,9 +386,77 @@ class PathaoCourierService
         return $stores;
     }
 
+    private function storeListContains(array $stores, int $storeId): bool
+    {
+        foreach ($stores as $store) {
+            if ((int) ($store['store_id'] ?? 0) === $storeId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function findStoreById(CourierConfiguration $config, int $storeId, int $maxPages): ?array
+    {
+        $token = $this->getAccessToken($config);
+
+        if (!$token) {
+            return null;
+        }
+
+        $page = 1;
+        $lastPage = 1;
+
+        try {
+            do {
+                $response = $this->pathaoClient(25)
+                    ->withHeaders([
+                        'Authorization' => 'Bearer ' . $token,
+                        'Accept' => 'application/json',
+                    ])->get($this->getBaseUrl($config) . '/aladdin/api/v1/stores', [
+                        'page' => $page,
+                    ]);
+
+                if (!$response->successful()) {
+                    break;
+                }
+
+                $json = $response->json();
+
+                if (($json['code'] ?? null) != 200) {
+                    break;
+                }
+
+                $pageData = $json['data']['data'] ?? [];
+
+                if (is_array($pageData)) {
+                    foreach ($pageData as $store) {
+                        if ((int) ($store['store_id'] ?? 0) === $storeId) {
+                            return $store;
+                        }
+                    }
+                }
+
+                $lastPage = (int) ($json['data']['last_page'] ?? 1);
+                $page++;
+            } while ($page <= $lastPage && $page <= max(1, $maxPages));
+        } catch (\Throwable $th) {
+            return null;
+        }
+
+        return null;
+    }
+
     public function getCities(CourierConfiguration $config): array
     {
-        return $this->authorizedGet($config, '/aladdin/api/v1/countries/1/city-list');
+        $cities = $this->authorizedGet($config, '/aladdin/api/v1/countries/1/city-list');
+
+        if ($cities !== []) {
+            return $cities;
+        }
+
+        return $this->authorizedGet($config, '/aladdin/api/v1/city-list');
     }
 
     public function getZones(CourierConfiguration $config, int $cityId): array
@@ -260,53 +471,50 @@ class PathaoCourierService
 
     public function createStore(CourierConfiguration $config, array $storeData): array
     {
-        $token = $this->getAccessToken($config);
+        return $this->mutateStore(
+            $config,
+            'POST',
+            '/aladdin/api/v1/stores',
+            $this->buildStorePayload($storeData),
+            'Store created successfully.',
+            'Pathao store creation failed.'
+        );
+    }
 
-        if (!$token) {
-            return [
-                'success' => false,
-                'message' => 'Unable to authenticate with Pathao.',
-                'data' => null,
-            ];
-        }
+    public function updateStore(CourierConfiguration $config, int $storeId, array $storeData): array
+    {
+        $payload = $this->buildStorePayload($storeData);
 
-        $payload = [
-            'name' => (string) ($storeData['name'] ?? ''),
-            'contact_name' => (string) ($storeData['contact_name'] ?? ''),
-            'contact_number' => $this->normalizePhone($storeData['contact_number'] ?? ''),
-            'address' => (string) ($storeData['address'] ?? ''),
-            'city_id' => (int) ($storeData['city_id'] ?? 0),
-            'zone_id' => (int) ($storeData['zone_id'] ?? 0),
-            'area_id' => (int) ($storeData['area_id'] ?? 0),
-        ];
+        return $this->mutateStore(
+            $config,
+            'PUT',
+            '/aladdin/api/v1/stores/' . $storeId,
+            $payload,
+            'Store updated successfully.',
+            'Pathao store update failed.'
+        );
+    }
 
-        try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $token,
-            ])->post($this->getBaseUrl() . '/aladdin/api/v1/stores', $payload);
+    public function deleteStore(CourierConfiguration $config, int $storeId): array
+    {
+        return $this->mutateStore(
+            $config,
+            'DELETE',
+            '/aladdin/api/v1/stores/' . $storeId,
+            null,
+            'Store deleted successfully.',
+            'Pathao store deletion failed.'
+        );
+    }
 
-            $json = $response->json();
+    private function invalidateAccessToken(CourierConfiguration $config): void
+    {
+        $settings = $this->normalizeSettings($config->settings);
+        unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
+        $config->settings = $settings;
 
-            if ($response->successful() && ($json['code'] ?? null) == 200) {
-                return [
-                    'success' => true,
-                    'message' => $json['message'] ?? 'Store created successfully.',
-                    'data' => $json['data'] ?? null,
-                ];
-            }
-
-            return [
-                'success' => false,
-                'message' => $this->parseApiError($json, $response->body()),
-                'data' => null,
-            ];
-        } catch (\Throwable $th) {
-            return [
-                'success' => false,
-                'message' => $th->getMessage(),
-                'data' => null,
-            ];
+        if (class_exists(\Illuminate\Support\Facades\Cache::class)) {
+            \Illuminate\Support\Facades\Cache::forget($this->tokenCacheKey($config));
         }
     }
 
@@ -332,34 +540,46 @@ class PathaoCourierService
             'recipient_zone' => (int) ($input['recipient_zone'] ?? $settings['recipient_zone']),
         ];
 
-        try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $token,
-            ])->post($this->getBaseUrl() . '/aladdin/api/v1/merchant/price-plan', $payload);
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            try {
+                $response = $this->pathaoClient()->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $token,
+                ])->post($this->getBaseUrl($config) . '/aladdin/api/v1/merchant/price-plan', $payload);
 
-            $json = $response->json();
+                $json = $response->json();
 
-            if ($response->successful() && ($json['code'] ?? null) == 200) {
+                if ($response->successful() && ($json['code'] ?? null) == 200) {
+                    return [
+                        'success' => true,
+                        'message' => $json['message'] ?? 'Price calculated.',
+                        'data' => $json['data'] ?? null,
+                    ];
+                }
+
                 return [
-                    'success' => true,
-                    'message' => $json['message'] ?? 'Price calculated.',
-                    'data' => $json['data'] ?? null,
+                    'success' => false,
+                    'message' => $this->parseApiError($json, $response->body()),
+                    'data' => null,
                 ];
-            }
+            } catch (\Throwable $th) {
+                if ($attempt >= 3) {
+                    return [
+                        'success' => false,
+                        'message' => $this->formatNetworkError($th->getMessage()),
+                        'data' => null,
+                    ];
+                }
 
-            return [
-                'success' => false,
-                'message' => $this->parseApiError($json, $response->body()),
-                'data' => null,
-            ];
-        } catch (\Throwable $th) {
-            return [
-                'success' => false,
-                'message' => $th->getMessage(),
-                'data' => null,
-            ];
+                usleep(250000 * $attempt);
+            }
         }
+
+        return [
+            'success' => false,
+            'message' => 'Unable to calculate delivery price from Pathao.',
+            'data' => null,
+        ];
     }
 
     private function authorizedGet(CourierConfiguration $config, string $path): array
@@ -370,11 +590,11 @@ class PathaoCourierService
             return [];
         }
 
-        $url = $this->getBaseUrl() . $path;
+        $url = $this->getBaseUrl($config) . $path;
 
         for ($attempt = 1; $attempt <= 3; $attempt++) {
             try {
-                $response = Http::timeout(25)
+                $response = $this->pathaoClient(25)
                     ->withHeaders([
                         'Authorization' => 'Bearer ' . $token,
                         'Accept' => 'application/json',
@@ -489,9 +709,9 @@ class PathaoCourierService
         ], $extra);
 
         try {
-            $response = Http::withHeaders([
+            $response = $this->pathaoClient()->withHeaders([
                 'Content-Type' => 'application/json',
-            ])->post($this->getBaseUrl() . '/aladdin/api/v1/issue-token', $payload);
+            ])->post($this->getBaseUrl($config) . '/aladdin/api/v1/issue-token', $payload);
 
             $json = $response->json();
 
@@ -547,33 +767,183 @@ class PathaoCourierService
         return $digits;
     }
 
-    private function parseApiError($json, string $fallbackBody = ''): string
+    private function formatNetworkError(string $message): string
     {
-        if (is_array($json)) {
-            if (!empty($json['message']) && is_string($json['message'])) {
-                return $json['message'];
+        if (
+            str_contains($message, 'cURL error 56')
+            || str_contains($message, 'Connection reset by peer')
+            || str_contains($message, 'Broken pipe')
+        ) {
+            return 'Pathao API connection failed. Please try again in a moment.';
+        }
+
+        return $message;
+    }
+
+    private function buildStorePayload(array $storeData): array
+    {
+        $contactNumber = $this->normalizePhone((string) ($storeData['contact_number'] ?? ''));
+        $payload = [
+            'name' => trim((string) ($storeData['name'] ?? '')),
+            'contact_name' => trim((string) ($storeData['contact_name'] ?? '')),
+            'contact_number' => $contactNumber,
+            'address' => trim((string) ($storeData['address'] ?? '')),
+            'city_id' => (int) ($storeData['city_id'] ?? 0),
+            'zone_id' => (int) ($storeData['zone_id'] ?? 0),
+            'area_id' => (int) ($storeData['area_id'] ?? 0),
+        ];
+
+        $otpNumber = $this->normalizePhone((string) ($storeData['otp_number'] ?? $contactNumber));
+
+        if ($otpNumber !== '') {
+            $payload['otp_number'] = $otpNumber;
+        }
+
+        $secondaryContact = $this->normalizePhone((string) ($storeData['secondary_contact'] ?? ''));
+
+        if ($secondaryContact !== '' && preg_match('/^01[0-9]{9}$/', $secondaryContact)) {
+            $payload['secondary_contact'] = $secondaryContact;
+        }
+
+        return $payload;
+    }
+
+    private function mutateStore(
+        CourierConfiguration $config,
+        string $method,
+        string $path,
+        ?array $payload,
+        string $successMessage,
+        string $failureMessage
+    ): array {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $token = $this->getAccessToken($config);
+
+            if (!$token) {
+                return [
+                    'success' => false,
+                    'message' => 'Unable to authenticate with Pathao.',
+                    'data' => null,
+                ];
             }
 
+            try {
+                $request = $this->pathaoClient()->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $token,
+                    'Accept' => 'application/json',
+                ]);
+
+                $url = $this->getBaseUrl($config) . $path;
+
+                $response = match (strtoupper($method)) {
+                    'PUT' => $request->put($url, $payload ?? []),
+                    'PATCH' => $request->patch($url, $payload ?? []),
+                    'DELETE' => $request->delete($url),
+                    default => $request->post($url, $payload ?? []),
+                };
+
+                $json = $response->json();
+                $responseCode = is_array($json) ? (int) ($json['code'] ?? 0) : 0;
+                $hasApiError = is_array($json) && !empty($json['error']);
+
+                if ($response->successful() && !$hasApiError && ($responseCode === 0 || in_array($responseCode, [200, 201, 204], true))) {
+                    $storeData = $json['data'] ?? null;
+
+                    if (is_array($storeData) && isset($storeData['data']) && is_array($storeData['data'])) {
+                        $storeData = $storeData['data'];
+                    }
+
+                    return [
+                        'success' => true,
+                        'message' => $json['message'] ?? $successMessage,
+                        'data' => $storeData,
+                    ];
+                }
+
+                $details = $this->parseApiErrorDetails($json, $response->body(), $failureMessage);
+                $message = $details['message'];
+
+                if ($response->status() === 404 || $response->status() === 405) {
+                    $message .= ' Pathao may not allow this action via API — use the Pathao Merchant app to manage stores.';
+                }
+
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'errors' => $details['errors'],
+                    'data' => null,
+                ];
+            } catch (\Throwable $th) {
+                if ($attempt < 3 && $this->isRetryableNetworkError($th->getMessage())) {
+                    $this->invalidateAccessToken($config);
+                    usleep(250000 * $attempt);
+                    continue;
+                }
+
+                return [
+                    'success' => false,
+                    'message' => $this->formatNetworkError($th->getMessage()),
+                    'data' => null,
+                ];
+            }
+        }
+
+        return [
+            'success' => false,
+            'message' => $failureMessage,
+            'data' => null,
+        ];
+    }
+
+    private function parseApiError($json, string $fallbackBody = '', string $defaultMessage = 'Pathao request failed.'): string
+    {
+        return $this->parseApiErrorDetails($json, $fallbackBody, $defaultMessage)['message'];
+    }
+
+    private function parseApiErrorDetails($json, string $fallbackBody = '', string $defaultMessage = 'Pathao request failed.'): array
+    {
+        $errors = null;
+        $message = $defaultMessage;
+
+        if (is_array($json)) {
             if (!empty($json['errors']) && is_array($json['errors'])) {
+                $errors = $json['errors'];
                 $messages = [];
 
-                foreach ($json['errors'] as $field => $errors) {
-                    if (is_array($errors)) {
-                        $messages = array_merge($messages, $errors);
-                    } elseif (is_string($errors)) {
-                        $messages[] = $errors;
+                foreach ($json['errors'] as $fieldErrors) {
+                    if (is_array($fieldErrors)) {
+                        foreach ($fieldErrors as $error) {
+                            if (is_string($error) && $error !== '') {
+                                $messages[] = $error;
+                            }
+                        }
+                    } elseif (is_string($fieldErrors) && $fieldErrors !== '') {
+                        $messages[] = $fieldErrors;
                     }
                 }
 
                 if ($messages) {
-                    return implode(' ', $messages);
+                    return [
+                        'message' => implode(' ', array_values(array_unique($messages))),
+                        'errors' => $errors,
+                    ];
                 }
+            }
+
+            if (!empty($json['message']) && is_string($json['message'])) {
+                $message = $json['message'];
             }
         }
 
-        return is_string($fallbackBody) && strlen($fallbackBody) < 300
-            ? $fallbackBody
-            : 'Pathao order creation failed.';
+        if ($message === $defaultMessage && is_string($fallbackBody) && strlen($fallbackBody) > 0 && strlen($fallbackBody) < 300) {
+            $message = $fallbackBody;
+        }
+
+        return [
+            'message' => $message,
+            'errors' => $errors,
+        ];
     }
 
     private function successOrderRow(array $order, array $data): array
@@ -589,7 +959,7 @@ class PathaoCourierService
             'note' => $order['note'] ?? null,
             'consignment_id' => (string) ($data['consignment_id'] ?? ''),
             'tracking_code' => 'not-available',
-            'status' => strtolower((string) ($data['order_status'] ?? 'pending')),
+            'status' => $this->normalizeOrderStatus((string) ($data['order_status_slug'] ?? $data['order_status'] ?? 'pending')),
             'error' => null,
             'created_at' => $now,
             'updated_at' => $now,

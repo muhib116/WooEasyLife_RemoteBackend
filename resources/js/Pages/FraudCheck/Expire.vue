@@ -36,8 +36,27 @@
             </PageCard>
 
             <PageCard
+                title="Courier Credentials"
+                description="Fraud checks now use merchant login credentials from .env instead of saved CURL commands"
+            >
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div
+                        v-for="(enabled, key) in credentialStatus || {}"
+                        :key="key"
+                        class="rounded-xl border px-4 py-3 text-sm"
+                        :class="enabled
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300'
+                            : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'"
+                    >
+                        <span class="font-medium">{{ key }}</span>:
+                        {{ enabled ? "Configured" : "Missing in .env" }}
+                    </div>
+                </div>
+            </PageCard>
+
+            <PageCard
                 title="Steadfast CURL Configuration"
-                description="Paste the CURL command used for Steadfast fraud API requests"
+                description="Legacy fallback only. Prefer STEADFAST_USER and STEADFAST_PASSWORD in .env"
             >
                 <Textarea
                     v-model="curlForm.curl_text"
@@ -71,6 +90,7 @@ defineOptions({
 
 const props = defineProps({
     steadfast_curl: String,
+    credentialStatus: Object,
 });
 
 const checkingExpiry = ref(false);

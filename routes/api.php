@@ -51,6 +51,8 @@ if ($pathaoDevCatalog) {
         Route::post('/zones', [PathaoController::class, 'getZones']);
         Route::post('/areas', [PathaoController::class, 'getAreas']);
         Route::post('/create-store', [PathaoController::class, 'createStore']);
+        Route::post('/update-store', [PathaoController::class, 'updateStore']);
+        Route::post('/delete-store', [PathaoController::class, 'deleteStore']);
         Route::post('/price-plan', [PathaoController::class, 'pricePlan']);
     });
 }
@@ -101,6 +103,8 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
                 Route::post('/zones', [PathaoController::class, 'getZones']);
                 Route::post('/areas', [PathaoController::class, 'getAreas']);
                 Route::post('/create-store', [PathaoController::class, 'createStore']);
+                Route::post('/update-store', [PathaoController::class, 'updateStore']);
+                Route::post('/delete-store', [PathaoController::class, 'deleteStore']);
                 Route::post('/price-plan', [PathaoController::class, 'pricePlan']);
             }
         });
@@ -121,7 +125,11 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::get('/balance', [SmsController::class, 'smsBalance']);
         });
 
-        Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('fraudCheck');
-        Route::post('/fraud-check-stream', [FraudCheckController::class, 'checkStream'])->name('checkStream');
+        Route::post('/fraud-check', [FraudCheckController::class, 'check'])
+            ->middleware('check.fraudWhitelist')
+            ->name('fraudCheck');
+        Route::post('/fraud-check-stream', [FraudCheckController::class, 'checkStream'])
+            ->middleware('check.fraudWhitelist')
+            ->name('checkStream');
     });
 });

@@ -4,13 +4,15 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $guarded = ['id'];
 
@@ -27,6 +29,28 @@ class User extends Authenticatable
 
     public function userPackage() {
         return $this->hasMany(UserPackage::class, 'user_id', 'id');
+    }
+
+    public function canAccessPlatform(): bool
+    {
+        return ! $this->trashed() && (bool) $this->status;
+    }
+
+    public static function findForApiAccess(int $userId): ?self
+    {
+        $user = static::withTrashed()->find($userId);
+
+        return ($user && $user->canAccessPlatform()) ? $user : null;
+    }
+
+    public function revokePlatformAccess(): void
+    {
+        AccessToken::query()
+            ->where('tokenable_id', $this->id)
+            ->where('tokenable_type', self::class)
+            ->delete();
+
+        DB::table('sessions')->where('user_id', $this->id)->delete();
     }
     
     /**

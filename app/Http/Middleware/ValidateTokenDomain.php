@@ -49,6 +49,20 @@ class ValidateTokenDomain
                 return $this->errorResponse('Expired', 401);
             }
 
+            if ($accessToken->tokenable_type !== User::class) {
+                return $this->errorResponse('Invalid Token', 401);
+            }
+
+            $user = User::findForApiAccess((int) $accessToken->tokenable_id);
+
+            if (! $user) {
+                LogHelper::saveLog('Inactive or trashed user API access', $token);
+
+                return $this->errorResponse('Unauthenticated', 401, [
+                    'user' => 'Account is disabled or deleted',
+                ]);
+            }
+
             $host = $this->getDomainFromUrl($accessToken->domain);
             if ($frontendDomain !== $host) {
                 return $this->errorResponse('Invalid domain', 401);

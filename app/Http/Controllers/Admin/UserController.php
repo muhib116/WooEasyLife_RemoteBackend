@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\LogHelper;
 use App\Models\AccessToken;
+use App\Models\CourierConfiguration;
 use App\Models\PackageHub;
 use App\Models\PackageUseHistory;
+use App\Models\RouteHit;
 use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
+use App\Models\TransactionHistory;
 use App\Models\User;
+use App\Models\UserBusiness;
 use App\Models\UserPackage;
 use App\Traits\Transaction;
 use App\Traits\Util;
@@ -28,15 +32,33 @@ class UserController extends Controller
 
     public function index()
     {
-        $users = User::query()
-            // ->where('role', 'user')
+        $users = $this->usersQuery()->get();
+
+        return Inertia::render('Users/Index', [
+            'users' => $users,
+            'trashed' => false,
+        ]);
+    }
+
+    public function trashed()
+    {
+        $users = $this->usersQuery(true)->get();
+
+        return Inertia::render('Users/Index', [
+            'users' => $users,
+            'trashed' => true,
+        ]);
+    }
+
+    private function usersQuery(bool $onlyTrashed = false)
+    {
+        $query = $onlyTrashed ? User::onlyTrashed() : User::query();
+
+        return $query
             ->withSum(['userPackage as remaining_order' => function ($query) {
                 $query->where('is_active', 1);
             }], 'remaining_order')
-            ->orderBy('id', 'desc')
-            ->get();
-        // return $users;
-        return Inertia::render('Users/Index', compact('users'));
+            ->orderBy($onlyTrashed ? 'deleted_at' : 'id', 'desc');
     }
 
     public $notices = [
@@ -81,15 +103,9 @@ class UserController extends Controller
         }
 
         try {
-            $user = $accessToken->tokenable;
-            // $types = ['success', 'warning', 'danger', 'info', null];
+            $user = User::findForApiAccess((int) $accessToken->tokenable_id);
 
-            if (!$user) {
-                return $this->errorResponse('Unauthenticated', 401);
-            }
-
-            if (!$user->status) {
-                LogHelper::saveLog('disabled user', 'This user is disabled');
+            if (! $user) {
                 return $this->errorResponse('Unauthenticated', 401);
             }
 
@@ -198,6 +214,81 @@ class UserController extends Controller
             User::create($data);
         }
         return back()->with('success', 'User Saved Successfully!');
+    }
+
+    public function destroy($userId)
+    {
+        $user = User::findOrFail($userId);
+
+        if ((int) $user->id === (int) Auth::id()) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        $user->revokePlatformAccess();
+        $user->update(['status' => false]);
+        $user->delete();
+
+        return redirect()->route('users.index')->with('success', 'User moved to trash.');
+    }
+
+    public function restore($userId)
+    {
+        $user = User::onlyTrashed()->findOrFail($userId);
+        $user->restore();
+
+        if ($user->role === 'user') {
+            $user->update(['status' => true]);
+        }
+
+        return redirect()->route('users.trashed')->with('success', 'User restored successfully.');
+    }
+
+    public function forceDestroy($userId)
+    {
+        $user = User::onlyTrashed()->findOrFail($userId);
+
+        if ((int) $user->id === (int) Auth::id()) {
+            return back()->with('error', 'You cannot permanently delete your own account.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $this->permanentlyDeleteUser($user);
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            LogHelper::saveLog('User force delete error', $th->getMessage());
+
+            return back()->with('error', 'Failed to permanently delete user.');
+        }
+
+        return redirect()->route('users.trashed')->with('success', 'User permanently deleted.');
+    }
+
+    private function permanentlyDeleteUser(User $user): void
+    {
+        $user->revokePlatformAccess();
+
+        $smsBalanceIds = SmsBalance::where('user_id', $user->id)->pluck('id');
+
+        TransactionHistory::query()
+            ->where('user_id', $user->id)
+            ->orWhere(function ($query) use ($smsBalanceIds) {
+                $query->where('transactional_type', SmsBalance::class)
+                    ->whereIn('transactional_id', $smsBalanceIds);
+            })
+            ->forceDelete();
+
+        PackageUseHistory::where('user_id', $user->id)->forceDelete();
+        UserPackage::where('user_id', $user->id)->forceDelete();
+        SmsBalance::where('user_id', $user->id)->delete();
+        SmsRecharge::where('user_id', $user->id)->forceDelete();
+        UserBusiness::where('user_id', $user->id)->forceDelete();
+        CourierConfiguration::where('user_id', $user->id)->delete();
+        RouteHit::where('user_id', $user->id)->delete();
+
+        $user->forceDelete();
     }
 
     public function apiKeys($userId)

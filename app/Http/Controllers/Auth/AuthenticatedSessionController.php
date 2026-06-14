@@ -32,7 +32,16 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $user = User::where('email', $request->email)->first();
-        if($user->role != 'admin') {
+
+        if (! $user) {
+            return back()->withErrors(['email' => trans('auth.failed')]);
+        }
+
+        if ($user->trashed()) {
+            return back()->withErrors(['email' => 'This account has been deactivated.']);
+        }
+
+        if ($user->role != 'admin') {
             return back()->withErrors(['email' => 'You are not admin']);
         }
         $request->authenticate();
