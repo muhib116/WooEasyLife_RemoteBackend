@@ -15,19 +15,28 @@ class DatabaseSeeder extends Seeder
     {
         $password = Hash::make('password');
 
-        User::updateOrCreate(
-            ['email' => 'admin@example.com'],
-            ['name' => 'Admin 1', 'role' => 'admin', 'password' => $password, 'status' => true]
-        );
+        $seedUsers = [
+            ['email' => 'admin@example.com', 'name' => 'Admin 1', 'role' => 'admin'],
+            ['email' => 'entnasir23a@gmail.com', 'name' => 'Admin 2', 'role' => 'admin'],
+            ['email' => 'user@example.com', 'name' => 'Test User', 'role' => 'user'],
+        ];
 
-        User::updateOrCreate(
-            ['email' => 'entnasir23a@gmail.com'],
-            ['name' => 'Admin 2', 'role' => 'admin', 'password' => $password, 'status' => true]
-        );
+        foreach ($seedUsers as $seedUser) {
+            $user = User::withTrashed()->where('email', $seedUser['email'])->first();
 
-        User::updateOrCreate(
-            ['email' => 'user@example.com'],
-            ['name' => 'Test User', 'role' => 'user', 'password' => $password, 'status' => true]
-        );
+            if ($user?->trashed()) {
+                $user->restore();
+            }
+
+            User::updateOrCreate(
+                ['email' => $seedUser['email']],
+                [
+                    'name' => $seedUser['name'],
+                    'role' => $seedUser['role'],
+                    'password' => $password,
+                    'status' => true,
+                ]
+            );
+        }
     }
 }

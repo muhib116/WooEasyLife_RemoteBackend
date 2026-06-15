@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Courier;
 use App\Http\Controllers\Controller;
 use App\LogHelper;
 use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierShipmentService;
 use App\Services\PathaoCourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,11 +19,11 @@ class SteadFastController extends Controller
     // protected $apiKey;
     // protected $secretKey;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected CourierShipmentService $shipmentService,
+        protected CourierAccountService $courierAccountService
+    ) {
         $this->baseUrl = 'https://portal.packzy.com/api/v1';
-        // $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80';
-        // $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t';
     }
 
     private function getConfig()
@@ -67,19 +69,40 @@ class SteadFastController extends Controller
 
     public function bulkCheckStatus(Request $request)
     {
-        $config = $this->getConfig();
-
-        if (!$config) {
-            return $this->errorResponse('The SteadFast settings are not configured properly.');
-        }
-
         $consignmentIds = $request->consignment_ids ?? [];
         $invoiceIds = $request->invoice_ids ?? [];
-
         $response_data = [];
+        $config = $this->getConfig();
+        $environment = $config
+            ? $this->courierAccountService->environmentFromConfig($config)
+            : null;
 
-        if (count($consignmentIds)) {
-            foreach ($consignmentIds as $id) {
+        $groups = $this->shipmentService->groupConsignmentsByAccount(
+            'steadfast',
+            is_array($consignmentIds) ? $consignmentIds : [],
+            $environment
+        );
+
+        if (empty($groups) && count($consignmentIds)) {
+            $groups = [0 => $consignmentIds];
+        }
+
+        foreach ($groups as $accountId => $ids) {
+            $config = $this->courierAccountService->configurationForAccount(
+                (int) $accountId,
+                (int) (Auth::id() ?? 0),
+                'steadfast'
+            );
+
+            if (!$config) {
+                $config = $this->getConfig();
+            }
+
+            if (!$config) {
+                continue;
+            }
+
+            foreach ($ids as $id) {
                 $response = Http::withHeaders([
                     'Api-Key' => $config->api_key,
                     'Secret-Key' => $config->secret_key,
@@ -96,22 +119,26 @@ class SteadFastController extends Controller
                 $response_data[$id] = $status;
             }
         }
+
         if (count($invoiceIds)) {
-            foreach ($invoiceIds as $id) {
-                $response = Http::withHeaders([
-                    'Api-Key' => $config->api_key,
-                    'Secret-Key' => $config->secret_key,
-                    'Content-Type' => 'application/json',
-                ])->get($this->baseUrl . '/status_by_invoice/' . $id);
-                $status = '';
-                try {
-                    $jsonResponse = $response->json();
-                    if (@$jsonResponse['status'] == '200') {
-                        $status = @$jsonResponse['delivery_status'];
+            $config = $this->getConfig();
+            if ($config) {
+                foreach ($invoiceIds as $id) {
+                    $response = Http::withHeaders([
+                        'Api-Key' => $config->api_key,
+                        'Secret-Key' => $config->secret_key,
+                        'Content-Type' => 'application/json',
+                    ])->get($this->baseUrl . '/status_by_invoice/' . $id);
+                    $status = '';
+                    try {
+                        $jsonResponse = $response->json();
+                        if (@$jsonResponse['status'] == '200') {
+                            $status = @$jsonResponse['delivery_status'];
+                        }
+                    } catch (\Throwable $th) {
                     }
-                } catch (\Throwable $th) {
+                    $response_data[$id] = $status;
                 }
-                $response_data[$id] = $status;
             }
         }
 
@@ -304,8 +331,9 @@ class SteadFastController extends Controller
                     $order['updated_at'] = now();
                     return $order;
                 }, $data['data'] ?? []);
-                // try {
-                // } catch (\Throwable $th) {}
+
+                $data = $this->shipmentService->recordSuccessfulOrders('steadfast', $config, $data, $request);
+
                 return $this->successResponse($data);
             } else {
 

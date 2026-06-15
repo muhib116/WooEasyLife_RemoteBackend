@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Courier\CourierWebhookOpsController;
+use App\Http\Controllers\Courier\WebhookHubController;
 use App\Http\Controllers\Courier\ConfigurationController;
 use App\Http\Controllers\Courier\PathaoController;
 use App\Http\Controllers\Courier\RedXController;
@@ -36,6 +38,21 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
 Route::get('app-logo', [PluginsController::class, 'appLogo']);
 Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
+
+Route::prefix('api/webhooks')->group(function () {
+    Route::post('/pathao', [WebhookHubController::class, 'pathao']);
+    Route::post('/pathao/sandbox', function (Request $request) {
+        return app(WebhookHubController::class)->pathao($request, 'sandbox');
+    });
+    Route::post('/steadfast', [WebhookHubController::class, 'steadfast']);
+    Route::post('/steadfast/sandbox', function (Request $request) {
+        return app(WebhookHubController::class)->steadfast($request, 'sandbox');
+    });
+    Route::post('/redx', [WebhookHubController::class, 'redx']);
+    Route::post('/redx/sandbox', function (Request $request) {
+        return app(WebhookHubController::class)->redx($request, 'sandbox');
+    });
+});
 
 $pathaoDevCatalog = app()->environment('local')
     || filter_var(env('PATHAO_DEV_CATALOG', false), FILTER_VALIDATE_BOOLEAN);
@@ -88,6 +105,10 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/list', [ConfigurationController::class, 'getList']);
             Route::post('/save-configuration', [ConfigurationController::class, 'saveConfiguration']);
             Route::post('/get-configuration', [ConfigurationController::class, 'getConfiguration']);
+            Route::get('/webhook-settings', [ConfigurationController::class, 'getWebhookSettings']);
+            Route::get('/webhook-health', [CourierWebhookOpsController::class, 'webhookHealth']);
+            Route::get('/webhook-events', [CourierWebhookOpsController::class, 'webhookEvents']);
+            Route::post('/backfill-shipments', [CourierWebhookOpsController::class, 'backfillShipments']);
         });
 
         Route::get('check-courier-balance', [SteadFastController::class, 'checkCourierBalance']);

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
+use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierShipmentService;
 use App\Services\RedXCourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,8 +14,11 @@ class RedXController extends Controller
 {
     protected RedXCourierService $redxService;
 
-    public function __construct(RedXCourierService $redxService)
-    {
+    public function __construct(
+        RedXCourierService $redxService,
+        protected CourierShipmentService $shipmentService,
+        protected CourierAccountService $courierAccountService
+    ) {
         $this->redxService = $redxService;
     }
 
@@ -195,6 +200,8 @@ class RedXController extends Controller
             $results[] = $this->redxService->createOrder($config, $row, $redxOptions);
         }
 
+        $results = $this->shipmentService->recordSuccessfulOrders('redx', $config, $results, $request);
+
         return $this->successResponse($results);
     }
 
@@ -227,12 +234,6 @@ class RedXController extends Controller
 
     public function bulkTrackStatus(Request $request)
     {
-        $config = $this->resolveConfig($request);
-
-        if (!$config) {
-            return $this->errorResponse('The RedX settings are not configured properly.');
-        }
-
         $trackingIds = $request->consignment_ids ?? $request->track_ids ?? [];
 
         if (!is_array($trackingIds) || empty($trackingIds)) {
@@ -241,9 +242,39 @@ class RedXController extends Controller
             ]);
         }
 
-        return $this->successResponse(
-            $this->redxService->getTrackingStatuses($config, $trackingIds)
-        );
+        $responseData = [];
+        $config = $this->resolveCatalogConfig($request);
+        $environment = $config
+            ? $this->courierAccountService->environmentFromConfig($config)
+            : null;
+        $groups = $this->shipmentService->groupConsignmentsByAccount('redx', $trackingIds, $environment);
+
+        if (empty($groups)) {
+            $groups = [0 => $trackingIds];
+        }
+
+        foreach ($groups as $accountId => $ids) {
+            $config = $this->courierAccountService->configurationForAccount(
+                (int) $accountId,
+                (int) (Auth::id() ?? 0),
+                'redx'
+            );
+
+            if (!$config) {
+                $config = $this->resolveConfig($request);
+            }
+
+            if (!$config) {
+                continue;
+            }
+
+            $responseData = array_merge(
+                $responseData,
+                $this->redxService->getTrackingStatuses($config, $ids)
+            );
+        }
+
+        return $this->successResponse($responseData);
     }
 
     public function checkBalance()
