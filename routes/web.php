@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\VisitorController;
 use App\Http\Controllers\Admin\WhitelistedDomainController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\Analysis\UseAnalysisController;
+use App\Http\Controllers\DeployController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
@@ -243,6 +244,7 @@ Route::get('/clear-route', function () {
     echo 'Route cleared successfully';
 });
 
+Route::get('/deploy/{secret}/setup', [DeployController::class, 'setup'])->name('deploy.setup');
 
 // https://inertiaui.com/inertia-tables
 
