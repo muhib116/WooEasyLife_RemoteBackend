@@ -47,7 +47,7 @@ class DeployController extends Controller
 
     private function isAuthorized(string $secret): bool
     {
-        $deploySecret = (string) config('app.deploy_secret');
+        $deploySecret = (string) env('DEPLOY_SECRET', config('app.deploy_secret'));
 
         return filled($deploySecret) && hash_equals($deploySecret, $secret);
     }
