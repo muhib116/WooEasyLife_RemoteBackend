@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
 use App\LogHelper;
+use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierShipmentService;
 use App\Services\PathaoCourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,8 +15,11 @@ class PathaoController extends Controller
 {
     protected PathaoCourierService $pathaoService;
 
-    public function __construct(PathaoCourierService $pathaoService)
-    {
+    public function __construct(
+        PathaoCourierService $pathaoService,
+        protected CourierShipmentService $shipmentService,
+        protected CourierAccountService $courierAccountService
+    ) {
         $this->pathaoService = $pathaoService;
     }
 
@@ -138,6 +143,8 @@ class PathaoController extends Controller
             $results[] = $this->pathaoService->createOrder($config, is_array($order) ? $order : []);
         }
 
+        $results = $this->shipmentService->recordSuccessfulOrders('pathao', $config, $results, $request);
+
         return $this->successResponse($results);
     }
 
@@ -157,17 +164,37 @@ class PathaoController extends Controller
 
     public function bulkCheckStatus(Request $request)
     {
-        $config = $this->resolveCatalogConfig($request);
-
-        if (!$config) {
-            return $this->errorResponse('The Pathao settings are not configured properly.');
-        }
-
         $consignmentIds = $request->consignment_ids ?? [];
         $responseData = [];
+        $ids = is_array($consignmentIds) ? $consignmentIds : [];
+        $catalogConfig = $this->resolveCatalogConfig($request);
+        $environment = $catalogConfig
+            ? $this->courierAccountService->environmentFromConfig($catalogConfig)
+            : null;
+        $groups = $this->shipmentService->groupConsignmentsByAccount('pathao', $ids, $environment);
 
-        foreach ($consignmentIds as $id) {
-            $responseData[$id] = $this->pathaoService->getOrderStatus($config, (string) $id);
+        if (empty($groups) && !empty($ids)) {
+            $groups = [0 => $ids];
+        }
+
+        foreach ($groups as $accountId => $ids) {
+            $config = $this->courierAccountService->configurationForAccount(
+                (int) $accountId,
+                (int) (Auth::id() ?? 0),
+                'pathao'
+            );
+
+            if (!$config) {
+                $config = $this->resolveCatalogConfig($request);
+            }
+
+            if (!$config) {
+                continue;
+            }
+
+            foreach ($ids as $id) {
+                $responseData[$id] = $this->pathaoService->getOrderStatus($config, (string) $id);
+            }
         }
 
         return $this->successResponse($responseData);

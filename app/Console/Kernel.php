@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('test:scheduler')->twiceDaily();
+        $schedule->command('courier:retry-webhook-forwards')->everyMinute();
             // ->dailyAt('00:30')
             // ->timezone('Asia/Dhaka');
     }

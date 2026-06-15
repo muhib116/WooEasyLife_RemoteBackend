@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
 use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierWebhookSettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -12,6 +14,11 @@ use Illuminate\Validation\Rule;
 
 class ConfigurationController extends Controller
 {
+    public function __construct(
+        protected CourierAccountService $courierAccountService,
+        protected CourierWebhookSettingsService $webhookSettingsService
+    ) {
+    }
 
     public $vendors = ['pathao', 'paperfly', 'steadfast', 'redx'];
     public $baseUrl = 'https://portal.packzy.com/api/v1';
@@ -195,6 +202,10 @@ class ConfigurationController extends Controller
                 'item_type' => (int) ($request->input('settings.item_type') ?: ($existingSettings['item_type'] ?? 2)),
                 'item_weight' => (float) ($request->input('settings.item_weight') ?: ($existingSettings['item_weight'] ?? 0.5)),
                 'item_quantity' => (int) ($request->input('settings.item_quantity') ?: ($existingSettings['item_quantity'] ?? 1)),
+                'webhook_secret' => $this->pathaoStringSetting(
+                    $request->input('settings.webhook_secret'),
+                    $existingSettings['webhook_secret'] ?? ''
+                ),
             ]);
         }
 
@@ -223,7 +234,51 @@ class ConfigurationController extends Controller
             $configuration = CourierConfiguration::create($data);
         }
 
-        return $this->successResponse($configuration, 'Configuration saved successfully!');
+        $webhookSecretOverride = null;
+        if ($request->slug === 'pathao' && is_array($request->settings)) {
+            $webhookSecretOverride = trim((string) ($request->input('settings.webhook_secret') ?? ''));
+        }
+
+        $sync = $this->courierAccountService->syncAccountForConfiguration(
+            $configuration,
+            $request,
+            $webhookSecretOverride !== '' ? $webhookSecretOverride : null
+        );
+
+        $accessToken = $this->courierAccountService->resolveAccessToken($request);
+        $inFlight = 0;
+
+        if ($accessToken && !empty($sync['credentials_changed'])) {
+            $inFlight = $this->courierAccountService->countInFlightShipments(
+                $accessToken,
+                (string) $configuration->slug,
+                (int) ($sync['courier_account_id'] ?? 0)
+            );
+        }
+
+        $webhookSettings = $this->webhookSettingsService->buildSettings((string) $configuration->slug, $request, [
+            'credentials_changed' => (bool) ($sync['credentials_changed'] ?? false),
+            'in_flight_shipments' => $inFlight,
+        ]);
+
+        $responseData = $configuration->toArray();
+        $responseData['webhook_settings'] = $webhookSettings;
+        $responseData['credentials_changed'] = (bool) ($sync['credentials_changed'] ?? false);
+
+        return $this->successResponse($responseData, 'Configuration saved successfully!');
+    }
+
+    public function getWebhookSettings(Request $request)
+    {
+        $partner = strtolower(trim((string) $request->query('partner', '')));
+
+        if (!in_array($partner, ['steadfast', 'pathao', 'redx'], true)) {
+            return $this->errorResponse('Invalid courier partner.');
+        }
+
+        return $this->successResponse(
+            $this->webhookSettingsService->buildSettings($partner, $request)
+        );
     }
 
 
