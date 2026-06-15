@@ -104,12 +104,8 @@ class PathaoController extends Controller
 
         $settings = is_array($config->settings) ? $config->settings : [];
 
-        if (
-            empty($settings['store_id'])
-            || empty($settings['sender_name'])
-            || empty($settings['sender_phone'])
-        ) {
-            return $this->errorResponse('Configure Pathao pickup store and sender details in Settings → Courier.');
+        if (empty($settings['store_id'])) {
+            return $this->errorResponse('Select a Pathao store when sending orders.');
         }
 
         $validator = Validator::make($request->all(), [
@@ -182,7 +178,7 @@ class PathaoController extends Controller
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         $includeStoreId = (int) $request->input('store_id', 0);
@@ -202,7 +198,7 @@ class PathaoController extends Controller
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         return $this->successResponse($this->pathaoService->getCities($config));
@@ -213,7 +209,7 @@ class PathaoController extends Controller
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         $validator = Validator::make($request->all(), [
@@ -229,12 +225,19 @@ class PathaoController extends Controller
         );
     }
 
+    public function getZonesByCity(Request $request, $cityId)
+    {
+        $request->merge(['city_id' => $cityId]);
+
+        return $this->getZones($request);
+    }
+
     public function getAreas(Request $request)
     {
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         $validator = Validator::make($request->all(), [
@@ -250,12 +253,19 @@ class PathaoController extends Controller
         );
     }
 
+    public function getAreasByZone(Request $request, $zoneId)
+    {
+        $request->merge(['zone_id' => $zoneId]);
+
+        return $this->getAreas($request);
+    }
+
     public function createStore(Request $request)
     {
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         $validator = Validator::make($request->all(), $this->storeValidationRules());
@@ -290,7 +300,7 @@ class PathaoController extends Controller
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         $validator = Validator::make($request->all(), array_merge(
@@ -332,7 +342,7 @@ class PathaoController extends Controller
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         $validator = Validator::make($request->all(), [
@@ -357,7 +367,7 @@ class PathaoController extends Controller
         $config = $this->resolveCatalogConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('Save Pathao credentials first (Client ID, Secret, login email, password).');
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
         }
 
         $validator = Validator::make($request->all(), [
@@ -374,6 +384,57 @@ class PathaoController extends Controller
         }
 
         $result = $this->pathaoService->calculatePrice($config, $request->all());
+
+        if (!$result['success']) {
+            return $this->errorResponse($result['message']);
+        }
+
+        return $this->successResponse($result['data'], $result['message']);
+    }
+
+    public function testConnection(Request $request)
+    {
+        $config = $this->resolveCatalogConfig($request);
+
+        if (!$config) {
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
+        }
+
+        $result = $this->pathaoService->testConnection($config);
+
+        if (!$result['success']) {
+            return $this->errorResponse($result['message']);
+        }
+
+        return $this->successResponse(null, $result['message']);
+    }
+
+    public function resetToken(Request $request)
+    {
+        $config = $this->resolveCatalogConfig($request);
+
+        if (!$config) {
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
+        }
+
+        $result = $this->pathaoService->resetToken($config);
+
+        if (!$result['success']) {
+            return $this->errorResponse($result['message']);
+        }
+
+        return $this->successResponse(null, $result['message']);
+    }
+
+    public function merchantInfo(Request $request)
+    {
+        $config = $this->resolveCatalogConfig($request);
+
+        if (!$config) {
+            return $this->errorResponse('Save Pathao Client ID and Secret first.');
+        }
+
+        $result = $this->pathaoService->getMerchantInfo($config);
 
         if (!$result['success']) {
             return $this->errorResponse($result['message']);

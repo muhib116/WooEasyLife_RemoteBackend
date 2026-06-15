@@ -35,11 +35,11 @@ class ConfigurationController extends Controller
             //     'title' => 'Paperfly',
             //     'logo' => asset('images/paperfly.png')
             // ],
-            // [
-            //     'slug' => 'redx',
-            //     'title' => 'RedX',
-            //     'logo' => asset('images/redx.png')
-            // ],
+            [
+                'slug' => 'redx',
+                'title' => 'RedX',
+                'logo' => asset('images/redx.svg')
+            ],
         ];
 
         return $this->successResponse($formatted);
@@ -54,6 +54,19 @@ class ConfigurationController extends Controller
             'api_key' => 'required|string',
             'secret_key' => 'required|string',
         ];
+
+        if ($request->slug === 'redx') {
+            $rules['secret_key'] = $request->filled('id') ? 'nullable|string' : 'required|string';
+            $rules['settings.environment'] = 'nullable|string|in:live,sandbox';
+            $rules['settings.pickup_store_id'] = 'nullable|integer|min:1';
+            $rules['settings.delivery_area_id'] = 'nullable|integer|min:1';
+            $rules['settings.delivery_area'] = 'nullable|string|max:255';
+            $rules['settings.parcel_weight'] = 'nullable|numeric|min:500';
+
+            if ($request->boolean('is_active')) {
+                $rules['settings.delivery_area_id'] = 'required|integer|min:1';
+            }
+        }
 
         if ($request->slug === 'pathao') {
             $rules['settings.username'] = 'required|string';
@@ -90,6 +103,49 @@ class ConfigurationController extends Controller
             'logo' => 'images/'.trim($request->slug).'.png',
             'user_id' => Auth::id(),
         ];
+
+        if ($request->slug === 'redx') {
+            $existingSettings = [];
+
+            if ($request->filled('id')) {
+                $existing = CourierConfiguration::find($request->id);
+                $existingSettings = is_array($existing?->settings) ? $existing->settings : [];
+            }
+
+            $secretKey = trim((string) $request->secret_key);
+            if ($secretKey === '' && $request->filled('id')) {
+                $existing = CourierConfiguration::find($request->id);
+                $secretKey = trim((string) ($existing?->secret_key ?? ''));
+            }
+
+            if ($secretKey === '') {
+                return $this->validationErrorResponse([
+                    'secret_key' => ['RedX API access token is required.'],
+                ]);
+            }
+
+            $data['api_key'] = trim((string) ($request->api_key ?: 'redx')) ?: 'redx';
+            $data['secret_key'] = $secretKey;
+            $data['settings'] = array_merge($existingSettings, [
+                'environment' => $request->input('settings.environment') === 'live' ? 'live' : 'sandbox',
+                'pickup_store_id' => $this->pathaoIntSetting(
+                    $request->input('settings.pickup_store_id'),
+                    $existingSettings['pickup_store_id'] ?? null
+                ),
+                'delivery_area_id' => $this->pathaoIntSetting(
+                    $request->input('settings.delivery_area_id'),
+                    $existingSettings['delivery_area_id'] ?? null
+                ),
+                'delivery_area' => $this->pathaoStringSetting(
+                    $request->input('settings.delivery_area'),
+                    $existingSettings['delivery_area'] ?? ''
+                ),
+                'parcel_weight' => max(
+                    500,
+                    (int) ($request->input('settings.parcel_weight') ?: ($existingSettings['parcel_weight'] ?? 500))
+                ),
+            ]);
+        }
 
         if ($request->slug === 'pathao' && is_array($request->settings)) {
             $existingSettings = [];
@@ -175,7 +231,7 @@ class ConfigurationController extends Controller
     {
         $query = CourierConfiguration::query();
 
-        $query->whereIn('slug', ['steadfast', 'pathao']);
+        $query->whereIn('slug', ['steadfast', 'pathao', 'redx']);
 
         $query->where(['user_id' => Auth::id()]);
 
@@ -184,6 +240,7 @@ class ConfigurationController extends Controller
         $data = [
             'steadfast' => new \stdClass(),
             'pathao' => new \stdClass(),
+            'redx' => new \stdClass(),
         ];
 
         foreach ($config as $item) {
@@ -196,6 +253,10 @@ class ConfigurationController extends Controller
                 unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
                 $settings['password'] = '';
                 $item->settings = $settings;
+            }
+
+            if ($item->slug === 'redx') {
+                $item->secret_key = '';
             }
 
             $data[$item->slug] = $item;

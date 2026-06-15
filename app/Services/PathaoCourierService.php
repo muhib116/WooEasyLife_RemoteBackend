@@ -15,28 +15,7 @@ class PathaoCourierService
 
     public function getConfig(int $userId): ?CourierConfiguration
     {
-        $config = $this->getAuthConfig($userId);
-
-        if (!$config) {
-            return null;
-        }
-
-        $settings = $this->normalizeSettings($config->settings);
-
-        if (
-            empty($settings['store_id'])
-            || empty($settings['sender_name'])
-            || empty($settings['sender_phone'])
-            || empty($settings['recipient_city'])
-            || empty($settings['recipient_zone'])
-            || empty($settings['recipient_area'])
-        ) {
-            return null;
-        }
-
-        $config->settings = $settings;
-
-        return $config;
+        return $this->getAuthConfig($userId);
     }
 
     public function getAuthConfig(int $userId, array $override = []): ?CourierConfiguration
@@ -69,11 +48,28 @@ class PathaoCourierService
                 ]);
             }
 
-            $config->api_key = trim((string) $override['api_key']);
-            $config->secret_key = trim((string) ($override['secret_key'] ?? $config->secret_key ?? ''));
-
             $settings = $this->normalizeSettings($config->settings);
+            $storedApiKey = trim((string) ($config->api_key ?? ''));
+            $overrideKey = trim((string) $override['api_key']);
+            $overrideSecret = trim((string) ($override['secret_key'] ?? ''));
+            $nextEnvironment = !empty($override['environment'])
+                ? ($override['environment'] === 'live' ? 'live' : 'sandbox')
+                : (($settings['environment'] ?? 'sandbox') === 'live' ? 'live' : 'sandbox');
             $authChanged = false;
+
+            $shouldKeepStoredCredentials = $config->exists
+                && $nextEnvironment === 'live'
+                && $this->isSandboxApiKey($overrideKey)
+                && $storedApiKey !== ''
+                && !$this->isSandboxApiKey($storedApiKey);
+
+            if (!$shouldKeepStoredCredentials) {
+                $config->api_key = $overrideKey;
+
+                if ($overrideSecret !== '') {
+                    $config->secret_key = $overrideSecret;
+                }
+            }
 
             if (!empty($override['username'])) {
                 $settings['username'] = trim((string) $override['username']);
@@ -86,7 +82,6 @@ class PathaoCourierService
             }
 
             if (!empty($override['environment'])) {
-                $nextEnvironment = $override['environment'] === 'live' ? 'live' : 'sandbox';
                 if (($settings['environment'] ?? 'sandbox') !== $nextEnvironment) {
                     $authChanged = true;
                 }
@@ -104,13 +99,7 @@ class PathaoCourierService
             return null;
         }
 
-        $settings = $this->normalizeSettings($config->settings);
-
-        if (empty($settings['username']) || empty($settings['password'])) {
-            return null;
-        }
-
-        $config->settings = $settings;
+        $config->settings = $this->normalizeSettings($config->settings);
 
         return $config;
     }
@@ -162,6 +151,12 @@ class PathaoCourierService
             return $settings['access_token'];
         }
 
+        $token = $this->requestExternalLoginToken($config);
+
+        if ($token) {
+            return $token;
+        }
+
         if (!empty($settings['refresh_token'])) {
             $token = $this->requestToken($config, 'refresh_token', [
                 'refresh_token' => $settings['refresh_token'],
@@ -172,10 +167,14 @@ class PathaoCourierService
             }
         }
 
-        return $this->requestToken($config, 'password', [
-            'username' => $settings['username'],
-            'password' => $settings['password'],
-        ]);
+        if (!empty($settings['username']) && !empty($settings['password'])) {
+            return $this->requestToken($config, 'password', [
+                'username' => $settings['username'],
+                'password' => $settings['password'],
+            ]);
+        }
+
+        return null;
     }
 
     public function createOrder(CourierConfiguration $config, array $order): array
@@ -450,23 +449,139 @@ class PathaoCourierService
 
     public function getCities(CourierConfiguration $config): array
     {
-        $cities = $this->authorizedGet($config, '/aladdin/api/v1/countries/1/city-list');
+        $cities = $this->authorizedCatalogList($config, '/aladdin/api/v1/countries/1/city-list');
 
         if ($cities !== []) {
             return $cities;
         }
 
-        return $this->authorizedGet($config, '/aladdin/api/v1/city-list');
+        return $this->authorizedCatalogList($config, '/aladdin/api/v1/city-list');
     }
 
     public function getZones(CourierConfiguration $config, int $cityId): array
     {
-        return $this->authorizedGet($config, '/aladdin/api/v1/cities/' . $cityId . '/zone-list');
+        return $this->authorizedCatalogList(
+            $config,
+            '/aladdin/api/v1/cities/' . $cityId . '/zone-list'
+        );
     }
 
     public function getAreas(CourierConfiguration $config, int $zoneId): array
     {
-        return $this->authorizedGet($config, '/aladdin/api/v1/zones/' . $zoneId . '/area-list');
+        return $this->authorizedCatalogList(
+            $config,
+            '/aladdin/api/v1/zones/' . $zoneId . '/area-list'
+        );
+    }
+
+    public function testConnection(CourierConfiguration $config): array
+    {
+        $failureMessage = $this->explainAuthFailure($config);
+
+        if ($failureMessage !== null) {
+            return [
+                'success' => false,
+                'message' => $failureMessage,
+            ];
+        }
+
+        $this->invalidateAccessToken($config);
+        $token = $this->getAccessToken($config);
+
+        if (!$token) {
+            return [
+                'success' => false,
+                'message' => $this->explainAuthFailure($config)
+                    ?? 'Invalid Client ID or Secret. Check credentials and environment.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'API connection successful.',
+        ];
+    }
+
+    public function resetToken(CourierConfiguration $config): array
+    {
+        $this->invalidateAccessToken($config);
+
+        $token = $this->requestExternalLoginToken($config);
+
+        if (!$token) {
+            return [
+                'success' => false,
+                'message' => 'Unable to reset token. Check Client ID and Secret.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Connection token reset successfully.',
+        ];
+    }
+
+    public function getMerchantInfo(CourierConfiguration $config): array
+    {
+        $failureMessage = $this->explainAuthFailure($config);
+
+        if ($failureMessage !== null) {
+            return [
+                'success' => false,
+                'message' => $failureMessage,
+                'data' => null,
+            ];
+        }
+
+        $token = $this->getAccessToken($config);
+
+        if (!$token) {
+            return [
+                'success' => false,
+                'message' => $this->explainAuthFailure($config)
+                    ?? 'Unable to authenticate with Pathao. Check Client ID, Secret, and environment.',
+                'data' => null,
+            ];
+        }
+
+        try {
+            $response = $this->pathaoClient()->withHeaders([
+                'Authorization' => 'Bearer ' . $token,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])->get($this->getBaseUrl($config) . '/aladdin/api/v1/user/short-info');
+
+            $json = $response->json();
+
+            if (!$response->successful() || !is_array($json['data'] ?? null)) {
+                return [
+                    'success' => false,
+                    'message' => $this->parseApiError($json, $response->body()),
+                    'data' => null,
+                ];
+            }
+
+            $data = $json['data'];
+            $countryId = (int) ($data['country_id'] ?? 0);
+
+            return [
+                'success' => true,
+                'message' => $json['message'] ?? 'Merchant info loaded.',
+                'data' => [
+                    'merchant_name' => (string) ($data['merchant_name'] ?? $data['user_name'] ?? ''),
+                    'user_email' => (string) ($data['user_email'] ?? ''),
+                    'user_phone' => (string) ($data['user_phone'] ?? ''),
+                    'country_id' => $countryId,
+                    'country_name' => $countryId === 1 ? 'Bangladesh' : ($countryId > 0 ? 'Nepal' : ''),
+                ],
+            ];
+        } catch (\Throwable $th) {
+            return [
+                'success' => false,
+                'message' => $this->formatNetworkError($th->getMessage()),
+                'data' => null,
+            ];
+        }
     }
 
     public function createStore(CourierConfiguration $config, array $storeData): array
@@ -582,23 +697,50 @@ class PathaoCourierService
         ];
     }
 
-    private function authorizedGet(CourierConfiguration $config, string $path): array
+    /**
+     * Fetch Pathao catalog lists (cities/zones/areas).
+     * Tries GET first, then POST with empty body — live Hermes often requires POST.
+     */
+    private function authorizedCatalogList(CourierConfiguration $config, string $path): array
     {
-        $token = $this->getAccessToken($config);
+        for ($authAttempt = 0; $authAttempt < 2; $authAttempt++) {
+            $token = $this->getAccessToken($config);
 
-        if (!$token) {
-            return [];
+            if (!$token) {
+                return [];
+            }
+
+            $url = $this->getBaseUrl($config) . $path;
+            $headers = [
+                'Authorization' => 'Bearer ' . $token,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ];
+
+            foreach (['get', 'post'] as $method) {
+                $list = $this->fetchPathaoCatalogList($url, $headers, $method);
+
+                if ($list !== []) {
+                    return $list;
+                }
+            }
+
+            if ($authAttempt === 0) {
+                $this->invalidateAccessToken($config);
+            }
         }
 
-        $url = $this->getBaseUrl($config) . $path;
+        return [];
+    }
 
+    private function fetchPathaoCatalogList(string $url, array $headers, string $method): array
+    {
         for ($attempt = 1; $attempt <= 3; $attempt++) {
             try {
-                $response = $this->pathaoClient(25)
-                    ->withHeaders([
-                        'Authorization' => 'Bearer ' . $token,
-                        'Accept' => 'application/json',
-                    ])->get($url);
+                $client = $this->pathaoClient(25)->withHeaders($headers);
+                $response = $method === 'post'
+                    ? $client->post($url, [])
+                    : $client->get($url);
 
                 if (!$response->successful()) {
                     if ($attempt < 3) {
@@ -617,7 +759,7 @@ class PathaoCourierService
 
                 $list = $this->extractPathaoList($json);
 
-                if ($list !== [] || (int) ($json['code'] ?? 0) === 200) {
+                if ($list !== []) {
                     return $list;
                 }
 
@@ -634,6 +776,11 @@ class PathaoCourierService
         }
 
         return [];
+    }
+
+    private function authorizedGet(CourierConfiguration $config, string $path): array
+    {
+        return $this->authorizedCatalogList($config, $path);
     }
 
     private function tokenCacheKey(CourierConfiguration $config): string
@@ -676,14 +823,61 @@ class PathaoCourierService
 
     private function extractPathaoList(array $json): array
     {
-        $data = $json['data'] ?? null;
+        $candidates = [];
 
-        if (is_array($data) && isset($data['data']) && is_array($data['data'])) {
-            return array_values($data['data']);
+        if (isset($json['data'])) {
+            $candidates[] = $json['data'];
         }
 
-        if (is_array($data) && $this->isSequentialList($data)) {
-            return array_values($data);
+        $candidates[] = $json;
+
+        foreach ($candidates as $candidate) {
+            $list = $this->normalizePathaoListItems($candidate);
+
+            if ($list !== []) {
+                return $list;
+            }
+        }
+
+        return [];
+    }
+
+    private function normalizePathaoListItems(mixed $payload): array
+    {
+        if (!is_array($payload)) {
+            return [];
+        }
+
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $nested = $this->normalizePathaoListItems($payload['data']);
+
+            if ($nested !== []) {
+                return $nested;
+            }
+        }
+
+        foreach (['cities', 'zones', 'areas', 'stores', 'items', 'list'] as $key) {
+            if (isset($payload[$key]) && is_array($payload[$key])) {
+                $nested = $this->normalizePathaoListItems($payload[$key]);
+
+                if ($nested !== []) {
+                    return $nested;
+                }
+            }
+        }
+
+        if ($payload === []) {
+            return [];
+        }
+
+        if ($this->isSequentialList($payload)) {
+            return array_values(array_filter($payload, fn ($item) => is_array($item) && $item !== []));
+        }
+
+        $values = array_values($payload);
+
+        if ($values !== [] && is_array($values[0])) {
+            return array_values(array_filter($values, fn ($item) => is_array($item) && $item !== []));
         }
 
         return [];
@@ -696,6 +890,35 @@ class PathaoCourierService
         }
 
         return array_keys($items) === range(0, count($items) - 1);
+    }
+
+    private function requestExternalLoginToken(CourierConfiguration $config, bool $persist = true): ?string
+    {
+        $settings = $this->normalizeSettings($config->settings);
+
+        try {
+            $response = $this->pathaoClient()->withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])->post($this->getBaseUrl($config) . '/aladdin/api/v1/external/login', [
+                'client_id' => $config->api_key,
+                'client_secret' => $config->secret_key,
+            ]);
+
+            $json = $response->json();
+
+            if (!$response->successful() || empty($json['access_token'])) {
+                return null;
+            }
+
+            if (!$persist) {
+                return $json['access_token'];
+            }
+
+            return $this->persistAccessToken($config, $settings, $json);
+        } catch (\Throwable $th) {
+            return null;
+        }
     }
 
     private function requestToken(CourierConfiguration $config, string $grantType, array $extra): ?string
@@ -719,22 +942,27 @@ class PathaoCourierService
                 return null;
             }
 
-            $settings['access_token'] = $json['access_token'];
-            $settings['refresh_token'] = $json['refresh_token'] ?? ($settings['refresh_token'] ?? null);
-            $settings['expires_at'] = time() + (int) ($json['expires_in'] ?? 432000);
-
-            $config->settings = $settings;
-
-            if ($config->exists) {
-                $config->save();
-            } else {
-                $this->cacheAccessToken($config, $settings);
-            }
-
-            return $json['access_token'];
+            return $this->persistAccessToken($config, $settings, $json);
         } catch (\Throwable $th) {
             return null;
         }
+    }
+
+    private function persistAccessToken(CourierConfiguration $config, array $settings, array $json): ?string
+    {
+        $settings['access_token'] = $json['access_token'];
+        $settings['refresh_token'] = $json['refresh_token'] ?? ($settings['refresh_token'] ?? null);
+        $settings['expires_at'] = time() + (int) ($json['expires_in'] ?? 432000);
+
+        $config->settings = $settings;
+
+        if ($config->exists) {
+            $config->save();
+        } else {
+            $this->cacheAccessToken($config, $settings);
+        }
+
+        return $json['access_token'];
     }
 
     private function normalizeSettings($settings): array
@@ -750,6 +978,39 @@ class PathaoCourierService
         }
 
         return is_array($settings) ? $settings : [];
+    }
+
+    private function resolvePathaoEnvironment(CourierConfiguration $config): string
+    {
+        $settings = $this->normalizeSettings($config->settings);
+
+        return ($settings['environment'] ?? 'sandbox') === 'live' ? 'live' : 'sandbox';
+    }
+
+    private function isSandboxApiKey(?string $apiKey): bool
+    {
+        $key = trim((string) $apiKey);
+
+        if ($key === '') {
+            return false;
+        }
+
+        $configured = trim((string) env('PATHAO_SANDBOX_CLIENT_ID', '7N1aMJQbWm'));
+
+        return $key === '7N1aMJQbWm' || ($configured !== '' && $key === $configured);
+    }
+
+    private function explainAuthFailure(CourierConfiguration $config): ?string
+    {
+        if (!$config->api_key || !$config->secret_key) {
+            return 'Save Pathao Client ID and Secret first.';
+        }
+
+        if ($this->resolvePathaoEnvironment($config) === 'live' && $this->isSandboxApiKey($config->api_key)) {
+            return 'Live mode is on but Pathao sandbox Client ID is still in use. Enter your production Client ID and Secret from Pathao Developer API, then save settings.';
+        }
+
+        return null;
     }
 
     private function normalizePhone(string $phone): string

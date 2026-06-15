@@ -40,21 +40,31 @@ Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 $pathaoDevCatalog = app()->environment('local')
     || filter_var(env('PATHAO_DEV_CATALOG', false), FILTER_VALIDATE_BOOLEAN);
 
+$registerPathaoCatalogRoutes = function () {
+    Route::post('/stores', [PathaoController::class, 'getStores']);
+    Route::post('/city-list', [PathaoController::class, 'getCities']);
+    Route::post('/cities', [PathaoController::class, 'getCities']);
+    Route::post('/cities/{cityId}/zone-list', [PathaoController::class, 'getZonesByCity'])
+        ->where('cityId', '[0-9]+');
+    Route::post('/zones', [PathaoController::class, 'getZones']);
+    Route::post('/zones/{zoneId}/area-list', [PathaoController::class, 'getAreasByZone'])
+        ->where('zoneId', '[0-9]+');
+    Route::post('/areas', [PathaoController::class, 'getAreas']);
+    Route::post('/create-store', [PathaoController::class, 'createStore']);
+    Route::post('/update-store', [PathaoController::class, 'updateStore']);
+    Route::post('/delete-store', [PathaoController::class, 'deleteStore']);
+    Route::post('/price-plan', [PathaoController::class, 'pricePlan']);
+    Route::post('/test-connection', [PathaoController::class, 'testConnection']);
+    Route::post('/reset-token', [PathaoController::class, 'resetToken']);
+    Route::post('/merchant-info', [PathaoController::class, 'merchantInfo']);
+};
+
 /*
 | Dev Pathao catalog proxy using credentials sent in the request body.
 | Enable with APP_ENV=local OR PATHAO_DEV_CATALOG=true in .env
 */
 if ($pathaoDevCatalog) {
-    Route::prefix('api/pathao')->group(function () {
-        Route::post('/stores', [PathaoController::class, 'getStores']);
-        Route::post('/cities', [PathaoController::class, 'getCities']);
-        Route::post('/zones', [PathaoController::class, 'getZones']);
-        Route::post('/areas', [PathaoController::class, 'getAreas']);
-        Route::post('/create-store', [PathaoController::class, 'createStore']);
-        Route::post('/update-store', [PathaoController::class, 'updateStore']);
-        Route::post('/delete-store', [PathaoController::class, 'deleteStore']);
-        Route::post('/price-plan', [PathaoController::class, 'pricePlan']);
-    });
+    Route::prefix('api/pathao')->group($registerPathaoCatalogRoutes);
 }
 
 Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () use ($pathaoDevCatalog) {
@@ -98,21 +108,18 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/check-balance', [PathaoController::class, 'checkBalance']);
 
             if (!$pathaoDevCatalog) {
-                Route::post('/stores', [PathaoController::class, 'getStores']);
-                Route::post('/cities', [PathaoController::class, 'getCities']);
-                Route::post('/zones', [PathaoController::class, 'getZones']);
-                Route::post('/areas', [PathaoController::class, 'getAreas']);
-                Route::post('/create-store', [PathaoController::class, 'createStore']);
-                Route::post('/update-store', [PathaoController::class, 'updateStore']);
-                Route::post('/delete-store', [PathaoController::class, 'deleteStore']);
-                Route::post('/price-plan', [PathaoController::class, 'pricePlan']);
+                $registerPathaoCatalogRoutes();
             }
         });
 
         Route::group(['as' => 'redx.', 'prefix' => 'redx'], function () {
+            Route::post('/test-connection', [RedXController::class, 'testConnection']);
             Route::post('/get-areas', [RedXController::class, 'getArea']);
+            Route::post('/pickup-stores', [RedXController::class, 'getPickupStores']);
+            Route::post('/charge-calculator', [RedXController::class, 'chargeCalculator']);
             Route::post('/create-order', [RedXController::class, 'createOrder']);
             Route::post('/track-parcel', [RedXController::class, 'trackParcel']);
+            Route::post('/bulk-track-status', [RedXController::class, 'bulkTrackStatus']);
             Route::post('/create-bulk-order', [RedXController::class, 'createBulkOrder']);
             Route::post('/check-balance', [RedXController::class, 'checkBalance']);
         });

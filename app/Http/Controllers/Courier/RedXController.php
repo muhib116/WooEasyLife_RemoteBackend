@@ -3,59 +3,96 @@
 namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
-use App\Models\CourierConfiguration;
-use Codeboxr\RedxCourier\Facade\RedxCourier;
+use App\Services\RedXCourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
 class RedXController extends Controller
 {
-    protected $baseUrl = 'https://sandbox.redx.com.bd';
-    protected $apiKey;
-    protected $secretKey;
+    protected RedXCourierService $redxService;
 
-    protected $token = [
-        "API-ACCESS-TOKEN" => "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MTY5MDMiLCJpYXQiOjE3MzY3NzA0MjYsImlzcyI6ImhuV1FraTdYZWswb21ObDhJaXg2SmZNMW9pWjNURWxvIiwic2hvcF9pZCI6OTE2OTAzLCJ1c2VyX2lkIjo5NDM0MDA0fQ.2VSeFA5TxsgJPUzL-Fy0Bt3tNnD1V_CY-cJeYPmfkWc",
-        "Accept" => "application/json"
-    ];
-
-    public function getArea()
+    public function __construct(RedXCourierService $redxService)
     {
-        $config = $this->getConfig();
+        $this->redxService = $redxService;
+    }
+
+    public function testConnection(Request $request)
+    {
+        $config = $this->resolveConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('The Redx settings are not configured properly.');
+            return $this->errorResponse('The RedX settings are not configured properly.');
         }
-        $link = $this->baseUrl . '/v1.0.0-beta/areas';
+
+        $result = $this->redxService->testConnection($config);
+
+        if (!$result['ok']) {
+            return $this->errorResponse($result['message']);
+        }
+
+        return $this->successResponse($result['data'] ?? null, $result['message']);
+    }
+
+    public function getArea(Request $request)
+    {
+        $config = $this->resolveConfig($request);
+
+        if (!$config) {
+            return $this->errorResponse('The RedX settings are not configured properly.');
+        }
 
         try {
-            $response = Http::withHeaders($this->token)->get($link);
-            $response = $response->json();
-            return $this->successResponse($response);
+            return $this->successResponse($this->redxService->getAreas($config));
         } catch (\Throwable $th) {
-            return $this->errorResponse('There is some issue to get areas.');
+            return $this->errorResponse($th->getMessage() ?: 'There is some issue to get areas.');
         }
     }
 
-    private function getConfig()
+    public function getPickupStores(Request $request)
     {
-        $config = CourierConfiguration::where('user_id', Auth::id())
-            ->where('slug', 'redx')
-            ->first();
+        $config = $this->resolveConfig($request);
 
-        if (!$config || !$config->api_key || !$config->secret_key) {
-            return false;
+        if (!$config) {
+            return $this->errorResponse('The RedX settings are not configured properly.');
         }
 
-        $this->token['API-ACCESS-TOKEN'] = 'Bearer ' . $config->secret_key;
-        return $config;
+        try {
+            return $this->successResponse($this->redxService->getPickupStores($config));
+        } catch (\Throwable $th) {
+            return $this->errorResponse($th->getMessage() ?: 'Could not load RedX pickup stores.');
+        }
+    }
+
+    public function chargeCalculator(Request $request)
+    {
+        $config = $this->resolveConfig($request);
+
+        if (!$config) {
+            return $this->errorResponse('The RedX settings are not configured properly.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'delivery_area_id' => 'required|integer|min:1',
+            'weight' => 'required|numeric|min:1',
+            'cash_collection_amount' => 'nullable|numeric|min:0',
+            'pickup_area_id' => 'nullable|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->messages());
+        }
+
+        try {
+            return $this->successResponse($this->redxService->calculateCharge($config, $request->all()));
+        } catch (\Throwable $th) {
+            return $this->errorResponse($th->getMessage() ?: 'Could not calculate RedX delivery charge.');
+        }
     }
 
     public function createOrder(Request $request)
     {
-        $config = $this->getConfig();
+        $config = $this->resolveConfig($request);
 
         if (!$config) {
             return $this->errorResponse('The RedX settings are not configured properly.');
@@ -63,89 +100,155 @@ class RedXController extends Controller
 
         $validator = Validator::make($request->all(), [
             'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:20', // Adjust max length based on phone format
+            'customer_phone' => 'required|string|max:20',
             'delivery_area' => 'required|string|max:255',
-            'delivery_area_id' => 'required|integer',
+            'delivery_area_id' => 'required|integer|min:1',
             'customer_address' => 'required|string|max:500',
             'cash_collection_amount' => 'required|numeric|min:0',
-            'parcel_weight' => 'required|numeric|min:0',
+            'parcel_weight' => 'required|numeric|min:1',
             'merchant_invoice_id' => 'nullable|string|max:255',
             'instruction' => 'nullable|string|max:1000',
-            'type' => 'nullable|string|in:reverse', // Optional: Adjust the valid types
             'value' => 'required|numeric|min:0',
-            'parcel_details_json' => 'nullable|array', // Ensures it's a valid JSON string
-            'pickup_store_id' => 'nullable|integer',
+            'pickup_store_id' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator->messages());
         }
 
-        $payload = [
-            "customer_name" => $request->customer_name,
-            "customer_phone" => $request->customer_phone,
-            "delivery_area" => $request->delivery_area,
-            "delivery_area_id" => $request->delivery_area_id,
-            "customer_address" => $request->customer_address,
-            "merchant_invoice_id" => $request->merchant_invoice_id,
-            "cash_collection_amount" => $request->cash_collection_amount, // Ensure this is an integer
-            "parcel_weight" => $request->parcel_weight, // Weight in grams
-            "instruction" => $request->instruction,
-            "value" => $request->value, // Compensation value
-            "is_closed_box" => $request->is_closed_box,
-            "pickup_store_id" => $request->pickup_store_id, // Optional
-            "parcel_details_json" => $request->parcel_details_json
+        $order = [
+            'invoice' => $request->merchant_invoice_id,
+            'recipient_name' => $request->customer_name,
+            'recipient_phone' => $request->customer_phone,
+            'recipient_address' => $request->customer_address,
+            'cod_amount' => $request->cash_collection_amount,
+            'parcel_weight' => $request->parcel_weight,
+            'note' => $request->instruction,
+            'value' => $request->value,
+            'delivery_area' => $request->delivery_area,
+            'delivery_area_id' => $request->delivery_area_id,
+            'pickup_store_id' => $request->pickup_store_id,
         ];
 
-        $link = $this->baseUrl . '/v1.0.0-beta/parcel';
+        $result = $this->redxService->createOrder($config, $order);
 
-        try {
-            $response = Http::withHeaders($this->token)->post($link, $payload);
-            $response = $response->json();
-            return $this->successResponse($response);
-        } catch (\Throwable $th) {
-            return $this->errorResponse('An issue occurred while processing the order.');
+        if (!empty($result['error'])) {
+            return $this->errorResponse($result['error'], $result);
         }
+
+        return $this->successResponse([
+            'tracking_id' => $result['consignment_id'],
+            'consignment_id' => $result['consignment_id'],
+            'status' => $result['status'],
+        ]);
+    }
+
+    public function createBulkOrder(Request $request)
+    {
+        $config = $this->resolveConfig($request);
+
+        if (!$config) {
+            return $this->errorResponse('The RedX settings are not configured properly.');
+        }
+
+        $settings = $this->redxService->normalizeSettings($config->settings);
+        $redxOptions = is_array($request->input('redx_options')) ? $request->input('redx_options') : [];
+
+        $validator = Validator::make($request->all(), [
+            'orders' => 'required|array|max:200',
+            'orders.*.recipient_name' => 'required|string',
+            'orders.*.recipient_phone' => 'required|digits:11|regex:/^01[0-9]{9}$/',
+            'orders.*.recipient_address' => 'required|string|min:10',
+            'orders.*.cod_amount' => 'required|numeric|min:0',
+            'orders.*.value' => 'nullable|numeric|min:0',
+            'orders.*.delivery_area_id' => 'nullable|integer|min:1',
+            'orders.*.delivery_area' => 'nullable|string|max:255',
+            'redx_options.delivery_area_id' => 'nullable|integer|min:1',
+            'redx_options.delivery_area' => 'nullable|string|max:255',
+            'redx_options.pickup_store_id' => 'nullable|integer|min:1',
+            'redx_options.parcel_weight' => 'nullable|numeric|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->messages());
+        }
+
+        $defaultAreaId = (int) ($redxOptions['delivery_area_id'] ?? $settings['delivery_area_id'] ?? 0);
+        $defaultAreaName = (string) ($redxOptions['delivery_area'] ?? $settings['delivery_area'] ?? '');
+
+        if ($defaultAreaId <= 0) {
+            return $this->errorResponse('Select a RedX delivery area when sending orders.');
+        }
+
+        $orders = $request->input('orders', []);
+        $results = [];
+
+        foreach ($orders as $order) {
+            $row = is_array($order) ? $order : [];
+            $row['delivery_area_id'] = (int) ($row['delivery_area_id'] ?? $defaultAreaId);
+            $row['delivery_area'] = (string) ($row['delivery_area'] ?? $defaultAreaName);
+
+            if (empty($row['value'])) {
+                $row['value'] = $row['cod_amount'] ?? 0;
+            }
+
+            $results[] = $this->redxService->createOrder($config, $row, $redxOptions);
+        }
+
+        return $this->successResponse($results);
     }
 
     public function trackParcel(Request $request)
     {
-        $config = $this->getConfig();
+        $config = $this->resolveConfig($request);
 
         if (!$config) {
-            return $this->errorResponse('The Redx settings are not configured properly.');
+            return $this->errorResponse('The RedX settings are not configured properly.');
         }
 
+        $validator = Validator::make($request->all(), [
+            'tracking_id' => 'required_without:track_id|string|max:64',
+            'track_id' => 'required_without:tracking_id|string|max:64',
+        ]);
 
-        $trackId = $request->track_id;
-        $baseTrackUrl = $this->baseUrl . '/v1.0.0-beta/parcel/track/';
-        $parcels = [];
-
-        if (is_array($trackId)) {
-            foreach ($trackId as $id) {
-                try {
-                    $response = Http::withHeaders($this->token)->get($baseTrackUrl . $id);
-                    $parcels[$id] = @$response->json()['tracking'] ?? [];
-                } catch (\Throwable $th) {
-                    $parcels[$id] = [];
-                }
-            }
-        } else {
-            try {
-                $response = Http::withHeaders($this->token)->get($baseTrackUrl . $trackId);
-                $parcels[$trackId] = @$response->json()['tracking'] ?? [];
-            } catch (\Throwable $th) {
-                return $this->errorResponse('An issue occurred while processing the order.');
-            }
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->messages());
         }
 
-        return $this->successResponse($parcels);
-        // https://sandbox.redx.com.bd/v1.0.0-beta/parcel/info/21A427TU4BN3R
+        $trackingId = trim((string) ($request->input('tracking_id') ?: $request->input('track_id')));
+        $result = $this->redxService->getParcelTrackingHistory($config, $trackingId);
+
+        if (!empty($result['error'])) {
+            return $this->errorResponse($result['error'], $result);
+        }
+
+        return $this->successResponse($result);
+    }
+
+    public function bulkTrackStatus(Request $request)
+    {
+        $config = $this->resolveConfig($request);
+
+        if (!$config) {
+            return $this->errorResponse('The RedX settings are not configured properly.');
+        }
+
+        $trackingIds = $request->consignment_ids ?? $request->track_ids ?? [];
+
+        if (!is_array($trackingIds) || empty($trackingIds)) {
+            return $this->validationErrorResponse([
+                'consignment_ids' => ['At least one tracking ID is required.'],
+            ]);
+        }
+
+        return $this->successResponse(
+            $this->redxService->getTrackingStatuses($config, $trackingIds)
+        );
     }
 
     public function checkBalance()
     {
-        $config = $this->getConfig();
+        $config = $this->redxService->getConfig(Auth::id());
 
         if (!$config) {
             return $this->errorResponse('The RedX settings are not configured properly.');
@@ -158,98 +261,30 @@ class RedXController extends Controller
         ]);
     }
 
-    public function createBulkOrder(Request $request)
+    private function resolveConfig(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'orders' => 'required|array',
-            'orders.*.recipient_name' => 'required|string',
-            'orders.*.recipient_phone' => 'required|digits:11|regex:/^01[0-9]{9}$/',
-            'orders.*.recipient_address' => 'required|string',
-            'orders.*.cod_amount' => 'required|numeric',
-        ]);
+        $override = [];
 
-        if ($validator->fails()) {
-            return $this->validationErrorResponse($validator->messages());
+        if ($request->filled('secret_key')) {
+            $override['secret_key'] = $request->input('secret_key');
         }
 
-        $orders = $request->input('orders');
+        if ($request->filled('api_key')) {
+            $override['api_key'] = $request->input('api_key');
+        }
 
-        $data = array_map(function ($order) {
-            return [
-                'invoice' => $order['invoice'],
-                'recipient_name' => $order['recipient_name'],
-                'recipient_phone' => $order['recipient_phone'],
-                'recipient_address' => $order['recipient_address'],
-                'cod_amount' => $order['cod_amount'],
-                'note' => $order['note'] ?? null,
-            ];
-        }, $orders);
+        if ($request->filled('environment')) {
+            $override['environment'] = $request->input('environment') === 'live' ? 'live' : 'sandbox';
+        }
 
-        return $this->successResponse($data);
+        if ($request->filled('courier_config_id')) {
+            $override['courier_config_id'] = (int) $request->input('courier_config_id');
+        }
 
-        // $response = $this->bulkCreateOrders($data);
+        if ($override) {
+            return $this->redxService->getAuthConfig(Auth::id(), $override);
+        }
 
-        // return $this->successResponse($response);
-    }
-
-    private function placeOrder($data)
-    {
-        $config = $this->getConfig();
-        $response = Http::withHeaders([
-            'Api-Key' => $config->api_key,
-            'Secret-Key' => $config->secret_key,
-            'Content-Type' => 'application/json',
-        ])->post($this->baseUrl . '/create_order', $data);
-
-        return $response->json();
-    }
-
-    private function bulkCreateOrders($data)
-    {
-        $config = $this->getConfig();
-
-        $response = Http::withHeaders([
-            'Api-Key' => $config->api_key,
-            'Secret-Key' => $config->secret_key,
-            'Content-Type' => 'application/json',
-        ])->post($this->baseUrl . '/create_order/bulk-order', [
-            'data' => json_encode($data)
-        ]);
-
-        return $response->json();
-    }
-
-    private function checkDeliveryStatusByConsignmentId($id)
-    {
-        $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/status_by_cid/' . $id);
-
-        return $response->json();
-    }
-
-
-    private function checkDeliveryStatusByInvoiceId($id)
-    {
-        $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/status_by_invoice/' . $id);
-
-        return $response->json();
-    }
-
-    private function checkDeliveryStatusByTrackingCode($id)
-    {
-        $response = Http::withHeaders([
-            'Api-Key' => $this->apiKey,
-            'Secret-Key' => $this->secretKey,
-            'Content-Type' => 'application/json',
-        ])->get($this->baseUrl . '/status_by_trackingcode/' . $id);
-
-        return $response->json();
+        return $this->redxService->getConfig(Auth::id());
     }
 }
