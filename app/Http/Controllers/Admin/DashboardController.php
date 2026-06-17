@@ -9,6 +9,7 @@ use App\Models\CourierWebhookEvent;
 use App\Models\SmsBalance;
 use App\Models\User;
 use App\Models\UserPackage;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 function getBoxData($title, $value, $modifier = null, $modifier_position = 'right', ...$others)
@@ -255,7 +256,7 @@ class DashboardController extends Controller
 
         return [
             'title' => 'Courier Webhook Activity',
-            'link' => route('webhooks.index'),
+            'link' => Route::has('webhooks.index') ? route('webhooks.index') : url('/webhooks'),
             'link_text' => 'View All Activities',
             'total_events' => $totalEvents,
             'success_count' => $successCount,
