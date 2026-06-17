@@ -28,4 +28,9 @@ class CourierWebhookEvent extends Model
     {
         return $this->belongsTo(CourierShipment::class, 'shipment_id');
     }
+
+    public function forwardRetries()
+    {
+        return $this->hasMany(CourierForwardRetry::class, 'webhook_event_id');
+    }
 }

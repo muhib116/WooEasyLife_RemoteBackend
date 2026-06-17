@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
+use App\Models\CourierForwardRetry;
+use App\Models\CourierWebhookEvent;
 use App\Models\SmsBalance;
 use App\Models\User;
 use App\Models\UserPackage;
@@ -57,6 +59,7 @@ class DashboardController extends Controller
             'sms' => $this->getSmsInfo(),
             'package_purchase' => $this->packagePurchaseInfo(),
             'expired_tokens' => $this->getExpiredTokenInfo(),
+            'webhooks' => $this->getWebhookInfo(),
         ];
 
         return Inertia::render('Dashboard/Dashboard', compact('data'));
@@ -199,6 +202,73 @@ class DashboardController extends Controller
                 getBoxData('Expiring Soon', $expiringSoon),
                 getBoxData('Active Tokens', $active),
             ],
+        ];
+    }
+
+    private function getWebhookInfo()
+    {
+        $totalEvents = CourierWebhookEvent::query()->count();
+        $successCount = CourierWebhookEvent::query()->where('forward_status', 'success')->count();
+        $failedCount = CourierWebhookEvent::query()->where('forward_status', 'failed')->count();
+        $retryQueuedCount = CourierWebhookEvent::query()->where('forward_status', 'retry_queued')->count();
+        $orphanCount = CourierWebhookEvent::query()->where('forward_status', 'orphan')->count();
+        $pendingRetries = CourierForwardRetry::query()->where('status', 'pending')->count();
+        $failedRetries = CourierForwardRetry::query()->where('status', 'failed')->count();
+
+        $lastEvent = CourierWebhookEvent::query()->orderByDesc('id')->first();
+
+        $successRate = $totalEvents > 0
+            ? round(($successCount / $totalEvents) * 100)
+            : 0;
+
+        $recentEvents = CourierWebhookEvent::query()
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get()
+            ->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'partner' => $event->partner,
+                    'environment' => $event->environment,
+                    'consignment_id' => $event->consignment_id,
+                    'wc_order_id' => $event->wc_order_id,
+                    'site_url' => $event->site_url,
+                    'event_type' => $event->event_type,
+                    'forward_status' => $event->forward_status,
+                    'forward_message' => $event->forward_message,
+                    'created_at' => $event->created_at?->format('Y-m-d H:i'),
+                    'received_ago' => $event->created_at?->diffForHumans(),
+                ];
+            })
+            ->values();
+
+        $partnerBreakdown = CourierWebhookEvent::query()
+            ->selectRaw('partner, COUNT(*) as total')
+            ->groupBy('partner')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => [
+                'partner' => $row->partner,
+                'total' => (int) $row->total,
+            ])
+            ->values();
+
+        return [
+            'title' => 'Courier Webhook Activity',
+            'link' => route('webhooks.index'),
+            'link_text' => 'View All Activities',
+            'total_events' => $totalEvents,
+            'success_count' => $successCount,
+            'failed_count' => $failedCount,
+            'retry_queued_count' => $retryQueuedCount,
+            'orphan_count' => $orphanCount,
+            'pending_retries' => $pendingRetries,
+            'failed_retries' => $failedRetries,
+            'success_rate' => $successRate,
+            'last_event_at' => $lastEvent?->created_at?->format('Y-m-d H:i'),
+            'last_forward_status' => $lastEvent?->forward_status,
+            'recent' => $recentEvents,
+            'partners' => $partnerBreakdown,
         ];
     }
 }

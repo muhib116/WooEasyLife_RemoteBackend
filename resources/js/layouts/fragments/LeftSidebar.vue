@@ -229,15 +229,9 @@ const sections: NavSection[] = [
     {
         label: "System",
         items: [
+            { title: "Webhook Activities", name: "webhooks.index", icon: "PhArrowClockwise" },
             { title: "Error Logs", name: "logs.index", icon: "PhBug" },
             { title: "Database Backups", name: "backups.index", icon: "PhFloppyDiskBack" },
-        ],
-    },
-    {
-        label: "Reference",
-        items: [
-            { title: "Phosphor Icons", name: "icons", icon: "PhListHeart" },
-            { title: "Prime Icons", name: "icons.prime", icon: "PhPalette" },
         ],
     },
 ];

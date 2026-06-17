@@ -58,16 +58,16 @@
                     icon-class="text-sky-600 dark:text-sky-400"
                 />
                 <StatCard
-                    title="Expired Tokens"
-                    :value="expiredTokens.expired ?? 0"
-                    icon="PhClockCountdown"
-                    :subtitle="`${expiredTokens.expiring_soon ?? 0} expiring within 7 days`"
-                    :badge="expiredTokenBadge"
-                    badge-label="of all API tokens"
-                    :badge-positive="(expiredTokens.expired ?? 0) === 0"
-                    accent-class="bg-rose-500"
-                    icon-bg-class="bg-rose-50 dark:bg-rose-500/15"
-                    icon-class="text-rose-600 dark:text-rose-400"
+                    title="Webhook Events"
+                    :value="webhooks.total_events ?? 0"
+                    icon="PhArrowClockwise"
+                    :subtitle="webhookSubtitle"
+                    :badge="`${webhooks.success_rate ?? 0}%`"
+                    badge-label="forward success"
+                    :badge-positive="(webhooks.pending_retries ?? 0) === 0"
+                    accent-class="bg-violet-500"
+                    icon-bg-class="bg-violet-50 dark:bg-violet-500/15"
+                    icon-class="text-violet-600 dark:text-violet-400"
                 />
             </div>
 
@@ -87,6 +87,8 @@
             </div>
 
             <ExpiredTokensPanel :data="expiredTokens" />
+
+            <WebhookActivityPanel :data="webhooks" />
 
             <div>
                 <div class="mb-4 flex items-center gap-2">
@@ -128,6 +130,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from "@/layouts/AuthenticatedLayout.vue";
 import ExpiredTokensPanel from "./fragments/ExpiredTokensPanel.vue";
+import WebhookActivityPanel from "./fragments/WebhookActivityPanel.vue";
 import GroupListBox from "./fragments/GroupListBox.vue";
 import StatCard from "./fragments/StatCard.vue";
 import Widget from "./fragments/Widget.vue";
@@ -174,6 +177,7 @@ type DashboardData = {
         total_sms_recharge: string;
     };
     expired_tokens: ExpiredTokenData;
+    webhooks: WebhookData;
 };
 
 const props = defineProps<{
@@ -200,6 +204,62 @@ const expiredTokens = computed(() => get(props.data, "expired_tokens", {
     expiring_soon: 0,
     recent: [],
 }) as ExpiredTokenData);
+
+type WebhookData = {
+    title?: string;
+    link?: string;
+    link_text?: string;
+    total_events?: number;
+    success_count?: number;
+    failed_count?: number;
+    retry_queued_count?: number;
+    orphan_count?: number;
+    pending_retries?: number;
+    failed_retries?: number;
+    success_rate?: number;
+    last_event_at?: string | null;
+    last_forward_status?: string | null;
+    recent?: Array<{
+        id: number;
+        partner: string;
+        environment: string;
+        consignment_id: string | null;
+        wc_order_id: number | null;
+        event_type: string | null;
+        forward_status: string;
+        forward_message: string | null;
+        created_at: string | null;
+        received_ago: string | null;
+    }>;
+    partners?: Array<{ partner: string; total: number }>;
+};
+
+const webhooks = computed(() => get(props.data, "webhooks", {
+    total_events: 0,
+    success_count: 0,
+    failed_count: 0,
+    retry_queued_count: 0,
+    orphan_count: 0,
+    pending_retries: 0,
+    failed_retries: 0,
+    success_rate: 0,
+    recent: [],
+    partners: [],
+}) as WebhookData);
+
+const webhookSubtitle = computed(() => {
+    const pending = webhooks.value.pending_retries ?? 0;
+
+    if (pending > 0) {
+        return `${pending} pending ${pending === 1 ? "retry" : "retries"}`;
+    }
+
+    if (webhooks.value.last_event_at) {
+        return `Last event: ${webhooks.value.last_event_at}`;
+    }
+
+    return "No webhook events yet";
+});
 
 const expiredTokenBadge = computed(() => {
     const total = expiredTokens.value.total ?? 0;
@@ -266,6 +326,7 @@ const formattedDate = computed(() => {
 
 const quickActions: { label: string; name: string; icon: IconName }[] = [
     { label: "Users", name: "users.index", icon: "PhUsers" },
+    { label: "Webhooks", name: "webhooks.index", icon: "PhArrowClockwise" },
     { label: "Token Ledger", name: "tokenLedger", icon: "PhCoins" },
     { label: "Packages", name: "packages.index", icon: "PhPackage" },
     { label: "API Keys", name: "apiKeys.index", icon: "PhLockKeyOpen" },

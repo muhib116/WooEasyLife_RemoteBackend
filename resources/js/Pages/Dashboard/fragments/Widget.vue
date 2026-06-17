@@ -23,25 +23,25 @@
 
         <div
             v-if="badge || rightText"
-            class="mt-4 flex items-center gap-2"
+            class="mt-4 space-y-1.5"
         >
+            <p
+                v-if="rightText"
+                class="text-theme-xs text-gray-400 dark:text-gray-500"
+            >
+                {{ rightText }}
+            </p>
             <span
                 v-if="badge"
                 :class="
                     twMerge(
-                        'text-theme-xs inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium',
+                        'text-theme-xs inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 font-medium',
                         badgeClass ||
                             'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
                     )
                 "
             >
                 {{ badge }}
-            </span>
-            <span
-                v-if="rightText"
-                class="text-theme-xs text-gray-400 dark:text-gray-500"
-            >
-                {{ rightText }}
             </span>
         </div>
     </div>

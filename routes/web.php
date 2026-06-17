@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitorController;
+use App\Http\Controllers\Admin\WebhookActivityController;
 use App\Http\Controllers\Admin\WhitelistedDomainController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\Analysis\UseAnalysisController;
@@ -101,6 +102,17 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
         Route::post('/dump-database', [BackupController::class, 'dumpDatabase'])->name('dumpDatabase');
         Route::get('/download-backup/{file_name}', [BackupController::class, 'downloadBackup'])->name('downloadBackup');
         Route::post('/delete-file/{file_name}', [BackupController::class, 'deleteFile'])->name('deleteFile');
+    });
+
+    Route::group(['as' => 'webhooks.', 'prefix' => 'webhooks'], function () {
+        Route::get('/', [WebhookActivityController::class, 'index'])->name('index');
+        Route::get('/summary', [WebhookActivityController::class, 'summary'])->name('summary');
+        Route::get('/events', [WebhookActivityController::class, 'events'])->name('events');
+        Route::get('/retries', [WebhookActivityController::class, 'retries'])->name('retries');
+        Route::post('/process-retries', [WebhookActivityController::class, 'processRetries'])->name('processRetries');
+        Route::post('/retries/{retry}/retry', [WebhookActivityController::class, 'retryForward'])->name('retryForward');
+        Route::post('/events/{event}/retry', [WebhookActivityController::class, 'retryEvent'])->name('retryEvent');
+        Route::post('/events/{event}/test-plugin', [WebhookActivityController::class, 'testPluginReach'])->name('testPlugin');
     });
 
     Route::group(['as' => 'products.', 'prefix' => 'products'], function () {

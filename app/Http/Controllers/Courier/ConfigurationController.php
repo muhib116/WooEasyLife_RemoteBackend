@@ -14,6 +14,8 @@ use Illuminate\Validation\Rule;
 
 class ConfigurationController extends Controller
 {
+    private const PATHAO_SANDBOX_PASSWORD = 'lovePathao';
+
     public function __construct(
         protected CourierAccountService $courierAccountService,
         protected CourierWebhookSettingsService $webhookSettingsService
@@ -76,7 +78,9 @@ class ConfigurationController extends Controller
         }
 
         if ($request->slug === 'pathao') {
-            $rules['settings.username'] = 'required|string';
+            $rules['settings.environment'] = 'nullable|string';
+            $rules['settings.username'] = 'nullable|string';
+            $rules['settings.merchant_email'] = 'nullable|string';
             $rules['settings.password'] = 'nullable|string';
             $rules['settings.sender_name'] = 'nullable|string';
             $rules['settings.sender_phone'] = 'nullable|string';
@@ -162,21 +166,41 @@ class ConfigurationController extends Controller
                 $existingSettings = is_array($existing?->settings) ? $existing->settings : [];
             }
 
-            $password = $request->input('settings.password') ?: ($existingSettings['password'] ?? '');
+            $environment = $this->normalizePathaoEnvironment($request->input('settings.environment'));
+            $username = trim((string) (
+                $request->input('settings.username')
+                ?: $request->input('settings.merchant_email')
+                ?: ($existingSettings['username'] ?? '')
+            ));
 
-            if (empty($password)) {
+            if ($username === '') {
                 return $this->validationErrorResponse([
-                    'settings.password' => ['Pathao login password is required.'],
+                    'settings.username' => ['Pathao merchant email (username) is required.'],
+                ]);
+            }
+
+            $password = trim((string) (
+                $request->input('settings.password')
+                ?: ($existingSettings['password'] ?? '')
+            ));
+
+            if ($password === '' && $environment === 'sandbox') {
+                $password = self::PATHAO_SANDBOX_PASSWORD;
+            }
+
+            if ($password === '') {
+                return $this->validationErrorResponse([
+                    'settings.password' => ['Pathao merchant login password is required.'],
                 ]);
             }
 
             $data['settings'] = array_merge($existingSettings, [
-                'environment' => $request->input('settings.environment') === 'live' ? 'live' : 'sandbox',
+                'environment' => $environment,
                 'store_id' => $this->pathaoStringSetting(
                     $request->input('settings.store_id'),
                     $existingSettings['store_id'] ?? ''
                 ),
-                'username' => $request->input('settings.username'),
+                'username' => $username,
                 'password' => $password,
                 'sender_name' => $this->pathaoStringSetting(
                     $request->input('settings.sender_name'),
@@ -337,5 +361,10 @@ class ConfigurationController extends Controller
         }
 
         return (int) $value;
+    }
+
+    private function normalizePathaoEnvironment($value): string
+    {
+        return strtolower(trim((string) $value)) === 'live' ? 'live' : 'sandbox';
     }
 }

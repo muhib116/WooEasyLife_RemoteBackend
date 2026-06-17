@@ -30,6 +30,7 @@ declare module 'vue' {
     Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
     Skeleton: typeof import('primevue/skeleton')['default']
+    Tag: typeof import('primevue/tag')['default']
     Textarea: typeof import('primevue/textarea')['default']
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
