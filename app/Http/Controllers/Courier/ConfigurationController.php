@@ -88,15 +88,6 @@ class ConfigurationController extends Controller
             $rules['settings.recipient_city'] = 'nullable|integer|min:0';
             $rules['settings.recipient_zone'] = 'nullable|integer|min:0';
             $rules['settings.recipient_area'] = 'nullable|integer|min:0';
-
-            if ($request->boolean('is_active')) {
-                $rules['settings.store_id'] = 'required';
-                $rules['settings.sender_name'] = 'required|string';
-                $rules['settings.sender_phone'] = 'required|string';
-                $rules['settings.recipient_city'] = 'required|integer|min:1';
-                $rules['settings.recipient_zone'] = 'required|integer|min:1';
-                $rules['settings.recipient_area'] = 'required|integer|min:1';
-            }
         }
 
         $validator = Validator::make($request->all(), $rules);
