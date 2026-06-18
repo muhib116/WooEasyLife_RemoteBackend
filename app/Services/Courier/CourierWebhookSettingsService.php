@@ -24,10 +24,29 @@ class CourierWebhookSettingsService
         $accessToken = $this->accountService->resolveAccessToken($request);
 
         $callbackUrl = $this->callbackUrl($partner, $environment);
-        $redxToken = $partner === 'redx' ? CourierHubToken::tokenForPartner('redx') : '';
+        $redxToken = '';
 
-        if ($partner === 'redx' && $redxToken !== '') {
-            $callbackUrl .= (str_contains($callbackUrl, '?') ? '&' : '?') . 'token=' . urlencode($redxToken);
+        if ($partner === 'redx') {
+            if ($accessToken) {
+                $accountLink = LicenseCourierAccount::query()
+                    ->where('access_token_id', $accessToken->id)
+                    ->where('is_current', true)
+                    ->whereHas('courierAccount', function ($query) use ($partner, $environment) {
+                        $query->where('partner', $partner)->where('environment', $environment);
+                    })
+                    ->with('courierAccount')
+                    ->first();
+
+                $redxToken = trim((string) ($accountLink?->courierAccount?->webhook_verify_secret ?? ''));
+            }
+
+            if ($redxToken === '') {
+                $redxToken = CourierHubToken::tokenForPartner('redx');
+            }
+
+            if ($redxToken !== '') {
+                $callbackUrl .= (str_contains($callbackUrl, '?') ? '&' : '?') . 'token=' . urlencode($redxToken);
+            }
         }
 
         $sharedCount = 0;

@@ -9,6 +9,7 @@ use App\Services\Courier\CourierForwardRetryService;
 use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\CourierWebhookEventService;
 use App\Services\Courier\WordPressCourierForwarder;
+use App\Services\Courier\CourierWebhookSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -20,8 +21,38 @@ class CourierWebhookOpsController extends Controller
         protected CourierWebhookEventService $eventService,
         protected CourierForwardRetryService $retryService,
         protected CourierAccountService $accountService,
-        protected WordPressCourierForwarder $forwarder
+        protected WordPressCourierForwarder $forwarder,
+        protected CourierWebhookSyncService $webhookSyncService
     ) {
+    }
+
+    public function webhookSync(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'partner' => 'required|string|in:steadfast,pathao,redx',
+            'environment' => 'nullable|string|in:live,sandbox',
+            'site_url' => 'nullable|string|max:512',
+            'store_forward_url' => 'nullable|string|max:512',
+            'callback_url' => 'nullable|string|max:512',
+            'webhook_secret' => 'nullable|string|max:255',
+            'webhook_token' => 'nullable|string|max:128',
+            'webhook_auth' => 'nullable|array',
+            'webhook_auth.bearer_token' => 'nullable|string|max:255',
+            'pathao_integration' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->errors());
+        }
+
+        try {
+            return $this->successResponse(
+                $this->webhookSyncService->sync($request),
+                'Webhook configuration synced.'
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return $this->errorResponse($exception->getMessage(), 401);
+        }
     }
 
     public function webhookHealth(Request $request)
