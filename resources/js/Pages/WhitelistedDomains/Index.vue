@@ -154,19 +154,21 @@
             </form>
 
             <template #footer>
-                <Button
-                    label="Cancel"
-                    severity="secondary"
-                    text
-                    @click="showForm = false"
-                />
-                <Button
-                    label="Save"
-                    icon="pi pi-check"
-                    severity="info"
-                    :loading="form.processing"
-                    @click="submit"
-                />
+                <div class="flex justify-end gap-2 mt-3">
+                    <Button
+                        label="Cancel"
+                        severity="secondary"
+                        text
+                        @click="showForm = false"
+                    />
+                    <Button
+                        label="Save"
+                        icon="pi pi-check"
+                        severity="info"
+                        :loading="form.processing"
+                        @click="submit"
+                    />
+                </div>
             </template>
         </AdminDialog>
 
