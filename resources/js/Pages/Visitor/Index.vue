@@ -31,21 +31,26 @@
             </PageHeader>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <StatCard
-                    title="Records"
-                    :value="report.length"
-                    icon="PhRows"
-                    :subtitle="currentReportLabel"
-                />
-                <StatCard
-                    title="Total Hits"
-                    :value="totalHits"
-                    icon="PhCursorClick"
-                    subtitle="Sum of hit counts in view"
-                    accent-class="bg-emerald-500"
-                    icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
-                    icon-class="text-emerald-600 dark:text-emerald-400"
-                />
+                <template v-if="loading">
+                    <StatCardSkeleton v-for="index in 2" :key="`visitor-stat-${index}`" :delay="index * 80" />
+                </template>
+                <template v-else>
+                    <StatCard
+                        title="Records"
+                        :value="report.length"
+                        icon="PhRows"
+                        :subtitle="currentReportLabel"
+                    />
+                    <StatCard
+                        title="Total Hits"
+                        :value="totalHits"
+                        icon="PhCursorClick"
+                        subtitle="Sum of hit counts in view"
+                        accent-class="bg-emerald-500"
+                        icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
+                        icon-class="text-emerald-600 dark:text-emerald-400"
+                    />
+                </template>
             </div>
 
             <PageCard
@@ -53,21 +58,25 @@
                 :description="`${report.length} record${report.length === 1 ? '' : 's'}`"
                 no-padding
             >
-                <DataTable
+                <div
                     v-if="loading"
-                    :value="new Array(5)"
-                    class="professional-table text-sm"
+                    class="border-t border-slate-100 dark:border-slate-800"
                 >
-                    <Column header="SL"><template #body><Skeleton /></template></Column>
-                    <Column header="Data"><template #body><Skeleton /></template></Column>
-                    <Column header="Hits"><template #body><Skeleton /></template></Column>
-                </DataTable>
+                    <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                        <i class="pi pi-spin pi-spinner" />
+                        Loading visitor report...
+                    </div>
+                    <TableSkeletonLoader :columns="visitorSkeletonColumns" :rows="5" />
+                </div>
 
                 <DataTable
                     v-else-if="report.length"
                     :value="report"
-                    :rows="15"
+                    :rows="rowsPerPage"
                     paginator
+                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    :rowsPerPageOptions="[10, 15, 25, 50]"
+                    currentPageReportTemplate="{first}–{last} of {totalRecords}"
                     class="professional-table text-sm"
                 >
                     <Column header="SL" headerStyle="width:3rem">
@@ -142,10 +151,19 @@ import { AuthenticatedLayout } from "@/layouts";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
+import TableSkeletonLoader from "@/Pages/Users/fragments/TableSkeletonLoader.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 const loading = ref(false);
+const rowsPerPage = ref(15);
 const report = ref([]);
+
+const visitorSkeletonColumns = [
+    { width: "2rem", variant: "bar" },
+    { width: "14rem", variant: "bar" },
+    { width: "6rem", variant: "bar" },
+];
 
 const reportType = ref("daily");
 const reportTypes = [

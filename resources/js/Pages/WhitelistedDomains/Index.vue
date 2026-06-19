@@ -1,92 +1,184 @@
 <template>
     <AuthenticatedLayout title="Whitelisted Domains">
-        <Card class="dark:bg-slate-900 dark:text-white">
-            <template #title>
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <div>Fraud Check — Whitelisted Domains</div>
-                        <p class="mt-1 text-sm font-normal text-slate-500">
-                            Only these domains can call the fraud check API.
-                        </p>
-                    </div>
-                    <Button icon="pi pi-plus" label="Add Domain" @click="openCreate" />
-                </div>
-            </template>
-            <template #content>
-                <DataTable :value="domains" paginator :rows="10" tableStyle="min-width: 40rem">
-                    <Column header="#" headerStyle="width:3rem">
+        <div class="space-y-5">
+            <PageHeader
+                title="Whitelisted Domains"
+                description="Only these domains can call the fraud check API"
+                icon="PhGlobe"
+                icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
+                icon-class="text-sky-600 dark:text-sky-400"
+            >
+                <template #actions>
+                    <Button
+                        label="Add Domain"
+                        icon="pi pi-plus"
+                        size="small"
+                        @click="openCreate"
+                    />
+                </template>
+            </PageHeader>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <StatCard
+                    title="Total Domains"
+                    :value="domains.length"
+                    icon="PhGlobe"
+                />
+                <StatCard
+                    title="Active"
+                    :value="activeCount"
+                    icon="PhCheckCircle"
+                    subtitle="Allowed to call fraud API"
+                    accent-class="bg-emerald-500"
+                    icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
+                    icon-class="text-emerald-600 dark:text-emerald-400"
+                />
+                <StatCard
+                    title="Inactive"
+                    :value="inactiveCount"
+                    icon="PhProhibit"
+                    subtitle="Blocked from fraud API"
+                    accent-class="bg-rose-500"
+                    icon-bg-class="bg-rose-50 dark:bg-rose-500/15"
+                    icon-class="text-rose-600 dark:text-rose-400"
+                />
+            </div>
+
+            <PageCard
+                title="Domain Whitelist"
+                :description="`${domains.length} domain${domains.length === 1 ? '' : 's'} configured`"
+                no-padding
+            >
+                <DataTable
+                    v-if="domains.length"
+                    :value="domains"
+                    paginator
+                    :rows="10"
+                    :rowsPerPageOptions="[10, 25, 50]"
+                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    currentPageReportTemplate="{first}–{last} of {totalRecords}"
+                    class="professional-table text-sm"
+                >
+                    <Column header="SL" headerStyle="width:3rem">
                         <template #body="slotProps">
                             {{ slotProps.index + 1 }}
                         </template>
                     </Column>
-                    <Column field="domain" header="Domain" />
-                    <Column field="notes" header="Notes">
+                    <Column field="domain" header="Domain" style="min-width: 12rem">
                         <template #body="{ data }">
-                            {{ data.notes || "—" }}
+                            <span class="font-medium">{{ data.domain }}</span>
                         </template>
                     </Column>
-                    <Column field="is_active" header="Status">
+                    <Column field="notes" header="Notes" style="min-width: 14rem">
                         <template #body="{ data }">
-                            <Badge
+                            <span class="text-sm text-gray-600 dark:text-gray-300">
+                                {{ data.notes || "—" }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column header="Status" style="min-width: 7rem">
+                        <template #body="{ data }">
+                            <Tag
                                 :value="data.is_active ? 'Active' : 'Inactive'"
                                 :severity="data.is_active ? 'success' : 'secondary'"
                             />
                         </template>
                     </Column>
-                    <Column header="Actions" headerStyle="width:10rem">
+                    <Column header="Actions" headerStyle="width:9rem">
                         <template #body="{ data }">
-                            <div class="flex gap-2">
+                            <div class="flex gap-1">
                                 <Button
                                     icon="pi pi-pencil"
                                     size="small"
+                                    text
+                                    rounded
                                     severity="secondary"
+                                    v-tooltip.top="'Edit domain'"
                                     @click="openEdit(data)"
                                 />
                                 <Button
                                     icon="pi pi-trash"
                                     size="small"
+                                    text
+                                    rounded
                                     severity="danger"
-                                    @click="removeDomain(data.id)"
+                                    v-tooltip.top="'Remove domain'"
+                                    @click="confirmRemove(data)"
                                 />
                             </div>
                         </template>
                     </Column>
                 </DataTable>
-            </template>
-        </Card>
 
-        <Dialog
+                <EmptyState
+                    v-else
+                    icon="PhGlobe"
+                    title="No whitelisted domains"
+                    description="Add a domain to allow fraud check API access from that site"
+                >
+                    <Button
+                        label="Add Domain"
+                        icon="pi pi-plus"
+                        size="small"
+                        class="mt-4"
+                        @click="openCreate"
+                    />
+                </EmptyState>
+            </PageCard>
+        </div>
+
+        <AdminDialog
             v-model:visible="showForm"
-            modal
             :header="editing ? 'Edit Domain' : 'Add Domain'"
             :style="{ width: '32rem' }"
+            @hide="resetForm"
         >
             <form class="space-y-4" @submit.prevent="submit">
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Domain</label>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                        Domain
+                    </label>
                     <InputText
                         v-model="form.domain"
                         class="w-full"
                         placeholder="example.com"
                     />
-                    <small v-if="form.errors.domain" class="text-red-500">
+                    <small v-if="form.errors.domain" class="text-rose-500">
                         {{ form.errors.domain }}
                     </small>
                 </div>
-                <div>
-                    <label class="mb-1 block text-sm font-medium">Notes</label>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                        Notes
+                    </label>
                     <Textarea v-model="form.notes" class="w-full" rows="3" />
                 </div>
                 <div class="flex items-center gap-2">
                     <Checkbox v-model="form.is_active" binary inputId="is_active" />
-                    <label for="is_active">Active</label>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <Button type="button" label="Cancel" severity="secondary" @click="showForm = false" />
-                    <Button type="submit" label="Save" :loading="form.processing" />
+                    <label for="is_active" class="text-sm text-gray-700 dark:text-gray-200">
+                        Active
+                    </label>
                 </div>
             </form>
-        </Dialog>
+
+            <template #footer>
+                <Button
+                    label="Cancel"
+                    severity="secondary"
+                    text
+                    @click="showForm = false"
+                />
+                <Button
+                    label="Save"
+                    icon="pi pi-check"
+                    severity="info"
+                    :loading="form.processing"
+                    @click="submit"
+                />
+            </template>
+        </AdminDialog>
+
+        <ConfirmDialog />
     </AuthenticatedLayout>
 </template>
 
@@ -94,6 +186,12 @@
 import { AuthenticatedLayout } from "@/layouts";
 import { useForm } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
+import { useConfirm } from "primevue";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
+import PageCard from "@/Pages/Users/fragments/PageCard.vue";
+import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
+import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 
 defineOptions({ name: "WhitelistedDomainsIndex" });
 
@@ -106,7 +204,10 @@ const props = defineProps<{
     }>;
 }>();
 
+const confirm = useConfirm();
 const domains = computed(() => props.domains);
+const activeCount = computed(() => domains.value.filter((item) => item.is_active).length);
+const inactiveCount = computed(() => domains.value.length - activeCount.value);
 const showForm = ref(false);
 const editing = ref<{ id: number } | null>(null);
 
@@ -156,11 +257,17 @@ const submit = () => {
     });
 };
 
-const removeDomain = (id: number) => {
-    if (!confirm("Remove this domain from the whitelist?")) {
-        return;
-    }
-
-    useForm({}).delete(route("whitelistedDomains.destroy", id));
+const confirmRemove = (item: (typeof props.domains)[number]) => {
+    confirm.require({
+        header: "Remove domain?",
+        message: `Remove ${item.domain} from the whitelist? Fraud checks from this domain will be blocked.`,
+        icon: "pi pi-exclamation-triangle",
+        rejectLabel: "Cancel",
+        acceptLabel: "Remove",
+        acceptClass: "p-button-danger",
+        accept: () => {
+            useForm({}).delete(route("whitelistedDomains.destroy", item.id));
+        },
+    });
 };
 </script>

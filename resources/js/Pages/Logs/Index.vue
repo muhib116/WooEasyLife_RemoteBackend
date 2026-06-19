@@ -56,21 +56,26 @@
             </p>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <StatCard
-                    title="Log Entries"
-                    :value="logs.length"
-                    icon="PhListBullets"
-                    :subtitle="selectedFileName || 'No file selected'"
-                />
-                <StatCard
-                    title="Log Files"
-                    :value="logFiles.length"
-                    icon="PhFileText"
-                    subtitle="Available on server"
-                    accent-class="bg-sky-500"
-                    icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
-                    icon-class="text-sky-600 dark:text-sky-400"
-                />
+                <template v-if="isLoading && !logs.length">
+                    <StatCardSkeleton v-for="index in 2" :key="`log-stat-${index}`" :delay="index * 80" />
+                </template>
+                <template v-else>
+                    <StatCard
+                        title="Log Entries"
+                        :value="logs.length"
+                        icon="PhListBullets"
+                        :subtitle="selectedFileName || 'No file selected'"
+                    />
+                    <StatCard
+                        title="Log Files"
+                        :value="logFiles.length"
+                        icon="PhFileText"
+                        subtitle="Available on server"
+                        accent-class="bg-sky-500"
+                        icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
+                        icon-class="text-sky-600 dark:text-sky-400"
+                    />
+                </template>
             </div>
 
             <PageCard
@@ -78,16 +83,16 @@
                 :description="selectedFileName ? `Viewing ${selectedFileName}` : 'Select a log file to view entries'"
                 no-padding
             >
-                <DataTable
+                <div
                     v-if="isLoading"
-                    :value="new Array(6)"
-                    class="professional-table text-sm"
+                    class="border-t border-slate-100 dark:border-slate-800"
                 >
-                    <Column header="SL"><template #body><Skeleton /></template></Column>
-                    <Column header="Timestamp"><template #body><Skeleton /></template></Column>
-                    <Column header="Title"><template #body><Skeleton /></template></Column>
-                    <Column header="Message"><template #body><Skeleton /></template></Column>
-                </DataTable>
+                    <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                        <i class="pi pi-spin pi-spinner" />
+                        Loading log entries...
+                    </div>
+                    <TableSkeletonLoader :columns="logSkeletonColumns" :rows="6" />
+                </div>
 
                 <DataTable
                     v-else-if="logs.length"
@@ -170,6 +175,8 @@ import { useConfirm } from "primevue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
+import TableSkeletonLoader from "@/Pages/Users/fragments/TableSkeletonLoader.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 defineOptions({
@@ -191,6 +198,13 @@ const logFiles = ref<{ name: string; path: string }[]>([]);
 const selectedLogFile = ref<string | null>(null);
 const logs = ref<any[]>([]);
 const clearing = ref(false);
+
+const logSkeletonColumns = [
+    { width: "2rem", variant: "bar" as const },
+    { width: "9rem", variant: "bar" as const },
+    { width: "7rem", variant: "bar" as const },
+    { width: "16rem", variant: "stack" as const, subWidth: "10rem" },
+];
 
 const selectedFileName = computed(() => {
     const file = logFiles.value.find((f) => f.path === selectedLogFile.value);

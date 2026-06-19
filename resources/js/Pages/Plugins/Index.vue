@@ -1,41 +1,22 @@
 <template>
     <AuthenticatedLayout title="Manage Plugins">
         <div class="space-y-5">
-            <div
-                class="box-bg box-color box-border rounded-2xl border px-5 py-4 shadow-sm md:px-6"
+            <PageHeader
+                title="Plugin Versions"
+                description="Publish and manage WooCommerce plugin releases"
+                icon="PhPlugsConnected"
+                icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                icon-class="text-primary-600 dark:text-primary-400"
             >
-                <div
-                    class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center"
-                >
-                    <div class="flex items-start gap-4">
-                        <div
-                            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-500/15"
-                        >
-                            <Icon
-                                name="PhPlugsConnected"
-                                class="text-2xl text-primary-600 dark:text-primary-400"
-                            />
-                        </div>
-                        <div>
-                            <h1
-                                class="text-xl font-semibold text-gray-900 dark:text-white"
-                            >
-                                Plugin Versions
-                            </h1>
-                            <p
-                                class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                            >
-                                Publish and manage WooCommerce plugin releases
-                            </p>
-                        </div>
-                    </div>
+                <template #actions>
                     <Button
                         label="New Version"
                         icon="pi pi-plus"
+                        size="small"
                         @click="openCreateForm"
                     />
-                </div>
-            </div>
+                </template>
+            </PageHeader>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard
@@ -193,13 +174,11 @@
             </PageCard>
         </div>
 
-        <Dialog
+        <AdminDialog
             v-model:visible="showForm"
             :header="form.id ? 'Edit Plugin Version' : 'Publish New Version'"
-            modal
             :style="{ width: '40rem' }"
             draggable
-            dismissable-mask
             @hide="resetForm"
         >
             <VersionForm
@@ -209,7 +188,7 @@
                 @cancel="closeForm"
                 @file-select="handleFileSelect"
             />
-        </Dialog>
+        </AdminDialog>
 
         <ConfirmDialog />
         <Toast />
@@ -218,7 +197,6 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { Icon } from "@/plugins";
 import { PluginsVersion } from "@/types";
 import { router, useForm } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
@@ -226,8 +204,10 @@ import { get } from "lodash";
 import { format } from "date-fns";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue/usetoast";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import VersionForm from "./fragments/VersionForm.vue";

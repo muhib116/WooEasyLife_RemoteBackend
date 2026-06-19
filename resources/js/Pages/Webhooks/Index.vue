@@ -196,6 +196,19 @@
                             size="small"
                             @click="clearEventFilters"
                         />
+                        <div class="ml-auto flex items-center gap-2">
+                            <label class="text-xs text-gray-500 dark:text-gray-400">
+                                Per page
+                            </label>
+                            <Dropdown
+                                v-model="eventsPerPage"
+                                :options="pageSizeOptions"
+                                optionLabel="label"
+                                optionValue="value"
+                                class="w-[110px]"
+                                @change="handleEventsPageSizeChange"
+                            />
+                        </div>
                     </div>
 
                     <div
@@ -262,12 +275,13 @@
                     v-model:selection="selectedEvents"
                     :value="events.data"
                     dataKey="id"
-                    :rows="events.per_page"
+                    :rows="eventsPerPage"
                     :totalRecords="events.total"
-                    :first="(events.current_page - 1) * events.per_page"
+                    :first="(events.current_page - 1) * eventsPerPage"
                     lazy
                     paginator
-                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    :rowsPerPageOptions="pageSizeValues"
                     currentPageReportTemplate="{first}–{last} of {totalRecords}"
                     class="professional-table text-sm"
                     @page="onEventPage"
@@ -276,7 +290,7 @@
                     <Column selectionMode="multiple" headerStyle="width:3rem" />
                     <Column header="SL" headerStyle="width:3rem">
                         <template #body="slotProps">
-                            {{ (events.current_page - 1) * events.per_page + slotProps.index + 1 }}
+                            {{ (events.current_page - 1) * eventsPerPage + slotProps.index + 1 }}
                         </template>
                     </Column>
                     <Column header="Received" style="min-width: 9rem">
@@ -408,9 +422,22 @@
                 no-padding
             >
                 <template #actions>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ retries.total }} total
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs text-gray-500 dark:text-gray-400">
+                            Per page
+                        </label>
+                        <Dropdown
+                            v-model="retriesPerPage"
+                            :options="pageSizeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            class="w-[110px]"
+                            @change="handleRetriesPageSizeChange"
+                        />
+                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ retries.total }} total
+                        </span>
+                    </div>
                 </template>
 
                 <div
@@ -479,12 +506,13 @@
                     v-model:selection="selectedRetries"
                     :value="retries.data"
                     dataKey="id"
-                    :rows="retries.per_page"
+                    :rows="retriesPerPage"
                     :totalRecords="retries.total"
-                    :first="(retries.current_page - 1) * retries.per_page"
+                    :first="(retries.current_page - 1) * retriesPerPage"
                     lazy
                     paginator
-                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    :rowsPerPageOptions="pageSizeValues"
                     currentPageReportTemplate="{first}–{last} of {totalRecords}"
                     class="professional-table text-sm"
                     @page="onRetryPage"
@@ -493,7 +521,7 @@
                     <Column selectionMode="multiple" headerStyle="width:3rem" />
                     <Column header="SL" headerStyle="width:3rem">
                         <template #body="slotProps">
-                            {{ (retries.current_page - 1) * retries.per_page + slotProps.index + 1 }}
+                            {{ (retries.current_page - 1) * retriesPerPage + slotProps.index + 1 }}
                         </template>
                     </Column>
                     <Column header="Partner" style="min-width: 7rem">
@@ -583,9 +611,8 @@
             </PageCard>
         </div>
 
-        <Dialog
+        <AdminDialog
             v-model:visible="testDialogVisible"
-            modal
             header="Plugin Reachability Test"
             :style="{ width: '34rem' }"
         >
@@ -645,11 +672,10 @@
                     </div>
                 </div>
             </div>
-        </Dialog>
+        </AdminDialog>
 
-        <Dialog
+        <AdminDialog
             v-model:visible="courierTestDialogVisible"
-            modal
             header="Test Courier Webhook"
             :style="{ width: '36rem' }"
         >
@@ -783,13 +809,14 @@
                 <Button
                     label="Run Test"
                     icon="pi pi-send"
+                    severity="info"
                     :loading="testingCourierWebhook"
                     @click="handleTestCourierWebhook"
                 />
             </template>
-        </Dialog>
+        </AdminDialog>
 
-        <ConfirmDialog />
+        <ConfirmDialog class="admin-confirm-dialog" />
     </AuthenticatedLayout>
 </template>
 
@@ -805,6 +832,7 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
 import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
 import TableSkeletonLoader from "@/Pages/Users/fragments/TableSkeletonLoader.vue";
+import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 defineOptions({
@@ -822,6 +850,8 @@ const toast = useToast();
 const confirm = useConfirm();
 
 const activeTab = ref<"events" | "retries">("events");
+const eventsPerPage = ref(20);
+const retriesPerPage = ref(20);
 const loading = ref(false);
 const loadingEvents = ref(false);
 const loadingRetries = ref(false);
@@ -919,6 +949,13 @@ const sourceOptions = [
     { label: "Admin tests", value: "admin_test" },
     { label: "All sources", value: "all" },
 ];
+
+const pageSizeValues = [10, 20, 25, 50, 100];
+
+const pageSizeOptions = pageSizeValues.map((value) => ({
+    label: String(value),
+    value,
+}));
 
 const eventSkeletonColumns = [
     { width: "1.25rem", variant: "checkbox" as const },
@@ -1176,6 +1213,7 @@ const fetchEvents = async (page = events.value.current_page) => {
         const { data } = await axios.get(route("webhooks.events"), {
             params: {
                 page,
+                per_page: eventsPerPage.value,
                 partner: eventFilters.partner,
                 environment: eventFilters.environment,
                 forward_status: eventFilters.forward_status,
@@ -1184,6 +1222,9 @@ const fetchEvents = async (page = events.value.current_page) => {
             },
         });
         events.value = data;
+        if (data.per_page) {
+            eventsPerPage.value = data.per_page;
+        }
         clearEventSelection();
     } catch (error) {
         console.error("Error fetching webhook events:", error);
@@ -1198,8 +1239,16 @@ const fetchRetries = async (page = retries.value.current_page) => {
     loadingRetries.value = true;
 
     try {
-        const { data } = await axios.get(route("webhooks.retries"), { params: { page } });
+        const { data } = await axios.get(route("webhooks.retries"), {
+            params: {
+                page,
+                per_page: retriesPerPage.value,
+            },
+        });
         retries.value = data;
+        if (data.per_page) {
+            retriesPerPage.value = data.per_page;
+        }
         clearRetrySelection();
     } catch (error) {
         console.error("Error fetching webhook retries:", error);
@@ -1212,6 +1261,14 @@ const fetchRetries = async (page = retries.value.current_page) => {
 
 const handleEventFiltersChange = () => {
     fetchEvents(1);
+};
+
+const handleEventsPageSizeChange = () => {
+    fetchEvents(1);
+};
+
+const handleRetriesPageSizeChange = () => {
+    fetchRetries(1);
 };
 
 const clearEventFilters = () => {
@@ -1417,11 +1474,23 @@ const reloadAll = async () => {
     }
 };
 
-const onEventPage = (event: { page: number }) => {
+const onEventPage = (event: { page: number; rows: number }) => {
+    if (event.rows !== eventsPerPage.value) {
+        eventsPerPage.value = event.rows;
+        fetchEvents(1);
+        return;
+    }
+
     fetchEvents(event.page + 1);
 };
 
-const onRetryPage = (event: { page: number }) => {
+const onRetryPage = (event: { page: number; rows: number }) => {
+    if (event.rows !== retriesPerPage.value) {
+        retriesPerPage.value = event.rows;
+        fetchRetries(1);
+        return;
+    }
+
     fetchRetries(event.page + 1);
 };
 

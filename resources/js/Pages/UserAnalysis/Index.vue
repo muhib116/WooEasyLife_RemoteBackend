@@ -47,28 +47,33 @@
                 v-if="selectedUserId"
                 class="grid grid-cols-1 gap-4 sm:grid-cols-3"
             >
-                <StatCard
-                    title="Completed Orders"
-                    :value="total_order - total_abandon"
-                    icon="PhShoppingCart"
-                    subtitle="Excluding abandons"
-                />
-                <StatCard
-                    title="Abandoned"
-                    :value="total_abandon"
-                    icon="PhXCircle"
-                    accent-class="bg-amber-500"
-                    icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
-                    icon-class="text-amber-600 dark:text-amber-400"
-                />
-                <StatCard
-                    title="All Total"
-                    :value="total_order"
-                    icon="PhPackage"
-                    accent-class="bg-sky-500"
-                    icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
-                    icon-class="text-sky-600 dark:text-sky-400"
-                />
+                <template v-if="loading">
+                    <StatCardSkeleton v-for="index in 3" :key="`analysis-stat-${index}`" :delay="index * 80" />
+                </template>
+                <template v-else>
+                    <StatCard
+                        title="Completed Orders"
+                        :value="total_order - total_abandon"
+                        icon="PhShoppingCart"
+                        subtitle="Excluding abandons"
+                    />
+                    <StatCard
+                        title="Abandoned"
+                        :value="total_abandon"
+                        icon="PhXCircle"
+                        accent-class="bg-amber-500"
+                        icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
+                        icon-class="text-amber-600 dark:text-amber-400"
+                    />
+                    <StatCard
+                        title="All Total"
+                        :value="total_order"
+                        icon="PhPackage"
+                        accent-class="bg-sky-500"
+                        icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
+                        icon-class="text-sky-600 dark:text-sky-400"
+                    />
+                </template>
             </div>
 
             <PageCard
@@ -90,7 +95,24 @@
                     v-else-if="loading"
                     class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
                 >
-                    <Skeleton v-for="n in 6" :key="n" height="7rem" class="rounded-xl" />
+                    <div
+                        v-for="index in 6"
+                        :key="`product-skeleton-${index}`"
+                        class="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
+                    >
+                        <div
+                            class="skeleton-block mb-3 h-4"
+                            :style="{ width: '70%', animationDelay: `${index * 60}ms` }"
+                        />
+                        <div
+                            class="skeleton-block mb-2 h-8"
+                            :style="{ width: '45%', animationDelay: `${index * 60 + 40}ms` }"
+                        />
+                        <div
+                            class="skeleton-block h-3"
+                            :style="{ width: '55%', animationDelay: `${index * 60 + 80}ms` }"
+                        />
+                    </div>
                 </div>
 
                 <div
@@ -147,6 +169,7 @@ import { each, isArray } from "lodash";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 const props = defineProps({

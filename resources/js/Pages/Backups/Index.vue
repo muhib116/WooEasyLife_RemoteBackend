@@ -29,21 +29,26 @@
             </PageHeader>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <StatCard
-                    title="Backup Files"
-                    :value="backups.length"
-                    icon="PhHardDrives"
-                    subtitle="Stored on server"
-                />
-                <StatCard
-                    title="Latest Backup"
-                    :value="latestBackupLabel"
-                    icon="PhClock"
-                    subtitle="Most recent file"
-                    accent-class="bg-sky-500"
-                    icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
-                    icon-class="text-sky-600 dark:text-sky-400"
-                />
+                <template v-if="isLoading && !backups.length">
+                    <StatCardSkeleton v-for="index in 2" :key="`backup-stat-${index}`" :delay="index * 80" />
+                </template>
+                <template v-else>
+                    <StatCard
+                        title="Backup Files"
+                        :value="backups.length"
+                        icon="PhHardDrives"
+                        subtitle="Stored on server"
+                    />
+                    <StatCard
+                        title="Latest Backup"
+                        :value="latestBackupLabel"
+                        icon="PhClock"
+                        subtitle="Most recent file"
+                        accent-class="bg-sky-500"
+                        icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
+                        icon-class="text-sky-600 dark:text-sky-400"
+                    />
+                </template>
             </div>
 
             <PageCard
@@ -51,16 +56,16 @@
                 :description="`${backups.length} file${backups.length === 1 ? '' : 's'} available`"
                 no-padding
             >
-                <DataTable
+                <div
                     v-if="isLoading"
-                    :value="new Array(4)"
-                    class="professional-table text-sm"
+                    class="border-t border-slate-100 dark:border-slate-800"
                 >
-                    <Column header="SL"><template #body><Skeleton /></template></Column>
-                    <Column header="File"><template #body><Skeleton /></template></Column>
-                    <Column header="Size"><template #body><Skeleton /></template></Column>
-                    <Column header="Actions"><template #body><Skeleton /></template></Column>
-                </DataTable>
+                    <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                        <i class="pi pi-spin pi-spinner" />
+                        Loading backup files...
+                    </div>
+                    <TableSkeletonLoader :columns="backupSkeletonColumns" :rows="4" />
+                </div>
 
                 <DataTable
                     v-else-if="backups.length"
@@ -130,6 +135,8 @@ import { useConfirm } from "primevue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
+import TableSkeletonLoader from "@/Pages/Users/fragments/TableSkeletonLoader.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 defineOptions({
@@ -141,6 +148,14 @@ const confirm = useConfirm();
 const isLoading = ref(false);
 const backups = ref<any[]>([]);
 const dumping = ref(false);
+
+const backupSkeletonColumns = [
+    { width: "2rem", variant: "bar" },
+    { width: "14rem", variant: "bar" },
+    { width: "6rem", variant: "bar" },
+    { width: "8rem", variant: "bar" },
+    { width: "5rem", variant: "actions" },
+];
 
 const latestBackupLabel = computed(() => {
     if (!backups.value.length) {

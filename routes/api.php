@@ -84,9 +84,9 @@ if ($pathaoDevCatalog) {
     Route::prefix('api/pathao')->group($registerPathaoCatalogRoutes);
 }
 
-Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () use ($pathaoDevCatalog) {
+Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 'api'], function () use ($pathaoDevCatalog, $registerPathaoCatalogRoutes) {
 
-    Route::middleware(['auth:sanctum'])->group(function () use ($pathaoDevCatalog) {
+    Route::middleware(['auth:sanctum'])->group(function () use ($pathaoDevCatalog, $registerPathaoCatalogRoutes) {
         Route::get('/get-user-data', function (Request $request) {
             return $request->user();
         })->name('getUserData');
@@ -122,7 +122,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
         });
 
-        Route::group(['as' => 'pathao.', 'prefix' => 'pathao'], function () use ($pathaoDevCatalog) {
+        Route::group(['as' => 'pathao.', 'prefix' => 'pathao'], function () use ($pathaoDevCatalog, $registerPathaoCatalogRoutes) {
             Route::post('/create-order', [PathaoController::class, 'createOrder']);
             Route::post('/create-bulk-order', [PathaoController::class, 'createBulkOrder']);
             Route::post('/check-status', [PathaoController::class, 'checkStatus']);

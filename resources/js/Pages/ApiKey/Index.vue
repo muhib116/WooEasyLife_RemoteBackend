@@ -1,32 +1,13 @@
 <template>
     <AuthenticatedLayout title="API Keys">
         <div class="space-y-5">
-            <div
-                class="box-bg box-color box-border rounded-2xl border px-5 py-4 shadow-sm md:px-6"
-            >
-                <div class="flex items-start gap-4">
-                    <div
-                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-500/15"
-                    >
-                        <Icon
-                            name="PhLockKeyOpen"
-                            class="text-2xl text-primary-600 dark:text-primary-400"
-                        />
-                    </div>
-                    <div>
-                        <h1
-                            class="text-xl font-semibold text-gray-900 dark:text-white"
-                        >
-                            API Keys
-                        </h1>
-                        <p
-                            class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                        >
-                            Manage bearer tokens and domain access for merchants
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <PageHeader
+                title="API Keys"
+                description="Manage bearer tokens and domain access for merchants"
+                icon="PhLockKeyOpen"
+                icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                icon-class="text-primary-600 dark:text-primary-400"
+            />
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard
@@ -180,13 +161,12 @@
             </PageCard>
         </div>
 
-        <Dialog
-            v-model:visible="selectedUser"
-            modal
+        <AdminDialog
+            v-model:visible="detailsVisible"
             maximizable
             :style="{ width: '100%', maxWidth: '72rem' }"
             draggable
-            dismissable-mask
+            @hide="closeDetails"
         >
             <template #header>
                 <div
@@ -241,15 +221,13 @@
                 @handle-edit="handleEdit"
                 @handle-delete-token="handleDeleteToken"
             />
-        </Dialog>
+        </AdminDialog>
 
-        <Dialog
+        <AdminDialog
             v-model:visible="showForm"
             :header="tokenForm.id ? 'Edit API Token' : 'Generate API Token'"
-            modal
             :style="{ width: '40rem' }"
             draggable
-            dismissable-mask
             @hide="tokenForm.reset()"
         >
             <TokenForm
@@ -257,7 +235,7 @@
                 @on-close="showForm = false"
                 @handle-save="handleSave"
             />
-        </Dialog>
+        </AdminDialog>
 
         <ConfirmDialog />
         <Toast />
@@ -266,7 +244,6 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { Icon } from "@/plugins";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import { parseISO, isPast } from "date-fns";
 import { computed, ref } from "vue";
@@ -275,8 +252,10 @@ import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue";
 import Details from "./Details.vue";
 import TokenForm from "./TokenForm.vue";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import UserAvatar from "@/Pages/Users/fragments/UserAvatar.vue";
@@ -295,6 +274,7 @@ const props = defineProps<{
 
 const search = ref("");
 const showForm = ref(false);
+const detailsVisible = ref(false);
 const selectedUser = ref<any>(null);
 
 const tokenForm = useForm({
@@ -359,6 +339,15 @@ const filteredUsers = computed(() => {
 
 const showDetails = (user: any) => {
     selectedUser.value = user;
+    detailsVisible.value = true;
+};
+
+const closeDetails = () => {
+    detailsVisible.value = false;
+
+    if (!showForm.value) {
+        selectedUser.value = null;
+    }
 };
 
 const openCreateToken = () => {

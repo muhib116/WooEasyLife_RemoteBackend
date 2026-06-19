@@ -1,11 +1,9 @@
 <template>
-    <Dialog
+    <AdminDialog
         v-model:visible="dialog"
         :header="`${userForm.id ? 'Edit' : 'Create'} User`"
-        modal
         :style="{ width: '35rem' }"
         draggable
-        dismissable-mask
         @hide="resetForm"
     >
         <div class="space-y-4 p-1">
@@ -178,10 +176,11 @@
                 />
             </div>
         </div>
-    </Dialog>
+    </AdminDialog>
 </template>
 
 <script setup lang="ts">
+import AdminDialog from "./AdminDialog.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 

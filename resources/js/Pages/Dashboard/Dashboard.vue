@@ -1,34 +1,25 @@
 <template>
     <AuthenticatedLayout title="Dashboard">
-        <div class="space-y-6">
-            <div
-                class="box-bg box-color box-border flex flex-col justify-between gap-4 rounded-2xl border p-5 md:flex-row md:items-center md:p-6"
+        <div class="space-y-5">
+            <PageHeader
+                title="Dashboard"
+                :description="`${greeting}, ${authUser?.name || 'Admin'} · ${formattedDate}`"
+                icon="PhChartBar"
+                icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                icon-class="text-primary-600 dark:text-primary-400"
             >
-                <div>
-                    <p class="text-theme-sm text-gray-500 dark:text-gray-400">
-                        {{ greeting }}
-                    </p>
-                    <h1
-                        class="mt-1 text-2xl font-bold text-gray-800 dark:text-white/90"
-                    >
-                        {{ authUser?.name || "Admin" }}
-                    </h1>
-                    <p class="mt-1 text-theme-sm text-gray-400 dark:text-gray-500">
-                        {{ formattedDate }}
-                    </p>
-                </div>
-                <div class="flex flex-wrap gap-2">
+                <template #actions>
                     <Link
                         v-for="action in quickActions"
                         :key="action.name"
                         :href="route(action.name)"
-                        class="text-theme-sm inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 font-medium text-gray-700 shadow-sm transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-200 dark:hover:border-primary-500/40 dark:hover:bg-primary-500/10 dark:hover:text-primary-300"
+                        class="text-theme-sm inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 font-medium text-gray-700 shadow-sm transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-200 dark:hover:border-primary-500/40 dark:hover:bg-primary-500/10 dark:hover:text-primary-300"
                     >
                         <Icon :name="action.icon" />
                         {{ action.label }}
                     </Link>
-                </div>
-            </div>
+                </template>
+            </PageHeader>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
@@ -90,18 +81,10 @@
 
             <WebhookActivityPanel :data="webhooks" />
 
-            <div>
-                <div class="mb-4 flex items-center gap-2">
-                    <Icon
-                        name="PhDeviceMobile"
-                        class="text-lg text-gray-500 dark:text-gray-400"
-                    />
-                    <h2
-                        class="text-lg font-semibold text-gray-800 dark:text-white/90"
-                    >
-                        SMS Overview
-                    </h2>
-                </div>
+            <PageCard
+                title="SMS Overview"
+                description="Balance, recharge, and delivery metrics"
+            >
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <Widget
                         title="User SMS Balance"
@@ -122,13 +105,15 @@
                         right-text="Messages delivered"
                     />
                 </div>
-            </div>
+            </PageCard>
         </div>
     </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
 import AuthenticatedLayout from "@/layouts/AuthenticatedLayout.vue";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
+import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import ExpiredTokensPanel from "./fragments/ExpiredTokensPanel.vue";
 import WebhookActivityPanel from "./fragments/WebhookActivityPanel.vue";
 import GroupListBox from "./fragments/GroupListBox.vue";

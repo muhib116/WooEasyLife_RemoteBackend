@@ -40,6 +40,8 @@ function getBoxData($title, $value, $modifier = null, $modifier_position = 'righ
 
 class DashboardController extends Controller
 {
+    private const ADMIN_TEST_SOURCE = 'admin_test';
+
     public function index()
     {
         $data = [
@@ -208,21 +210,23 @@ class DashboardController extends Controller
 
     private function getWebhookInfo()
     {
-        $totalEvents = CourierWebhookEvent::query()->count();
-        $successCount = CourierWebhookEvent::query()->where('forward_status', 'success')->count();
-        $failedCount = CourierWebhookEvent::query()->where('forward_status', 'failed')->count();
-        $retryQueuedCount = CourierWebhookEvent::query()->where('forward_status', 'retry_queued')->count();
-        $orphanCount = CourierWebhookEvent::query()->where('forward_status', 'orphan')->count();
+        $eventsQuery = $this->courierWebhookEventsQuery();
+
+        $totalEvents = (clone $eventsQuery)->count();
+        $successCount = (clone $eventsQuery)->where('forward_status', 'success')->count();
+        $failedCount = (clone $eventsQuery)->where('forward_status', 'failed')->count();
+        $retryQueuedCount = (clone $eventsQuery)->where('forward_status', 'retry_queued')->count();
+        $orphanCount = (clone $eventsQuery)->where('forward_status', 'orphan')->count();
         $pendingRetries = CourierForwardRetry::query()->where('status', 'pending')->count();
         $failedRetries = CourierForwardRetry::query()->where('status', 'failed')->count();
 
-        $lastEvent = CourierWebhookEvent::query()->orderByDesc('id')->first();
+        $lastEvent = (clone $eventsQuery)->orderByDesc('id')->first();
 
         $successRate = $totalEvents > 0
             ? round(($successCount / $totalEvents) * 100)
             : 0;
 
-        $recentEvents = CourierWebhookEvent::query()
+        $recentEvents = (clone $eventsQuery)
             ->orderByDesc('id')
             ->limit(8)
             ->get()
@@ -243,7 +247,7 @@ class DashboardController extends Controller
             })
             ->values();
 
-        $partnerBreakdown = CourierWebhookEvent::query()
+        $partnerBreakdown = (clone $eventsQuery)
             ->selectRaw('partner, COUNT(*) as total')
             ->groupBy('partner')
             ->orderByDesc('total')
@@ -271,5 +275,13 @@ class DashboardController extends Controller
             'recent' => $recentEvents,
             'partners' => $partnerBreakdown,
         ];
+    }
+
+    private function courierWebhookEventsQuery()
+    {
+        return CourierWebhookEvent::query()->where(function ($builder) {
+            $builder->whereNull('payload_summary')
+                ->orWhere('payload_summary->source', '!=', self::ADMIN_TEST_SOURCE);
+        });
     }
 }

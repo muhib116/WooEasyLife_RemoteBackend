@@ -1,34 +1,27 @@
 <template>
     <AuthenticatedLayout :title="trashed ? 'Trashed Users' : 'Users'">
         <div class="space-y-5">
-            <div
-                class="box-bg box-color box-border rounded-2xl border px-5 py-4 shadow-sm md:px-6"
+            <PageHeader
+                :title="trashed ? 'Trashed Users' : 'User Management'"
+                :description="
+                    trashed
+                        ? 'Restore deleted accounts or remove them permanently'
+                        : 'Manage merchant accounts, access, and billing'
+                "
+                icon="PhUsers"
+                icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                icon-class="text-primary-600 dark:text-primary-400"
             >
-                <div
-                    class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center"
-                >
-                    <div>
-                        <h1
-                            class="text-xl font-semibold text-gray-900 dark:text-white"
-                        >
-                            {{ trashed ? "Trashed Users" : "User Management" }}
-                        </h1>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {{
-                                trashed
-                                    ? "Restore deleted accounts or remove them permanently"
-                                    : "Manage merchant accounts, access, and billing"
-                            }}
-                        </p>
-                    </div>
+                <template #actions>
                     <Button
                         v-if="!trashed"
                         label="Create User"
                         icon="pi pi-plus"
+                        size="small"
                         @click="openCreateForm"
                     />
-                </div>
-            </div>
+                </template>
+            </PageHeader>
 
             <div v-if="!trashed" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard
@@ -331,6 +324,7 @@ import { useConfirm } from "primevue";
 import { computed, ref, watch } from "vue";
 import { format, parseISO } from "date-fns";
 import UserForm from "./fragments/UserForm.vue";
+import PageHeader from "./fragments/PageHeader.vue";
 import StatCard from "./fragments/StatCard.vue";
 import PageCard from "./fragments/PageCard.vue";
 import StatusBadge from "./fragments/StatusBadge.vue";

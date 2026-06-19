@@ -9,6 +9,8 @@
                 title="Fraud Checker"
                 description="Check customer delivery success rate across couriers"
                 icon="PhUserCheck"
+                icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
+                icon-class="text-emerald-600 dark:text-emerald-400"
             />
 
             <PageCard title="Phone Lookup" description="Enter a Bangladesh mobile number to check">
@@ -37,7 +39,16 @@
                 </div>
 
                 <div class="flex min-h-[280px] flex-col items-center justify-center py-8">
-                    <div v-if="isLoading" class="loader mb-4" />
+                    <div
+                        v-if="isLoading"
+                        class="flex flex-col items-center gap-4"
+                    >
+                        <div class="skeleton-block h-12 w-12 rounded-full" />
+                        <div class="skeleton-block h-3 w-32" />
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Checking courier history...
+                        </p>
+                    </div>
                     <img
                         v-else-if="!response"
                         :src="SecurityOn"

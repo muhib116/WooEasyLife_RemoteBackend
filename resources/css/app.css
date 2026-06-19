@@ -234,6 +234,87 @@
         );
     }
 
+    .p-dialog-mask {
+        backdrop-filter: blur(2px);
+    }
+
+    .dark .p-dialog-mask {
+        background: rgb(15 23 42 / 0.72) !important;
+    }
+
+    .admin-dialog.p-dialog,
+    .p-confirmdialog {
+        border: 1px solid rgb(226 232 240);
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgb(15 23 42 / 0.18);
+    }
+
+    .dark .admin-dialog.p-dialog,
+    .dark .p-confirmdialog {
+        background: rgb(30 41 59) !important;
+        border-color: rgb(51 65 85) !important;
+        color: rgb(226 232 240);
+        box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
+    }
+
+    .admin-dialog .p-dialog-header,
+    .p-confirmdialog .p-dialog-header {
+        background: rgb(248 250 252);
+        border-bottom: 1px solid rgb(241 245 249);
+        padding: 1rem 1.25rem;
+        color: rgb(15 23 42);
+    }
+
+    .dark .admin-dialog .p-dialog-header,
+    .dark .p-confirmdialog .p-dialog-header {
+        background: rgb(15 23 42 / 0.55);
+        border-bottom-color: rgb(51 65 85);
+        color: rgb(241 245 249);
+    }
+
+    .dark .admin-dialog .p-dialog-header .p-button,
+    .dark .p-confirmdialog .p-dialog-header .p-button {
+        color: rgb(203 213 225) !important;
+        background: rgb(51 65 85 / 0.45) !important;
+        border-color: transparent !important;
+    }
+
+    .admin-dialog .p-dialog-content,
+    .p-confirmdialog .p-dialog-content {
+        background: rgb(255 255 255);
+        color: rgb(51 65 85);
+        padding: 1.25rem;
+    }
+
+    .dark .admin-dialog .p-dialog-content,
+    .dark .p-confirmdialog .p-dialog-content {
+        background: rgb(30 41 59) !important;
+        color: rgb(226 232 240);
+    }
+
+    .admin-dialog .p-dialog-footer,
+    .p-confirmdialog .p-dialog-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        background: rgb(248 250 252 / 0.9);
+        border-top: 1px solid rgb(241 245 249);
+        padding: 0.875rem 1.25rem;
+    }
+
+    .dark .admin-dialog .p-dialog-footer,
+    .dark .p-confirmdialog .p-dialog-footer,
+    .dark .admin-confirm-dialog .p-dialog-footer {
+        background: rgb(15 23 42 / 0.4);
+        border-top-color: rgb(51 65 85);
+    }
+
+    .dark .admin-confirm-dialog.p-dialog,
+    .dark .admin-confirm-dialog .p-dialog {
+        background: rgb(30 41 59) !important;
+    }
+
     .dark {
         --p-content-background: #2a3136 !important;
         --p-overlay-modal-background: #2a3136 !important;

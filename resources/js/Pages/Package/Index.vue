@@ -1,41 +1,22 @@
 <template>
     <AuthenticatedLayout title="Package Hub">
         <div class="space-y-5">
-            <div
-                class="box-bg box-color box-border rounded-2xl border px-5 py-4 shadow-sm md:px-6"
+            <PageHeader
+                title="Package Hub"
+                description="Define billing packages merchants can purchase"
+                icon="PhPackage"
+                icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                icon-class="text-primary-600 dark:text-primary-400"
             >
-                <div
-                    class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center"
-                >
-                    <div class="flex items-start gap-4">
-                        <div
-                            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-500/15"
-                        >
-                            <Icon
-                                name="PhPackage"
-                                class="text-2xl text-primary-600 dark:text-primary-400"
-                            />
-                        </div>
-                        <div>
-                            <h1
-                                class="text-xl font-semibold text-gray-900 dark:text-white"
-                            >
-                                Package Hub
-                            </h1>
-                            <p
-                                class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                            >
-                                Define billing packages merchants can purchase
-                            </p>
-                        </div>
-                    </div>
+                <template #actions>
                     <Button
                         label="New Package"
                         icon="pi pi-plus"
+                        size="small"
                         @click="openCreateForm"
                     />
-                </div>
-            </div>
+                </template>
+            </PageHeader>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard
@@ -174,14 +155,11 @@
             </PageCard>
         </div>
 
-        <Dialog
+        <AdminDialog
             v-model:visible="showForm"
             header="Create Package"
-            modal
             :style="{ width: '40rem' }"
-            :breakpoints="{ '1199px': '75vw', '575px': '95vw' }"
             draggable
-            dismissable-mask
             @hide="onClose"
         >
             <CreateForm
@@ -189,7 +167,7 @@
                 @on-close="onClose"
                 @handle-submit="handleSubmit"
             />
-        </Dialog>
+        </AdminDialog>
 
         <Toast />
     </AuthenticatedLayout>
@@ -197,13 +175,14 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { Icon } from "@/plugins";
 import { useForm } from "@inertiajs/vue3";
 import { format } from "date-fns";
 import { computed, ref } from "vue";
 import CreateForm from "./fragments/CreateForm.vue";
+import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
