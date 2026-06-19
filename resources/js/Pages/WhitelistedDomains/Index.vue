@@ -125,9 +125,9 @@
             :style="{ width: '32rem' }"
             @hide="resetForm"
         >
-            <form class="space-y-4" @submit.prevent="submit">
-                <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+            <form class="space-y-5 p-1" @submit.prevent="submit">
+                <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                         Domain
                     </label>
                     <InputText
@@ -135,17 +135,17 @@
                         class="w-full"
                         placeholder="example.com"
                     />
-                    <small v-if="form.errors.domain" class="text-rose-500">
+                    <small v-if="form.errors.domain" class="mt-1 block text-rose-500">
                         {{ form.errors.domain }}
                     </small>
                 </div>
-                <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                         Notes
                     </label>
                     <Textarea v-model="form.notes" class="w-full" rows="3" />
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 pt-1">
                     <Checkbox v-model="form.is_active" binary inputId="is_active" />
                     <label for="is_active" class="text-sm text-gray-700 dark:text-gray-200">
                         Active
