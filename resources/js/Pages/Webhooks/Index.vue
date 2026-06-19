@@ -37,39 +37,48 @@
             </PageHeader>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard
-                    title="Total Events"
-                    :value="summary.total_events"
-                    icon="PhListBullets"
-                    :subtitle="eventsStatSubtitle"
-                />
-                <StatCard
-                    title="Forwarded"
-                    :value="summary.success_count"
-                    icon="PhCheckCircle"
-                    subtitle="Successful forwards"
-                    accent-class="bg-emerald-500"
-                    icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
-                    icon-class="text-emerald-600 dark:text-emerald-400"
-                />
-                <StatCard
-                    title="Pending Retries"
-                    :value="summary.pending_retries"
-                    icon="PhClock"
-                    :subtitle="`${summary.retry_queued_count} queued events`"
-                    accent-class="bg-amber-500"
-                    icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
-                    icon-class="text-amber-600 dark:text-amber-400"
-                />
-                <StatCard
-                    title="Failed / Orphan"
-                    :value="summary.failed_count + summary.orphan_count"
-                    icon="PhWarningCircle"
-                    :subtitle="`${summary.failed_retries} failed retries`"
-                    accent-class="bg-rose-500"
-                    icon-bg-class="bg-rose-50 dark:bg-rose-500/15"
-                    icon-class="text-rose-600 dark:text-rose-400"
-                />
+                <template v-if="loading">
+                    <StatCardSkeleton
+                        v-for="index in 4"
+                        :key="`stat-skeleton-${index}`"
+                        :delay="index * 90"
+                    />
+                </template>
+                <template v-else>
+                    <StatCard
+                        title="Total Events"
+                        :value="summary.total_events"
+                        icon="PhListBullets"
+                        :subtitle="eventsStatSubtitle"
+                    />
+                    <StatCard
+                        title="Forwarded"
+                        :value="summary.success_count"
+                        icon="PhCheckCircle"
+                        subtitle="Successful forwards"
+                        accent-class="bg-emerald-500"
+                        icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
+                        icon-class="text-emerald-600 dark:text-emerald-400"
+                    />
+                    <StatCard
+                        title="Pending Retries"
+                        :value="summary.pending_retries"
+                        icon="PhClock"
+                        :subtitle="`${summary.retry_queued_count} queued events`"
+                        accent-class="bg-amber-500"
+                        icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
+                        icon-class="text-amber-600 dark:text-amber-400"
+                    />
+                    <StatCard
+                        title="Failed / Orphan"
+                        :value="summary.failed_count + summary.orphan_count"
+                        icon="PhWarningCircle"
+                        :subtitle="`${summary.failed_retries} failed retries`"
+                        accent-class="bg-rose-500"
+                        icon-bg-class="bg-rose-50 dark:bg-rose-500/15"
+                        icon-class="text-rose-600 dark:text-rose-400"
+                    />
+                </template>
             </div>
 
             <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm dark:border-gray-700 dark:bg-slate-900/60">
@@ -237,17 +246,16 @@
                     </div>
                 </div>
 
-                <DataTable
+                <div
                     v-if="loadingEvents"
-                    :value="new Array(6)"
-                    class="professional-table text-sm"
+                    class="border-t border-slate-100 dark:border-slate-800"
                 >
-                    <Column headerStyle="width:3rem"><template #body><Skeleton /></template></Column>
-                    <Column header="SL"><template #body><Skeleton /></template></Column>
-                    <Column header="Partner"><template #body><Skeleton /></template></Column>
-                    <Column header="Status"><template #body><Skeleton /></template></Column>
-                    <Column header="Details"><template #body><Skeleton /></template></Column>
-                </DataTable>
+                    <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                        <i class="pi pi-spin pi-spinner" />
+                        Loading webhook events...
+                    </div>
+                    <TableSkeletonLoader :columns="eventSkeletonColumns" :rows="7" />
+                </div>
 
                 <DataTable
                     v-else-if="events.data.length"
@@ -455,16 +463,16 @@
                     </div>
                 </div>
 
-                <DataTable
+                <div
                     v-if="loadingRetries"
-                    :value="new Array(4)"
-                    class="professional-table text-sm"
+                    class="border-t border-slate-100 dark:border-slate-800"
                 >
-                    <Column headerStyle="width:3rem"><template #body><Skeleton /></template></Column>
-                    <Column header="SL"><template #body><Skeleton /></template></Column>
-                    <Column header="Partner"><template #body><Skeleton /></template></Column>
-                    <Column header="Status"><template #body><Skeleton /></template></Column>
-                </DataTable>
+                    <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                        <i class="pi pi-spin pi-spinner" />
+                        Loading retry queue...
+                    </div>
+                    <TableSkeletonLoader :columns="retrySkeletonColumns" :rows="5" />
+                </div>
 
                 <DataTable
                     v-else-if="retries.data.length"
@@ -795,6 +803,8 @@ import { useToast } from "primevue/usetoast";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
+import TableSkeletonLoader from "@/Pages/Users/fragments/TableSkeletonLoader.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 
 defineOptions({
@@ -908,6 +918,32 @@ const sourceOptions = [
     { label: "Live webhooks", value: "courier" },
     { label: "Admin tests", value: "admin_test" },
     { label: "All sources", value: "all" },
+];
+
+const eventSkeletonColumns = [
+    { width: "1.25rem", variant: "checkbox" as const },
+    { width: "2rem", variant: "bar" as const },
+    { width: "7rem", variant: "bar" as const },
+    { width: "5.5rem", variant: "stack" as const, subWidth: "3.5rem" },
+    { width: "6.5rem", variant: "stack" as const, subWidth: "4rem" },
+    { width: "8rem", variant: "bar" as const, heightClass: "h-3" },
+    { width: "5rem", variant: "bar" as const },
+    { width: "4.5rem", variant: "badge" as const },
+    { width: "7rem", variant: "bar" as const, heightClass: "h-3" },
+    { width: "5.5rem", variant: "actions" as const },
+];
+
+const retrySkeletonColumns = [
+    { width: "1.25rem", variant: "checkbox" as const },
+    { width: "2rem", variant: "bar" as const },
+    { width: "4.5rem", variant: "badge" as const },
+    { width: "6rem", variant: "bar" as const },
+    { width: "8rem", variant: "bar" as const, heightClass: "h-3" },
+    { width: "4rem", variant: "badge" as const },
+    { width: "3.5rem", variant: "bar" as const },
+    { width: "6rem", variant: "bar" as const },
+    { width: "7rem", variant: "bar" as const, heightClass: "h-3" },
+    { width: "5.5rem", variant: "actions" as const },
 ];
 
 const courierPartnerOptions = [

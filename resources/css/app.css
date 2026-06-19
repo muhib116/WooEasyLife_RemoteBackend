@@ -131,6 +131,109 @@
         background: rgb(71 85 105);
     }
 
+    .skeleton-block {
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.375rem;
+        background: rgb(226 232 240);
+    }
+
+    .dark .skeleton-block {
+        background: rgb(51 65 85 / 0.55);
+    }
+
+    .skeleton-block::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgb(255 255 255 / 0.55) 50%,
+            transparent 100%
+        );
+        animation: skeleton-shimmer 1.35s ease-in-out infinite;
+    }
+
+    .dark .skeleton-block::after {
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgb(255 255 255 / 0.08) 50%,
+            transparent 100%
+        );
+    }
+
+    @keyframes skeleton-shimmer {
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    .table-skeleton-loader {
+        background: rgb(255 255 255);
+    }
+
+    .dark .table-skeleton-loader {
+        background: rgb(30 41 59);
+    }
+
+    .table-skeleton-header {
+        background: rgb(248 250 252 / 0.9);
+    }
+
+    .dark .table-skeleton-header {
+        background: rgb(15 23 42 / 0.35);
+    }
+
+    .table-skeleton-row {
+        animation: skeleton-row-fade 0.35s ease both;
+    }
+
+    @keyframes skeleton-row-fade {
+        from {
+            opacity: 0.35;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .p-skeleton {
+        background: rgb(226 232 240) !important;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .dark .p-skeleton {
+        background: rgb(51 65 85 / 0.55) !important;
+    }
+
+    .p-skeleton::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgb(255 255 255 / 0.45) 50%,
+            transparent 100%
+        );
+        animation: skeleton-shimmer 1.35s ease-in-out infinite;
+    }
+
+    .dark .p-skeleton::after {
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgb(255 255 255 / 0.08) 50%,
+            transparent 100%
+        );
+    }
+
     .dark {
         --p-content-background: #2a3136 !important;
         --p-overlay-modal-background: #2a3136 !important;
