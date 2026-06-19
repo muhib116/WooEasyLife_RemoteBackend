@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\LogHelper;
 use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierShipmentService;
 use App\Services\PathaoCourierService;
 use Illuminate\Http\Request;
@@ -213,7 +214,7 @@ class SteadFastController extends Controller
 
         if ($steadfastConfigured) {
             $responseData['steadfast'] = [
-                'logo' => asset('images/steadfast.png'),
+                'logo' => CourierLogoUrl::forSlug('steadfast'),
                 'balance' => $steadfastBalance ?? 0,
                 'balance_available' => true,
             ];
@@ -221,7 +222,7 @@ class SteadFastController extends Controller
 
         if ($pathaoConfigured) {
             $responseData['pathao'] = [
-                'logo' => asset('images/pathao.png'),
+                'logo' => CourierLogoUrl::forSlug('pathao'),
                 'balance' => null,
                 'balance_available' => false,
                 'message' => 'Pathao does not expose a merchant balance API.',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Courier;
 use App\Http\Controllers\Controller;
 use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierWebhookSettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,23 +32,17 @@ class ConfigurationController extends Controller
             [
                 'slug' => 'steadfast',
                 'title' => 'Steadfast',
-                'logo' => asset('images/steadfast.png')
-                // "logo": "http://localhost:8000/images/steadfast.png",
+                'logo' => CourierLogoUrl::forSlug('steadfast'),
             ],
             [
                 'slug' => 'pathao',
                 'title' => 'Pathao',
-                'logo' => asset('images/pathao.png')
+                'logo' => CourierLogoUrl::forSlug('pathao'),
             ],
-            // [
-            //     'slug' => 'paperfly',
-            //     'title' => 'Paperfly',
-            //     'logo' => asset('images/paperfly.png')
-            // ],
             [
                 'slug' => 'redx',
                 'title' => 'RedX',
-                'logo' => asset('images/redx.svg')
+                'logo' => CourierLogoUrl::forSlug('redx'),
             ],
         ];
 
@@ -102,7 +97,7 @@ class ConfigurationController extends Controller
             'api_key' => trim($request->api_key),
             'secret_key' => trim($request->secret_key),
             'is_active' => $request->is_active,
-            'logo' => 'images/'.trim($request->slug).'.png',
+            'logo' => CourierLogoUrl::forSlug(trim($request->slug)),
             'user_id' => Auth::id(),
         ];
 
@@ -277,6 +272,7 @@ class ConfigurationController extends Controller
         ]);
 
         $responseData = $configuration->toArray();
+        $responseData['logo'] = CourierLogoUrl::forSlug((string) $configuration->slug);
         $responseData['webhook_settings'] = $webhookSettings;
         $responseData['credentials_changed'] = (bool) ($sync['credentials_changed'] ?? false);
 
@@ -314,9 +310,7 @@ class ConfigurationController extends Controller
         ];
 
         foreach ($config as $item) {
-            if ($item->logo) {
-                $item->logo = asset('images/'.$item->slug.'.png');
-            }
+            $item->logo = CourierLogoUrl::forSlug((string) $item->slug);
 
             if ($item->slug === 'pathao' && is_array($item->settings)) {
                 $settings = $item->settings;

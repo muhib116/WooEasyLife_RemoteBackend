@@ -10,11 +10,11 @@
             >
                 <template #actions>
                     <Button
-                        label="Test Steadfast Webhook"
+                        label="Test Courier Webhook"
                         icon="pi pi-send"
                         severity="info"
                         size="small"
-                        @click="openSteadfastTestDialog"
+                        @click="openCourierTestDialog"
                     />
                     <Button
                         label="Process Due Retries"
@@ -380,79 +380,100 @@
         </Dialog>
 
         <Dialog
-            v-model:visible="steadfastTestDialogVisible"
+            v-model:visible="courierTestDialogVisible"
             modal
-            header="Test Steadfast Webhook"
+            header="Test Courier Webhook"
             :style="{ width: '36rem' }"
         >
             <div class="space-y-4 text-sm">
                 <p class="text-gray-500 dark:text-gray-400">
-                    Sends a sample Steadfast payload through the same handler used by
-                    <span class="font-mono text-xs">/api/webhooks/steadfast</span>.
+                    Sends a sample payload through the same inbound handler used by the public
+                    courier webhook routes.
                 </p>
 
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="space-y-1.5">
                         <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                            Notification type
+                            Courier partner
                         </label>
                         <Dropdown
-                            v-model="steadfastTestForm.notification_type"
-                            :options="steadfastNotificationOptions"
+                            v-model="courierTestForm.partner"
+                            :options="courierPartnerOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            class="w-full"
+                            @change="handleCourierPartnerChange"
+                        />
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                            Test type
+                        </label>
+                        <Dropdown
+                            v-model="courierTestForm.test_type"
+                            :options="courierTestTypeOptions"
                             optionLabel="label"
                             optionValue="value"
                             class="w-full"
                         />
                     </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="space-y-1.5">
                         <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
                             Environment
                         </label>
                         <Dropdown
-                            v-model="steadfastTestForm.environment"
+                            v-model="courierTestForm.environment"
                             :options="environmentOptions"
                             optionLabel="label"
                             optionValue="value"
                             class="w-full"
                         />
                     </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                            {{ courierConsignmentLabel }}
+                        </label>
+                        <InputText
+                            v-model="courierTestForm.consignment_id"
+                            :placeholder="courierConsignmentPlaceholder"
+                            class="w-full"
+                        />
+                    </div>
                 </div>
 
-                <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                        Consignment ID
-                    </label>
-                    <InputText
-                        v-model="steadfastTestForm.consignment_id"
-                        placeholder="Leave empty to use latest mapped shipment or 12345"
-                        class="w-full"
-                    />
-                </div>
-
-                <div class="space-y-1.5">
+                <div
+                    v-if="courierTestForm.partner !== 'pathao' || courierTestForm.test_type !== 'webhook_integration'"
+                    class="space-y-1.5"
+                >
                     <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
                         Invoice (optional)
                     </label>
                     <InputText
-                        v-model="steadfastTestForm.invoice"
+                        v-model="courierTestForm.invoice"
                         placeholder="Auto-generated if empty"
                         class="w-full"
                     />
                 </div>
 
-                <div class="space-y-1.5">
+                <div
+                    v-if="showCourierAuthField"
+                    class="space-y-1.5"
+                >
                     <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
-                        Bearer token (optional)
+                        {{ courierAuthLabel }}
                     </label>
                     <InputText
-                        v-model="steadfastTestForm.auth_token"
-                        placeholder="Uses saved Steadfast API key if empty"
+                        v-model="courierTestForm.auth_token"
+                        :placeholder="courierAuthPlaceholder"
                         class="w-full"
                     />
                 </div>
 
                 <div
-                    v-if="steadfastTestResult"
+                    v-if="courierTestResult"
                     class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700"
                 >
                     <div class="flex items-center justify-between gap-2">
@@ -460,26 +481,27 @@
                             Test result
                         </p>
                         <Tag
-                            :value="steadfastTestResult.docs_compliant ? 'Docs compliant' : 'Check response'"
-                            :severity="steadfastTestResult.docs_compliant ? 'success' : 'warn'"
+                            :value="courierTestResult.docs_compliant ? 'Docs compliant' : 'Check response'"
+                            :severity="courierTestResult.docs_compliant ? 'success' : 'warn'"
                         />
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        HTTP {{ steadfastTestResult.http_status }} ·
-                        {{ steadfastTestResult.message }}
+                        {{ courierTestResult.partner }} · {{ courierTestResult.test_type }} ·
+                        HTTP {{ courierTestResult.http_status }} ·
+                        {{ courierTestResult.message }}
                     </p>
                     <p class="break-all text-xs text-gray-500 dark:text-gray-400">
-                        Callback: {{ steadfastTestResult.callback_url }}
+                        Callback: {{ courierTestResult.callback_url }}
                     </p>
                     <p
-                        v-if="steadfastTestResult.event"
+                        v-if="courierTestResult.event"
                         class="text-xs text-gray-600 dark:text-gray-300"
                     >
-                        Event #{{ steadfastTestResult.event.id }} ·
-                        {{ steadfastTestResult.event.forward_status }} ·
-                        {{ steadfastTestResult.event.forward_message || "no message" }}
+                        Event #{{ courierTestResult.event.id }} ·
+                        {{ courierTestResult.event.forward_status }} ·
+                        {{ courierTestResult.event.forward_message || "no message" }}
                     </p>
-                    <pre class="overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">{{ JSON.stringify(steadfastTestResult.response, null, 2) }}</pre>
+                    <pre class="overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">{{ JSON.stringify(courierTestResult.response, null, 2) }}</pre>
                 </div>
             </div>
 
@@ -488,13 +510,13 @@
                     label="Cancel"
                     severity="secondary"
                     text
-                    @click="steadfastTestDialogVisible = false"
+                    @click="courierTestDialogVisible = false"
                 />
                 <Button
                     label="Run Test"
                     icon="pi pi-send"
-                    :loading="testingSteadfast"
-                    @click="handleTestSteadfastWebhook"
+                    :loading="testingCourierWebhook"
+                    @click="handleTestCourierWebhook"
                 />
             </template>
         </Dialog>
@@ -503,7 +525,7 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import axios from "axios";
 import { format } from "date-fns";
 import { useToast } from "primevue/usetoast";
@@ -533,10 +555,10 @@ const retryingEventId = ref<number | null>(null);
 const retryingRetryId = ref<number | null>(null);
 const testingEventId = ref<number | null>(null);
 const testingRetryId = ref<number | null>(null);
-const testingSteadfast = ref(false);
+const testingCourierWebhook = ref(false);
 const testDialogVisible = ref(false);
-const steadfastTestDialogVisible = ref(false);
-const steadfastTestResult = ref<any>(null);
+const courierTestDialogVisible = ref(false);
+const courierTestResult = ref<any>(null);
 const testResult = ref<{
     success: boolean;
     message: string;
@@ -606,17 +628,84 @@ const statusOptions = [
     { label: "Orphan", value: "orphan" },
 ];
 
-const steadfastNotificationOptions = [
-    { label: "Delivery status", value: "delivery_status" },
-    { label: "Tracking update", value: "tracking_update" },
+const courierPartnerOptions = [
+    { label: "Steadfast", value: "steadfast" },
+    { label: "Pathao", value: "pathao" },
+    { label: "RedX", value: "redx" },
 ];
 
-const steadfastTestForm = reactive({
-    notification_type: "delivery_status",
+const courierTestTypeOptionsByPartner: Record<string, { label: string; value: string }[]> = {
+    steadfast: [
+        { label: "Delivery status", value: "delivery_status" },
+        { label: "Tracking update", value: "tracking_update" },
+    ],
+    pathao: [
+        { label: "Webhook integration", value: "webhook_integration" },
+        { label: "Order delivered", value: "order_delivered" },
+        { label: "Order picked up", value: "order_picked_up" },
+    ],
+    redx: [
+        { label: "Delivered", value: "delivered" },
+        { label: "Partial delivery", value: "partial_delivery" },
+    ],
+};
+
+const courierTestForm = reactive({
+    partner: "steadfast",
+    test_type: "delivery_status",
     environment: "live",
     consignment_id: "",
     invoice: "",
     auth_token: "",
+});
+
+const courierTestTypeOptions = computed(
+    () => courierTestTypeOptionsByPartner[courierTestForm.partner] ?? []
+);
+
+const showCourierAuthField = computed(() => {
+    if (courierTestForm.partner === "pathao" && courierTestForm.test_type === "webhook_integration") {
+        return false;
+    }
+
+    return true;
+});
+
+const courierAuthLabel = computed(() => {
+    switch (courierTestForm.partner) {
+        case "pathao":
+            return "X-PATHAO-Signature";
+        case "redx":
+            return "Webhook token";
+        default:
+            return "Bearer token";
+    }
+});
+
+const courierAuthPlaceholder = computed(() => {
+    switch (courierTestForm.partner) {
+        case "pathao":
+            return "Uses saved Pathao webhook secret if empty";
+        case "redx":
+            return "Uses saved RedX webhook token if empty";
+        default:
+            return "Uses saved Steadfast API key if empty";
+    }
+});
+
+const courierConsignmentLabel = computed(() => {
+    return courierTestForm.partner === "redx" ? "Tracking number" : "Consignment ID";
+});
+
+const courierConsignmentPlaceholder = computed(() => {
+    switch (courierTestForm.partner) {
+        case "pathao":
+            return "Leave empty to use latest mapped shipment or DL121224VS8TTJ";
+        case "redx":
+            return "Leave empty to use latest mapped shipment or a generated test ID";
+        default:
+            return "Leave empty to use latest mapped shipment or 12345";
+    }
 });
 
 const formatDate = (value?: string | null) => {
@@ -868,28 +957,36 @@ onMounted(() => {
     reloadAll();
 });
 
-const openSteadfastTestDialog = () => {
-    steadfastTestResult.value = null;
-    steadfastTestDialogVisible.value = true;
+const openCourierTestDialog = () => {
+    courierTestResult.value = null;
+    courierTestDialogVisible.value = true;
 };
 
-const handleTestSteadfastWebhook = async () => {
-    testingSteadfast.value = true;
+const handleCourierPartnerChange = () => {
+    const options = courierTestTypeOptionsByPartner[courierTestForm.partner] ?? [];
+    courierTestForm.test_type = options[0]?.value ?? "";
+};
+
+const handleTestCourierWebhook = async () => {
+    testingCourierWebhook.value = true;
 
     try {
-        const { data } = await axios.post(route("webhooks.testSteadfast"), {
-            notification_type: steadfastTestForm.notification_type,
-            environment: steadfastTestForm.environment,
-            consignment_id: steadfastTestForm.consignment_id || undefined,
-            invoice: steadfastTestForm.invoice || undefined,
-            auth_token: steadfastTestForm.auth_token || undefined,
+        const { data } = await axios.post(route("webhooks.testWebhook"), {
+            partner: courierTestForm.partner,
+            test_type: courierTestForm.test_type,
+            environment: courierTestForm.environment,
+            consignment_id: courierTestForm.consignment_id || undefined,
+            invoice: courierTestForm.invoice || undefined,
+            auth_token: courierTestForm.auth_token || undefined,
         });
 
-        steadfastTestResult.value = data;
+        courierTestResult.value = data;
 
         toast.add({
             severity: data.success ? "success" : "warn",
-            summary: data.success ? "Steadfast test passed" : "Steadfast test completed with issues",
+            summary: data.success
+                ? `${data.partner} webhook test passed`
+                : `${data.partner} webhook test completed with issues`,
             detail: data.message,
             life: 5000,
         });
@@ -898,17 +995,17 @@ const handleTestSteadfastWebhook = async () => {
     } catch (error: any) {
         const responseData = error?.response?.data;
         if (responseData) {
-            steadfastTestResult.value = responseData;
+            courierTestResult.value = responseData;
         }
 
         toast.add({
             severity: "error",
-            summary: "Steadfast test failed",
-            detail: responseData?.message || "Unable to run Steadfast webhook test",
+            summary: "Courier webhook test failed",
+            detail: responseData?.message || "Unable to run courier webhook test",
             life: 5000,
         });
     } finally {
-        testingSteadfast.value = false;
+        testingCourierWebhook.value = false;
     }
 };
 </script>

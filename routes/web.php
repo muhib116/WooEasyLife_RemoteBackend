@@ -108,11 +108,14 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
         Route::get('/', [WebhookActivityController::class, 'index'])->name('index');
         Route::get('/summary', [WebhookActivityController::class, 'summary'])->name('summary');
         Route::get('/events', [WebhookActivityController::class, 'events'])->name('events');
+        Route::delete('/events', [WebhookActivityController::class, 'deleteEvents'])->name('deleteEvents');
         Route::get('/retries', [WebhookActivityController::class, 'retries'])->name('retries');
+        Route::delete('/retries', [WebhookActivityController::class, 'deleteRetries'])->name('deleteRetries');
         Route::post('/process-retries', [WebhookActivityController::class, 'processRetries'])->name('processRetries');
         Route::post('/retries/{retry}/retry', [WebhookActivityController::class, 'retryForward'])->name('retryForward');
         Route::post('/events/{event}/retry', [WebhookActivityController::class, 'retryEvent'])->name('retryEvent');
         Route::post('/events/{event}/test-plugin', [WebhookActivityController::class, 'testPluginReach'])->name('testPlugin');
+        Route::post('/test-webhook', [WebhookActivityController::class, 'testCourierWebhook'])->name('testWebhook');
         Route::post('/test-steadfast', [WebhookActivityController::class, 'testSteadfastWebhook'])->name('testSteadfast');
     });
 
