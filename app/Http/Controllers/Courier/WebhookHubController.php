@@ -99,29 +99,42 @@ class WebhookHubController extends Controller
 
     public function redx(Request $request, string $environment = 'live')
     {
-        if (!$this->verifyRedxToken($request)) {
+        if (!$this->verifyRedxToken($request, $environment)) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized.'], 401);
         }
 
         $payload = $request->all();
         $trackingNumber = trim((string) ($payload['tracking_number'] ?? ''));
-        $rawStatus = (string) ($payload['status'] ?? '');
-        $deliveryType = strtolower(str_replace('-', '_', (string) ($payload['delivery_type'] ?? '')));
-
-        if (in_array($deliveryType, ['partial_delivery', 'partial_return'], true)) {
-            $rawStatus = 'partial_delivery';
-        }
+        $invoice = trim((string) ($payload['invoice_number'] ?? ''));
 
         if ($trackingNumber === '') {
-            return response()->json(['status' => 'success', 'message' => 'Webhook received successfully.']);
+            return $this->standardCourierWebhookSuccessResponse(200);
+        }
+
+        $rawStatus = $this->normalizeRedxWebhookStatus(
+            (string) ($payload['status'] ?? ''),
+            (string) ($payload['delivery_type'] ?? '')
+        );
+
+        if ($rawStatus === '') {
+            return $this->standardCourierWebhookSuccessResponse(200);
+        }
+
+        $messageEn = trim((string) ($payload['message_en'] ?? ''));
+        $messageBn = trim((string) ($payload['message_bn'] ?? ''));
+        $trackingMessage = $messageEn;
+        if ($messageBn !== '' && $messageBn !== $messageEn) {
+            $trackingMessage = $messageEn !== '' ? $messageEn . ' / ' . $messageBn : $messageBn;
         }
 
         return $this->forwardShipmentUpdate('redx', $trackingNumber, [
             'partner' => 'redx',
             'raw_status' => $rawStatus,
             'updated_at' => (string) ($payload['timestamp'] ?? now()->toDateTimeString()),
-            'tracking_message' => (string) ($payload['message_en'] ?? ''),
-        ], $environment);
+            'tracking_message' => $trackingMessage,
+            'invoice' => $invoice,
+            'delivery_type' => trim((string) ($payload['delivery_type'] ?? '')),
+        ], $environment, $invoice);
     }
 
     private function forwardShipmentUpdate(
@@ -266,15 +279,18 @@ class WebhookHubController extends Controller
         return false;
     }
 
-    private function verifyRedxToken(Request $request): bool
+    private function verifyRedxToken(Request $request, string $environment = 'live'): bool
     {
         $token = trim((string) $request->query('token'));
         if ($token === '') {
             return false;
         }
 
+        $env = $environment === 'sandbox' ? 'sandbox' : 'live';
+
         $accountSecrets = CourierAccount::query()
             ->where('partner', 'redx')
+            ->where('environment', $env)
             ->where('is_active', true)
             ->pluck('webhook_verify_secret')
             ->filter(fn ($secret) => trim((string) $secret) !== '')
@@ -392,6 +408,41 @@ class WebhookHubController extends Controller
             'partial_delivery' => 'partial_delivered',
             'partially_delivered' => 'partial_delivered',
             'canceled' => 'cancelled',
+        ];
+
+        return $aliases[$raw] ?? $raw;
+    }
+
+    /**
+     * Normalize RedX webhook status and delivery_type per merchant portal docs.
+     */
+    private function normalizeRedxWebhookStatus(string $status, string $deliveryType = ''): string
+    {
+        $deliveryType = strtolower(trim(str_replace([' ', '-'], '_', $deliveryType)));
+
+        if ($deliveryType === 'partial_delivery') {
+            return 'partial_delivered';
+        }
+
+        if ($deliveryType === 'partial_return') {
+            return 'return_in_transit';
+        }
+
+        $raw = strtolower(trim(str_replace([' ', '-'], '_', $status)));
+        if ($raw === '') {
+            return '';
+        }
+
+        $aliases = [
+            'ready_for_delivery' => 'pending',
+            'delivery_in_progress' => 'in_transit',
+            'delivered' => 'delivered',
+            'agent_hold' => 'hold',
+            'agent_returning' => 'return_in_transit',
+            'agent_area_change' => 'in_transit',
+            'returned' => 'returned',
+            'partial_delivery' => 'partial_delivered',
+            'partial_return' => 'return_in_transit',
         ];
 
         return $aliases[$raw] ?? $raw;

@@ -95,6 +95,12 @@ class CourierWebhookSettingsService
             $setupSteps[] = 'Steadfast sends delivery_status and tracking_update notifications — both are handled automatically.';
         }
 
+        if ($partner === 'redx') {
+            $setupSteps[] = 'In RedX webhook settings, paste the full callback URL including the ?token= query parameter.';
+            $setupSteps[] = 'RedX sends POST JSON with tracking_number, status, delivery_type, message_en, and message_bn.';
+            $setupSteps[] = 'Handled statuses: ready-for-delivery, delivery-in-progress, delivered, agent-hold, agent-returning, returned, agent-area-change.';
+        }
+
         $credentialsChanged = (bool) ($context['credentials_changed'] ?? false);
         $inFlight = (int) ($context['in_flight_shipments'] ?? 0);
         $mappingCount = $this->shipmentMappingCount($accessToken?->id, $partner, $environment);
