@@ -14,11 +14,16 @@ use App\Services\Courier\CourierWebhookEventService;
 use App\Services\Courier\WordPressCourierForwarder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WebhookActivityController extends Controller
 {
+    private const ADMIN_TEST_SOURCE = 'admin_test';
+
+    private const BULK_DELETE_WARNING_THRESHOLD = 50;
+
     public function __construct(
         protected CourierWebhookEventService $eventService,
         protected CourierForwardRetryService $retryService,
@@ -33,19 +38,21 @@ class WebhookActivityController extends Controller
 
     public function summary(): JsonResponse
     {
-        $lastEvent = CourierWebhookEvent::query()->orderByDesc('id')->first();
+        $lastEvent = $this->excludeAdminTestEvents(CourierWebhookEvent::query())->orderByDesc('id')->first();
 
         return response()->json([
-            'total_events' => CourierWebhookEvent::query()->count(),
-            'success_count' => CourierWebhookEvent::query()->where('forward_status', 'success')->count(),
-            'failed_count' => CourierWebhookEvent::query()->where('forward_status', 'failed')->count(),
-            'retry_queued_count' => CourierWebhookEvent::query()->where('forward_status', 'retry_queued')->count(),
-            'orphan_count' => CourierWebhookEvent::query()->where('forward_status', 'orphan')->count(),
+            'total_events' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->count(),
+            'success_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'success')->count(),
+            'failed_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'failed')->count(),
+            'retry_queued_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'retry_queued')->count(),
+            'orphan_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'orphan')->count(),
+            'admin_test_count' => CourierWebhookEvent::query()->where('payload_summary->source', self::ADMIN_TEST_SOURCE)->count(),
             'pending_retries' => CourierForwardRetry::query()->where('status', 'pending')->count(),
             'failed_retries' => CourierForwardRetry::query()->where('status', 'failed')->count(),
             'last_event_at' => $lastEvent?->created_at?->toDateTimeString(),
             'last_forward_status' => $lastEvent?->forward_status,
             'health' => $this->eventService->healthSummary(),
+            'bulk_delete_warning_threshold' => self::BULK_DELETE_WARNING_THRESHOLD,
         ]);
     }
 
@@ -68,6 +75,7 @@ class WebhookActivityController extends Controller
             'environment' => 'nullable|string|max:16',
             'forward_status' => 'nullable|string|max:32',
             'search' => 'nullable|string|max:255',
+            'source' => 'nullable|string|in:all,courier,admin_test',
         ]);
 
         $ids = $this->resolveDeletionIds(
@@ -84,6 +92,13 @@ class WebhookActivityController extends Controller
         }
 
         $deleted = $this->deleteWebhookEventsByIds($ids);
+
+        if (! $request->boolean('select_all') && $deleted === 0) {
+            return response()->json([
+                'message' => 'No matching webhook events were found for the selected IDs.',
+                'deleted' => 0,
+            ], 422);
+        }
 
         return response()->json([
             'message' => "{$deleted} webhook event(s) deleted.",
@@ -123,6 +138,13 @@ class WebhookActivityController extends Controller
         }
 
         $deleted = CourierForwardRetry::query()->whereIn('id', $ids)->delete();
+
+        if (! $request->boolean('select_all') && $deleted === 0) {
+            return response()->json([
+                'message' => 'No matching retry rows were found for the selected IDs.',
+                'deleted' => 0,
+            ], 422);
+        }
 
         return response()->json([
             'message' => "{$deleted} retry row(s) deleted.",
@@ -231,6 +253,9 @@ class WebhookActivityController extends Controller
 
         $responseBody = json_decode($response->getContent(), true) ?? [];
         $latestEvent = $this->findLatestTestEvent($partner, $beforeEventId, $consignmentId);
+        if ($latestEvent) {
+            $this->markEventAsAdminTest($latestEvent, $testType);
+        }
         $callbackUrl = rtrim((string) config('app.url'), '/').$path;
         $docsCompliant = $this->isDocsCompliantResponse($partner, $testType, $response, $responseBody);
 
@@ -506,7 +531,45 @@ class WebhookActivityController extends Controller
             });
         }
 
+        $this->applyEventSourceFilter(
+            $query,
+            (string) $request->query('source', $request->input('source', 'courier'))
+        );
+
         return $query;
+    }
+
+    private function applyEventSourceFilter($query, string $source): void
+    {
+        $source = strtolower(trim($source));
+
+        if ($source === 'admin_test') {
+            $query->where('payload_summary->source', self::ADMIN_TEST_SOURCE);
+
+            return;
+        }
+
+        if ($source === 'courier') {
+            $this->excludeAdminTestEvents($query);
+        }
+    }
+
+    private function excludeAdminTestEvents($query)
+    {
+        return $query->where(function ($builder) {
+            $builder->whereNull('payload_summary')
+                ->orWhere('payload_summary->source', '!=', self::ADMIN_TEST_SOURCE);
+        });
+    }
+
+    private function markEventAsAdminTest(CourierWebhookEvent $event, string $testType): void
+    {
+        $summary = is_array($event->payload_summary) ? $event->payload_summary : [];
+        $summary['source'] = self::ADMIN_TEST_SOURCE;
+        $summary['admin_test_type'] = $testType;
+
+        $event->payload_summary = $summary;
+        $event->save();
     }
 
     private function buildRetriesQuery(Request $request)
@@ -545,6 +608,7 @@ class WebhookActivityController extends Controller
             'payload_summary' => $event->payload_summary,
             'created_at' => $event->created_at?->toDateTimeString(),
             'shipment_status' => $event->shipment?->status,
+            'is_admin_test' => ($event->payload_summary['source'] ?? null) === self::ADMIN_TEST_SOURCE,
         ];
     }
 
@@ -594,10 +658,12 @@ class WebhookActivityController extends Controller
      */
     private function deleteWebhookEventsByIds(array $ids): int
     {
-        CourierForwardRetry::query()
-            ->whereIn('webhook_event_id', $ids)
-            ->delete();
+        return (int) DB::transaction(function () use ($ids) {
+            CourierForwardRetry::query()
+                ->whereIn('webhook_event_id', $ids)
+                ->delete();
 
-        return CourierWebhookEvent::query()->whereIn('id', $ids)->delete();
+            return CourierWebhookEvent::query()->whereIn('id', $ids)->delete();
+        });
     }
 }
