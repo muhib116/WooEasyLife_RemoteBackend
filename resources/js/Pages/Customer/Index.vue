@@ -12,41 +12,32 @@
                 />
             </template>
             <template #action="{ item }">
-                <div class="flex gap-2 justify-end">
-                    <Button
-                        icon="pi pi-map"
-                        size="small"
-                        class="!w-7 h-7"
-                        severity="secondary"
+                <TableActions>
+                    <TableActionButton
+                        action="map"
+                        tooltip="View address"
                         :loading="item.loading"
                         @click="() => (selectedCustomer = item)"
                     />
-                    <Button
-                        icon="pi pi-eye"
-                        size="small"
-                        class="!w-7 h-7"
-                        :as="Link"
-                        :href="route('followUp.view', item.id)"
-                        v-tooltip.top="{ value: 'Follow Up', autoHide: false }"
-                    />
-                    <Button
-                        icon="pi pi-pencil"
-                        size="small"
-                        class="!w-7 h-7"
-                        severity="info"
-                        aria-label="Filter"
+                    <Link :href="route('followUp.view', item.id)">
+                        <TableActionButton
+                            action="view"
+                            as="span"
+                            tooltip="Follow up"
+                        />
+                    </Link>
+                    <TableActionButton
+                        action="edit"
+                        tooltip="Edit customer"
                         @click="handleEdit(item)"
                     />
-                    <Button
-                        icon="pi pi-trash"
-                        size="small"
-                        class="!w-7 h-7"
-                        severity="danger"
+                    <TableActionButton
+                        action="delete"
+                        tooltip="Delete customer"
                         :loading="item.loading"
-                        aria-label="Filter"
                         @click="handleDelete($event, item)"
                     />
-                </div>
+                </TableActions>
             </template>
         </Table.Basic>
         <Dialog
@@ -210,6 +201,8 @@ import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import AddressPopup from "./fragments/AddressPopup.vue";
 import AddressList from "./fragments/AddressList.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 import { Customer } from "@/types";
 
 const props = defineProps<{

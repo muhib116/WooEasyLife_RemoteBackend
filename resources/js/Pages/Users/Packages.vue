@@ -54,23 +54,18 @@
                 </Column>
                 <Column header="Actions" header-class="text-right">
                     <template #body="{ data }">
-                        <div class="flex justify-end gap-2">
-                            <Button
-                                severity="secondary"
-                                size="small"
-                                icon="pi pi-pencil"
-                                outlined
-                                label="Edit"
+                        <TableActions>
+                            <TableActionButton
+                                action="edit"
+                                tooltip="Edit package"
                                 @click="handleEdit(data)"
                             />
-                            <Button
-                                severity="secondary"
-                                size="small"
-                                label="Details"
-                                outlined
+                            <TableActionButton
+                                action="view"
+                                tooltip="View details"
                                 @click="showUseDetails = data.id"
                             />
-                        </div>
+                        </TableActions>
                     </template>
                 </Column>
             </DataTable>
@@ -135,6 +130,8 @@ import PageCard from "./fragments/PageCard.vue";
 import StatusBadge from "./fragments/StatusBadge.vue";
 import PackageForm from "./fragments/PackageForm.vue";
 import UseDetails from "./fragments/UseDetails.vue";
+import TableActions from "./fragments/TableActions.vue";
+import TableActionButton from "./fragments/TableActionButton.vue";
 import { ref } from "vue";
 import { useForm } from "@inertiajs/vue3";
 

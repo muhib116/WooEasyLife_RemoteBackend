@@ -45,24 +45,18 @@
                 </Column>
                 <Column header="Actions" header-class="text-right">
                     <template #body="{ data }">
-                        <div
-                            v-if="data?.status == 'pending'"
-                            class="flex justify-end gap-2"
-                        >
-                            <Button
-                                label="Reject"
-                                severity="danger"
-                                size="small"
-                                outlined
+                        <TableActions v-if="data?.status == 'pending'">
+                            <TableActionButton
+                                action="reject"
+                                tooltip="Reject recharge"
                                 @click="handleReject(data)"
                             />
-                            <Button
-                                label="Approve"
-                                severity="success"
-                                size="small"
+                            <TableActionButton
+                                action="approve"
+                                tooltip="Approve recharge"
                                 @click="handleApprove(data)"
                             />
-                        </div>
+                        </TableActions>
                     </template>
                 </Column>
             </DataTable>
@@ -95,6 +89,8 @@ import UserLayout from "./UserLayout.vue";
 import PageCard from "./fragments/PageCard.vue";
 import StatusBadge from "./fragments/StatusBadge.vue";
 import RechargeForm from "./fragments/RechargeForm.vue";
+import TableActions from "./fragments/TableActions.vue";
+import TableActionButton from "./fragments/TableActionButton.vue";
 import { ref } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import { useToast } from "primevue/usetoast";

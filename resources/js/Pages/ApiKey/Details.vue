@@ -63,33 +63,24 @@
             </Column>
             <Column header="Actions" header-class="text-right">
                 <template #body="{ data }">
-                    <div class="flex justify-end gap-2">
-                        <Button
-                            severity="secondary"
-                            size="small"
-                            icon="pi pi-copy"
-                            outlined
-                            v-tooltip.top="'Copy bearer token'"
+                    <TableActions>
+                        <TableActionButton
+                            action="copy"
+                            tooltip="Copy bearer token"
                             @click="$emit('handleCopy', data)"
                         />
-                        <Button
-                            severity="secondary"
-                            size="small"
-                            icon="pi pi-pencil"
-                            outlined
-                            v-tooltip.top="'Edit token'"
+                        <TableActionButton
+                            action="edit"
+                            tooltip="Edit token"
                             @click="$emit('handleEdit', data)"
                         />
-                        <Button
-                            severity="danger"
-                            size="small"
-                            icon="pi pi-trash"
-                            outlined
+                        <TableActionButton
+                            action="delete"
+                            tooltip="Delete token"
                             :loading="data?.loading"
-                            v-tooltip.top="'Delete token'"
                             @click="$emit('handleDeleteToken', data)"
                         />
-                    </div>
+                    </TableActions>
                 </template>
             </Column>
         </DataTable>
@@ -100,6 +91,8 @@
 import { format, isPast, parseISO } from "date-fns";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineProps<{
     user: any;

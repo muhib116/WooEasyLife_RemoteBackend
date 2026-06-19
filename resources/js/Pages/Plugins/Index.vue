@@ -132,42 +132,24 @@
                     </Column>
                     <Column header="Actions" header-class="text-right">
                         <template #body="{ data }">
-                            <div class="flex justify-end gap-2">
-                                <a
-                                    :href="
-                                        route(
-                                            'plugins.downloadVersion',
-                                            data.version,
-                                        )
-                                    "
+                            <TableActions>
+                                <TableActionButton
+                                    action="download"
+                                    :href="route('plugins.downloadVersion', data.version)"
                                     download
-                                >
-                                    <Button
-                                        icon="pi pi-download"
-                                        size="small"
-                                        severity="secondary"
-                                        outlined
-                                        v-tooltip.top="'Download ZIP'"
-                                        as="span"
-                                    />
-                                </a>
-                                <Button
-                                    icon="pi pi-pencil"
-                                    size="small"
-                                    severity="secondary"
-                                    outlined
-                                    v-tooltip.top="'Edit version'"
+                                    tooltip="Download ZIP"
+                                />
+                                <TableActionButton
+                                    action="edit"
+                                    tooltip="Edit version"
                                     @click="handleEdit(data)"
                                 />
-                                <Button
-                                    icon="pi pi-trash"
-                                    size="small"
-                                    severity="danger"
-                                    outlined
-                                    v-tooltip.top="'Delete version'"
+                                <TableActionButton
+                                    action="delete"
+                                    tooltip="Delete version"
                                     @click="handleDelete(data)"
                                 />
-                            </div>
+                            </TableActions>
                         </template>
                     </Column>
                 </DataTable>
@@ -210,6 +192,8 @@ import StatCard from "@/Pages/Users/fragments/StatCard.vue";
 import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 import VersionForm from "./fragments/VersionForm.vue";
 
 defineOptions({

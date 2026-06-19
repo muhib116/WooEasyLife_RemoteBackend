@@ -84,28 +84,20 @@
                             />
                         </template>
                     </Column>
-                    <Column header="Actions" headerStyle="width:9rem">
+                    <Column header="Actions" header-class="text-right" headerStyle="width:9rem">
                         <template #body="{ data }">
-                            <div class="flex gap-1">
-                                <Button
-                                    icon="pi pi-pencil"
-                                    size="small"
-                                    text
-                                    rounded
-                                    severity="secondary"
-                                    v-tooltip.top="'Edit domain'"
+                            <TableActions>
+                                <TableActionButton
+                                    action="edit"
+                                    tooltip="Edit domain"
                                     @click="openEdit(data)"
                                 />
-                                <Button
-                                    icon="pi pi-trash"
-                                    size="small"
-                                    text
-                                    rounded
-                                    severity="danger"
-                                    v-tooltip.top="'Remove domain'"
+                                <TableActionButton
+                                    action="delete"
+                                    tooltip="Remove domain"
                                     @click="confirmRemove(data)"
                                 />
-                            </div>
+                            </TableActions>
                         </template>
                     </Column>
                 </DataTable>
@@ -192,6 +184,8 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineOptions({ name: "WhitelistedDomainsIndex" });
 

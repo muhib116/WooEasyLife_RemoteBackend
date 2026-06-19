@@ -353,41 +353,30 @@
                             </span>
                         </template>
                     </Column>
-                    <Column header="Action" headerStyle="width:9rem">
+                    <Column header="Action" header-class="text-right" headerStyle="width:9rem">
                         <template #body="{ data }">
-                            <div class="flex flex-wrap gap-1">
-                                <Button
+                            <TableActions>
+                                <TableActionButton
                                     v-if="canTestPlugin(data)"
-                                    icon="pi pi-link"
-                                    size="small"
-                                    text
-                                    rounded
-                                    v-tooltip.top="'Test plugin'"
+                                    action="link"
+                                    tooltip="Test plugin"
                                     :loading="testingEventId === data.id"
                                     @click="handleTestPlugin(data.id)"
                                 />
-                                <Button
+                                <TableActionButton
                                     v-if="canRetryEvent(data)"
-                                    icon="pi pi-replay"
-                                    size="small"
-                                    text
-                                    rounded
-                                    severity="warn"
-                                    v-tooltip.top="'Retry forward'"
+                                    action="retry"
+                                    tooltip="Retry forward"
                                     :loading="retryingEventId === data.id"
                                     @click="handleRetryEvent(data.id)"
                                 />
-                                <Button
-                                    icon="pi pi-trash"
-                                    size="small"
-                                    text
-                                    rounded
-                                    severity="danger"
-                                    v-tooltip.top="'Delete event'"
+                                <TableActionButton
+                                    action="delete"
+                                    tooltip="Delete event"
                                     :loading="deletingEventId === data.id"
                                     @click="confirmDeleteSingleEvent(data)"
                                 />
-                            </div>
+                            </TableActions>
                         </template>
                     </Column>
                 </DataTable>
@@ -564,40 +553,29 @@
                             </span>
                         </template>
                     </Column>
-                    <Column header="Action" headerStyle="width:9rem">
+                    <Column header="Action" header-class="text-right" headerStyle="width:9rem">
                         <template #body="{ data }">
-                            <div class="flex flex-wrap gap-1">
-                                <Button
-                                    icon="pi pi-link"
-                                    size="small"
-                                    text
-                                    rounded
-                                    v-tooltip.top="'Test plugin'"
+                            <TableActions>
+                                <TableActionButton
+                                    action="link"
+                                    tooltip="Test plugin"
                                     :loading="testingRetryId === data.id"
                                     @click="handleTestRetryPlugin(data.id, data.event_id)"
                                 />
-                                <Button
+                                <TableActionButton
                                     v-if="data.status !== 'completed'"
-                                    icon="pi pi-replay"
-                                    size="small"
-                                    text
-                                    rounded
-                                    severity="warn"
-                                    v-tooltip.top="'Retry now'"
+                                    action="retry"
+                                    tooltip="Retry now"
                                     :loading="retryingRetryId === data.id"
                                     @click="handleRetryForward(data.id)"
                                 />
-                                <Button
-                                    icon="pi pi-trash"
-                                    size="small"
-                                    text
-                                    rounded
-                                    severity="danger"
-                                    v-tooltip.top="'Delete retry'"
+                                <TableActionButton
+                                    action="delete"
+                                    tooltip="Delete retry"
                                     :loading="deletingRetryId === data.id"
                                     @click="confirmDeleteSingleRetry(data)"
                                 />
-                            </div>
+                            </TableActions>
                         </template>
                     </Column>
                 </DataTable>
@@ -834,6 +812,8 @@ import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
 import TableSkeletonLoader from "@/Pages/Users/fragments/TableSkeletonLoader.vue";
 import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineOptions({
     name: "WebhookActivities",

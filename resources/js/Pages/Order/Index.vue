@@ -56,13 +56,15 @@
                                     </div>
                                 </template>
                             </Column>
-                            <Column header="Action">
+                            <Column header="Action" header-class="text-right">
                                 <template #body="{data}">
-                                    <Button
-                                        @click="handleEdit(data)"
-                                        icon="pi pi-pencil"
-                                        class="!w-8 h-8"
-                                    />
+                                    <TableActions>
+                                        <TableActionButton
+                                            action="edit"
+                                            tooltip="Edit order"
+                                            @click="handleEdit(data)"
+                                        />
+                                    </TableActions>
                                 </template>
                             </Column>
                         </DataTable>
@@ -153,6 +155,8 @@ import { Dropdown } from "@/plugins/form";
 import { isEmpty } from 'lodash'
 import { useCustomers } from "@/composable/useCustomers";
 import { useProducts } from "@/composable/useProducts";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineOptions({
     name: 'Orders'

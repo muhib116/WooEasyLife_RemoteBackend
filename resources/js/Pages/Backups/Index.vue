@@ -89,26 +89,21 @@
                             {{ getTime(data.time) }}
                         </template>
                     </Column>
-                    <Column header="Actions" headerStyle="width:8rem">
+                    <Column header="Actions" header-class="text-right" headerStyle="width:8rem">
                         <template #body="{ data }">
-                            <div class="flex gap-2">
-                                <Button
-                                    as="a"
-                                    size="small"
-                                    rounded
-                                    icon="pi pi-download"
-                                    severity="secondary"
+                            <TableActions>
+                                <TableActionButton
+                                    action="download"
                                     :href="data.path"
                                     download
+                                    tooltip="Download backup"
                                 />
-                                <Button
-                                    size="small"
-                                    rounded
-                                    icon="pi pi-trash"
-                                    severity="danger"
+                                <TableActionButton
+                                    action="delete"
+                                    tooltip="Delete backup"
                                     @click="() => deleteFile(data.name)"
                                 />
-                            </div>
+                            </TableActions>
                         </template>
                     </Column>
                 </DataTable>
@@ -138,6 +133,8 @@ import StatCard from "@/Pages/Users/fragments/StatCard.vue";
 import StatCardSkeleton from "@/Pages/Users/fragments/StatCardSkeleton.vue";
 import TableSkeletonLoader from "@/Pages/Users/fragments/TableSkeletonLoader.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineOptions({
     name: "Backups",

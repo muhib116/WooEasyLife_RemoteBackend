@@ -143,16 +143,13 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div
-                                        class="flex items-center justify-end gap-2"
-                                    >
-                                        <Button
-                                            label="Manage Keys"
-                                            icon="pi pi-key"
-                                            size="small"
+                                    <TableActions>
+                                        <TableActionButton
+                                            action="key"
+                                            tooltip="Manage keys"
                                             @click="showDetails(user)"
                                         />
-                                    </div>
+                                    </TableActions>
                                 </td>
                             </tr>
                         </tbody>
@@ -259,6 +256,8 @@ import AdminDialog from "@/Pages/Users/fragments/AdminDialog.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import UserAvatar from "@/Pages/Users/fragments/UserAvatar.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 const { copy } = useClipboard();
 const toast = useToast();

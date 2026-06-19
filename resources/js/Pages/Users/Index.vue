@@ -198,25 +198,17 @@
                                     {{ user.remaining_order ?? 0 }}
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div
-                                        class="flex items-center justify-end gap-2"
-                                    >
+                                    <TableActions>
                                         <template v-if="trashed">
-                                            <Button
-                                                label="Restore"
-                                                icon="pi pi-replay"
-                                                size="small"
-                                                severity="success"
-                                                outlined
+                                            <TableActionButton
+                                                action="restore"
+                                                tooltip="Restore user"
                                                 :loading="restoringUserId === user.id"
                                                 @click="handleRestore(user)"
                                             />
-                                            <Button
-                                                label="Delete Forever"
-                                                icon="pi pi-trash"
-                                                size="small"
-                                                severity="danger"
-                                                outlined
+                                            <TableActionButton
+                                                action="delete"
+                                                tooltip="Delete forever"
                                                 :loading="deletingUserId === user.id"
                                                 :disabled="
                                                     Number(user.id) ===
@@ -226,21 +218,15 @@
                                             />
                                         </template>
                                         <template v-else>
-                                            <Button
+                                            <TableActionButton
                                                 v-if="user.role === 'user'"
-                                                icon="pi pi-pencil"
-                                                size="small"
-                                                severity="secondary"
-                                                outlined
-                                                v-tooltip.top="'Edit user'"
+                                                action="edit"
+                                                tooltip="Edit user"
                                                 @click="handleEdit(user)"
                                             />
-                                            <Button
-                                                label="Delete"
-                                                icon="pi pi-trash"
-                                                size="small"
-                                                severity="danger"
-                                                outlined
+                                            <TableActionButton
+                                                action="delete"
+                                                tooltip="Delete user"
                                                 :loading="deletingUserId === user.id"
                                                 :disabled="
                                                     Number(user.id) ===
@@ -251,16 +237,14 @@
                                             <Link
                                                 :href="route('users.view', user.id)"
                                             >
-                                                <Button
-                                                    label="View"
-                                                    size="small"
-                                                    icon="pi pi-arrow-right"
-                                                    icon-pos="right"
+                                                <TableActionButton
+                                                    action="navigate"
                                                     as="span"
+                                                    tooltip="View user"
                                                 />
                                             </Link>
                                         </template>
-                                    </div>
+                                    </TableActions>
                                 </td>
                             </tr>
                         </tbody>
@@ -330,6 +314,8 @@ import PageCard from "./fragments/PageCard.vue";
 import StatusBadge from "./fragments/StatusBadge.vue";
 import EmptyState from "./fragments/EmptyState.vue";
 import UserAvatar from "./fragments/UserAvatar.vue";
+import TableActions from "./fragments/TableActions.vue";
+import TableActionButton from "./fragments/TableActionButton.vue";
 
 defineOptions({
     name: "Users",

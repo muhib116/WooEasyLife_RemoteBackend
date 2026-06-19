@@ -53,31 +53,24 @@
                 </Column>
                 <Column header="Actions" header-class="text-right">
                     <template #body="{ data }">
-                        <div class="flex justify-end gap-2">
-                            <Button
-                                severity="secondary"
-                                size="small"
-                                icon="pi pi-copy"
-                                outlined
-                                v-tooltip.top="'Copy token'"
+                        <TableActions>
+                            <TableActionButton
+                                action="copy"
+                                tooltip="Copy token"
                                 @click="handleCopy(data)"
                             />
-                            <Button
-                                severity="secondary"
-                                size="small"
-                                icon="pi pi-pencil"
-                                outlined
+                            <TableActionButton
+                                action="edit"
+                                tooltip="Edit token"
                                 @click="handleEdit(data)"
                             />
-                            <Button
-                                severity="danger"
-                                size="small"
-                                icon="pi pi-trash"
-                                outlined
+                            <TableActionButton
+                                action="delete"
+                                tooltip="Delete token"
                                 :loading="data?.loading"
                                 @click="handleDeleteToken(data)"
                             />
-                        </div>
+                        </TableActions>
                     </template>
                 </Column>
             </DataTable>
@@ -110,6 +103,8 @@ import UserLayout from "./UserLayout.vue";
 import PageCard from "./fragments/PageCard.vue";
 import StatusBadge from "./fragments/StatusBadge.vue";
 import TokenForm from "./fragments/TokenForm.vue";
+import TableActions from "./fragments/TableActions.vue";
+import TableActionButton from "./fragments/TableActionButton.vue";
 import { format, parseISO } from "date-fns";
 import { router, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";

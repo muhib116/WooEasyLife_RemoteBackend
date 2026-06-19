@@ -29,26 +29,22 @@
                     <Column field="description" header="Description" />
                     <Column field="domain" header="Domain" />
                     <Column field="ip" header="IP" />
-                    <Column header="Actions" headerStyle="width:10rem">
+                    <Column header="Actions" header-class="text-right" headerStyle="width:10rem">
                         <template #body="{ data }">
-                            <div class="flex gap-2">
-                                <Button
-                                    label="Edit"
-                                    size="small"
-                                    severity="secondary"
-                                    outlined
+                            <TableActions>
+                                <TableActionButton
+                                    action="edit"
+                                    tooltip="Edit business"
                                     @click="handleEdit(data)"
                                 />
                                 <Link :href="route('users.view', user?.id)">
-                                    <Button
-                                        label="User"
-                                        size="small"
-                                        icon="pi pi-arrow-right"
-                                        iconPos="right"
+                                    <TableActionButton
+                                        action="navigate"
                                         as="span"
+                                        tooltip="View user"
                                     />
                                 </Link>
-                            </div>
+                            </TableActions>
                         </template>
                     </Column>
                 </DataTable>
@@ -70,6 +66,8 @@ import { ref } from "vue";
 import BusinessForm from "./fragments/BusinessForm.vue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineOptions({
     name: "UserBusiness",

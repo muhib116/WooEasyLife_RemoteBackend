@@ -57,13 +57,15 @@
                                     </div>
                                 </template>
                             </Column>
-                            <Column header="Action">
+                            <Column header="Action" header-class="text-right">
                                 <template #body="{data}">
-                                    <Button
-                                        @click="handleEdit(data)"
-                                        icon="pi pi-pencil"
-                                        class="!w-8 h-8"
-                                    />
+                                    <TableActions>
+                                        <TableActionButton
+                                            action="edit"
+                                            tooltip="Edit follow up"
+                                            @click="handleEdit(data)"
+                                        />
+                                    </TableActions>
                                 </template>
                             </Column>
                         </DataTable>
@@ -162,6 +164,8 @@ import { useForm, usePage } from "@inertiajs/vue3";
 import { isEmpty } from 'lodash'
 import { Customer } from "@/types";
 import { Editor } from "@/plugins/form";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineOptions({
     name: 'FollowUp'

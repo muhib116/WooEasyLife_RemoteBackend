@@ -81,17 +81,15 @@
                             {{ getTime(data.last_activity) }}
                         </template>
                     </Column>
-                    <Column header="Actions" headerStyle="width:5rem">
+                    <Column header="Actions" header-class="text-right" headerStyle="width:5rem">
                         <template #body="{ data }">
-                            <Button
-                                v-tooltip.left="'View payload'"
-                                icon="pi pi-eye"
-                                size="small"
-                                severity="secondary"
-                                text
-                                rounded
-                                @click="selectedItem = data"
-                            />
+                            <TableActions>
+                                <TableActionButton
+                                    action="view"
+                                    tooltip="View payload"
+                                    @click="selectedItem = data"
+                                />
+                            </TableActions>
                         </template>
                     </Column>
                 </DataTable>
@@ -129,6 +127,8 @@ import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
+import TableActions from "@/Pages/Users/fragments/TableActions.vue";
+import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineOptions({
     name: "Sessions",
