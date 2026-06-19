@@ -90,6 +90,11 @@ class CourierWebhookSettingsService
             $setupSteps[] = 'If you change API credentials later, register the same callback URL in your new Pathao account.';
         }
 
+        if ($partner === 'steadfast') {
+            $setupSteps[] = 'In Steadfast webhook settings, paste your API Key as the Bearer auth token (Auth Token).';
+            $setupSteps[] = 'Steadfast sends delivery_status and tracking_update notifications — both are handled automatically.';
+        }
+
         $credentialsChanged = (bool) ($context['credentials_changed'] ?? false);
         $inFlight = (int) ($context['in_flight_shipments'] ?? 0);
         $mappingCount = $this->shipmentMappingCount($accessToken?->id, $partner, $environment);

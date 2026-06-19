@@ -58,15 +58,16 @@ class WebhookHubController extends Controller
     public function steadfast(Request $request, string $environment = 'live')
     {
         if (!$this->verifySteadfastAuth($request, $environment)) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized.'], 401);
+            return $this->steadfastErrorResponse('Unauthorized.', 401);
         }
 
         $payload = $request->all();
         $notificationType = strtolower((string) ($payload['notification_type'] ?? 'delivery_status'));
         $consignmentId = trim((string) ($payload['consignment_id'] ?? ''));
+        $invoice = trim((string) ($payload['invoice'] ?? ''));
 
         if ($consignmentId === '') {
-            return response()->json(['status' => 'success', 'message' => 'Webhook received successfully.']);
+            return $this->steadfastSuccessResponse();
         }
 
         if ($notificationType === 'tracking_update') {
@@ -75,15 +76,25 @@ class WebhookHubController extends Controller
                 'notification_type' => 'tracking_update',
                 'tracking_message' => (string) ($payload['tracking_message'] ?? ''),
                 'updated_at' => (string) ($payload['updated_at'] ?? now()->toDateTimeString()),
-            ], $environment);
+                'invoice' => $invoice,
+            ], $environment, $invoice);
+        }
+
+        $rawStatus = $this->normalizeSteadfastWebhookStatus((string) ($payload['status'] ?? ''));
+        if ($rawStatus === '') {
+            return $this->steadfastSuccessResponse();
         }
 
         return $this->forwardShipmentUpdate('steadfast', $consignmentId, [
             'partner' => 'steadfast',
-            'raw_status' => (string) ($payload['status'] ?? ''),
+            'notification_type' => 'delivery_status',
+            'raw_status' => $rawStatus,
             'updated_at' => (string) ($payload['updated_at'] ?? now()->toDateTimeString()),
             'tracking_message' => (string) ($payload['tracking_message'] ?? ''),
-        ], $environment);
+            'invoice' => $invoice,
+            'cod_amount' => $payload['cod_amount'] ?? null,
+            'delivery_charge' => $payload['delivery_charge'] ?? null,
+        ], $environment, $invoice);
     }
 
     public function redx(Request $request, string $environment = 'live')
@@ -113,9 +124,19 @@ class WebhookHubController extends Controller
         ], $environment);
     }
 
-    private function forwardShipmentUpdate(string $partner, string $consignmentId, array $payload, string $environment = 'live')
-    {
-        $shipment = $this->shipmentService->findByConsignment($partner, $consignmentId, $environment);
+    private function forwardShipmentUpdate(
+        string $partner,
+        string $consignmentId,
+        array $payload,
+        string $environment = 'live',
+        string $invoice = ''
+    ) {
+        $shipment = $this->shipmentService->resolveShipment(
+            $partner,
+            $consignmentId,
+            $invoice !== '' ? $invoice : (string) ($payload['invoice'] ?? ''),
+            $environment
+        );
 
         $event = $this->eventService->record($partner, $environment, [
             'consignment_id' => $consignmentId,
@@ -136,10 +157,10 @@ class WebhookHubController extends Controller
             $event->forward_message = 'mapping_not_found';
             $event->save();
 
-            return $this->pathaoResponse([
-                'status' => 'accepted',
-                'message' => 'Shipment mapping not found.',
-            ], 202);
+            return $this->partnerResponse($partner, [
+                'status' => 'success',
+                'message' => 'Webhook received successfully.',
+            ], $this->successStatusForPartner($partner));
         }
 
         $forwardPayload = array_merge($payload, [
@@ -160,8 +181,8 @@ class WebhookHubController extends Controller
 
             return $this->partnerResponse($partner, [
                 'status' => 'success',
-                'message' => $result['message'] ?? 'forwarded',
-            ], in_array($partner, ['pathao'], true) ? 202 : 200);
+                'message' => 'Webhook received successfully.',
+            ], $this->successStatusForPartner($partner));
         }
 
         $error = (string) ($result['message'] ?? 'forward_failed');
@@ -173,8 +194,8 @@ class WebhookHubController extends Controller
 
         return $this->partnerResponse($partner, [
             'status' => 'success',
-            'message' => 'Forward queued for retry.',
-        ], in_array($partner, ['pathao'], true) ? 202 : 200);
+            'message' => 'Webhook received successfully.',
+        ], $this->successStatusForPartner($partner));
     }
 
     private function verifyPathaoSignature(Request $request, string $environment): bool
@@ -222,7 +243,7 @@ class WebhookHubController extends Controller
         $account = null;
 
         if ($consignmentId !== '') {
-            $shipment = $this->shipmentService->findByConsignment('steadfast', $consignmentId, $environment);
+            $shipment = $this->shipmentService->resolveShipment('steadfast', $consignmentId, '', $environment);
             if ($shipment?->courier_account_id) {
                 $account = CourierAccount::query()->find($shipment->courier_account_id);
             }
@@ -296,7 +317,41 @@ class WebhookHubController extends Controller
             return $this->pathaoResponse($body, $status);
         }
 
+        if (in_array($partner, ['steadfast', 'redx'], true)) {
+            if (($body['status'] ?? '') === 'error') {
+                return response()->json($body, $status);
+            }
+
+            return $this->standardCourierWebhookSuccessResponse($status);
+        }
+
         return response()->json($body, $status);
+    }
+
+    private function steadfastSuccessResponse()
+    {
+        return $this->standardCourierWebhookSuccessResponse(200);
+    }
+
+    private function steadfastErrorResponse(string $message, int $status = 401)
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => $message,
+        ], $status);
+    }
+
+    private function standardCourierWebhookSuccessResponse(int $status = 200)
+    {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Webhook received successfully.',
+        ], $status);
+    }
+
+    private function successStatusForPartner(string $partner): int
+    {
+        return $partner === 'pathao' ? 202 : 200;
     }
 
     private function isPathaoOrderEvent(string $event): bool
@@ -319,5 +374,26 @@ class WebhookHubController extends Controller
                 'assigned_for_delivery', 'in_transit', 'out_for_delivery',
                 'return_initiated', 'return_completed',
             ], true);
+    }
+
+    private function normalizeSteadfastWebhookStatus(string $status): string
+    {
+        $raw = strtolower(trim($status));
+        if ($raw === '') {
+            return '';
+        }
+
+        $raw = preg_replace('/[\s-]+/', '_', $raw) ?? $raw;
+
+        $aliases = [
+            'complete' => 'delivered',
+            'completed' => 'delivered',
+            'returned' => 'returned',
+            'partial_delivery' => 'partial_delivered',
+            'partially_delivered' => 'partial_delivered',
+            'canceled' => 'cancelled',
+        ];
+
+        return $aliases[$raw] ?? $raw;
     }
 }

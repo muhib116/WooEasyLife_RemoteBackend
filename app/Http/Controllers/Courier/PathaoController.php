@@ -108,9 +108,16 @@ class PathaoController extends Controller
         $config = $this->applyPathaoOptionsToConfig($config, $request->input('pathao_options', []));
 
         $settings = is_array($config->settings) ? $config->settings : [];
+        $orders = $request->input('orders', []);
+        $firstOrder = is_array($orders[0] ?? null) ? $orders[0] : [];
+        $storeId = (int) (
+            $settings['store_id']
+            ?? $firstOrder['store_id']
+            ?? 0
+        );
 
-        if (empty($settings['store_id'])) {
-            return $this->errorResponse('Select a Pathao store when sending orders.');
+        if ($storeId <= 0) {
+            return $this->errorResponse('Select a Pathao pickup store when sending orders.');
         }
 
         $validator = Validator::make($request->all(), [

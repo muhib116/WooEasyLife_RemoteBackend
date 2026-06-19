@@ -104,13 +104,72 @@ class CourierShipmentService
 
         $query = CourierShipment::query()
             ->where('partner', $partner)
-            ->where('consignment_id', $consignmentId);
+            ->where(function ($builder) use ($consignmentId) {
+                $builder->where('consignment_id', $consignmentId);
+
+                if (ctype_digit($consignmentId)) {
+                    $builder->orWhere('consignment_id', (string) ((int) $consignmentId));
+                }
+            });
 
         if ($environment !== null) {
             $query->where('environment', $this->normalizeEnvironment($environment));
         }
 
         return $query->orderByDesc('id')->first();
+    }
+
+    public function findByInvoice(string $partner, string $invoice, ?string $environment = null): ?CourierShipment
+    {
+        $partner = strtolower(trim($partner));
+        $invoice = trim($invoice);
+
+        if ($partner === '' || $invoice === '') {
+            return null;
+        }
+
+        $query = CourierShipment::query()
+            ->where('partner', $partner)
+            ->where('invoice', $invoice);
+
+        if ($environment !== null) {
+            $query->where('environment', $this->normalizeEnvironment($environment));
+        }
+
+        $shipment = $query->orderByDesc('id')->first();
+        if ($shipment) {
+            return $shipment;
+        }
+
+        $wcOrderId = $this->accountService->parseInvoiceOrderId($invoice);
+        if ($wcOrderId <= 0) {
+            return null;
+        }
+
+        $orderQuery = CourierShipment::query()
+            ->where('partner', $partner)
+            ->where('wc_order_id', $wcOrderId);
+
+        if ($environment !== null) {
+            $orderQuery->where('environment', $this->normalizeEnvironment($environment));
+        }
+
+        return $orderQuery->orderByDesc('id')->first();
+    }
+
+    public function resolveShipment(
+        string $partner,
+        string $consignmentId,
+        string $invoice = '',
+        ?string $environment = null
+    ): ?CourierShipment {
+        $shipment = $this->findByConsignment($partner, $consignmentId, $environment);
+
+        if ($shipment || trim($invoice) === '') {
+            return $shipment;
+        }
+
+        return $this->findByInvoice($partner, $invoice, $environment);
     }
 
     public function groupConsignmentsByAccount(string $partner, array $consignmentIds, ?string $environment = null): array

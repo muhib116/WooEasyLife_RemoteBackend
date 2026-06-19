@@ -10,6 +10,13 @@
             >
                 <template #actions>
                     <Button
+                        label="Test Steadfast Webhook"
+                        icon="pi pi-send"
+                        severity="info"
+                        size="small"
+                        @click="openSteadfastTestDialog"
+                    />
+                    <Button
                         label="Process Due Retries"
                         icon="pi pi-play"
                         severity="help"
@@ -371,6 +378,126 @@
                 </div>
             </div>
         </Dialog>
+
+        <Dialog
+            v-model:visible="steadfastTestDialogVisible"
+            modal
+            header="Test Steadfast Webhook"
+            :style="{ width: '36rem' }"
+        >
+            <div class="space-y-4 text-sm">
+                <p class="text-gray-500 dark:text-gray-400">
+                    Sends a sample Steadfast payload through the same handler used by
+                    <span class="font-mono text-xs">/api/webhooks/steadfast</span>.
+                </p>
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                            Notification type
+                        </label>
+                        <Dropdown
+                            v-model="steadfastTestForm.notification_type"
+                            :options="steadfastNotificationOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            class="w-full"
+                        />
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                            Environment
+                        </label>
+                        <Dropdown
+                            v-model="steadfastTestForm.environment"
+                            :options="environmentOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            class="w-full"
+                        />
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                        Consignment ID
+                    </label>
+                    <InputText
+                        v-model="steadfastTestForm.consignment_id"
+                        placeholder="Leave empty to use latest mapped shipment or 12345"
+                        class="w-full"
+                    />
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                        Invoice (optional)
+                    </label>
+                    <InputText
+                        v-model="steadfastTestForm.invoice"
+                        placeholder="Auto-generated if empty"
+                        class="w-full"
+                    />
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-300">
+                        Bearer token (optional)
+                    </label>
+                    <InputText
+                        v-model="steadfastTestForm.auth_token"
+                        placeholder="Uses saved Steadfast API key if empty"
+                        class="w-full"
+                    />
+                </div>
+
+                <div
+                    v-if="steadfastTestResult"
+                    class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700"
+                >
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="font-medium text-gray-800 dark:text-gray-100">
+                            Test result
+                        </p>
+                        <Tag
+                            :value="steadfastTestResult.docs_compliant ? 'Docs compliant' : 'Check response'"
+                            :severity="steadfastTestResult.docs_compliant ? 'success' : 'warn'"
+                        />
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        HTTP {{ steadfastTestResult.http_status }} ·
+                        {{ steadfastTestResult.message }}
+                    </p>
+                    <p class="break-all text-xs text-gray-500 dark:text-gray-400">
+                        Callback: {{ steadfastTestResult.callback_url }}
+                    </p>
+                    <p
+                        v-if="steadfastTestResult.event"
+                        class="text-xs text-gray-600 dark:text-gray-300"
+                    >
+                        Event #{{ steadfastTestResult.event.id }} ·
+                        {{ steadfastTestResult.event.forward_status }} ·
+                        {{ steadfastTestResult.event.forward_message || "no message" }}
+                    </p>
+                    <pre class="overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">{{ JSON.stringify(steadfastTestResult.response, null, 2) }}</pre>
+                </div>
+            </div>
+
+            <template #footer>
+                <Button
+                    label="Cancel"
+                    severity="secondary"
+                    text
+                    @click="steadfastTestDialogVisible = false"
+                />
+                <Button
+                    label="Run Test"
+                    icon="pi pi-send"
+                    :loading="testingSteadfast"
+                    @click="handleTestSteadfastWebhook"
+                />
+            </template>
+        </Dialog>
     </AuthenticatedLayout>
 </template>
 
@@ -406,7 +533,10 @@ const retryingEventId = ref<number | null>(null);
 const retryingRetryId = ref<number | null>(null);
 const testingEventId = ref<number | null>(null);
 const testingRetryId = ref<number | null>(null);
+const testingSteadfast = ref(false);
 const testDialogVisible = ref(false);
+const steadfastTestDialogVisible = ref(false);
+const steadfastTestResult = ref<any>(null);
 const testResult = ref<{
     success: boolean;
     message: string;
@@ -475,6 +605,19 @@ const statusOptions = [
     { label: "Failed", value: "failed" },
     { label: "Orphan", value: "orphan" },
 ];
+
+const steadfastNotificationOptions = [
+    { label: "Delivery status", value: "delivery_status" },
+    { label: "Tracking update", value: "tracking_update" },
+];
+
+const steadfastTestForm = reactive({
+    notification_type: "delivery_status",
+    environment: "live",
+    consignment_id: "",
+    invoice: "",
+    auth_token: "",
+});
 
 const formatDate = (value?: string | null) => {
     if (!value) return "—";
@@ -724,4 +867,48 @@ const handleTestRetryPlugin = async (retryId: number, eventId?: number | null) =
 onMounted(() => {
     reloadAll();
 });
+
+const openSteadfastTestDialog = () => {
+    steadfastTestResult.value = null;
+    steadfastTestDialogVisible.value = true;
+};
+
+const handleTestSteadfastWebhook = async () => {
+    testingSteadfast.value = true;
+
+    try {
+        const { data } = await axios.post(route("webhooks.testSteadfast"), {
+            notification_type: steadfastTestForm.notification_type,
+            environment: steadfastTestForm.environment,
+            consignment_id: steadfastTestForm.consignment_id || undefined,
+            invoice: steadfastTestForm.invoice || undefined,
+            auth_token: steadfastTestForm.auth_token || undefined,
+        });
+
+        steadfastTestResult.value = data;
+
+        toast.add({
+            severity: data.success ? "success" : "warn",
+            summary: data.success ? "Steadfast test passed" : "Steadfast test completed with issues",
+            detail: data.message,
+            life: 5000,
+        });
+
+        await reloadAll();
+    } catch (error: any) {
+        const responseData = error?.response?.data;
+        if (responseData) {
+            steadfastTestResult.value = responseData;
+        }
+
+        toast.add({
+            severity: "error",
+            summary: "Steadfast test failed",
+            detail: responseData?.message || "Unable to run Steadfast webhook test",
+            life: 5000,
+        });
+    } finally {
+        testingSteadfast.value = false;
+    }
+};
 </script>

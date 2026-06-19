@@ -186,25 +186,63 @@ class PathaoCourierService
             return $this->failedOrderRow($order, 'Unable to authenticate with Pathao. Check Client ID, Secret, login email, and password.');
         }
 
+        $storeId = (int) ($order['store_id'] ?? $settings['store_id'] ?? 0);
+
+        if ($storeId <= 0) {
+            return $this->failedOrderRow($order, 'Select a Pathao pickup store before sending the order.');
+        }
+
+        $itemType = (int) ($order['item_type'] ?? $settings['item_type'] ?? self::ITEM_TYPE_PARCEL);
+        if (!in_array($itemType, [self::ITEM_TYPE_DOCUMENT, self::ITEM_TYPE_PARCEL], true)) {
+            $itemType = self::ITEM_TYPE_PARCEL;
+        }
+
         $payload = [
-            'store_id' => (int) ($order['store_id'] ?? $settings['store_id']),
+            'store_id' => $storeId,
             'merchant_order_id' => (string) ($order['invoice'] ?? ''),
-            'sender_name' => (string) $settings['sender_name'],
-            'sender_phone' => $this->normalizePhone($settings['sender_phone']),
             'recipient_name' => (string) ($order['recipient_name'] ?? ''),
             'recipient_phone' => $this->normalizePhone($order['recipient_phone'] ?? ''),
             'recipient_address' => (string) ($order['recipient_address'] ?? ''),
-            'recipient_city' => (int) ($order['recipient_city'] ?? $settings['recipient_city']),
-            'recipient_zone' => (int) ($order['recipient_zone'] ?? $settings['recipient_zone']),
-            'recipient_area' => (int) ($order['recipient_area'] ?? $settings['recipient_area']),
             'delivery_type' => (int) ($order['delivery_type'] ?? $settings['delivery_type'] ?? self::DELIVERY_TYPE_NORMAL),
-            'item_type' => (int) ($order['item_type'] ?? $settings['item_type'] ?? self::ITEM_TYPE_PARCEL),
-            'item_quantity' => (int) ($order['item_quantity'] ?? $settings['item_quantity'] ?? 1),
+            'item_type' => $itemType,
+            'item_quantity' => max(1, (int) ($order['item_quantity'] ?? $settings['item_quantity'] ?? 1)),
             'item_weight' => (float) ($order['item_weight'] ?? $settings['item_weight'] ?? 0.5),
-            'amount_to_collect' => (int) round($order['cod_amount'] ?? 0),
-            'special_instruction' => $order['note'] ?? null,
-            'item_description' => $order['item_description'] ?? $order['note'] ?? null,
+            'amount_to_collect' => max(0, (int) round($order['cod_amount'] ?? 0)),
         ];
+
+        $recipientCity = (int) ($order['recipient_city'] ?? $settings['recipient_city'] ?? 0);
+        $recipientZone = (int) ($order['recipient_zone'] ?? $settings['recipient_zone'] ?? 0);
+        $recipientArea = (int) ($order['recipient_area'] ?? $settings['recipient_area'] ?? 0);
+
+        if ($recipientCity > 0) {
+            $payload['recipient_city'] = $recipientCity;
+        }
+
+        if ($recipientZone > 0) {
+            $payload['recipient_zone'] = $recipientZone;
+        }
+
+        if ($recipientArea > 0) {
+            $payload['recipient_area'] = $recipientArea;
+        }
+
+        $secondaryPhone = $this->normalizePhone((string) ($order['recipient_secondary_phone'] ?? ''));
+
+        if ($secondaryPhone !== '' && preg_match('/^01[0-9]{9}$/', $secondaryPhone)) {
+            $payload['recipient_secondary_phone'] = $secondaryPhone;
+        }
+
+        $specialInstruction = trim((string) ($order['note'] ?? ''));
+
+        if ($specialInstruction !== '') {
+            $payload['special_instruction'] = $specialInstruction;
+        }
+
+        $itemDescription = trim((string) ($order['item_description'] ?? $specialInstruction));
+
+        if ($itemDescription !== '') {
+            $payload['item_description'] = $itemDescription;
+        }
 
         for ($attempt = 1; $attempt <= 3; $attempt++) {
             try {

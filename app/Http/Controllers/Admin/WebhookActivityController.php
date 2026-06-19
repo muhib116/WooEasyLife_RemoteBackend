@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Courier\WebhookHubController;
+use App\Models\CourierAccount;
 use App\Models\CourierForwardRetry;
+use App\Models\CourierShipment;
 use App\Models\CourierWebhookEvent;
 use App\Services\Courier\CourierForwardRetryService;
 use App\Services\Courier\CourierWebhookEventService;
@@ -182,5 +185,125 @@ class WebhookActivityController extends Controller
             'message' => $result['message'],
             'result' => $result,
         ], $result['reachable'] ? 200 : 422);
+    }
+
+    public function testSteadfastWebhook(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'notification_type' => 'nullable|string|in:delivery_status,tracking_update',
+            'consignment_id' => 'nullable|string|max:128',
+            'invoice' => 'nullable|string|max:128',
+            'environment' => 'nullable|string|in:live,sandbox',
+            'auth_token' => 'nullable|string|max:255',
+        ]);
+
+        $environment = $validated['environment'] ?? 'live';
+        $notificationType = $validated['notification_type'] ?? 'delivery_status';
+        $consignmentId = trim((string) ($validated['consignment_id'] ?? ''));
+
+        if ($consignmentId === '') {
+            $latestShipment = CourierShipment::query()
+                ->where('partner', 'steadfast')
+                ->where('environment', $environment)
+                ->orderByDesc('id')
+                ->first();
+
+            $consignmentId = trim((string) ($latestShipment?->consignment_id ?? '12345'));
+        }
+
+        $authToken = trim((string) ($validated['auth_token'] ?? ''));
+        if ($authToken === '') {
+            $authToken = trim((string) CourierAccount::query()
+                ->where('partner', 'steadfast')
+                ->where('environment', $environment)
+                ->where('is_active', true)
+                ->whereNotNull('webhook_verify_secret')
+                ->value('webhook_verify_secret'));
+        }
+
+        if ($authToken === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No Steadfast auth token found. Save Steadfast settings in a store first, or enter the Bearer token manually.',
+            ], 422);
+        }
+
+        $invoice = trim((string) ($validated['invoice'] ?? ('INV-TEST-'.now()->format('YmdHis'))));
+        $updatedAt = now()->format('Y-m-d H:i:s');
+        $consignmentValue = ctype_digit($consignmentId) ? (int) $consignmentId : $consignmentId;
+
+        $payload = $notificationType === 'tracking_update'
+            ? [
+                'notification_type' => 'tracking_update',
+                'consignment_id' => $consignmentValue,
+                'invoice' => $invoice,
+                'tracking_message' => 'Steadfast webhook connectivity test from WooEasyLife admin.',
+                'updated_at' => $updatedAt,
+            ]
+            : [
+                'notification_type' => 'delivery_status',
+                'consignment_id' => $consignmentValue,
+                'invoice' => $invoice,
+                'cod_amount' => 1500.00,
+                'status' => 'Delivered',
+                'delivery_charge' => 100.00,
+                'tracking_message' => 'Steadfast webhook connectivity test from WooEasyLife admin.',
+                'updated_at' => $updatedAt,
+            ];
+
+        $path = '/api/webhooks/steadfast'.($environment === 'sandbox' ? '/sandbox' : '');
+        $internalRequest = Request::create(
+            $path,
+            'POST',
+            $payload,
+            [],
+            [],
+            [
+                'HTTP_AUTHORIZATION' => 'Bearer '.$authToken,
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_ACCEPT' => 'application/json',
+            ],
+            json_encode($payload)
+        );
+
+        $beforeEventId = (int) CourierWebhookEvent::query()->max('id');
+        $response = app(WebhookHubController::class)->steadfast($internalRequest, $environment);
+        $responseBody = json_decode($response->getContent(), true) ?? [];
+
+        $latestEvent = CourierWebhookEvent::query()
+            ->where('partner', 'steadfast')
+            ->where('id', '>', $beforeEventId)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $latestEvent && $consignmentId !== '') {
+            $latestEvent = CourierWebhookEvent::query()
+                ->where('partner', 'steadfast')
+                ->where('consignment_id', (string) $consignmentId)
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        $callbackUrl = rtrim((string) config('app.url'), '/').$path;
+        $docsCompliant = ($responseBody['status'] ?? '') === 'success'
+            && $response->getStatusCode() === 200
+            && ($responseBody['message'] ?? '') === 'Webhook received successfully.';
+
+        return response()->json([
+            'success' => $docsCompliant,
+            'message' => $responseBody['message'] ?? 'Steadfast webhook test completed.',
+            'http_status' => $response->getStatusCode(),
+            'callback_url' => $callbackUrl,
+            'payload' => $payload,
+            'response' => $responseBody,
+            'docs_compliant' => $docsCompliant,
+            'event' => $latestEvent ? [
+                'id' => $latestEvent->id,
+                'forward_status' => $latestEvent->forward_status,
+                'forward_message' => $latestEvent->forward_message,
+                'consignment_id' => $latestEvent->consignment_id,
+                'wc_order_id' => $latestEvent->wc_order_id,
+            ] : null,
+        ], $docsCompliant ? 200 : 422);
     }
 }

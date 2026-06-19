@@ -113,6 +113,7 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
         Route::post('/retries/{retry}/retry', [WebhookActivityController::class, 'retryForward'])->name('retryForward');
         Route::post('/events/{event}/retry', [WebhookActivityController::class, 'retryEvent'])->name('retryEvent');
         Route::post('/events/{event}/test-plugin', [WebhookActivityController::class, 'testPluginReach'])->name('testPlugin');
+        Route::post('/test-steadfast', [WebhookActivityController::class, 'testSteadfastWebhook'])->name('testSteadfast');
     });
 
     Route::group(['as' => 'products.', 'prefix' => 'products'], function () {
