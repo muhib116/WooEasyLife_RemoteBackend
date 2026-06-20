@@ -1,10 +1,12 @@
 <template>
     <aside class="flex h-svh flex-col overflow-hidden">
         <div class="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200/80 bg-white px-5 dark:border-gray-800 dark:bg-slate-900">
-            <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-50 dark:bg-primary-500/15"
-            >
-                <img src="/app-logo" alt="Logo" class="h-8 w-8 object-contain" />
+            <div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl">
+                <img
+                    src="/app-logo"
+                    alt="WooEasyLife"
+                    class="h-full w-full object-cover"
+                />
             </div>
             <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-bold text-gray-900 dark:text-white">

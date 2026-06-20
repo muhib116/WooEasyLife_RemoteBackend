@@ -145,6 +145,10 @@ class DeveloperController extends Controller
             return true;
         }
 
+        if (str_starts_with($path, '/brand-asset/')) {
+            return true;
+        }
+
         if (str_starts_with($path, '/api/')) {
             return true;
         }

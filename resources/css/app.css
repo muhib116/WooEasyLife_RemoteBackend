@@ -316,17 +316,36 @@
     }
 
     .dark {
-        --p-content-background: #2a3136 !important;
-        --p-overlay-modal-background: #2a3136 !important;
-        --p-content-color: white !important;
-        --p-overlay-modal-color: white !important;
-        --p-inputtext-color: white !important;
-        --p-inputtext-background: #2a3136 !important;
-        --p-inputtext-border-color: #ddd3 !important;
-        --p-content-border-color: #ddd3 !important;
-        --p-form-field-background: #2a3136 !important;
-        --p-form-field-border-color: #ddd3 !important;
-        --p-form-field-color: rgb(228, 228, 228) !important;
+        --p-content-background: rgb(30 41 59) !important;
+        --p-overlay-modal-background: rgb(30 41 59) !important;
+        --p-content-color: rgb(226 232 240) !important;
+        --p-overlay-modal-color: rgb(226 232 240) !important;
+        --p-inputtext-color: rgb(226 232 240) !important;
+        --p-inputtext-background: rgb(30 41 59) !important;
+        --p-inputtext-border-color: rgb(71 85 105) !important;
+        --p-content-border-color: rgb(71 85 105) !important;
+        --p-form-field-background: rgb(30 41 59) !important;
+        --p-form-field-border-color: rgb(71 85 105) !important;
+        --p-form-field-color: rgb(226 232 240) !important;
+        --p-list-option-color: rgb(226 232 240) !important;
+        --p-list-option-focus-background: rgb(51 65 85) !important;
+        --p-list-option-focus-color: rgb(248 250 252) !important;
+        --p-list-option-selected-background: rgb(79 70 229 / 0.25) !important;
+        --p-list-option-selected-color: rgb(196 181 253) !important;
+    }
+
+    .dark .p-select-overlay,
+    .dark .p-select-list,
+    .dark .p-select-option {
+        background: rgb(30 41 59);
+        color: rgb(226 232 240);
+        border-color: rgb(71 85 105);
+    }
+
+    .dark .p-select-filter-container .p-inputtext {
+        background: rgb(15 23 42 / 0.6);
+        border-color: rgb(71 85 105);
+        color: rgb(226 232 240);
     }
 
     .table-actions {

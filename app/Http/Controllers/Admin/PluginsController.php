@@ -113,21 +113,44 @@ class PluginsController extends Controller
 
     public function appLogo()
     {
-        $path = public_path('images/woo-easy-life/app_icon.jpg');
+        return $this->serveBrandAsset('app_icon.jpg');
+    }
 
-        if (!file_exists($path)) {
+    public function brandAsset(string $asset)
+    {
+        return $this->serveBrandAsset($asset);
+    }
+
+    private function serveBrandAsset(string $asset)
+    {
+        $allowed = [
+            'icon-128.png',
+            'icon-256.png',
+            'app_logo.png',
+            'app_icon.jpg',
+        ];
+
+        if (! in_array($asset, $allowed, true)) {
+            abort(404);
+        }
+
+        $path = public_path('images/woo-easy-life/' . $asset);
+
+        if ($asset === 'app_icon.jpg' && ! file_exists($path)) {
             $path = public_path('logo.webp');
         }
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             abort(404);
         }
 
         $file = file_get_contents($path);
-        $type = mime_content_type($path);
+        $type = mime_content_type($path) ?: 'application/octet-stream';
+
         return Response::make($file, 200, [
             'Content-Type' => $type,
             'Content-Disposition' => 'inline',
+            'Cache-Control' => 'public, max-age=604800',
         ]);
     }
 

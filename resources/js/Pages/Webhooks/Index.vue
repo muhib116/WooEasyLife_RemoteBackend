@@ -47,13 +47,13 @@
                 <template v-else>
                     <StatCard
                         title="Total Events"
-                        :value="summary.total_events"
+                        :value="eventStats.total_events"
                         icon="PhListBullets"
                         :subtitle="eventsStatSubtitle"
                     />
                     <StatCard
                         title="Forwarded"
-                        :value="summary.success_count"
+                        :value="eventStats.success_count"
                         icon="PhCheckCircle"
                         subtitle="Successful forwards"
                         accent-class="bg-emerald-500"
@@ -64,14 +64,14 @@
                         title="Pending Retries"
                         :value="summary.pending_retries"
                         icon="PhClock"
-                        :subtitle="`${summary.retry_queued_count} queued events`"
+                        :subtitle="`${eventStats.retry_queued_count} queued events`"
                         accent-class="bg-amber-500"
                         icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
                         icon-class="text-amber-600 dark:text-amber-400"
                     />
                     <StatCard
                         title="Failed / Orphan"
-                        :value="summary.failed_count + summary.orphan_count"
+                        :value="eventStats.failed_count + eventStats.orphan_count"
                         icon="PhWarningCircle"
                         :subtitle="`${summary.failed_retries} failed retries`"
                         accent-class="bg-rose-500"
@@ -97,7 +97,7 @@
                         class="rounded-full px-2 py-0.5 text-xs"
                         :class="activeTab === 'events' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-300'"
                     >
-                        {{ summary.total_events }}
+                        {{ events.total }}
                     </span>
                 </button>
                 <button
@@ -115,7 +115,7 @@
                         class="rounded-full px-2 py-0.5 text-xs"
                         :class="activeTab === 'retries' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-300'"
                     >
-                        {{ summary.pending_retries + summary.failed_retries }}
+                        {{ retries.total }}
                     </span>
                 </button>
             </div>
@@ -179,16 +179,6 @@
                             filter
                             filterPlaceholder="Search status..."
                             showClear
-                            class="min-w-[11rem]"
-                            @update:model-value="handleEventFiltersChange"
-                        />
-                        <Select
-                            v-model="eventFilters.source"
-                            :options="sourceOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            filter
-                            filterPlaceholder="Search source..."
                             class="min-w-[11rem]"
                             @update:model-value="handleEventFiltersChange"
                         />
@@ -892,17 +882,28 @@ const testResult = ref<{
 } | null>(null);
 
 const summary = reactive({
-    total_events: 0,
-    success_count: 0,
-    failed_count: 0,
-    retry_queued_count: 0,
-    orphan_count: 0,
     admin_test_count: 0,
     pending_retries: 0,
     failed_retries: 0,
     last_event_at: null as string | null,
     bulk_delete_warning_threshold: 50,
 });
+
+const eventStats = reactive({
+    total_events: 0,
+    success_count: 0,
+    failed_count: 0,
+    retry_queued_count: 0,
+    orphan_count: 0,
+});
+
+const applyEventStats = (stats?: Partial<typeof eventStats>) => {
+    if (!stats) {
+        return;
+    }
+
+    Object.assign(eventStats, stats);
+};
 
 const events = ref<Paginated<any>>({
     data: [],
@@ -923,11 +924,37 @@ const eventFilters = reactive({
     site_url: null as string | null,
     environment: null as string | null,
     forward_status: null as string | null,
-    source: "courier",
     search: "",
 });
 
 const storeOptions = ref<{ label: string; value: string }[]>([]);
+
+const syncStoreOptions = (...siteLists: Array<string[] | undefined>) => {
+    const merged = new Set<string>();
+
+    for (const list of siteLists) {
+        for (const siteUrl of list ?? []) {
+            const normalized = String(siteUrl).trim();
+
+            if (normalized) {
+                merged.add(normalized);
+            }
+        }
+    }
+
+    for (const event of events.value.data) {
+        if (event.site_url) {
+            merged.add(String(event.site_url).trim());
+        }
+    }
+
+    storeOptions.value = [...merged]
+        .sort((a, b) => a.localeCompare(b))
+        .map((siteUrl) => ({
+            label: siteUrl,
+            value: siteUrl,
+        }));
+};
 
 const partnerOptions = [
     { label: "Steadfast", value: "steadfast" },
@@ -946,12 +973,6 @@ const statusOptions = [
     { label: "Retry Queued", value: "retry_queued" },
     { label: "Failed", value: "failed" },
     { label: "Orphan", value: "orphan" },
-];
-
-const sourceOptions = [
-    { label: "Live webhooks", value: "courier" },
-    { label: "Admin tests", value: "admin_test" },
-    { label: "All sources", value: "all" },
 ];
 
 const pageSizeValues = [10, 20, 25, 50, 100];
@@ -1073,7 +1094,6 @@ const hasActiveEventFilters = computed(() => {
             eventFilters.site_url ||
             eventFilters.environment ||
             eventFilters.forward_status ||
-            eventFilters.source !== "courier" ||
             eventFilters.search.trim()
     );
 });
@@ -1082,7 +1102,6 @@ const buildEventFilterParams = (page: number, perPage: number) => {
     const params: Record<string, string | number> = {
         page,
         per_page: perPage,
-        source: eventFilters.source,
     };
 
     if (eventFilters.partner) {
@@ -1119,18 +1138,20 @@ const eventsDescription = computed(() => {
 });
 
 const eventsStatSubtitle = computed(() => {
+    if (hasActiveEventFilters.value) {
+        return `${eventStats.total_events} matching event(s)`;
+    }
+
     if (summary.last_event_at) {
         const adminTests =
             summary.admin_test_count > 0
-                ? ` · ${summary.admin_test_count} admin test(s) hidden`
+                ? ` · ${summary.admin_test_count} admin test(s)`
                 : "";
 
         return `Last: ${formatDate(summary.last_event_at)}${adminTests}`;
     }
 
-    return summary.admin_test_count > 0
-        ? `${summary.admin_test_count} admin test(s) hidden from totals`
-        : "No live events yet";
+    return eventStats.total_events > 0 ? "Latest webhook activity" : "No events yet";
 });
 
 const allPageEventsSelected = computed(() => {
@@ -1239,12 +1260,14 @@ const canTestPlugin = (event: { site_url?: string | null; wc_order_id?: number |
 };
 
 const fetchSummary = async () => {
-    const { data } = await axios.get(route("webhooks.summary"));
-    Object.assign(summary, data);
-    storeOptions.value = (data.stores ?? []).map((siteUrl: string) => ({
-        label: siteUrl,
-        value: siteUrl,
-    }));
+    try {
+        const { data } = await axios.get(route("webhooks.summary"));
+        Object.assign(summary, data);
+        applyEventStats(data);
+        syncStoreOptions(data.stores);
+    } catch (error) {
+        console.error("Error fetching webhook summary:", error);
+    }
 };
 
 const fetchEvents = async (page = events.value.current_page) => {
@@ -1258,6 +1281,8 @@ const fetchEvents = async (page = events.value.current_page) => {
         if (data.per_page) {
             eventsPerPage.value = data.per_page;
         }
+        applyEventStats(data.stats);
+        syncStoreOptions(data.stores);
         clearEventSelection();
     } catch (error) {
         console.error("Error fetching webhook events:", error);
@@ -1309,7 +1334,6 @@ const clearEventFilters = () => {
     eventFilters.site_url = null;
     eventFilters.environment = null;
     eventFilters.forward_status = null;
-    eventFilters.source = "courier";
     eventFilters.search = "";
     fetchEvents(1);
 };
@@ -1344,7 +1368,6 @@ const buildEventDeletePayload = (ids?: number[]) => {
             site_url: eventFilters.site_url || undefined,
             environment: eventFilters.environment || undefined,
             forward_status: eventFilters.forward_status || undefined,
-            source: eventFilters.source || undefined,
             search: eventFilters.search.trim() || undefined,
         };
     }

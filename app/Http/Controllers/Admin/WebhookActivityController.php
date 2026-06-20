@@ -38,14 +38,12 @@ class WebhookActivityController extends Controller
 
     public function summary(): JsonResponse
     {
-        $lastEvent = $this->excludeAdminTestEvents(CourierWebhookEvent::query())->orderByDesc('id')->first();
+        $eventQuery = CourierWebhookEvent::query();
+        $eventStats = $this->buildEventStats($eventQuery);
+        $lastEvent = (clone $eventQuery)->orderByDesc('id')->first();
 
         return response()->json([
-            'total_events' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->count(),
-            'success_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'success')->count(),
-            'failed_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'failed')->count(),
-            'retry_queued_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'retry_queued')->count(),
-            'orphan_count' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())->where('forward_status', 'orphan')->count(),
+            ...$eventStats,
             'admin_test_count' => CourierWebhookEvent::query()->where('payload_summary->source', self::ADMIN_TEST_SOURCE)->count(),
             'pending_retries' => CourierForwardRetry::query()->where('status', 'pending')->count(),
             'failed_retries' => CourierForwardRetry::query()->where('status', 'failed')->count(),
@@ -53,23 +51,24 @@ class WebhookActivityController extends Controller
             'last_forward_status' => $lastEvent?->forward_status,
             'health' => $this->eventService->healthSummary(),
             'bulk_delete_warning_threshold' => self::BULK_DELETE_WARNING_THRESHOLD,
-            'stores' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())
-                ->whereNotNull('site_url')
-                ->where('site_url', '!=', '')
-                ->distinct()
-                ->orderBy('site_url')
-                ->pluck('site_url')
-                ->values(),
+            'stores' => $this->getDistinctStoreUrls(),
         ]);
     }
 
     public function events(Request $request): JsonResponse
     {
-        $events = $this->buildEventsQuery($request)
+        $query = $this->buildEventsQuery($request);
+        $stats = $this->buildEventStats($query);
+
+        $paginator = $query
             ->paginate(max(10, min(100, (int) $request->query('per_page', 20))))
             ->through(fn (CourierWebhookEvent $event) => $this->formatWebhookEvent($event));
 
-        return response()->json($events);
+        return response()->json([
+            ...$paginator->toArray(),
+            'stores' => $this->getDistinctStoreUrls(),
+            'stats' => $stats,
+        ]);
     }
 
     public function deleteEvents(Request $request): JsonResponse
@@ -524,7 +523,14 @@ class WebhookActivityController extends Controller
         }
 
         if ($siteUrl = trim((string) $request->query('site_url', $request->input('site_url', '')))) {
-            $query->where('site_url', $siteUrl);
+            $normalized = rtrim($siteUrl, '/');
+
+            $query->where(function ($builder) use ($normalized) {
+                $builder->where('site_url', 'like', $normalized.'%')
+                    ->orWhereHas('shipment', function ($shipmentQuery) use ($normalized) {
+                        $shipmentQuery->where('site_url', 'like', $normalized.'%');
+                    });
+            });
         }
 
         if ($status = strtolower(trim((string) $request->query('forward_status', $request->input('forward_status', ''))))) {
@@ -545,7 +551,7 @@ class WebhookActivityController extends Controller
 
         $this->applyEventSourceFilter(
             $query,
-            (string) $request->query('source', $request->input('source', 'courier'))
+            (string) $request->query('source', $request->input('source', 'all'))
         );
 
         return $query;
@@ -572,6 +578,61 @@ class WebhookActivityController extends Controller
             $builder->whereNull('payload_summary')
                 ->orWhere('payload_summary->source', '!=', self::ADMIN_TEST_SOURCE);
         });
+    }
+
+    /**
+     * @return array{
+     *     total_events: int,
+     *     success_count: int,
+     *     failed_count: int,
+     *     retry_queued_count: int,
+     *     orphan_count: int
+     * }
+     */
+    private function buildEventStats($query): array
+    {
+        return [
+            'total_events' => (clone $query)->count(),
+            'success_count' => (clone $query)->where('forward_status', 'success')->count(),
+            'failed_count' => (clone $query)->where('forward_status', 'failed')->count(),
+            'retry_queued_count' => (clone $query)->where('forward_status', 'retry_queued')->count(),
+            'orphan_count' => (clone $query)->where('forward_status', 'orphan')->count(),
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getDistinctStoreUrls(): array
+    {
+        $urls = CourierWebhookEvent::query()
+            ->whereNotNull('site_url')
+            ->where('site_url', '!=', '')
+            ->distinct()
+            ->pluck('site_url');
+
+        $shipmentUrls = CourierWebhookEvent::query()
+            ->join('courier_shipments', 'courier_webhook_events.shipment_id', '=', 'courier_shipments.id')
+            ->whereNotNull('courier_shipments.site_url')
+            ->where('courier_shipments.site_url', '!=', '')
+            ->distinct()
+            ->pluck('courier_shipments.site_url');
+
+        return $urls
+            ->merge($shipmentUrls)
+            ->map(fn ($url) => rtrim(trim((string) $url), '/'))
+            ->filter(fn ($url) => $url !== '')
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    private function resolveEventSiteUrl(CourierWebhookEvent $event): ?string
+    {
+        $siteUrl = trim((string) ($event->site_url ?: $event->shipment?->site_url));
+
+        return $siteUrl !== '' ? $siteUrl : null;
     }
 
     private function markEventAsAdminTest(CourierWebhookEvent $event, string $testType): void
@@ -613,7 +674,7 @@ class WebhookActivityController extends Controller
             'environment' => $event->environment,
             'consignment_id' => $event->consignment_id,
             'wc_order_id' => $event->wc_order_id,
-            'site_url' => $event->site_url,
+            'site_url' => $this->resolveEventSiteUrl($event),
             'event_type' => $event->event_type,
             'forward_status' => $event->forward_status,
             'forward_message' => $event->forward_message,

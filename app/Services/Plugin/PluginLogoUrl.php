@@ -12,11 +12,10 @@ class PluginLogoUrl
     public static function icons(): array
     {
         $base = rtrim((string) config('app.url'), '/');
-        $path = $base . '/images/woo-easy-life';
 
         return [
-            '1x' => $path . '/icon-128.png',
-            '2x' => $path . '/icon-256.png',
+            '1x' => $base . '/brand-asset/icon-128.png',
+            '2x' => $base . '/brand-asset/icon-256.png',
             'svg' => '',
         ];
     }
@@ -28,7 +27,7 @@ class PluginLogoUrl
     {
         $base = rtrim((string) config('app.url'), '/');
 
-        return $base . '/images/woo-easy-life/app_logo.png';
+        return $base . '/brand-asset/app_logo.png';
     }
 
     /**
@@ -38,6 +37,6 @@ class PluginLogoUrl
     {
         $base = rtrim((string) config('app.url'), '/');
 
-        return $base . '/images/woo-easy-life/app_icon.jpg';
+        return $base . '/app-logo';
     }
 }

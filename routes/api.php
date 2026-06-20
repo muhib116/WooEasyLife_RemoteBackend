@@ -36,6 +36,8 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
 });
 
 Route::get('app-logo', [PluginsController::class, 'appLogo']);
+Route::get('brand-asset/{asset}', [PluginsController::class, 'brandAsset'])
+    ->where('asset', 'icon-128\.png|icon-256\.png|app_logo\.png|app_icon\.jpg');
 Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 

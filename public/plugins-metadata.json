@@ -14,8 +14,8 @@
     "changelog": "Version changelog…"
   },
   "icons": {
-    "1x": "https://api.wpsalehub.com/images/woo-easy-life/icon-128.png",
-    "2x": "https://api.wpsalehub.com/images/woo-easy-life/icon-256.png",
+    "1x": "https://api.wpsalehub.com/brand-asset/icon-128.png",
+    "2x": "https://api.wpsalehub.com/brand-asset/icon-256.png",
     "svg": null
   }
 }
