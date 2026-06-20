@@ -9,7 +9,7 @@
         />
 
         <div
-            class="fixed inset-y-0 left-0 z-50 w-[272px] -translate-x-full border-r border-gray-200/80 bg-white transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 dark:border-gray-800 dark:bg-slate-900"
+            class="fixed inset-y-0 left-0 z-50 h-svh w-[272px] -translate-x-full border-r border-gray-200/80 bg-white transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shrink-0 dark:border-gray-800 dark:bg-slate-900"
             :class="{ '!translate-x-0': sidebarOpen }"
         >
             <LeftSidebar @close="sidebarOpen = false" />

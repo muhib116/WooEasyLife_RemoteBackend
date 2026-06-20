@@ -134,43 +134,63 @@
 
                 <div class="space-y-0 border-b border-gray-100 dark:border-gray-800">
                     <div class="flex flex-wrap items-center gap-3 px-4 py-3">
-                        <Dropdown
+                        <Select
                             v-model="eventFilters.partner"
                             :options="partnerOptions"
                             optionLabel="label"
                             optionValue="value"
                             placeholder="All partners"
-                            class="w-[150px]"
+                            filter
+                            filterPlaceholder="Search partner..."
                             showClear
-                            @change="handleEventFiltersChange"
+                            class="min-w-[11rem]"
+                            @update:model-value="handleEventFiltersChange"
                         />
-                        <Dropdown
+                        <Select
+                            v-model="eventFilters.site_url"
+                            :options="storeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="All stores"
+                            filter
+                            filterPlaceholder="Search store..."
+                            showClear
+                            class="min-w-[14rem] max-w-[18rem]"
+                            @update:model-value="handleEventFiltersChange"
+                        />
+                        <Select
                             v-model="eventFilters.environment"
                             :options="environmentOptions"
                             optionLabel="label"
                             optionValue="value"
                             placeholder="All environments"
-                            class="w-[150px]"
+                            filter
+                            filterPlaceholder="Search environment..."
                             showClear
-                            @change="handleEventFiltersChange"
+                            class="min-w-[11rem]"
+                            @update:model-value="handleEventFiltersChange"
                         />
-                        <Dropdown
+                        <Select
                             v-model="eventFilters.forward_status"
                             :options="statusOptions"
                             optionLabel="label"
                             optionValue="value"
                             placeholder="All statuses"
-                            class="w-[170px]"
+                            filter
+                            filterPlaceholder="Search status..."
                             showClear
-                            @change="handleEventFiltersChange"
+                            class="min-w-[11rem]"
+                            @update:model-value="handleEventFiltersChange"
                         />
-                        <Dropdown
+                        <Select
                             v-model="eventFilters.source"
                             :options="sourceOptions"
                             optionLabel="label"
                             optionValue="value"
-                            class="w-[170px]"
-                            @change="handleEventFiltersChange"
+                            filter
+                            filterPlaceholder="Search source..."
+                            class="min-w-[11rem]"
+                            @update:model-value="handleEventFiltersChange"
                         />
                         <span class="relative w-full min-w-[220px] flex-1 sm:max-w-xs">
                             <InputText
@@ -200,13 +220,13 @@
                             <label class="text-xs text-gray-500 dark:text-gray-400">
                                 Per page
                             </label>
-                            <Dropdown
+                            <Select
                                 v-model="eventsPerPage"
                                 :options="pageSizeOptions"
                                 optionLabel="label"
                                 optionValue="value"
                                 class="w-[110px]"
-                                @change="handleEventsPageSizeChange"
+                                @update:model-value="handleEventsPageSizeChange"
                             />
                         </div>
                     </div>
@@ -415,13 +435,13 @@
                         <label class="text-xs text-gray-500 dark:text-gray-400">
                             Per page
                         </label>
-                        <Dropdown
+                        <Select
                             v-model="retriesPerPage"
                             :options="pageSizeOptions"
                             optionLabel="label"
                             optionValue="value"
                             class="w-[110px]"
-                            @change="handleRetriesPageSizeChange"
+                            @update:model-value="handleRetriesPageSizeChange"
                         />
                         <span class="text-xs text-gray-500 dark:text-gray-400">
                             {{ retries.total }} total
@@ -801,6 +821,7 @@
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
 import { computed, onMounted, reactive, ref } from "vue";
+import { watchDebounced } from "@vueuse/core";
 import axios from "axios";
 import { format } from "date-fns";
 import { useConfirm } from "primevue";
@@ -899,11 +920,14 @@ const retries = ref<Paginated<any>>({
 
 const eventFilters = reactive({
     partner: null as string | null,
+    site_url: null as string | null,
     environment: null as string | null,
     forward_status: null as string | null,
     source: "courier",
     search: "",
 });
+
+const storeOptions = ref<{ label: string; value: string }[]>([]);
 
 const partnerOptions = [
     { label: "Steadfast", value: "steadfast" },
@@ -1046,12 +1070,45 @@ const courierConsignmentPlaceholder = computed(() => {
 const hasActiveEventFilters = computed(() => {
     return Boolean(
         eventFilters.partner ||
+            eventFilters.site_url ||
             eventFilters.environment ||
             eventFilters.forward_status ||
             eventFilters.source !== "courier" ||
             eventFilters.search.trim()
     );
 });
+
+const buildEventFilterParams = (page: number, perPage: number) => {
+    const params: Record<string, string | number> = {
+        page,
+        per_page: perPage,
+        source: eventFilters.source,
+    };
+
+    if (eventFilters.partner) {
+        params.partner = eventFilters.partner;
+    }
+
+    if (eventFilters.site_url) {
+        params.site_url = eventFilters.site_url;
+    }
+
+    if (eventFilters.environment) {
+        params.environment = eventFilters.environment;
+    }
+
+    if (eventFilters.forward_status) {
+        params.forward_status = eventFilters.forward_status;
+    }
+
+    const search = eventFilters.search.trim();
+
+    if (search) {
+        params.search = search;
+    }
+
+    return params;
+};
 
 const eventsDescription = computed(() => {
     if (hasActiveEventFilters.value) {
@@ -1184,6 +1241,10 @@ const canTestPlugin = (event: { site_url?: string | null; wc_order_id?: number |
 const fetchSummary = async () => {
     const { data } = await axios.get(route("webhooks.summary"));
     Object.assign(summary, data);
+    storeOptions.value = (data.stores ?? []).map((siteUrl: string) => ({
+        label: siteUrl,
+        value: siteUrl,
+    }));
 };
 
 const fetchEvents = async (page = events.value.current_page) => {
@@ -1191,15 +1252,7 @@ const fetchEvents = async (page = events.value.current_page) => {
 
     try {
         const { data } = await axios.get(route("webhooks.events"), {
-            params: {
-                page,
-                per_page: eventsPerPage.value,
-                partner: eventFilters.partner,
-                environment: eventFilters.environment,
-                forward_status: eventFilters.forward_status,
-                source: eventFilters.source,
-                search: eventFilters.search || undefined,
-            },
+            params: buildEventFilterParams(page, eventsPerPage.value),
         });
         events.value = data;
         if (data.per_page) {
@@ -1253,6 +1306,7 @@ const handleRetriesPageSizeChange = () => {
 
 const clearEventFilters = () => {
     eventFilters.partner = null;
+    eventFilters.site_url = null;
     eventFilters.environment = null;
     eventFilters.forward_status = null;
     eventFilters.source = "courier";
@@ -1287,10 +1341,11 @@ const buildEventDeletePayload = (ids?: number[]) => {
         return {
             select_all: true,
             partner: eventFilters.partner || undefined,
+            site_url: eventFilters.site_url || undefined,
             environment: eventFilters.environment || undefined,
             forward_status: eventFilters.forward_status || undefined,
             source: eventFilters.source || undefined,
-            search: eventFilters.search || undefined,
+            search: eventFilters.search.trim() || undefined,
         };
     }
 
@@ -1618,6 +1673,14 @@ const handleTestRetryPlugin = async (retryId: number, eventId?: number | null) =
 onMounted(() => {
     reloadAll();
 });
+
+watchDebounced(
+    () => eventFilters.search,
+    () => {
+        fetchEvents(1);
+    },
+    { debounce: 400 },
+);
 
 const openCourierTestDialog = () => {
     courierTestResult.value = null;

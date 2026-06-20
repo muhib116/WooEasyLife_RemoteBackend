@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PluginsVersion;
+use App\Services\Plugin\PluginLogoUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
@@ -112,7 +113,11 @@ class PluginsController extends Controller
 
     public function appLogo()
     {
-        $path = public_path('logo.webp');
+        $path = public_path('images/woo-easy-life/app_icon.jpg');
+
+        if (!file_exists($path)) {
+            $path = public_path('logo.webp');
+        }
 
         if (!file_exists($path)) {
             abort(404);
@@ -155,10 +160,18 @@ class PluginsController extends Controller
         }
 
         try {
-            return json_decode($plugins->settings);
+            $settings = json_decode($plugins->settings, true, 512, JSON_THROW_ON_ERROR);
         } catch (\Throwable $th) {
-            return $plugins->settings;
+            $settings = json_decode($plugins->settings, true) ?? [];
         }
+
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+
+        $settings['icons'] = PluginLogoUrl::icons();
+
+        return $settings;
     }
     public function pluginsMetadata()
     {

@@ -1,6 +1,6 @@
 <template>
-    <aside class="flex h-full flex-col">
-        <div class="flex h-16 shrink-0 items-center gap-3 border-b border-gray-200/80 px-5 dark:border-gray-800">
+    <aside class="flex h-svh flex-col overflow-hidden">
+        <div class="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200/80 bg-white px-5 dark:border-gray-800 dark:bg-slate-900">
             <div
                 class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-50 dark:bg-primary-500/15"
             >
@@ -8,7 +8,7 @@
             </div>
             <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-bold text-gray-900 dark:text-white">
-                    WooEasyLife
+                    WooEasyLife Platform
                 </p>
                 <p class="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Admin Console
@@ -23,7 +23,7 @@
             </button>
         </div>
 
-        <nav class="flex-1 overflow-y-auto px-3 py-4 admin-scrollbar">
+        <nav class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 admin-scrollbar">
             <div v-for="section in sections" :key="section.label" class="mb-5">
                 <p
                     class="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
@@ -147,12 +147,12 @@
             </div>
         </nav>
 
-        <div class="shrink-0 border-t border-gray-200/80 p-4 dark:border-gray-800">
+        <div class="sticky bottom-0 z-10 shrink-0 border-t border-gray-200/80 bg-white p-4 dark:border-gray-800 dark:bg-slate-900">
             <div
                 class="rounded-xl bg-gradient-to-br from-primary-500/10 to-primary-600/5 p-3 dark:from-primary-500/20 dark:to-transparent"
             >
                 <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                    Natural Care Platform
+                    WooEasyLife Platform
                 </p>
                 <p class="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
                     Merchant & courier management

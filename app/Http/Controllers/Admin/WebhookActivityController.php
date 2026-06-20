@@ -53,6 +53,13 @@ class WebhookActivityController extends Controller
             'last_forward_status' => $lastEvent?->forward_status,
             'health' => $this->eventService->healthSummary(),
             'bulk_delete_warning_threshold' => self::BULK_DELETE_WARNING_THRESHOLD,
+            'stores' => $this->excludeAdminTestEvents(CourierWebhookEvent::query())
+                ->whereNotNull('site_url')
+                ->where('site_url', '!=', '')
+                ->distinct()
+                ->orderBy('site_url')
+                ->pluck('site_url')
+                ->values(),
         ]);
     }
 
@@ -74,6 +81,7 @@ class WebhookActivityController extends Controller
             'partner' => 'nullable|string|max:32',
             'environment' => 'nullable|string|max:16',
             'forward_status' => 'nullable|string|max:32',
+            'site_url' => 'nullable|string|max:255',
             'search' => 'nullable|string|max:255',
             'source' => 'nullable|string|in:all,courier,admin_test',
         ]);
@@ -513,6 +521,10 @@ class WebhookActivityController extends Controller
 
         if ($environment = strtolower(trim((string) $request->query('environment', $request->input('environment', ''))))) {
             $query->where('environment', $environment);
+        }
+
+        if ($siteUrl = trim((string) $request->query('site_url', $request->input('site_url', '')))) {
+            $query->where('site_url', $siteUrl);
         }
 
         if ($status = strtolower(trim((string) $request->query('forward_status', $request->input('forward_status', ''))))) {

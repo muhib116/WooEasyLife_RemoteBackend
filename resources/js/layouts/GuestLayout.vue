@@ -14,7 +14,7 @@
                     </div>
                     <div>
                         <p class="text-lg font-bold text-white">WooEasyLife</p>
-                        <p class="text-xs text-white/70">Natural Care Admin</p>
+                        <p class="text-xs text-white/70">WooEasyLife Admin</p>
                     </div>
                 </div>
             </div>

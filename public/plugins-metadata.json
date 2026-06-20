@@ -1,1 +1,21 @@
-{"name":"Your Plugin Name","slug":"your-plugin-slug","version":"1.1.0","download_url":"https:\/\/yourserver.com\/plugin-name.zip","requires":"5.0","tested":"6.2","last_updated":"2025-01-01","homepage":"https:\/\/yourwebsite.com","sections":{"description":"Your plugin description goes here.","changelog":"Version 1.1.0: Fixed bugs and added new features."}}
+{
+  "name": "WooEasyLife",
+  "slug": "woo-easy-life",
+  "version": "1.3.7",
+  "download_url": "https://api.wpsalehub.com/download-plugins",
+  "requires": {
+    "wordpress": "5.0",
+    "php": "7.4",
+    "woocommerce": "5.0"
+  },
+  "homepage": "https://api.wpsalehub.com/get-metadata",
+  "sections": {
+    "description": "Plugin description…",
+    "changelog": "Version changelog…"
+  },
+  "icons": {
+    "1x": "https://api.wpsalehub.com/images/woo-easy-life/icon-128.png",
+    "2x": "https://api.wpsalehub.com/images/woo-easy-life/icon-256.png",
+    "svg": null
+  }
+}
