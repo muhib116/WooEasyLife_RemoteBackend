@@ -31,7 +31,7 @@ class PluginsController extends Controller
         $file = $request->file('file');
         $destinationPath = storage_path('/app/private');
 
-        $settings = json_decode($request->settings);
+        $settings = $this->normalizePluginSettings($request->settings);
 
         // Create the directory if it does not exist
         if (!file_exists($destinationPath)) {
@@ -82,7 +82,7 @@ class PluginsController extends Controller
             'version' => $request->version,
             'download_count' => 0,
             'created_by' => Auth::id(),
-            'settings' => $request->settings,
+            'settings' => $this->normalizePluginSettings($request->settings),
         ];
 
         if (isset($path) && $path) {
@@ -182,19 +182,37 @@ class PluginsController extends Controller
             abort(404);
         }
 
-        try {
-            $settings = json_decode($plugins->settings, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $th) {
-            $settings = json_decode($plugins->settings, true) ?? [];
-        }
-
-        if (!is_array($settings)) {
-            $settings = [];
-        }
-
+        $settings = $this->normalizePluginSettings($plugins->settings);
         $settings['icons'] = PluginLogoUrl::resolve($settings['icons'] ?? null);
 
         return $settings;
+    }
+
+    /**
+     * PluginsVersion casts settings as JSON, so values may already be an array.
+     *
+     * @param mixed $settings
+     * @return array<string, mixed>
+     */
+    private function normalizePluginSettings($settings): array
+    {
+        if (is_array($settings)) {
+            return $settings;
+        }
+
+        if (is_object($settings)) {
+            $decoded = json_decode(json_encode($settings), true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        if (is_string($settings) && $settings !== '') {
+            $decoded = json_decode($settings, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
     }
     public function pluginsMetadata()
     {
