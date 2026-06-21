@@ -192,7 +192,7 @@ class PluginsController extends Controller
             $settings = [];
         }
 
-        $settings['icons'] = PluginLogoUrl::icons();
+        $settings['icons'] = PluginLogoUrl::resolve($settings['icons'] ?? null);
 
         return $settings;
     }

@@ -21,6 +21,30 @@ class PluginLogoUrl
     }
 
     /**
+     * Prefer icons from plugin version settings JSON; fall back to brand-asset URLs.
+     *
+     * @param  mixed  $icons
+     * @return array{1x: string, 2x: string, svg: string}
+     */
+    public static function resolve(mixed $icons): array
+    {
+        if (is_array($icons)) {
+            $oneX = trim((string) ($icons['1x'] ?? ''));
+            $twoX = trim((string) ($icons['2x'] ?? ''));
+
+            if ($oneX !== '' && $twoX !== '') {
+                return [
+                    '1x' => $oneX,
+                    '2x' => $twoX,
+                    'svg' => trim((string) ($icons['svg'] ?? '')),
+                ];
+            }
+        }
+
+        return self::icons();
+    }
+
+    /**
      * Wide header logo used in the mobile app splash header.
      */
     public static function logo(): string
