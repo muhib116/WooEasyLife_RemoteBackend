@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ApiKeyController;
+use App\Http\Controllers\App\LegalController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -49,6 +50,11 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
+});
+
+Route::prefix('wooeasylife/app')->name('wooeasylife.app.')->group(function () {
+    Route::get('/privacy-policy', [LegalController::class, 'privacyPolicy'])
+        ->name('privacy-policy');
 });
 
 Route::get('/curl', [CurlController::class, 'index']);
