@@ -18,8 +18,8 @@ By installing or using the App, you agree to this Privacy Policy. If you do not 
 **Data controller:**
 
 WPSaleHub  
-Website: https://wpsalehub.com  
-Email: support@wpsalehub.com
+Website: https://api.wpsalehub.com  
+Email: dev.muhibbullah@gmail.com
 
 For most store and customer data, **you (the merchant)** remain the controller of data processed through your own WordPress/WooCommerce site. We provide the App and related services to help you access and manage that data.
 
@@ -187,7 +187,7 @@ You can:
 - Clear App data or uninstall the App
 - Manage customer/order data retention on your WordPress site
 
-Depending on your country, you may have rights to access, correct, delete, restrict, or object to certain processing of personal data. To exercise these rights, contact us at **support@wpsalehub.com**.
+Depending on your country, you may have rights to access, correct, delete, restrict, or object to certain processing of personal data. To exercise these rights, contact us at **dev.muhibbullah@gmail.com**.
 
 If you are in the EEA/UK, you may also lodge a complaint with your local data protection authority.
 
@@ -218,5 +218,5 @@ Continued use of the App after changes means you accept the updated policy.
 If you have questions about this Privacy Policy or our data practices, contact:
 
 **WPSaleHub**  
-Email: support@wpsalehub.com  
-Website: https://wpsalehub.com
+Email: dev.muhibbullah@gmail.com  
+Website: https://api.wpsalehub.com

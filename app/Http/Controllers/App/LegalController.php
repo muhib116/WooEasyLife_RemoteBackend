@@ -18,6 +18,8 @@ class LegalController extends Controller
             'content' => Str::markdown($markdown),
             'effectiveDate' => 'June 22, 2026',
             'lastUpdated' => 'June 22, 2026',
+            'contactEmail' => 'dev.muhibbullah@gmail.com',
+            'contactWebsite' => 'https://api.wpsalehub.com',
         ]);
     }
 }
