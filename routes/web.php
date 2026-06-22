@@ -55,6 +55,8 @@ Route::get('/', function () {
 Route::prefix('wooeasylife/app')->name('wooeasylife.app.')->group(function () {
     Route::get('/privacy-policy', [LegalController::class, 'privacyPolicy'])
         ->name('privacy-policy');
+    Route::get('/terms-of-service', [LegalController::class, 'termsOfService'])
+        ->name('terms-of-service');
 });
 
 Route::get('/curl', [CurlController::class, 'index']);
