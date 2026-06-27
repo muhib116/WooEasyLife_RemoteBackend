@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CourierConfiguration;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Http;
 
 class RedXCourierService
@@ -247,16 +248,33 @@ class RedXCourierService
 
     public function getTrackingStatuses(CourierConfiguration $config, array $trackingIds): array
     {
+        $ids = $this->normalizeTrackingIds($trackingIds);
+        if ($ids === []) {
+            return [];
+        }
+
+        $limit = max(1, min(50, (int) config('courier.bulk_status_concurrency', 15)));
         $statuses = [];
 
-        foreach ($trackingIds as $trackingId) {
-            $id = trim((string) $trackingId);
+        foreach (array_chunk($ids, $limit) as $chunk) {
+            $responses = Http::pool(function (Pool $pool) use ($chunk, $config) {
+                foreach ($chunk as $trackingId) {
+                    $pool->as($trackingId)
+                        ->withHeaders([
+                            'Accept' => 'application/json',
+                            'Content-Type' => 'application/json',
+                            'API-ACCESS-TOKEN' => 'Bearer ' . $this->getAccessToken($config),
+                        ])
+                        ->timeout(12)
+                        ->get($this->endpoint($config, '/parcel/info/' . rawurlencode($trackingId)));
+                }
+            });
 
-            if ($id === '') {
-                continue;
+            foreach ($chunk as $trackingId) {
+                $statuses[$trackingId] = $this->extractLatestTrackingStatusFromResponse(
+                    $responses[$trackingId] ?? null,
+                );
             }
-
-            $statuses[$id] = $this->getLatestTrackingStatus($config, $id);
         }
 
         return $statuses;
@@ -334,6 +352,33 @@ class RedXCourierService
     {
         $parcel = $this->getParcelInfo($config, $trackingId);
 
+        return $this->extractLatestTrackingStatusFromParcel($parcel);
+    }
+
+    private function extractLatestTrackingStatusFromResponse(mixed $response): string
+    {
+        if ($response === null) {
+            return '';
+        }
+
+        try {
+            if (method_exists($response, 'successful') && !$response->successful()) {
+                return '';
+            }
+
+            $json = $response->json();
+            $parcel = $json['parcel'] ?? $json['data']['parcel'] ?? null;
+
+            return $this->extractLatestTrackingStatusFromParcel(
+                is_array($parcel) ? $parcel : null,
+            );
+        } catch (\Throwable $th) {
+            return '';
+        }
+    }
+
+    private function extractLatestTrackingStatusFromParcel(?array $parcel): string
+    {
         if (!is_array($parcel)) {
             return '';
         }
@@ -345,6 +390,24 @@ class RedXCourierService
         }
 
         return '';
+    }
+
+    /**
+     * @param  array<int|string>  $trackingIds
+     * @return array<int, string>
+     */
+    private function normalizeTrackingIds(array $trackingIds): array
+    {
+        $normalized = [];
+
+        foreach ($trackingIds as $trackingId) {
+            $id = trim((string) $trackingId);
+            if ($id !== '') {
+                $normalized[] = $id;
+            }
+        }
+
+        return $normalized;
     }
 
     private function normalizeTrackingEvents(array $events): array

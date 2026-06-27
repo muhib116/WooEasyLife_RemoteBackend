@@ -268,10 +268,7 @@ class RedXController extends Controller
                 continue;
             }
 
-            $responseData = array_merge(
-                $responseData,
-                $this->redxService->getTrackingStatuses($config, $ids)
-            );
+            $responseData += $this->redxService->getTrackingStatuses($config, $ids);
         }
 
         return $this->successResponse($responseData);

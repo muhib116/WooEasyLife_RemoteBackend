@@ -199,9 +199,10 @@ class PathaoController extends Controller
                 continue;
             }
 
-            foreach ($ids as $id) {
-                $responseData[$id] = $this->pathaoService->getOrderStatus($config, (string) $id);
-            }
+            $responseData += $this->pathaoService->fetchOrderStatuses(
+                    $config,
+                    is_array($ids) ? $ids : [],
+                );
         }
 
         return $this->successResponse($responseData);

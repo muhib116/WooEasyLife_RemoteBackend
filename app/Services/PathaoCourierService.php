@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CourierConfiguration;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -305,6 +306,91 @@ class PathaoCourierService
         }
 
         return '';
+    }
+
+    /**
+     * @param  array<int|string>  $consignmentIds
+     * @return array<string, string>
+     */
+    public function fetchOrderStatuses(
+        CourierConfiguration $config,
+        array $consignmentIds,
+        ?int $concurrency = null,
+    ): array {
+        $ids = $this->normalizeConsignmentIds($consignmentIds);
+        if ($ids === []) {
+            return [];
+        }
+
+        $token = $this->getAccessToken($config);
+        if (!$token) {
+            return array_fill_keys($ids, '');
+        }
+
+        $limit = max(1, min(50, $concurrency ?? (int) config('courier.bulk_status_concurrency', 15)));
+        $baseUrl = $this->getBaseUrl($config);
+        $statuses = [];
+
+        foreach (array_chunk($ids, $limit) as $chunk) {
+            $responses = Http::pool(function (Pool $pool) use ($chunk, $token, $baseUrl) {
+                foreach ($chunk as $id) {
+                    $pool->as($id)
+                        ->withHeaders([
+                            'Authorization' => 'Bearer ' . $token,
+                        ])
+                        ->timeout(12)
+                        ->get($baseUrl . '/aladdin/api/v1/orders/' . rawurlencode($id) . '/info');
+                }
+            });
+
+            foreach ($chunk as $id) {
+                $statuses[$id] = $this->parseOrderStatusResponse($responses[$id] ?? null);
+            }
+        }
+
+        return $statuses;
+    }
+
+    private function parseOrderStatusResponse(mixed $response): string
+    {
+        if ($response === null) {
+            return '';
+        }
+
+        try {
+            if (method_exists($response, 'successful') && !$response->successful()) {
+                return '';
+            }
+
+            $json = $response->json();
+            if (($json['code'] ?? null) == 200) {
+                $status = $json['data']['order_status_slug'] ?? $json['data']['order_status'] ?? '';
+
+                return $this->normalizeOrderStatus(is_string($status) ? $status : '');
+            }
+        } catch (\Throwable $th) {
+            return '';
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  array<int|string>  $consignmentIds
+     * @return array<int, string>
+     */
+    private function normalizeConsignmentIds(array $consignmentIds): array
+    {
+        $normalized = [];
+
+        foreach ($consignmentIds as $consignmentId) {
+            $id = trim((string) $consignmentId);
+            if ($id !== '') {
+                $normalized[] = $id;
+            }
+        }
+
+        return $normalized;
     }
 
     public function normalizeOrderStatus(string $status): string

@@ -8,6 +8,7 @@ use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierShipmentService;
+use App\Services\Courier\SteadfastStatusBatchService;
 use App\Services\PathaoCourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,7 +23,8 @@ class SteadFastController extends Controller
 
     public function __construct(
         protected CourierShipmentService $shipmentService,
-        protected CourierAccountService $courierAccountService
+        protected CourierAccountService $courierAccountService,
+        protected SteadfastStatusBatchService $steadfastStatusBatchService,
     ) {
         $this->baseUrl = 'https://portal.packzy.com/api/v1';
     }
@@ -103,43 +105,21 @@ class SteadFastController extends Controller
                 continue;
             }
 
-            foreach ($ids as $id) {
-                $response = Http::withHeaders([
-                    'Api-Key' => $config->api_key,
-                    'Secret-Key' => $config->secret_key,
-                    'Content-Type' => 'application/json',
-                ])->get($this->baseUrl . '/status_by_cid/' . $id);
-                $status = '';
-                try {
-                    $jsonResponse = $response->json();
-                    if (@$jsonResponse['status'] == '200') {
-                        $status = @$jsonResponse['delivery_status'];
-                    }
-                } catch (\Throwable $th) {
-                }
-                $response_data[$id] = $status;
-            }
+            $response_data += $this->steadfastStatusBatchService->fetchStatuses(
+                    $config,
+                    is_array($ids) ? $ids : [],
+                    [],
+                );
         }
 
         if (count($invoiceIds)) {
             $config = $this->getConfig();
             if ($config) {
-                foreach ($invoiceIds as $id) {
-                    $response = Http::withHeaders([
-                        'Api-Key' => $config->api_key,
-                        'Secret-Key' => $config->secret_key,
-                        'Content-Type' => 'application/json',
-                    ])->get($this->baseUrl . '/status_by_invoice/' . $id);
-                    $status = '';
-                    try {
-                        $jsonResponse = $response->json();
-                        if (@$jsonResponse['status'] == '200') {
-                            $status = @$jsonResponse['delivery_status'];
-                        }
-                    } catch (\Throwable $th) {
-                    }
-                    $response_data[$id] = $status;
-                }
+                $response_data += $this->steadfastStatusBatchService->fetchStatuses(
+                        $config,
+                        [],
+                        is_array($invoiceIds) ? $invoiceIds : [],
+                    );
             }
         }
 
