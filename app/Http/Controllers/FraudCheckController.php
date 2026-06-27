@@ -115,6 +115,8 @@ class FraudCheckController extends Controller
 
     public function check(Request $request)
     {
+        set_time_limit(120);
+
         try {
             if (is_array($request->data)) {
                 return $this->successResponse($this->fraudCheckService->checkMultiple($request->data));
@@ -144,6 +146,8 @@ class FraudCheckController extends Controller
 
     public function checkStream(Request $request)
     {
+        set_time_limit(300);
+
         return response()->stream(function () use ($request) {
             $total = count($request->data ?? []);
             $processed = 0;

@@ -44,43 +44,4 @@ CURL;
         return is_array($payload)
             && (isset($payload['total_delivered']) || isset($payload['frauds']));
     }
-
-    public static function run(string $phone, ?string $sourcePath = null): string
-    {
-        if (!function_exists('shell_exec')) {
-            return '';
-        }
-
-        $path = $sourcePath ?? self::path();
-
-        if (!is_file($path)) {
-            return '';
-        }
-
-        $curlString = file_get_contents($path);
-        $curlString = preg_replace(
-            '#https://(?:www\.)?steadfast\.com\.bd/user/frauds/check/\d+#',
-            'https://www.steadfast.com.bd/user/frauds/check/' . $phone,
-            (string) $curlString
-        );
-
-        if (!preg_match('/\s\-s\b/', $curlString)) {
-            $curlString = preg_replace('/^curl\s/', 'curl -s ', $curlString);
-        }
-
-        $script = tempnam(sys_get_temp_dir(), 'steadfast_curl_');
-
-        if ($script === false) {
-            return '';
-        }
-
-        file_put_contents($script, $curlString . PHP_EOL);
-        chmod($script, 0700);
-
-        $raw = (string) shell_exec('bash ' . escapeshellarg($script) . ' 2>/dev/null');
-
-        @unlink($script);
-
-        return $raw;
-    }
 }

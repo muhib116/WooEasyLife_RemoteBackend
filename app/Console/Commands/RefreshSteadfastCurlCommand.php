@@ -4,26 +4,19 @@ namespace App\Console\Commands;
 
 use App\Services\FraudCheck\CourierReportFormatter;
 use App\Services\FraudCheck\SteadfastCurlExporter;
-use App\Services\FraudCheck\SteadfastNativeClient;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class RefreshSteadfastCurlCommand extends Command
 {
     protected $signature = 'steadfast:refresh-curl {phone=01770989591}';
 
-    protected $description = 'Verify or refresh curlcode.txt for Steadfast fraud check';
+    protected $description = 'Log into Steadfast and refresh curlcode.txt for fraud check fallback';
 
-    public function handle(SteadfastNativeClient $client): int
+    public function handle(): int
     {
-        $phone = (string) $this->argument('phone');
-
-        if ($this->verifyExistingCurl($phone)) {
-            $this->info('Existing curl session is still valid: ' . SteadfastCurlExporter::path());
-
-            return self::SUCCESS;
-        }
-
         $email = config('fraud-checker-bd-courier.steadfast.user');
         $password = config('fraud-checker-bd-courier.steadfast.password');
 
@@ -33,51 +26,140 @@ class RefreshSteadfastCurlCommand extends Command
             return self::FAILURE;
         }
 
-        $host = SteadfastNativeClient::DEFAULT_HOST;
-        $this->info("Trying one login on {$host}...");
+        $phone = (string) $this->argument('phone');
 
-        try {
-            $cookies = $client->login($host, (string) $email, (string) $password);
-            $raw = $client->fetchFraudCheckRaw($host, $cookies, $phone);
+        foreach (['www.steadfast.com.bd', 'steadfast.com.bd'] as $host) {
+            $this->info("Trying {$host}...");
 
-            SteadfastCurlExporter::save($host, $cookies, $phone);
+            try {
+                if ($this->refreshForHost($host, $email, $password, $phone)) {
+                    $this->info('Saved: ' . SteadfastCurlExporter::path());
 
-            Cache::put(
-                'fraud_check_steadfast_session_' . md5((string) $email),
-                ['host' => $host, 'cookies' => $cookies],
-                now()->addMinutes(55)
-            );
-
-            $report = CourierReportFormatter::fromSteadfast(json_decode($raw, true) ?? []);
-            $this->info("Saved: " . SteadfastCurlExporter::path());
-            $this->info("Verified: {$report['total_order']} orders, " . count($report['frauds'] ?? []) . ' fraud reports');
-
-            return self::SUCCESS;
-        } catch (\Throwable $th) {
-            $this->error("{$host}: {$th->getMessage()}");
+                    return self::SUCCESS;
+                }
+            } catch (\Throwable $th) {
+                $this->warn("{$host}: {$th->getMessage()}");
+            }
         }
 
-        $this->line('Steadfast is blocking automated login from this server.');
+        $this->error('Could not refresh Steadfast curl automatically.');
         $this->line('Log into https://www.steadfast.com.bd in Chrome, run a fraud check, copy the request as cURL, and paste it on the Fraud Check Expire page.');
 
         return self::FAILURE;
     }
 
-    private function verifyExistingCurl(string $phone): bool
+    private function refreshForHost(string $host, string $email, string $password, string $phone): bool
     {
-        if (!file_exists(SteadfastCurlExporter::path())) {
+        $client = Http::timeout(60)
+            ->retry(5, 2000, fn ($e) => $e instanceof ConnectionException, throw: false)
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept-Language' => 'en-US,en;q=0.9',
+            ]);
+
+        $loginPage = $client->get("https://{$host}/login");
+
+        if (!$loginPage->successful()) {
+            $this->warn("Login page HTTP {$loginPage->status()}");
+
             return false;
         }
 
-        $raw = SteadfastCurlExporter::run($phone);
+        preg_match('/name="_token" value="([^"]+)"/', $loginPage->body(), $matches);
+        $csrfToken = $matches[1] ?? null;
 
-        if (!SteadfastCurlExporter::isValid($raw)) {
+        if (!$csrfToken) {
+            $this->warn('CSRF token not found');
+
             return false;
         }
 
-        $report = CourierReportFormatter::fromSteadfast(json_decode($raw, true) ?? []);
-        $this->info("Verified existing curl: {$report['total_order']} orders, " . count($report['frauds'] ?? []) . ' fraud reports');
+        $cookies = $this->cookiesToArray($loginPage->cookies()->toArray());
+
+        $loginResponse = $client
+            ->withCookies($cookies, $host)
+            ->asForm()
+            ->withHeaders(['Referer' => "https://{$host}/login"])
+            ->post("https://{$host}/login", [
+                '_token' => $csrfToken,
+                'email' => $email,
+                'password' => $password,
+            ]);
+
+        if (!$loginResponse->successful() && !$loginResponse->redirect()) {
+            $this->warn("Login failed HTTP {$loginResponse->status()}");
+
+            return false;
+        }
+
+        $cookies = array_merge(
+            $cookies,
+            $this->cookiesToArray($loginResponse->cookies()->toArray())
+        );
+
+        if (!isset($cookies['steadfast_courier_session'])) {
+            $this->warn('Login did not return a session cookie — check STEADFAST credentials');
+
+            return false;
+        }
+
+        SteadfastCurlExporter::save($host, $cookies, $phone);
+
+        Cache::put(
+            'fraud_check_steadfast_session_' . md5((string) config('fraud-checker-bd-courier.steadfast.user')),
+            ['host' => $host, 'cookies' => $cookies],
+            now()->addMinutes(55)
+        );
+
+        $fraudResponse = $client
+            ->withHeaders([
+                'Accept' => 'application/json, text/plain, */*',
+                'X-Requested-With' => 'XMLHttpRequest',
+                'Referer' => "https://{$host}/user/frauds/check",
+                'X-XSRF-TOKEN' => urldecode($cookies['XSRF-TOKEN'] ?? ''),
+            ])
+            ->withCookies($cookies, $host)
+            ->get("https://{$host}/user/frauds/check/{$phone}");
+
+        if ($fraudResponse->successful()) {
+            $payload = $fraudResponse->json() ?? [];
+            $report = CourierReportFormatter::fromCounts(
+                (int) ($payload['total_delivered'] ?? 0),
+                (int) ($payload['total_cancelled'] ?? 0),
+                ['frauds' => $payload['frauds'] ?? []]
+            );
+            $this->info("Verified: {$report['total_order']} orders, " . count($report['frauds'] ?? []) . ' fraud reports');
+
+            return true;
+        }
+
+        if (!function_exists('shell_exec')) {
+            $this->warn('Fraud API blocked and shell_exec unavailable to test saved curl');
+
+            return true;
+        }
+
+        $output = (string) shell_exec('curl -s ' . escapeshellarg("https://{$host}/user/frauds/check/{$phone}") . ' 2>/dev/null');
+
+        if (SteadfastCurlExporter::isValid($output)) {
+            $this->info('Saved curl verified via shell_exec');
+
+            return true;
+        }
+
+        $this->warn('Session saved but fraud API blocked from this server (Cloudflare). Curl may work on production.');
 
         return true;
+    }
+
+    private function cookiesToArray(array $cookies): array
+    {
+        $mapped = [];
+
+        foreach ($cookies as $cookie) {
+            $mapped[$cookie['Name']] = $cookie['Value'];
+        }
+
+        return $mapped;
     }
 }

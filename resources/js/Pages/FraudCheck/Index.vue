@@ -230,9 +230,11 @@ const handleSearch = async () => {
 
     try {
         const phone = String(form.phone).replace(/-/g, "");
-        const { data } = await axios.post(route("frauds.adminFraudCheck"), {
-            phone,
-        });
+        const { data } = await axios.post(
+            route("frauds.adminFraudCheck"),
+            { phone },
+            { timeout: 120000 },
+        );
         response.value = data;
         slangs.value = data?.frauds || [];
     } catch (error: any) {
