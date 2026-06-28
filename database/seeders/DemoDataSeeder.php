@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\AccessToken;
-use App\Models\MerchantEmployee;
 use App\Models\PackageHub;
 use App\Models\PackagePaymentRequest;
 use App\Models\PackageUseHistory;
@@ -16,7 +15,6 @@ use App\Models\UserPackage;
 use App\Models\Website;
 use App\Models\WhitelistedDomain;
 use App\Services\LicenseProvisioningService;
-use App\Services\MerchantEmployeeService;
 use App\Services\PlanAssignmentService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Crypt;
@@ -42,6 +40,35 @@ class DemoDataSeeder extends Seeder
         $plans = $this->seedPackageHubs($admin);
         $this->seedWhitelistedDomains();
         $this->seedMerchants($password, $plans, $admin);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function localWordPressMerchantConfig(): array
+    {
+        return [
+            'email' => 'user@example.com',
+            'name' => 'Test User',
+            'phone' => '01700000000',
+            'landing_page' => self::LOCAL_WORDPRESS_URL,
+            'sites' => [
+                [
+                    'domain' => self::LOCAL_WORDPRESS_DOMAIN,
+                    'title' => 'Local WordPress (8081)',
+                    'wordpress_url' => self::LOCAL_WORDPRESS_URL,
+                    'plan' => 'Standard',
+                    'order_limit' => 100,
+                    'remaining_order' => 75,
+                    'handled' => 25,
+                    'sms_balance' => 150,
+                    'subscription_expires_at' => now()->addDays(3),
+                    'license_expires_at' => now()->addDays(5),
+                    'demo_token' => self::DEMO_PLUGIN_TOKEN,
+                    'payment_pending' => true,
+                ],
+            ],
+        ];
     }
 
     private function seedAdminUsers(string $password): User
@@ -120,20 +147,13 @@ class DemoDataSeeder extends Seeder
 
     private function seedWhitelistedDomains(): void
     {
-        foreach ([
-            self::LOCAL_WORDPRESS_DOMAIN,
-            'shop-two.example.com',
-        ] as $domain) {
-            WhitelistedDomain::updateOrCreate(
-                ['domain' => $domain],
-                [
-                    'is_active' => true,
-                    'notes' => $domain === self::LOCAL_WORDPRESS_DOMAIN
-                        ? 'Local WordPress: ' . self::LOCAL_WORDPRESS_URL
-                        : 'Seeded for local fraud-check testing',
-                ]
-            );
-        }
+        WhitelistedDomain::updateOrCreate(
+            ['domain' => self::LOCAL_WORDPRESS_DOMAIN],
+            [
+                'is_active' => true,
+                'notes' => 'Local WordPress: ' . self::LOCAL_WORDPRESS_URL,
+            ]
+        );
     }
 
     /**
@@ -141,96 +161,40 @@ class DemoDataSeeder extends Seeder
      */
     private function seedMerchants(string $password, array $plans, User $admin): void
     {
-        $merchantConfigs = [
+        $config = $this->localWordPressMerchantConfig();
+
+        $merchant = User::withTrashed()->where('email', $config['email'])->first();
+        if ($merchant?->trashed()) {
+            $merchant->restore();
+        }
+
+        $merchant = User::updateOrCreate(
+            ['email' => $config['email']],
             [
-                'email' => 'user@example.com',
-                'name' => 'Test User',
-                'phone' => '01700000000',
-                'landing_page' => self::LOCAL_WORDPRESS_URL,
-                'sites' => [
-                    [
-                        'domain' => self::LOCAL_WORDPRESS_DOMAIN,
-                        'title' => 'Local WordPress (8081)',
-                        'wordpress_url' => self::LOCAL_WORDPRESS_URL,
-                        'plan' => 'Standard',
-                        'order_limit' => 100,
-                        'remaining_order' => 75,
-                        'handled' => 25,
-                        'sms_balance' => 150,
-                        'subscription_expires_at' => now()->addDays(3),
-                        'license_expires_at' => now()->addDays(5),
-                        'demo_token' => self::DEMO_PLUGIN_TOKEN,
-                        'payment_pending' => true,
-                    ],
-                ],
-                'employees' => [
-                    ['name' => 'Shop Manager', 'email' => 'manager@localhost', 'role' => 'merchant-manager', 'portal_access' => true],
-                ],
+                'name' => $config['name'],
+                'phone' => $config['phone'],
+                'whatsapp_phone' => $config['phone'],
+                'facebook_page_link' => $config['landing_page'],
+                'role' => 'user',
+                'password' => $password,
+                'status' => true,
+            ]
+        );
+
+        UserBusiness::updateOrCreate(
+            [
+                'user_id' => $merchant->id,
+                'domain' => $config['sites'][0]['domain'],
             ],
             [
-                'email' => 'merchant2@example.com',
-                'name' => 'Demo Merchant Two',
-                'phone' => '01700000002',
-                'sites' => [
-                    [
-                        'domain' => 'shop-two.example.com',
-                        'plan' => 'Premium',
-                        'order_limit' => 200,
-                        'remaining_order' => 15,
-                        'handled' => 20,
-                        'sms_balance' => 80,
-                        'subscription_expires_at' => now()->addDays(2),
-                        'license_expires_at' => now()->addDays(10),
-                        'demo_token' => null,
-                        'payment_pending' => false,
-                    ],
-                ],
-                'employees' => [
-                    ['name' => 'Site Operator', 'email' => 'operator@shop-two.example.com', 'role' => 'merchant-operator'],
-                ],
-            ],
-        ];
+                'title' => $config['name'] . ' Business',
+                'description' => 'WordPress: ' . $config['landing_page'],
+                'status' => true,
+            ]
+        );
 
-        foreach ($merchantConfigs as $config) {
-            $merchant = User::withTrashed()->where('email', $config['email'])->first();
-            if ($merchant?->trashed()) {
-                $merchant->restore();
-            }
-
-            $merchant = User::updateOrCreate(
-                ['email' => $config['email']],
-                [
-                    'name' => $config['name'],
-                    'phone' => $config['phone'],
-                    'whatsapp_phone' => $config['phone'],
-                    'facebook_page_link' => $config['landing_page'] ?? null,
-                    'role' => 'user',
-                    'password' => $password,
-                    'status' => true,
-                ]
-            );
-
-            UserBusiness::updateOrCreate(
-                [
-                    'user_id' => $merchant->id,
-                    'domain' => $config['sites'][0]['domain'],
-                ],
-                [
-                    'title' => $config['name'] . ' Business',
-                    'description' => isset($config['landing_page'])
-                        ? 'WordPress: ' . $config['landing_page']
-                        : 'Seeded business profile',
-                    'status' => true,
-                ]
-            );
-
-            foreach ($config['sites'] as $site) {
-                $this->seedMerchantSite($merchant, $admin, $plans, $site);
-            }
-
-            foreach ($config['employees'] as $employee) {
-                $this->seedEmployee($merchant, $employee, $config['sites'][0]['domain']);
-            }
+        foreach ($config['sites'] as $site) {
+            $this->seedMerchantSite($merchant, $admin, $plans, $site);
         }
     }
 
@@ -459,67 +423,6 @@ class DemoDataSeeder extends Seeder
             'domain' => $domain,
             'note' => 'Seeded SMS balance',
             'created_by' => $admin->id,
-        ]);
-    }
-
-    /**
-     * @param  array<string, mixed>  $employee
-     */
-    private function seedEmployee(User $merchant, array $employee, string $defaultDomain): void
-    {
-        $role = Role::query()
-            ->where('slug', $employee['role'])
-            ->where('scope', 'merchant')
-            ->first();
-
-        if (! $role) {
-            return;
-        }
-
-        $website = Website::query()
-            ->where('user_id', $merchant->id)
-            ->where('domain', $defaultDomain)
-            ->first();
-
-        $existing = MerchantEmployee::query()
-            ->where('merchant_user_id', $merchant->id)
-            ->where('email', $employee['email'])
-            ->first();
-
-        if ($existing) {
-            $existing->update([
-                'role_id' => $role->id,
-                'website_id' => $website?->id,
-                'name' => $employee['name'],
-                'status' => true,
-            ]);
-
-            if ($employee['portal_access'] ?? false) {
-                app(MerchantEmployeeService::class)->update($existing, $merchant, [
-                    'name' => $employee['name'],
-                    'email' => $employee['email'],
-                    'phone' => $merchant->phone,
-                    'role_id' => $role->id,
-                    'website_id' => $website?->id,
-                    'status' => true,
-                    'grant_portal_access' => true,
-                    'portal_password' => 'password',
-                ]);
-            }
-
-            return;
-        }
-
-        $created = app(MerchantEmployeeService::class)->create($merchant, [
-            'name' => $employee['name'],
-            'email' => $employee['email'],
-            'phone' => $merchant->phone,
-            'role_id' => $role->id,
-            'website_id' => $website?->id,
-            'status' => true,
-            'notes' => 'Seeded team member',
-            'grant_portal_access' => (bool) ($employee['portal_access'] ?? false),
-            'portal_password' => ($employee['portal_access'] ?? false) ? 'password' : null,
         ]);
     }
 }

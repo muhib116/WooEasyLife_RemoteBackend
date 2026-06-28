@@ -210,7 +210,7 @@ export const apiCategories: ApiCategory[] = [
                     { name: "api_key", type: "string", required: true, description: "Courier API key / client ID" },
                     { name: "secret_key", type: "string", required: true, description: "Courier secret key" },
                     { name: "is_active", type: "boolean", required: false, description: "Enable or disable integration" },
-                    { name: "settings", type: "object", required: false, description: "Pathao-only: store_id, username, password, sender_name, sender_phone, recipient_city, recipient_zone, recipient_area" },
+                    { name: "settings", type: "object", required: false, description: "Pathao: store_id, username, password, etc. Steadfast (optional): username, password for portal login." },
                 ],
                 requestExample: JSON.stringify(
                     {

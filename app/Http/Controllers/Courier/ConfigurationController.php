@@ -72,6 +72,11 @@ class ConfigurationController extends Controller
             }
         }
 
+        if ($request->slug === 'steadfast') {
+            $rules['settings.username'] = 'nullable|string|max:255';
+            $rules['settings.password'] = 'nullable|string|max:255';
+        }
+
         if ($request->slug === 'pathao') {
             $rules['settings.environment'] = 'nullable|string';
             $rules['settings.username'] = 'nullable|string';
@@ -141,6 +146,26 @@ class ConfigurationController extends Controller
                     500,
                     (int) ($request->input('settings.parcel_weight') ?: ($existingSettings['parcel_weight'] ?? 500))
                 ),
+            ]);
+        }
+
+        if ($request->slug === 'steadfast') {
+            $existingSettings = [];
+
+            if ($request->filled('id')) {
+                $existing = CourierConfiguration::find($request->id);
+                $existingSettings = is_array($existing?->settings) ? $existing->settings : [];
+            }
+
+            $password = trim((string) $request->input('settings.password'));
+
+            if ($password === '' && $request->filled('id')) {
+                $password = trim((string) ($existingSettings['password'] ?? ''));
+            }
+
+            $data['settings'] = array_merge($existingSettings, [
+                'username' => trim((string) ($request->input('settings.username') ?? ($existingSettings['username'] ?? ''))),
+                'password' => $password,
             ]);
         }
 
@@ -315,6 +340,12 @@ class ConfigurationController extends Controller
             if ($item->slug === 'pathao' && is_array($item->settings)) {
                 $settings = $item->settings;
                 unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
+                $settings['password'] = '';
+                $item->settings = $settings;
+            }
+
+            if ($item->slug === 'steadfast' && is_array($item->settings)) {
+                $settings = $item->settings;
                 $settings['password'] = '';
                 $item->settings = $settings;
             }

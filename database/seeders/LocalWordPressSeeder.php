@@ -4,11 +4,14 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
-class DatabaseSeeder extends Seeder
+/**
+ * Seeds reference data plus the local WordPress merchant at http://localhost:8081/wordpress/.
+ *
+ * Usage:
+ *   php artisan db:seed --class=LocalWordPressSeeder
+ */
+class LocalWordPressSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         $this->call([
@@ -17,7 +20,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->command?->newLine();
-        $this->command?->info('Demo credentials');
+        $this->command?->info('Local WordPress (' . DemoDataSeeder::LOCAL_WORDPRESS_URL . ') seeded.');
         $this->command?->table(
             ['Account', 'Email', 'Password'],
             [
@@ -26,7 +29,7 @@ class DatabaseSeeder extends Seeder
                 ['Test User', 'user@example.com', 'password'],
             ]
         );
-        $this->command?->comment('Plugin demo token (Test User / localhost): ' . DemoDataSeeder::DEMO_PLUGIN_TOKEN);
+        $this->command?->comment('Plugin demo token: ' . DemoDataSeeder::DEMO_PLUGIN_TOKEN);
         $this->command?->comment('WordPress URL: ' . DemoDataSeeder::LOCAL_WORDPRESS_URL);
         $this->command?->comment('Plugin Origin header: ' . DemoDataSeeder::LOCAL_WORDPRESS_ORIGIN);
         $this->command?->comment('License domain (stored): ' . DemoDataSeeder::LOCAL_WORDPRESS_DOMAIN);
