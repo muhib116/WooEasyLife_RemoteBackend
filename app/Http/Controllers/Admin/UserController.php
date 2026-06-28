@@ -18,11 +18,14 @@ use App\Models\UserPackage;
 use App\Services\DomainNormalizer;
 use App\Services\MerchantSetupService;
 use App\Services\PackagePaymentService;
+use App\Services\PackagePlanResolver;
 use App\Services\PlanAssignmentService;
 use App\Services\SubscriptionAlertService;
 use App\Services\SubscriptionPaymentConfigService;
 use App\Services\LicenseProvisioningService;
 use App\Services\WebsiteAggregatorService;
+use App\Services\SubscriptionAdminService;
+use App\Services\WebsiteRemovalService;
 use App\Traits\Transaction;
 use App\Traits\Util;
 use Carbon\Carbon;
@@ -330,7 +333,8 @@ class UserController extends Controller
     {
         $user = User::findOrFail($userId);
         $user->loadCount(['websites', 'merchantEmployees']);
-        $catalogPackages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
+        $planResolver = app(PackagePlanResolver::class);
+        $activePlans = PackageHub::where('is_active', true)->orderBy('index')->orderBy('id')->get();
         $user_packages = UserPackage::where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -342,7 +346,7 @@ class UserController extends Controller
         return Inertia::render('Users/Websites/Index', [
             'user' => $user,
             'websites' => $websites,
-            'packages' => $catalogPackages,
+            'packages' => $planResolver->mapPlansPayload($activePlans),
             'user_packages' => $user_packages,
             'action' => request()->query('action'),
             'domain' => request()->query('domain'),
@@ -550,12 +554,14 @@ class UserController extends Controller
             ->where('user_id', $id)
             ->firstOrFail();
 
+        $quotaLabel = ($userPackage->plan_type ?? 'legacy') === 'catalog' ? 'tokens' : 'orders';
+
         if ($request->filled('remaining_order')) {
             $remainingOrder = (int) $request->remaining_order;
 
             if ($remainingOrder > (int) $userPackage->total_order_can_handle) {
                 throw ValidationException::withMessages([
-                    'remaining_order' => 'Remaining orders cannot exceed the plan quota ('
+                    'remaining_order' => 'Remaining '.$quotaLabel.' cannot exceed the plan quota ('
                         .$userPackage->total_order_can_handle.').',
                 ]);
             }
@@ -579,7 +585,7 @@ class UserController extends Controller
 
         if ($isActive && $remainingOrder <= 0) {
             throw ValidationException::withMessages([
-                'remaining_order' => 'Cannot activate a plan with zero remaining orders.',
+                'remaining_order' => 'Cannot activate a plan with zero remaining '.$quotaLabel.'.',
             ]);
         }
 
@@ -600,20 +606,115 @@ class UserController extends Controller
 
         app(\App\Services\WebsiteSyncService::class)->linkUserPackage($userPackage->fresh());
 
-        return back()->with('success', 'Package updated successfully');
+        return back()->with('success', 'Subscription adjustments saved.');
+    }
+
+    public function renewSubscription(Request $request, $id, SubscriptionAdminService $subscriptionAdmin)
+    {
+        $request->validate([
+            'user_package_id' => 'required|integer',
+        ]);
+
+        User::findOrFail($id);
+
+        $userPackage = UserPackage::query()
+            ->where('id', $request->user_package_id)
+            ->where('user_id', $id)
+            ->firstOrFail();
+
+        try {
+            $subscriptionAdmin->renewCatalog($userPackage);
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        return back()->with('success', 'Subscription renewed. Tokens and expiry were reset for a new plan period.');
+    }
+
+    public function changeSubscription(Request $request, $id, SubscriptionAdminService $subscriptionAdmin)
+    {
+        $user = User::findOrFail($id);
+        $newHub = PackageHub::findOrFail($request->package_id);
+        $planResolver = app(PackagePlanResolver::class);
+
+        $rules = [
+            'user_package_id' => 'required|integer',
+            'package_id' => 'required|integer',
+            'domain' => 'required|string',
+            'transaction_method' => 'required|string',
+        ];
+
+        if ($planResolver->isLegacy($newHub)) {
+            $rules['limit'] = 'required|integer|min:1';
+        }
+
+        $request->validate($rules);
+
+        $existing = UserPackage::query()
+            ->where('id', $request->user_package_id)
+            ->where('user_id', $id)
+            ->firstOrFail();
+
+        try {
+            $subscriptionAdmin->changePlan($user, $existing, $newHub, $request->only([
+                'domain',
+                'limit',
+                'transaction_method',
+                'transaction_number',
+                'transaction_id',
+                'transaction_charge',
+                'note',
+            ]));
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        return back()->with('success', 'Subscription plan changed successfully.');
+    }
+
+    public function destroyWebsite(Request $request, $id, WebsiteRemovalService $websiteRemoval)
+    {
+        $request->validate([
+            'domain' => 'required|string',
+        ]);
+
+        $user = User::findOrFail($id);
+
+        try {
+            $stats = $websiteRemoval->remove($user, $request->domain);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        $message = 'Website removed successfully.';
+        if ($stats['packages_removed'] > 0 || $stats['licenses_removed'] > 0) {
+            $message .= sprintf(
+                ' Removed %d plan(s) and %d license key(s).',
+                $stats['packages_removed'],
+                $stats['licenses_removed']
+            );
+        }
+
+        return back()->with('success', $message);
     }
 
     public function purchase(Request $request, $id, PlanAssignmentService $planAssignment)
     {
         $user = User::findOrFail($id);
-        $request->validate([
-            'limit' => 'required|integer',
+        $package = PackageHub::findOrFail($request->package_id);
+        $planResolver = app(PackagePlanResolver::class);
+
+        $rules = [
             'domain' => 'required',
             'package_id' => 'required',
             'transaction_method' => 'required',
-        ]);
+        ];
 
-        $package = PackageHub::findOrFail($request->package_id);
+        if ($planResolver->isLegacy($package)) {
+            $rules['limit'] = 'required|integer|min:1';
+        }
+
+        $request->validate($rules);
 
         try {
             $userPackage = $planAssignment->assign($user, $package, $request->only([
@@ -647,8 +748,10 @@ class UserController extends Controller
         $user = User::findOrFail($userId);
         $user->loadCount(['websites', 'merchantEmployees']);
         $setup = app(MerchantSetupService::class)->progress($user);
-        $catalogPackages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
-        $defaultPackage = $catalogPackages->first();
+        $planResolver = app(PackagePlanResolver::class);
+        $activePlans = PackageHub::where('is_active', true)->orderBy('index')->orderBy('id')->get();
+        $defaultPackage = $activePlans->first(fn (PackageHub $plan) => $planResolver->isLegacy($plan))
+            ?? $activePlans->first();
         $userPackages = UserPackage::where('user_id', $userId)
             ->where('is_active', true)
             ->orderBy('id', 'desc')
@@ -657,7 +760,7 @@ class UserController extends Controller
         return Inertia::render('Users/Setup/Wizard', [
             'user' => $user,
             'setup' => $setup,
-            'packages' => $catalogPackages,
+            'packages' => $planResolver->mapPlansPayload($activePlans),
             'user_packages' => $userPackages,
             'default_package_id' => $defaultPackage?->id,
             'license_token' => session('license_token'),

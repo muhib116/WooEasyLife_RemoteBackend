@@ -17,7 +17,8 @@ class PackagePaymentService
     public function __construct(
         protected DomainNormalizer $domainNormalizer,
         protected PlanAssignmentService $planAssignment,
-        protected WebsiteSyncService $websiteSync
+        protected WebsiteSyncService $websiteSync,
+        protected PackagePlanResolver $planResolver
     ) {
     }
 
@@ -56,20 +57,12 @@ class PackagePaymentService
             ]);
         }
 
-        $orderLimit = (int) ($data['order_limit'] ?? 0);
-        if ($orderLimit <= 0) {
-            throw ValidationException::withMessages([
-                'order_limit' => 'Order limit is required',
-            ]);
-        }
-
         $transactionCharge = round((float) ($data['transaction_charge'] ?? $data['total_charge'] ?? 0), 2);
-        $totalAmount = round((float) ($data['total_amount'] ?? ($packageHub->per_order_rate * $orderLimit)), 2);
 
-        if ($totalAmount <= 0) {
-            throw ValidationException::withMessages([
-                'total_amount' => 'Total amount is required',
-            ]);
+        if ($this->planResolver->isCatalog($packageHub)) {
+            [$orderLimit, $totalAmount] = $this->resolveCatalogPaymentAmounts($packageHub, $data);
+        } else {
+            [$orderLimit, $totalAmount] = $this->resolveLegacyPaymentAmounts($packageHub, $data);
         }
 
         $website = $this->websiteSync->resolveForUser($user, $domain);
@@ -106,7 +99,11 @@ class PackagePaymentService
             $existing = $this->findActivePackageForDomain($user, $paymentRequest->domain);
 
             if ($existing) {
-                $userPackage = $this->topUpPackage($existing, $paymentRequest);
+                $userPackage = $this->applyApprovedPaymentToExisting(
+                    $existing,
+                    $packageHub,
+                    $paymentRequest
+                );
             } else {
                 $userPackage = $this->planAssignment->assign($user, $packageHub, [
                     'domain' => $paymentRequest->domain,
@@ -171,13 +168,94 @@ class PackagePaymentService
                 $accessToken->domain
             ));
 
-        return [
+        $snapshot = [
             'subscription_status' => $this->resolveSubscriptionStatus($activePackage, $remainingOrder),
             'remaining_order' => $remainingOrder,
             'expires_at' => $activePackage?->expires_at,
             'pending_payment_count' => $pendingPayments->count(),
             'has_pending_payment' => $pendingPayments->isNotEmpty(),
         ];
+
+        if ($activePackage) {
+            $snapshot['plan_type'] = $activePackage->plan_type ?? 'legacy';
+            $snapshot['plan_title'] = $activePackage->title;
+        }
+
+        return $snapshot;
+    }
+
+    private function applyApprovedPaymentToExisting(
+        UserPackage $existing,
+        PackageHub $packageHub,
+        PackagePaymentRequest $paymentRequest
+    ): UserPackage {
+        $existingIsCatalog = $this->planResolver->isCatalog($existing);
+        $incomingIsCatalog = $this->planResolver->isCatalog($packageHub);
+
+        if ($existingIsCatalog !== $incomingIsCatalog) {
+            throw ValidationException::withMessages([
+                'package_hub_id' => 'Cannot top up a '
+                    .($existingIsCatalog ? 'catalog' : 'legacy')
+                    .' subscription with a '
+                    .($incomingIsCatalog ? 'catalog' : 'legacy')
+                    .' plan. Assign a new plan from the admin panel or submit a matching renewal.',
+            ]);
+        }
+
+        if ($incomingIsCatalog) {
+            return $this->renewCatalogPackage($existing, $packageHub, $paymentRequest);
+        }
+
+        return $this->topUpLegacyPackage($existing, $paymentRequest);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0: int, 1: float}
+     */
+    private function resolveLegacyPaymentAmounts(PackageHub $packageHub, array $data): array
+    {
+        $orderLimit = (int) ($data['order_limit'] ?? 0);
+        if ($orderLimit <= 0) {
+            throw ValidationException::withMessages([
+                'order_limit' => 'Order limit is required',
+            ]);
+        }
+
+        $totalAmount = round((float) ($data['total_amount'] ?? ($packageHub->per_order_rate * $orderLimit)), 2);
+
+        if ($totalAmount <= 0) {
+            throw ValidationException::withMessages([
+                'total_amount' => 'Total amount is required',
+            ]);
+        }
+
+        return [$orderLimit, $totalAmount];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0: int, 1: float}
+     */
+    private function resolveCatalogPaymentAmounts(PackageHub $packageHub, array $data): array
+    {
+        $orderLimit = (int) ($packageHub->order_rate_token ?? 0);
+        if ($orderLimit <= 0) {
+            throw ValidationException::withMessages([
+                'package_hub_id' => 'This catalog plan has no token quota configured.',
+            ]);
+        }
+
+        $expectedAmount = round((float) ($packageHub->package_price ?? 0), 2);
+        $totalAmount = round((float) ($data['total_amount'] ?? $expectedAmount), 2);
+
+        if ($totalAmount < 0 || ($expectedAmount > 0 && $totalAmount <= 0)) {
+            throw ValidationException::withMessages([
+                'total_amount' => 'Total amount is required',
+            ]);
+        }
+
+        return [$orderLimit, $totalAmount];
     }
 
     private function findActivePackageForDomain(User $user, string $domain): ?UserPackage
@@ -193,7 +271,7 @@ class PackagePaymentService
             ));
     }
 
-    private function topUpPackage(UserPackage $package, PackagePaymentRequest $paymentRequest): UserPackage
+    private function topUpLegacyPackage(UserPackage $package, PackagePaymentRequest $paymentRequest): UserPackage
     {
         $additionalOrders = $paymentRequest->order_limit;
         $additionalCost = $package->per_order_rate * $additionalOrders;
@@ -206,6 +284,42 @@ class PackagePaymentService
             'transaction_method' => $paymentRequest->transaction_method ?? $package->transaction_method,
             'transaction_id' => $paymentRequest->transaction_id ?? $package->transaction_id,
             'transaction_number' => $paymentRequest->account_number ?? $package->transaction_number,
+            'is_active' => true,
+            'updated_by' => Auth::id(),
+        ]);
+
+        $this->websiteSync->linkUserPackage($package->fresh());
+
+        return $package->fresh();
+    }
+
+    private function renewCatalogPackage(
+        UserPackage $package,
+        PackageHub $packageHub,
+        PackagePaymentRequest $paymentRequest
+    ): UserPackage {
+        $tokens = (int) ($packageHub->order_rate_token ?? 0);
+        if ($tokens <= 0) {
+            throw ValidationException::withMessages([
+                'package_hub_id' => 'This catalog plan has no token quota configured.',
+            ]);
+        }
+
+        $package->update([
+            'title' => $packageHub->title,
+            'package_hub_id' => $packageHub->id,
+            'order_rate_token' => $tokens,
+            'package_duration' => $packageHub->package_duration,
+            'features' => $packageHub->features,
+            'total_order_can_handle' => $tokens,
+            'remaining_order' => $tokens,
+            'total_order_handled' => 0,
+            'total_cost' => $package->total_cost + $paymentRequest->total_amount,
+            'transaction_charge' => $package->transaction_charge + $paymentRequest->transaction_charge,
+            'transaction_method' => $paymentRequest->transaction_method ?? $package->transaction_method,
+            'transaction_id' => $paymentRequest->transaction_id ?? $package->transaction_id,
+            'transaction_number' => $paymentRequest->account_number ?? $package->transaction_number,
+            'expires_at' => $this->planResolver->expiresAt($packageHub),
             'is_active' => true,
             'updated_by' => Auth::id(),
         ]);

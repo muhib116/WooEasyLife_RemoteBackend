@@ -8,6 +8,7 @@ use App\Models\PackagePaymentRequest;
 use App\Models\User;
 use App\Models\UserPackage;
 use App\Services\PackagePaymentService;
+use App\Services\PackagePlanResolver;
 use App\Services\SubscriptionAlertService;
 use App\Services\WebsiteAggregatorService;
 use Illuminate\Http\Request;
@@ -51,7 +52,9 @@ class PackagePaymentAdminController extends Controller
     ) {
         $user = User::findOrFail($userId);
         $user->loadCount(['websites', 'merchantEmployees']);
-        $plans = PackageHub::query()->where('is_active', true)->orderBy('index')->get();
+        $planResolver = app(PackagePlanResolver::class);
+        $activePlans = PackageHub::query()->where('is_active', true)->orderBy('index')->orderBy('id')->get();
+        $plans = $planResolver->mapPlansPayload($activePlans);
 
         $payments = PackagePaymentRequest::query()
             ->with('packageHub:id,title,per_order_rate')
@@ -89,9 +92,9 @@ class PackagePaymentAdminController extends Controller
     {
         $request->validate([
             'package_hub_id' => 'required|integer',
-            'order_limit' => 'required|integer|min:1',
+            'order_limit' => 'nullable|integer|min:1',
             'domain' => 'required|string',
-            'total_amount' => 'required|numeric|min:0.01',
+            'total_amount' => 'nullable|numeric|min:0',
             'transaction_charge' => 'nullable|numeric|min:0',
             'transaction_method' => 'required|string',
             'transaction_id' => 'nullable|string',

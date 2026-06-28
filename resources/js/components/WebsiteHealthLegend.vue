@@ -13,10 +13,10 @@
                 <strong>Configured</strong> — Plan and license are ready; waiting for the first plugin connection.
             </li>
             <li>
-                <strong>Incomplete</strong> — Missing a plan, license, or domain alignment.
+                <strong>Setup needed</strong> — Missing a plan, license, or domain alignment.
             </li>
             <li>
-                <strong>Disabled</strong> — Expired, inactive, or order quota exhausted.
+                <strong>Inactive</strong> — Expired, disabled, or token/order quota exhausted.
             </li>
         </ul>
     </details>

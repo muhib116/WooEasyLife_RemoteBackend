@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PackagePaymentRequest;
 use App\Models\User;
 use App\Services\PackagePaymentService;
+use App\Services\PackagePlanResolver;
 use App\Traits\ApiResponseTrait;
 use App\Traits\Util;
 use Illuminate\Http\Request;
@@ -16,20 +17,16 @@ class PackagePaymentController extends Controller
     use ApiResponseTrait, Util;
 
     public function __construct(
-        protected PackagePaymentService $packagePaymentService
+        protected PackagePaymentService $packagePaymentService,
+        protected PackagePlanResolver $planResolver
     ) {
     }
 
     public function plans()
     {
-        $plans = $this->packagePaymentService->listActivePlans()
-            ->map(fn ($plan) => [
-                'id' => $plan->id,
-                'title' => $plan->title,
-                'description' => $plan->description,
-                'per_order_rate' => (float) $plan->per_order_rate,
-            ])
-            ->values();
+        $plans = $this->planResolver->mapPlansPayload(
+            $this->packagePaymentService->listActivePlans()
+        );
 
         return $this->successResponse($plans);
     }
@@ -38,8 +35,8 @@ class PackagePaymentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'package_hub_id' => 'required|integer',
-            'order_limit' => 'required|integer|min:1',
-            'total_amount' => 'required|numeric|min:0.01',
+            'order_limit' => 'nullable|integer|min:1',
+            'total_amount' => 'nullable|numeric|min:0',
             'transaction_charge' => 'nullable|numeric|min:0',
             'total_charge' => 'nullable|numeric|min:0',
             'account_number' => 'required|string',
@@ -78,7 +75,7 @@ class PackagePaymentController extends Controller
         $domain = $this->getTokenDomain();
 
         $query = PackagePaymentRequest::query()
-            ->with('packageHub:id,title,per_order_rate')
+            ->with('packageHub:id,title,per_order_rate,package_price,order_rate_token,package_duration')
             ->where('user_id', $userId)
             ->orderByDesc('id');
 

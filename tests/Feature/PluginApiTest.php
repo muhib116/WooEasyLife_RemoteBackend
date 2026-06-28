@@ -276,4 +276,41 @@ class PluginApiTest extends TestCase
             ->assertJsonPath('is_order_limit_over', true)
             ->assertJsonPath('message', 'Order count exceeds remaining quota');
     }
+
+    public function test_catalog_subscription_works_with_package_order_use(): void
+    {
+        [$user, $plainToken] = $this->createMerchantWithToken();
+
+        UserPackage::create([
+            'title' => 'Starter – 1 Month',
+            'domain' => 'shop.example.com',
+            'user_id' => $user->id,
+            'package_hub_id' => 1,
+            'plan_type' => 'catalog',
+            'order_rate_token' => 1000,
+            'package_duration' => '1_month',
+            'total_order_can_handle' => 1000,
+            'remaining_order' => 1000,
+            'total_order_handled' => 0,
+            'per_order_rate' => 0,
+            'total_cost' => 999,
+            'transaction_charge' => 0,
+            'is_active' => true,
+            'expires_at' => now()->addMonth(),
+        ]);
+
+        $response = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->postJson('/api/package-order-use', [
+                'order_count' => 3,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.remaining_order', 997);
+
+        $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->getJson('/api/get-user')
+            ->assertOk()
+            ->assertJsonPath('remaining_order', 997)
+            ->assertJsonPath('billing.plan_type', 'catalog');
+    }
 }

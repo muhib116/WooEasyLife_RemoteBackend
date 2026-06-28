@@ -388,10 +388,84 @@ export function setAllFeatures(
 }
 
 export function isCatalogPackage(pkg: {
+    plan_type?: string | null;
     package_duration?: string | null;
     order_rate_token?: number | null;
 }): boolean {
+    if (pkg.plan_type === "catalog") {
+        return true;
+    }
+
+    if (pkg.plan_type === "legacy") {
+        return false;
+    }
+
     return pkg.package_duration != null || pkg.order_rate_token != null;
+}
+
+export function planDropdownLabel(plan: {
+    title: string;
+    plan_type?: string | null;
+    per_order_rate?: number | null;
+    package_price?: number | null;
+}): string {
+    if (isCatalogPackage(plan)) {
+        const price = Number(plan.package_price ?? 0);
+        return price === 0 ? "Free" : `${price.toLocaleString()} TK`;
+    }
+
+    return `${plan.per_order_rate ?? 0} TK/order`;
+}
+
+export function planOptionLabel(plan: {
+    title: string;
+    plan_type?: string | null;
+    per_order_rate?: number | null;
+    package_price?: number | null;
+    order_rate_token?: number | null;
+    package_duration?: string | null;
+}): string {
+    if (isCatalogPackage(plan)) {
+        const price = Number(plan.package_price ?? 0);
+        const priceLabel = price === 0 ? "Free" : `${price.toLocaleString()} TK`;
+        const tokens = (plan.order_rate_token ?? 0).toLocaleString();
+        const duration = plan.package_duration
+            ? packageDurationLabel(plan.package_duration)
+            : null;
+
+        return duration
+            ? `${plan.title} · ${priceLabel} · ${duration} · ${tokens} tokens`
+            : `${plan.title} · ${priceLabel} · ${tokens} tokens`;
+    }
+
+    return `(${plan.per_order_rate ?? 0} TK/order) ${plan.title}`;
+}
+
+export function groupPlansForSelect(
+    plans: Array<{
+        id: number;
+        title: string;
+        plan_type?: string | null;
+        per_order_rate?: number | null;
+        package_price?: number | null;
+        order_rate_token?: number | null;
+        package_duration?: string | null;
+    }>,
+): Array<{ label: string; items: typeof plans }> {
+    const catalog = plans.filter((plan) => isCatalogPackage(plan));
+    const legacy = plans.filter((plan) => !isCatalogPackage(plan));
+
+    const groups: Array<{ label: string; items: typeof plans }> = [];
+
+    if (catalog.length) {
+        groups.push({ label: "Subscription plans", items: catalog });
+    }
+
+    if (legacy.length) {
+        groups.push({ label: "Legacy (pay per order)", items: legacy });
+    }
+
+    return groups;
 }
 
 function mergePackageFeatures(

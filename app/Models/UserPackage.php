@@ -12,6 +12,8 @@ class UserPackage extends Model
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'features' => 'array',
+        'order_rate_token' => 'integer',
     ];
 
     public function user() {

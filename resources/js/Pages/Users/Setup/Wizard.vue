@@ -79,13 +79,10 @@
                 </div>
 
                 <div v-else-if="currentStep === 'plan'" class="space-y-4">
-                    <p class="text-sm text-gray-600 dark:text-gray-300">
-                        Assign order quota for
-                        <strong>{{ activeDomain }}</strong>
-                    </p>
                     <PackageForm
                         :form="planForm"
                         :packages="packages"
+                        mode="assign"
                         simplified
                         hide-domain
                         @on-close="goToOverview"

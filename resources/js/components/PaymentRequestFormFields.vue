@@ -30,7 +30,7 @@
                 <Select
                     :model-value="form.package_hub_id"
                     :options="plans"
-                    option-label="title"
+                    :option-label="planOptionLabel"
                     option-value="id"
                     placeholder="Select plan"
                     class="w-full"
@@ -41,7 +41,11 @@
                 </small>
             </div>
 
-            <div class="sm:col-span-2">
+            <div v-if="selectedPlan && isCatalogSelected" class="sm:col-span-2">
+                <PlanSelectSummary :plan="selectedPlan" />
+            </div>
+
+            <div v-if="!isCatalogSelected" class="sm:col-span-2">
                 <OrderLimitPresets
                     :model-value="form.order_limit"
                     @update:model-value="onOrderLimitChange"
@@ -56,17 +60,22 @@
                 <InputNumber
                     :model-value="form.total_amount"
                     class="w-full"
-                    :min="0.01"
+                    :min="isCatalogSelected && suggestedTotal === 0 ? 0 : 0.01"
                     :min-fraction-digits="2"
                     placeholder="Enter total paid amount"
                     @update:model-value="updateField('total_amount', $event)"
                 />
                 <p
-                    v-if="selectedPlan && form.order_limit"
+                    v-if="selectedPlan && (isCatalogSelected || form.order_limit)"
                     class="mt-1 text-xs text-gray-500 dark:text-gray-400"
                 >
-                    Suggested: {{ suggestedTotal }} TK ({{ selectedPlan.per_order_rate }} TK ×
-                    {{ form.order_limit }} orders)
+                    <template v-if="isCatalogSelected">
+                        Fixed plan price: {{ suggestedTotal === 0 ? "Free" : `${suggestedTotal} TK` }}
+                    </template>
+                    <template v-else>
+                        Suggested: {{ suggestedTotal }} TK ({{ selectedPlan.per_order_rate }} TK ×
+                        {{ form.order_limit }} orders)
+                    </template>
                 </p>
             </div>
 
@@ -150,8 +159,23 @@
 
 <script setup lang="ts">
 import OrderLimitPresets from "@/components/OrderLimitPresets.vue";
+import PlanSelectSummary from "@/components/PlanSelectSummary.vue";
 import SubscriptionPaymentGuide from "@/components/SubscriptionPaymentGuide.vue";
+import {
+    isCatalogPackage,
+    planOptionLabel,
+} from "@/data/packageCatalogDraft";
 import { computed } from "vue";
+
+type PlanOption = {
+    id: number;
+    title: string;
+    plan_type?: string | null;
+    per_order_rate: number;
+    package_price?: number | null;
+    order_rate_token?: number | null;
+    package_duration?: string | null;
+};
 
 const props = withDefaults(
     defineProps<{
@@ -167,7 +191,7 @@ const props = withDefaults(
             processing?: boolean;
             errors?: Record<string, string>;
         };
-        plans: Array<{ id: number; title: string; per_order_rate: number }>;
+        plans: PlanOption[];
         domains: string[];
         showDomain?: boolean;
         showPaymentGuide?: boolean;
@@ -201,8 +225,20 @@ const selectedPlan = computed(() =>
     props.plans.find((plan) => plan.id === props.form.package_hub_id),
 );
 
+const isCatalogSelected = computed(() =>
+    selectedPlan.value ? isCatalogPackage(selectedPlan.value) : false,
+);
+
 const suggestedTotal = computed(() => {
-    if (!selectedPlan.value || !props.form.order_limit) {
+    if (!selectedPlan.value) {
+        return 0;
+    }
+
+    if (isCatalogPackage(selectedPlan.value)) {
+        return Number((selectedPlan.value.package_price ?? 0).toFixed(2));
+    }
+
+    if (!props.form.order_limit) {
         return 0;
     }
 
@@ -216,7 +252,17 @@ const updateField = (field: string, value: unknown) => {
 };
 
 const syncTotalAmount = () => {
-    if (!selectedPlan.value || !props.form.order_limit) {
+    if (!selectedPlan.value) {
+        return;
+    }
+
+    if (isCatalogPackage(selectedPlan.value)) {
+        props.form.total_amount = suggestedTotal.value;
+        props.form.order_limit = selectedPlan.value.order_rate_token ?? 0;
+        return;
+    }
+
+    if (!props.form.order_limit) {
         return;
     }
 

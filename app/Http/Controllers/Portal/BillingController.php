@@ -10,6 +10,7 @@ use App\Models\UserPackage;
 use App\Models\Website;
 use App\Services\MerchantPortalContext;
 use App\Services\PackagePaymentService;
+use App\Services\PackagePlanResolver;
 use App\Services\SubscriptionAlertService;
 use App\Services\WebsiteAggregatorService;
 use Illuminate\Http\Request;
@@ -52,11 +53,12 @@ class BillingController extends Controller
         $packages = $packagesQuery->get();
 
         $domains = $this->resolveDomains($merchant, $employee?->website_id);
-        $plans = PackageHub::query()
+        $planResolver = app(PackagePlanResolver::class);
+        $activePlans = PackageHub::query()
             ->where('is_active', true)
             ->orderBy('index')
             ->orderBy('id')
-            ->get(['id', 'title', 'per_order_rate', 'description']);
+            ->get();
 
         $alerts = $this->subscriptionAlertService->collectPortalAlerts($merchant, $domains);
         $tab = $request->query('tab', 'payments');
@@ -64,7 +66,7 @@ class BillingController extends Controller
         return Inertia::render('Portal/Billing/Index', [
             'payments' => $payments,
             'packages' => $packages,
-            'plans' => $plans,
+            'plans' => $planResolver->mapPlansPayload($activePlans),
             'domains' => $domains,
             'alerts' => $alerts,
             'tab' => $tab,
@@ -78,9 +80,9 @@ class BillingController extends Controller
 
         $validated = $request->validate([
             'package_hub_id' => 'required|integer',
-            'order_limit' => 'required|integer|min:1',
+            'order_limit' => 'nullable|integer|min:1',
             'domain' => 'required|string',
-            'total_amount' => 'required|numeric|min:0.01',
+            'total_amount' => 'nullable|numeric|min:0',
             'transaction_charge' => 'nullable|numeric|min:0',
             'transaction_method' => 'required|string',
             'transaction_id' => 'required|string',

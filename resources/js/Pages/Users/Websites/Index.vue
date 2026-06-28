@@ -2,7 +2,7 @@
     <UserLayout
         title="Websites"
         section="Websites"
-        subtitle="Manage plans and license keys per website domain"
+        subtitle="Manage store domains, subscription plans, and plugin license keys"
         :user="user"
     >
         <template #actions>
@@ -19,11 +19,11 @@
         <EmptyState
             v-if="!websites.length"
             title="No websites yet"
-            description="Assign a subscription plan with a domain to create the first website entry."
+            description="Add a store domain and assign a subscription plan to get started."
             icon="PhGlobe"
         >
             <Button
-                label="Assign First Plan"
+                label="Add Website"
                 icon="pi pi-plus"
                 size="small"
                 @click="openAssignPlan()"
@@ -31,254 +31,50 @@
         </EmptyState>
 
         <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <PageCard
+            <WebsiteCard
                 v-for="website in websites"
                 :key="website.domain"
-                no-padding
-            >
-                <div
-                    class="flex items-start justify-between gap-3 border-b border-gray-100 p-5 dark:border-gray-700/80"
-                >
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <Icon name="PhGlobe" class="text-primary-500" />
-                            <h3
-                                class="truncate font-semibold text-gray-900 dark:text-white"
-                            >
-                                {{ website.domain }}
-                            </h3>
-                            <StatusBadge
-                                :label="healthLabel(website.health.status)"
-                                :variant="healthVariant(website.health.status)"
-                                format="none"
-                            />
-                        </div>
-                        <a
-                            :href="website.display_url"
-                            target="_blank"
-                            rel="noopener"
-                            class="mt-1 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
-                        >
-                            {{ website.display_url }}
-                            <Icon
-                                name="PhArrowSquareOut"
-                                class="text-[0.7rem]"
-                            />
-                        </a>
-                    </div>
-                    <Button
-                        icon="pi pi-ellipsis-v"
-                        size="small"
-                        severity="secondary"
-                        text
-                        rounded
-                        aria-label="More actions"
-                        @click="toggleMenu($event, website)"
-                    />
-                </div>
-
-                <div class="space-y-5 p-5">
-                    <div
-                        v-if="website.health.issues?.length"
-                        class="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
-                    >
-                        <Icon name="PhWarning" class="mt-0.5 shrink-0" />
-                        <ul class="space-y-0.5">
-                            <li
-                                v-for="issue in website.health.issues"
-                                :key="issue"
-                            >
-                                {{ issue }}
-                            </li>
-                        </ul>
-                    </div>
-
-                    <section>
-                        <div class="mb-2 flex items-center justify-between gap-2">
-                            <h4
-                                class="text-xs font-semibold uppercase tracking-wide text-gray-500"
-                            >
-                                Subscription
-                            </h4>
-                            <span
-                                v-if="website.subscription"
-                                class="truncate text-sm font-medium text-gray-900 dark:text-gray-100"
-                            >
-                                {{ website.subscription.title }}
-                            </span>
-                        </div>
-
-                        <template v-if="website.subscription">
-                            <ProgressBar
-                                :value="usagePercent(website.subscription)"
-                                :show-value="false"
-                                style="height: 0.5rem"
-                            />
-                            <div
-                                class="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300"
-                            >
-                                <span>
-                                    <strong
-                                        class="text-gray-900 dark:text-gray-100"
-                                        >{{
-                                            website.subscription.remaining_order
-                                        }}</strong
-                                    >
-                                    of
-                                    {{
-                                        website.subscription
-                                            .total_order_can_handle
-                                    }}
-                                    orders left
-                                </span>
-                                <span class="flex items-center gap-3">
-                                    <span
-                                        >Cost:
-                                        <strong
-                                            >{{
-                                                website.subscription.total_cost
-                                            }}
-                                            TK</strong
-                                        ></span
-                                    >
-                                    <span
-                                        v-if="website.subscription.expires_at"
-                                    >
-                                        Expires
-                                        {{
-                                            formatDate(
-                                                website.subscription
-                                                    .expires_at,
-                                            )
-                                        }}
-                                    </span>
-                                </span>
-                            </div>
-                        </template>
-                        <div
-                            v-else
-                            class="rounded-lg border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
-                        >
-                            No plan assigned yet.
-                        </div>
-                    </section>
-
-                    <section>
-                        <h4
-                            class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500"
-                        >
-                            License Keys
-                        </h4>
-                        <div
-                            v-if="website.licenses?.length"
-                            class="divide-y divide-gray-100 dark:divide-gray-800"
-                        >
-                            <div
-                                v-for="license in website.licenses"
-                                :key="license.id"
-                                class="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
-                            >
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="truncate text-sm font-medium text-gray-800 dark:text-gray-100"
-                                        >
-                                            {{ license.title || "License" }}
-                                        </span>
-                                        <StatusBadge
-                                            :label="
-                                                license.status
-                                                    ? 'Enabled'
-                                                    : 'Disabled'
-                                            "
-                                            :variant="
-                                                license.status
-                                                    ? 'success'
-                                                    : 'neutral'
-                                            "
-                                            format="none"
-                                        />
-                                    </div>
-                                    <p
-                                        class="text-xs text-gray-500 dark:text-gray-400"
-                                    >
-                                        Last used:
-                                        {{ license.last_used_ago || "Never" }}
-                                    </p>
-                                </div>
-                                <div class="flex shrink-0 items-center">
-                                    <Button
-                                        v-if="license.has_token"
-                                        v-tooltip.top="'Copy key'"
-                                        icon="pi pi-copy"
-                                        size="small"
-                                        severity="secondary"
-                                        text
-                                        rounded
-                                        :loading="isRevealing(license.id)"
-                                        @click="revealAndCopy(license.id)"
-                                    />
-                                    <Button
-                                        v-tooltip.top="'Edit license'"
-                                        icon="pi pi-pencil"
-                                        size="small"
-                                        severity="secondary"
-                                        text
-                                        rounded
-                                        @click="
-                                            handleEditLicense(
-                                                license,
-                                                website.domain,
-                                            )
-                                        "
-                                    />
-                                    <Button
-                                        v-tooltip.top="'Delete license'"
-                                        icon="pi pi-trash"
-                                        size="small"
-                                        severity="danger"
-                                        text
-                                        rounded
-                                        @click="handleDeleteLicense(license)"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <p
-                            v-else
-                            class="text-sm text-gray-500 dark:text-gray-400"
-                        >
-                            No license key generated yet.
-                        </p>
-                    </section>
-
-                    <div class="pt-1">
-                        <Button
-                            :label="primaryAction(website).label"
-                            :icon="primaryAction(website).icon"
-                            size="small"
-                            class="w-full sm:w-auto"
-                            @click="primaryAction(website).run()"
-                        />
-                    </div>
-                </div>
-            </PageCard>
+                :website="website"
+                :is-revealing="isRevealing"
+                :primary-action="primaryAction(website)"
+                @menu="toggleMenu($event, website)"
+                @renew-plan="confirmRenewPlan(website)"
+                @renew-via-billing="goToBilling"
+                @change-plan="openChangePlan(website)"
+                @adjust-subscription="openAdjustPlan(website)"
+                @copy-license="revealAndCopy"
+                @edit-license="(license) => handleEditLicense(license, website.domain)"
+                @delete-license="handleDeleteLicense"
+            />
         </div>
 
         <Menu ref="actionMenu" :model="menuItems" :popup="true" />
 
         <Dialog
             v-model:visible="showPlanForm"
-            :header="planForm.id ? 'Edit Plan' : 'Assign Plan'"
             modal
-            :style="{ width: '35rem' }"
+            :style="{ width: 'min(100vw - 2rem, 42rem)' }"
+            :breakpoints="{ '960px': '92vw' }"
             draggable
             dismissable-mask
             @hide="planForm.reset()"
         >
+            <template #header>
+                <div class="pr-6">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ planDialogTitle }}
+                    </h2>
+                    <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                        {{ planDialogSubtitle }}
+                    </p>
+                </div>
+            </template>
             <PackageForm
                 :form="planForm"
                 :packages="packages"
+                :mode="planFormMode"
+                :hide-domain="planFormMode === 'change'"
+                :current-plan="planCurrentPackage"
                 @on-close="showPlanForm = false"
                 @handle-save="handleSavePlan"
             />
@@ -286,35 +82,30 @@
 
         <Dialog
             v-model:visible="showLicenseForm"
-            :header="tokenForm.id ? 'Edit License' : 'Generate License'"
             modal
-            :style="{ width: '35rem' }"
+            :style="{ width: 'min(100vw - 2rem, 42rem)' }"
+            :breakpoints="{ '960px': '92vw' }"
             draggable
             dismissable-mask
-            @hide="tokenForm.reset()"
+            @hide="onLicenseFormHide"
         >
+            <template #header>
+                <div class="pr-6">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ licenseDialogTitle }}
+                    </h2>
+                    <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                        {{ licenseDialogSubtitle }}
+                    </p>
+                </div>
+            </template>
             <TokenForm
                 :token-form="tokenForm"
                 :user_packages="filteredUserPackages"
-                show-summary
+                :hide-website-select="Boolean(licenseDomain)"
+                :locked-domain="licenseDomain"
                 @on-close="showLicenseForm = false"
                 @handle-save="handleSaveLicense"
-            />
-        </Dialog>
-
-        <Dialog
-            v-model:visible="showUseDetails"
-            header="Package Use Details"
-            modal
-            maximizable
-            :style="{ width: '90%' }"
-            draggable
-            dismissable-mask
-        >
-            <UseDetails
-                v-if="showUseDetails"
-                :user="user"
-                :id="showUseDetails"
             />
         </Dialog>
 
@@ -325,19 +116,16 @@
 
 <script setup lang="ts">
 import UserLayout from "../UserLayout.vue";
-import PageCard from "../fragments/PageCard.vue";
-import StatusBadge from "../fragments/StatusBadge.vue";
 import EmptyState from "../fragments/EmptyState.vue";
 import PackageForm from "../fragments/PackageForm.vue";
 import TokenForm from "../fragments/TokenForm.vue";
-import UseDetails from "../fragments/UseDetails.vue";
+import WebsiteCard from "../fragments/WebsiteCard.vue";
 import WebsiteHealthLegend from "@/components/WebsiteHealthLegend.vue";
-import { Icon } from "@/plugins";
 import { router, useForm } from "@inertiajs/vue3";
 import { computed, onMounted, ref } from "vue";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue/usetoast";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 import { useLicenseTokenReveal } from "@/composables/useLicenseTokenReveal";
 
 defineOptions({
@@ -358,14 +146,17 @@ const confirm = useConfirm();
 const toast = useToast();
 
 const showPlanForm = ref(false);
+const planFormMode = ref<"add" | "assign" | "adjust" | "change">("assign");
+const planAdjustPackageHubId = ref<number | null>(null);
+const planChangeFromHubId = ref<number | null>(null);
 const showLicenseForm = ref(false);
-const showUseDetails = ref<number | false>(false);
 const licenseDomain = ref<string | null>(null);
 const actionMenu = ref();
 const menuItems = ref<any[]>([]);
 
 const planForm = useForm({
     id: null,
+    user_package_id: null as number | null,
     package_id: null,
     transaction_number: null,
     transaction_id: null,
@@ -378,6 +169,7 @@ const planForm = useForm({
     total_order_can_handle: null as number | null,
     expires_at: null as Date | null,
     is_active: true,
+    plan_type: "legacy" as string,
 });
 
 const tokenForm = useForm({
@@ -405,6 +197,74 @@ const filteredUserPackages = computed(() => {
     );
 });
 
+const planDialogTitle = computed(() => {
+    if (planFormMode.value === "adjust") {
+        return "Adjust Subscription";
+    }
+
+    if (planFormMode.value === "change") {
+        return "Change Plan";
+    }
+
+    return planFormMode.value === "add" ? "Add Website" : "Assign Plan";
+});
+
+const planDialogSubtitle = computed(() => {
+    if (planFormMode.value === "adjust") {
+        return "Override quota, expiry, or active status. Use Renew or Change plan for plan switches.";
+    }
+
+    if (planFormMode.value === "change") {
+        return planForm.domain
+            ? `Replace the current plan for ${planForm.domain}.`
+            : "Replace the current subscription with a different plan.";
+    }
+
+    if (planFormMode.value === "add") {
+        return "Enter the store domain and pick a subscription plan to onboard a new website.";
+    }
+
+    if (planForm.domain) {
+        return `Choose a plan for ${planForm.domain}. Generate a license key after saving if needed.`;
+    }
+
+    return "Choose a subscription plan for this website.";
+});
+
+const planCurrentPackage = computed(() => {
+    const hubId =
+        planFormMode.value === "change"
+            ? planChangeFromHubId.value
+            : planAdjustPackageHubId.value;
+
+    if (!hubId) {
+        return null;
+    }
+
+    return props.packages.find((item) => item.id === hubId) ?? null;
+});
+
+const licenseDialogTitle = computed(() =>
+    tokenForm.id ? "Edit License" : "Generate License",
+);
+
+const licenseDialogSubtitle = computed(() => {
+    if (tokenForm.id) {
+        return "Update license metadata or access settings for this website.";
+    }
+
+    if (licenseDomain.value) {
+        return `Create a plugin license key for ${licenseDomain.value}. Subscription expiry controls access — custom key expiry is optional.`;
+    }
+
+    return "Link a license key to a website plan for WooCommerce plugin access.";
+});
+
+const onLicenseFormHide = () => {
+    tokenForm.reset();
+    licenseDomain.value = null;
+};
+
 const normalizeDomain = (value?: string | null) => {
     if (!value) {
         return "";
@@ -418,55 +278,19 @@ const normalizeDomain = (value?: string | null) => {
     }
 };
 
-const healthLabel = (status: string) => {
-    if (status === "connected") return "Connected";
-    if (status === "configured") return "Configured";
-    if (status === "ready") return "Connected";
-    if (status === "disabled") return "Disabled";
-    return "Incomplete";
-};
-
-const healthVariant = (status: string) => {
-    if (status === "connected" || status === "ready") return "success";
-    if (status === "configured") return "info";
-    if (status === "disabled") return "danger";
-    return "warning";
-};
-
-const formatDate = (value?: string | null) => {
-    if (!value) {
-        return "—";
-    }
-
-    try {
-        return format(parseISO(value), "yyyy-MM-dd");
-    } catch {
-        return value;
-    }
-};
-
-const usagePercent = (subscription: any) => {
-    const quota = Number(subscription?.total_order_can_handle) || 0;
-    const used = Number(subscription?.total_order_handled) || 0;
-
-    if (quota <= 0) {
-        return 0;
-    }
-
-    return Math.min(100, Math.round((used / quota) * 100));
-};
-
 const primaryAction = (website: any) => {
     if (!website.subscription) {
         return {
-            label: "Assign Plan",
+            label: "Assign plan",
             icon: "pi pi-plus",
             run: () => openAssignPlan(website.domain),
         };
     }
 
+    const hasLicense = (website.licenses?.length ?? 0) > 0;
+
     return {
-        label: "Generate License",
+        label: hasLicense ? "Add license key" : "Generate license",
         icon: "pi pi-key",
         run: () => openGenerateLicense(website.domain),
     };
@@ -477,52 +301,36 @@ const buildMenuItems = (website: any) => {
 
     if (website.subscription) {
         items.push({
-            label: "Edit Plan",
-            icon: "pi pi-pencil",
-            command: () => openEditPlan(website),
-        });
-    }
-
-    items.push({
-        label: website.subscription ? "Add Another Plan" : "Assign Plan",
-        icon: "pi pi-plus",
-        command: () => openAssignPlan(website.domain),
-    });
-
-    items.push({
-        label: "Generate License",
-        icon: "pi pi-key",
-        command: () => openGenerateLicense(website.domain),
-    });
-
-    items.push({ separator: true });
-
-    items.push({
-        label: "Order History",
-        icon: "pi pi-chart-line",
-        command: () =>
-            router.visit(
-                route("users.packagesOrders", {
-                    user_id: props.user.id,
-                    domain: website.domain,
-                }),
-            ),
-    });
-
-    if (website.subscription) {
-        items.push({
-            label: "Usage Breakdown",
-            icon: "pi pi-list",
-            command: () => {
-                showUseDetails.value = website.subscription.id;
-            },
+            label: "Usage history",
+            icon: "pi pi-chart-line",
+            command: () =>
+                router.visit(
+                    route("users.packagesOrders", {
+                        user_id: props.user.id,
+                        domain: website.domain,
+                    }),
+                ),
         });
         items.push({
-            label: "Manage Billing",
+            label: "Billing & payments",
             icon: "pi pi-credit-card",
             command: () => router.visit(route("users.billing", props.user.id)),
         });
+    } else {
+        items.push({
+            label: "Assign plan",
+            icon: "pi pi-plus",
+            command: () => openAssignPlan(website.domain),
+        });
     }
+
+    items.push({ separator: true });
+    items.push({
+        label: "Delete website",
+        icon: "pi pi-trash",
+        class: "website-menu-danger",
+        command: () => confirmDeleteWebsite(website),
+    });
 
     return items;
 };
@@ -536,16 +344,20 @@ const openAssignPlan = (domain?: string) => {
     planForm.reset();
     planForm.is_active = true;
     planForm.domain = domain ?? null;
+    planAdjustPackageHubId.value = null;
+    planChangeFromHubId.value = null;
+    planFormMode.value = domain ? "assign" : "add";
     showPlanForm.value = true;
 };
 
-const openEditPlan = (website: any) => {
+const openAdjustPlan = (website: any) => {
     const subscription = website.subscription;
     if (!subscription) {
         openAssignPlan(website.domain);
         return;
     }
 
+    planFormMode.value = "adjust";
     const source = props.user_packages.find(
         (item) => item.id === subscription.id,
     );
@@ -557,10 +369,66 @@ const openEditPlan = (website: any) => {
     planForm.remaining_order = subscription.remaining_order;
     planForm.total_order_can_handle = subscription.total_order_can_handle;
     planForm.is_active = Boolean(subscription.is_active);
+    planForm.plan_type = source?.plan_type ?? subscription.plan_type ?? "legacy";
+    planAdjustPackageHubId.value =
+        subscription.package_hub_id ?? source?.package_hub_id ?? null;
     planForm.expires_at = subscription.expires_at
         ? parseISO(subscription.expires_at)
         : null;
     showPlanForm.value = true;
+};
+
+const openChangePlan = (website: any) => {
+    const subscription = website.subscription;
+    if (!subscription) {
+        openAssignPlan(website.domain);
+        return;
+    }
+
+    planFormMode.value = "change";
+    planAdjustPackageHubId.value = null;
+    planChangeFromHubId.value = subscription.package_hub_id ?? null;
+    planForm.reset();
+    planForm.user_package_id = subscription.id;
+    planForm.domain = website.domain;
+    planForm.package_id = null;
+    planForm.transaction_method = "Cash";
+    planForm.is_active = true;
+    planForm.limit = subscription.total_order_can_handle ?? 300;
+    planForm.total_order_can_handle = subscription.total_order_can_handle ?? 300;
+    showPlanForm.value = true;
+};
+
+const confirmRenewPlan = (website: any) => {
+    const subscription = website.subscription;
+    if (!subscription) {
+        return;
+    }
+
+    confirm.require({
+        message: `Renew ${website.domain}? This resets order tokens and extends expiry for a new plan period.`,
+        header: "Renew Plan",
+        icon: "pi pi-refresh",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Renew plan",
+            size: "small",
+        },
+        accept: () => {
+            router.post(route("users.renewSubscription", props.user.id), {
+                user_package_id: subscription.id,
+            });
+        },
+    });
+};
+
+const goToBilling = () => {
+    router.visit(route("users.billing", props.user.id));
 };
 
 const openGenerateLicense = (domain: string) => {
@@ -591,8 +459,21 @@ const openGenerateLicense = (domain: string) => {
 };
 
 const handleSavePlan = () => {
-    if (planForm.id) {
+    if (planFormMode.value === "adjust" && planForm.id) {
         planForm.post(route("users.updatePurchasePackage", props.user.id), {
+            onFinish() {
+                if (!planForm.hasErrors) {
+                    showPlanForm.value = false;
+                    planForm.reset();
+                    planAdjustPackageHubId.value = null;
+                }
+            },
+        });
+        return;
+    }
+
+    if (planFormMode.value === "change") {
+        planForm.post(route("users.changeSubscription", props.user.id), {
             onFinish() {
                 if (!planForm.hasErrors) {
                     showPlanForm.value = false;
@@ -615,6 +496,7 @@ const handleSavePlan = () => {
 
 const handleEditLicense = (license: any, domain: string) => {
     licenseDomain.value = domain;
+    tokenForm.reset();
     tokenForm.id = license.id;
     tokenForm.title = license.title;
     tokenForm.expires_at = license.expires_at
@@ -658,7 +540,7 @@ const handleSaveLicense = () => {
         tokenForm.post(route("apiKeys.update", tokenForm.id), {
             onSuccess() {
                 showLicenseForm.value = false;
-                tokenForm.reset();
+                onLicenseFormHide();
             },
         });
     } else {
@@ -666,7 +548,7 @@ const handleSaveLicense = () => {
         tokenForm.post(route("apiKeys.create"), {
             onSuccess() {
                 showLicenseForm.value = false;
-                tokenForm.reset();
+                onLicenseFormHide();
             },
         });
     }
@@ -694,6 +576,49 @@ const handleDeleteLicense = (license: any) => {
     });
 };
 
+const confirmDeleteWebsite = (website: any) => {
+    const licenseCount = website.licenses?.length ?? 0;
+    const hasPlan = Boolean(website.subscription);
+
+    let detail =
+        "This permanently removes the website entry for this domain.";
+    if (hasPlan || licenseCount > 0) {
+        const parts: string[] = [];
+        if (hasPlan) {
+            parts.push("its subscription plan");
+        }
+        if (licenseCount > 0) {
+            parts.push(
+                `${licenseCount} license key${licenseCount === 1 ? "" : "s"}`,
+            );
+        }
+        detail += ` It will also remove ${parts.join(" and ")}.`;
+    }
+    detail += " Pending payment requests for this domain will be cancelled.";
+
+    confirm.require({
+        message: `Delete ${website.domain}? ${detail}`,
+        header: "Delete Website",
+        icon: "pi pi-exclamation-triangle",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Delete Website",
+            severity: "danger",
+            size: "small",
+        },
+        accept: () => {
+            router.post(route("users.websites.delete", props.user.id), {
+                domain: website.domain,
+            });
+        },
+    });
+};
+
 onMounted(() => {
     if (!props.action || !props.domain) {
         return;
@@ -708,3 +633,16 @@ onMounted(() => {
     }
 });
 </script>
+
+<style scoped>
+:deep(.website-menu-danger .p-menu-item-link),
+:deep(.website-menu-danger .p-menuitem-link) {
+    color: rgb(220 38 38);
+}
+
+:deep(.website-menu-danger .p-menu-item-link:hover),
+:deep(.website-menu-danger .p-menuitem-link:hover) {
+    color: rgb(185 28 28);
+    background: rgb(254 242 242);
+}
+</style>

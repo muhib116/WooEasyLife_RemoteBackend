@@ -187,6 +187,7 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('setup/validate-domain', [UserController::class, 'validateSetupDomain'])->name('setup.validateDomain');
         Route::post('setup/generate-license', [UserController::class, 'setupGenerateLicense'])->name('setup.generateLicense');
         Route::get('websites', [UserController::class, 'websites'])->name('websites');
+        Route::post('websites/delete', [UserController::class, 'destroyWebsite'])->name('websites.delete');
         Route::get('api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('packages', [UserController::class, 'packages'])->name('packages');
         Route::get('packages/{package_id}/use-details', [UserController::class, 'useDetails'])->name('useDetails');
@@ -215,6 +216,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
             ->name('employees.destroy');
         Route::post('purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
         Route::post('update-purchase-package', [UserController::class, 'updatePurchasePackage'])->name('updatePurchasePackage');
+        Route::post('renew-subscription', [UserController::class, 'renewSubscription'])->name('renewSubscription');
+        Route::post('change-subscription', [UserController::class, 'changeSubscription'])->name('changeSubscription');
     });
 
     Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {

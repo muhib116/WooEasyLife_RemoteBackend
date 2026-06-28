@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PackageHub;
 use App\Models\UserPackage;
+use App\Services\PackagePlanResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -12,6 +13,11 @@ use Inertia\Inertia;
 
 class PackageHubController extends Controller
 {
+    public function __construct(
+        protected PackagePlanResolver $planResolver
+    ) {
+    }
+
     public function index()
     {
         $packages = PackageHub::withTrashed()
@@ -54,7 +60,7 @@ class PackageHubController extends Controller
     {
         $package = PackageHub::query()->findOrFail($id);
 
-        if (! $this->isCatalogPackage($package)) {
+        if (! $this->planResolver->isCatalog($package)) {
             return back()->with('error', 'Legacy packages cannot be edited from the catalog form.');
         }
 
@@ -130,11 +136,5 @@ class PackageHubController extends Controller
             'total_website_connect' => ['nullable', 'integer', 'min:1', 'max:5'],
             'features' => ['required', 'array'],
         ]);
-    }
-
-    private function isCatalogPackage(PackageHub $package): bool
-    {
-        return $package->package_duration !== null
-            || $package->order_rate_token !== null;
     }
 }

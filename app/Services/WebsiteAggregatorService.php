@@ -207,13 +207,19 @@ class WebsiteAggregatorService
 
         return [
             'id' => $active->id,
+            'package_hub_id' => $active->package_hub_id,
             'title' => $active->title,
+            'plan_type' => $active->plan_type ?? 'legacy',
             'is_active' => (bool) $active->is_active,
             'remaining_order' => (int) $active->remaining_order,
             'total_order_can_handle' => (int) $active->total_order_can_handle,
             'total_order_handled' => (int) $active->total_order_handled,
             'total_cost' => (float) $active->total_cost,
             'per_order_rate' => (float) $active->per_order_rate,
+            'order_rate_token' => $active->order_rate_token !== null
+                ? (int) $active->order_rate_token
+                : null,
+            'package_duration' => $active->package_duration,
             'expires_at' => $active->expires_at,
         ];
     }
@@ -232,7 +238,9 @@ class WebsiteAggregatorService
         } elseif (! $subscription['is_active']) {
             $issues[] = 'Subscription plan is disabled.';
         } elseif ($subscription['remaining_order'] <= 0) {
-            $issues[] = 'Order quota exhausted.';
+            $issues[] = ($subscription['plan_type'] ?? 'legacy') === 'catalog'
+                ? 'Order tokens exhausted.'
+                : 'Order quota exhausted.';
         } elseif ($subscriptionExpired) {
             $issues[] = 'Subscription has expired.';
         }
