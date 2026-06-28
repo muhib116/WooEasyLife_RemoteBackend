@@ -1,11 +1,32 @@
 <template>
     <UserLayout
-        title="Package Orders"
-        section="Package Orders"
-        subtitle="Order usage history and package consumption"
+        title="Usage History"
+        section="Usage History"
+        subtitle="Order quota consumption and package usage records"
         :user="user"
     >
         <div class="space-y-5">
+            <div
+                v-if="filterDomain"
+                class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-900 dark:border-primary-500/30 dark:bg-primary-500/10 dark:text-primary-100"
+            >
+                <span>
+                    Showing usage for
+                    <strong>{{ filterDomain }}</strong>
+                </span>
+                <Link
+                    :href="route('users.packagesOrders', { user_id: userId })"
+                >
+                    <Button
+                        label="Clear domain filter"
+                        size="small"
+                        severity="secondary"
+                        outlined
+                        as="span"
+                    />
+                </Link>
+            </div>
+
             <PageCard title="Filter Period" description="Narrow results by date range">
                 <div class="flex flex-wrap items-end gap-3">
                     <div class="min-w-[220px] flex-1">
@@ -114,7 +135,7 @@ import EmptyState from "./fragments/EmptyState.vue";
 import PackageOrderDetails from "./PackageOrderDetails.vue";
 import { isString, isArray, set } from "lodash";
 import { computed } from "vue";
-import { useForm } from "@inertiajs/vue3";
+import { Link, useForm } from "@inertiajs/vue3";
 
 defineOptions({
     name: "PackagesOrders",
@@ -126,15 +147,19 @@ const props = defineProps<{
     user: { id: number; name: string } | null;
     end_date: any;
     start_date: any;
+    filterDomain?: string | null;
 }>();
 
 const form = useForm({
     start_date: props.start_date,
     end_date: props.end_date,
+    domain: props.filterDomain ?? null,
 });
 
 const handleSubmit = () => {
-    form.get(route("users.packagesOrders", props.userId));
+    form.get(route("users.packagesOrders", props.userId), {
+        preserveState: true,
+    });
 };
 
 const overview = computed(() => {

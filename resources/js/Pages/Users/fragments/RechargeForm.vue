@@ -1,18 +1,16 @@
 <template>
     <div>
         <div class="mb-4 flex flex-col gap-1">
-            <div for="domain" class="font-semibold">
-                Select Package for Domain
-            </div>
+            <label for="domain" class="text-sm font-semibold">Website plan</label>
             <div class="relative flex-auto">
-                <!-- used ${item.total_order_can_handle} of ${item.total_order_handled} -->
                 <Select
+                    id="domain"
                     class="w-full"
                     v-model="rechargeForm.domain"
                     :options="user_packages"
                     :optionLabel="(item) => `(${item.domain})`"
                     optionValue="domain"
-                    placeholder="Package"
+                    placeholder="Select website plan"
                 />
                 <span
                     v-if="rechargeForm.errors.domain"
@@ -22,13 +20,14 @@
             </div>
         </div>
         <div class="mb-4 flex flex-col gap-1">
-            <div for="expires_at" class="font-semibold">Total Amount</div>
+            <label for="total_amount" class="text-sm font-semibold">Total amount (TK)</label>
             <div class="relative flex-auto">
                 <div class="flex-auto">
                     <InputNumber
                         :useGrouping="false"
                         v-model="rechargeForm.total_amount"
                         inputId="total_amount"
+                        placeholder="Enter recharge amount"
                         fluid
                     />
                 </div>
@@ -41,7 +40,7 @@
         </div>
 
         <div class="mb-4 flex flex-col gap-1">
-            <div class="font-semibold">Transaction Method</div>
+            <label class="text-sm font-semibold">Payment method</label>
             <div class="relative flex-auto">
                 <Select
                     class="w-full"
@@ -50,7 +49,7 @@
                     @change="onMethodChange"
                     optionLabel="title"
                     optionValue="id"
-                    placeholder="Method"
+                    placeholder="Select payment method"
                 />
                 <span
                     v-if="rechargeForm.errors.transaction_method"
@@ -61,12 +60,12 @@
         </div>
         <template v-if="rechargeForm.transaction_method != 'Cash'">
             <div class="mb-4 flex flex-col gap-1">
-                <div class="font-semibold">Transaction Number</div>
+                <label for="account_number" class="text-sm font-semibold">Account number</label>
                 <div class="relative flex-auto">
                     <InputText
                         v-model="rechargeForm.account_number"
                         id="account_number"
-                        placeholder="Transaction Number"
+                        placeholder="Sender mobile or account number"
                         class="!w-full"
                     />
                     <span
@@ -77,12 +76,12 @@
                 </div>
             </div>
             <div class="mb-4 flex flex-col gap-1">
-                <div class="font-semibold">Transaction Id</div>
+                <label for="transaction_id" class="text-sm font-semibold">Transaction ID</label>
                 <div class="relative flex-auto">
                     <InputText
                         v-model="rechargeForm.transaction_id"
                         id="transaction_id"
-                        placeholder="Transaction Id"
+                        placeholder="Enter gateway transaction ID"
                         class="!w-full"
                     />
                     <span
@@ -93,13 +92,14 @@
                 </div>
             </div>
             <div class="mb-4 flex flex-col gap-1">
-                <div class="font-semibold">Transaction Charge</div>
+                <label for="transaction_charge" class="text-sm font-semibold">Gateway charge (TK)</label>
                 <div class="relative flex-auto">
                     <InputNumber
                         :useGrouping="false"
                         :maxFractionDigits="5"
                         v-model="rechargeForm.transaction_charge"
-                        inputId="limit"
+                        inputId="transaction_charge"
+                        placeholder="Enter gateway fee"
                         fluid
                     />
                     <span
@@ -110,11 +110,7 @@
                 </div>
             </div>
         </template>
-        
-        <!-- <label class="flex items-center gap-5">
-            <ToggleSwitch v-model="rechargeForm.status" />
-            Is Active
-        </label> -->
+
         <div class="flex justify-end gap-2">
             <Button
                 type="button"

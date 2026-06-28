@@ -15,15 +15,22 @@ use App\Models\TransactionHistory;
 use App\Models\User;
 use App\Models\UserBusiness;
 use App\Models\UserPackage;
+use App\Services\DomainNormalizer;
+use App\Services\MerchantSetupService;
+use App\Services\PackagePaymentService;
+use App\Services\PlanAssignmentService;
+use App\Services\SubscriptionAlertService;
+use App\Services\LicenseProvisioningService;
+use App\Services\WebsiteAggregatorService;
 use App\Traits\Transaction;
 use App\Traits\Util;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -109,42 +116,47 @@ class UserController extends Controller
                 return $this->errorResponse('Unauthenticated', 401);
             }
 
-            $notice = null;
-            $frontendDomain = $this->getRequestDomain();
+            $domainNormalizer = app(DomainNormalizer::class);
+            $alertService = app(SubscriptionAlertService::class);
 
-            $smsQuery = SmsBalance::query()
+            $smsBalances = SmsBalance::query()
                 ->where('user_id', $user->id)
-                ->where('domain', $this->getDomainFromUrl($accessToken->domain));
-            $smsBalance = $smsQuery->sum('amount');
-            $smsCount = $smsQuery->where('type', 'out')->count();
+                ->get()
+                ->filter(fn (SmsBalance $balance) => $domainNormalizer->matches(
+                    $balance->domain,
+                    $accessToken->domain
+                ));
+            $smsBalance = $smsBalances->sum('amount');
 
-            // Cache key for tracking last notice time
-            $smsNoticeCacheKey = 'sms_balance_notice_' . $user->id;
-
-            if ($smsBalance <= 20 && $smsCount > 0) {
-                // Check if the notice was shown in the last 2 hours
-                if (!Cache::has($smsNoticeCacheKey)) {
-                    $notice = [
-                        ['type' => 'info', 'message' => 'Your SMS balance is less than 20TK.']
-                    ];
-
-                    // Store a timestamp in cache for 2 hours (120 minutes)
-                    Cache::put($smsNoticeCacheKey, now(), now()->addHours(2));
-                }
-            }
-
-            // return $accessToken->domain;
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
-                ->where('domain', 'LIKE', '%' . $this->getDomainFromUrl($accessToken->domain) . '%')
                 ->where('is_active', true)
-                ->get();
-            // return $userPackage;
-            $remainingOrders = collect($userPackage)->filter(function ($item) use ($frontendDomain) {
-                return $this->getDomainFromUrl($item->domain) == $frontendDomain;
-            })->sum('remaining_order');
+                ->get()
+                ->filter(fn (UserPackage $package) => $domainNormalizer->matches(
+                    $package->domain,
+                    $accessToken->domain
+                ));
+            $remainingOrders = $userPackage->sum('remaining_order');
             $user->remaining_order = $remainingOrders + 0;
-            $user->notice = $notice; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
-            $user->sms_balance = round($smsBalance, 2) + 0; // $types[array_rand($types)] ? $notices[array_rand($notices)] : null;
+            $user->notice = $alertService->pluginNotices($user, $accessToken);
+            $user->sms_balance = round($smsBalance, 2) + 0;
+
+            $billingAlerts = collect($alertService->collectAlerts($user, $accessToken))
+                ->map(fn (array $alert) => [
+                    'type' => $alert['type'],
+                    'severity' => $alert['severity'],
+                    'message' => $alert['message'],
+                ])
+                ->values()
+                ->all();
+
+            $user->billing = [
+                ...app(PackagePaymentService::class)->billingSnapshot($user, $accessToken),
+                'alerts' => $billingAlerts,
+            ];
+            $user->license = [
+                'expires_at' => $accessToken->expires_at,
+                'status' => (bool) $accessToken->status,
+            ];
 
             return response()->json($user, 200);
         } catch (\Throwable $th) {
@@ -164,8 +176,10 @@ class UserController extends Controller
             'active_package' => $package->where('is_active', 1)->count(),
             'remaining_orders' => $package->where('is_active', 1)->sum('remaining_order'),
         ];
-        // LogHelper::saveLog('ip', request()->ip());
-        return Inertia::render('Users/View', compact('user', 'report'));
+
+        $setup = app(MerchantSetupService::class)->progress($user);
+
+        return Inertia::render('Users/View', compact('user', 'report', 'setup'));
     }
 
     public function store(Request $request)
@@ -211,8 +225,13 @@ class UserController extends Controller
             if (@$data['role'] == 'admin') {
                 return back()->with('error', 'Admin User cannot be create.');
             }
-            User::create($data);
+            $user = User::create($data);
+
+            return redirect()
+                ->route('users.setup', $user->id)
+                ->with('success', 'User created. Complete website setup below.');
         }
+
         return back()->with('success', 'User Saved Successfully!');
     }
 
@@ -284,7 +303,7 @@ class UserController extends Controller
         UserPackage::where('user_id', $user->id)->forceDelete();
         SmsBalance::where('user_id', $user->id)->delete();
         SmsRecharge::where('user_id', $user->id)->forceDelete();
-        UserBusiness::where('user_id', $user->id)->forceDelete();
+        UserBusiness::where('user_id', $user->id)->delete();
         CourierConfiguration::where('user_id', $user->id)->delete();
         RouteHit::where('user_id', $user->id)->delete();
 
@@ -293,35 +312,48 @@ class UserController extends Controller
 
     public function apiKeys($userId)
     {
-        $user = User::findOrFail($userId);
-        $tokens = AccessToken::where('tokenable_id', $user->id)->get();
-        $tokens = $tokens->map(function ($token) {
-            return [
-                ...$token->toArray(),
-                'bearer_token' => $this->decodeToken($token->access_key),
-                'last_used_ago' => optional($token->last_used_at)->diffForHumans()
-            ];
-        });
+        $params = ['user_id' => $userId];
 
-        $packages = UserPackage::where('user_id', $user->id)
-            ->orderBy('id', 'desc')
-            ->get()
-            ->unique('domain');
-        $user_packages = [];
-        foreach (collect($packages) as $v) {
-            $user_packages[] = $v;
+        if (request()->filled('domain')) {
+            $params['domain'] = request('domain');
+            $params['action'] = 'license';
         }
-        return Inertia::render('Users/ApiKeys', compact('user', 'tokens', 'user_packages'));
+
+        return redirect()->route('users.websites', $params);
+    }
+
+    public function websites($userId)
+    {
+        $user = User::findOrFail($userId);
+        $catalogPackages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
+        $user_packages = UserPackage::where('user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $websites = collect(app(WebsiteAggregatorService::class)->forUser($user))
+            ->values()
+            ->all();
+
+        return Inertia::render('Users/Websites/Index', [
+            'user' => $user,
+            'websites' => $websites,
+            'packages' => $catalogPackages,
+            'user_packages' => $user_packages,
+            'action' => request()->query('action'),
+            'domain' => request()->query('domain'),
+        ]);
     }
 
     public function packages($userId)
     {
-        $user = User::find($userId);
-        $packages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
-        $user_packages = UserPackage::where([
-            'user_id' => $userId,
-        ])->orderBy('created_at', 'desc')->get();
-        return Inertia::render('Users/Packages', compact('user', 'packages', 'user_packages'));
+        $params = ['user_id' => $userId];
+
+        if (request()->filled('domain')) {
+            $params['domain'] = request('domain');
+            $params['action'] = 'assign';
+        }
+
+        return redirect()->route('users.websites', $params);
     }
 
     public function packagesOrders(Request $request, $userId)
@@ -331,6 +363,18 @@ class UserController extends Controller
         $query = PackageUseHistory::where([
             'user_id' => $userId,
         ]);
+
+        if ($request->filled('domain')) {
+            $normalizedDomain = app(DomainNormalizer::class)->normalize($request->domain);
+            $packageIds = UserPackage::query()
+                ->where('user_id', $userId)
+                ->get()
+                ->filter(fn (UserPackage $package) => app(DomainNormalizer::class)->normalize($package->domain) === $normalizedDomain)
+                ->pluck('id');
+
+            $query->whereIn('user_package_id', $packageIds);
+        }
+
         $start_date = $request->start_date;
         $end_date = $request->end_date;
 
@@ -370,8 +414,9 @@ class UserController extends Controller
                 ->format('m/d/Y h:i a');
         }
         $user = User::find($userId);
+        $filterDomain = $request->domain;
 
-        return Inertia::render('Users/PackageOrders', compact('modifiedHistory', 'userId', 'start_date', 'end_date', 'user'));
+        return Inertia::render('Users/PackageOrders', compact('modifiedHistory', 'userId', 'start_date', 'end_date', 'user', 'filterDomain'));
     }
     public function useDetails($userId, $packageId)
     {
@@ -404,23 +449,41 @@ class UserController extends Controller
 
     public function smsRecharge($userId)
     {
-        $user = User::find($userId);
-        $recharge = SmsRecharge::where('user_id', $userId)->orderBy('id', 'desc')->get();
-        $user_packages = UserPackage::where('user_id', $userId)
-            ->orderBy('id', 'desc')
-            ->get()
-            ->unique('domain');
-        return Inertia::render('Users/SmsRecharge', compact('user', 'recharge', 'user_packages'));
+        return redirect()->route('users.sms', [
+            'user_id' => $userId,
+            'tab' => 'recharge',
+        ]);
     }
 
-    public function smsUseHistory($userId)
+    public function sms($userId)
     {
+        $user = User::findOrFail($userId);
+        $recharge = SmsRecharge::where('user_id', $userId)->orderBy('id', 'desc')->get();
         $sms_history = SmsBalance::where('user_id', $userId)
             ->where('type', 'out')
             ->orderBy('id', 'desc')
             ->get();
-        $user = User::find($userId);
-        return Inertia::render('Users/SmsHistory', compact('user', 'sms_history'));
+        $user_packages = UserPackage::where('user_id', $userId)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->unique('domain');
+        $tab = request()->query('tab', 'recharge');
+
+        return Inertia::render('Users/Sms/Index', compact(
+            'user',
+            'recharge',
+            'sms_history',
+            'user_packages',
+            'tab'
+        ));
+    }
+
+    public function smsUseHistory($userId)
+    {
+        return redirect()->route('users.sms', [
+            'user_id' => $userId,
+            'tab' => 'history',
+        ]);
     }
 
     public function approveSmsRecharge($sms_id)
@@ -466,19 +529,74 @@ class UserController extends Controller
 
     public function updatePurchasePackage(Request $request, $id)
     {
-        $userPackage = UserPackage::find($request->id);
-        if ($userPackage) {
-            $userPackage->update([
-                'updated_by' => Auth::id(),
-                'note' => $request->note,
-                'domain' => $request->domain,
+        $request->validate([
+            'id' => 'required|integer',
+            'domain' => 'nullable|string',
+            'note' => 'nullable|string|max:1000',
+            'is_active' => 'nullable|boolean',
+            'remaining_order' => 'nullable|integer|min:0',
+            'expires_at' => 'nullable|date',
+        ]);
+
+        $userPackage = UserPackage::query()
+            ->where('id', $request->id)
+            ->where('user_id', $id)
+            ->firstOrFail();
+
+        if ($request->filled('remaining_order')) {
+            $remainingOrder = (int) $request->remaining_order;
+
+            if ($remainingOrder > (int) $userPackage->total_order_can_handle) {
+                throw ValidationException::withMessages([
+                    'remaining_order' => 'Remaining orders cannot exceed the plan quota ('
+                        .$userPackage->total_order_can_handle.').',
+                ]);
+            }
+        }
+
+        $domain = $request->filled('domain')
+            ? (app(DomainNormalizer::class)->normalize($request->domain) ?? $request->domain)
+            : $userPackage->domain;
+
+        $expiresAt = $request->has('expires_at')
+            ? ($request->expires_at ?: null)
+            : $userPackage->expires_at;
+
+        $remainingOrder = $request->filled('remaining_order')
+            ? (int) $request->remaining_order
+            : (int) $userPackage->remaining_order;
+
+        $isActive = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : (bool) $userPackage->is_active;
+
+        if ($isActive && $remainingOrder <= 0) {
+            throw ValidationException::withMessages([
+                'remaining_order' => 'Cannot activate a plan with zero remaining orders.',
             ]);
         }
+
+        if ($isActive && $expiresAt && now()->greaterThan($expiresAt)) {
+            throw ValidationException::withMessages([
+                'expires_at' => 'Cannot activate a plan that is already expired. Extend the expiry date first.',
+            ]);
+        }
+
+        $userPackage->update([
+            'updated_by' => Auth::id(),
+            'note' => $request->input('note', $userPackage->note),
+            'domain' => $domain,
+            'is_active' => $isActive,
+            'remaining_order' => $remainingOrder,
+            'expires_at' => $expiresAt,
+        ]);
+
+        app(\App\Services\WebsiteSyncService::class)->linkUserPackage($userPackage->fresh());
 
         return back()->with('success', 'Package updated successfully');
     }
 
-    public function purchase(Request $request, $id)
+    public function purchase(Request $request, $id, PlanAssignmentService $planAssignment)
     {
         $user = User::findOrFail($id);
         $request->validate([
@@ -488,32 +606,118 @@ class UserController extends Controller
             'transaction_method' => 'required',
         ]);
 
-        $package = PackageHub::find($request->package_id);
+        $package = PackageHub::findOrFail($request->package_id);
 
-        $domain = $this->getDomainFromUrl($request->domain);
-        $data = [
-            'title' => $package->title,
-            'description' => $package->description,
-            'domain' => $domain,
-            'user_id' => $user->id,
-            'package_hub_id' => $package->id,
-            'total_order_can_handle' => $request->limit,
-            'remaining_order' => $request->limit,
-            'total_order_handled' => 0,
-            'per_order_rate' => $package->per_order_rate,
-            'transaction_method' => $package->transaction_method,
-            'transaction_number' => $package->transaction_number,
-            'transaction_id' => $package->transaction_id,
-            'total_cost' => $package->per_order_rate * $request->limit,
-            'transaction_charge' => $request->transaction_charge,
-            'is_active' => true,
-            'note' => $request->note,
-            'created_by' => Auth::id(),
-            // 'updated_by' => Auth::id(),
-        ];
+        try {
+            $userPackage = $planAssignment->assign($user, $package, $request->only([
+                'domain',
+                'limit',
+                'transaction_method',
+                'transaction_number',
+                'transaction_id',
+                'transaction_charge',
+                'note',
+            ]));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
 
-        UserPackage::create($data);
+        if ($request->boolean('redirect_to_setup')) {
+            return redirect()
+                ->route('users.setup', [
+                    'user_id' => $user->id,
+                    'step' => 'license',
+                    'domain' => $userPackage->domain,
+                ])
+                ->with('success', 'Plan assigned. Generate the license key next.');
+        }
 
         return back()->with('success', 'Package created successfully');
+    }
+
+    public function setup($userId)
+    {
+        $user = User::findOrFail($userId);
+        $setup = app(MerchantSetupService::class)->progress($user);
+        $catalogPackages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
+        $defaultPackage = $catalogPackages->first();
+        $userPackages = UserPackage::where('user_id', $userId)
+            ->where('is_active', true)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return Inertia::render('Users/Setup/Wizard', [
+            'user' => $user,
+            'setup' => $setup,
+            'packages' => $catalogPackages,
+            'user_packages' => $userPackages,
+            'default_package_id' => $defaultPackage?->id,
+            'license_token' => session('license_token'),
+            'step' => request()->query('step'),
+            'domain' => request()->query('domain'),
+        ]);
+    }
+
+    public function validateSetupDomain(Request $request, $userId, DomainNormalizer $domainNormalizer)
+    {
+        $request->validate([
+            'domain' => 'required|string',
+        ]);
+
+        $domain = $domainNormalizer->normalize($request->domain);
+        if (! $domain) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Enter a valid website domain (e.g. shop.example.com).',
+            ], 422);
+        }
+
+        if (! $domainNormalizer->hasDnsARecord($domain)) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Domain must resolve to a DNS A record before continuing.',
+            ], 422);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'domain' => $domain,
+            'display_url' => 'https://' . $domain,
+        ]);
+    }
+
+    public function setupGenerateLicense(Request $request, $userId, LicenseProvisioningService $licenseProvisioning)
+    {
+        $user = User::findOrFail($userId);
+
+        $request->validate([
+            'domain' => 'required|string',
+        ]);
+
+        try {
+            $result = $licenseProvisioning->create(
+                $user,
+                $request->domain,
+                [
+                    'title' => $request->title,
+                    'expires_at' => $request->expires_at,
+                    'user_package_id' => $request->user_package_id,
+                    'status' => $request->boolean('status', true),
+                ],
+                requireUserPackage: true,
+                requireDns: true
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        } catch (\Throwable $th) {
+            return back()->with('error', $th->getMessage());
+        }
+
+        return redirect()
+            ->route('users.setup', [
+                'user_id' => $userId,
+                'step' => 'complete',
+            ])
+            ->with('license_token', $result['plain_text_token']);
     }
 }

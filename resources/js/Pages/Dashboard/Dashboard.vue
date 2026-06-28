@@ -138,6 +138,7 @@
 
                 <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
                     <ExpiredTokensPanel :data="expiredTokens" />
+                    <SubscriptionAlertsPanel :data="subscriptionAlerts" />
                     <WebhookActivityPanel :data="webhooks" />
                 </div>
             </section>
@@ -176,6 +177,7 @@ import AuthenticatedLayout from "@/layouts/AuthenticatedLayout.vue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import ExpiredTokensPanel from "./fragments/ExpiredTokensPanel.vue";
+import SubscriptionAlertsPanel from "./fragments/SubscriptionAlertsPanel.vue";
 import WebhookActivityPanel from "./fragments/WebhookActivityPanel.vue";
 import GroupListBox from "./fragments/GroupListBox.vue";
 import StatCard from "./fragments/StatCard.vue";
@@ -239,6 +241,26 @@ type WebhookData = {
     partners?: Array<{ partner: string; total: number }>;
 };
 
+type SubscriptionAlertData = {
+    title?: string;
+    link?: string;
+    link_text?: string;
+    summary?: {
+        total: number;
+        danger: number;
+        warning: number;
+        info: number;
+    };
+    recent?: Array<{
+        type: string;
+        severity: string;
+        message: string;
+        user_id: number;
+        user_name: string;
+        domain: string;
+    }>;
+};
+
 type DashboardData = {
     users: {
         data: StatItem[];
@@ -252,6 +274,7 @@ type DashboardData = {
         total_sms_recharge: string;
     };
     expired_tokens: ExpiredTokenData;
+    subscription_alerts: SubscriptionAlertData;
     webhooks: WebhookData;
 };
 
@@ -279,6 +302,11 @@ const expiredTokens = computed(() => get(props.data, "expired_tokens", {
     expiring_soon: 0,
     recent: [],
 }) as ExpiredTokenData);
+
+const subscriptionAlerts = computed(() => get(props.data, "subscription_alerts", {
+    summary: { total: 0, danger: 0, warning: 0, info: 0 },
+    recent: [],
+}) as SubscriptionAlertData);
 
 const webhooks = computed(() => get(props.data, "webhooks", {
     total_events: 0,
@@ -385,6 +413,32 @@ const healthAlerts = computed<HealthAlert[]>(() => {
         (webhooks.value.failed_count ?? 0) + (webhooks.value.orphan_count ?? 0);
     const expiredCount = expiredTokens.value.expired ?? 0;
     const expiringSoon = expiredTokens.value.expiring_soon ?? 0;
+    const criticalSubscriptions = subscriptionAlerts.value.summary?.danger ?? 0;
+    const warningSubscriptions = subscriptionAlerts.value.summary?.warning ?? 0;
+
+    if (criticalSubscriptions > 0) {
+        alerts.push({
+            label: "Critical subscription alerts",
+            detail: `${criticalSubscriptions} merchants need immediate attention`,
+            icon: "PhBellRinging",
+            href: route("subscriptionAlerts.index"),
+            className:
+                "border-rose-200 bg-rose-50/80 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
+            iconBg: "bg-rose-100 dark:bg-rose-500/20",
+            iconClass: "text-rose-600 dark:text-rose-300",
+        });
+    } else if (warningSubscriptions > 0) {
+        alerts.push({
+            label: "Subscription warnings",
+            detail: `${warningSubscriptions} merchants have expiring plans or low quota`,
+            icon: "PhBell",
+            href: route("subscriptionAlerts.index"),
+            className:
+                "border-amber-200 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+            iconBg: "bg-amber-100 dark:bg-amber-500/20",
+            iconClass: "text-amber-600 dark:text-amber-300",
+        });
+    }
 
     if (pendingRetries > 0) {
         alerts.push({

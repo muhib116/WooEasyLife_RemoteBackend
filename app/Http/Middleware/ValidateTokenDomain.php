@@ -6,6 +6,7 @@ use App\LogHelper;
 use App\Models\AccessToken;
 use App\Models\User;
 use App\Models\UserPackage;
+use App\Services\DomainNormalizer;
 use App\Traits\ApiResponseTrait;
 use App\Traits\Util;
 use Closure;
@@ -19,6 +20,7 @@ class ValidateTokenDomain
 
     public function handle(Request $request, Closure $next)
     {
+        $domainNormalizer = app(DomainNormalizer::class);
         // return response($this->getDomainFromUrl('localhost:8080'));
         try {
             $token = $request->bearerToken();
@@ -68,10 +70,13 @@ class ValidateTokenDomain
                 return $this->errorResponse('Invalid domain', 401);
             }
             $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
-                ->where('domain', $accessToken->domain)
                 ->where('is_active', true)
-                ->get();
-            if ($userPackage) {
+                ->get()
+                ->filter(fn (UserPackage $package) => $domainNormalizer->matches(
+                    $package->domain,
+                    $accessToken->domain
+                ));
+            if ($userPackage->isNotEmpty()) {
                 foreach ($userPackage as $package) {
                     if ($package->total_order_can_handle - $package->total_order_handled == 0) {
                         $package->update([

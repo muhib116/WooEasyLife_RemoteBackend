@@ -33,6 +33,8 @@ class AccessToken extends Model implements HasAbilities
         'access_key',
         'api_key',
         'domain',
+        'website_id',
+        'user_package_id',
         'status',
         'token',
         'abilities',

@@ -9,6 +9,7 @@ use App\Models\CourierWebhookEvent;
 use App\Models\SmsBalance;
 use App\Models\User;
 use App\Models\UserPackage;
+use App\Services\SubscriptionAlertService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -62,6 +63,7 @@ class DashboardController extends Controller
             'sms' => $this->getSmsInfo(),
             'package_purchase' => $this->packagePurchaseInfo(),
             'expired_tokens' => $this->getExpiredTokenInfo(),
+            'subscription_alerts' => $this->getSubscriptionAlertInfo(),
             'webhooks' => $this->getWebhookInfo(),
         ];
 
@@ -205,6 +207,31 @@ class DashboardController extends Controller
                 getBoxData('Expiring Soon', $expiringSoon),
                 getBoxData('Active Tokens', $active),
             ],
+        ];
+    }
+
+    private function getSubscriptionAlertInfo()
+    {
+        $feed = app(SubscriptionAlertService::class)->adminAlertFeed(12);
+        $summary = app(SubscriptionAlertService::class)->summarizeAdminFeed(
+            app(SubscriptionAlertService::class)->adminAlertFeed(500)
+        );
+
+        return [
+            'title' => 'Subscription Alerts',
+            'link' => Route::has('subscriptionAlerts.index') ? route('subscriptionAlerts.index') : url('/subscription-alerts'),
+            'link_text' => 'View All Alerts',
+            'summary' => $summary,
+            'recent' => $feed->map(function (array $alert) {
+                return [
+                    'type' => $alert['type'],
+                    'severity' => $alert['severity'],
+                    'message' => $alert['message'],
+                    'user_id' => $alert['user_id'],
+                    'user_name' => $alert['user_name'],
+                    'domain' => $alert['domain'],
+                ];
+            })->values(),
         ];
     }
 

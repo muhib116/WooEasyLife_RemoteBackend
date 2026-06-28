@@ -1,13 +1,14 @@
 <template>
     <form @submit.prevent="$emit('handleSave')">
-        <div class="mb-4 flex flex-col gap-1">
-            <div for="domain" class="w-24 font-semibold">Domain</div>
+        <div v-if="!hideDomain" class="mb-4 flex flex-col gap-1">
+            <label for="domain" class="text-sm font-semibold">Website domain</label>
             <div class="relative flex-auto">
                 <InputText
                     v-model="form.domain"
                     id="domain"
-                    placeholder="Domain"
+                    placeholder="shop.example.com"
                     class="!w-full"
+                    :disabled="Boolean(form.id)"
                 />
                 <span
                     v-if="form.errors.domain"
@@ -16,115 +17,72 @@
                 >
             </div>
         </div>
-        <div class="mb-4 flex flex-col gap-1">
-            <div for="note" class="w-24 font-semibold">Note</div>
-            <div class="relative flex-auto">
+
+        <template v-if="form.id">
+            <div class="mb-4 flex flex-col gap-1">
+                <label for="remaining_order" class="text-sm font-semibold">Remaining orders</label>
+                <InputNumber
+                    :useGrouping="false"
+                    v-model="form.remaining_order"
+                    inputId="remaining_order"
+                    :max="form.total_order_can_handle ?? undefined"
+                    placeholder="Enter remaining order count"
+                    fluid
+                />
+                <p
+                    v-if="form.total_order_can_handle"
+                    class="text-xs text-gray-500 dark:text-gray-400"
+                >
+                    Plan quota: {{ form.total_order_can_handle }} orders
+                </p>
+                <span
+                    v-if="form.errors.remaining_order"
+                    class="text-sm text-rose-500"
+                >
+                    {{ form.errors.remaining_order }}
+                </span>
+            </div>
+
+            <div class="mb-4 flex flex-col gap-1">
+                <label class="text-sm font-semibold">Expires at</label>
+                <DatePicker
+                    v-model="form.expires_at"
+                    show-icon
+                    date-format="yy-mm-dd"
+                    placeholder="No expiry"
+                    class="w-full"
+                />
+                <span
+                    v-if="form.errors.expires_at"
+                    class="text-sm text-rose-500"
+                >
+                    {{ form.errors.expires_at }}
+                </span>
+            </div>
+
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <label class="text-sm font-semibold">Active plan</label>
+                <ToggleSwitch v-model="form.is_active" />
+            </div>
+
+            <div class="mb-4 flex flex-col gap-1">
+                <label for="edit_note" class="text-sm font-semibold">Admin note</label>
                 <Textarea
-                    id="note"
+                    id="edit_note"
                     v-model="form.note"
                     autoResize
                     rows="2"
-                    placeholder="Note"
+                    placeholder="Optional note about this plan"
                     class="!w-full"
                 />
-                <span
-                    v-if="form.errors.note"
-                    class="absolute -bottom-6 left-0 text-red-500"
-                    >{{ form.errors.note }}</span
-                >
-            </div>
-        </div>
-        <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
-            <div class="font-semibold">Transaction Method</div>
-            <div class="relative flex-auto">
-                <Select
-                    class="w-full"
-                    v-model="form.transaction_method"
-                    :options="methods"
-                    @change="onMethodChange"
-                    optionLabel="title"
-                    optionValue="id"
-                    placeholder="Method"
-                />
-                <span
-                    v-if="form.errors.transaction_method"
-                    class="absolute -bottom-6 left-0 text-red-500"
-                    >{{ form.errors.transaction_method }}</span
-                >
-            </div>
-        </div>
-        <template v-if="!form.id && form.transaction_method != 'Cash'">
-            <div class="mb-4 flex flex-col gap-1">
-                <div class="font-semibold">Transaction Number</div>
-                <div class="relative flex-auto">
-                    <InputText
-                        v-model="form.transaction_number"
-                        id="transaction_number"
-                        placeholder="Transaction Number"
-                        class="!w-full"
-                    />
-                    <span
-                        v-if="form.errors.transaction_number"
-                        class="absolute -bottom-6 left-0 text-red-500"
-                        >{{ form.errors.transaction_number }}</span
-                    >
-                </div>
-            </div>
-            <div class="mb-4 flex flex-col gap-1">
-                <div class="font-semibold">Transaction Id</div>
-                <div class="relative flex-auto">
-                    <InputText
-                        v-model="form.transaction_id"
-                        id="transaction_id"
-                        placeholder="Transaction Id"
-                        class="!w-full"
-                    />
-                    <span
-                        v-if="form.errors.transaction_id"
-                        class="absolute -bottom-6 left-0 text-red-500"
-                        >{{ form.errors.transaction_id }}</span
-                    >
-                </div>
-            </div>
-            <div class="mb-4 flex flex-col gap-1">
-                <div class="font-semibold">Transaction Charge</div>
-                <div class="relative flex-auto">
-                    <InputNumber
-                        :useGrouping="false"
-                        :maxFractionDigits="5"
-                        v-model="form.transaction_charge"
-                        inputId="limit"
-                        fluid
-                    />
-                    <span
-                        v-if="form.errors.transaction_charge"
-                        class="absolute -bottom-6 left-0 text-red-500"
-                        >{{ form.errors.transaction_charge }}</span
-                    >
-                </div>
             </div>
         </template>
-        <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
-            <div for="limit" class="w-24 font-semibold">Order Limit</div>
-            <div class="relative flex-auto">
-                <InputNumber
-                    :useGrouping="false"
-                    v-model="form.limit"
-                    inputId="limit"
-                    fluid
-                />
 
-                <span
-                    v-if="form.errors.limit"
-                    class="absolute -bottom-6 left-0 text-red-500"
-                    >{{ form.errors.limit }}</span
-                >
-            </div>
-        </div>
         <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
-            <div for="package" class="w-24 font-semibold">Package</div>
+            <label for="package" class="text-sm font-semibold">Pricing plan</label>
             <div class="relative flex-auto">
                 <Select
+                    id="package"
                     class="w-full"
                     v-model="form.package_id"
                     :options="packages"
@@ -132,7 +90,7 @@
                         (item) => `(${item.per_order_rate}TK) ${item.title}`
                     "
                     optionValue="id"
-                    placeholder="Package"
+                    placeholder="Select pricing plan"
                 />
                 <span
                     v-if="form.errors.package_id"
@@ -142,8 +100,119 @@
             </div>
         </div>
 
+        <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
+            <label for="limit" class="text-sm font-semibold">Order limit</label>
+            <div class="relative flex-auto">
+                <InputNumber
+                    :useGrouping="false"
+                    v-model="form.limit"
+                    inputId="limit"
+                    placeholder="e.g. 300"
+                    fluid
+                />
+                <span
+                    v-if="form.errors.limit"
+                    class="absolute -bottom-6 left-0 text-red-500"
+                    >{{ form.errors.limit }}</span
+                >
+            </div>
+        </div>
+
+        <template v-if="!form.id && !simplified">
+            <div class="mb-4 flex flex-col gap-1">
+                <label for="note" class="text-sm font-semibold">Admin note</label>
+                <div class="relative flex-auto">
+                    <Textarea
+                        id="note"
+                        v-model="form.note"
+                        autoResize
+                        rows="2"
+                        placeholder="Optional note about this purchase"
+                        class="!w-full"
+                    />
+                </div>
+            </div>
+
+            <div class="mb-4 flex flex-col gap-1">
+                <label class="text-sm font-semibold">Payment method</label>
+                <div class="relative flex-auto">
+                    <Select
+                        class="w-full"
+                        v-model="form.transaction_method"
+                        :options="methods"
+                        @change="onMethodChange"
+                        optionLabel="title"
+                        optionValue="id"
+                        placeholder="Select payment method"
+                    />
+                </div>
+            </div>
+            <template v-if="form.transaction_method != 'Cash'">
+                <div class="mb-4 flex flex-col gap-1">
+                    <label class="text-sm font-semibold">Transaction number</label>
+                    <InputText
+                        v-model="form.transaction_number"
+                        placeholder="Enter payment reference number"
+                        class="!w-full"
+                    />
+                </div>
+                <div class="mb-4 flex flex-col gap-1">
+                    <label class="text-sm font-semibold">Transaction ID</label>
+                    <InputText
+                        v-model="form.transaction_id"
+                        placeholder="Enter gateway transaction ID"
+                        class="!w-full"
+                    />
+                </div>
+                <div class="mb-4 flex flex-col gap-1">
+                    <label class="text-sm font-semibold">Gateway charge (TK)</label>
+                    <InputNumber
+                        :useGrouping="false"
+                        :maxFractionDigits="5"
+                        v-model="form.transaction_charge"
+                        placeholder="Enter gateway fee"
+                        fluid
+                    />
+                </div>
+            </template>
+        </template>
+
+        <details v-if="!form.id && simplified" class="mb-4">
+            <summary
+                class="cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-300"
+            >
+                Payment details (optional)
+            </summary>
+            <div class="mt-3 space-y-3">
+                <div>
+                    <label class="mb-1 block text-sm font-medium">Payment method</label>
+                    <Select
+                        class="w-full"
+                        v-model="form.transaction_method"
+                        :options="methods"
+                        @change="onMethodChange"
+                        optionLabel="title"
+                        optionValue="id"
+                        placeholder="Select payment method"
+                    />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-medium">Admin note</label>
+                    <Textarea
+                        v-model="form.note"
+                        autoResize
+                        rows="2"
+                        placeholder="Optional note about this purchase"
+                        class="!w-full"
+                    />
+                </div>
+            </div>
+        </details>
+
         <div class="flex items-center justify-end gap-2">
-            <div class="pr-5">Total Cost = {{ getTotalCost }} TK</div>
+            <div v-if="!form.id" class="pr-5 text-sm">
+                Total Cost = {{ getTotalCost }} TK
+            </div>
             <Button
                 type="button"
                 label="Cancel"
@@ -152,9 +221,8 @@
             ></Button>
             <Button
                 type="submit"
-                :label="form.id ? 'Update' : 'Purchase'"
+                :label="form.id ? 'Update' : simplified ? 'Assign Plan' : 'Purchase'"
                 :loading="form.processing"
-                @click="$emit('handleSave')"
             ></Button>
         </div>
     </form>
@@ -163,19 +231,25 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-const props = defineProps<{
-    form: any;
-    packages: any[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        form: any;
+        packages: any[];
+        simplified?: boolean;
+        hideDomain?: boolean;
+    }>(),
+    {
+        simplified: false,
+        hideDomain: false,
+    },
+);
 
 const getTotalCost = computed(() => {
     const foundPackage = (props.packages || []).find(
         (item) => item.id == props.form.package_id,
     );
     if (foundPackage) {
-        console.log(foundPackage);
-        let cost = foundPackage.per_order_rate * props.form.limit;
-        return cost || 0;
+        return foundPackage.per_order_rate * props.form.limit || 0;
     }
     return 0;
 });
@@ -189,25 +263,10 @@ const onMethodChange = () => {
 };
 
 const methods = ref([
-    {
-        title: "Bkash",
-        id: "Bkash",
-    },
-    {
-        title: "Nagad",
-        id: "Nagad",
-    },
-    {
-        title: "Rocket",
-        id: "Rocket",
-    },
-    {
-        title: "Bank",
-        id: "Bank",
-    },
-    {
-        title: "Cash",
-        id: "Cash",
-    },
+    { title: "Bkash", id: "Bkash" },
+    { title: "Nagad", id: "Nagad" },
+    { title: "Rocket", id: "Rocket" },
+    { title: "Bank", id: "Bank" },
+    { title: "Cash", id: "Cash" },
 ]);
 </script>

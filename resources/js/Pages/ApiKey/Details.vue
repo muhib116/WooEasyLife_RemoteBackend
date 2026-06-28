@@ -65,8 +65,10 @@
                 <template #body="{ data }">
                     <TableActions>
                         <TableActionButton
+                            v-if="data.has_token"
                             action="copy"
                             tooltip="Copy bearer token"
+                            :loading="isRevealing(data.id)"
                             @click="$emit('handleCopy', data)"
                         />
                         <TableActionButton
@@ -96,6 +98,7 @@ import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
 defineProps<{
     user: any;
+    isRevealing: (tokenId: number) => boolean;
 }>();
 
 defineEmits<{

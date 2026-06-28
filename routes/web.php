@@ -10,6 +10,10 @@ use App\Http\Controllers\Admin\DeveloperController;
 use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\MerchantEmployeeController;
+use App\Http\Controllers\Admin\PackagePaymentAdminController;
+use App\Http\Controllers\Admin\RoleAdminController;
+use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
 use App\Http\Controllers\Admin\PackageHubController;
 use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
@@ -75,7 +79,7 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
     })->name('icons');
 });
 
-Route::middleware(['auth', 'auth.active'])->group(function () {
+Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () {
     Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
     Route::post('/fraud-stream', [FraudCheckController::class, 'checkStream'])->name('adminCheckStream');
     Route::get('/icons', function () {
@@ -107,7 +111,12 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
     Route::group(['as' => 'backups.', 'prefix' => 'backups'], function () {
         Route::get('/', [BackupController::class, 'index'])->name('index');
         Route::get('/get-backups', [BackupController::class, 'getBackups'])->name('getBackups');
+        Route::get('/server-requirements', [BackupController::class, 'serverRequirements'])->name('serverRequirements');
         Route::post('/dump-database', [BackupController::class, 'dumpDatabase'])->name('dumpDatabase');
+        Route::post('/upload-import', [BackupController::class, 'uploadImport'])->name('uploadImport');
+        Route::post('/start-import', [BackupController::class, 'startImport'])->name('startImport');
+        Route::post('/import-backup/{file_name}', [BackupController::class, 'importFromBackup'])->name('importFromBackup');
+        Route::get('/import-status/{import_id}', [BackupController::class, 'importStatus'])->name('importStatus');
         Route::get('/download-backup/{file_name}', [BackupController::class, 'downloadBackup'])->name('downloadBackup');
         Route::post('/delete-file/{file_name}', [BackupController::class, 'deleteFile'])->name('deleteFile');
     });
@@ -154,8 +163,18 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
         Route::post('/{user_id}/restore', [UserController::class, 'restore'])->name('restore');
         Route::delete('/{user_id}/force', [UserController::class, 'forceDestroy'])->name('forceDestroy');
         Route::delete('/{user_id}', [UserController::class, 'destroy'])->name('destroy');
-        Route::post('approve-sms-recharge/{sms_id}', [UserController::class, 'approveSmsRecharge'])->name('approveSmsRecharge');
-        Route::post('reject-sms-recharge/{sms_id}', [UserController::class, 'rejectSmsRecharge'])->name('rejectSmsRecharge');
+        Route::post('approve-sms-recharge/{sms_id}', [UserController::class, 'approveSmsRecharge'])
+            ->middleware('permission:payments.approve')
+            ->name('approveSmsRecharge');
+        Route::post('reject-sms-recharge/{sms_id}', [UserController::class, 'rejectSmsRecharge'])
+            ->middleware('permission:payments.approve')
+            ->name('rejectSmsRecharge');
+        Route::post('approve-package-payment/{payment_id}', [PackagePaymentAdminController::class, 'approve'])
+            ->middleware('permission:payments.approve')
+            ->name('approvePackagePayment');
+        Route::post('reject-package-payment/{payment_id}', [PackagePaymentAdminController::class, 'reject'])
+            ->middleware('permission:payments.approve')
+            ->name('rejectPackagePayment');
     });
 
     Route::group(['as' => 'users.', 'prefix' => 'users/{user_id}'], function () {
@@ -164,13 +183,36 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
             Route::post('/store', [BusinessController::class, 'store'])->name('store');
         });
         Route::get('view', [UserController::class, 'view'])->name('view');
+        Route::get('setup', [UserController::class, 'setup'])->name('setup');
+        Route::post('setup/validate-domain', [UserController::class, 'validateSetupDomain'])->name('setup.validateDomain');
+        Route::post('setup/generate-license', [UserController::class, 'setupGenerateLicense'])->name('setup.generateLicense');
+        Route::get('websites', [UserController::class, 'websites'])->name('websites');
         Route::get('api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('packages', [UserController::class, 'packages'])->name('packages');
         Route::get('packages/{package_id}/use-details', [UserController::class, 'useDetails'])->name('useDetails');
         Route::get('packages-orders', [UserController::class, 'packagesOrders'])->name('packagesOrders');
+        Route::get('sms', [UserController::class, 'sms'])->name('sms');
         Route::get('sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
         Route::post('sms-admin-recharge', [SmsController::class, 'smsAdminRecharge'])->name('smsAdminRecharge');
         Route::get('sms-use-history', [UserController::class, 'smsUseHistory'])->name('smsUseHistory');
+        Route::get('billing', [PackagePaymentAdminController::class, 'userBilling'])
+            ->middleware('permission:billing.view')
+            ->name('billing');
+        Route::post('billing/payment-request', [PackagePaymentAdminController::class, 'adminCreate'])
+            ->middleware('permission:billing.approve')
+            ->name('billing.create');
+        Route::get('employees', [MerchantEmployeeController::class, 'index'])
+            ->middleware('permission:employees.view')
+            ->name('employees');
+        Route::post('employees', [MerchantEmployeeController::class, 'store'])
+            ->middleware('permission:employees.manage')
+            ->name('employees.store');
+        Route::put('employees/{employee_id}', [MerchantEmployeeController::class, 'update'])
+            ->middleware('permission:employees.manage')
+            ->name('employees.update');
+        Route::delete('employees/{employee_id}', [MerchantEmployeeController::class, 'destroy'])
+            ->middleware('permission:employees.manage')
+            ->name('employees.destroy');
         Route::post('purchase-package', [UserController::class, 'purchase'])->name('purchasePackage');
         Route::post('update-purchase-package', [UserController::class, 'updatePurchasePackage'])->name('updatePurchasePackage');
     });
@@ -203,6 +245,7 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
     Route::group(['as' => 'apiKeys.', 'prefix' => 'api-keys'], function () {
         Route::get('/', [ApiKeyController::class, 'index'])->name('index');
         Route::post('/create', [ApiKeyController::class, 'create'])->name('create');
+        Route::post('/reveal/{id}', [ApiKeyController::class, 'reveal'])->name('reveal');
         Route::post('/update/{id}', [ApiKeyController::class, 'update'])->name('update');
         Route::post('/delete/{id}', [ApiKeyController::class, 'delete'])->name('delete');
     });
@@ -216,6 +259,24 @@ Route::middleware(['auth', 'auth.active'])->group(function () {
     Route::group(['as' => 'packages.', 'prefix' => 'packages'], function () {
         Route::get('/', [PackageHubController::class, 'index'])->name('index');
         Route::post('/create', [PackageHubController::class, 'create'])->name('create');
+    });
+
+    Route::group(['as' => 'packagePayments.', 'prefix' => 'package-payments'], function () {
+        Route::get('/', [PackagePaymentAdminController::class, 'index'])
+            ->middleware('permission:payments.view')
+            ->name('index');
+    });
+
+    Route::group(['as' => 'subscriptionAlerts.', 'prefix' => 'subscription-alerts'], function () {
+        Route::get('/', [SubscriptionAlertAdminController::class, 'index'])
+            ->middleware('permission:billing.view')
+            ->name('index');
+    });
+
+    Route::group(['as' => 'roles.', 'prefix' => 'roles', 'middleware' => 'permission:roles.manage'], function () {
+        Route::get('/', [RoleAdminController::class, 'index'])->name('index');
+        Route::post('/admins/{user_id}/assign', [RoleAdminController::class, 'assignAdminRole'])->name('assignAdmin');
+        Route::post('/{role_id}/permissions', [RoleAdminController::class, 'syncPermissions'])->name('syncPermissions');
     });
 
     Route::group(['as' => 'whitelistedDomains.', 'prefix' => 'whitelisted-domains'], function () {
@@ -238,6 +299,7 @@ Route::group(['as' => 'frauds.', 'prefix' => 'q8w1d9zp7kuo2vrb5m6cnx0ahjls4et3if
 
 Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
 
+require __DIR__ . '/portal.php';
 require __DIR__ . '/auth.php';
 
 Route::get('/get-ip', function () {

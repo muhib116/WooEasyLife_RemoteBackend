@@ -34,9 +34,17 @@ trait Util
 
     public function getDomainFromUrl($url)
     {
+        if ($url === null || $url === '') {
+            return null;
+        }
+
+        $url = trim((string) $url);
+
         // Ensure the URL has a scheme, default to http:// if missing
-        if (!preg_match('/^https?:\/\//', $url)) {
+        if (! preg_match('/^https?:\/\//i', $url)) {
             $url = 'http://' . $url;
+        } else {
+            $url = preg_replace('/^https?:\/\//i', 'http://', $url);
         }
         $host = null;
 
@@ -45,7 +53,7 @@ trait Util
 
             $host = $parsedUrl['host'] ?? '';
 
-            if (!empty($host)) {
+            if (! empty($host)) {
                 return $host;
             }
         } catch (\Throwable $th) {

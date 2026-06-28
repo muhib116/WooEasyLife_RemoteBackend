@@ -156,6 +156,12 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::get('/balance', [SmsController::class, 'smsBalance']);
         });
 
+        Route::group(['as' => 'package.', 'prefix' => 'package'], function () {
+            Route::get('/plans', [\App\Http\Controllers\PackagePaymentController::class, 'plans']);
+            Route::post('/payment-request', [\App\Http\Controllers\PackagePaymentController::class, 'createRequest']);
+            Route::get('/payment-history', [\App\Http\Controllers\PackagePaymentController::class, 'history']);
+        });
+
         Route::post('/fraud-check', [FraudCheckController::class, 'check'])
             ->middleware('check.fraudWhitelist')
             ->name('fraudCheck');

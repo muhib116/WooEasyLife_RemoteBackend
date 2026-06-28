@@ -48,40 +48,46 @@ const props = defineProps<{
 const menus = computed(
     (): { title: string; url: string; isActive: boolean; icon: IconName }[] => [
         {
-            title: "Overview",
+            title: "1. Overview",
             url: route("users.view", props.user.id),
             isActive: route().current("users.view"),
             icon: "PhSquaresFour",
         },
         {
-            title: "API Keys",
-            url: route("users.apiKeys", props.user.id),
-            isActive: route().current("users.apiKeys"),
-            icon: "PhKey",
+            title: "2. Websites",
+            url: route("users.websites", props.user.id),
+            isActive:
+                route().current("users.websites") ||
+                route().current("users.packages") ||
+                route().current("users.apiKeys"),
+            icon: "PhGlobe",
         },
         {
-            title: "Packages",
-            url: route("users.packages", props.user.id),
-            isActive: route().current("users.packages"),
-            icon: "PhPackage",
-        },
-        {
-            title: "Orders",
+            title: "3. Usage",
             url: route("users.packagesOrders", props.user.id),
             isActive: route().current("users.packagesOrders"),
             icon: "PhShoppingCart",
         },
         {
-            title: "SMS Recharge",
-            url: route("users.smsRecharge", props.user.id),
-            isActive: route().current("users.smsRecharge"),
+            title: "4. SMS",
+            url: route("users.sms", props.user.id),
+            isActive:
+                route().current("users.sms") ||
+                route().current("users.smsRecharge") ||
+                route().current("users.smsUseHistory"),
             icon: "PhWallet",
         },
         {
-            title: "SMS History",
-            url: route("users.smsUseHistory", props.user.id),
-            isActive: route().current("users.smsUseHistory"),
-            icon: "PhChatCircleText",
+            title: "5. Billing",
+            url: route("users.billing", props.user.id),
+            isActive: route().current("users.billing"),
+            icon: "PhCreditCard",
+        },
+        {
+            title: "6. Employees",
+            url: route("users.employees", props.user.id),
+            isActive: route().current("users.employees"),
+            icon: "PhUsersThree",
         },
     ],
 );

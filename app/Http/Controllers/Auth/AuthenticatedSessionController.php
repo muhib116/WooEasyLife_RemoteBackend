@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Services\MerchantPortalContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +15,11 @@ use Inertia\Response;
 
 class AuthenticatedSessionController extends Controller
 {
+    public function __construct(
+        protected MerchantPortalContext $portalContext
+    ) {
+    }
+
     /**
      * Display the login view.
      */
@@ -31,24 +36,43 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user) {
-            return back()->withErrors(['email' => trans('auth.failed')]);
-        }
-
-        if ($user->trashed()) {
-            return back()->withErrors(['email' => 'This account has been deactivated.']);
-        }
-
-        if ($user->role != 'admin') {
-            return back()->withErrors(['email' => 'You are not admin']);
-        }
         $request->authenticate();
+
+        $user = $request->user();
+
+        if (! $user || ! $user->canAccessPlatform()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors(['email' => 'This account is disabled.']);
+        }
+
+        if ($user->role === 'merchant_staff' && ! $this->portalContext->canAccessPortal($user)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors(['email' => 'Your employee portal access is inactive.']);
+        }
 
         $request->session()->regenerate();
 
-        return redirect()->intended(RouteServiceProvider::HOME);
+        $home = match ($user->role) {
+            'admin' => RouteServiceProvider::HOME,
+            'user', 'merchant_staff' => RouteServiceProvider::PORTAL_HOME,
+            default => RouteServiceProvider::HOME,
+        };
+
+        if (! in_array($user->role, ['admin', 'user', 'merchant_staff'], true)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors(['email' => 'This account cannot sign in here.']);
+        }
+
+        return redirect()->intended($home);
     }
 
     /**

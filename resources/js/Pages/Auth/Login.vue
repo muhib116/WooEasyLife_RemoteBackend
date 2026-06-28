@@ -7,7 +7,7 @@
                 Welcome back
             </h2>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Sign in to your admin account
+                Sign in to WooEasyLife admin or merchant portal
             </p>
         </div>
 

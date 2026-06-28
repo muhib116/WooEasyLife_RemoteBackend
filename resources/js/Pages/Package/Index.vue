@@ -1,9 +1,9 @@
 <template>
-    <AuthenticatedLayout title="Package Hub">
+    <AuthenticatedLayout title="Pricing Plans">
         <div class="space-y-5">
             <PageHeader
-                title="Package Hub"
-                description="Define billing packages merchants can purchase"
+                title="Pricing Plans"
+                description="Define subscription pricing merchants can purchase"
                 icon="PhPackage"
                 icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
                 icon-class="text-primary-600 dark:text-primary-400"

@@ -215,10 +215,11 @@ const sections: NavSection[] = [
     {
         label: "Platform",
         items: [
-            { title: "Manage Plugins", name: "plugins.index", icon: "PhPlugsConnected" },
-            { title: "Package Hub", name: "packages.index", icon: "PhPackage" },
-            { title: "API Keys", name: "apiKeys.index", icon: "PhLockKeyOpen" },
-            { title: "Developer API", name: "developer.index", icon: "PhCode" },
+            { title: "Plugin Versions", name: "plugins.index", icon: "PhPlugsConnected" },
+            { title: "Pricing Plans", name: "packages.index", icon: "PhPackage" },
+            { title: "Payment Requests", name: "packagePayments.index", icon: "PhCreditCard" },
+            { title: "Subscription Alerts", name: "subscriptionAlerts.index", icon: "PhBellRinging" },
+            { title: "License Keys", name: "apiKeys.index", icon: "PhLockKeyOpen" },
         ],
     },
     {
@@ -233,7 +234,9 @@ const sections: NavSection[] = [
         items: [
             { title: "Webhook Activities", name: "webhooks.index", icon: "PhArrowClockwise" },
             { title: "Error Logs", name: "logs.index", icon: "PhBug" },
+            { title: "Roles & Access", name: "roles.index", icon: "PhShieldCheck" },
             { title: "Database Backups", name: "backups.index", icon: "PhFloppyDiskBack" },
+            { title: "Developer API", name: "developer.index", icon: "PhCode" },
         ],
     },
 ];

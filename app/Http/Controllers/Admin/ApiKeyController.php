@@ -3,16 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\TokenManage;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Str;
-use Inertia\Inertia;
 use App\Models\AccessToken;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
+use App\Services\DomainNormalizer;
+use App\Services\LicenseProvisioningService;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ApiKeyController extends Controller
 {
@@ -25,103 +21,91 @@ class ApiKeyController extends Controller
             $user->tokens = $tokens->map(function ($token) {
                 return [
                     ...$token->toArray(),
-                    // 'id' => $token->id,
-                    // 'expires_at' => $token->expires_at,
-                    // 'domain' => $token->domain,
-                    // 'description' => $token->description,
-                    'bearer_token' => $this->decodeToken($token->access_key),
-                    // 'title' => $token->title,
-                    // 'abilities' => $token->abilities,
-                    // 'name' => $token->name,
-                    'last_used_ago' => optional($token->last_used_at)->diffForHumans()
+                    'has_token' => ! empty($token->access_key),
+                    'last_used_ago' => optional($token->last_used_at)->diffForHumans(),
                 ];
             });
+
             return $user;
         });
-        // return $users;
-        // $user = Auth::user();
 
         return Inertia::render('ApiKey/Index', compact('users'));
     }
 
-    public function create(Request $request)
+    public function reveal($id)
     {
+        $accessToken = AccessToken::findOrFail($id);
 
-        // $request->validate([
-        //     'domain' => [
-        //         'nullable',
-        //         'regex:/^(https?:\/\/)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}(\/.*)?$/'
-        //     ],
-        // ]);
+        if (empty($accessToken->access_key)) {
+            return response()->json([
+                'message' => 'No stored license key for this token.',
+            ], 404);
+        }
 
+        $plainTextToken = $this->decodeToken($accessToken->access_key);
+
+        if (! $plainTextToken) {
+            return response()->json([
+                'message' => 'Unable to decrypt the license key.',
+            ], 422);
+        }
+
+        return response()->json([
+            'token' => $plainTextToken,
+        ]);
+    }
+
+    public function create(Request $request, LicenseProvisioningService $licenseProvisioning)
+    {
         $request->validate([
-            'domain' => 'required'
+            'domain' => 'required',
+            'tokenable_id' => 'required|integer',
+            'user_package_id' => 'required|integer',
         ]);
 
-        $domain = $this->getDomainFromUrl($request->domain);
-        if(!$domain) {
-            return back()->withErrors([
-                'domain' => 'Invalid Domain'
-            ]);
-        }
-        
-        $dnsRecords = dns_get_record($domain, DNS_A);
-        
-        if(empty($dnsRecords)) {
-            return back()->withErrors([
-                'domain' => 'Invalid Domain'
-            ]);
-        }
-
-        if (!$request->tokenable_id) {
-            return back()->with('error', 'No selected user found');
-        }
-
         $user = User::find($request->tokenable_id);
-        if (!$user) {
+        if (! $user) {
             return back()->with('error', 'No user found against user id ' . $request->tokenable_id);
         }
 
         try {
-            DB::beginTransaction();
-            $tokenLength = AccessToken::where('tokenable_id', $user->id)->count();
-            $title = $request->title ? $request->title : $user->name . '(' . $user->id . ') - t(' . $tokenLength . ')';
-            $token = $user->createToken($title, ['*']);
-            $plainTextToken = $token->plainTextToken;
-            $accessToken = $token->accessToken;
-            $accessToken = AccessToken::find($accessToken->id);
-
-            $accessToken->update([
-                'access_key' => $this->encodeToken($plainTextToken),
-                'title' => $title,
-                'domain' => $domain ?? null,
-                'status' => $request->status,
-                'expires_at' => $request->expires_at ?? null
-            ]);
-            DB::commit();
+            $licenseProvisioning->create(
+                $user,
+                $request->domain,
+                [
+                    'title' => $request->title,
+                    'description' => $request->description,
+                    'status' => $request->status,
+                    'expires_at' => $request->expires_at,
+                    'user_package_id' => $request->user_package_id,
+                ],
+                requireUserPackage: true,
+                requireDns: true
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
         } catch (\Throwable $th) {
             return back()->with('error', $th->getMessage());
         }
 
         return back()->with('success', 'Access token generated successfully!');
     }
-    public function update(Request $request, $id)
-    {
 
-        // $request->validate([
-        //     'domain' => [
-        //         'required',
-        //         'regex:/^(https?:\/\/)?([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}(\/.*)?$/'
-        //     ],
-        // ]);
+    public function update(Request $request, $id, LicenseProvisioningService $licenseProvisioning)
+    {
         $accessToken = AccessToken::findOrFail($id);
-        $accessToken->update([
-            'title' => $request->title,
-            'description' => $request->description ?? null,
-            'domain' => $request->domain ?? null,
-            'status' => $request->status,
-            'expires_at' => $request->expires_at ? Carbon::parse($request->expires_at) : null
-        ]);
+
+        try {
+            $licenseProvisioning->update($accessToken, [
+                'title' => $request->title,
+                'description' => $request->description,
+                'domain' => $request->domain,
+                'status' => $request->status,
+                'expires_at' => $request->expires_at,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
 
         return back()->with('success', 'Access token info updated successfully!');
     }
@@ -130,16 +114,7 @@ class ApiKeyController extends Controller
     {
         $accessToken = AccessToken::findOrFail($id);
         $accessToken->delete();
+
         return back()->with('success', 'Token deleted successfully');
-    }
-
-    private function generateUniqueApiKey()
-    {
-        // $key = generateUniqueApiKey();
-        // do {
-        //     $apiKey = generateUniqueApiKey();
-        // } while (AccessToken::where('key', $apiKey)->exists()); // Check for uniqueness
-
-        // return $apiKey;
     }
 }

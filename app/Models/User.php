@@ -31,6 +31,36 @@ class User extends Authenticatable
         return $this->hasMany(UserPackage::class, 'user_id', 'id');
     }
 
+    public function adminRole()
+    {
+        return $this->belongsTo(Role::class, 'admin_role_id');
+    }
+
+    public function merchantEmployees()
+    {
+        return $this->hasMany(MerchantEmployee::class, 'merchant_user_id');
+    }
+
+    public function merchantOwner()
+    {
+        return $this->belongsTo(User::class, 'merchant_user_id');
+    }
+
+    public function staffEmployee()
+    {
+        return $this->hasOne(MerchantEmployee::class, 'user_id');
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return app(\App\Services\RbacService::class)->hasPermission($this, $permission);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return app(\App\Services\RbacService::class)->isSuperAdmin($this);
+    }
+
     public function canAccessPlatform(): bool
     {
         return ! $this->trashed() && (bool) $this->status;

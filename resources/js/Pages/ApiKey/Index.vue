@@ -9,6 +9,15 @@
                 icon-class="text-primary-600 dark:text-primary-400"
             />
 
+            <div
+                class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+            >
+                For day-to-day setup, use
+                <strong>Merchant → Websites</strong> to assign plans and
+                license keys per domain. Creating tokens here without a linked
+                plan is discouraged.
+            </div>
+
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard
                     title="Merchants"
@@ -190,10 +199,10 @@
                     <div class="flex gap-2">
                         <Link
                             v-if="selectedUser"
-                            :href="route('users.apiKeys', selectedUser.id)"
+                            :href="route('users.websites', selectedUser.id)"
                         >
                             <Button
-                                label="Open in User"
+                                label="Open Websites"
                                 icon="pi pi-external-link"
                                 size="small"
                                 severity="secondary"
@@ -202,10 +211,11 @@
                             />
                         </Link>
                         <Button
-                            label="Generate Token"
-                            icon="pi pi-plus"
+                            v-if="selectedUser"
+                            label="Generate on Websites"
+                            icon="pi pi-external-link"
                             size="small"
-                            @click="openCreateToken"
+                            @click="openWebsitesForLicense"
                         />
                     </div>
                 </div>
@@ -214,6 +224,7 @@
             <Details
                 v-if="selectedUser"
                 :user="selectedUser"
+                :is-revealing="isRevealing"
                 @handle-copy="handleCopy"
                 @handle-edit="handleEdit"
                 @handle-delete-token="handleDeleteToken"
@@ -244,9 +255,9 @@ import { AuthenticatedLayout } from "@/layouts";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import { parseISO, isPast } from "date-fns";
 import { computed, ref } from "vue";
-import { useClipboard } from "@vueuse/core";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue";
+import { useLicenseTokenReveal } from "@/composables/useLicenseTokenReveal";
 import Details from "./Details.vue";
 import TokenForm from "./TokenForm.vue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
@@ -259,7 +270,7 @@ import UserAvatar from "@/Pages/Users/fragments/UserAvatar.vue";
 import TableActions from "@/Pages/Users/fragments/TableActions.vue";
 import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 
-const { copy } = useClipboard();
+const { revealAndCopy, isRevealing } = useLicenseTokenReveal();
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -349,10 +360,23 @@ const closeDetails = () => {
     }
 };
 
-const openCreateToken = () => {
-    tokenForm.reset();
-    tokenForm.status = true;
-    showForm.value = true;
+const openWebsitesForLicense = () => {
+    if (!selectedUser.value) {
+        toast.add({
+            severity: "warn",
+            summary: "Select a merchant",
+            detail: "Choose a merchant before generating a license key.",
+            life: 3000,
+        });
+        return;
+    }
+
+    router.visit(
+        route("users.websites", {
+            user_id: selectedUser.value.id,
+            action: "license",
+        }),
+    );
 };
 
 const reFindSelectedUser = () => {
@@ -401,28 +425,11 @@ const handleSave = () => {
                 reFindSelectedUser();
             },
         });
-    } else {
-        tokenForm.tokenable_id = selectedUser.value.id;
-        tokenForm.post(route("apiKeys.create"), {
-            onSuccess(e) {
-                if (!Object.keys(e.props?.errors || {}).length) {
-                    tokenForm.reset();
-                    showForm.value = false;
-                }
-                reFindSelectedUser();
-            },
-        });
     }
 };
 
-const handleCopy = (item: any) => {
-    copy(item.bearer_token);
-    toast.add({
-        severity: "success",
-        summary: "Copied",
-        detail: "Bearer token copied to clipboard",
-        life: 3000,
-    });
+const handleCopy = async (item: any) => {
+    await revealAndCopy(item.id);
 };
 
 const handleDeleteToken = (item: any) => {

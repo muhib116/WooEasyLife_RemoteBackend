@@ -6,6 +6,12 @@
         :user="user"
     >
         <div class="space-y-5">
+            <SetupChecklist
+                v-if="user?.role === 'user' && setup"
+                :user-id="user.id"
+                :setup="setup"
+            />
+
             <PageCard no-padding>
                 <div class="p-5 md:p-6">
                     <div
@@ -47,17 +53,36 @@
                                 outlined
                                 @click="showForm = true"
                             />
-                            <Link :href="route('users.apiKeys', user.id)">
+                            <Link :href="route('users.websites', user.id)">
                                 <Button
-                                    label="API Keys"
-                                    icon="pi pi-key"
+                                    label="Manage Websites"
+                                    icon="pi pi-globe"
                                     size="small"
                                     as="span"
                                 />
                             </Link>
-                            <Link :href="route('users.packages', user.id)">
+                            <Link
+                                v-if="setup?.needs_wizard"
+                                :href="route('users.setup', user.id)"
+                            >
                                 <Button
-                                    label="Add Package"
+                                    label="Complete Setup"
+                                    icon="pi pi-play"
+                                    size="small"
+                                    severity="warning"
+                                    as="span"
+                                />
+                            </Link>
+                            <Link
+                                :href="
+                                    route('users.websites', {
+                                        user_id: user.id,
+                                        action: 'assign',
+                                    })
+                                "
+                            >
+                                <Button
+                                    label="Assign Plan"
                                     icon="pi pi-plus"
                                     size="small"
                                     severity="success"
@@ -102,10 +127,10 @@
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
-                    title="API Keys"
+                    title="License Keys"
                     :value="report.active_api_key"
                     icon="PhKey"
-                    subtitle="Personal access tokens"
+                    subtitle="Plugin access tokens"
                 />
                 <StatCard
                     title="SMS Balance"
@@ -117,7 +142,7 @@
                     icon-class="text-sky-600 dark:text-sky-400"
                 />
                 <StatCard
-                    title="Active Packages"
+                    title="Active Plans"
                     :value="report.active_package"
                     icon="PhPackage"
                     subtitle="Currently enabled"
@@ -155,6 +180,7 @@ import PageCard from "./fragments/PageCard.vue";
 import StatCard from "./fragments/StatCard.vue";
 import StatusBadge from "./fragments/StatusBadge.vue";
 import UserAvatar from "./fragments/UserAvatar.vue";
+import SetupChecklist from "./fragments/SetupChecklist.vue";
 import UserForm from "./fragments/UserForm.vue";
 
 defineOptions({
@@ -164,6 +190,13 @@ defineOptions({
 const props = defineProps<{
     user: any;
     report: any;
+    setup?: {
+        complete: number;
+        total: number;
+        ready_for_plugin: boolean;
+        needs_wizard?: boolean;
+        steps: any[];
+    };
 }>();
 
 const showForm = ref(false);

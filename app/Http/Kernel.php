@@ -73,5 +73,8 @@ class Kernel extends HttpKernel
         'check.tokenDomain' => \App\Http\Middleware\ValidateTokenDomain::class,
         'check.fraudWhitelist' => \App\Http\Middleware\ValidateWhitelistedFraudDomain::class,
         'auth.active' => \App\Http\Middleware\EnsureActiveAuthenticatedUser::class,
+        'permission' => \App\Http\Middleware\EnsurePermission::class,
+        'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
+        'merchant.portal' => \App\Http\Middleware\EnsureMerchantPortalAccess::class,
     ];
 }

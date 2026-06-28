@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\MerchantPortalContext;
+use App\Services\RbacService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -29,14 +31,22 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $rbac = app(RbacService::class);
+        $portal = app(MerchantPortalContext::class);
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'permissions' => $user ? $rbac->permissionSlugsFor($user) : [],
+                'is_super_admin' => $user ? $rbac->isSuperAdmin($user) : false,
+                'portal' => $user ? $portal->sharePayload($user) : null,
             ],
             'flash' => [
                 'success' => session('success'),
                 'error' => session('error'),
+                'license_token' => session('license_token'),
             ]
         ];
     }

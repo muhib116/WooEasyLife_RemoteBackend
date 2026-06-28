@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\LogHelper;
 use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
+use App\Services\DomainNormalizer;
 use App\Traits\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -467,15 +468,20 @@ class SmsController extends Controller
         return $this->successResponse($balanceHistory);
     }
 
-    public function smsBalance()
+    public function smsBalance(DomainNormalizer $domainNormalizer)
     {
         $userId = Auth::id();
+        $tokenDomain = $this->getTokenDomain();
 
-        $domain = $this->getTokenDomain();
         $balance = SmsBalance::query()
             ->where('user_id', $userId)
-            ->where('domain', $domain)
+            ->get()
+            ->filter(fn (SmsBalance $smsBalance) => $domainNormalizer->matches(
+                $smsBalance->domain,
+                $tokenDomain
+            ))
             ->sum('amount');
+
         return $this->successResponse($balance);
     }
 }
