@@ -35,6 +35,12 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
     Route::get('/get-user', [UserController::class, 'getUser']);
 });
 
+Route::group(['middleware' => ['auth.packageRenewal'], 'prefix' => 'api/package', 'as' => 'package.'], function () {
+    Route::get('/plans', [\App\Http\Controllers\PackagePaymentController::class, 'plans']);
+    Route::post('/payment-request', [\App\Http\Controllers\PackagePaymentController::class, 'createRequest']);
+    Route::get('/payment-history', [\App\Http\Controllers\PackagePaymentController::class, 'history']);
+});
+
 Route::get('app-logo', [PluginsController::class, 'appLogo']);
 Route::get('brand-asset/{asset}', [PluginsController::class, 'brandAsset'])
     ->where('asset', 'icon-128\.png|icon-256\.png|app_logo\.png|app_icon\.jpg');
@@ -154,12 +160,6 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::get('/recharge-history', [SmsController::class, 'rechargeHistory']);
             Route::get('/use-history', [SmsController::class, 'useHistory']);
             Route::get('/balance', [SmsController::class, 'smsBalance']);
-        });
-
-        Route::group(['as' => 'package.', 'prefix' => 'package'], function () {
-            Route::get('/plans', [\App\Http\Controllers\PackagePaymentController::class, 'plans']);
-            Route::post('/payment-request', [\App\Http\Controllers\PackagePaymentController::class, 'createRequest']);
-            Route::get('/payment-history', [\App\Http\Controllers\PackagePaymentController::class, 'history']);
         });
 
         Route::post('/fraud-check', [FraudCheckController::class, 'check'])

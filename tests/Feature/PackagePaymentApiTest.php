@@ -138,6 +138,50 @@ class PackagePaymentApiTest extends TestCase
         ]);
     }
 
+    public function test_expired_token_can_still_access_package_renewal_routes(): void
+    {
+        [$user, $plainToken] = $this->createMerchantWithToken();
+        $plan = $this->createPlan();
+
+        AccessToken::query()
+            ->where('tokenable_id', $user->id)
+            ->update([
+                'expires_at' => now()->subDay(),
+            ]);
+
+        $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->getJson('/api/get-user')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Expired');
+
+        $plansResponse = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->getJson('/api/package/plans');
+
+        $plansResponse->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonCount(1, 'data');
+
+        $submitResponse = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->postJson('/api/package/payment-request', [
+                'package_hub_id' => $plan->id,
+                'order_limit' => 100,
+                'total_amount' => 100,
+                'transaction_charge' => 0,
+                'transaction_method' => 'Bkash',
+                'transaction_id' => 'TXN-EXPIRED',
+                'account_number' => '01700000000',
+            ]);
+
+        $submitResponse->assertOk()
+            ->assertJsonPath('status', true);
+
+        $this->assertDatabaseHas('package_payment_requests', [
+            'user_id' => $user->id,
+            'transaction_id' => 'TXN-EXPIRED',
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_approving_payment_assigns_subscription(): void
     {
         [$user, $plainToken] = $this->createMerchantWithToken();
