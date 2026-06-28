@@ -1,98 +1,349 @@
 <template>
-    <form class="space-y-5" @submit.prevent="$emit('handleSubmit')">
-        <div
-            class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300"
+    <form class="space-y-6" @submit.prevent="onSubmit">
+        <section
+            class="space-y-4 rounded-xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-700 dark:bg-slate-900/40 sm:p-5"
         >
-            Package price = <strong>per order rate × order limit</strong> when
-            assigned to a user. No time expiry — quota is order-based.
-        </div>
+            <div class="flex items-center gap-2 border-b border-gray-200/80 pb-3 dark:border-gray-700/80">
+                <span
+                    class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-500/20 dark:text-primary-300"
+                >
+                    <i class="pi pi-box text-sm" />
+                </span>
+                <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">
+                    Package details
+                </h3>
+            </div>
 
-        <div>
-            <label
-                for="title"
-                class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
-            >
-                Package Title <span class="text-rose-500">*</span>
-            </label>
-            <InputText
-                v-model="form.title"
-                id="title"
-                placeholder="e.g. Starter Plan"
-                class="!w-full"
-                autocomplete="off"
-            />
-            <p v-if="form.errors.title" class="mt-1 text-sm text-rose-500">
-                {{ form.errors.title }}
-            </p>
-        </div>
+            <div class="space-y-4">
+                <div>
+                    <label
+                        for="package_name"
+                        class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                    >
+                        Package Name <span class="text-rose-500">*</span>
+                    </label>
+                    <InputText
+                        id="package_name"
+                        v-model="draft.package_name"
+                        placeholder="e.g. Pro Plus – 1 Month"
+                        class="!w-full"
+                        autocomplete="off"
+                    />
+                    <p v-if="errors.package_name" class="mt-1 text-sm text-rose-500">
+                        {{ errors.package_name }}
+                    </p>
+                </div>
 
-        <div>
-            <label
-                for="description"
-                class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
-            >
-                Description
-            </label>
-            <Textarea
-                v-model="form.description"
-                id="description"
-                placeholder="Brief description for admins and merchants"
-                class="w-full"
-                auto-resize
-                rows="3"
-            />
-            <p
-                v-if="form.errors.description"
-                class="mt-1 text-sm text-rose-500"
-            >
-                {{ form.errors.description }}
-            </p>
-        </div>
+                <div
+                    :class="[
+                        'flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 transition-colors',
+                        draft.is_special
+                            ? 'border-amber-300 bg-amber-50/90 dark:border-amber-500/35 dark:bg-amber-500/10'
+                            : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-slate-950/50',
+                    ]"
+                    @click="draft.is_special = !draft.is_special"
+                >
+                    <div class="flex min-w-0 items-center gap-3">
+                        <span
+                            :class="[
+                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                                draft.is_special
+                                    ? 'bg-amber-200 text-amber-700 dark:bg-amber-500/25 dark:text-amber-300'
+                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                            ]"
+                        >
+                            <i
+                                :class="[
+                                    'pi text-sm',
+                                    draft.is_special ? 'pi-star-fill' : 'pi-star',
+                                ]"
+                            />
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                Is Special?
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Featured plan — highlighted in the package catalog
+                            </p>
+                        </div>
+                    </div>
+                    <ToggleSwitch
+                        v-model="draft.is_special"
+                        class="pointer-events-none shrink-0"
+                    />
+                </div>
 
-        <div>
-            <label
-                for="per_order_rate"
-                class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                <div
+                    class="grid gap-4"
+                    :class="
+                        isFreeTrial
+                            ? 'sm:grid-cols-2 lg:grid-cols-4'
+                            : 'sm:grid-cols-2 lg:grid-cols-3'
+                    "
+                >
+                    <div>
+                        <label
+                            for="package_duration"
+                            class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Package Duration <span class="text-rose-500">*</span>
+                        </label>
+                        <Select
+                            id="package_duration"
+                            v-model="draft.package_duration"
+                            :options="durationOptions"
+                            option-label="label"
+                            option-value="value"
+                            placeholder="Select duration"
+                            class="w-full"
+                        />
+                    </div>
+
+                    <div v-if="isFreeTrial">
+                        <label
+                            for="trial_days"
+                            class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Trial duration (days)
+                            <span class="text-rose-500">*</span>
+                        </label>
+                        <InputNumber
+                            id="trial_days"
+                            v-model="draft.trial_days"
+                            class="w-full"
+                            :use-grouping="false"
+                            :min="1"
+                            suffix=" days"
+                            placeholder="e.g. 14"
+                        />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Active trial length before expiry.
+                        </p>
+                        <p v-if="errors.trial_days" class="mt-1 text-sm text-rose-500">
+                            {{ errors.trial_days }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label
+                            for="package_price"
+                            class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Package Pricing <span class="text-rose-500">*</span>
+                        </label>
+                        <InputNumber
+                            id="package_price"
+                            v-model="draft.package_price"
+                            class="w-full"
+                            :use-grouping="false"
+                            :min="0"
+                            :min-fraction-digits="0"
+                            :max-fraction-digits="2"
+                            suffix=" TK"
+                            placeholder="e.g. 1500"
+                        />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Total price merchants pay for this package period.
+                        </p>
+                        <p v-if="errors.package_price" class="mt-1 text-sm text-rose-500">
+                            {{ errors.package_price }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label
+                            for="order_rate_token"
+                            class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Order Rate Token <span class="text-rose-500">*</span>
+                        </label>
+                        <InputNumber
+                            id="order_rate_token"
+                            v-model="draft.order_rate_token"
+                            class="w-full"
+                            :use-grouping="false"
+                            :min="0"
+                            placeholder="e.g. 1000"
+                        />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Usage tokens included for this package period.
+                        </p>
+                        <p v-if="errors.order_rate_token" class="mt-1 text-sm text-rose-500">
+                            {{ errors.order_rate_token }}
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <label
+                        for="description"
+                        class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                    >
+                        Features / Description
+                    </label>
+                    <div
+                        class="package-description-editor overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-slate-950/50"
+                    >
+                        <ClassicEditor v-model="draft.description" />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Rich text for marketing copy or package feature highlights.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3
+                    class="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                >
+                    Plugin features
+                </h3>
+                <div class="flex gap-2">
+                    <Button
+                        type="button"
+                        label="Check all"
+                        size="small"
+                        severity="secondary"
+                        outlined
+                        @click="setPluginFeatures(true)"
+                    />
+                    <Button
+                        type="button"
+                        label="Uncheck all"
+                        size="small"
+                        severity="secondary"
+                        outlined
+                        @click="setPluginFeatures(false)"
+                    />
+                </div>
+            </div>
+
+            <div
+                v-for="(items, group) in pluginFeatureGroups"
+                :key="group"
+                class="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
             >
-                Per Order Rate (TK) <span class="text-rose-500">*</span>
-            </label>
-            <InputNumber
-                v-model="form.per_order_rate"
-                input-id="per_order_rate"
-                placeholder="e.g. 1.00"
-                class="w-full"
-                :max-fraction-digits="5"
-                :use-grouping="false"
-                :min="0"
-                suffix=" TK"
-            />
-            <p
-                v-if="form.errors.per_order_rate"
-                class="mt-1 text-sm text-rose-500"
+                <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    {{ group }}
+                </p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label
+                        v-for="item in items"
+                        :key="item.key"
+                        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800/60"
+                    >
+                        <Checkbox
+                            v-model="draft.features[item.key]"
+                            :input-id="item.key"
+                            binary
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                            {{ item.label }}
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <section
+            class="space-y-4 rounded-xl border border-primary-200 bg-primary-50/40 p-4 dark:border-primary-500/20 dark:bg-primary-500/5"
+        >
+            <div
+                class="flex cursor-pointer items-center justify-between gap-3"
+                @click="draft.app_connect = !draft.app_connect"
             >
-                {{ form.errors.per_order_rate }}
-            </p>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Charged per order processed against this package.
-            </p>
-        </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        App Connect
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Enable WooEasyLife Android app for this package
+                    </p>
+                </div>
+                <ToggleSwitch
+                    v-model="draft.app_connect"
+                    class="pointer-events-none"
+                />
+            </div>
+
+            <div v-if="draft.app_connect" class="space-y-4 border-t border-primary-200/80 pt-4 dark:border-primary-500/20">
+                <div>
+                    <label
+                        for="total_website_connect"
+                        class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                    >
+                        Total Website Connect
+                    </label>
+                    <Select
+                        id="total_website_connect"
+                        v-model="draft.total_website_connect"
+                        :options="websiteConnectOptions"
+                        option-label="label"
+                        option-value="value"
+                        placeholder="Select store limit"
+                        class="w-full"
+                    />
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        App features
+                    </p>
+                    <div class="flex gap-2">
+                        <Button
+                            type="button"
+                            label="Check all"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            @click="setAppFeatures(true)"
+                        />
+                        <Button
+                            type="button"
+                            label="Uncheck all"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            @click="setAppFeatures(false)"
+                        />
+                    </div>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label
+                        v-for="item in appFeatureDefinitions"
+                        :key="item.key"
+                        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 hover:bg-white/60 dark:hover:bg-slate-800/60"
+                    >
+                        <Checkbox
+                            v-model="draft.features[item.key]"
+                            :input-id="`app-${item.key}`"
+                            binary
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                            {{ item.label }}
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </section>
 
         <div
             class="flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
-            @click="form.is_active = !form.is_active"
+            @click="draft.is_active = !draft.is_active"
         >
             <div>
                 <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
                     Active package
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Only active packages can be assigned to users
+                    Only active packages can be assigned to merchants
                 </p>
             </div>
-            <ToggleSwitch
-                v-model="form.is_active"
-                class="pointer-events-none"
-            />
+            <ToggleSwitch v-model="draft.is_active" class="pointer-events-none" />
         </div>
 
         <div
@@ -103,25 +354,167 @@
                 label="Cancel"
                 severity="secondary"
                 outlined
+                :disabled="saving"
                 @click="$emit('onClose')"
             />
             <Button
                 type="submit"
-                label="Create Package"
-                icon="pi pi-save"
-                :loading="form.processing"
+                :label="submitLabel"
+                icon="pi pi-check"
+                :loading="saving"
             />
         </div>
     </form>
 </template>
 
 <script setup lang="ts">
-defineProps<{
-    form: any;
+import {
+    APP_FEATURE_DEFINITIONS,
+    buildPackagePayload,
+    groupedPluginFeatures,
+    PACKAGE_DURATION_OPTIONS,
+    PLUGIN_FEATURE_DEFINITIONS,
+    setAllFeatures,
+    WEBSITE_CONNECT_OPTIONS,
+} from "@/data/packageCatalogDraft";
+import { Classic as ClassicEditor } from "@/plugins/form/editor";
+import type { PackageCatalogDraft } from "@/types/packageCatalog";
+import { router } from "@inertiajs/vue3";
+import { computed, reactive, ref, watch } from "vue";
+
+const props = defineProps<{
+    draft: PackageCatalogDraft;
+    packageId?: number | null;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     onClose: [];
-    handleSubmit: [];
 }>();
+
+const draft = props.draft;
+const saving = ref(false);
+const isEditing = computed(() => Boolean(props.packageId));
+const submitLabel = computed(() =>
+    isEditing.value ? "Update Package" : "Save Package",
+);
+const errors = reactive({
+    package_name: "",
+    package_price: "",
+    order_rate_token: "",
+    trial_days: "",
+});
+
+const isFreeTrial = computed(() => draft.package_duration === "free_trial");
+
+const durationOptions = PACKAGE_DURATION_OPTIONS;
+const websiteConnectOptions = WEBSITE_CONNECT_OPTIONS;
+const pluginFeatureGroups = groupedPluginFeatures();
+const appFeatureDefinitions = APP_FEATURE_DEFINITIONS;
+
+watch(
+    () => draft.app_connect,
+    (enabled) => {
+        if (!enabled) {
+            draft.features = setAllFeatures(
+                draft.features,
+                false,
+                APP_FEATURE_DEFINITIONS.map((item) => item.key),
+            );
+        }
+    },
+);
+
+function setPluginFeatures(enabled: boolean) {
+    draft.features = setAllFeatures(
+        draft.features,
+        enabled,
+        PLUGIN_FEATURE_DEFINITIONS.map((item) => item.key),
+    );
+}
+
+function setAppFeatures(enabled: boolean) {
+    draft.features = setAllFeatures(
+        draft.features,
+        enabled,
+        APP_FEATURE_DEFINITIONS.map((item) => item.key),
+    );
+}
+
+function validate(): boolean {
+    errors.package_name = "";
+    errors.package_price = "";
+    errors.order_rate_token = "";
+    errors.trial_days = "";
+
+    if (!draft.package_name.trim()) {
+        errors.package_name = "Package name is required.";
+    }
+
+    if (draft.package_price == null || draft.package_price < 0) {
+        errors.package_price = "Package pricing must be zero or greater.";
+    }
+
+    if (draft.order_rate_token == null || draft.order_rate_token < 0) {
+        errors.order_rate_token = "Order rate token must be zero or greater.";
+    }
+
+    if (
+        isFreeTrial.value &&
+        (draft.trial_days == null || draft.trial_days < 1)
+    ) {
+        errors.trial_days = "Trial duration must be at least 1 day.";
+    }
+
+    return (
+        !errors.package_name &&
+        !errors.package_price &&
+        !errors.order_rate_token &&
+        !errors.trial_days
+    );
+}
+
+function onSubmit() {
+    if (!validate()) {
+        return;
+    }
+
+    const payload = buildPackagePayload(draft);
+    saving.value = true;
+
+    const requestOptions = {
+        preserveScroll: true,
+        onSuccess: () => {
+            saving.value = false;
+            emit("onClose");
+        },
+        onError: (serverErrors: Record<string, string>) => {
+            saving.value = false;
+            errors.package_name = serverErrors.package_name ?? "";
+            errors.package_price = serverErrors.package_price ?? "";
+            errors.order_rate_token = serverErrors.order_rate_token ?? "";
+            errors.trial_days = serverErrors.trial_days ?? "";
+        },
+        onFinish: () => {
+            saving.value = false;
+        },
+    };
+
+    if (isEditing.value && props.packageId) {
+        router.post(route("packages.update", props.packageId), payload, requestOptions);
+        return;
+    }
+
+    router.post(route("packages.create"), payload, requestOptions);
+}
 </script>
+
+<style scoped>
+.package-description-editor :deep(.ck-editor__editable) {
+    min-height: 12rem;
+}
+
+.package-description-editor :deep(.ck.ck-editor__main > .ck-editor__editable) {
+    max-height: 16rem;
+    overflow-y: auto;
+}
+</style>

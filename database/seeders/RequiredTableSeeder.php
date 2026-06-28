@@ -24,6 +24,7 @@ class RequiredTableSeeder extends Seeder
 
         $this->call(RolePermissionSeeder::class);
         $this->seedPackageHubs();
+        $this->call(PackageCatalogSeeder::class);
 
         $this->command?->info('Required reference tables seeded.');
         $this->command?->comment('Roles: ' . Role::count() . ' | Permissions: ' . Permission::count() . ' | Plans: ' . PackageHub::count());

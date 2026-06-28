@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PackageHub;
+use App\Models\UserPackage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class PackageHubController extends Controller
@@ -16,25 +18,123 @@ class PackageHubController extends Controller
             ->with('creator')
             ->orderBy('id', 'desc')
             ->get();
+
         return Inertia::render('Package/Index', compact('packages'));
     }
 
     public function create(Request $request)
     {
-        $request->validate([
-            'title' => 'required',
-            'per_order_rate' => 'required'
+        $validated = $this->validateCatalogPayload($request);
+
+        PackageHub::create([
+            'title' => $validated['package_name'],
+            'description' => $validated['description'] ?? null,
+            'per_order_rate' => 0,
+            'package_duration' => $validated['package_duration'],
+            'trial_days' => $validated['package_duration'] === 'free_trial'
+                ? $validated['trial_days']
+                : null,
+            'order_rate_token' => $validated['order_rate_token'],
+            'package_price' => $validated['package_price'],
+            'app_connect' => $request->boolean('app_connect'),
+            'total_website_connect' => $request->boolean('app_connect')
+                ? ($validated['total_website_connect'] ?? null)
+                : null,
+            'features' => $validated['features'],
+            'is_active' => $request->boolean('is_active'),
+            'is_special' => $request->boolean('is_special'),
+            'created_by' => Auth::id(),
+            'index' => PackageHub::withTrashed()->count() + 1,
         ]);
 
-        $data = [
-            'title' => $request->title,
-            'description' => $request->description,
-            'per_order_rate' => $request->per_order_rate,
-            'is_active' => $request->is_active,
-            'created_by' => Auth::id(),
-            'index' => PackageHub::withTrashed()->count() + 1
-        ];
-        PackageHub::create($data);
         return back()->with('success', 'Package created successfully!');
+    }
+
+    public function update(Request $request, int $id)
+    {
+        $package = PackageHub::query()->findOrFail($id);
+
+        if (! $this->isCatalogPackage($package)) {
+            return back()->with('error', 'Legacy packages cannot be edited from the catalog form.');
+        }
+
+        $validated = $this->validateCatalogPayload($request);
+
+        $package->update([
+            'title' => $validated['package_name'],
+            'description' => $validated['description'] ?? null,
+            'package_duration' => $validated['package_duration'],
+            'trial_days' => $validated['package_duration'] === 'free_trial'
+                ? $validated['trial_days']
+                : null,
+            'order_rate_token' => $validated['order_rate_token'],
+            'package_price' => $validated['package_price'],
+            'app_connect' => $request->boolean('app_connect'),
+            'total_website_connect' => $request->boolean('app_connect')
+                ? ($validated['total_website_connect'] ?? null)
+                : null,
+            'features' => $validated['features'],
+            'is_active' => $request->boolean('is_active'),
+            'is_special' => $request->boolean('is_special'),
+            'updated_by' => Auth::id(),
+        ]);
+
+        return back()->with('success', 'Package updated successfully!');
+    }
+
+    public function destroy(int $id)
+    {
+        $package = PackageHub::query()->findOrFail($id);
+
+        if ($package->trashed()) {
+            return back()->with('error', 'This package has already been deleted.');
+        }
+
+        if (UserPackage::query()->where('package_hub_id', $package->id)->exists()) {
+            return back()->with(
+                'error',
+                'Cannot delete this package because it is assigned to one or more merchants.',
+            );
+        }
+
+        $package->update(['updated_by' => Auth::id()]);
+        $package->delete();
+
+        return back()->with('success', 'Package deleted successfully!');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateCatalogPayload(Request $request): array
+    {
+        return $request->validate([
+            'package_name' => ['required', 'string', 'max:255'],
+            'package_duration' => [
+                'required',
+                'string',
+                Rule::in(['free_trial', '1_month', '5_month', '1_year']),
+            ],
+            'trial_days' => [
+                'nullable',
+                'integer',
+                'min:1',
+                Rule::requiredIf($request->input('package_duration') === 'free_trial'),
+            ],
+            'order_rate_token' => ['required', 'integer', 'min:0'],
+            'package_price' => ['required', 'numeric', 'min:0'],
+            'description' => ['nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+            'is_special' => ['sometimes', 'boolean'],
+            'app_connect' => ['sometimes', 'boolean'],
+            'total_website_connect' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'features' => ['required', 'array'],
+        ]);
+    }
+
+    private function isCatalogPackage(PackageHub $package): bool
+    {
+        return $package->package_duration !== null
+            || $package->order_rate_token !== null;
     }
 }

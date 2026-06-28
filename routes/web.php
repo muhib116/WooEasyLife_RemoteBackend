@@ -259,6 +259,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     Route::group(['as' => 'packages.', 'prefix' => 'packages'], function () {
         Route::get('/', [PackageHubController::class, 'index'])->name('index');
         Route::post('/create', [PackageHubController::class, 'create'])->name('create');
+        Route::post('/{id}/update', [PackageHubController::class, 'update'])->name('update');
+        Route::post('/{id}/delete', [PackageHubController::class, 'destroy'])->name('delete');
     });
 
     Route::group(['as' => 'packagePayments.', 'prefix' => 'package-payments'], function () {
