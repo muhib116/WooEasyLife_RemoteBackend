@@ -201,11 +201,11 @@ const sections: NavSection[] = [
         label: "Merchants",
         items: [
             {
-                title: "Users",
+                title: "Merchants",
                 icon: "PhUsers",
                 children: [
-                    { title: "All Users", name: "users.index", icon: "PhUsersThree" },
-                    { title: "Trashed Users", name: "users.trashed", icon: "PhTrash" },
+                    { title: "All Merchants", name: "users.index", icon: "PhUsersThree" },
+                    { title: "Trashed Merchants", name: "users.trashed", icon: "PhTrash" },
                 ],
             },
             { title: "Fraud Checker", name: "frauds.index", icon: "PhUserCheck" },
@@ -219,7 +219,6 @@ const sections: NavSection[] = [
             { title: "Pricing Plans", name: "packages.index", icon: "PhPackage" },
             { title: "Payment Requests", name: "packagePayments.index", icon: "PhCreditCard" },
             { title: "Subscription Alerts", name: "subscriptionAlerts.index", icon: "PhBellRinging" },
-            { title: "License Keys", name: "apiKeys.index", icon: "PhLockKeyOpen" },
         ],
     },
     {
@@ -242,7 +241,7 @@ const sections: NavSection[] = [
 ];
 
 const expandedGroups = reactive<Record<string, boolean>>({
-    Users: Boolean(route().current("users.*")),
+    Merchants: Boolean(route().current("users.*")),
 });
 
 const toggleGroup = (title: string) => {

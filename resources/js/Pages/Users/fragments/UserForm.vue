@@ -1,7 +1,7 @@
 <template>
     <AdminDialog
         v-model:visible="dialog"
-        :header="`${userForm.id ? 'Edit' : 'Create'} User`"
+        :header="`${userForm.id ? 'Edit' : 'Create'} Merchant`"
         :style="{ width: '35rem' }"
         draggable
         @hide="resetForm"
@@ -119,6 +119,9 @@
                         placeholder="Enter WhatsApp phone"
                         class="!w-full"
                     />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Used for subscription renewal alerts when WhatsApp notifications are enabled.
+                    </p>
                 </div>
 
                 <div>

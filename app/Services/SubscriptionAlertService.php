@@ -311,13 +311,15 @@ class SubscriptionAlertService
             }
 
             foreach ($this->collectAlerts($user, $token) as $alert) {
+                $domain = $this->domainNormalizer->normalize($token->domain);
                 $feed->push([
                     ...$alert,
                     'user_id' => $user->id,
                     'user_name' => $user->name,
                     'user_email' => $user->email,
-                    'domain' => $this->domainNormalizer->normalize($token->domain),
+                    'domain' => $domain,
                     'token_id' => $token->id,
+                    'notification_channels' => $this->notificationChannelsForAlert($user, $domain, $alert),
                 ]);
             }
         }
@@ -375,6 +377,22 @@ class SubscriptionAlertService
             now()->toDateString(),
             $channel,
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function notificationChannelsForAlert(User $user, ?string $domain, array $alert): array
+    {
+        $channels = [];
+
+        foreach (['email', 'sms', 'whatsapp'] as $channel) {
+            if ($this->wasNotified($user, $domain, $alert, $channel)) {
+                $channels[] = $channel;
+            }
+        }
+
+        return $channels;
     }
 
     /**

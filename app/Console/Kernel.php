@@ -13,7 +13,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
-        $schedule->command('test:scheduler')->twiceDaily();
+        if (app()->environment('local')) {
+            $schedule->command('test:scheduler')->twiceDaily();
+        }
         $schedule->command('subscriptions:apply-expiry')->dailyAt('07:55');
         $schedule->command('subscriptions:check-alerts')->dailyAt('08:00');
         $schedule->command('subscriptions:notify')->dailyAt('08:05');

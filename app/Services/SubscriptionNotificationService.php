@@ -165,7 +165,13 @@ class SubscriptionNotificationService
         $webhookUrl = config('subscription.notifications.whatsapp_webhook_url');
         $phone = $user->whatsapp_phone ?: $user->phone;
 
-        if (! $webhookUrl || ! $phone) {
+        if (! $webhookUrl) {
+            LogHelper::saveLog('subscription whatsapp skipped', 'SUBSCRIPTION_WHATSAPP_WEBHOOK_URL is not set while WhatsApp notifications are enabled.');
+
+            return false;
+        }
+
+        if (! $phone) {
             return false;
         }
 

@@ -20,6 +20,7 @@ use App\Services\MerchantSetupService;
 use App\Services\PackagePaymentService;
 use App\Services\PlanAssignmentService;
 use App\Services\SubscriptionAlertService;
+use App\Services\SubscriptionPaymentConfigService;
 use App\Services\LicenseProvisioningService;
 use App\Services\WebsiteAggregatorService;
 use App\Traits\Transaction;
@@ -152,6 +153,7 @@ class UserController extends Controller
             $user->billing = [
                 ...app(PackagePaymentService::class)->billingSnapshot($user, $accessToken),
                 'alerts' => $billingAlerts,
+                'payment_methods' => app(SubscriptionPaymentConfigService::class)->forApi(),
             ];
             $user->license = [
                 'expires_at' => $accessToken->expires_at,
@@ -673,10 +675,14 @@ class UserController extends Controller
         }
 
         if (! $domainNormalizer->hasDnsARecord($domain)) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Domain must resolve to a DNS A record before continuing.',
-            ], 422);
+            if (app()->environment('local') && in_array($domain, ['localhost', '127.0.0.1'], true)) {
+                // Allow local WordPress development hostnames without public DNS.
+            } else {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Domain must resolve to a DNS A record before continuing.',
+                ], 422);
+            }
         }
 
         return response()->json([

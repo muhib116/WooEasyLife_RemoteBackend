@@ -32,7 +32,18 @@
                 />
             </div>
 
-            <BillingAlertsPanel :alerts="alerts" />
+            <BillingAlertsPanel :alerts="alerts">
+                <template v-if="canViewBilling" #actions>
+                    <Link :href="route('portal.billing')">
+                        <Button
+                            label="Go to Billing"
+                            icon="pi pi-credit-card"
+                            size="small"
+                            as="span"
+                        />
+                    </Link>
+                </template>
+            </BillingAlertsPanel>
 
             <PageCard title="Websites" :description="`${websites.length} shown`">
                 <div v-if="!websites.length" class="text-sm text-gray-500 dark:text-gray-400">
@@ -56,6 +67,7 @@
                             <StatusBadge
                                 :label="healthLabel(website.health?.status)"
                                 :variant="healthVariant(website.health?.status)"
+                                format="none"
                             />
                         </div>
                     </div>
@@ -72,7 +84,8 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/components/StatCard.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import BillingAlertsPanel from "@/Pages/Portal/fragments/BillingAlertsPanel.vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePermissions } from "@/composables/usePermissions";
+import { Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -94,6 +107,8 @@ const props = defineProps<{
 
 const page = usePage();
 const portal = computed(() => (page.props.auth as any)?.portal);
+const { can } = usePermissions();
+const canViewBilling = computed(() => can("billing.view"));
 
 const welcomeText = computed(() => {
     if (portal.value?.is_staff) {

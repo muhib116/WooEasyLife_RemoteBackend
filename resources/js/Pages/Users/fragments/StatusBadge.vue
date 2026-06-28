@@ -8,24 +8,44 @@
             )
         "
     >
-        <slot>{{ label }}</slot>
+        <slot>{{ displayLabel }}</slot>
     </span>
 </template>
 
 <script setup lang="ts">
 import { twMerge } from "tailwind-merge";
+import { computed } from "vue";
+import { formatSeverityLabel, formatStatusLabel } from "@/utils/formatLabels";
 
 type Variant = "success" | "danger" | "warning" | "info" | "neutral" | "primary";
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         label?: string;
         variant?: Variant;
+        format?: "status" | "severity" | "none";
     }>(),
     {
         variant: "neutral",
+        format: "status",
     },
 );
+
+const displayLabel = computed(() => {
+    if (!props.label) {
+        return "";
+    }
+
+    if (props.format === "none") {
+        return props.label;
+    }
+
+    if (props.format === "severity") {
+        return formatSeverityLabel(props.label);
+    }
+
+    return formatStatusLabel(props.label);
+});
 
 const variants: Record<Variant, string> = {
     success:

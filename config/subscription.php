@@ -13,6 +13,7 @@ return [
         'email' => (bool) env('SUBSCRIPTION_NOTIFY_EMAIL', true),
         'sms' => (bool) env('SUBSCRIPTION_NOTIFY_SMS', false),
         'whatsapp' => (bool) env('SUBSCRIPTION_NOTIFY_WHATSAPP', false),
+        // Required when whatsapp is true — POST endpoint receiving phone, message, domain, etc.
         'whatsapp_webhook_url' => env('SUBSCRIPTION_WHATSAPP_WEBHOOK_URL'),
         'portal_url' => env('SUBSCRIPTION_PORTAL_URL', env('APP_URL', 'http://localhost')),
     ],

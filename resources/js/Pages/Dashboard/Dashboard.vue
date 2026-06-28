@@ -388,11 +388,10 @@ const formattedDate = computed(() => {
 });
 
 const quickActions: { label: string; name: string; icon: IconName }[] = [
-    { label: "Users", name: "users.index", icon: "PhUsers" },
+    { label: "Merchants", name: "users.index", icon: "PhUsers" },
     { label: "Webhooks", name: "webhooks.index", icon: "PhArrowClockwise" },
     { label: "Token Ledger", name: "tokenLedger", icon: "PhCoins" },
-    { label: "Packages", name: "packages.index", icon: "PhPackage" },
-    { label: "API Keys", name: "apiKeys.index", icon: "PhLockKeyOpen" },
+    { label: "Pricing Plans", name: "packages.index", icon: "PhPackage" },
 ];
 
 type HealthAlert = {
@@ -471,7 +470,7 @@ const healthAlerts = computed<HealthAlert[]>(() => {
             label: "Expired API tokens",
             detail: `${expiredCount} merchant tokens are no longer valid`,
             icon: "PhKey",
-            href: route("apiKeys.index"),
+            href: route("users.index"),
             className:
                 "border-rose-200 bg-rose-50/80 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
             iconBg: "bg-rose-100 dark:bg-rose-500/20",
@@ -482,7 +481,7 @@ const healthAlerts = computed<HealthAlert[]>(() => {
             label: "Tokens expiring soon",
             detail: `${expiringSoon} tokens expire within 7 days`,
             icon: "PhHourglassMedium",
-            href: route("apiKeys.index"),
+            href: route("users.index"),
             className:
                 "border-sky-200 bg-sky-50/80 text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100",
             iconBg: "bg-sky-100 dark:bg-sky-500/20",

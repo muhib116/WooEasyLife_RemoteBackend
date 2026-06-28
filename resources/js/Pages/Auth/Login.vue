@@ -7,7 +7,8 @@
                 Welcome back
             </h2>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Sign in to WooEasyLife admin or merchant portal
+                Sign in to the WooEasyLife admin console or merchant portal.
+                Merchants and team members are redirected to the portal automatically.
             </p>
         </div>
 

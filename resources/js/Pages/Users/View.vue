@@ -37,9 +37,9 @@
                                     />
                                 </div>
                                 <p
-                                    class="mt-1 text-sm capitalize text-gray-500 dark:text-gray-400"
+                                    class="mt-1 text-sm text-gray-500 dark:text-gray-400"
                                 >
-                                    {{ user?.role }} account
+                                    {{ roleLabel }} account
                                 </p>
                             </div>
                         </div>
@@ -182,6 +182,7 @@ import StatusBadge from "./fragments/StatusBadge.vue";
 import UserAvatar from "./fragments/UserAvatar.vue";
 import SetupChecklist from "./fragments/SetupChecklist.vue";
 import UserForm from "./fragments/UserForm.vue";
+import { formatUserRoleLabel } from "@/utils/formatLabels";
 
 defineOptions({
     name: "UserView",
@@ -200,6 +201,8 @@ const props = defineProps<{
 }>();
 
 const showForm = ref(false);
+
+const roleLabel = computed(() => formatUserRoleLabel(props.user?.role));
 
 const contactItems = computed(() => {
     const items: { label: string; value: string; icon: IconName }[] = [];

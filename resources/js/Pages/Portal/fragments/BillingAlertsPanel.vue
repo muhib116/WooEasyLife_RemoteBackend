@@ -4,6 +4,9 @@
         title="Billing Alerts"
         :description="`${alerts.length} active alert${alerts.length === 1 ? '' : 's'}`"
     >
+        <template v-if="$slots.actions" #actions>
+            <slot name="actions" />
+        </template>
         <div class="space-y-3">
             <div
                 v-for="(alert, index) in alerts"

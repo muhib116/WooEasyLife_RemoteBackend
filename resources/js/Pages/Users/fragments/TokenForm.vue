@@ -101,7 +101,7 @@
             ></Button>
             <Button
                 type="submit"
-                :label="tokenForm.id ? 'Update' : 'Create'"
+                :label="tokenForm.id ? 'Update License' : 'Generate License'"
                 :loading="tokenForm.processing"
                 @click="$emit('handleSave')"
             ></Button>

@@ -73,6 +73,7 @@
                         <StatusBadge
                             :label="alert.severity"
                             :variant="severityVariant(alert.severity)"
+                            format="severity"
                         />
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium text-gray-900 dark:text-gray-100">

@@ -10,11 +10,13 @@
                     class="!w-full"
                     :disabled="Boolean(form.id)"
                 />
-                <span
+                <DomainFieldHint class="mt-2" />
+                <p
                     v-if="form.errors.domain"
-                    class="absolute -bottom-6 left-0 text-red-500"
-                    >{{ form.errors.domain }}</span
+                    class="mt-1 text-sm text-rose-500"
                 >
+                    {{ form.errors.domain }}
+                </p>
             </div>
         </div>
 
@@ -35,12 +37,12 @@
                 >
                     Plan quota: {{ form.total_order_can_handle }} orders
                 </p>
-                <span
+                <p
                     v-if="form.errors.remaining_order"
-                    class="text-sm text-rose-500"
+                    class="mt-1 text-sm text-rose-500"
                 >
                     {{ form.errors.remaining_order }}
-                </span>
+                </p>
             </div>
 
             <div class="mb-4 flex flex-col gap-1">
@@ -100,22 +102,11 @@
             </div>
         </div>
 
-        <div v-if="!form.id" class="mb-4 flex flex-col gap-1">
-            <label for="limit" class="text-sm font-semibold">Order limit</label>
-            <div class="relative flex-auto">
-                <InputNumber
-                    :useGrouping="false"
-                    v-model="form.limit"
-                    inputId="limit"
-                    placeholder="e.g. 300"
-                    fluid
-                />
-                <span
-                    v-if="form.errors.limit"
-                    class="absolute -bottom-6 left-0 text-red-500"
-                    >{{ form.errors.limit }}</span
-                >
-            </div>
+        <div v-if="!form.id" class="mb-4">
+            <OrderLimitPresets v-model="form.limit" />
+            <p v-if="form.errors.limit" class="mt-1 text-sm text-rose-500">
+                {{ form.errors.limit }}
+            </p>
         </div>
 
         <template v-if="!form.id && !simplified">
@@ -221,7 +212,7 @@
             ></Button>
             <Button
                 type="submit"
-                :label="form.id ? 'Update' : simplified ? 'Assign Plan' : 'Purchase'"
+                :label="form.id ? 'Update Plan' : simplified ? 'Assign Plan' : 'Assign Plan'"
                 :loading="form.processing"
             ></Button>
         </div>
@@ -229,6 +220,8 @@
 </template>
 
 <script setup lang="ts">
+import DomainFieldHint from "@/components/DomainFieldHint.vue";
+import OrderLimitPresets from "@/components/OrderLimitPresets.vue";
 import { computed, ref } from "vue";
 
 const props = withDefaults(

@@ -109,6 +109,12 @@
                             placeholder="Select role"
                             class="w-full"
                         />
+                        <p
+                            v-if="selectedRole?.description"
+                            class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            {{ selectedRole.description }}
+                        </p>
                     </div>
                     <div>
                         <label class="mb-1 block text-sm font-medium">Website scope</label>
@@ -174,6 +180,10 @@ const websiteOptions = computed(() =>
         label: website.domain,
         value: website.id,
     })),
+);
+
+const selectedRole = computed(() =>
+    props.roles.find((role) => role.id === employeeForm.role_id),
 );
 
 const employeeForm = useForm({

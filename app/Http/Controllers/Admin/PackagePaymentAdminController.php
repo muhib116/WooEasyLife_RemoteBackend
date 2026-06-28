@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\PackageHub;
 use App\Models\PackagePaymentRequest;
 use App\Models\User;
+use App\Models\UserPackage;
 use App\Services\PackagePaymentService;
+use App\Services\SubscriptionAlertService;
 use App\Services\WebsiteAggregatorService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PackagePaymentAdminController extends Controller
@@ -43,8 +44,11 @@ class PackagePaymentAdminController extends Controller
         ]);
     }
 
-    public function userBilling($userId, WebsiteAggregatorService $websiteAggregator)
-    {
+    public function userBilling(
+        $userId,
+        WebsiteAggregatorService $websiteAggregator,
+        SubscriptionAlertService $subscriptionAlertService
+    ) {
         $user = User::findOrFail($userId);
         $plans = PackageHub::query()->where('is_active', true)->orderBy('index')->get();
 
@@ -54,13 +58,30 @@ class PackagePaymentAdminController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        $packages = UserPackage::query()
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->get();
+
         $domains = collect($websiteAggregator->forUser($user))
             ->pluck('domain')
             ->unique()
             ->values()
             ->all();
 
-        return Inertia::render('Users/Billing/Index', compact('user', 'payments', 'plans', 'domains'));
+        $alerts = $subscriptionAlertService->collectPortalAlerts($user, $domains);
+        $tab = request()->query('tab', 'payments');
+
+        return Inertia::render('Users/Billing/Index', compact(
+            'user',
+            'payments',
+            'plans',
+            'domains',
+            'packages',
+            'alerts',
+            'tab'
+        ));
     }
 
     public function adminCreate(Request $request, $userId)

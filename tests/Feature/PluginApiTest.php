@@ -77,7 +77,17 @@ class PluginApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('remaining_order', 75)
-            ->assertJsonStructure(['id', 'name', 'sms_balance', 'notice']);
+            ->assertJsonStructure([
+                'id',
+                'name',
+                'sms_balance',
+                'notice',
+                'billing' => [
+                    'payment_methods' => [
+                        ['payment_partner', 'account', 'note', 'steps'],
+                    ],
+                ],
+            ]);
     }
 
     public function test_get_user_rejects_missing_origin(): void

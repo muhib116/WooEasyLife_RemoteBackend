@@ -194,8 +194,8 @@ class DashboardController extends Controller
 
         return [
             'title' => 'API Token Expiry',
-            'link' => route('apiKeys.index'),
-            'link_text' => 'Manage API Keys',
+            'link' => route('users.index'),
+            'link_text' => 'Manage Merchants',
             'total' => $total,
             'expired' => $expired,
             'active' => $active,

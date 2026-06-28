@@ -29,6 +29,12 @@ class SubscriptionAlertAdminController extends Controller
                 $this->subscriptionAlertService->adminAlertFeed(500)
             ),
             'severity' => $severity,
+            'notifications_enabled' => (bool) config('subscription.notifications.enabled', true),
+            'notification_channels' => [
+                'email' => (bool) config('subscription.notifications.email', true),
+                'sms' => (bool) config('subscription.notifications.sms', false),
+                'whatsapp' => (bool) config('subscription.notifications.whatsapp', false),
+            ],
         ]);
     }
 }

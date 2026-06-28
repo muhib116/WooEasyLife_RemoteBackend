@@ -37,9 +37,13 @@ class LicenseProvisioningService
         }
 
         if ($requireDns && ! $this->domainNormalizer->hasDnsARecord($normalizedDomain)) {
-            throw ValidationException::withMessages([
-                'domain' => 'Invalid domain',
-            ]);
+            $isLocalDevHost = in_array($normalizedDomain, ['localhost', '127.0.0.1'], true);
+
+            if (! (app()->environment('local') && $isLocalDevHost)) {
+                throw ValidationException::withMessages([
+                    'domain' => 'Invalid domain',
+                ]);
+            }
         }
 
         $userPackage = $this->resolveUserPackage($user, $normalizedDomain, $attributes, $requireUserPackage);

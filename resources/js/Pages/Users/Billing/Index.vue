@@ -2,12 +2,13 @@
     <UserLayout
         title="Billing"
         section="Billing"
-        subtitle="Subscription payment requests and renewals"
+        subtitle="Payment requests and active subscriptions"
         :user="user"
     >
         <template #actions>
             <Button
-                label="New Payment Request"
+                v-if="activeTab === 'payments'"
+                label="Add Payment Request"
                 icon="pi pi-plus"
                 size="small"
                 :disabled="!domains.length"
@@ -15,164 +16,129 @@
             />
         </template>
 
-        <PageCard
-            title="Subscription Payments"
-            :description="`${payments.length} record${payments.length === 1 ? '' : 's'}`"
-            no-padding
+        <BillingAlertsPanel v-if="alerts.length" :alerts="alerts" />
+
+        <div
+            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
-            <DataTable
-                :value="payments"
-                paginator
-                :rows="10"
-                responsive-layout="scroll"
-                class="professional-table text-sm"
+            <SelectButton
+                v-model="activeTab"
+                :options="tabOptions"
+                option-label="label"
+                option-value="value"
+                @change="onTabChange"
+            />
+        </div>
+
+        <div v-if="activeTab === 'payments'" class="space-y-4">
+            <PageCard
+                title="Payment Requests"
+                :description="`${payments.length} record${payments.length === 1 ? '' : 's'}`"
+                no-padding
             >
-                <Column field="domain" header="Domain" />
-                <Column header="Plan">
-                    <template #body="{ data }">
-                        {{ data.package_hub?.title || "—" }}
-                    </template>
-                </Column>
-                <Column field="order_limit" header="Orders" />
-                <Column field="transaction_id" header="Transaction ID" />
-                <Column field="transaction_method" header="Method" />
-                <Column field="total_amount" header="Amount">
-                    <template #body="{ data }">
-                        {{ data.total_amount }} TK
-                    </template>
-                </Column>
-                <Column field="status" header="Status">
-                    <template #body="{ data }">
-                        <StatusBadge
-                            :label="data.status"
-                            :variant="statusVariant(data.status)"
-                        />
-                    </template>
-                </Column>
-                <Column header="Actions" header-class="text-right">
-                    <template #body="{ data }">
-                        <TableActions v-if="data?.status === 'pending'">
-                            <TableActionButton
-                                action="reject"
-                                tooltip="Reject payment"
-                                @click="handleReject(data)"
+                <DataTable
+                    :value="payments"
+                    paginator
+                    :rows="10"
+                    :rows-per-page-options="[10, 25, 50]"
+                    responsive-layout="scroll"
+                    class="professional-table text-sm"
+                >
+                    <Column header="Submitted">
+                        <template #body="{ data }">
+                            {{ dateFormat(data?.created_at) }}
+                        </template>
+                    </Column>
+                    <Column field="domain" header="Domain" />
+                    <Column header="Plan">
+                        <template #body="{ data }">
+                            {{ data.package_hub?.title || "—" }}
+                        </template>
+                    </Column>
+                    <Column field="order_limit" header="Orders" />
+                    <Column field="account_number" header="Account" />
+                    <Column field="transaction_id" header="Transaction ID" />
+                    <Column field="transaction_method" header="Method" />
+                    <Column field="total_amount" header="Amount">
+                        <template #body="{ data }">
+                            {{ data.total_amount }} TK
+                        </template>
+                    </Column>
+                    <Column field="status" header="Status">
+                        <template #body="{ data }">
+                            <StatusBadge
+                                :label="data.status"
+                                :variant="statusVariant(data.status)"
                             />
-                            <TableActionButton
-                                action="approve"
-                                tooltip="Approve payment"
-                                @click="handleApprove(data)"
-                            />
-                        </TableActions>
-                    </template>
-                </Column>
-            </DataTable>
-        </PageCard>
+                        </template>
+                    </Column>
+                    <Column header="Actions" header-class="text-right">
+                        <template #body="{ data }">
+                            <TableActions v-if="data?.status === 'pending'">
+                                <TableActionButton
+                                    action="reject"
+                                    tooltip="Reject payment"
+                                    @click="handleReject(data)"
+                                />
+                                <TableActionButton
+                                    action="approve"
+                                    tooltip="Approve payment"
+                                    @click="handleApprove(data)"
+                                />
+                            </TableActions>
+                        </template>
+                    </Column>
+                </DataTable>
+            </PageCard>
+        </div>
+
+        <div v-else class="space-y-4">
+            <PageCard
+                title="Active Subscriptions"
+                :description="`${packages.length} active plan${packages.length === 1 ? '' : 's'}`"
+                no-padding
+            >
+                <DataTable
+                    :value="packages"
+                    paginator
+                    :rows="10"
+                    :rows-per-page-options="[10, 25, 50]"
+                    responsive-layout="scroll"
+                    class="professional-table text-sm"
+                >
+                    <Column field="domain" header="Domain" />
+                    <Column field="title" header="Plan" />
+                    <Column field="remaining_order" header="Remaining" />
+                    <Column field="total_order_can_handle" header="Quota" />
+                    <Column field="expires_at" header="Expires">
+                        <template #body="{ data }">
+                            {{ data.expires_at || "—" }}
+                        </template>
+                    </Column>
+                </DataTable>
+            </PageCard>
+        </div>
 
         <Dialog
             v-model:visible="showForm"
-            header="New Payment Request"
+            header="Add Payment Request"
             modal
-            :style="{ width: '40rem' }"
+            :style="{ width: '42rem' }"
+            draggable
             dismissable-mask
         >
-            <form class="space-y-4" @submit.prevent="submitForm">
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="sm:col-span-2">
-                        <label class="mb-1 block text-sm font-medium">Domain</label>
-                        <Select
-                            v-model="paymentForm.domain"
-                            :options="domainOptions"
-                            option-label="label"
-                            option-value="value"
-                            placeholder="Select website domain"
-                            class="w-full"
-                        />
-                        <small
-                            v-if="!domains.length"
-                            class="mt-1 block text-amber-600"
-                        >
-                            No websites found. Assign a plan on the Websites tab first.
-                        </small>
-                        <small v-if="paymentForm.errors.domain" class="text-red-500">
-                            {{ paymentForm.errors.domain }}
-                        </small>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="mb-1 block text-sm font-medium">Plan</label>
-                        <Select
-                            v-model="paymentForm.package_hub_id"
-                            :options="plans"
-                            option-label="title"
-                            option-value="id"
-                            placeholder="Select plan"
-                            class="w-full"
-                        />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium">Order limit</label>
-                        <InputNumber
-                            v-model="paymentForm.order_limit"
-                            class="w-full"
-                            :min="1"
-                            placeholder="e.g. 100"
-                        />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium">Total amount (TK)</label>
-                        <InputNumber
-                            v-model="paymentForm.total_amount"
-                            class="w-full"
-                            :min="0.01"
-                            :min-fraction-digits="2"
-                            placeholder="Enter total paid amount"
-                        />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium">Payment method</label>
-                        <InputText
-                            v-model="paymentForm.transaction_method"
-                            class="w-full"
-                            placeholder="e.g. Bkash, Nagad, Bank"
-                        />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium">Transaction ID</label>
-                        <InputText
-                            v-model="paymentForm.transaction_id"
-                            class="w-full"
-                            placeholder="Enter payment transaction ID"
-                        />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium">Account number</label>
-                        <InputText
-                            v-model="paymentForm.account_number"
-                            class="w-full"
-                            placeholder="Sender mobile or account number"
-                        />
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-sm font-medium">Gateway charge (TK)</label>
-                        <InputNumber
-                            v-model="paymentForm.transaction_charge"
-                            class="w-full"
-                            :min="0"
-                            :min-fraction-digits="2"
-                            placeholder="Enter gateway fee"
-                        />
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <Button
-                        label="Cancel"
-                        severity="secondary"
-                        outlined
-                        type="button"
-                        @click="showForm = false"
-                    />
-                    <Button label="Submit" type="submit" :loading="paymentForm.processing" />
-                </div>
-            </form>
+            <PaymentRequestFormFields
+                v-if="showForm"
+                :form="paymentForm"
+                :plans="plans"
+                :domains="domains"
+                :show-payment-guide="false"
+                include-cash-method
+                empty-domains-message="No websites found. Assign a plan on the Websites tab first."
+                submit-label="Create"
+                @submit="submitForm"
+                @cancel="showForm = false"
+            />
         </Dialog>
 
         <Toast />
@@ -186,35 +152,69 @@ import PageCard from "../fragments/PageCard.vue";
 import StatusBadge from "../fragments/StatusBadge.vue";
 import TableActions from "../fragments/TableActions.vue";
 import TableActionButton from "../fragments/TableActionButton.vue";
-import { router, useForm } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import BillingAlertsPanel from "@/Pages/Portal/fragments/BillingAlertsPanel.vue";
+import PaymentRequestFormFields from "@/components/PaymentRequestFormFields.vue";
+import { dateFormat } from "@/Helper";
+import { router, useForm, usePage } from "@inertiajs/vue3";
+import { computed, ref, watch } from "vue";
 import { useConfirm } from "primevue";
+import { useToast } from "primevue/usetoast";
 
 defineOptions({
     name: "UserBillingIndex",
 });
 
-const props = defineProps<{
-    user: { id: number };
-    payments: any[];
-    plans: any[];
-    domains: string[];
-}>();
-
-const confirm = useConfirm();
-const showForm = ref(false);
-
-const domainOptions = computed(() =>
-    props.domains.map((domain) => ({
-        label: domain,
-        value: domain,
-    })),
+const props = withDefaults(
+    defineProps<{
+        user: { id: number };
+        payments: any[];
+        packages?: any[];
+        plans: any[];
+        domains: string[];
+        alerts?: Array<{
+            type: string;
+            severity: string;
+            message: string;
+            domain?: string;
+        }>;
+        tab?: string;
+    }>(),
+    {
+        packages: () => [],
+        alerts: () => [],
+        tab: "payments",
+    },
 );
 
-const openForm = () => {
-    paymentForm.domain = props.domains[0] ?? "";
-    paymentForm.package_hub_id = props.plans[0]?.id ?? null;
-    showForm.value = true;
+const confirm = useConfirm();
+const toast = useToast();
+const page = usePage();
+const showForm = ref(false);
+
+const tabOptions = [
+    { label: "Payment Requests", value: "payments" },
+    { label: "Active Subscriptions", value: "subscriptions" },
+];
+
+const tabFromQuery = computed(() => {
+    const url = new URL(page.url, window.location.origin);
+    return url.searchParams.get("tab") || props.tab || "payments";
+});
+
+const activeTab = ref(
+    tabFromQuery.value === "subscriptions" ? "subscriptions" : "payments",
+);
+
+watch(tabFromQuery, (value) => {
+    activeTab.value = value === "subscriptions" ? "subscriptions" : "payments";
+});
+
+const onTabChange = () => {
+    router.get(
+        route("users.billing", props.user.id),
+        { tab: activeTab.value },
+        { preserveState: true, replace: true },
+    );
 };
 
 const paymentForm = useForm({
@@ -229,6 +229,24 @@ const paymentForm = useForm({
     note: "",
 });
 
+const syncSuggestedTotal = () => {
+    const plan = props.plans.find((item) => item.id === paymentForm.package_hub_id);
+
+    if (plan && paymentForm.order_limit) {
+        paymentForm.total_amount = Number(
+            (plan.per_order_rate * paymentForm.order_limit).toFixed(2),
+        );
+    }
+};
+
+const openForm = () => {
+    paymentForm.domain = props.domains[0] ?? "";
+    paymentForm.package_hub_id = props.plans[0]?.id ?? null;
+    paymentForm.order_limit = 100;
+    syncSuggestedTotal();
+    showForm.value = true;
+};
+
 const statusVariant = (status: string) => {
     if (status === "approved") return "success";
     if (status === "pending") return "warning";
@@ -241,6 +259,14 @@ const submitForm = () => {
         onSuccess: () => {
             paymentForm.reset();
             showForm.value = false;
+        },
+        onError: () => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Payment request failed",
+                life: 3000,
+            });
         },
     });
 };

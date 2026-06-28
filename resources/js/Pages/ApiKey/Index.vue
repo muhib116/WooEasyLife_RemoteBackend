@@ -1,9 +1,9 @@
 <template>
-    <AuthenticatedLayout title="API Keys">
+    <AuthenticatedLayout title="License Keys">
         <div class="space-y-5">
             <PageHeader
-                title="API Keys"
-                description="Manage bearer tokens and domain access for merchants"
+                title="All License Keys"
+                description="Advanced view of bearer tokens across all merchants"
                 icon="PhLockKeyOpen"
                 icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
                 icon-class="text-primary-600 dark:text-primary-400"

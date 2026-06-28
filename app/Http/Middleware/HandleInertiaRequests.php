@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\MerchantPortalContext;
 use App\Services\RbacService;
+use App\Services\SubscriptionPaymentConfigService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -47,7 +48,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => session('success'),
                 'error' => session('error'),
                 'license_token' => session('license_token'),
-            ]
+            ],
+            'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
         ];
     }
 }

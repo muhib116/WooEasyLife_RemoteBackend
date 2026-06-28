@@ -59,6 +59,7 @@ class BillingController extends Controller
             ->get(['id', 'title', 'per_order_rate', 'description']);
 
         $alerts = $this->subscriptionAlertService->collectPortalAlerts($merchant, $domains);
+        $tab = $request->query('tab', 'payments');
 
         return Inertia::render('Portal/Billing/Index', [
             'payments' => $payments,
@@ -66,6 +67,7 @@ class BillingController extends Controller
             'plans' => $plans,
             'domains' => $domains,
             'alerts' => $alerts,
+            'tab' => $tab,
         ]);
     }
 

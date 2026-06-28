@@ -14,6 +14,13 @@
                     {{ portal?.merchant_name || "Your account" }}
                 </p>
             </div>
+            <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 lg:hidden dark:hover:bg-slate-800"
+                @click="$emit('close')"
+            >
+                <Icon name="PhX" />
+            </button>
         </div>
 
         <nav class="min-h-0 flex-1 overflow-y-auto px-3 py-4 admin-scrollbar">
@@ -27,6 +34,7 @@
                                 ? 'bg-primary-50/80 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300'
                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-slate-800/80 dark:hover:text-gray-100'
                         "
+                        @click="$emit('close')"
                     >
                         <span
                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
@@ -47,34 +55,16 @@
 </template>
 
 <script setup lang="ts">
+import { useMerchantPortalNav } from "@/composables/useMerchantPortalNav";
 import { Icon } from "@/plugins";
-import { usePermissions } from "@/composables/usePermissions";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
-import type { IconName } from "@/types";
+
+defineEmits<{
+    close: [];
+}>();
 
 const page = usePage();
-const { can } = usePermissions();
-
 const portal = computed(() => (page.props.auth as any)?.portal);
-
-const navItems = computed(() => {
-    const items: Array<{ title: string; name: string; icon: IconName }> = [
-        { title: "Dashboard", name: "portal.dashboard", icon: "PhChartBar" },
-    ];
-
-    if (can("websites.view")) {
-        items.push({ title: "Websites", name: "portal.websites", icon: "PhGlobe" });
-    }
-
-    if (can("billing.view")) {
-        items.push({ title: "Billing", name: "portal.billing", icon: "PhCreditCard" });
-    }
-
-    if (can("employees.view")) {
-        items.push({ title: "Team", name: "portal.employees", icon: "PhUsersThree" });
-    }
-
-    return items;
-});
+const { navItems } = useMerchantPortalNav();
 </script>

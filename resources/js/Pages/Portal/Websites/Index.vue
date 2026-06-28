@@ -9,6 +9,8 @@
                 icon-class="text-primary-600 dark:text-primary-400"
             />
 
+            <WebsiteHealthLegend />
+
             <EmptyState
                 v-if="!websites.length"
                 title="No websites available"
@@ -31,6 +33,7 @@
                             <StatusBadge
                                 :label="healthLabel(website.health?.status)"
                                 :variant="healthVariant(website.health?.status)"
+                                format="none"
                             />
                         </div>
                         <ul
@@ -62,6 +65,18 @@
                             License keys:
                             <strong>{{ website.licenses?.length || 0 }}</strong>
                         </p>
+                        <div v-if="canViewBilling" class="pt-2">
+                            <Link :href="route('portal.billing')">
+                                <Button
+                                    label="Renew in Billing"
+                                    icon="pi pi-credit-card"
+                                    size="small"
+                                    severity="warning"
+                                    outlined
+                                    as="span"
+                                />
+                            </Link>
+                        </div>
                     </div>
                 </PageCard>
             </div>
@@ -75,11 +90,18 @@ import PageHeader from "@/components/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
+import WebsiteHealthLegend from "@/components/WebsiteHealthLegend.vue";
+import { usePermissions } from "@/composables/usePermissions";
 import { Icon } from "@/plugins";
+import { Link } from "@inertiajs/vue3";
+import { computed } from "vue";
 
 defineProps<{
     websites: any[];
 }>();
+
+const { can } = usePermissions();
+const canViewBilling = computed(() => can("billing.view"));
 
 const healthLabel = (status?: string) => {
     if (status === "connected") return "Connected";

@@ -9,6 +9,19 @@
                 icon-class="text-primary-600 dark:text-primary-400"
             />
 
+            <div
+                v-if="notifications_enabled"
+                class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100"
+            >
+                Daily merchant notifications run at 08:05 via:
+                <span v-if="notification_channels.email"> email</span>
+                <span v-if="notification_channels.sms">, SMS</span>
+                <span v-if="notification_channels.whatsapp">, WhatsApp</span>
+                <span v-if="!notification_channels.email && !notification_channels.sms && !notification_channels.whatsapp">
+                    (no outbound channels enabled)
+                </span>
+            </div>
+
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
                 <StatCard
                     title="Total"
@@ -61,6 +74,7 @@
                             <StatusBadge
                                 :label="data.severity"
                                 :variant="severityVariant(data.severity)"
+                                format="severity"
                             />
                         </template>
                     </Column>
@@ -77,6 +91,17 @@
                     </Column>
                     <Column field="domain" header="Domain" />
                     <Column field="message" header="Message" />
+                    <Column header="Notified">
+                        <template #body="{ data }">
+                            <span
+                                v-if="data.notification_channels?.length"
+                                class="text-xs text-gray-600 dark:text-gray-300"
+                            >
+                                {{ data.notification_channels.join(", ") }}
+                            </span>
+                            <span v-else class="text-xs text-gray-400">—</span>
+                        </template>
+                    </Column>
                     <Column header="Actions">
                         <template #body="{ data }">
                             <Link
@@ -111,6 +136,7 @@ type AlertRow = {
     user_id: number;
     user_name: string;
     domain: string;
+    notification_channels?: string[];
 };
 
 type Summary = {
@@ -124,6 +150,12 @@ const props = defineProps<{
     alerts: AlertRow[];
     summary: Summary;
     severity: string;
+    notifications_enabled?: boolean;
+    notification_channels?: {
+        email: boolean;
+        sms: boolean;
+        whatsapp: boolean;
+    };
 }>();
 
 const activeSeverity = ref(props.severity);

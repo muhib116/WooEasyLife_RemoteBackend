@@ -39,6 +39,7 @@
                         DNS A record (same hostname the plugin will send in
                         Origin headers).
                     </p>
+                    <DomainFieldHint />
                     <div class="max-w-xl space-y-3">
                         <label class="block text-sm font-medium">Website domain</label>
                         <InputText
@@ -218,6 +219,7 @@
 import UserLayout from "../UserLayout.vue";
 import PageCard from "../fragments/PageCard.vue";
 import PackageForm from "../fragments/PackageForm.vue";
+import DomainFieldHint from "@/components/DomainFieldHint.vue";
 import { Icon } from "@/plugins";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import axios from "axios";

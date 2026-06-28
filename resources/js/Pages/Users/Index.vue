@@ -1,8 +1,8 @@
 <template>
-    <AuthenticatedLayout :title="trashed ? 'Trashed Users' : 'Users'">
+    <AuthenticatedLayout :title="trashed ? 'Trashed Merchants' : 'Merchants'">
         <div class="space-y-5">
             <PageHeader
-                :title="trashed ? 'Trashed Users' : 'User Management'"
+                :title="trashed ? 'Trashed Merchants' : 'Merchant Management'"
                 :description="
                     trashed
                         ? 'Restore deleted accounts or remove them permanently'
@@ -15,7 +15,7 @@
                 <template #actions>
                     <Button
                         v-if="!trashed"
-                        label="Create User"
+                        label="Create Merchant"
                         icon="pi pi-plus"
                         size="small"
                         @click="openCreateForm"
@@ -33,7 +33,7 @@
                     icon-class="text-primary-600 dark:text-primary-400"
                 />
                 <StatCard
-                    title="Active Users"
+                    title="Active Merchants"
                     :value="stats.active"
                     icon="PhUserCheck"
                     subtitle="Merchant accounts enabled"
@@ -53,7 +53,7 @@
             </div>
 
             <PageCard
-                :title="trashed ? 'Trashed Users' : 'All Users'"
+                :title="trashed ? 'Trashed Merchants' : 'All Merchants'"
                 :description="`${filteredUsers.length} accounts found`"
                 no-padding
             >

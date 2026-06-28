@@ -3,33 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\AccessToken;
+use App\Models\User;
 use App\Services\DomainNormalizer;
 use App\Services\LicenseProvisioningService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class ApiKeyController extends Controller
 {
     public function index()
     {
-        $users = User::where('role', 'user')->get();
-
-        $users = $users->map(function ($user) {
-            $tokens = AccessToken::where('tokenable_id', $user->id)->get();
-            $user->tokens = $tokens->map(function ($token) {
-                return [
-                    ...$token->toArray(),
-                    'has_token' => ! empty($token->access_key),
-                    'last_used_ago' => optional($token->last_used_at)->diffForHumans(),
-                ];
-            });
-
-            return $user;
-        });
-
-        return Inertia::render('ApiKey/Index', compact('users'));
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'Manage license keys per merchant under Merchants → open a merchant → Websites.');
     }
 
     public function reveal($id)

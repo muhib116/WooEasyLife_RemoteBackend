@@ -14,6 +14,8 @@
             />
         </template>
 
+        <WebsiteHealthLegend class="mb-2" />
+
         <EmptyState
             v-if="!websites.length"
             title="No websites yet"
@@ -52,6 +54,7 @@
                                 <StatusBadge
                                     :label="healthLabel(website.health.status)"
                                     :variant="healthVariant(website.health.status)"
+                                    format="none"
                                 />
                             </div>
                             <p
@@ -177,6 +180,7 @@
                                                 ? 'success'
                                                 : 'neutral'
                                         "
+                                        format="none"
                                     />
                                 </div>
                                 <p
@@ -226,6 +230,19 @@
                     </div>
 
                     <div class="flex flex-wrap gap-2">
+                        <Link
+                            v-if="website.subscription"
+                            :href="route('users.billing', user.id)"
+                        >
+                            <Button
+                                label="Manage Billing"
+                                icon="pi pi-credit-card"
+                                size="small"
+                                severity="warning"
+                                outlined
+                                as="span"
+                            />
+                        </Link>
                         <Button
                             v-if="website.subscription"
                             label="Edit Plan"
@@ -236,7 +253,7 @@
                             @click="openEditPlan(website)"
                         />
                         <Button
-                            label="Assign Plan"
+                            :label="website.subscription ? 'Add Plan' : 'Assign Plan'"
                             icon="pi pi-plus"
                             size="small"
                             severity="secondary"
@@ -258,7 +275,7 @@
                             "
                         >
                             <Button
-                                label="View Usage"
+                                label="Order History"
                                 icon="pi pi-chart-line"
                                 size="small"
                                 severity="secondary"
@@ -268,7 +285,7 @@
                         </Link>
                         <Button
                             v-if="website.subscription"
-                            label="Usage Details"
+                            label="Usage Breakdown"
                             icon="pi pi-list"
                             size="small"
                             severity="secondary"
@@ -344,6 +361,7 @@ import EmptyState from "../fragments/EmptyState.vue";
 import PackageForm from "../fragments/PackageForm.vue";
 import TokenForm from "../fragments/TokenForm.vue";
 import UseDetails from "../fragments/UseDetails.vue";
+import WebsiteHealthLegend from "@/components/WebsiteHealthLegend.vue";
 import { Icon } from "@/plugins";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import { computed, onMounted, ref } from "vue";
