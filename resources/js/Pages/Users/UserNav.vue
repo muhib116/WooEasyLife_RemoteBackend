@@ -22,6 +22,17 @@
                     <span class="flex items-center gap-2">
                         <Icon :name="menu.icon" class="text-base" />
                         {{ menu.title }}
+                        <span
+                            v-if="menu.count !== null && menu.count !== undefined"
+                            class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-xs font-semibold"
+                            :class="
+                                menu.isActive
+                                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300'
+                                    : 'bg-slate-200 text-gray-600 dark:bg-slate-700 dark:text-gray-300'
+                            "
+                        >
+                            {{ menu.count }}
+                        </span>
                     </span>
                 </Link>
             </div>
@@ -42,34 +53,45 @@ import { computed } from "vue";
 import type { IconName } from "@/types";
 
 const props = defineProps<{
-    user: { id: number };
+    user: {
+        id: number;
+        websites_count?: number;
+        merchant_employees_count?: number;
+    };
 }>();
 
 const menus = computed(
-    (): { title: string; url: string; isActive: boolean; icon: IconName }[] => [
+    (): {
+        title: string;
+        url: string;
+        isActive: boolean;
+        icon: IconName;
+        count?: number | null;
+    }[] => [
         {
-            title: "1. Overview",
+            title: "Overview",
             url: route("users.view", props.user.id),
             isActive: route().current("users.view"),
             icon: "PhSquaresFour",
         },
         {
-            title: "2. Websites",
+            title: "Websites",
             url: route("users.websites", props.user.id),
             isActive:
                 route().current("users.websites") ||
                 route().current("users.packages") ||
                 route().current("users.apiKeys"),
             icon: "PhGlobe",
+            count: props.user.websites_count ?? null,
         },
         {
-            title: "3. Usage",
+            title: "Usage",
             url: route("users.packagesOrders", props.user.id),
             isActive: route().current("users.packagesOrders"),
             icon: "PhShoppingCart",
         },
         {
-            title: "4. SMS",
+            title: "SMS",
             url: route("users.sms", props.user.id),
             isActive:
                 route().current("users.sms") ||
@@ -78,16 +100,17 @@ const menus = computed(
             icon: "PhWallet",
         },
         {
-            title: "5. Billing",
+            title: "Billing",
             url: route("users.billing", props.user.id),
             isActive: route().current("users.billing"),
             icon: "PhCreditCard",
         },
         {
-            title: "6. Employees",
+            title: "Employees",
             url: route("users.employees", props.user.id),
             isActive: route().current("users.employees"),
             icon: "PhUsersThree",
+            count: props.user.merchant_employees_count ?? null,
         },
     ],
 );

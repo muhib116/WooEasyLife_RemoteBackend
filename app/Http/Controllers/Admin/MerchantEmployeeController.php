@@ -27,6 +27,8 @@ class MerchantEmployeeController extends Controller
             abort(404);
         }
 
+        $user->loadCount(['websites', 'merchantEmployees']);
+
         return Inertia::render('Users/Employees/Index', [
             'user' => $user,
             'employees' => $this->employeeService->listForMerchant($user),

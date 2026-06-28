@@ -66,6 +66,7 @@ class UserController extends Controller
             ->withSum(['userPackage as remaining_order' => function ($query) {
                 $query->where('is_active', 1);
             }], 'remaining_order')
+            ->withCount(['websites', 'merchantEmployees'])
             ->orderBy($onlyTrashed ? 'deleted_at' : 'id', 'desc');
     }
 
@@ -170,6 +171,7 @@ class UserController extends Controller
     public function view($userId)
     {
         $user = User::find($userId);
+        $user?->loadCount(['websites', 'merchantEmployees']);
 
         $package = UserPackage::where('user_id', $userId);
         $report = [
@@ -327,6 +329,7 @@ class UserController extends Controller
     public function websites($userId)
     {
         $user = User::findOrFail($userId);
+        $user->loadCount(['websites', 'merchantEmployees']);
         $catalogPackages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
         $user_packages = UserPackage::where('user_id', $userId)
             ->orderBy('created_at', 'desc')
@@ -416,6 +419,7 @@ class UserController extends Controller
                 ->format('m/d/Y h:i a');
         }
         $user = User::find($userId);
+        $user?->loadCount(['websites', 'merchantEmployees']);
         $filterDomain = $request->domain;
 
         return Inertia::render('Users/PackageOrders', compact('modifiedHistory', 'userId', 'start_date', 'end_date', 'user', 'filterDomain'));
@@ -460,6 +464,7 @@ class UserController extends Controller
     public function sms($userId)
     {
         $user = User::findOrFail($userId);
+        $user->loadCount(['websites', 'merchantEmployees']);
         $recharge = SmsRecharge::where('user_id', $userId)->orderBy('id', 'desc')->get();
         $sms_history = SmsBalance::where('user_id', $userId)
             ->where('type', 'out')
@@ -640,6 +645,7 @@ class UserController extends Controller
     public function setup($userId)
     {
         $user = User::findOrFail($userId);
+        $user->loadCount(['websites', 'merchantEmployees']);
         $setup = app(MerchantSetupService::class)->progress($user);
         $catalogPackages = PackageHub::where('is_active', true)->orderBy('id', 'desc')->get();
         $defaultPackage = $catalogPackages->first();

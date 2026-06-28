@@ -122,7 +122,13 @@
                                     v-if="!trashed"
                                     class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
                                 >
-                                    Orders Left
+                                    Websites
+                                </th>
+                                <th
+                                    v-if="!trashed"
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Employees
                                 </th>
                                 <th
                                     class="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
@@ -191,11 +197,21 @@
                                         :variant="user.status ? 'success' : 'danger'"
                                     />
                                 </td>
-                                <td
-                                    v-if="!trashed"
-                                    class="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200"
-                                >
-                                    {{ user.remaining_order ?? 0 }}
+                                <td v-if="!trashed" class="px-6 py-4">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-slate-800 dark:text-gray-200"
+                                    >
+                                        <i class="pi pi-globe text-[0.7rem]" />
+                                        {{ user.websites_count ?? 0 }}
+                                    </span>
+                                </td>
+                                <td v-if="!trashed" class="px-6 py-4">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-slate-800 dark:text-gray-200"
+                                    >
+                                        <i class="pi pi-users text-[0.7rem]" />
+                                        {{ user.merchant_employees_count ?? 0 }}
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4">
                                     <TableActions>

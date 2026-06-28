@@ -50,6 +50,7 @@ class PackagePaymentAdminController extends Controller
         SubscriptionAlertService $subscriptionAlertService
     ) {
         $user = User::findOrFail($userId);
+        $user->loadCount(['websites', 'merchantEmployees']);
         $plans = PackageHub::query()->where('is_active', true)->orderBy('index')->get();
 
         $payments = PackagePaymentRequest::query()

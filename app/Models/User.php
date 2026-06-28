@@ -31,6 +31,11 @@ class User extends Authenticatable
         return $this->hasMany(UserPackage::class, 'user_id', 'id');
     }
 
+    public function websites()
+    {
+        return $this->hasMany(Website::class, 'user_id', 'id');
+    }
+
     public function adminRole()
     {
         return $this->belongsTo(Role::class, 'admin_role_id');
