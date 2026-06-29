@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RequiredTableSeeder::class,
             DemoDataSeeder::class,
+            MerchantEmployeeSeeder::class,
         ]);
 
         $this->command?->newLine();
@@ -30,5 +31,6 @@ class DatabaseSeeder extends Seeder
         $this->command?->comment('WordPress URL: ' . DemoDataSeeder::LOCAL_WORDPRESS_URL);
         $this->command?->comment('Plugin Origin header: ' . DemoDataSeeder::LOCAL_WORDPRESS_ORIGIN);
         $this->command?->comment('License domain (stored): ' . DemoDataSeeder::LOCAL_WORDPRESS_DOMAIN);
+        $this->command?->comment('Demo employees seeded for Test User (see MerchantEmployeeSeeder).');
     }
 }

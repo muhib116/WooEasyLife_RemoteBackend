@@ -22,12 +22,19 @@ class EmployeeController extends Controller
     public function index(Request $request)
     {
         $merchant = $this->merchant();
-
-        $employees = $this->pluginEmployeeService->listForMerchant($merchant);
+        $website = $this->pluginEmployeeService->resolveCurrentWebsite($merchant, $request);
+        $employees = $this->pluginEmployeeService->listForMerchant($merchant, $website['website_id']);
 
         return $this->successResponse([
             'employees' => $employees->values()->all(),
             'roles' => $this->pluginEmployeeService->listRoles()->values()->all(),
+            'websites' => $this->pluginEmployeeService->listWebsitesForMerchant($merchant)->values()->all(),
+            'current_website_id' => $website['website_id'],
+            'website_assignment' => $this->pluginEmployeeService->websiteAssignmentSummary(
+                $employees,
+                $website['website_id'],
+                $website['domain']
+            ),
         ]);
     }
 
@@ -35,15 +42,18 @@ class EmployeeController extends Controller
     {
         $merchant = $this->merchant();
         $employee = $this->pluginEmployeeService->findForMerchant($merchant, $employeeId);
+        $website = $this->pluginEmployeeService->resolveCurrentWebsite($merchant, $request);
 
         return $this->successResponse([
-            'employee' => $this->pluginEmployeeService->formatEmployee($employee),
+            'employee' => $this->pluginEmployeeService->formatEmployee($employee, $website['website_id']),
         ]);
     }
 
     public function store(Request $request)
     {
         $merchant = $this->merchant();
+
+        $this->pluginEmployeeService->normalizeWebsiteIdsInput($request);
 
         $validator = Validator::make(
             $request->all(),
@@ -55,9 +65,11 @@ class EmployeeController extends Controller
         }
 
         try {
+            $website = $this->pluginEmployeeService->resolveCurrentWebsite($merchant, $request);
             $employee = $this->pluginEmployeeService->create(
                 $merchant,
-                $this->pluginEmployeeService->requestPayload($request)
+                $this->pluginEmployeeService->requestPayload($request),
+                $website['website_id']
             );
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->validationErrorResponse($e->errors());
@@ -73,6 +85,8 @@ class EmployeeController extends Controller
         $merchant = $this->merchant();
         $employee = $this->pluginEmployeeService->findForMerchant($merchant, $employeeId);
 
+        $this->pluginEmployeeService->normalizeWebsiteIdsInput($request);
+
         $validator = Validator::make(
             $request->all(),
             $this->pluginEmployeeService->validationRules(updating: true)
@@ -83,10 +97,12 @@ class EmployeeController extends Controller
         }
 
         try {
+            $website = $this->pluginEmployeeService->resolveCurrentWebsite($merchant, $request);
             $updated = $this->pluginEmployeeService->update(
                 $employee,
                 $merchant,
-                $this->pluginEmployeeService->requestPayload($request)
+                $this->pluginEmployeeService->requestPayload($request),
+                $website['website_id']
             );
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->validationErrorResponse($e->errors());

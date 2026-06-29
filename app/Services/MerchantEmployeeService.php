@@ -16,8 +16,22 @@ use Illuminate\Validation\ValidationException;
 class MerchantEmployeeService
 {
     public function __construct(
-        protected RbacService $rbac
+        protected RbacService $rbac,
+        protected WebsiteSyncService $websiteSyncService
     ) {
+    }
+
+    /**
+     * @return Collection<int, Website>
+     */
+    public function assignableWebsitesForMerchant(User $merchant): Collection
+    {
+        $this->websiteSyncService->backfillUser($merchant);
+
+        return Website::query()
+            ->where('user_id', $merchant->id)
+            ->orderBy('domain')
+            ->get(['id', 'domain', 'title']);
     }
 
     /**

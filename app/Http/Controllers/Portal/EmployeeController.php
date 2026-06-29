@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\MerchantEmployee;
-use App\Models\Website;
 use App\Services\MerchantEmployeeService;
 use App\Services\MerchantPortalContext;
 use App\Services\RbacService;
@@ -32,10 +31,7 @@ class EmployeeController extends Controller
                 'slug' => $role->slug,
                 'description' => $role->description,
             ]),
-            'websites' => Website::query()
-                ->where('user_id', $merchant->id)
-                ->orderBy('domain')
-                ->get(['id', 'domain', 'title']),
+            'websites' => $this->employeeService->assignableWebsitesForMerchant($merchant),
         ]);
     }
 

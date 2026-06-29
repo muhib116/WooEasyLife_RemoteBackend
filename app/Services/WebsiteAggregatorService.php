@@ -226,15 +226,7 @@ class WebsiteAggregatorService
 
     private function employeeLinkedToWebsite(MerchantEmployee $employee, int $websiteId): bool
     {
-        if ($employee->websites->isNotEmpty()) {
-            return $employee->websites->contains('id', $websiteId);
-        }
-
-        if ($employee->website_id) {
-            return (int) $employee->website_id === $websiteId;
-        }
-
-        return true;
+        return $employee->isAssignedToWebsite($websiteId);
     }
 
     /**

@@ -114,6 +114,8 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::get('employees/{employee_id}', [PluginEmployeeController::class, 'show'])
             ->whereNumber('employee_id');
         Route::post('employees', [PluginEmployeeController::class, 'store']);
+        Route::post('employees/{employee_id}', [PluginEmployeeController::class, 'update'])
+            ->whereNumber('employee_id');
         Route::put('employees/{employee_id}', [PluginEmployeeController::class, 'update'])
             ->whereNumber('employee_id');
         Route::patch('employees/{employee_id}', [PluginEmployeeController::class, 'update'])

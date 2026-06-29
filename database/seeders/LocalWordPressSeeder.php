@@ -17,6 +17,7 @@ class LocalWordPressSeeder extends Seeder
         $this->call([
             RequiredTableSeeder::class,
             DemoDataSeeder::class,
+            MerchantEmployeeSeeder::class,
         ]);
 
         $this->command?->newLine();

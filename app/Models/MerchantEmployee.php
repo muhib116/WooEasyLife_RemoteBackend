@@ -57,4 +57,23 @@ class MerchantEmployee extends Model
 
         return asset('storage/'.$this->photo);
     }
+
+    public function isAssignedToWebsite(?int $websiteId): bool
+    {
+        if (! $websiteId) {
+            return false;
+        }
+
+        $this->loadMissing('websites');
+
+        if ($this->websites->isNotEmpty()) {
+            return $this->websites->contains('id', $websiteId);
+        }
+
+        if ($this->website_id) {
+            return (int) $this->website_id === $websiteId;
+        }
+
+        return true;
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\AccessToken;
 use App\Models\MerchantEmployee;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserPackage;
 use App\Models\Website;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -93,15 +94,241 @@ class PluginEmployeeApiTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'employees' => [
-                        ['id', 'name', 'phone', 'email', 'photo_url', 'status', 'role', 'website_ids'],
+                        ['id', 'name', 'phone', 'email', 'photo_url', 'status', 'role', 'website_ids', 'assigned_to_website'],
                     ],
                     'roles' => [
                         ['id', 'name', 'slug', 'description'],
+                    ],
+                    'websites',
+                    'current_website_id',
+                    'website_assignment' => [
+                        'website_id',
+                        'domain',
+                        'total',
+                        'employees',
                     ],
                 ],
             ]);
 
         $this->assertArrayNotHasKey('has_portal_access', $response->json('data.employees.0') ?? []);
+    }
+
+    public function test_plugin_lists_website_assignment_for_current_domain(): void
+    {
+        [$merchant, $tokenA] = $this->createMerchantWithToken('shop-a.example.com');
+        $tokenB = 'test-token-' . bin2hex(random_bytes(16));
+
+        AccessToken::unguarded(function () use ($merchant, $tokenB) {
+            AccessToken::create([
+                'tokenable_type' => User::class,
+                'tokenable_id' => $merchant->id,
+                'name' => 'Shop B Token',
+                'token' => hash('sha256', $tokenB),
+                'domain' => 'shop-b.example.com',
+                'status' => true,
+            ]);
+        });
+
+        $siteA = Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'shop-a.example.com',
+            'status' => true,
+        ]);
+
+        $siteB = Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'shop-b.example.com',
+            'status' => true,
+        ]);
+
+        $assigned = MerchantEmployee::create([
+            'merchant_user_id' => $merchant->id,
+            'role_id' => $this->merchantRoleId(),
+            'name' => 'Assigned Staff',
+            'phone' => '01711111111',
+            'status' => true,
+        ]);
+        $assigned->websites()->sync([$siteA->id]);
+
+        MerchantEmployee::create([
+            'merchant_user_id' => $merchant->id,
+            'role_id' => $this->merchantRoleId(),
+            'name' => 'All Websites Staff',
+            'phone' => '01722222222',
+            'status' => true,
+        ]);
+
+        $response = $this->withHeaders($this->apiHeaders($tokenA, 'https://shop-a.example.com'))
+            ->getJson('/api/employees');
+
+        $response->assertOk()
+            ->assertJsonPath('data.current_website_id', $siteA->id)
+            ->assertJsonPath('data.website_assignment.website_id', $siteA->id)
+            ->assertJsonPath('data.website_assignment.domain', 'shop-a.example.com')
+            ->assertJsonPath('data.website_assignment.total', 2)
+            ->assertJsonCount(2, 'data.websites');
+
+        $assignedNames = collect($response->json('data.website_assignment.employees'))
+            ->pluck('name')
+            ->all();
+
+        $this->assertEqualsCanonicalizing(
+            ['Assigned Staff', 'All Websites Staff'],
+            $assignedNames
+        );
+
+        $employees = collect($response->json('data.employees'))->keyBy('name');
+
+        $this->assertTrue($employees->get('Assigned Staff')['assigned_to_website']);
+        $this->assertTrue($employees->get('All Websites Staff')['assigned_to_website']);
+
+        $shopBResponse = $this->withHeaders($this->apiHeaders($tokenB, 'https://shop-b.example.com'))
+            ->getJson('/api/employees');
+
+        $shopBResponse->assertOk()
+            ->assertJsonPath('data.website_assignment.website_id', $siteB->id)
+            ->assertJsonPath('data.website_assignment.total', 1)
+            ->assertJsonPath('data.website_assignment.employees.0.name', 'All Websites Staff');
+
+        $shopBEmployees = collect($shopBResponse->json('data.employees'))->keyBy('name');
+
+        $this->assertFalse($shopBEmployees->get('Assigned Staff')['assigned_to_website']);
+        $this->assertTrue($shopBEmployees->get('All Websites Staff')['assigned_to_website']);
+    }
+
+    public function test_plugin_create_accepts_json_website_ids_payload(): void
+    {
+        [$merchant, $plainToken] = $this->createMerchantWithToken('shop-a.example.com');
+
+        $siteA = Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'shop-a.example.com',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'shop-b.example.com',
+            'status' => true,
+        ]);
+
+        $headers = $this->apiHeaders($plainToken, 'https://shop-a.example.com');
+
+        $create = $this->withHeaders($headers)->post('/api/employees', [
+            'name' => 'Site A Staff',
+            'phone' => '01766666666',
+            'role_id' => $this->merchantRoleId(),
+            'status' => true,
+            'website_ids' => json_encode([$siteA->id]),
+        ], ['Accept' => 'application/json']);
+
+        $create->assertCreated()
+            ->assertJsonPath('data.employee.name', 'Site A Staff')
+            ->assertJsonPath('data.employee.assigned_to_website', true);
+
+        $employeeId = $create->json('data.employee.id');
+
+        $this->assertDatabaseHas('merchant_employee_website', [
+            'merchant_employee_id' => $employeeId,
+            'website_id' => $siteA->id,
+        ]);
+    }
+
+    public function test_plugin_lists_assignable_websites_after_backfill(): void
+    {
+        [$merchant, $plainToken] = $this->createMerchantWithToken('shop-a.example.com');
+
+        AccessToken::unguarded(function () use ($merchant) {
+            AccessToken::create([
+                'tokenable_type' => User::class,
+                'tokenable_id' => $merchant->id,
+                'name' => 'Shop B Token',
+                'token' => hash('sha256', 'token-b'),
+                'domain' => 'shop-b.example.com',
+                'status' => true,
+            ]);
+        });
+
+        UserPackage::create([
+            'title' => 'Standard',
+            'domain' => 'shop-a.example.com',
+            'user_id' => $merchant->id,
+            'package_hub_id' => 1,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 50,
+            'total_order_handled' => 50,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+        ]);
+
+        UserPackage::create([
+            'title' => 'Standard',
+            'domain' => 'shop-b.example.com',
+            'user_id' => $merchant->id,
+            'package_hub_id' => 1,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 50,
+            'total_order_handled' => 50,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+        ]);
+
+        $response = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop-a.example.com'))
+            ->getJson('/api/employees');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data.websites');
+
+        $domains = collect($response->json('data.websites'))->pluck('domain')->all();
+
+        $this->assertEqualsCanonicalizing(
+            ['shop-a.example.com', 'shop-b.example.com'],
+            $domains
+        );
+    }
+
+    public function test_plugin_multipart_post_update_matches_plugin_form(): void
+    {
+        [$merchant, $plainToken] = $this->createMerchantWithToken();
+        $headers = $this->apiHeaders($plainToken, 'https://shop.example.com');
+
+        $create = $this->withHeaders($headers)->post('/api/employees', [
+            'name' => 'Before Edit',
+            'phone' => '01777777777',
+            'role_id' => $this->merchantRoleId(),
+            'status' => true,
+            'website_ids' => '[]',
+        ], ['Accept' => 'application/json']);
+
+        $create->assertCreated();
+        $employeeId = $create->json('data.employee.id');
+
+        $update = $this->withHeaders($headers)->post('/api/employees/' . $employeeId, [
+            'name' => 'After Edit',
+            'phone' => '01777777777',
+            'email' => 'edited@example.com',
+            'address' => 'Updated address',
+            'role_id' => $this->merchantRoleId(),
+            'status' => '0',
+            'notes' => 'Updated from plugin form',
+            'website_ids' => '[]',
+        ], ['Accept' => 'application/json']);
+
+        $update->assertOk()
+            ->assertJsonPath('data.employee.name', 'After Edit')
+            ->assertJsonPath('data.employee.email', 'edited@example.com')
+            ->assertJsonPath('data.employee.status', false);
+
+        $this->assertDatabaseHas('merchant_employees', [
+            'id' => $employeeId,
+            'name' => 'After Edit',
+            'email' => 'edited@example.com',
+            'status' => false,
+        ]);
     }
 
     public function test_plugin_creates_updates_and_deletes_employee(): void
