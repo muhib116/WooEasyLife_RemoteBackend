@@ -20,6 +20,7 @@
                         variant="info"
                         format="none"
                     />
+                    <WebsiteEmployeeBadge :employees="website.employees ?? []" />
                 </div>
                 <a
                     :href="website.display_url"
@@ -278,6 +279,7 @@
 <script setup lang="ts">
 import PageCard from "./PageCard.vue";
 import StatusBadge from "./StatusBadge.vue";
+import WebsiteEmployeeBadge from "./WebsiteEmployeeBadge.vue";
 import { Icon } from "@/plugins";
 import {
     formatSubscriptionExpiry,

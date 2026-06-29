@@ -109,18 +109,23 @@ class RolePermissionSeeder extends Seeder
 
         $merchantRoles = [
             'merchant-manager' => [
-                'name' => 'Manager',
-                'description' => 'Full access to merchant websites and team',
+                'name' => 'Store Manager',
+                'description' => 'Oversees store operations, billing, and team across assigned websites',
                 'permissions' => ['websites.view', 'websites.manage', 'billing.view', 'billing.manage', 'employees.view', 'employees.manage'],
             ],
             'merchant-operator' => [
-                'name' => 'Operator',
-                'description' => 'Day-to-day website and billing operations',
+                'name' => 'Order Fulfillment',
+                'description' => 'Processes orders, shipments, and courier bookings',
                 'permissions' => ['websites.view', 'billing.view', 'employees.view'],
             ],
             'merchant-viewer' => [
-                'name' => 'Viewer',
-                'description' => 'Read-only merchant team access',
+                'name' => 'Customer Support',
+                'description' => 'Handles customer inquiries, returns, and order status updates',
+                'permissions' => ['websites.view', 'employees.view'],
+            ],
+            'merchant-inventory' => [
+                'name' => 'Inventory & Catalog',
+                'description' => 'Manages product listings, stock levels, and catalog updates',
                 'permissions' => ['websites.view', 'employees.view'],
             ],
         ];

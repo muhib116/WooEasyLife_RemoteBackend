@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\MerchantEmployee;
 use App\Models\User;
-use App\Models\Website;
-use Illuminate\Support\Collection;
 
 class MerchantPortalContext
 {
@@ -62,9 +60,31 @@ class MerchantPortalContext
         }
 
         return MerchantEmployee::query()
-            ->with(['role.permissions', 'website:id,domain,title'])
+            ->with(['role.permissions', 'website:id,domain,title', 'websites:id,domain,title'])
             ->where('user_id', $user->id)
             ->first();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function assignedWebsiteIds(MerchantEmployee $employee): array
+    {
+        $employee->loadMissing('websites');
+
+        if ($employee->websites->isNotEmpty()) {
+            return $employee->websites
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+        }
+
+        if ($employee->website_id) {
+            return [(int) $employee->website_id];
+        }
+
+        return [];
     }
 
     /**
@@ -75,19 +95,23 @@ class MerchantPortalContext
     {
         $employee = $this->resolveEmployee($user);
 
-        if (! $employee?->website_id) {
+        if (! $employee) {
             return $websites;
         }
 
-        $scopedDomain = $employee->website?->domain;
+        $assignedIds = $this->assignedWebsiteIds($employee);
+
+        if ($assignedIds === []) {
+            return $websites;
+        }
 
         return collect($websites)
-            ->filter(function (array $website) use ($employee, $scopedDomain) {
+            ->filter(function (array $website) use ($assignedIds) {
                 if ($website['id'] ?? null) {
-                    return (int) $website['id'] === (int) $employee->website_id;
+                    return in_array((int) $website['id'], $assignedIds, true);
                 }
 
-                return $scopedDomain && ($website['domain'] ?? null) === $scopedDomain;
+                return false;
             })
             ->values()
             ->all();
@@ -116,7 +140,9 @@ class MerchantPortalContext
                 'role' => $employee->role?->name,
                 'role_slug' => $employee->role?->slug,
                 'website_id' => $employee->website_id,
+                'website_ids' => $this->assignedWebsiteIds($employee),
                 'website_domain' => $employee->website?->domain,
+                'website_domains' => $employee->websites->pluck('domain')->values()->all(),
             ] : null,
         ];
     }

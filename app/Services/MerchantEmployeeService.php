@@ -6,9 +6,11 @@ use App\Models\MerchantEmployee;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Website;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class MerchantEmployeeService
@@ -19,18 +21,24 @@ class MerchantEmployeeService
     }
 
     /**
-     * @return Collection<int, MerchantEmployee>
+     * @return Collection<int, array<string, mixed>>
      */
     public function listForMerchant(User $merchant): Collection
     {
         return MerchantEmployee::query()
-            ->with(['role:id,name,slug', 'website:id,domain,title', 'portalUser:id,email,status'])
+            ->with([
+                'role:id,name,slug,description',
+                'website:id,domain,title',
+                'websites:id,domain,title',
+                'portalUser:id,email,status',
+            ])
             ->where('merchant_user_id', $merchant->id)
             ->orderByDesc('id')
             ->get()
             ->map(function (MerchantEmployee $employee) {
                 return [
                     ...$employee->toArray(),
+                    'website_ids' => $employee->websites->pluck('id')->all(),
                     'has_portal_access' => (bool) $employee->user_id,
                     'portal_email' => $employee->portalUser?->email,
                 ];
@@ -43,25 +51,29 @@ class MerchantEmployeeService
     public function create(User $merchant, array $data): MerchantEmployee
     {
         $role = $this->resolveMerchantRole($data['role_id'] ?? null);
-        $website = $this->resolveWebsite($merchant, $data['website_id'] ?? null);
+        $websiteIds = $this->resolveWebsiteIds($merchant, $data);
 
         $employee = MerchantEmployee::create([
             'merchant_user_id' => $merchant->id,
             'role_id' => $role->id,
-            'website_id' => $website?->id,
+            'website_id' => $websiteIds[0] ?? null,
             'name' => $data['name'],
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
+            'address' => $data['address'] ?? null,
             'status' => (bool) ($data['status'] ?? true),
             'notes' => $data['notes'] ?? null,
             'created_by' => Auth::id(),
         ]);
 
+        $this->syncWebsites($employee, $merchant, $websiteIds);
+        $this->storePhoto($employee, $data['photo'] ?? null);
+
         if ($this->shouldGrantPortalAccess($data)) {
-            $this->syncPortalAccount($employee, $merchant, (string) $data['portal_password']);
+            $this->syncPortalAccount($employee->fresh(), $merchant, (string) $data['portal_password']);
         }
 
-        return $employee->fresh(['role', 'website', 'portalUser']);
+        return $employee->fresh(['role', 'website', 'websites', 'portalUser']);
     }
 
     /**
@@ -72,19 +84,23 @@ class MerchantEmployeeService
         $this->assertBelongsToMerchant($employee, $merchant);
 
         $role = $this->resolveMerchantRole($data['role_id'] ?? $employee->role_id);
-        $website = $this->resolveWebsite($merchant, $data['website_id'] ?? $employee->website_id);
+        $websiteIds = $this->resolveWebsiteIds($merchant, $data, $employee);
         $status = array_key_exists('status', $data) ? (bool) $data['status'] : $employee->status;
 
         $employee->update([
             'role_id' => $role->id,
-            'website_id' => $website?->id,
+            'website_id' => $websiteIds[0] ?? null,
             'name' => $data['name'] ?? $employee->name,
-            'email' => $data['email'] ?? $employee->email,
+            'email' => array_key_exists('email', $data) ? $data['email'] : $employee->email,
             'phone' => $data['phone'] ?? $employee->phone,
+            'address' => array_key_exists('address', $data) ? $data['address'] : $employee->address,
             'status' => $status,
-            'notes' => $data['notes'] ?? $employee->notes,
+            'notes' => array_key_exists('notes', $data) ? $data['notes'] : $employee->notes,
             'updated_by' => Auth::id(),
         ]);
+
+        $this->syncWebsites($employee, $merchant, $websiteIds);
+        $this->updatePhoto($employee, $data);
 
         if ($this->shouldGrantPortalAccess($data)) {
             $this->syncPortalAccount(
@@ -98,16 +114,127 @@ class MerchantEmployeeService
             $this->revokePortalAccount($employee->fresh());
         } elseif (! $status) {
             $this->revokePortalAccount($employee->fresh(), deactivateOnly: true);
+        } elseif ($status && $employee->user_id) {
+            $this->syncPortalAccount($employee->fresh(), $merchant, '');
         }
 
-        return $employee->fresh(['role', 'website', 'portalUser']);
+        return $employee->fresh(['role', 'website', 'websites', 'portalUser']);
     }
 
     public function delete(MerchantEmployee $employee, User $merchant): void
     {
         $this->assertBelongsToMerchant($employee, $merchant);
         $this->revokePortalAccount($employee);
+        $this->deletePhoto($employee);
+        $employee->websites()->detach();
         $employee->delete();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<int, int>
+     */
+    private function resolveWebsiteIds(User $merchant, array $data, ?MerchantEmployee $employee = null): array
+    {
+        if (array_key_exists('website_ids', $data)) {
+            $websiteIds = collect($data['website_ids'] ?? [])
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+        } elseif (array_key_exists('website_id', $data)) {
+            $websiteIds = $data['website_id'] ? [(int) $data['website_id']] : [];
+        } elseif ($employee) {
+            $employee->loadMissing('websites');
+
+            if ($employee->websites->isNotEmpty()) {
+                $websiteIds = $employee->websites->pluck('id')->all();
+            } else {
+                $websiteIds = $employee->website_id ? [(int) $employee->website_id] : [];
+            }
+        } else {
+            $websiteIds = [];
+        }
+
+        if ($websiteIds === []) {
+            return [];
+        }
+
+        $validIds = Website::query()
+            ->where('user_id', $merchant->id)
+            ->whereIn('id', $websiteIds)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (count($validIds) !== count($websiteIds)) {
+            throw ValidationException::withMessages([
+                'website_ids' => 'One or more selected websites are invalid for this merchant.',
+            ]);
+        }
+
+        return $validIds;
+    }
+
+    /**
+     * @param  array<int, int>  $websiteIds
+     */
+    private function syncWebsites(MerchantEmployee $employee, User $merchant, array $websiteIds): void
+    {
+        if ($websiteIds === []) {
+            $employee->websites()->sync([]);
+
+            return;
+        }
+
+        $employee->websites()->sync(
+            collect($websiteIds)
+                ->mapWithKeys(fn (int $websiteId) => [
+                    $websiteId => [
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                ])
+                ->all()
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function updatePhoto(MerchantEmployee $employee, array $data): void
+    {
+        if (($data['remove_photo'] ?? false) === true) {
+            $this->deletePhoto($employee);
+            $employee->update(['photo' => null]);
+
+            return;
+        }
+
+        if (($data['photo'] ?? null) instanceof UploadedFile) {
+            $this->deletePhoto($employee);
+            $this->storePhoto($employee, $data['photo']);
+        }
+    }
+
+    private function storePhoto(MerchantEmployee $employee, mixed $photo): void
+    {
+        if (! $photo instanceof UploadedFile) {
+            return;
+        }
+
+        $path = $photo->store('employees', 'public');
+        $employee->update(['photo' => $path]);
+    }
+
+    private function deletePhoto(MerchantEmployee $employee): void
+    {
+        if (! $employee->photo) {
+            return;
+        }
+
+        Storage::disk('public')->delete($employee->photo);
     }
 
     /**
@@ -242,26 +369,6 @@ class MerchantEmployeeService
         }
 
         return $role;
-    }
-
-    private function resolveWebsite(User $merchant, mixed $websiteId): ?Website
-    {
-        if (! $websiteId) {
-            return null;
-        }
-
-        $website = Website::query()
-            ->where('id', $websiteId)
-            ->where('user_id', $merchant->id)
-            ->first();
-
-        if (! $website) {
-            throw ValidationException::withMessages([
-                'website_id' => 'Invalid website for this merchant.',
-            ]);
-        }
-
-        return $website;
     }
 
     private function assertBelongsToMerchant(MerchantEmployee $employee, User $merchant): void

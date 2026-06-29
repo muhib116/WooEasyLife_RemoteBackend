@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Storage;
 
 class MerchantEmployee extends Model
 {
@@ -11,6 +13,10 @@ class MerchantEmployee extends Model
 
     protected $casts = [
         'status' => 'boolean',
+    ];
+
+    protected $appends = [
+        'photo_url',
     ];
 
     public function merchant(): BelongsTo
@@ -28,8 +34,27 @@ class MerchantEmployee extends Model
         return $this->belongsTo(Website::class);
     }
 
+    public function websites(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Website::class,
+            'merchant_employee_website',
+            'merchant_employee_id',
+            'website_id'
+        )->withTimestamps();
+    }
+
     public function portalUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (! $this->photo) {
+            return null;
+        }
+
+        return asset('storage/'.$this->photo);
     }
 }

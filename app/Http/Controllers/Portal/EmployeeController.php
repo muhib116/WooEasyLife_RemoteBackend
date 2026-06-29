@@ -43,20 +43,10 @@ class EmployeeController extends Controller
     {
         $merchant = $this->portalContext->resolveMerchant($request->user());
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'role_id' => 'required|integer',
-            'website_id' => 'nullable|integer',
-            'status' => 'boolean',
-            'notes' => 'nullable|string',
-            'grant_portal_access' => 'boolean',
-            'portal_password' => 'nullable|string|min:8',
-        ]);
+        $request->validate($this->employeeRules());
 
         try {
-            $this->employeeService->create($merchant, $request->all());
+            $this->employeeService->create($merchant, $this->employeePayload($request));
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors());
         }
@@ -69,20 +59,10 @@ class EmployeeController extends Controller
         $merchant = $this->portalContext->resolveMerchant($request->user());
         $employee = MerchantEmployee::findOrFail($employeeId);
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'role_id' => 'required|integer',
-            'website_id' => 'nullable|integer',
-            'status' => 'boolean',
-            'notes' => 'nullable|string',
-            'grant_portal_access' => 'boolean',
-            'portal_password' => 'nullable|string|min:8',
-        ]);
+        $request->validate($this->employeeRules());
 
         try {
-            $this->employeeService->update($employee, $merchant, $request->all());
+            $this->employeeService->update($employee, $merchant, $this->employeePayload($request));
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors());
         }
@@ -98,5 +78,45 @@ class EmployeeController extends Controller
         $this->employeeService->delete($employee, $merchant);
 
         return back()->with('success', 'Employee removed successfully.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function employeeRules(): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'required|string|max:50',
+            'address' => 'nullable|string|max:1000',
+            'role_id' => 'required|integer',
+            'website_ids' => 'nullable|array',
+            'website_ids.*' => 'integer',
+            'status' => 'sometimes|boolean',
+            'notes' => 'nullable|string',
+            'photo' => 'nullable|image|max:2048',
+            'remove_photo' => 'sometimes|boolean',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function employeePayload(Request $request): array
+    {
+        $payload = $request->except(['photo', 'remove_photo', 'status', '_method', 'id']);
+
+        $payload['photo'] = $request->file('photo');
+
+        if ($request->has('remove_photo')) {
+            $payload['remove_photo'] = $request->boolean('remove_photo');
+        }
+
+        if ($request->has('status')) {
+            $payload['status'] = $request->boolean('status');
+        }
+
+        return $payload;
     }
 }

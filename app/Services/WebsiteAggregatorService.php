@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AccessToken;
+use App\Models\MerchantEmployee;
 use App\Models\User;
 use App\Models\UserBusiness;
 use App\Models\UserPackage;
@@ -37,10 +38,17 @@ class WebsiteAggregatorService
             ->orderBy('id')
             ->get();
 
+        $employees = MerchantEmployee::query()
+            ->with(['websites:id', 'role:id,name'])
+            ->where('merchant_user_id', $user->id)
+            ->where('status', true)
+            ->orderBy('name')
+            ->get();
+
         $results = collect();
 
         foreach ($websites as $website) {
-            $results->push($this->buildWebsiteFromRecord($website, $packages, $tokens));
+            $results->push($this->buildWebsiteFromRecord($website, $packages, $tokens, $employees));
         }
 
         $coveredDomains = $websites->pluck('domain');
@@ -53,7 +61,7 @@ class WebsiteAggregatorService
             ->reject(fn (string $domain) => $coveredDomains->contains($domain));
 
         foreach ($orphanDomains as $domain) {
-            $results->push($this->buildWebsite($domain, $packages, $tokens));
+            $results->push($this->buildWebsite($domain, $packages, $tokens, $employees));
         }
 
         return $results->values()->all();
@@ -90,10 +98,15 @@ class WebsiteAggregatorService
     /**
      * @return array<string, mixed>
      */
-    private function buildWebsiteFromRecord(Website $website, Collection $packages, Collection $tokens): array
-    {
+    private function buildWebsiteFromRecord(
+        Website $website,
+        Collection $packages,
+        Collection $tokens,
+        Collection $employees
+    ): array {
         $domainPackages = $this->packagesForWebsite($website, $packages);
         $domainTokens = $this->tokensForWebsite($website, $tokens);
+        $linkedEmployees = $this->employeesForWebsite($employees, $website->id);
 
         return $this->composeWebsitePayload(
             $website->domain,
@@ -102,15 +115,20 @@ class WebsiteAggregatorService
             $website->id,
             $website->title,
             (bool) $website->status,
-            (bool) $website->is_primary
+            (bool) $website->is_primary,
+            $linkedEmployees
         );
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildWebsite(string $domain, Collection $packages, Collection $tokens): array
-    {
+    private function buildWebsite(
+        string $domain,
+        Collection $packages,
+        Collection $tokens,
+        Collection $employees
+    ): array {
         $domainPackages = $packages->filter(
             fn (UserPackage $package) => $this->domainNormalizer->normalize($package->domain) === $domain
         );
@@ -154,7 +172,8 @@ class WebsiteAggregatorService
         ?int $websiteId = null,
         ?string $title = null,
         ?bool $websiteStatus = null,
-        ?bool $isPrimary = null
+        ?bool $isPrimary = null,
+        array $linkedEmployees = []
     ): array {
         $subscription = $this->primarySubscription($domainPackages);
         $licenses = $domainTokens->map(fn (AccessToken $token) => [
@@ -179,7 +198,43 @@ class WebsiteAggregatorService
             'subscription' => $subscription,
             'licenses' => $licenses,
             'health' => $health,
+            'employees' => $linkedEmployees,
+            'employee_count' => count($linkedEmployees),
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function employeesForWebsite(Collection $employees, ?int $websiteId): array
+    {
+        if (! $websiteId) {
+            return [];
+        }
+
+        return $employees
+            ->filter(fn (MerchantEmployee $employee) => $this->employeeLinkedToWebsite($employee, $websiteId))
+            ->map(fn (MerchantEmployee $employee) => [
+                'id' => $employee->id,
+                'name' => $employee->name,
+                'photo_url' => $employee->photo_url,
+                'role' => $employee->role?->name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function employeeLinkedToWebsite(MerchantEmployee $employee, int $websiteId): bool
+    {
+        if ($employee->websites->isNotEmpty()) {
+            return $employee->websites->contains('id', $websiteId);
+        }
+
+        if ($employee->website_id) {
+            return (int) $employee->website_id === $websiteId;
+        }
+
+        return true;
     }
 
     /**

@@ -35,6 +35,7 @@
                                 :variant="healthVariant(website.health?.status)"
                                 format="none"
                             />
+                            <WebsiteEmployeeBadge :employees="website.employees ?? []" />
                         </div>
                         <ul
                             v-if="website.health?.issues?.length"
@@ -91,6 +92,7 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import WebsiteHealthLegend from "@/components/WebsiteHealthLegend.vue";
+import WebsiteEmployeeBadge from "@/Pages/Users/fragments/WebsiteEmployeeBadge.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { Icon } from "@/plugins";
 import { Link } from "@inertiajs/vue3";

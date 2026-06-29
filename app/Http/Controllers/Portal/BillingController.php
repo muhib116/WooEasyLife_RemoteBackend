@@ -29,14 +29,15 @@ class BillingController extends Controller
     {
         $merchant = $portalContext->resolveMerchant($request->user());
         $employee = $portalContext->resolveEmployee($request->user());
+        $scopedWebsiteIds = $employee ? $portalContext->assignedWebsiteIds($employee) : [];
 
         $paymentsQuery = PackagePaymentRequest::query()
             ->with('packageHub:id,title,per_order_rate')
             ->where('user_id', $merchant->id)
             ->orderByDesc('id');
 
-        if ($employee?->website_id) {
-            $paymentsQuery->where('website_id', $employee->website_id);
+        if ($scopedWebsiteIds !== []) {
+            $paymentsQuery->whereIn('website_id', $scopedWebsiteIds);
         }
 
         $payments = $paymentsQuery->limit(100)->get();
@@ -46,13 +47,13 @@ class BillingController extends Controller
             ->where('is_active', true)
             ->orderByDesc('id');
 
-        if ($employee?->website_id) {
-            $packagesQuery->where('website_id', $employee->website_id);
+        if ($scopedWebsiteIds !== []) {
+            $packagesQuery->whereIn('website_id', $scopedWebsiteIds);
         }
 
         $packages = $packagesQuery->get();
 
-        $domains = $this->resolveDomains($merchant, $employee?->website_id);
+        $domains = $this->resolveDomains($merchant, $scopedWebsiteIds);
         $planResolver = app(PackagePlanResolver::class);
         $activePlans = PackageHub::query()
             ->where('is_active', true)
@@ -90,7 +91,10 @@ class BillingController extends Controller
             'note' => 'nullable|string',
         ]);
 
-        $allowedDomains = $this->resolveDomains($merchant, $employee?->website_id);
+        $allowedDomains = $this->resolveDomains(
+            $merchant,
+            $employee ? $portalContext->assignedWebsiteIds($employee) : []
+        );
 
         if (
             ! collect($allowedDomains)->contains(
@@ -113,17 +117,19 @@ class BillingController extends Controller
     }
 
     /**
+     * @param  array<int, int>  $websiteIds
      * @return array<int, string>
      */
-    private function resolveDomains(User $merchant, ?int $websiteId): array
+    private function resolveDomains(User $merchant, array $websiteIds): array
     {
-        if ($websiteId) {
-            $domain = Website::query()
-                ->where('id', $websiteId)
+        if ($websiteIds !== []) {
+            return Website::query()
                 ->where('user_id', $merchant->id)
-                ->value('domain');
-
-            return $domain ? [$domain] : [];
+                ->whereIn('id', $websiteIds)
+                ->pluck('domain')
+                ->filter()
+                ->values()
+                ->all();
         }
 
         return collect($this->websiteAggregator->forUser($merchant))

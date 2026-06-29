@@ -107,6 +107,10 @@ class WebsiteRemovalService
                     ->where('website_id', $website->id)
                     ->update(['website_id' => null]);
 
+                DB::table('merchant_employee_website')
+                    ->where('website_id', $website->id)
+                    ->delete();
+
                 $wasPrimary = (bool) $website->is_primary;
                 $website->delete();
 

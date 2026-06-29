@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Models\Permission;
+use App\Models\MerchantEmployee;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Website;
 use App\Services\MerchantEmployeeService;
 use App\Services\RbacService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RbacAndEmployeeTest extends TestCase
@@ -104,6 +107,7 @@ class RbacAndEmployeeTest extends TestCase
 
         app(MerchantEmployeeService::class)->update($employee, $merchant, [
             'name' => 'Updated Manager',
+            'phone' => '01711111111',
             'role_id' => $role->id,
             'status' => false,
         ]);
@@ -113,6 +117,76 @@ class RbacAndEmployeeTest extends TestCase
             'name' => 'Updated Manager',
             'status' => false,
         ]);
+    }
+
+    public function test_employee_can_be_assigned_to_multiple_websites(): void
+    {
+        $merchant = $this->createMerchant();
+        $role = Role::where('slug', 'merchant-operator')->where('scope', 'merchant')->firstOrFail();
+
+        $siteA = Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'shop-a.example.com',
+            'title' => 'Shop A',
+            'status' => true,
+        ]);
+
+        $siteB = Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'shop-b.example.com',
+            'title' => 'Shop B',
+            'status' => true,
+        ]);
+
+        $employee = app(MerchantEmployeeService::class)->create($merchant, [
+            'name' => 'Fulfillment Lead',
+            'phone' => '01722222222',
+            'email' => 'fulfillment@example.com',
+            'role_id' => $role->id,
+            'website_ids' => [$siteA->id, $siteB->id],
+            'status' => true,
+        ]);
+
+        $employee->load('websites');
+
+        $this->assertCount(2, $employee->websites);
+        $this->assertEqualsCanonicalizing(
+            [$siteA->id, $siteB->id],
+            $employee->websites->pluck('id')->all()
+        );
+
+        $this->assertDatabaseHas('merchant_employee_website', [
+            'merchant_employee_id' => $employee->id,
+            'website_id' => $siteA->id,
+        ]);
+    }
+
+    public function test_employee_photo_upload_via_http(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->createAdmin();
+        $merchant = $this->createMerchant();
+        $role = Role::where('slug', 'merchant-manager')->where('scope', 'merchant')->firstOrFail();
+
+        $response = $this->actingAs($admin)->post(
+            route('users.employees.store', $merchant->id),
+            [
+                'name' => 'Photo Employee',
+                'phone' => '01733333333',
+                'role_id' => $role->id,
+                'status' => true,
+                'photo' => UploadedFile::fake()->image('employee.jpg'),
+            ],
+            ['Accept' => 'text/html, application/xhtml+xml'],
+        );
+
+        $response->assertRedirect();
+
+        $employee = MerchantEmployee::query()->where('merchant_user_id', $merchant->id)->firstOrFail();
+
+        $this->assertNotNull($employee->photo);
+        Storage::disk('public')->assertExists($employee->photo);
     }
 
     public function test_employees_page_loads_for_super_admin(): void

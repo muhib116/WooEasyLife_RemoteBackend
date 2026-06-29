@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\PackagePaymentRequest;
 use App\Models\UserPackage;
-use App\Models\Website;
 use App\Services\MerchantPortalContext;
 use App\Services\SubscriptionAlertService;
 use App\Services\WebsiteAggregatorService;
@@ -21,19 +20,12 @@ class DashboardController extends Controller
         SubscriptionAlertService $subscriptionAlertService
     ) {
         $merchant = $portalContext->resolveMerchant($request->user());
-        $employee = $portalContext->resolveEmployee($request->user());
         $websites = $portalContext->filterWebsitesForUser(
             $request->user(),
             $websiteAggregator->forUser($merchant)
         );
 
         $domains = collect($websites)->pluck('domain')->filter()->unique()->values()->all();
-        if ($employee?->website_id) {
-            $scopedDomain = Website::query()
-                ->where('id', $employee->website_id)
-                ->value('domain');
-            $domains = $scopedDomain ? [$scopedDomain] : [];
-        }
 
         $alerts = $subscriptionAlertService->collectPortalAlerts($merchant, $domains);
 
