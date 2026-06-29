@@ -190,8 +190,6 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('websites/delete', [UserController::class, 'destroyWebsite'])->name('websites.delete');
         Route::get('api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('packages', [UserController::class, 'packages'])->name('packages');
-        Route::get('packages/{package_id}/use-details', [UserController::class, 'useDetails'])->name('useDetails');
-        Route::get('packages-orders', [UserController::class, 'packagesOrders'])->name('packagesOrders');
         Route::get('sms', [UserController::class, 'sms'])->name('sms');
         Route::get('sms-recharge', [UserController::class, 'smsRecharge'])->name('smsRecharge');
         Route::post('sms-admin-recharge', [SmsController::class, 'smsAdminRecharge'])->name('smsAdminRecharge');

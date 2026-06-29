@@ -301,17 +301,6 @@ const buildMenuItems = (website: any) => {
 
     if (website.subscription) {
         items.push({
-            label: "Usage history",
-            icon: "pi pi-chart-line",
-            command: () =>
-                router.visit(
-                    route("users.packagesOrders", {
-                        user_id: props.user.id,
-                        domain: website.domain,
-                    }),
-                ),
-        });
-        items.push({
             label: "Billing & payments",
             icon: "pi pi-credit-card",
             command: () => router.visit(route("users.billing", props.user.id)),

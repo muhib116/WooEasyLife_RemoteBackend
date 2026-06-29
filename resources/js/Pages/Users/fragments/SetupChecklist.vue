@@ -1,9 +1,29 @@
 <template>
     <PageCard
-        :title="readyForPlugin ? 'Plugin connected' : configuredForPlugin ? 'Configured for plugin' : 'Setup progress'"
+        :title="cardTitle"
         :description="`${setup.complete} of ${setup.total} required steps complete`"
     >
-        <div class="space-y-4">
+        <template #actions>
+            <Button
+                type="button"
+                :icon="expanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+                size="small"
+                severity="secondary"
+                text
+                rounded
+                :aria-label="expanded ? 'Collapse setup checklist' : 'Expand setup checklist'"
+                @click="expanded = !expanded"
+            />
+        </template>
+
+        <p
+            v-if="!expanded"
+            class="text-sm text-gray-600 dark:text-gray-300"
+        >
+            {{ collapsedSummary }}
+        </p>
+
+        <div v-show="expanded" class="space-y-4">
             <div
                 v-if="!readyForPlugin && setup.needs_wizard"
                 class="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"
@@ -92,7 +112,7 @@
 <script setup lang="ts">
 import { Icon } from "@/plugins";
 import { Link } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import PageCard from "./PageCard.vue";
 
 const props = defineProps<{
@@ -118,6 +138,44 @@ const readyForPlugin = computed(() => props.setup.ready_for_plugin);
 const configuredForPlugin = computed(
     () => props.setup.configured_for_plugin ?? false,
 );
+
+const needsAttention = computed(
+    () =>
+        Boolean(props.setup.needs_wizard) ||
+        props.setup.complete < props.setup.total,
+);
+
+const expanded = ref(needsAttention.value);
+
+const cardTitle = computed(() => {
+    if (readyForPlugin.value) {
+        return "Plugin connected";
+    }
+
+    if (configuredForPlugin.value) {
+        return "Configured for plugin";
+    }
+
+    return "Setup progress";
+});
+
+const collapsedSummary = computed(() => {
+    if (readyForPlugin.value) {
+        return "All setup steps complete and the WooCommerce plugin is connected.";
+    }
+
+    if (configuredForPlugin.value) {
+        return "Plan and license are ready. Waiting for the plugin to connect.";
+    }
+
+    const incomplete = props.setup.steps.filter((step) => !step.complete);
+
+    if (incomplete.length === 1) {
+        return `Next: ${incomplete[0].label}`;
+    }
+
+    return `${incomplete.length} setup steps still need attention. Expand to view details.`;
+});
 
 const fixUrl = (step: {
     action_route: string | null;

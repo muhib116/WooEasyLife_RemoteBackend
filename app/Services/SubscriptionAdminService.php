@@ -67,8 +67,14 @@ class SubscriptionAdminService
         });
     }
 
-    private function applyCatalogRenewal(UserPackage $userPackage, PackageHub $packageHub): UserPackage
-    {
+    /**
+     * @param  array<string, mixed>  $extraAttributes
+     */
+    public function applyCatalogRenewal(
+        UserPackage $userPackage,
+        PackageHub $packageHub,
+        array $extraAttributes = []
+    ): UserPackage {
         $tokens = (int) ($packageHub->order_rate_token ?? 0);
         if ($tokens <= 0) {
             throw ValidationException::withMessages([
@@ -76,7 +82,7 @@ class SubscriptionAdminService
             ]);
         }
 
-        $userPackage->update([
+        $userPackage->update(array_merge([
             'title' => $packageHub->title,
             'package_hub_id' => $packageHub->id,
             'plan_type' => 'catalog',
@@ -90,7 +96,7 @@ class SubscriptionAdminService
             'expires_at' => $this->planResolver->expiresAt($packageHub),
             'is_active' => true,
             'updated_by' => Auth::id(),
-        ]);
+        ], $extraAttributes));
 
         $this->websiteSync->linkUserPackage($userPackage->fresh());
 

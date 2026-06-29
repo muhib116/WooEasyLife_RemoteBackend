@@ -85,12 +85,6 @@ const menus = computed(
             count: props.user.websites_count ?? null,
         },
         {
-            title: "Usage",
-            url: route("users.packagesOrders", props.user.id),
-            isActive: route().current("users.packagesOrders"),
-            icon: "PhShoppingCart",
-        },
-        {
             title: "SMS",
             url: route("users.sms", props.user.id),
             isActive:

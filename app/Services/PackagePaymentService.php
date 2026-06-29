@@ -298,35 +298,13 @@ class PackagePaymentService
         PackageHub $packageHub,
         PackagePaymentRequest $paymentRequest
     ): UserPackage {
-        $tokens = (int) ($packageHub->order_rate_token ?? 0);
-        if ($tokens <= 0) {
-            throw ValidationException::withMessages([
-                'package_hub_id' => 'This catalog plan has no token quota configured.',
-            ]);
-        }
-
-        $package->update([
-            'title' => $packageHub->title,
-            'package_hub_id' => $packageHub->id,
-            'order_rate_token' => $tokens,
-            'package_duration' => $packageHub->package_duration,
-            'features' => $packageHub->features,
-            'total_order_can_handle' => $tokens,
-            'remaining_order' => $tokens,
-            'total_order_handled' => 0,
+        return app(SubscriptionAdminService::class)->applyCatalogRenewal($package, $packageHub, [
             'total_cost' => $package->total_cost + $paymentRequest->total_amount,
             'transaction_charge' => $package->transaction_charge + $paymentRequest->transaction_charge,
             'transaction_method' => $paymentRequest->transaction_method ?? $package->transaction_method,
             'transaction_id' => $paymentRequest->transaction_id ?? $package->transaction_id,
             'transaction_number' => $paymentRequest->account_number ?? $package->transaction_number,
-            'expires_at' => $this->planResolver->expiresAt($packageHub),
-            'is_active' => true,
-            'updated_by' => Auth::id(),
         ]);
-
-        $this->websiteSync->linkUserPackage($package->fresh());
-
-        return $package->fresh();
     }
 
     private function resolveSubscriptionStatus(?UserPackage $package, int $remainingOrder): string

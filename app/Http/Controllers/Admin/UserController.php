@@ -33,7 +33,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -73,37 +72,8 @@ class UserController extends Controller
             ->orderBy($onlyTrashed ? 'deleted_at' : 'id', 'desc');
     }
 
-    public $notices = [
-        ['type' => 'success', 'message' => 'You did an amazing job!'],
-        ['type' => 'warning', 'message' => 'Be careful! Something might go wrong.'],
-        ['type' => 'danger', 'message' => 'Oops! Something went wrong.'],
-        ['type' => 'info', 'message' => 'Just so you know, this is important.'],
-        ['type' => 'success', 'message' => 'Well done! Keep up the good work.'],
-        ['type' => 'warning', 'message' => 'Watch out! You might need to check this.'],
-        ['type' => 'danger', 'message' => 'Alert! Action is required immediately.'],
-        ['type' => 'info', 'message' => 'Heads up! Here’s some useful information.'],
-        ['type' => 'success', 'message' => 'Great work! Everything is running smoothly.'],
-        ['type' => 'warning', 'message' => 'This needs your attention before proceeding.'],
-        ['type' => 'danger', 'message' => 'Error detected! Fix it as soon as possible.'],
-        ['type' => 'info', 'message' => 'Here’s a quick update on your progress.'],
-        ['type' => 'success', 'message' => 'You nailed it! Fantastic result.'],
-        ['type' => 'warning', 'message' => 'This might not work as expected.'],
-        ['type' => 'danger', 'message' => 'Caution! Something is broken.'],
-        ['type' => 'info', 'message' => 'Did you know? This could be useful for you.'],
-        ['type' => 'success', 'message' => 'Perfect! Everything is on track.'],
-        ['type' => 'warning', 'message' => 'A minor issue was detected, please check.'],
-        ['type' => 'danger', 'message' => 'System failure! Take immediate action.'],
-        ['type' => 'info', 'message' => 'FYI: A new update is available.']
-    ];
-
     public function getUser(Request $request)
     {
-        // return dns_get_record('localhost', DNS_A);
-        // 104.18.32.47
-        // 172.64.155.209
-        // return $this->getDomainFromUrl('localhost');
-        // LogHelper::saveLog('hi', 'hi');
-        // echo "Called from line: " . $backtrace[0]['line'] . PHP_EOL;
         $token = $request->bearerToken();
         $accessToken = AccessToken::findToken($token);
         if (!$accessToken) {
@@ -363,98 +333,6 @@ class UserController extends Controller
         }
 
         return redirect()->route('users.websites', $params);
-    }
-
-    public function packagesOrders(Request $request, $userId)
-    {
-        // $pkg = UserPackage::where('user_id', $userId)->get();
-
-        $query = PackageUseHistory::where([
-            'user_id' => $userId,
-        ]);
-
-        if ($request->filled('domain')) {
-            $normalizedDomain = app(DomainNormalizer::class)->normalize($request->domain);
-            $packageIds = UserPackage::query()
-                ->where('user_id', $userId)
-                ->get()
-                ->filter(fn (UserPackage $package) => app(DomainNormalizer::class)->normalize($package->domain) === $normalizedDomain)
-                ->pluck('id');
-
-            $query->whereIn('user_package_id', $packageIds);
-        }
-
-        $start_date = $request->start_date;
-        $end_date = $request->end_date;
-
-        if ($start_date && $end_date) {
-            $query->whereBetween('created_at', [$start_date, $end_date]);
-        } elseif ($start_date) {
-            $query->where('created_at', '>=', $start_date);
-        } elseif ($end_date) {
-            $query->where('created_at', '<=', $end_date);
-        } else {
-            $query->whereDate('created_at', now());
-        }
-
-        $history = $query->orderBy('created_at', 'desc')->get();
-        $modifiedHistory = collect($history)->map(function ($record) {
-            $useDetails = collect($record->use_details);
-            $record->create_time = Carbon::parse($record->created_at)
-                ->format('j M Y g:i a');
-            $record->use_details = $useDetails->map(function ($item) {
-                try {
-                    if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
-                        $item['cart_contents'] = unserialize($item['cart_contents']);
-                    }
-                } catch (\Throwable $th) {
-                }
-                return $item;
-            });
-
-            return $record;
-        });
-        if($start_date) {
-            $start_date = Carbon::parse($start_date)
-                ->format('m/d/Y h:i a');
-        }
-        if($end_date) {
-            $end_date = Carbon::parse($end_date)
-                ->format('m/d/Y h:i a');
-        }
-        $user = User::find($userId);
-        $user?->loadCount(['websites', 'merchantEmployees']);
-        $filterDomain = $request->domain;
-
-        return Inertia::render('Users/PackageOrders', compact('modifiedHistory', 'userId', 'start_date', 'end_date', 'user', 'filterDomain'));
-    }
-    public function useDetails($userId, $packageId)
-    {
-        $userPackage = UserPackage::find($packageId);
-        $history = PackageUseHistory::where([
-            'user_id' => $userId,
-            'user_package_id' => $packageId
-        ])
-            ->orderBy('id', 'desc')
-            ->get();
-
-        $modifiedHistory = collect($history)->map(function ($record) {
-            // return $record->use_details;
-            $useDetails = collect($record->use_details);
-            $record->use_details = $useDetails->map(function ($item) {
-                try {
-                    if (is_string($item['cart_contents']) && @unserialize($item['cart_contents']) !== false) {
-                        $item['cart_contents'] = unserialize($item['cart_contents']);
-                    }
-                } catch (\Throwable $th) {
-                }
-                return $item;
-            });
-
-            return $record;
-        });
-
-        return response()->json($modifiedHistory);
     }
 
     public function smsRecharge($userId)
