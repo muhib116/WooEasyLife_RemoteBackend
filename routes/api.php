@@ -11,6 +11,7 @@ use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\Data\DataController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Hub\HubController;
+use App\Http\Controllers\Plugin\EmployeeController as PluginEmployeeController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -108,6 +109,17 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
 
         // use of package order limit
         Route::post('package-order-use', [HubController::class, 'hubUse']);
+
+        Route::get('employees', [PluginEmployeeController::class, 'index']);
+        Route::get('employees/{employee_id}', [PluginEmployeeController::class, 'show'])
+            ->whereNumber('employee_id');
+        Route::post('employees', [PluginEmployeeController::class, 'store']);
+        Route::put('employees/{employee_id}', [PluginEmployeeController::class, 'update'])
+            ->whereNumber('employee_id');
+        Route::patch('employees/{employee_id}', [PluginEmployeeController::class, 'update'])
+            ->whereNumber('employee_id');
+        Route::delete('employees/{employee_id}', [PluginEmployeeController::class, 'destroy'])
+            ->whereNumber('employee_id');
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);
