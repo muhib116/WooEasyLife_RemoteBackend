@@ -63,6 +63,10 @@ class PackagePlanResolver
             'package_duration' => $plan->package_duration,
             'trial_days' => $plan->trial_days,
             'requires_order_limit' => ! $catalog,
+            'features' => $plan->features ?? [],
+            'app_connect' => (bool) ($plan->app_connect ?? false),
+            'total_website_connect' => $plan->total_website_connect,
+            'is_special' => (bool) ($plan->is_special ?? false),
         ];
     }
 

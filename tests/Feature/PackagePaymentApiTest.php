@@ -91,6 +91,8 @@ class PackagePaymentApiTest extends TestCase
             ->assertJsonPath('remaining_order', 5)
             ->assertJsonPath('billing.subscription_status', 'active')
             ->assertJsonPath('billing.remaining_order', 5)
+            ->assertJsonPath('billing.total_order_can_handle', 10)
+            ->assertJsonPath('billing.total_order_handled', 5)
             ->assertJsonPath('billing.has_pending_payment', false)
             ->assertJsonStructure([
                 'billing' => [

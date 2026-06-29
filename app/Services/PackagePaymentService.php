@@ -158,6 +158,8 @@ class PackagePaymentService
 
         $activePackage = $packages->sortByDesc('id')->first();
         $remainingOrder = (int) $packages->sum('remaining_order');
+        $totalQuota = (int) $packages->sum('total_order_can_handle');
+        $totalHandled = (int) $packages->sum('total_order_handled');
 
         $pendingPayments = PackagePaymentRequest::query()
             ->where('user_id', $user->id)
@@ -171,6 +173,8 @@ class PackagePaymentService
         $snapshot = [
             'subscription_status' => $this->resolveSubscriptionStatus($activePackage, $remainingOrder),
             'remaining_order' => $remainingOrder,
+            'total_order_can_handle' => $totalQuota,
+            'total_order_handled' => $totalHandled,
             'expires_at' => $activePackage?->expires_at,
             'pending_payment_count' => $pendingPayments->count(),
             'has_pending_payment' => $pendingPayments->isNotEmpty(),
