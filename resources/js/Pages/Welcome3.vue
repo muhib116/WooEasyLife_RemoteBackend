@@ -10,6 +10,7 @@ import LossComparisonSection from '@/components/marketing/LossComparisonSection.
 import HowItWorksSection from '@/components/marketing/HowItWorksSection.vue';
 import FeatureShowcaseSection from '@/components/marketing/FeatureShowcaseSection.vue';
 import AppShowcaseSection from '@/components/marketing/AppShowcaseSection.vue';
+import ContactSupportSection from '@/components/marketing/ContactSupportSection.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -24,6 +25,7 @@ const props = defineProps({
     stats: { type: Array, default: () => [] },
     lossComparison: { type: Object, default: () => ({}) },
     whatsappUrl: { type: String, default: null },
+    whatsappContactUrl: { type: String, default: null },
     appDownloadUrl: { type: String, default: null },
     playStoreUrl: { type: String, default: null },
     fraudCheck: { type: Object, default: () => ({}) },
@@ -268,6 +270,9 @@ const toggleFaq = (i) => {
                 </div>
             </div>
         </section>
+
+        <!-- Contact support -->
+        <ContactSupportSection :whatsapp-contact-url="whatsappContactUrl" />
 
         <!-- 13. Final CTA -->
         <section class="px-4 py-12 sm:py-16">

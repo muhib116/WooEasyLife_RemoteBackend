@@ -3,6 +3,11 @@
 return [
     'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE'),
 
+    'whatsapp_default_message' => env(
+        'LANDING_WHATSAPP_DEFAULT_MESSAGE',
+        'সালাম, আমি WooEasyLife সম্পর্কে জানতে চাই।',
+    ),
+
     'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE')),
 
     'location' => 'ঢাকা, বাংলাদেশ',

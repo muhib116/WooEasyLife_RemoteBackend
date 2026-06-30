@@ -1,0 +1,49 @@
+<script setup>
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const props = defineProps({
+    whatsappContactUrl: { type: String, default: null },
+    headline: { type: String, default: 'আরও প্রশ্ন আছে?' },
+    subheadline: { type: String, default: 'আমাদের সাপোর্ট টিম সবসময় প্রস্তুত' },
+    buttonLabel: { type: String, default: 'যোগাযোগ করুন' },
+});
+
+const page = usePage();
+
+const contactUrl = computed(
+    () => props.whatsappContactUrl || page.props.marketing?.whatsapp_contact_url || null,
+);
+</script>
+
+<template>
+    <section v-if="contactUrl" class="px-4 py-10 sm:py-14">
+        <div class="mx-auto max-w-4xl">
+            <div
+                class="flex flex-col items-center justify-between gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md sm:flex-row sm:gap-8 sm:p-8"
+            >
+                <div class="text-center sm:text-left">
+                    <h2 class="text-xl font-bold text-white sm:text-2xl">{{ headline }}</h2>
+                    <p class="mt-1.5 text-sm text-slate-400 sm:text-base">{{ subheadline }}</p>
+                </div>
+
+                <a
+                    :href="contactUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex shrink-0 items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/25 transition hover:from-blue-500 hover:to-purple-500"
+                >
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        />
+                    </svg>
+                    {{ buttonLabel }}
+                </a>
+            </div>
+        </div>
+    </section>
+</template>

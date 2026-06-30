@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PackageHub;
+use App\Support\WhatsappLink;
 use App\Services\PublicFraudCheckService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -63,9 +64,11 @@ class LandingPageService
             'stats' => config('landing.stats', []),
             'lossComparison' => config('landing.loss_comparison', []),
             'paymentMethods' => config('landing.payment_methods', []),
-            'whatsappUrl' => $whatsappPhone
-                ? 'https://wa.me/'.preg_replace('/\D+/', '', (string) $whatsappPhone)
-                : null,
+            'whatsappUrl' => WhatsappLink::url($whatsappPhone),
+            'whatsappContactUrl' => WhatsappLink::url(
+                $whatsappPhone,
+                config('landing.whatsapp_default_message'),
+            ),
             'appDownloadUrl' => env('WOOEASYLIFE_ANDROID_DOWNLOAD_URL'),
             'playStoreUrl' => env('WOOEASYLIFE_PLAY_STORE_URL'),
             'fraudCheck' => $this->publicFraudCheckService->meta($request?->ip()),

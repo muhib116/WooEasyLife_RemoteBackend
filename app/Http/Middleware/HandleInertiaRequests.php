@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\WhatsappLink;
 use App\Services\MerchantPortalContext;
 use App\Services\RbacService;
 use App\Services\SubscriptionPaymentConfigService;
@@ -56,9 +57,11 @@ class HandleInertiaRequests extends Middleware
                 'footer_tagline' => config('landing.footer_tagline'),
                 'footer_tagline_en' => config('landing.footer_tagline_en'),
                 'trust_badges' => config('landing.trust_badges', []),
-                'whatsapp_url' => filled(config('landing.whatsapp_phone'))
-                    ? 'https://wa.me/'.preg_replace('/\D+/', '', (string) config('landing.whatsapp_phone'))
-                    : null,
+                'whatsapp_url' => WhatsappLink::url(config('landing.whatsapp_phone')),
+                'whatsapp_contact_url' => WhatsappLink::url(
+                    config('landing.whatsapp_phone'),
+                    config('landing.whatsapp_default_message'),
+                ),
             ],
         ];
     }
