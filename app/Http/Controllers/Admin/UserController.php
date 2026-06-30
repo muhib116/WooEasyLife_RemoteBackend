@@ -112,7 +112,18 @@ class UserController extends Controller
                     $accessToken->domain
                 ));
             $remainingOrders = $userPackage->sum('remaining_order');
+            $activePackage = $userPackage->sortByDesc('id')->first();
             $user->remaining_order = $remainingOrders + 0;
+            $user->active_package = $activePackage ? [
+                'id' => $activePackage->id,
+                'package_hub_id' => (int) $activePackage->package_hub_id,
+                'plan_type' => $activePackage->plan_type ?? 'legacy',
+                'title' => $activePackage->title,
+                'expires_at' => $activePackage->expires_at,
+                'remaining_order' => (int) $activePackage->remaining_order,
+                'total_order_can_handle' => (int) $activePackage->total_order_can_handle,
+                'features' => $activePackage->features ?? [],
+            ] : null;
             $user->notice = $alertService->pluginNotices($user, $accessToken);
             $user->sms_balance = round($smsBalance, 2) + 0;
 

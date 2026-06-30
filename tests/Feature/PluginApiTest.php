@@ -77,16 +77,88 @@ class PluginApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('remaining_order', 75)
+            ->assertJsonPath('active_package.remaining_order', 75)
+            ->assertJsonPath('active_package.total_order_can_handle', 100)
+            ->assertJsonPath('active_package.title', 'Standard')
             ->assertJsonStructure([
                 'id',
                 'name',
                 'sms_balance',
                 'billing',
+                'active_package' => [
+                    'id',
+                    'package_hub_id',
+                    'plan_type',
+                    'title',
+                    'expires_at',
+                    'remaining_order',
+                    'total_order_can_handle',
+                    'features',
+                ],
             ]);
 
         $this->assertIsArray($response->json('billing.payment_methods'));
         $notice = $response->json('notice');
         $this->assertTrue($notice === null || is_array($notice));
+    }
+
+    public function test_get_user_includes_active_package_with_features(): void
+    {
+        [$user, $plainToken] = $this->createMerchantWithToken();
+
+        $plan = PackageHub::create([
+            'title' => 'Pro Monthly',
+            'description' => 'Pro plan',
+            'per_order_rate' => 0,
+            'package_price' => 999,
+            'order_rate_token' => 500,
+            'package_duration' => '1_month',
+            'is_active' => true,
+            'index' => 2,
+            'features' => [
+                'fraud_customer_checker' => true,
+                'bulk_sms' => false,
+            ],
+        ]);
+
+        UserPackage::create([
+            'title' => 'Pro Monthly',
+            'domain' => 'shop.example.com',
+            'user_id' => $user->id,
+            'package_hub_id' => $plan->id,
+            'plan_type' => 'catalog',
+            'total_order_can_handle' => 500,
+            'remaining_order' => 400,
+            'total_order_handled' => 100,
+            'per_order_rate' => 0,
+            'total_cost' => 999,
+            'transaction_charge' => 0,
+            'is_active' => true,
+            'features' => [
+                'fraud_customer_checker' => true,
+                'bulk_sms' => false,
+            ],
+        ]);
+
+        $response = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->getJson('/api/get-user');
+
+        $response->assertOk()
+            ->assertJsonPath('active_package.plan_type', 'catalog')
+            ->assertJsonPath('active_package.package_hub_id', $plan->id)
+            ->assertJsonPath('active_package.features.fraud_customer_checker', true)
+            ->assertJsonPath('active_package.features.bulk_sms', false);
+    }
+
+    public function test_get_user_returns_null_active_package_when_no_package(): void
+    {
+        [, $plainToken] = $this->createMerchantWithToken();
+
+        $response = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->getJson('/api/get-user');
+
+        $response->assertOk()
+            ->assertJsonPath('active_package', null);
     }
 
     public function test_get_user_rejects_missing_origin(): void
