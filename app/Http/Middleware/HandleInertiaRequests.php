@@ -50,6 +50,16 @@ class HandleInertiaRequests extends Middleware
                 'license_token' => session('license_token'),
             ],
             'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
+            'marketing' => [
+                'helpline' => config('landing.helpline_phone'),
+                'location' => config('landing.location'),
+                'footer_tagline' => config('landing.footer_tagline'),
+                'footer_tagline_en' => config('landing.footer_tagline_en'),
+                'trust_badges' => config('landing.trust_badges', []),
+                'whatsapp_url' => filled(config('landing.whatsapp_phone'))
+                    ? 'https://wa.me/'.preg_replace('/\D+/', '', (string) config('landing.whatsapp_phone'))
+                    : null,
+            ],
         ];
     }
 }

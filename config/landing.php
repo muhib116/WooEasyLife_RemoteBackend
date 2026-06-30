@@ -3,6 +3,20 @@
 return [
     'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE'),
 
+    'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE')),
+
+    'location' => 'ঢাকা, বাংলাদেশ',
+
+    'footer_tagline' => 'বাংলাদেশের WooCommerce মার্চেন্টদের জন্য অল-ইন-ওয়ান অটোমেশন প্ল্যাটফর্ম — আপনার ডাটা, আপনার নিয়ন্ত্রণ।',
+
+    'footer_tagline_en' => "Bangladesh's trusted WooCommerce automation platform. Fraud check, courier sync, AI orders & multi-store management.",
+
+    'trust_badges' => [
+        ['icon' => 'check', 'label' => '৪০+ প্রিমিয়াম ফিচার'],
+        ['icon' => 'clock', 'label' => '২৪/৭ মনিটরিং'],
+        ['icon' => 'lock', 'label' => 'সিকিউর কানেকশন'],
+    ],
+
     'feature_highlight_order' => [
         'ai_text_order_create',
         'ai_image_to_order_create',
@@ -19,12 +33,14 @@ return [
         'duplicate_order_validation',
         'customer_sms_for_order',
         'courier_auto_status_sync',
+        'admin_employee_manage',
+        'call_history_with_duration',
     ],
 
     'hero_bullets' => [
         'এআই দিয়ে টেক্সট বা ছবি থেকে সেকেন্ডেই অর্ডার তৈরি',
         'একাধিক ওয়েবসাইট এক ড্যাশবোর্ড ও মোবাইল অ্যাপে — সব আপনার আঙুলের ডগায়',
-        'ফ্রড চেক + কুরিয়ার অটোমেশন + এসএমএস — ম্যানুয়াল ঝামেলা শেষ',
+        'স্মার্ট টিম ম্যানেজমেন্ট — পারফরম্যান্স ট্র্যাক করে দলকে এগিয়ে নিন',
     ],
 
     'value_pillars' => [
@@ -55,7 +71,19 @@ return [
                 'cross_store_order_detection',
                 'centralized_notifications',
                 'customer_call_identifier',
+            ],
+        ],
+        [
+            'id' => 'team',
+            'badge' => 'স্মার্ট টিম ম্যানেজমেন্ট',
+            'headline' => 'টিম পারফরম্যান্স ট্র্যাক করুন — সবাই এক লাইনে',
+            'subheadline' => 'রোল ভিত্তিক অ্যাক্সেস, স্টোর অনুযায়ী টিম অ্যাসাইন ও কল/অর্ডার পারফরম্যান্স দেখুন। ছোট টিমও বড় ব্যবসার মতো চলবে।',
+            'accent' => 'violet',
+            'feature_keys' => [
                 'admin_employee_manage',
+                'call_history_with_duration',
+                'customer_call_identifier',
+                'order_source_identifier',
             ],
         ],
         [
@@ -107,6 +135,9 @@ return [
         'multistore_order_notifications' => 'phone',
         'customer_call_identifier' => 'phone',
         'common_dashboard' => 'dashboard',
+        'admin_employee_manage' => 'users',
+        'call_history_with_duration' => 'phone',
+        'order_source_identifier' => 'clipboard',
     ],
 
     'groups' => [
@@ -166,12 +197,12 @@ return [
         'multistore_order_notifications' => 'মাল্টি-স্টোর অর্ডার অ্যালার্ট',
         'customer_call_identifier' => 'কাস্টমার কল শনাক্ত',
         'cross_store_order_detection' => 'ক্রস-স্টোর অর্ডার ডিটেকশন',
-        'call_history_with_duration' => 'কল হিস্ট্রি ও সময়',
+        'call_history_with_duration' => 'কল পারফরম্যান্স ট্র্যাকিং',
         'common_dashboard' => 'সব স্টোরের এক ড্যাশবোর্ড',
         'courier_movement_notification' => 'কুরিয়ার মুভমেন্ট অ্যালার্ট',
         'notification_sound_management' => 'নোটিফিকেশন সাউন্ড কন্ট্রোল',
         'centralized_notifications' => 'সেন্ট্রাল নোটিফিকেশন',
-        'admin_employee_manage' => 'এডমিন ও এমপ্লয়ি ম্যানেজ',
+        'admin_employee_manage' => 'স্মার্ট টিম ম্যানেজমেন্ট',
     ],
 
     'plugin_feature_groups' => [
@@ -223,13 +254,14 @@ return [
         'customer_sms_for_order' => 'অর্ডার ও ডেলিভারি আপডেট কাস্টমারকে এসএমএসে পাঠান।',
         'duplicate_order_validation' => 'একই কাস্টমারের ডুপ্লিকেট অর্ডার ব্লক করে লস কমান।',
         'multistore_order_notifications' => 'সব স্টোরের নতুন অর্ডার এক অ্যাপে — কখনো মিস করবেন না।',
-        'customer_call_identifier' => 'ফোন রিং হলেই জানুন কোন কাস্টমার — অর্ডার হিস্ট্রি সহ।',
+        'customer_call_identifier' => 'ইনকামিং কলে কাস্টমার শনাক্ত — স্টাফ দ্রুত রেসপন্স দিতে পারে।',
         'cross_store_order_detection' => 'এক কাস্টমার অন্য স্টোরেও অর্ডার দিয়েছে কিনা শনাক্ত করুন।',
-        'call_history_with_duration' => 'কল হিস্ট্রি ও সময়কাল — কাস্টমার সাপোর্ট আরও দ্রুত।',
+        'call_history_with_duration' => 'কোন স্টাফ কতক্ষণ কল করল — পারফরম্যান্স মাপুন ও টিম উন্নত করুন।',
+        'order_source_identifier' => 'কোন এমপ্লয়ি কোন অর্ডার হ্যান্ডেল করছে তা শনাক্ত করুন।',
         'courier_movement_notification' => 'কুরিয়ার মুভমেন্ট অ্যালার্ট সরাসরি ফোনে।',
         'notification_sound_management' => 'স্টোর অনুযায়ী আলাদা নোটিফিকেশন সাউন্ড।',
         'centralized_notifications' => 'সব স্টোরের নোটিফিকেশন এক জায়গায় — কোথাও খুঁজতে হবে না।',
-        'admin_employee_manage' => 'টিম মেম্বারকে স্টোর ভিত্তিক অ্যাক্সেস দিন — নিরাপদভাবে।',
+        'admin_employee_manage' => 'রোল, স্টোর অ্যাসাইন ও পোর্টাল অ্যাক্সেস — টিম এক জায়গায় ম্যানেজ করুন।',
         'ai_text_order_create' => 'মেসেজ বা টেক্সট পেস্ট করলেই এআই অর্ডার বানায় — কপি-পেস্ট ঝামেলা নেই।',
         'ai_image_to_order_create' => 'কাস্টমারের স্ক্রিনশট বা ছবি থেকে এআই অর্ডার তৈরি করে।',
         'ai_incomplete_address_autocomplete' => 'অসম্পূর্ণ ঠিকানা এআই দিয়ে অটো পূরণ — ডেলিভারি ফেইল কমে।',
@@ -252,6 +284,7 @@ return [
 
     'loss_comparison' => [
         'headline' => 'রিটার্নে প্রতিদিন লাখ টাকা লস করছেন?',
+        'subtitle' => 'ম্যানুয়াল কাজ vs স্মার্ট অটোমেশন — আপনি কোন পাশে?',
         'without' => [
             'title' => 'WooEasyLife ছাড়া',
             'items' => [

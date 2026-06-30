@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
+import LossComparisonSection from '@/components/marketing/LossComparisonSection.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -25,6 +26,13 @@ const openFaq = ref(null);
 
 const aiPillar = computed(() => props.valuePillars.find((p) => p.id === 'ai') ?? null);
 const multistorePillar = computed(() => props.valuePillars.find((p) => p.id === 'multistore') ?? null);
+const teamPillar = computed(() => props.valuePillars.find((p) => p.id === 'team') ?? null);
+
+const teamPerformancePreview = [
+    { name: 'রাহিম', role: 'সাপোর্ট', orders: 42, calls: '৩ঘ ১৫ম', score: 92 },
+    { name: 'সুমাইয়া', role: 'অর্ডার টিম', orders: 38, calls: '২ঘ ৪০ম', score: 88 },
+    { name: 'করিম', role: 'ম্যানেজার', orders: 27, calls: '১ঘ ৫৫ম', score: 95 },
+];
 
 const trialPlan = computed(() =>
     props.plans.find((p) => p.package_duration === 'free_trial') ?? null,
@@ -63,6 +71,8 @@ const faqs = computed(() => [
             : 'প্রাইসিং পেজ দেখুন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।',
     },
     { q: 'ফ্রি ফ্রড চেক কীভাবে কাজ করে?', a: `ল্যান্ডিং পেজে রেজিস্ট্রেশন ছাড়াই প্রতিদিন ${props.fraudCheck?.daily_free_limit ?? 5}টি ফ্রি সার্চ করতে পারবেন। কুরিয়ার ডেলিভারি হিস্ট্রি দেখে ঝুঁকি যাচাই করুন।` },
+    { q: 'একাধিক ওয়েবসাইট ম্যানেজ করা যাবে?', a: 'হ্যাঁ। Growth প্ল্যানে ২টি, Pro Plus-এ ৩টি বা বার্ষিক প্ল্যানে আনলিমিটেড স্টোর — সব এক ড্যাশবোর্ড ও মোবাইল অ্যাপে।' },
+    { q: 'টিম ম্যানেজমেন্ট ও পারফরম্যান্স ট্র্যাকিং আছে?', a: 'হ্যাঁ। স্টাফ যোগ করুন, রোল ও স্টোর অ্যাসাইন করুন, কল হিস্ট্রি ও অর্ডার সোর্স দেখে পারফরম্যান্স মাপুন।' },
     { q: 'এআই ফিচার কী কাজে লাগে?', a: 'কাস্টমারের মেসেজ/ছবি থেকে অর্ডার তৈরি, অসম্পূর্ণ ঠিকানা পূরণ, কাস্টমার স্কোরিং — ম্যানুয়াল টাইপিং কমায়, ভুল কমায়।' },
     { q: 'কোন কুরিয়ার সাপোর্ট করে?', a: 'Steadfast, Pathao, RedX সহ একাধিক কুরিয়ার ইন্টিগ্রেশন — এক ড্যাশবোর্ড থেকে ম্যানেজ করুন।' },
     { q: 'পেমেন্ট কীভাবে করব?', a: 'bKash, Nagad, Rocket বা ব্যাংক ট্রান্সফার — পেমেন্ট জমা দিলে দ্রুত অ্যাক্টিভেশন।' },
@@ -211,7 +221,7 @@ const toggleFaq = (i) => {
                 </div>
             </div>
 
-            <div class="relative mx-auto mt-10 max-w-3xl px-4 lg:px-8">
+            <div id="fraud-check" class="relative mx-auto mt-10 max-w-3xl scroll-mt-24 px-4 lg:px-8">
                 <LandingFraudCheck :fraud-check="fraudCheck" />
             </div>
         </section>
@@ -239,7 +249,7 @@ const toggleFaq = (i) => {
                     <h2 class="text-3xl font-bold text-white sm:text-4xl">কেন মার্চেন্টরা WooEasyLife বেছে নেন</h2>
                     <p class="mt-3 text-slate-400">এআই, মাল্টি-স্টোর, ফ্রড প্রোটেকশন ও ফুল অটোমেশন — এক প্ল্যাটফর্মে</p>
                 </div>
-                <div class="mt-12 grid gap-6 md:grid-cols-2">
+                <div class="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                     <article
                         v-for="pillar in valuePillars"
                         :key="pillar.id"
@@ -363,53 +373,82 @@ const toggleFaq = (i) => {
             </div>
         </section>
 
-        <!-- Loss aversion -->
-        <section v-if="lossComparison.headline" class="py-20">
-            <div class="mx-auto max-w-6xl px-4 lg:px-8">
-                <h2 class="text-center text-3xl font-bold text-white sm:text-4xl">
-                    {{ lossComparison.headline }}
-                </h2>
-                <div class="mt-12 grid gap-6 lg:grid-cols-2">
-                    <article class="rounded-2xl border border-red-500/30 bg-red-950/20 p-6">
-                        <h3 class="text-lg font-bold text-red-300">{{ lossComparison.without?.title }}</h3>
-                        <ul class="mt-4 space-y-3">
-                            <li
-                                v-for="item in lossComparison.without?.items ?? []"
-                                :key="item"
-                                class="flex items-start gap-2 text-sm text-red-100/80"
-                            >
-                                <span class="text-red-400">✕</span>{{ item }}
-                            </li>
-                        </ul>
-                        <p class="mt-5 rounded-lg bg-red-500/10 px-4 py-2 text-sm font-bold text-red-300">
-                            {{ lossComparison.without?.summary }}
-                        </p>
-                    </article>
-                    <article class="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-6">
-                        <h3 class="text-lg font-bold text-emerald-300">{{ lossComparison.with?.title }}</h3>
-                        <ul class="mt-4 space-y-3">
-                            <li
-                                v-for="item in lossComparison.with?.items ?? []"
-                                :key="item"
-                                class="flex items-start gap-2 text-sm text-emerald-100/80"
-                            >
-                                <span class="text-emerald-400">✓</span>{{ item }}
-                            </li>
-                        </ul>
-                        <p class="mt-5 rounded-lg bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300">
-                            {{ lossComparison.with?.summary }}
-                        </p>
-                        <a
-                            :href="primaryCtaUrl"
-                            :target="primaryCtaExternal ? '_blank' : undefined"
-                            class="mt-4 inline-flex rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-500"
+        <!-- Team management spotlight -->
+        <section v-if="teamPillar" class="border-y border-white/10 bg-[#0a0f1c] py-20">
+            <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 lg:grid-cols-2 lg:px-8">
+                <div>
+                    <span class="inline-flex rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-300">
+                        {{ teamPillar.badge }}
+                    </span>
+                    <h2 class="mt-4 text-3xl font-bold text-white sm:text-4xl">{{ teamPillar.headline }}</h2>
+                    <p class="mt-4 text-slate-400">{{ teamPillar.subheadline }}</p>
+                    <ul class="mt-6 space-y-3">
+                        <li
+                            v-for="feat in teamPillar.features"
+                            :key="feat.key"
+                            class="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"
                         >
-                            আজই শুরু করুন
-                        </a>
-                    </article>
+                            <span class="text-violet-400">✦</span>
+                            <div>
+                                <p class="font-semibold text-white">{{ feat.label }}</p>
+                                <p class="mt-1 text-sm text-slate-400">{{ feat.description }}</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/40 to-indigo-950/30 p-6">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-xs font-bold uppercase tracking-wider text-violet-300">টিম পারফরম্যান্স ড্যাশবোর্ড</p>
+                        <span class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">লাইভ</span>
+                    </div>
+
+                    <div class="mt-4 space-y-3">
+                        <div
+                            v-for="member in teamPerformancePreview"
+                            :key="member.name"
+                            class="rounded-xl border border-white/10 bg-white/5 p-4"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/20 text-sm font-bold text-violet-200">
+                                        {{ member.name.charAt(0) }}
+                                    </span>
+                                    <div>
+                                        <p class="font-semibold text-white">{{ member.name }}</p>
+                                        <p class="text-xs text-slate-400">{{ member.role }}</p>
+                                    </div>
+                                </div>
+                                <span class="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-300">
+                                    {{ member.score }}%
+                                </span>
+                            </div>
+                            <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                <div class="rounded-lg bg-black/20 px-3 py-2 text-slate-300">
+                                    <span class="block text-slate-500">অর্ডার হ্যান্ডেল</span>
+                                    <span class="font-bold text-white">{{ member.orders }}</span>
+                                </div>
+                                <div class="rounded-lg bg-black/20 px-3 py-2 text-slate-300">
+                                    <span class="block text-slate-500">কল সময়</span>
+                                    <span class="font-bold text-white">{{ member.calls }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="mt-4 text-center text-xs text-slate-500">
+                        রোল ভিত্তিক অ্যাক্সেস · স্টোর অনুযায়ী টিম · পারফরম্যান্স ইনসাইট
+                    </p>
                 </div>
             </div>
         </section>
+
+        <LossComparisonSection
+            :loss-comparison="lossComparison"
+            :primary-cta-url="primaryCtaUrl"
+            :primary-cta-external="primaryCtaExternal"
+            :fraud-check-enabled="fraudCheck?.enabled !== false"
+        />
 
         <!-- Stats -->
         <section v-if="stats.length" class="border-y border-white/10 bg-[#0a0f1c] py-12">
@@ -582,7 +621,7 @@ const toggleFaq = (i) => {
         </section>
 
         <!-- FAQ -->
-        <section class="border-t border-white/10 bg-[#0a0f1c] py-20">
+        <section id="faq" class="scroll-mt-24 border-t border-white/10 bg-[#0a0f1c] py-20">
             <div class="mx-auto max-w-3xl px-4 lg:px-8">
                 <h2 class="text-center text-3xl font-bold text-white">যা জানতে চান</h2>
                 <div class="mt-10 space-y-3">

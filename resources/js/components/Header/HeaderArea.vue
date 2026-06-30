@@ -49,7 +49,7 @@ const sidebarStore = useSidebar()
         </button>
         <!-- Hamburger Toggle BTN -->
         <router-link class="block flex-shrink-0 lg:hidden" to="/">
-          <img src="/assets/images/logo/logo-icon.svg" alt="Logo" />
+          <img src="/app-logo" alt="Logo" class="h-8 w-8 object-contain" />
         </router-link>
       </div>
       <div class="hidden sm:block">
