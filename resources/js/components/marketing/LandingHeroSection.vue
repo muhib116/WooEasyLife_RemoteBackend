@@ -25,11 +25,11 @@ defineProps({
                     {{ hero.badge }}
                 </span>
 
-                <h1 class="text-3xl font-extrabold leading-[1.35] tracking-tight text-white sm:text-4xl sm:leading-[1.3] lg:text-5xl">
+                <h1 class="text-3xl font-extrabold leading-[2] tracking-tight text-white sm:text-4xl sm:leading-[1.43] lg:text-5xl">
                     {{ hero.headline }}
                     <span
                         v-if="hero.headline_accent"
-                        class="mt-1 block bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text pb-1 text-transparent"
+                        class="mt-1 block bg-gradient-to-r leading-[1.7] from-violet-400 to-fuchsia-400 bg-clip-text pb-1 text-transparent"
                     >
                         {{ hero.headline_accent }}
                     </span>
