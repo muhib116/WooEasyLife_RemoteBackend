@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\App\LegalController;
+use App\Http\Controllers\App\PricingController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -30,7 +31,6 @@ use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SmsController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -48,13 +48,23 @@ im_super=true
 */
 
 Route::get('/', function () {
-    return Inertia::render('Welcome3', [
+    $landing = app(\App\Services\LandingPageService::class)->payload(request());
+
+    return Inertia::render('Welcome3', array_merge($landing, [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    ]));
 });
+
+Route::prefix('public/fraud-check')->name('landing.fraud-check.')->group(function () {
+    Route::get('/stats', [\App\Http\Controllers\PublicFraudCheckController::class, 'stats'])
+        ->name('stats');
+    Route::post('/', [\App\Http\Controllers\PublicFraudCheckController::class, 'check'])
+        ->middleware('throttle:30,1')
+        ->name('check');
+});
+
+Route::get('/pricing', PricingController::class)->name('pricing');
 
 Route::prefix('wooeasylife/app')->name('wooeasylife.app.')->group(function () {
     Route::get('/privacy-policy', [LegalController::class, 'privacyPolicy'])

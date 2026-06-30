@@ -18,6 +18,14 @@
 </head>
 
 <body class="font-sans antialiased">
+    <div id="app-loader" aria-live="polite" aria-busy="true">
+        <div class="app-loader-spinner" role="status" aria-label="লোড হচ্ছে">
+            <div class="app-loader-spinner__ring app-loader-spinner__ring--one"></div>
+            <div class="app-loader-spinner__ring app-loader-spinner__ring--two"></div>
+            <img src="/app-logo" alt="" class="app-loader-spinner__logo">
+        </div>
+    </div>
+
     @inertia
 </body>
 

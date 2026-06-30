@@ -1,0 +1,61 @@
+#app-loader,
+#app-navigation-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+#app-loader.is-hidden,
+#app-navigation-loader.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.app-loader-spinner {
+    position: relative;
+    width: 5.5rem;
+    height: 5.5rem;
+}
+
+.app-loader-spinner__logo {
+    position: absolute;
+    inset: 1.1rem;
+    width: calc(100% - 2.2rem);
+    height: calc(100% - 2.2rem);
+    border-radius: 9999px;
+    object-fit: contain;
+    background: #fff;
+    box-shadow: 0 0 0 4px #fff;
+}
+
+.app-loader-spinner__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    border: 3px solid transparent;
+}
+
+.app-loader-spinner__ring--one {
+    border-top-color: #334155;
+    border-right-color: #334155;
+    animation: app-loader-spin 0.9s linear infinite;
+}
+
+.app-loader-spinner__ring--two {
+    inset: 0.35rem;
+    border-bottom-color: #94a3b8;
+    border-left-color: #94a3b8;
+    animation: app-loader-spin 1.2s linear infinite reverse;
+}
+
+@keyframes app-loader-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
