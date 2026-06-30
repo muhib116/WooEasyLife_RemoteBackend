@@ -7,29 +7,29 @@ defineProps({
     trialPlan: { type: Object, default: null },
     primaryCtaUrl: { type: String, required: true },
     primaryCtaLabel: { type: String, required: true },
-    primaryCtaExternal: { type: Boolean, default: false },
+    fraudCheckEnabled: { type: Boolean, default: true },
 });
 </script>
 
 <template>
-    <section class="relative overflow-hidden pb-8 pt-10 sm:pb-12 sm:pt-14 lg:pt-16">
-        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,58,237,0.18),_transparent_55%)]" />
-        <div class="pointer-events-none absolute -right-32 top-20 h-72 w-72 rounded-full bg-violet-600/10 blur-3xl sm:h-96 sm:w-96" />
+    <section class="scroll-reveal scroll-reveal-visible relative overflow-hidden pb-8 pt-10 sm:pb-12 sm:pt-14 lg:pt-16">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,193,7,0.12),_transparent_55%)]" />
+        <div class="pointer-events-none absolute -right-32 top-20 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl sm:h-96 sm:w-96" />
 
         <div class="relative mx-auto max-w-6xl px-4 lg:px-8">
             <div class="mx-auto max-w-3xl text-center lg:max-w-none lg:text-left">
                 <span
                     v-if="hero.badge"
-                    class="mb-4 inline-flex rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-300"
+                    class="mb-4 inline-flex rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300"
                 >
                     {{ hero.badge }}
                 </span>
 
-                <h1 class="text-3xl font-extrabold leading-[2] tracking-tight text-white sm:text-4xl sm:leading-[1.43] lg:text-5xl">
+                <h1 class="text-3xl font-extrabold leading-[1.49] tracking-tight text-white sm:text-4xl sm:leading-[1.40] lg:text-5xl lg:leading-[1.55]">
                     {{ hero.headline }}
                     <span
                         v-if="hero.headline_accent"
-                        class="mt-1 block bg-gradient-to-r leading-[1.7] from-violet-400 to-fuchsia-400 bg-clip-text pb-1 text-transparent"
+                        class="mt-1 block bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 bg-clip-text pb-1 leading-[1] text-transparent sm:leading-[1.58] lg:leading-[1.55]"
                     >
                         {{ hero.headline_accent }}
                     </span>
@@ -45,20 +45,18 @@ defineProps({
                         :key="item"
                         class="flex items-start gap-2.5 text-sm text-slate-200 sm:text-base"
                     >
-                        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">✓</span>
+                        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-400">✓</span>
                         <span>{{ item }}</span>
                     </li>
                 </ul>
 
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                    <a
+                    <Link
                         :href="primaryCtaUrl"
-                        :target="primaryCtaExternal ? '_blank' : undefined"
-                        :rel="primaryCtaExternal ? 'noopener noreferrer' : undefined"
-                        class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-violet-900/40 transition hover:from-violet-500 hover:to-fuchsia-500"
+                        class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-7 py-3.5 text-sm font-bold text-black shadow-xl shadow-amber-900/40 transition hover:from-amber-400 hover:to-yellow-400"
                     >
                         {{ primaryCtaLabel }}
-                    </a>
+                    </Link>
                     <Link
                         :href="route('pricing')"
                         class="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
@@ -66,6 +64,15 @@ defineProps({
                         প্যাকেজ ও মূল্য দেখুন
                     </Link>
                 </div>
+
+                <a
+                    v-if="fraudCheckEnabled"
+                    href="#fraud-check"
+                    class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-amber-400 transition hover:text-amber-300 lg:justify-start"
+                >
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">📞</span>
+                    Free fraud check — number দিন, customer কেমন জেনে নিন
+                </a>
 
                 <p v-if="trialPlan" class="mt-4 text-sm text-slate-400">
                     {{ trialPlan.title }} · {{ trialPlan.duration_label }} · {{ trialPlan.price_label }}

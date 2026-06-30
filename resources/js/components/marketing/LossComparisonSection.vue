@@ -1,15 +1,16 @@
 <script setup>
+import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const props = defineProps({
     lossComparison: { type: Object, default: () => ({}) },
     primaryCtaUrl: { type: String, default: '#' },
-    primaryCtaExternal: { type: Boolean, default: false },
+    primaryCtaLabel: { type: String, default: 'ফ্রি ট্রায়াল শুরু করুন' },
     fraudCheckEnabled: { type: Boolean, default: true },
 });
 
 const withoutIcons = ['💸', '⏳', '📦', '📱'];
-const withIcons = ['🛡️', '🚚', '✅', '🔔', '🏪'];
+const withIcons = ['🛡️', '🚚', '✅', '🔔', '🌐'];
 
 const withoutItems = computed(() => props.lossComparison.without?.items ?? []);
 const withItems = computed(() => props.lossComparison.with?.items ?? []);
@@ -41,14 +42,14 @@ const scrollToFraudCheck = () => {
                 <div
                     class="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:flex"
                 >
-                    <span class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-[#0a0f1c] text-sm font-extrabold tracking-wider text-slate-300 shadow-xl">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-[#111111] text-sm font-extrabold tracking-wider text-slate-300 shadow-xl">
                         VS
                     </span>
                 </div>
 
                 <div class="grid gap-6 lg:grid-cols-2 lg:gap-8">
                     <!-- Without -->
-                    <article class="flex flex-col rounded-3xl border border-rose-500/25 bg-gradient-to-br from-rose-950/40 to-[#0a0f1c] p-6 sm:p-7">
+                    <article class="flex flex-col rounded-3xl border border-rose-500/25 bg-gradient-to-br from-rose-950/40 to-[#111111] p-6 sm:p-7">
                         <div class="flex items-center gap-3">
                             <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/15 text-lg">
                                 ✕
@@ -81,8 +82,14 @@ const scrollToFraudCheck = () => {
                         </div>
                     </article>
 
+                    <div class="flex items-center justify-center lg:hidden">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[#111111] text-xs font-extrabold tracking-wider text-slate-300 shadow-lg">
+                            VS
+                        </span>
+                    </div>
+
                     <!-- With -->
-                    <article class="relative flex flex-col rounded-3xl border border-emerald-400/40 bg-gradient-to-br from-emerald-950/50 via-[#0c1424] to-violet-950/30 p-6 shadow-2xl shadow-emerald-900/20 sm:p-7 lg:-translate-y-1 lg:scale-[1.02]">
+                    <article class="relative flex flex-col rounded-3xl border border-emerald-400/40 bg-gradient-to-br from-emerald-950/50 via-[#141414] to-amber-950/20 p-6 shadow-2xl shadow-emerald-900/20 sm:p-7 lg:-translate-y-1 lg:scale-[1.02]">
                         <span class="absolute -top-3 right-6 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 px-3 py-1 text-xs font-bold text-emerald-950">
                             সুপারিশকৃত
                         </span>
@@ -119,21 +126,19 @@ const scrollToFraudCheck = () => {
                         </div>
 
                         <div class="mt-5 flex flex-col gap-3 sm:flex-row">
-                            <a
+                            <Link
                                 :href="primaryCtaUrl"
-                                :target="primaryCtaExternal ? '_blank' : undefined"
-                                :rel="primaryCtaExternal ? 'noopener noreferrer' : undefined"
-                                class="inline-flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:from-violet-500 hover:to-fuchsia-500"
+                                class="inline-flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-5 py-3.5 text-sm font-bold text-black shadow-lg shadow-amber-900/40 transition hover:from-amber-400 hover:to-yellow-400"
                             >
-                                আজই শুরু করুন
-                            </a>
+                                {{ primaryCtaLabel }}
+                            </Link>
                             <button
                                 v-if="fraudCheckEnabled"
                                 type="button"
                                 class="inline-flex flex-1 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
                                 @click="scrollToFraudCheck"
                             >
-                                ফ্রি ফ্রড চেক করুন
+                                Free fraud check করুন
                             </button>
                         </div>
                     </article>

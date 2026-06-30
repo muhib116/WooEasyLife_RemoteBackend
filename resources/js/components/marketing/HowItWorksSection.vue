@@ -5,7 +5,7 @@ defineProps({
 </script>
 
 <template>
-    <section v-if="steps.length" id="how-it-works" class="scroll-mt-24 border-t border-white/10 bg-[#0a0f1c] py-14 sm:py-20">
+    <section v-if="steps.length" id="how-it-works" class="scroll-mt-24 border-t border-white/10 bg-[#111111] py-14 sm:py-20">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div class="text-center">
                 <h2 class="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">কিভাবে কাজ করে?</h2>
@@ -20,9 +20,9 @@ defineProps({
                 >
                     <span
                         v-if="index < steps.length - 1"
-                        class="pointer-events-none absolute -right-2 top-1/2 hidden h-0.5 w-4 bg-violet-500/30 lg:block"
+                        class="pointer-events-none absolute -right-2 top-1/2 hidden h-0.5 w-4 bg-amber-500/30 lg:block"
                     />
-                    <span class="text-3xl font-extrabold text-violet-500/50">{{ item.step }}</span>
+                    <span class="text-3xl font-extrabold text-amber-500/50">{{ item.step }}</span>
                     <h3 class="mt-3 text-base font-bold text-white sm:text-lg">{{ item.title }}</h3>
                     <p class="mt-2 text-sm leading-relaxed text-slate-400">{{ item.description }}</p>
                 </div>

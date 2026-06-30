@@ -31,6 +31,9 @@ class LandingPageServiceTest extends TestCase
                 'multistore_order_notifications' => true,
                 'three_courier_partner_integration' => true,
                 'customer_sms_for_order' => true,
+                'admin_employee_manage' => true,
+                'call_history_with_duration' => true,
+                'order_source_identifier' => true,
             ],
         ]);
 
@@ -48,7 +51,15 @@ class LandingPageServiceTest extends TestCase
         $this->assertNotEmpty($payload['appShowcase']);
         $this->assertNotEmpty($payload['featureShowcases']);
         $this->assertArrayHasKey('pain', $payload['featureShowcases'][0]);
+        $this->assertArrayHasKey('read_more', $payload['featureShowcases'][0]);
+        $this->assertArrayHasKey('highlights', $payload['featureShowcases'][0]);
+        $teamShowcase = collect($payload['featureShowcases'])->firstWhere('id', 'team');
+        $this->assertNotNull($teamShowcase);
+        $this->assertNotEmpty($teamShowcase['scenario']);
+        $this->assertNotEmpty($teamShowcase['read_more']);
         $this->assertNotEmpty($payload['stats']);
+        $this->assertNotEmpty($payload['fraudBenefitCards']);
+        $this->assertNotEmpty($payload['valuePillars']);
         $this->assertCount(1, $payload['plans']);
     }
 }

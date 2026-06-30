@@ -44,23 +44,24 @@ return [
 
     'hero' => [
         'badge' => 'বাংলাদেশের WooCommerce মার্চেন্টদের জন্য',
-        'headline' => 'ওয়েবসাইটের অর্ডার, ফ্রড, কুরিয়ার —',
-        'headline_accent' => 'সব এক জায়গায়। সময় বাঁচান, লাভ বাড়ান।',
-        'subheadline' => 'ফ্রড চেক, কুরিয়ার অটোমেশন, মিসিং অর্ডার রিকভারি, প্যাকিং স্টিকার প্রিন্ট ও একাধিক ওয়েবসাইট ফোন থেকে ম্যানেজ করুন।',
+        'headline' => 'ওয়েবসাইটের অর্ডার, ফ্রড, কুরিয়ার',
+        'headline_accent' => '— সব এক জায়গায়। সময় বাঁচান, লাভ বাড়ান।',
+        'subheadline' => 'ফ্রড চেক, কুরিয়ার অটোমেশন, কল হিস্ট্রি ও স্টাফ ট্র্যাকিং, মিসিং অর্ডার রিকভারি — একাধিক ওয়েবসাইট ফোন থেকে ম্যানেজ করুন।',
     ],
 
     'hero_bullets' => [
-        'মাসে হাজার হাজার টাকা রিটার্ন লস কমান — শিপ করার আগেই ফ্রড চেক',
+        'মাসে হাজার হাজার টাকা return loss কমান — order confirm করার আগেই fraud check',
         'দিনে ৩+ ঘণ্টা বাঁচান — কুরিয়ার, এসএমএস ও অর্ডার অটোমেশন',
+        'কল হিস্ট্রি (অ্যাপে ডিউরেশন), স্টাফ অ্যাসাইন — ক্যানসেল হলে কারণ বোঝা যায়',
         'একাধিক ওয়েবসাইট এক ড্যাশবোর্ড ও মোবাইল অ্যাপে — সেন্ট্রাল ম্যানেজমেন্ট',
     ],
 
     'roi_scenarios' => [
         [
             'icon' => '💸',
-            'title' => 'রিটার্ন লস কমান',
-            'calculation' => 'প্রতি রিটার্ন ≈ ১৫০–৩০০ টাকা · দিনে ১০ ফেইক = মাসে ৪৫,০০০+ টাকা লস',
-            'benefit' => 'ফ্রড চেক দিয়ে অর্ধেক কমালেই প্ল্যানের চেয়ে বেশি সাশ্রয়',
+            'title' => 'Return loss কমান',
+            'calculation' => 'প্রতি return ≈ ১৫০–৩০০ টাকা · দিনে ১০টা fake order = মাসে ৪৫,০০০+ টাকা loss',
+            'benefit' => 'Fraud check দিয়ে অর্ধেক কমালেই plan-এর চেয়ে বেশি save',
             'accent' => 'rose',
         ],
         [
@@ -111,33 +112,139 @@ return [
 
     'app_showcase' => [
         'headline' => 'মোবাইল অ্যাপে সব ওয়েবসাইট কন্ট্রোল করুন',
-        'subheadline' => 'নতুন অর্ডার, কুরিয়ার আপডেট, কাস্টমার কল — সব নোটিফিকেশন ফোনে। একাধিক WooCommerce ওয়েবসাইট একসাথে ম্যানেজ করুন।',
+        'subheadline' => 'Dashboard, Orders, Missing Orders — সব badge সহ এক sidebar-এ। Push notification on রাখলেই নতুন order alert ফোনে।',
+        'screenshot' => '/images/woo-easy-life/app-left-sidebar.png',
+        'screenshot_alt' => 'WooEasyLife মোবাইল অ্যাপ — sidebar, dashboard, orders ও missing orders',
         'benefits' => [
-            'সব ওয়েবসাইটের নতুন অর্ডার এক অ্যাপে',
-            'কল আসলেই কাস্টমার শনাক্ত — দ্রুত সাপোর্ট',
-            'কুরিয়ার মুভমেন্ট অ্যালার্ট সরাসরি ফোনে',
-            'ওয়েবসাইট বদলাতে লগইন-লগআউটের ঝামেলা নেই',
+            'Common Dashboard — New ও Courier order count এক নজরে',
+            'Missing Orders badge — FB/WhatsApp order miss হলে দ্রুত খুঁজুন',
+            'Push notification — নতুন order alert সরাসরি ফোনে',
+            'Company Employee ও multi-website — সব account এক app-এ',
+        ],
+    ],
+
+    'fraud_benefit_cards' => [
+        'headline' => 'Order confirm করার আগেই customer কেমন — জেনে নিন',
+        'subtitle' => 'Fake order confirm korle return khoroch — courier data দিয়ে আগেই decide করুন',
+        'cards' => [
+            [
+                'icon' => '📊',
+                'title' => 'Success rate দেখুন',
+                'description' => 'Steadfast, Pathao, RedX — কত delivery, কত return। এক নজরে customer-এর courier profile।',
+            ],
+            [
+                'icon' => '✅',
+                'title' => 'Delivery history',
+                'description' => 'Customer আগে কতবার order করেছে, কতবার successful delivery — সব record একসাথে।',
+            ],
+            [
+                'icon' => '🛡️',
+                'title' => 'Fake order ধরুন',
+                'description' => 'Fraud note, low success rate, risky pattern — order confirm করার আগেই red flag দেখুন।',
+            ],
+            [
+                'icon' => '📱',
+                'title' => 'Free check এখনই',
+                'description' => 'Registration ছাড়াই number দিন — landing page-এ daily free search, instant result।',
+                'cta' => '#fraud-check',
+                'cta_label' => 'Check করুন',
+            ],
         ],
     ],
 
     'feature_showcases' => [
         [
             'id' => 'fraud',
-            'badge' => 'ফ্রড প্রোটেকশন',
-            'headline' => 'শিপ করার আগেই জানুন — কাস্টমার বিশ্বস্ত কিনা',
-            'pain' => 'ফেইক অর্ডার শিপ করলে রিটার্ন খরচ, প্যাকেজিং লস ও কুরিয়ার চার্জ যায়।',
-            'solution' => 'কুরিয়ার ডাটা দিয়ে ফ্রড চেক, ডুপ্লিকেট ব্লক ও চেকআউট সুরক্ষা।',
-            'benefit' => 'রিটার্ন কমে নিশ্চিত ডেলিভারি বাড়ে — মাসে হাজার হাজার টাকা বাঁচে।',
+            'badge' => 'Fraud Protection',
+            'headline' => 'Order confirm করার আগেই customer কেমন — জেনে নিন',
+            'teaser' => 'Courier data দিয়ে fraud check — return loss কমান',
+            'pain' => 'Fake order confirm করলে return খরচ, packaging loss আর courier charge চলে যায়। অনেক merchant মাসে লাখ টাকারও বেশি loss করে।',
+            'solution' => 'Courier delivery history দিয়ে fraud check, duplicate block, checkout OTP — order confirm করার আগেই decide করুন।',
+            'benefit' => 'Return কমে, confirmed delivery বাড়ে — মাসে হাজার হাজার টাকা save, cash flow ভালো থাকে।',
+            'highlights' => [
+                'Landing page-এ free fraud check — registration ছাড়াই',
+                'Steadfast fraud note + courier success rate',
+                'Duplicate order আর checkout protection',
+            ],
+            'read_more' => [
+                [
+                    'title' => 'Fraud check কেন দরকার?',
+                    'body' => 'Bangladesh-এ COD business-এ fake/risky order বড় সমস্যা। একবার parcel চলে গেলে return charge, packaging আর time — সব loss। WooEasyLife-এ order confirm করার আগেই courier data দেখে decide নিন।',
+                ],
+                [
+                    'title' => 'কীভাবে কাজ করে?',
+                    'body' => 'Customer-এর number দিয়ে Steadfast, Pathao, RedX-এর delivery history, success rate আর fraud note একসাথে দেখুন। Risk বেশি হলে order confirm না cancel — আপনার control-এ।',
+                ],
+            ],
             'accent' => 'emerald',
             'feature_keys' => ['fraud_customer_checker', 'duplicate_order_validation', 'customer_delivery_history', 'checkout_otp_validation'],
+        ],
+        [
+            'id' => 'team',
+            'badge' => 'কল হিস্ট্রি ও অর্ডার অ্যাকাউন্টেবিলিটি',
+            'headline' => 'ক্যানসেল হলে জানুন কেন — কে কল করেছিল, কতক্ষণ, কে অর্ডার প্রসেস করেছিল',
+            'teaser' => 'অ্যাপ + প্লাগইন — কল, স্টাফ ও ক্যানসেল ডাটা এক জায়গায়',
+            'pain' => 'অর্ডার ক্যানসেল হলে বোঝা যায় না — স্টাফ ঠিকমতো কল করেছিল কিনা, কতক্ষণ কথা হয়েছিল, কে অর্ডার হ্যান্ডেল করেছিল। দোষ কার, সমস্যা কোথায় — অনুমানেই চলতে হয়।',
+            'solution' => 'প্লাগইন ও অ্যাপে কল হিস্ট্রি দেখুন; অ্যাপ দিয়ে কল করলে প্রতিটি কলের ডিউরেশন সেভ হয়। অর্ডারে স্টাফ অ্যাসাইন করুন, সোর্স ও কাস্টমার কল শনাক্ত করুন — ক্যানসেল অর্ডারে সব ডাটা একসাথে।',
+            'benefit' => 'ক্যানসেলের কারণ বোঝা যায়, স্টাফ ট্রেনিং ও দায়িত্ব স্পষ্ট হয়, ফেইক কাস্টমার vs দুর্বল ফলো-আপ আলাদা করা যায় — অনাকাঙ্ক্ষিত লস কমে।',
+            'highlights' => [
+                'অ্যাপ থেকে কল — প্রতিটি কলের সময়কাল (ডিউরেশন) রেকর্ড',
+                'অর্ডারে এমপ্লয়ি অ্যাসাইন — কে প্রসেস করছে ট্র্যাক',
+                'ক্যানসেল অর্ডারে কল + স্টাফ + সোর্স দেখে কারণ বিশ্লেষণ',
+            ],
+            'scenario' => [
+                'title' => 'উদাহরণ: ক্যানসেল অর্ডার #৪৮২১',
+                'steps' => [
+                    'কাস্টমার অর্ডার করল — স্টাফ «রাহিম» অ্যাসাইন',
+                    'রাহিম অ্যাপ থেকে ৪ মিনিট ৩২ সেকেন্ড কল করল',
+                    'পরে অর্ডার ক্যানসেল — কল হিস্ট্রি ও নোট দেখে বোঝা গেল কাস্টমার COD নিতে অনিচ্ছুক',
+                    'সিদ্ধান্ত: পরবর্তীতে এই নম্বরে ফোন-কনফার্ম বাধ্যতামূলক',
+                ],
+            ],
+            'read_more' => [
+                [
+                    'title' => 'কল হিস্ট্রি — প্লাগইন vs অ্যাপ',
+                    'body' => 'প্লাগইন ও ড্যাশবোর্ডে কল হিস্ট্রি দেখতে পারবেন — কোন নম্বরে কখন কল হয়েছিল। মোবাইল অ্যাপ দিয়ে কল করলে অতিরিক্ত সুবিধা: প্রতিটি কলের ডিউরেশন (কত মিনিট/সেকেন্ড) অটো সেভ হয়। ফলে বোঝা যায় কোন স্টাফ কতক্ষণ কাস্টমারের সাথে কথা বলছে — পারফরম্যান্স মাপা ও ট্রেনিং দেওয়া সহজ হয়।',
+                ],
+                [
+                    'title' => 'এমপ্লয়ি অ্যাসাইন ও অর্ডার ট্র্যাকিং',
+                    'body' => 'প্রতিটি অর্ডারে স্টাফ অ্যাসাইন করুন। কোন এমপ্লয়ি কোন অর্ডার প্রসেস করছে, কোন সোর্স থেকে (Facebook, হোয়াটসঅ্যাপ, ওয়েবসাইট) অর্ডার এসেছে — সব ট্র্যাক হয়। মালিক হিসেবে দেখতে পারবেন কে কত অর্ডার হ্যান্ডেল করছে, দায়িত্ব কোথায় ঘাটতি।',
+                ],
+                [
+                    'title' => 'ক্যানসেল হলে ডাটা কীভাবে সাহায্য করে?',
+                    'body' => 'অর্ডার ক্যানসেল হলে শুধু «ক্যানসেল» দেখে থেমে যাওয়ার দিন শেষ। WooEasyLife-এ ক্যানসেল অর্ডারে কল হিস্ট্রি (ডিউরেশন সহ), অ্যাসাইন করা স্টাফ, অর্ডার সোর্স ও কাস্টমার প্রোফাইল একসাথে দেখুন। ফেইক/অযোগ্য কাস্টমার পATTERN, স্টাফের দুর্বল ফলো-আপ, বা প্রোডাক্ট/দাম সমস্যা — কোনটা বেশি হচ্ছে তা বোঝা যায়। পরবর্তী সিদ্ধান্ত ডাটা দিয়ে নিন, অনুমানে নয়।',
+                ],
+                [
+                    'title' => 'টিম ম্যানেজমেন্ট',
+                    'body' => 'রোল ভিত্তিক অ্যাক্সেস, ওয়েবসাইট অনুযায়ী স্টাফ অ্যাসাইন, পোর্টাল লগইন — ছোট টিমও প্রফেশনালভাবে চলে। ইনকামিং কলে কাস্টমার শনাক্ত হয়, স্টাফ দ্রুত অর্ডার হিস্ট্রি দেখে রেসপন্স দিতে পারে।',
+                ],
+            ],
+            'accent' => 'violet',
+            'feature_keys' => ['admin_employee_manage', 'call_history_with_duration', 'order_source_identifier', 'customer_call_identifier'],
         ],
         [
             'id' => 'courier',
             'badge' => 'কুরিয়ার অটোমেশন',
             'headline' => 'কুরিয়ার প্যানেলে বসে সময় নষ্ট করবেন না',
-            'pain' => 'প্রতি অর্ডারে কুরিয়ার প্যানেলে ম্যানুয়াল এন্ট্রি — দিনে ৩+ ঘণ্টা চলে যায়।',
-            'solution' => 'Steadfast, Pathao, RedX — অর্ডার কনফার্ম হলেই অটো এন্ট্রি ও স্ট্যাটাস সিঙ্ক।',
-            'benefit' => 'সময় বাঁচে, ভুল কমে, স্টাফ অন্য কাজে লাগে — ব্যবসা দ্রুত চলে।',
+            'teaser' => 'Steadfast, Pathao, RedX — অর্ডার কনফার্ম হলেই অটো এন্ট্রি',
+            'pain' => 'প্রতি অর্ডারে কুরিয়ার প্যানেলে ম্যানুয়াল এন্ট্রি — দিনে ৩+ ঘণ্টা চলে যায়। ভুল এন্ট্রি হলে ভুল ডেলিভারি ও কাস্টমার অসন্তোষ।',
+            'solution' => 'Steadfast, Pathao, RedX — অর্ডার কনফার্ম হলেই অটো এন্ট্রি, স্ট্যাটাস সিঙ্ক ও কাস্টমার এসএমএস। এক ড্যাশবোর্ড থেকে সব কুরিয়ার।',
+            'benefit' => 'সময় বাঁচে, ভুল কমে, স্টাফ অন্য কাজে লাগে — দিনে ৫০+ অর্ডারও স্মুথলি চলে।',
+            'highlights' => [
+                '৩+ কুরিয়ার এক প্ল্যাটফর্ম',
+                'অটো কুরিয়ার এন্ট্রি ও স্ট্যাটাস সিঙ্ক',
+                'অর্ডার আপডেট কাস্টমারকে এসএমএস',
+            ],
+            'read_more' => [
+                [
+                    'title' => 'ম্যানুয়াল vs অটো',
+                    'body' => 'প্রতি অর্ডারে কুরিয়ার ওয়েবসাইটে লগইন, কপি-পেস্ট, কনসাইনমেন্ট ID — এগুলো দিনে ঘণ্টা নষ্ট করে। WooEasyLife অর্ডার স্ট্যাটাস বদলালেই কুরিয়ারে এন্ট্রি ও আপডেট হয়।',
+                ],
+                [
+                    'title' => 'এসএমএস ও ট্র্যাকিং',
+                    'body' => 'কাস্টমারকে অর্ডার ও ডেলিভারি আপডেট এসএমএসে যায় — «কোথায় আমার পার্সেল?» কল কমে।',
+                ],
+            ],
             'accent' => 'amber',
             'feature_keys' => ['three_courier_partner_integration', 'courier_entry_automation', 'courier_auto_status_sync', 'customer_sms_for_order'],
         ],
@@ -145,9 +252,21 @@ return [
             'id' => 'missing',
             'badge' => 'মিসিং অর্ডার রিকভারি',
             'headline' => 'Facebook/হোয়াটসঅ্যাপের অর্ডার হারিয়ে যাচ্ছে?',
-            'pain' => 'মেসেজে অর্ডার আসে কিন্তু WordPress-এ থাকে না — বিক্রি হারায়।',
-            'solution' => 'মিসিং অর্ডার খুঁজে ওয়ান ক্লিকে তৈরি করুন, অর্ডার ক্লোন করুন।',
-            'benefit' => 'হারানো অর্ডার ফিরে আসে — দিনে হাজার টাকা বিক্রি রিকভার।',
+            'teaser' => 'মিসিং অর্ডার খুঁজে ওয়ান ক্লিকে WordPress-এ তৈরি করুন',
+            'pain' => 'মেসেজে অর্ডার আসে কিন্তু WordPress-এ থাকে না — বিক্রি হারায়। স্টাফ ভুলে এন্ট্রি না করলে বা সিস্টেম গ্লিচ হলে টাকা চলে যায়।',
+            'solution' => 'মিসিং অর্ডার খুঁজে ওয়ান ক্লিকে তৈরি করুন, অর্ডার ক্লোন ও কুইক অ্যাকশন দিয়ে দ্রুত হ্যান্ডেল করুন।',
+            'benefit' => 'হারানো অর্ডার ফিরে আসে — দিনে হাজার টাকা বিক্রি রিকভার, রেভিনিউ লিক বন্ধ হয়।',
+            'highlights' => [
+                'FB/হোয়াটসঅ্যাপ অর্ডার vs WordPress মিলিয়ে খুঁজে বের',
+                'ওয়ান ক্লিকে মিসিং অর্ডার তৈরি',
+                'অর্ডার ক্লোন — দ্রুত পুনরায় এন্ট্রি',
+            ],
+            'read_more' => [
+                [
+                    'title' => 'কেন মিসিং অর্ডার হয়?',
+                    'body' => 'বাংলাদেশে অনেক বিক্রি Facebook বা হোয়াটসঅ্যাপ DM-এ আসে, পরে ম্যানুয়ালি WooCommerce-এ এন্ট্রি হয়। ব্যস্ততায় বা স্টাফ পরিবর্তনে অর্ডার মিস হয়। মিসিং অর্ডার ফিচার দিয়ে গ্যাপ খুঁজে পূরণ করুন।',
+                ],
+            ],
             'accent' => 'sky',
             'feature_keys' => ['missing_orders', 'missing_order_one_click_create', 'order_cloning', 'quick_action_tool'],
         ],
@@ -155,9 +274,21 @@ return [
             'id' => 'print',
             'badge' => 'প্যাকিং ও প্রিন্ট',
             'headline' => 'পার্সেল স্টিকার — সেকেন্ডে, ভুল ছাড়া',
-            'pain' => 'হাতে নাম-ঠিকানা লিখতে সময় যায়, ভুল হলে ভুল ডেলিভারি।',
-            'solution' => 'POS স্টিকার প্রিন্ট ও ওয়ান ক্লিক ইনভয়েস — প্যাকিং টিমের জন্য প্রস্তুত।',
-            'benefit' => 'প্যাকিং ২x দ্রুত, ওয়ার্কলোড কমে, অপারেশন স্মুথ হয়।',
+            'teaser' => 'POS স্টিকার ও ইনভয়েস — প্যাকিং টিমের জন্য প্রস্তুত',
+            'pain' => 'হাতে নাম-ঠিকানা লিখতে সময় যায়, ভুল হলে ভুল ডেলিভারি ও রিটার্ন। বড় অর্ডার ভলিউমে প্যাকিং বটleneck হয়।',
+            'solution' => 'POS স্টিকার প্রিন্ট ও ওয়ান ক্লিক ইনভয়েস, ইনলাইন শিপিং পরিবর্তন ও অর্ডার নোট — প্যাকিং লাইন দ্রুত চলে।',
+            'benefit' => 'প্যাকিং ২x দ্রুত, ভুল কমে, অপারেশন স্মুথ — দিনে আরও অর্ডার প্রসেস করুন।',
+            'highlights' => [
+                'POS স্টিকার — নাম, ঠিকানা, ফোন প্রিন্ট',
+                'ওয়ান ক্লিক ইনভয়েস',
+                'প্যাকিং টিমের জন্য স্ট্যান্ডার্ড ফরম্যাট',
+            ],
+            'read_more' => [
+                [
+                    'title' => 'প্যাকিং স্পিড',
+                    'body' => 'হাতে লেখা লেবেলে ভুল ঠিকানা = রিটার্ন খরচ। POS স্টিকারে WooCommerce ডাটা সরাসরি প্রিন্ট — সেকেন্ডে লেবেল, কম ভুল।',
+                ],
+            ],
             'accent' => 'violet',
             'feature_keys' => ['pos_sticker_print', 'invoice_print', 'inline_shipping_change', 'order_note_management'],
         ],
@@ -165,29 +296,47 @@ return [
             'id' => 'ai',
             'badge' => 'এআই ইন্টিগ্রেটেড',
             'headline' => 'মেসেজ থেকে অর্ডার — হাতে টাইপের দিন শেষ',
-            'pain' => 'কাস্টমারের মেসেজ/ছবি দেখে হাতে অর্ডার টাইপ — ৫–১০ মিনিট প্রতি অর্ডার।',
-            'solution' => 'এআই দিয়ে টেক্সট/ছবি থেকে অর্ডার, ঠিকানা অটো-কমপ্লিট ও কাস্টমার স্কোরিং।',
-            'benefit' => '৩০ সেকেন্ডে অর্ডার — দিনে ঘণ্টার পর ঘণ্টা সময় বাঁচে।',
+            'teaser' => 'টেক্সট বা ছবি থেকে এআই অর্ডার — ৩০ সেকেন্ডে',
+            'pain' => 'কাস্টমারের মেসেজ/ছবি দেখে হাতে অর্ডার টাইপ — ৫–১০ মিনিট প্রতি অর্ডার। ভুল ঠিকানা, ভুল প্রোডাক্ট — সাধারণ ভুল।',
+            'solution' => 'এআই দিয়ে টেক্সট/ছবি থেকে অর্ডার, ঠিকানা অটো-কমপ্লিট, কাস্টমার স্কোরিং — দ্রুত ও কম ভুল।',
+            'benefit' => '৩০ সেকেন্ডে অর্ডার — দিনে ঘণ্টার পর ঘণ্টা সময় বাঁচে, আরও অর্ডার হ্যান্ডেল করুন।',
+            'highlights' => [
+                'মেসেজ পেস্ট — এআই অর্ডার তৈরি',
+                'ছবি/স্ক্রিনশট থেকে অর্ডার',
+                'অসম্পূর্ণ ঠিকানা অটো পূরণ',
+            ],
+            'read_more' => [
+                [
+                    'title' => 'এআই অর্ডার ক্রিয়েশন',
+                    'body' => 'কাস্টমার «২টা শার্ট, XL, ঢাকা» লিখল — এআই পarse করে অর্ডার ফিল্ড পূরণ করে। স্ক্রিনশট থেকেও অর্ডার বানানো যায়।',
+                ],
+                [
+                    'title' => 'কাস্টমার স্কোরিং',
+                    'body' => 'এআই + কুরিয়ার ডাটা মিলিয়ে কাস্টমার রিস্ক স্কোর — কাকে ফোন-কনফার্ম করবেন সিদ্ধান্ত সহজ।',
+                ],
+            ],
             'accent' => 'fuchsia',
             'feature_keys' => ['ai_text_order_create', 'ai_image_to_order_create', 'ai_incomplete_address_autocomplete', 'ai_driven_customer_scoring'],
-        ],
-        [
-            'id' => 'team',
-            'badge' => 'স্মার্ট টিম ম্যানেজমেন্ট',
-            'headline' => 'টিম পারফরম্যান্স ট্র্যাক করুন — কে কী করছে জানুন',
-            'pain' => 'স্টাফ কত অর্ডার হ্যান্ডেল করল, কতক্ষণ কল করল — ট্র্যাক করা যায় না।',
-            'solution' => 'রোল ভিত্তিক অ্যাক্সেস, ওয়েবসাইট অ্যাসাইন, কল হিস্ট্রি ও অর্ডার সোর্স ট্র্যাকিং।',
-            'benefit' => 'টিম দক্ষতা বাড়ে, দায়িত্ব স্পষ্ট — ছোট টিমও বড় ব্যবসার মতো চলে।',
-            'accent' => 'violet',
-            'feature_keys' => ['admin_employee_manage', 'call_history_with_duration', 'order_source_identifier', 'customer_call_identifier'],
         ],
         [
             'id' => 'websites',
             'badge' => 'একাধিক ওয়েবসাইট',
             'headline' => '২–৩টা ওয়েবসাইট — সব আপনার আঙুলের ডগায়',
-            'pain' => 'প্রতিটি ওয়েবসাইটের admin আলাদা খুলে ঘোরা — সময় নষ্ট, অর্ডার মিস।',
-            'solution' => 'সব ওয়েবসাইট এক ড্যাশবোর্ড ও মোবাইল অ্যাপে — সেন্ট্রাল নোটিফিকেশন।',
-            'benefit' => 'সাইট বদলাতে ৩০–৪৫ মিনিট/দিন বাঁচে — সব কিছু হাতের মুঠোয়।',
+            'teaser' => 'সব WooCommerce ওয়েবসাইট এক ড্যাশবোর্ড ও অ্যাপে',
+            'pain' => 'প্রতিটি ওয়েবসাইটের admin আলাদা খুলে ঘোরা — সময় নষ্ট, অর্ডার মিস, স্টাফ বিভ্রান্ত।',
+            'solution' => 'সব ওয়েবসাইট এক ড্যাশবোর্ড ও মোবাইল অ্যাপে — সেন্ট্রাল নোটিফিকেশন, QR কানেক্ট।',
+            'benefit' => 'সাইট বদলাতে ৩০–৪৫ মিনিট/দিন বাঁচে — সব কিছু হাতের মুঠোয়, স্কেল করা সহজ।',
+            'highlights' => [
+                '২–৩ বা আনলিমিটেড ওয়েবসাইট (প্ল্যান অনুযায়ী)',
+                'সব সাইটের অর্ডার এক অ্যাপে',
+                'ওয়ান ক্লিক QR কানেক্ট',
+            ],
+            'read_more' => [
+                [
+                    'title' => 'মাল্টি-ওয়েবসাইট মার্চেন্ট',
+                    'body' => 'একাধিক নিশ বা ব্র্যান্ড চালান? প্রতিটি WooCommerce আলাদা লগইন — nightmare। WooEasyLife সব সাইট এক জায়গায়: অর্ডার, কুরিয়ার, ফ্রড, স্টাফ — এক ড্যাশবোর্ড।',
+                ],
+            ],
             'accent' => 'cyan',
             'feature_keys' => ['common_dashboard', 'multistore_order_notifications', 'one_click_app_connect', 'centralized_notifications'],
         ],
@@ -238,9 +387,9 @@ return [
         ],
         [
             'id' => 'protection',
-            'badge' => 'ফ্রড প্রোটেকশন',
-            'headline' => 'শিপ করার আগেই জানুন — কাস্টমার বিশ্বস্ত কিনা',
-            'subheadline' => 'বাংলাদেশের কুরিয়ার ডাটা দিয়ে ফ্রড চেক, ডুপ্লিকেট ব্লক ও চেকআউট সুরক্ষা — রিটার্ন কমান, লাভ বাড়ান।',
+            'badge' => 'Fraud Protection',
+            'headline' => 'Order confirm করার আগেই customer কেমন — জেনে নিন',
+            'subheadline' => 'Courier data দিয়ে fraud check, duplicate block আর checkout protection — return কমান, profit বাড়ান।',
             'accent' => 'emerald',
             'feature_keys' => [
                 'fraud_customer_checker',
@@ -334,7 +483,7 @@ return [
         'order_cloning' => 'অর্ডার ক্লোন',
         'customer_behavior_track' => 'কাস্টমার বিহেভিয়ার ট্র্যাক',
         'repeat_customer_identifier' => 'রিপিট কাস্টমার শনাক্ত',
-        'order_source_identifier' => 'অর্ডার সোর্স শনাক্ত',
+        'order_source_identifier' => 'অর্ডারে স্টাফ অ্যাসাইন ও সোর্স',
         'inline_shipping_change' => 'ইনলাইন শিপিং পরিবর্তন',
         'order_note_management' => 'অর্ডার নোট ম্যানেজমেন্ট',
         'cod_change' => 'COD পরিবর্তন',
@@ -347,8 +496,8 @@ return [
         'multistore_order_notifications' => 'মাল্টি-স্টোর অর্ডার অ্যালার্ট',
         'customer_call_identifier' => 'কাস্টমার কল শনাক্ত',
         'cross_store_order_detection' => 'ক্রস-স্টোর অর্ডার ডিটেকশন',
-        'call_history_with_duration' => 'কল পারফরম্যান্স ট্র্যাকিং',
-        'common_dashboard' => 'সব স্টোরের এক ড্যাশবোর্ড',
+        'call_history_with_duration' => 'কল হিস্ট্রি ও ডিউরেশন (অ্যাপ)',
+        'common_dashboard' => 'সব ওয়েবসাইটের এক ড্যাশবোর্ড',
         'courier_movement_notification' => 'কুরিয়ার মুভমেন্ট অ্যালার্ট',
         'notification_sound_management' => 'নোটিফিকেশন সাউন্ড কন্ট্রোল',
         'centralized_notifications' => 'সেন্ট্রাল নোটিফিকেশন',
@@ -398,7 +547,7 @@ return [
     ],
 
     'feature_descriptions' => [
-        'fraud_customer_checker' => 'শিপ করার আগেই কুরিয়ার ডাটা দিয়ে কাস্টমার যাচাই — ফেইক অর্ডার আটকান।',
+        'fraud_customer_checker' => 'Order confirm করার আগেই courier data দিয়ে customer check — fake order আটকান।',
         'three_courier_partner_integration' => 'Steadfast, Pathao, RedX — সব কুরিয়ার এক প্ল্যাটফর্ম থেকে ম্যানেজ করুন।',
         'courier_entry_automation' => 'অর্ডার কনফার্ম হলেই অটো কুরিয়ার এন্ট্রি — সময় বাঁচান।',
         'customer_sms_for_order' => 'অর্ডার ও ডেলিভারি আপডেট কাস্টমারকে এসএমএসে পাঠান।',
@@ -406,14 +555,14 @@ return [
         'one_click_app_connect' => 'QR স্ক্যানেই ওয়েবসাইট কানেক্ট — সেকেন্ডের মধ্যে প্রস্তুত।',
         'common_dashboard' => '২–৩ বা আনলিমিটেড ওয়েবসাইট এক ড্যাশবোর্ডে — সব আঙুলের ডগায়।',
         'multistore_order_notifications' => 'সব ওয়েবসাইটের নতুন অর্ডার এক অ্যাপে — কখনো মিস করবেন না।',
-        'customer_call_identifier' => 'ইনকামিং কলে কাস্টমার শনাক্ত — স্টাফ দ্রুত রেসপন্স দিতে পারে।',
-        'cross_store_order_detection' => 'এক কাস্টমার অন্য স্টোরেও অর্ডার দিয়েছে কিনা শনাক্ত করুন।',
-        'call_history_with_duration' => 'কোন স্টাফ কতক্ষণ কল করল — পারফরম্যান্স মাপুন ও টিম উন্নত করুন।',
-        'order_source_identifier' => 'কোন এমপ্লয়ি কোন অর্ডার হ্যান্ডেল করছে তা শনাক্ত করুন।',
+        'customer_call_identifier' => 'ইনকামিং কলে কাস্টমার শনাক্ত — অর্ডার হিস্ট্রি সহ দ্রুত রেসপন্স।',
+        'cross_store_order_detection' => 'এক কাস্টমার অন্য ওয়েবসাইটেও অর্ডার দিয়েছে কিনা শনাক্ত করুন।',
+        'call_history_with_duration' => 'কল হিস্ট্রি — অ্যাপ থেকে কল করলে প্রতিটি কলের ডিউরেশন রেকর্ড হয়।',
+        'order_source_identifier' => 'অর্ডারে স্টাফ অ্যাসাইন ও সোর্স ট্র্যাক — কে প্রসেস করছে জানুন।',
         'courier_movement_notification' => 'কুরিয়ার মুভমেন্ট অ্যালার্ট সরাসরি ফোনে।',
         'notification_sound_management' => 'স্টোর অনুযায়ী আলাদা নোটিফিকেশন সাউন্ড।',
         'centralized_notifications' => 'সব ওয়েবসাইটের নোটিফিকেশন এক জায়গায় — কোথাও খুঁজতে হবে না।',
-        'admin_employee_manage' => 'রোল, ওয়েবসাইট অ্যাসাইন ও পোর্টাল অ্যাক্সেস — টিম এক জায়গায় ম্যানেজ করুন।',
+        'admin_employee_manage' => 'স্টাফ যোগ, রোল, ওয়েবসাইট অ্যাসাইন ও পোর্টাল — টিম এক জায়গায়।',
         'ai_text_order_create' => 'মেসেজ বা টেক্সট পেস্ট করলেই এআই অর্ডার বানায় — কপি-পেস্ট ঝামেলা নেই।',
         'ai_image_to_order_create' => 'কাস্টমারের স্ক্রিনশট বা ছবি থেকে এআই অর্ডার তৈরি করে।',
         'ai_incomplete_address_autocomplete' => 'অসম্পূর্ণ ঠিকানা এআই দিয়ে অটো পূরণ — ডেলিভারি ফেইল কমে।',
@@ -430,6 +579,121 @@ return [
         'order_note_management' => 'অর্ডার নোট ম্যানেজ — টিমের সাথে তথ্য শেয়ার সহজ।',
     ],
 
+    'feature_detail_copy' => [
+        'fraud_customer_checker' => [
+            'summary' => 'Courier data দিয়ে customer check — order confirm করার আগেই risk দেখুন।',
+            'detail' => 'Steadfast, Pathao, RedX-এর delivery history, success rate আর fraud note একসাথে। Landing page-এ free check — registration ছাড়াই।',
+        ],
+        'duplicate_order_validation' => [
+            'summary' => 'Same customer duplicate order block।',
+            'detail' => 'Already order দিয়েছে এমন customer আবার order দিলে alert বা block — packaging loss কমে।',
+        ],
+        'customer_delivery_history' => [
+            'summary' => 'Customer-এর আগের delivery record দেখুন।',
+            'detail' => 'কতবার order, কত return — এক নজরে। Fraud check-এর সাথে মিলিয়ে decide করুন।',
+        ],
+        'checkout_otp_validation' => [
+            'summary' => 'Checkout-এ OTP — fake order কমে।',
+            'detail' => 'Order place করার সময় phone verify — junk order filter।',
+        ],
+        'admin_employee_manage' => [
+            'summary' => 'স্টাফ যোগ, রোল ও ওয়েবসাইট অ্যাসাইন।',
+            'detail' => 'প্রতিটি এমপ্লয়ির রোল, কোন ওয়েবসাইটে কাজ করবে, পোর্টাল লগইন — এক জায়গায়। মালিক দেখেন কে কত অর্ডার হ্যান্ডেল করছে।',
+        ],
+        'call_history_with_duration' => [
+            'summary' => 'কল হিস্ট্রি দেখুন — অ্যাপ থেকে কল করলে ডিউরেশন সহ।',
+            'detail' => 'প্লাগইন/ড্যাশবোর্ডে কল লগ দেখা যায়। মোবাইল অ্যাপ দিয়ে কল করলে প্রতিটি কল কত মিনিট/সেকেন্ড স্থায়ী হয়েছিল তা সেভ হয় — স্টাফ পারফরম্যান্স ও ক্যানসেল বিশ্লেষণে কাজে লাগে।',
+        ],
+        'order_source_identifier' => [
+            'summary' => 'অর্ডারে স্টাফ অ্যাসাইন — কে প্রসেস করছে জানুন।',
+            'detail' => 'প্রতিটি অর্ডারে দায়িত্বশীল স্টাফ সেট করুন। Facebook, হোয়াটসঅ্যাপ বা ওয়েবসাইট — কোথা থেকে অর্ডার এসেছে ও কে হ্যান্ডেল করছে ট্র্যাক হয়। ক্যানসেল হলে কার দায়িত্বে ছিল দেখা যায়।',
+        ],
+        'customer_call_identifier' => [
+            'summary' => 'ইনকামিং কলে কাস্টমার ও অর্ডার শনাক্ত।',
+            'detail' => 'কাস্টমার কল করলে অ্যাপ/সিস্টেমে নাম, অর্ডার হিস্ট্রি দেখা যায় — স্টাফ দ্রুত রেসপন্স দিতে পারে, কলের সাথে অর্ডার লিংক হয়।',
+        ],
+        'three_courier_partner_integration' => [
+            'summary' => 'Steadfast, Pathao, RedX এক প্ল্যাটফর্মে।',
+            'detail' => 'আলাদা প্যানেলে লগইনের দিন শেষ — সব কুরিয়ার WooEasyLife থেকে।',
+        ],
+        'courier_entry_automation' => [
+            'summary' => 'অর্ডার কনফার্ম = অটো কুরিয়ার এন্ট্রি।',
+            'detail' => 'ম্যানুয়াল কপি-পেস্ট বাদ — স্ট্যাটাস বদলালেই কুরিয়ারে যায়।',
+        ],
+        'courier_auto_status_sync' => [
+            'summary' => 'কুরিয়ার স্ট্যাটাস WooCommerce-এ অটো সিঙ্ক।',
+            'detail' => 'ডেলিভারি/রিটার্ন আপডেট আলাদা চেক করতে হয় না।',
+        ],
+        'customer_sms_for_order' => [
+            'summary' => 'অর্ডার ও ডেলিভারি আপডেট এসএমএস।',
+            'detail' => 'কাস্টমার «পার্সেল কোথায়?» কল কমায় — প্রফেশনাল ইমpression।',
+        ],
+        'missing_orders' => [
+            'summary' => 'WordPress-এ নেই এমন অর্ডার খুঁজুন।',
+            'detail' => 'FB/হোয়াটসঅ্যাপে আসা অর্ডার মিস হলে খুঁজে বের করুন।',
+        ],
+        'missing_order_one_click_create' => [
+            'summary' => 'মিসিং অর্ডার ওয়ান ক্লিকে তৈরি।',
+            'detail' => 'খুঁজে পাওয়ার পর সেকেন্ডে WooCommerce অর্ডার — হারানো বিক্রি ফিরে।',
+        ],
+        'order_cloning' => [
+            'summary' => 'আগের অর্ডার ক্লোন করে দ্রুত নতুন অর্ডার।',
+            'detail' => 'রিপিট কাস্টমার — এক ক্লিকে একই ডিটেইলস।',
+        ],
+        'quick_action_tool' => [
+            'summary' => 'বাল্ক অ্যাকশন — অনেক অর্ডার একসাথে।',
+            'detail' => 'স্ট্যাটাস, কুরিয়ার, প্রিন্ট — দ্রুত অপারেশন।',
+        ],
+        'pos_sticker_print' => [
+            'summary' => 'POS স্টিকার — পার্সেল লেবেল প্রিন্ট।',
+            'detail' => 'নাম, ঠিকানা, ফোন, COD — স্ট্যান্ডার্ড ফরম্যাটে, ভুল কমে।',
+        ],
+        'invoice_print' => [
+            'summary' => 'ওয়ান ক্লিক ইনভয়েস প্রিন্ট।',
+            'detail' => 'প্যাকিং ও রেকর্ডের জন্য প্রস্তুত ইনভয়েস।',
+        ],
+        'inline_shipping_change' => [
+            'summary' => 'অর্ডারে কুরিয়ার পরিবর্তন — প্যানেলে যেতে হয় না।',
+            'detail' => 'Steadfast থেকে Pathao — এক ক্লিকে স위চ।',
+        ],
+        'order_note_management' => [
+            'summary' => 'অর্ডার নোট — টিম কমিউনিকেশন।',
+            'detail' => 'কাস্টমারের বিশেষ চাহিদা, কলের ফলাফল — সব নোটে।',
+        ],
+        'ai_text_order_create' => [
+            'summary' => 'মেসেজ পেস্ট — এআই অর্ডার বানায়।',
+            'detail' => 'হাতে টাইপ ৫–১০ মিনিট → ৩০ সেকেন্ড।',
+        ],
+        'ai_image_to_order_create' => [
+            'summary' => 'ছবি/স্ক্রিনশট থেকে এআই অর্ডার।',
+            'detail' => 'কাস্টমার WhatsApp-এ ছবি পাঠাল — এআই parse করে।',
+        ],
+        'ai_incomplete_address_autocomplete' => [
+            'summary' => 'অসম্পূর্ণ ঠিকানা এআই দিয়ে পূরণ।',
+            'detail' => '«ঢাকা, গুলশান» — বাকি অংশ সাজেস্ট।',
+        ],
+        'ai_driven_customer_scoring' => [
+            'summary' => 'এআই কাস্টমার রিস্ক স্কোর।',
+            'detail' => 'কাকে ফোন-কনফার্ম, কাকে সরাসরি শিপ — ডাটা দিয়ে।',
+        ],
+        'common_dashboard' => [
+            'summary' => 'সব ওয়েবসাইট এক ড্যাশবোর্ডে।',
+            'detail' => '২–৩ বা আনলিমিটেড সাইট — এক লগইন, সব অর্ডার।',
+        ],
+        'multistore_order_notifications' => [
+            'summary' => 'সব সাইটের অর্ডার নোটিফিকেশন এক অ্যাপে।',
+            'detail' => 'কোন সাইট থেকে অর্ডার — আলাদা খোঁজার দরকার নেই।',
+        ],
+        'one_click_app_connect' => [
+            'summary' => 'QR স্ক্যান — ওয়েবসাইট কানেক্ট।',
+            'detail' => 'মিনিটের মধ্যে অ্যাপ + প্লাগইন লাইভ।',
+        ],
+        'centralized_notifications' => [
+            'summary' => 'সেন্ট্রাল নোটিফিকেশন হাব।',
+            'detail' => 'অর্ডার, কুরিয়ার, কল — এক জায়গায় অ্যালার্ট।',
+        ],
+    ],
+
     'feature_card_colors' => ['violet', 'emerald', 'sky', 'amber', 'rose', 'cyan', 'fuchsia', 'lime'],
 
     'stats' => [
@@ -440,30 +704,30 @@ return [
     ],
 
     'loss_comparison' => [
-        'headline' => 'রিটার্নে প্রতিদিন লাখ টাকা লস করছেন?',
-        'subtitle' => 'ম্যানুয়াল কাজ vs স্মার্ট অটোমেশন — আপনি কোন পাশে?',
+        'headline' => 'Return-এ প্রতিদিন লাখ টাকা loss করছেন?',
+        'subtitle' => 'Manual কাজ vs smart automation — আপনি কোন পাশে?',
         'without' => [
             'title' => 'WooEasyLife ছাড়া',
             'items' => [
-                'ফেইক অর্ডার শিপ করে রিটার্ন খরচ',
-                'কুরিয়ার প্যানেলে ম্যানুয়াল এন্ট্রি',
-                'ডুপ্লিকেট অর্ডারে প্যাকেজিং লস',
-                'সাইট বদলাতে সময় নষ্ট — অর্ডার মিস',
-                'মিসিং FB/হোয়াটসঅ্যাপ অর্ডার — বিক্রি হারানো',
+                'Fake order confirm করে return খরচ',
+                'Courier panel-এ manual entry',
+                'Duplicate order-এ packaging loss',
+                'Site বদলাতে time waste — order miss',
+                'Missing FB/WhatsApp order — sale হারানো',
             ],
-            'summary' => 'মাসে হাজার হাজার টাকা অযথা খরচ',
+            'summary' => 'মাসে হাজার হাজার টাকা unnecessary cost',
         ],
         'with' => [
             'title' => 'WooEasyLife দিয়ে',
             'items' => [
-                'শিপ করার আগেই ফ্রড চেক',
+                'Order confirm করার আগেই fraud check',
                 'অটো কুরিয়ার এন্ট্রি ও স্ট্যাটাস সিঙ্ক',
                 'ডুপ্লিকেট ও রিস্কি অর্ডার ব্লক',
                 'মোবাইলে রিয়েল-টাইম অর্ডার অ্যালার্ট',
                 'একাধিক ওয়েবসাইট এক ড্যাশবোর্ডে',
                 'মিসিং অর্ডার রিকভারি ও POS স্টিকার প্রিন্ট',
             ],
-            'summary' => 'ফ্রড কমে লাভ বাড়ে — নিশ্চিত ডেলিভারি',
+            'summary' => 'Fraud কমে profit বাড়ে — confirmed delivery',
         ],
     ],
 

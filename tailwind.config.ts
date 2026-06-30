@@ -23,6 +23,14 @@ export default {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
             colors: {
+                brand: {
+                    gold: '#ffc107',
+                    'gold-light': '#ffd54f',
+                    'gold-dark': '#e6a800',
+                    black: '#0a0a0a',
+                    surface: '#111111',
+                    panel: '#161616',
+                },
                 'gray': {
                     '50': '#f4f6f7',
                     '100': '#e3e7ea',

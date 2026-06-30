@@ -1,9 +1,19 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     appShowcase: { type: Object, default: () => ({}) },
     appDownloadUrl: { type: String, default: null },
     playStoreUrl: { type: String, default: null },
 });
+
+const screenshotSrc = computed(
+    () => props.appShowcase.screenshot ?? '/images/woo-easy-life/app-left-sidebar.png',
+);
+
+const screenshotAlt = computed(
+    () => props.appShowcase.screenshot_alt ?? 'WooEasyLife mobile app screenshot',
+);
 </script>
 
 <template>
@@ -36,7 +46,7 @@ defineProps({
                         <a
                             v-if="appDownloadUrl"
                             :href="appDownloadUrl"
-                            class="inline-flex items-center justify-center rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-violet-500"
+                            class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-amber-400"
                             download
                         >
                             APK ডাউনলোড
@@ -54,44 +64,18 @@ defineProps({
                 </div>
 
                 <div class="order-1 flex justify-center lg:order-2">
-                    <div class="relative w-full max-w-[280px] sm:max-w-xs">
+                    <div class="relative w-full max-w-[260px] sm:max-w-[280px]">
                         <div class="absolute -inset-4 rounded-[2.5rem] bg-sky-600/20 blur-2xl" />
-                        <div class="relative overflow-hidden rounded-[2rem] border-4 border-slate-700 bg-[#0f1729] shadow-2xl">
-                            <div class="flex items-center justify-center gap-1 border-b border-white/10 bg-black/40 px-4 py-2">
-                                <span class="h-2 w-2 rounded-full bg-rose-400" />
-                                <span class="h-2 w-2 rounded-full bg-amber-400" />
-                                <span class="h-2 w-2 rounded-full bg-emerald-400" />
-                            </div>
-                            <div class="space-y-3 p-4">
-                                <div class="flex items-center gap-2">
-                                    <img src="/app-logo" alt="" class="h-8 w-8 rounded-lg" />
-                                    <div>
-                                        <p class="text-xs font-bold text-white">WooEasyLife</p>
-                                        <p class="text-[10px] text-slate-400">৩টি ওয়েবসাইট কানেক্টেড</p>
-                                    </div>
-                                </div>
-                                <div class="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2">
-                                    <p class="text-[10px] text-rose-300">নতুন অর্ডার · Fashion Website</p>
-                                    <p class="text-xs font-bold text-white">#৪৮২১ — ৳১,২৫০</p>
-                                </div>
-                                <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                                    <p class="text-[10px] text-slate-400">ফ্রড চেক</p>
-                                    <p class="text-xs font-bold text-emerald-400">৮৮% নিরাপদ ✓</p>
-                                </div>
-                                <div class="rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2">
-                                    <p class="text-[10px] text-sky-300">ইনকামিং কল</p>
-                                    <p class="text-xs text-white">রাহিম আহমেদ · ৩ অর্ডার</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <span class="rounded-lg bg-violet-600/30 px-2 py-1 text-[10px] font-bold text-violet-200">ওয়েবসাইট ১</span>
-                                    <span class="rounded-lg bg-white/5 px-2 py-1 text-[10px] text-slate-400">২</span>
-                                    <span class="rounded-lg bg-white/5 px-2 py-1 text-[10px] text-slate-400">৩</span>
-                                </div>
-                            </div>
+                        <div class="relative overflow-hidden rounded-[2rem] border-[6px] border-slate-800 bg-slate-900 shadow-2xl shadow-sky-900/30 ring-1 ring-white/10">
+                            <div class="pointer-events-none absolute left-1/2 top-0 z-10 h-5 w-24 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
+                            <img
+                                :src="screenshotSrc"
+                                :alt="screenshotAlt"
+                                class="block w-full object-cover object-top"
+                                loading="lazy"
+                                decoding="async"
+                            >
                         </div>
-                        <p class="mt-4 text-center text-xs text-slate-500">
-                            স্ক্রিনশট যোগ করলে এখানে রিয়েল অ্যাপ দেখানো যাবে
-                        </p>
                     </div>
                 </div>
             </div>

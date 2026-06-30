@@ -112,7 +112,7 @@ const handleSearch = async () => {
 </script>
 
 <template>
-    <div v-if="isEnabled" class="mt-8">
+    <div v-if="isEnabled">
         <div
             v-if="dailySearchPhrase"
             class="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"
@@ -121,11 +121,11 @@ const handleSearch = async () => {
             {{ dailySearchPhrase }}
         </div>
 
-        <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#0c1220]/80 shadow-2xl shadow-violet-900/20">
+        <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/80 shadow-2xl shadow-amber-900/20">
             <div class="border-b border-white/10 px-4 py-4 sm:px-5">
-                <p class="text-sm font-semibold text-white">নাম্বার দিন — ফ্রড আগেই ধরুন</p>
+                <p class="text-sm font-semibold text-white">Number দিন — fake order আগেই ধরুন</p>
                 <p class="mt-1 text-xs text-slate-400">
-                    কুরিয়ার ডেলিভারি হিস্ট্রি দেখে অর্ডার কনফার্ম করার আগে ঝুঁকি যাচাই করুন
+                    Courier delivery history দেখে order confirm করার আগেই customer কেমন — জেনে নিন
                 </p>
             </div>
 
@@ -139,12 +139,12 @@ const handleSearch = async () => {
                             inputmode="numeric"
                             maxlength="14"
                             placeholder="017XXXXXXXX"
-                            class="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-white placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                            class="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-white placeholder:text-slate-500 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                         >
                     </label>
                     <button
                         type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3.5 text-sm font-bold text-white transition hover:from-violet-500 hover:to-fuchsia-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3.5 text-sm font-bold text-black transition hover:from-amber-400 hover:to-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="isLoading || remainingSearches <= 0"
                     >
                         <span v-if="isLoading" class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -174,7 +174,7 @@ const handleSearch = async () => {
                 </p>
 
                 <div v-if="isLoading" class="mt-6 flex flex-col items-center gap-3 py-8 text-sm text-slate-400">
-                    <div class="h-10 w-10 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-400" />
+                    <div class="h-10 w-10 animate-spin rounded-full border-2 border-amber-500/30 border-t-amber-400" />
                     কুরিয়ার ডাটা যাচাই হচ্ছে...
                 </div>
 
@@ -209,7 +209,7 @@ const handleSearch = async () => {
 
                     <div class="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
                         <p class="text-xs text-slate-400">সাকসেস রেট</p>
-                        <p class="mt-1 text-2xl font-extrabold text-violet-300">
+                        <p class="mt-1 text-2xl font-extrabold text-amber-300">
                             {{ result.report.success_rate }}
                         </p>
                     </div>
@@ -219,7 +219,7 @@ const handleSearch = async () => {
                         <div
                             v-for="item in result.report.courier"
                             :key="item.title"
-                            class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0a0f1c] px-4 py-3"
+                            class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-3"
                         >
                             <div class="flex items-center gap-3">
                                 <div class="flex h-10 w-16 items-center justify-center rounded-lg bg-white px-2">

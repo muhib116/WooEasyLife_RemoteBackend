@@ -6,7 +6,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
+    background: #0a0a0a;
     transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
@@ -21,17 +21,20 @@
     position: relative;
     width: 5.5rem;
     height: 5.5rem;
+    flex-shrink: 0;
 }
 
 .app-loader-spinner__logo {
     position: absolute;
-    inset: 1.1rem;
-    width: calc(100% - 2.2rem);
-    height: calc(100% - 2.2rem);
+    top: 1.1rem;
+    left: 1.1rem;
+    width: 3.3rem;
+    height: 3.3rem;
+    max-width: 3.3rem;
+    max-height: 3.3rem;
     border-radius: 9999px;
-    object-fit: contain;
-    background: #fff;
-    box-shadow: 0 0 0 4px #fff;
+    object-fit: cover;
+    display: block;
 }
 
 .app-loader-spinner__ring {
@@ -39,18 +42,19 @@
     inset: 0;
     border-radius: 9999px;
     border: 3px solid transparent;
+    box-sizing: border-box;
 }
 
 .app-loader-spinner__ring--one {
-    border-top-color: #334155;
-    border-right-color: #334155;
+    border-top-color: #ffc107;
+    border-right-color: #ffc107;
     animation: app-loader-spin 0.9s linear infinite;
 }
 
 .app-loader-spinner__ring--two {
     inset: 0.35rem;
-    border-bottom-color: #94a3b8;
-    border-left-color: #94a3b8;
+    border-bottom-color: #ffd54f;
+    border-left-color: #ffd54f;
     animation: app-loader-spin 1.2s linear infinite reverse;
 }
 

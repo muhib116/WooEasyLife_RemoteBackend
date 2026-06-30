@@ -26,13 +26,34 @@ const selectedPlan = ref(null);
 const authUser = computed(() => page.props.auth?.user ?? null);
 const hasPortal = computed(() => Boolean(page.props.auth?.portal));
 
-const trialPlan = computed(() =>
-    props.plans.find((plan) => plan.package_duration === 'free_trial') ?? null,
-);
+const displayPlans = computed(() => {
+    const trial = props.plans.filter((plan) => plan.package_duration === 'free_trial');
+    const paid = props.plans.filter((plan) => plan.package_duration !== 'free_trial');
 
-const paidPlans = computed(() =>
-    props.plans.filter((plan) => plan.package_duration !== 'free_trial'),
-);
+    return [...trial, ...paid];
+});
+
+const isFreeTrial = (plan) => plan.package_duration === 'free_trial';
+
+const planBadge = (plan) => {
+    if (isFreeTrial(plan)) {
+        return 'বিনামূল্যে শুরু';
+    }
+
+    if (plan.is_special) {
+        return 'সবচেয়ে জনপ্রিয়';
+    }
+
+    return null;
+};
+
+const planBadgeClass = (plan) => {
+    if (isFreeTrial(plan)) {
+        return 'bg-emerald-400 text-emerald-950';
+    }
+
+    return 'bg-amber-400 text-amber-950';
+};
 
 const paymentForm = useForm({
     domain: '',
@@ -47,6 +68,10 @@ const paymentForm = useForm({
 });
 
 const purchaseLabel = (plan) => {
+    if (isFreeTrial(plan)) {
+        return 'ফ্রি ট্রায়াল শুরু করুন';
+    }
+
     if (props.canPurchase && props.domains.length) {
         return 'এখনই কিনুন';
     }
@@ -151,23 +176,24 @@ onMounted(() => {
 
         <section class="py-16">
             <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                <div class="grid gap-6 lg:grid-cols-3">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <article
-                        v-for="plan in paidPlans"
+                        v-for="plan in displayPlans"
                         :key="plan.id"
                         class="relative flex flex-col rounded-2xl border p-6 transition hover:-translate-y-0.5"
                         :class="plan.is_special
-                            ? 'border-violet-400/50 bg-violet-600/10 shadow-xl shadow-violet-900/30'
+                            ? 'border-amber-400/50 bg-amber-500/10 shadow-xl shadow-amber-900/30'
                             : 'border-white/10 bg-white/5'"
                     >
                         <span
-                            v-if="plan.is_special"
-                            class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-3 py-0.5 text-xs font-bold text-amber-950"
+                            v-if="planBadge(plan)"
+                            class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-xs font-bold"
+                            :class="planBadgeClass(plan)"
                         >
-                            সবচেয়ে জনপ্রিয়
+                            {{ planBadge(plan) }}
                         </span>
 
-                        <p class="text-sm font-semibold text-violet-300">{{ plan.duration_label }}</p>
+                        <p class="text-sm font-semibold text-amber-300">{{ plan.duration_label }}</p>
                         <h2 class="mt-1 text-xl font-bold text-white">{{ plan.title }}</h2>
                         <p class="mt-2 text-4xl font-extrabold text-white">{{ plan.price_label }}</p>
                         <p class="mt-1 text-sm text-slate-400">{{ plan.token_label }}</p>
@@ -199,30 +225,13 @@ onMounted(() => {
                             type="button"
                             class="mt-6 w-full rounded-xl py-3 text-sm font-bold transition"
                             :class="plan.is_special
-                                ? 'bg-violet-600 text-white hover:bg-violet-500'
+                                ? 'bg-amber-500 text-black hover:bg-amber-400'
                                 : 'border border-white/15 text-white hover:bg-white/10'"
                             @click="openPurchase(plan)"
                         >
                             {{ purchaseLabel(plan) }}
                         </button>
                     </article>
-                </div>
-
-                <div
-                    v-if="trialPlan"
-                    class="mx-auto mt-10 max-w-xl rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-6 text-center"
-                >
-                    <h3 class="text-lg font-bold text-emerald-300">{{ trialPlan.title }}</h3>
-                    <p class="mt-2 text-sm text-emerald-200/80">
-                        {{ trialPlan.duration_label }} · {{ trialPlan.token_label }} · {{ trialPlan.price_label }}
-                    </p>
-                    <button
-                        type="button"
-                        class="mt-4 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-700"
-                        @click="openPurchase(trialPlan)"
-                    >
-                        {{ purchaseLabel(trialPlan) }}
-                    </button>
                 </div>
             </div>
         </section>
@@ -241,7 +250,7 @@ onMounted(() => {
                         :key="group.group"
                         class="rounded-2xl border border-white/10 bg-white/5 p-5"
                     >
-                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-violet-300">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-amber-300">
                             {{ group.group }}
                         </h3>
                         <ul class="space-y-2">
@@ -261,10 +270,10 @@ onMounted(() => {
             </div>
         </section>
 
-        <section class="bg-violet-600 py-14">
+        <section class="bg-amber-500 py-14">
             <div class="mx-auto max-w-3xl px-4 text-center">
                 <h2 class="text-3xl font-bold text-white">এখনই শুরু করুন</h2>
-                <p class="mt-3 text-violet-100">
+                <p class="mt-3 text-amber-50">
                     প্রশ্ন থাকলে হোয়াটসঅ্যাপে যোগাযোগ করুন, অথবা লগইন করে পেমেন্ট জমা দিন।
                 </p>
                 <div class="mt-6 flex flex-wrap justify-center gap-3">
@@ -273,7 +282,7 @@ onMounted(() => {
                         :href="whatsappUrl"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="rounded-xl bg-white px-6 py-3 text-sm font-bold text-violet-700"
+                        class="rounded-xl bg-white px-6 py-3 text-sm font-bold text-amber-950"
                     >
                         হোয়াটসঅ্যাপে যোগাযোগ
                     </a>

@@ -12,7 +12,7 @@ defineProps({
 </script>
 
 <template>
-    <section class="border-y border-white/10 bg-[#0a0f1c] py-8 sm:py-10">
+    <section class="border-y border-white/10 bg-[#111111] py-8 sm:py-10">
         <div class="mx-auto max-w-6xl px-4 text-center lg:px-8">
             <p class="text-sm font-semibold text-slate-400">যে কুরিয়ার দিয়ে কাজ করেন — আমরা সাপোর্ট করি</p>
             <div class="mt-5 flex flex-wrap items-center justify-center gap-3 sm:gap-4">

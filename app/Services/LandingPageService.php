@@ -72,6 +72,7 @@ class LandingPageService
             'appDownloadUrl' => env('WOOEASYLIFE_ANDROID_DOWNLOAD_URL'),
             'playStoreUrl' => env('WOOEASYLIFE_PLAY_STORE_URL'),
             'fraudCheck' => $this->publicFraudCheckService->meta($request?->ip()),
+            'fraudBenefitCards' => config('landing.fraud_benefit_cards', []),
         ];
     }
 
@@ -291,16 +292,22 @@ class LandingPageService
     {
         $labels = config('landing.labels', []);
         $descriptions = config('landing.feature_descriptions', []);
+        $detailCopy = config('landing.feature_detail_copy', []);
 
         return collect(config('landing.feature_showcases', []))
-            ->map(function (array $showcase) use ($features, $labels, $descriptions) {
+            ->map(function (array $showcase) use ($features, $labels, $descriptions, $detailCopy) {
                 $items = collect($showcase['feature_keys'] ?? [])
                     ->filter(fn (string $key) => $features[$key] ?? false)
-                    ->map(fn (string $key) => [
-                        'key' => $key,
-                        'label' => $labels[$key] ?? Str::headline(str_replace('_', ' ', $key)),
-                        'description' => $descriptions[$key] ?? ($labels[$key] ?? $key),
-                    ])
+                    ->map(function (string $key) use ($labels, $descriptions, $detailCopy) {
+                        $copy = $detailCopy[$key] ?? [];
+
+                        return [
+                            'key' => $key,
+                            'label' => $labels[$key] ?? Str::headline(str_replace('_', ' ', $key)),
+                            'description' => $copy['summary'] ?? ($descriptions[$key] ?? ($labels[$key] ?? $key)),
+                            'detail' => $copy['detail'] ?? ($descriptions[$key] ?? ''),
+                        ];
+                    })
                     ->values()
                     ->all();
 
@@ -308,9 +315,13 @@ class LandingPageService
                     'id' => $showcase['id'],
                     'badge' => $showcase['badge'],
                     'headline' => $showcase['headline'],
+                    'teaser' => $showcase['teaser'] ?? '',
                     'pain' => $showcase['pain'] ?? '',
                     'solution' => $showcase['solution'] ?? '',
                     'benefit' => $showcase['benefit'] ?? '',
+                    'highlights' => $showcase['highlights'] ?? [],
+                    'read_more' => $showcase['read_more'] ?? [],
+                    'scenario' => $showcase['scenario'] ?? null,
                     'accent' => $showcase['accent'] ?? 'violet',
                     'features' => $items,
                     'enabled_count' => count($items),

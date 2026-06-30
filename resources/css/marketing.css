@@ -1,0 +1,68 @@
+/* WooEasyLife marketing — gold on black (logo-aligned) */
+
+.marketing-page {
+    --marketing-bg: #0a0a0a;
+    --marketing-surface: #111111;
+    --marketing-panel: #161616;
+    --marketing-gold: #ffc107;
+    --marketing-gold-light: #ffd54f;
+    --marketing-gold-dark: #e6a800;
+    background-color: var(--marketing-bg);
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .marketing-page {
+        scroll-behavior: auto;
+    }
+}
+
+/* Primary CTA — matches WEL logo gold */
+.marketing-cta {
+    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3 text-sm font-bold text-black shadow-lg shadow-amber-900/35 transition hover:from-amber-400 hover:to-yellow-400;
+}
+
+.marketing-cta-sm {
+    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-900/30 transition hover:from-amber-400 hover:to-yellow-400;
+}
+
+.marketing-accent-text {
+    @apply text-amber-400;
+}
+
+.marketing-headline-gradient {
+    @apply bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 bg-clip-text text-transparent;
+}
+
+.marketing-surface {
+    background-color: var(--marketing-surface);
+}
+
+.marketing-panel {
+    background-color: var(--marketing-panel);
+}
+
+/* Scroll reveal */
+@media (prefers-reduced-motion: no-preference) {
+    .scroll-reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition:
+            opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+            transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: opacity, transform;
+    }
+
+    .scroll-reveal-visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scroll-reveal {
+        opacity: 1;
+        transform: none;
+    }
+}

@@ -1,12 +1,16 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
+import { primaryCtaLabel, primaryCtaShortLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import '../../../css/marketing.css';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
     whatsappUrl: { type: String, default: null },
     activeNav: { type: String, default: null },
     variant: { type: String, default: 'dark' },
+    /** Hide floating WhatsApp FAB on mobile when landing sticky CTA is shown */
+    suppressMobileWhatsappFab: { type: Boolean, default: false },
 });
 
 const page = usePage();
@@ -14,14 +18,18 @@ const mobileOpen = ref(false);
 
 const marketing = computed(() => page.props.marketing ?? {});
 
-const navLinks = [
+const pricingNavHref = computed(() =>
+    props.activeNav === 'home' ? '/#pricing' : route('pricing'),
+);
+
+const navLinks = computed(() => [
     { label: 'হোম', href: '/', key: 'home', anchor: false },
     { label: 'ফিচার', href: '/#features', key: 'features', anchor: true },
     { label: 'ফ্রড চেক', href: '/#fraud-check', key: 'fraud-check', anchor: true },
-    { label: 'প্রাইসিং', href: route('pricing'), key: 'pricing', anchor: false },
+    { label: 'প্রাইসিং', href: pricingNavHref.value, key: 'pricing', anchor: props.activeNav === 'home' },
     { label: 'অ্যাপ', href: '/#download-app', key: 'app', anchor: true },
     { label: 'FAQ', href: '/#faq', key: 'faq', anchor: true },
-];
+]);
 
 const footerProductLinks = [
     { label: 'প্রাইসিং', href: route('pricing') },
@@ -35,13 +43,9 @@ const isDark = computed(() => props.variant === 'dark');
 
 const contactUrl = computed(() => props.whatsappUrl || marketing.value.whatsapp_url || null);
 
-const primaryCtaUrl = computed(
-    () => contactUrl.value || (props.canLogin ? route('pricing') : route('pricing')),
-);
-const primaryCtaLabel = computed(() =>
-    contactUrl.value ? 'ফ্রি অ্যাকাউন্ট' : 'এখনই শুরু করুন',
-);
-const primaryCtaExternal = computed(() => Boolean(contactUrl.value));
+const headerCtaUrl = computed(() => primaryCtaUrl());
+const headerCtaLabel = computed(() => primaryCtaLabel());
+const headerCtaShortLabel = computed(() => primaryCtaShortLabel());
 
 const helplineDisplay = computed(() => {
     const phone = marketing.value.helpline;
@@ -68,7 +72,7 @@ const navLinkClass = (key) => {
 
     if (active) {
         return isDark.value
-            ? 'rounded-lg bg-white/10 px-3 py-1.5 text-violet-300'
+            ? 'rounded-lg bg-white/10 px-3 py-1.5 text-amber-300'
             : 'rounded-lg bg-primary-50 px-3 py-1.5 text-primary-700';
     }
 
@@ -90,27 +94,42 @@ const trustBadgeIcon = (icon) => {
 const closeMobile = () => {
     mobileOpen.value = false;
 };
+
+watch(mobileOpen, (open) => {
+    document.body.style.overflow = open ? 'hidden' : '';
+});
+
+onUnmounted(() => {
+    document.body.style.overflow = '';
+});
 </script>
 
 <template>
     <div
-        class="min-h-screen"
-        :class="isDark ? 'bg-[#070b16] text-slate-100' : 'bg-slate-50 text-slate-900'"
+        class="marketing-page min-h-screen"
+        :class="isDark ? 'bg-brand-black text-slate-100' : 'bg-slate-50 text-slate-900'"
         lang="bn"
     >
         <header
-            class="sticky top-0 z-40 border-b backdrop-blur-xl"
-            :class="isDark ? 'border-white/10 bg-[#070b16]/90' : 'border-slate-200/80 bg-white/95'"
+            class="sticky top-0 z-40 relative border-b backdrop-blur-xl supports-[backdrop-filter]:backdrop-blur-xl"
+            :class="isDark
+                ? 'border-white/5 bg-[#0a0a0a]/95 shadow-sm shadow-black/20'
+                : 'border-slate-200/80 bg-white/95'"
+            style="padding-top: env(safe-area-inset-top, 0px);"
         >
-            <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-                <Link href="/" class="flex shrink-0 items-center gap-2.5">
-                    <div
-                        class="flex h-10 w-10 items-center justify-center rounded-xl ring-1"
-                        :class="isDark ? 'bg-violet-500/10 ring-violet-400/25' : 'bg-primary-50 ring-primary-100'"
+            <nav class="relative mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-3 lg:px-8">
+                <Link href="/" class="flex min-w-0 shrink items-center gap-2 sm:gap-2.5">
+                    <img
+                        src="/app-logo"
+                        alt="WooEasyLife"
+                        class="h-9 w-9 shrink-0 rounded-full object-cover sm:h-10 sm:w-10"
+                    />
+                    <span
+                        class="truncate text-sm font-bold tracking-tight sm:text-base"
+                        :class="isDark ? 'text-white' : 'text-slate-900'"
                     >
-                        <img src="/app-logo" alt="" class="h-6 w-6 object-contain" />
-                    </div>
-                    <span class="text-base font-bold tracking-tight text-white">WooEasyLife</span>
+                        WooEasyLife
+                    </span>
                 </Link>
 
                 <div class="hidden flex-1 items-center justify-center gap-1 lg:flex xl:gap-2">
@@ -126,7 +145,7 @@ const closeMobile = () => {
                     </component>
                 </div>
 
-                <div class="hidden shrink-0 items-center gap-2 sm:flex">
+                <div class="hidden shrink-0 items-center gap-2 lg:flex">
                     <Link
                         v-if="canLogin"
                         :href="route('login')"
@@ -138,74 +157,105 @@ const closeMobile = () => {
                         </svg>
                         লগইন
                     </Link>
-                    <a
-                        :href="primaryCtaUrl"
-                        :target="primaryCtaExternal ? '_blank' : undefined"
-                        :rel="primaryCtaExternal ? 'noopener noreferrer' : undefined"
-                        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-900/40 transition hover:from-violet-500 hover:to-fuchsia-500"
+                    <Link
+                        :href="headerCtaUrl"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-900/40 transition hover:from-amber-400 hover:to-yellow-400"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
-                        {{ primaryCtaLabel }}
-                    </a>
+                        {{ headerCtaLabel }}
+                    </Link>
                 </div>
 
-                <button
-                    type="button"
-                    class="rounded-lg p-2 lg:hidden"
-                    :class="isDark ? 'text-slate-300 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'"
-                    aria-label="মেনু"
-                    @click="mobileOpen = !mobileOpen"
-                >
-                    <svg v-if="!mobileOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                    <svg v-else class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+                <!-- Mobile: compact CTA + menu -->
+                <div class="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:hidden">
+                    <Link
+                        :href="headerCtaUrl"
+                        class="inline-flex max-w-[7.5rem] items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 px-2.5 py-2 text-xs font-bold text-black shadow-md shadow-amber-900/30 sm:max-w-none sm:px-3.5 sm:text-sm"
+                    >
+                        <span class="truncate">{{ headerCtaShortLabel }}</span>
+                    </Link>
+                    <button
+                        type="button"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition sm:h-10 sm:w-10"
+                        :class="isDark
+                            ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"
+                        :aria-expanded="mobileOpen"
+                        aria-controls="mobile-nav-panel"
+                        aria-label="মেনু খুলুন"
+                        @click="mobileOpen = !mobileOpen"
+                    >
+                        <svg v-if="!mobileOpen" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </nav>
 
+            <!-- Mobile menu backdrop -->
             <div
                 v-show="mobileOpen"
-                class="border-t px-4 py-4 lg:hidden"
-                :class="isDark ? 'border-white/10 bg-[#0c1222]' : 'border-slate-200 bg-white'"
+                class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+                aria-hidden="true"
+                @click="closeMobile"
+            />
+
+            <!-- Mobile menu panel -->
+            <div
+                v-show="mobileOpen"
+                id="mobile-nav-panel"
+                class="absolute left-0 right-0 top-full z-50 max-h-[min(32rem,calc(100dvh-3.5rem))] overflow-y-auto border-t px-3 py-4 shadow-2xl lg:hidden sm:px-4"
+                :class="isDark ? 'border-white/10 bg-[#111111]' : 'border-slate-200 bg-white'"
+                style="padding-bottom: env(safe-area-inset-bottom, 0px);"
             >
-                <div class="space-y-1">
+                <div class="grid grid-cols-2 gap-2">
                     <component
                         :is="link.anchor ? 'a' : Link"
                         v-for="link in navLinks"
                         :key="link.key"
                         :href="link.href"
-                        class="block rounded-lg px-3 py-2.5 text-sm font-medium"
+                        class="flex items-center justify-center rounded-xl border px-3 py-3 text-center text-sm font-medium transition"
                         :class="[
                             activeNav === link.key
-                                ? isDark ? 'bg-white/10 text-violet-300' : 'bg-primary-50 text-primary-700'
-                                : isDark ? 'text-slate-200' : 'text-slate-700',
+                                ? isDark
+                                    ? 'border-amber-500/40 bg-amber-500/15 text-amber-200'
+                                    : 'border-primary-200 bg-primary-50 text-primary-700'
+                                : isDark
+                                    ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+                                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                         ]"
                         @click="closeMobile"
                     >
                         {{ link.label }}
                     </component>
                 </div>
-                <div class="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4">
+                <div
+                    class="mt-4 flex flex-col gap-2 border-t pt-4"
+                    :class="isDark ? 'border-white/10' : 'border-slate-200'"
+                >
                     <Link
                         v-if="canLogin"
                         :href="route('login')"
-                        class="rounded-lg border border-white/10 px-4 py-2.5 text-center text-sm font-semibold text-white"
+                        class="rounded-xl border px-4 py-3 text-center text-sm font-semibold transition"
+                        :class="isDark
+                            ? 'border-white/10 text-white hover:bg-white/5'
+                            : 'border-slate-200 text-slate-800 hover:bg-slate-50'"
                         @click="closeMobile"
                     >
                         লগইন
                     </Link>
-                    <a
-                        :href="primaryCtaUrl"
-                        :target="primaryCtaExternal ? '_blank' : undefined"
-                        class="rounded-xl bg-violet-600 px-4 py-2.5 text-center text-sm font-bold text-white"
+                    <Link
+                        :href="headerCtaUrl"
+                        class="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-3 text-center text-sm font-bold text-black shadow-lg shadow-amber-900/30"
                         @click="closeMobile"
                     >
-                        {{ primaryCtaLabel }}
-                    </a>
+                        {{ headerCtaLabel }}
+                    </Link>
                 </div>
             </div>
         </header>
@@ -214,14 +264,14 @@ const closeMobile = () => {
             <slot />
         </main>
 
-        <footer class="border-t" :class="isDark ? 'border-white/10 bg-[#050810]' : 'border-slate-800 bg-slate-950'">
+        <footer class="border-t" :class="isDark ? 'border-white/10 bg-[#080808]' : 'border-slate-800 bg-slate-950'">
             <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
                 <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
                     <!-- Brand -->
                     <div class="sm:col-span-2 lg:col-span-1">
                         <div class="flex items-center gap-2.5">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 ring-1 ring-violet-400/20">
-                                <img src="/app-logo" alt="" class="h-6 w-6 object-contain" />
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-400/25">
+                                <img src="/app-logo" alt="WooEasyLife" class="h-6 w-6 object-contain" />
                             </div>
                             <span class="text-lg font-bold text-white">WooEasyLife</span>
                         </div>
@@ -338,7 +388,8 @@ const closeMobile = () => {
             :href="contactUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl shadow-emerald-900/50 transition hover:scale-105 hover:bg-emerald-400 md:bottom-6"
+            class="fixed right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl shadow-emerald-900/50 transition hover:scale-105 hover:bg-emerald-400 md:bottom-6"
+            :class="suppressMobileWhatsappFab ? 'bottom-6 hidden md:flex' : 'bottom-20 md:bottom-6'"
             aria-label="হোয়াটসঅ্যাপে যোগাযোগ"
         >
             <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24">

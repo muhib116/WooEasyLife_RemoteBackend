@@ -8,7 +8,7 @@ const accentClass = (accent) => {
         rose: 'border-rose-500/25 bg-rose-950/20',
         amber: 'border-amber-500/25 bg-amber-950/20',
         sky: 'border-sky-500/25 bg-sky-950/20',
-        violet: 'border-violet-500/25 bg-violet-950/20',
+        violet: 'border-amber-500/25 bg-amber-950/20',
         emerald: 'border-emerald-500/25 bg-emerald-950/20',
     };
 
@@ -20,7 +20,7 @@ const titleClass = (accent) => {
         rose: 'text-rose-300',
         amber: 'text-amber-300',
         sky: 'text-sky-300',
-        violet: 'text-violet-300',
+        violet: 'text-amber-300',
         emerald: 'text-emerald-300',
     };
 
@@ -29,7 +29,7 @@ const titleClass = (accent) => {
 </script>
 
 <template>
-    <section v-if="scenarios.length" class="border-y border-white/10 bg-[#0a0f1c] py-14 sm:py-16">
+    <section v-if="scenarios.length" class="border-y border-white/10 bg-[#111111] py-14 sm:py-16">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div class="text-center">
                 <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
