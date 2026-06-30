@@ -11,7 +11,7 @@ use Illuminate\Database\Seeder;
  * Seeds catalog-format packages (duration, tokens, pricing, features).
  *
  * Safe to re-run: uses updateOrCreate by title.
- * Does not modify legacy Standard / Premium plans.
+ * Does not modify existing plans outside the catalog definitions below.
  *
  * Usage:
  *   php artisan db:seed --class=PackageCatalogSeeder

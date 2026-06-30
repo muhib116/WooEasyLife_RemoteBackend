@@ -14,7 +14,8 @@ class LicenseProvisioningService
 {
     public function __construct(
         protected DomainNormalizer $domainNormalizer,
-        protected WebsiteSyncService $websiteSync
+        protected WebsiteSyncService $websiteSync,
+        protected DomainAvailabilityService $domainAvailability
     ) {
     }
 
@@ -45,6 +46,8 @@ class LicenseProvisioningService
                 ]);
             }
         }
+
+        $this->domainAvailability->assertAvailableForUser($user, $normalizedDomain, forAdmin: true);
 
         $userPackage = $this->resolveUserPackage($user, $normalizedDomain, $attributes, $requireUserPackage);
 
@@ -93,6 +96,13 @@ class LicenseProvisioningService
         $domain = isset($attributes['domain']) && $attributes['domain']
             ? $this->domainNormalizer->normalize($attributes['domain']) ?? $attributes['domain']
             : $accessToken->domain;
+
+        if ($domain && $accessToken->tokenable_type === User::class && $accessToken->tokenable_id) {
+            $user = User::query()->find($accessToken->tokenable_id);
+            if ($user && ! $this->domainNormalizer->matches($domain, $accessToken->domain)) {
+                $this->domainAvailability->assertAvailableForUser($user, $domain, forAdmin: true);
+            }
+        }
 
         $website = null;
         if ($accessToken->tokenable_type === User::class && $accessToken->tokenable_id && $domain) {

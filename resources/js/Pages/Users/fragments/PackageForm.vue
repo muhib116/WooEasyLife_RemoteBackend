@@ -1,5 +1,5 @@
 <template>
-    <form class="flex flex-col gap-5" @submit.prevent="$emit('handleSave')">
+    <form class="flex flex-col gap-5" @submit.prevent="handleSubmit">
         <p
             v-if="introText"
             class="rounded-lg border border-gray-100 bg-slate-50 px-3 py-2.5 text-sm text-gray-600 dark:border-gray-800 dark:bg-slate-900/40 dark:text-gray-300"
@@ -149,11 +149,17 @@
                     id="domain"
                     placeholder="shop.example.com"
                     class="!w-full"
+                    :invalid="Boolean(domainFieldError)"
+                    @blur="onDomainBlur"
                 />
                 <DomainFieldHint class="mt-2" />
-                <p v-if="form.errors.domain" class="mt-1 text-sm text-rose-500">
-                    {{ form.errors.domain }}
-                </p>
+                <DomainValidationAlert
+                    v-if="domainValidationAlert"
+                    :status="domainValidationAlert.status"
+                    :title="domainValidationAlert.title"
+                    :message="domainValidationAlert.message"
+                    :hint="domainValidationAlert.hint"
+                />
             </FormSection>
 
             <FormSection
@@ -338,6 +344,7 @@
                     :label="submitLabel"
                     icon="pi pi-check"
                     :loading="form.processing"
+                    :disabled="submitDisabled"
                 />
             </div>
         </div>
@@ -346,6 +353,7 @@
 
 <script setup lang="ts">
 import DomainFieldHint from "@/components/DomainFieldHint.vue";
+import DomainValidationAlert from "@/components/DomainValidationAlert.vue";
 import OrderLimitPresets from "@/components/OrderLimitPresets.vue";
 import PlanSelectSummary from "@/components/PlanSelectSummary.vue";
 import FormSection from "@/components/FormSection.vue";
@@ -354,18 +362,22 @@ import {
     isCatalogPackage,
     planDropdownLabel,
 } from "@/data/packageCatalogDraft";
-import { computed, ref } from "vue";
+import { useDomainValidation } from "@/composables/useDomainValidation";
+import { domainValidationErrorTitle } from "@/utils/domainValidationMessages";
+import { computed, ref, toRef } from "vue";
 
 const props = withDefaults(
     defineProps<{
         form: any;
         packages: any[];
+        userId?: number | null;
         simplified?: boolean;
         hideDomain?: boolean;
         mode?: "add" | "assign" | "adjust" | "change";
         currentPlan?: any;
     }>(),
     {
+        userId: null,
         simplified: false,
         hideDomain: false,
         mode: "assign",
@@ -373,10 +385,141 @@ const props = withDefaults(
     },
 );
 
-defineEmits<{
+const emit = defineEmits<{
     handleSave: [];
     onClose: [];
 }>();
+
+const needsDomainValidation = computed(
+    () =>
+        !props.hideDomain &&
+        (props.mode === "add" || props.mode === "assign"),
+);
+
+const requireNewWebsite = computed(() => props.mode === "add");
+
+const domainModel = computed({
+    get: () => props.form.domain as string | null,
+    set: (value: string | null) => {
+        props.form.domain = value;
+    },
+});
+
+const domainValidation = useDomainValidation({
+    userId: toRef(() => props.userId),
+    domain: domainModel,
+    enabled: needsDomainValidation,
+    requireNewWebsite,
+});
+
+const domainFieldError = computed(
+    () => domainValidation.domainError.value || props.form.errors.domain || null,
+);
+
+const domainValidationAlert = computed(() => {
+    if (domainValidation.validating.value) {
+        return {
+            status: "loading" as const,
+            title: "Validating domain…",
+            message:
+                "Checking format, DNS, and whether this store is available on WooEasyLife.",
+            hint: null,
+        };
+    }
+
+    if (domainFieldError.value) {
+        const message = domainFieldError.value;
+
+        return {
+            status: "error" as const,
+            title: domainValidationErrorTitle(message),
+            message,
+            hint: domainValidationHint(message),
+        };
+    }
+
+    if (domainValidation.validatedDomain.value) {
+        return {
+            status: "success" as const,
+            title: "Domain verified",
+            message: `${domainValidation.validatedDomain.value} is ready to use.`,
+            hint: "Select a subscription plan below, then save to add this website.",
+        };
+    }
+
+    return null;
+});
+
+const domainValidationHint = (message: string): string | null => {
+    const lower = message.toLowerCase();
+
+    if (lower.includes("already registered")) {
+        return "Each store domain can only belong to one merchant. Delete the existing website or contact support for a transfer.";
+    }
+
+    if (lower.includes("already has a website")) {
+        return "Use Assign plan on the existing website card instead of adding a duplicate.";
+    }
+
+    if (lower.includes("dns")) {
+        return "The domain must have a public DNS A record. For local WordPress, use localhost or 127.0.0.1 in development.";
+    }
+
+    if (lower.includes("invalid domain") || lower.includes("valid website domain")) {
+        return "Use the hostname only — for example shop.example.com, not a full URL with https://.";
+    }
+
+    return null;
+};
+
+const submitDisabled = computed(() => {
+    if (props.form.processing) {
+        return true;
+    }
+
+    if (props.mode === "adjust" || props.mode === "change") {
+        return false;
+    }
+
+    if (!props.form.package_id) {
+        return true;
+    }
+
+    if (needsDomainValidation.value) {
+        return (
+            domainValidation.validating.value ||
+            !domainValidation.isValid.value
+        );
+    }
+
+    return false;
+});
+
+const handleSubmit = async () => {
+    if (needsDomainValidation.value) {
+        const valid = domainValidation.isValid.value
+            ? true
+            : await domainValidation.validateNow();
+
+        if (!valid) {
+            return;
+        }
+
+        if (domainValidation.validatedDomain.value) {
+            props.form.domain = domainValidation.validatedDomain.value;
+        }
+    }
+
+    emit("handleSave");
+};
+
+const onDomainBlur = () => {
+    if (!needsDomainValidation.value) {
+        return;
+    }
+
+    void domainValidation.validateNow();
+};
 
 const groupedPlans = computed(() => groupPlansForSelect(props.packages || []));
 

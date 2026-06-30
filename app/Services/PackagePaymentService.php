@@ -18,7 +18,9 @@ class PackagePaymentService
         protected DomainNormalizer $domainNormalizer,
         protected PlanAssignmentService $planAssignment,
         protected WebsiteSyncService $websiteSync,
-        protected PackagePlanResolver $planResolver
+        protected PackagePlanResolver $planResolver,
+        protected SubscriptionPaymentIntentService $paymentIntentService,
+        protected DomainTrialService $domainTrial
     ) {
     }
 
@@ -57,12 +59,45 @@ class PackagePaymentService
             ]);
         }
 
+        $this->assertPluginCanSubmitPayment($user, $domain, $accessToken);
+
         $transactionCharge = round((float) ($data['transaction_charge'] ?? $data['total_charge'] ?? 0), 2);
 
         if ($this->planResolver->isCatalog($packageHub)) {
             [$orderLimit, $totalAmount] = $this->resolveCatalogPaymentAmounts($packageHub, $data);
         } else {
             [$orderLimit, $totalAmount] = $this->resolveLegacyPaymentAmounts($packageHub, $data);
+        }
+
+        $this->assertPluginPaymentAmounts($accessToken, $packageHub, $orderLimit, $data, $transactionCharge);
+
+        $existing = $this->findActivePackageForDomain($user, $domain);
+        $remainingOrder = $this->remainingOrderForDomain($user, $domain);
+        $subscriptionStatus = $this->resolveSubscriptionStatus($existing, $remainingOrder);
+        $resolvedIntent = $this->paymentIntentService->resolveIntent($existing, $packageHub);
+
+        $trialBlock = $this->freeTrialBlockMessage($domain, $packageHub, $existing, $subscriptionStatus);
+        if ($trialBlock !== null) {
+            throw ValidationException::withMessages([
+                'package_hub_id' => $trialBlock,
+            ]);
+        }
+
+        if ($this->paymentIntentService->shouldEnforceIntentRules($accessToken)) {
+            $validation = $this->paymentIntentService->validateSubmission(
+                $existing,
+                $packageHub,
+                $subscriptionStatus,
+                isset($data['intent']) ? (string) $data['intent'] : null
+            );
+
+            if (! $validation['allowed']) {
+                throw ValidationException::withMessages([
+                    'package_hub_id' => $validation['message'] ?? 'This payment request is not allowed.',
+                ]);
+            }
+
+            $resolvedIntent = $validation['intent'];
         }
 
         $website = $this->websiteSync->resolveForUser($user, $domain);
@@ -79,6 +114,7 @@ class PackagePaymentService
             'transaction_id' => $data['transaction_id'] ?? null,
             'account_number' => $data['account_number'] ?? null,
             'note' => $data['note'] ?? null,
+            'payment_intent' => $resolvedIntent,
             'status' => 'pending',
             'created_by' => Auth::id() ?? $user->id,
         ]);
@@ -162,13 +198,18 @@ class PackagePaymentService
         $totalHandled = (int) $packages->sum('total_order_handled');
 
         $pendingPayments = PackagePaymentRequest::query()
+            ->with('packageHub:id,title,per_order_rate,package_price,order_rate_token')
             ->where('user_id', $user->id)
             ->where('status', 'pending')
+            ->orderByDesc('id')
             ->get()
             ->filter(fn (PackagePaymentRequest $request) => $this->domainNormalizer->matches(
                 $request->domain,
                 $accessToken->domain
-            ));
+            ))
+            ->values();
+
+        $hasPendingPayment = $pendingPayments->isNotEmpty();
 
         $snapshot = [
             'subscription_status' => $this->resolveSubscriptionStatus($activePackage, $remainingOrder),
@@ -177,15 +218,171 @@ class PackagePaymentService
             'total_order_handled' => $totalHandled,
             'expires_at' => $activePackage?->expires_at,
             'pending_payment_count' => $pendingPayments->count(),
-            'has_pending_payment' => $pendingPayments->isNotEmpty(),
+            'has_pending_payment' => $hasPendingPayment,
+            'pending_payments' => $pendingPayments
+                ->map(fn (PackagePaymentRequest $request) => $this->mapPendingPaymentPayload($request))
+                ->values()
+                ->all(),
         ];
+
+        $capabilities = $this->paymentIntentService->billingCapabilities(
+            $activePackage,
+            $snapshot['subscription_status'],
+            $hasPendingPayment
+        );
+
+        $snapshot['can_renew_current_plan'] = $capabilities['can_renew_current_plan'];
+        $snapshot['can_upgrade_plan'] = $capabilities['can_upgrade_plan'];
+        $snapshot['can_submit_payment'] = $capabilities['can_submit_payment'];
+        $snapshot['can_subscribe_plan'] = $capabilities['can_subscribe_plan'];
+
+        $normalizedDomain = $this->domainNormalizer->normalize($accessToken->domain);
+        $snapshot['domain_trial_used'] = $normalizedDomain
+            ? $this->domainTrial->hasDomainUsedFreeTrial($normalizedDomain)
+            : false;
 
         if ($activePackage) {
             $snapshot['plan_type'] = $activePackage->plan_type ?? 'legacy';
             $snapshot['plan_title'] = $activePackage->title;
+            $snapshot['package_hub_id'] = (int) $activePackage->package_hub_id;
+
+            $currentHub = PackageHub::query()->find($activePackage->package_hub_id);
+            if ($currentHub) {
+                $snapshot['current_plan_package_price'] = (float) ($currentHub->package_price ?? 0);
+                $snapshot['current_plan_index'] = (int) ($currentHub->index ?? 0);
+                $snapshot['current_plan_package_duration'] = $currentHub->package_duration;
+            }
         }
 
         return $snapshot;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function paymentQuote(User $user, AccessToken $accessToken, array $data): array
+    {
+        $domain = $this->domainNormalizer->normalize($accessToken->domain);
+        if (! $domain) {
+            throw ValidationException::withMessages([
+                'domain' => 'Invalid domain',
+            ]);
+        }
+
+        $packageHub = PackageHub::query()
+            ->where('id', $data['package_hub_id'] ?? null)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $packageHub) {
+            throw ValidationException::withMessages([
+                'package_hub_id' => 'Invalid or inactive plan',
+            ]);
+        }
+
+        $existing = $this->findActivePackageForDomain($user, $domain);
+        $remainingOrder = $this->remainingOrderForDomain($user, $domain);
+        $subscriptionStatus = $this->resolveSubscriptionStatus($existing, $remainingOrder);
+        $intent = $this->paymentIntentService->resolveIntent($existing, $packageHub);
+
+        if ($this->hasPendingPaymentForDomain($user, $domain)) {
+            return [
+                'allowed' => false,
+                'intent' => $intent,
+                'package_hub_id' => (int) $packageHub->id,
+                'plan_title' => $packageHub->title,
+                'message' => 'You already have a payment pending approval. Please wait for admin verification before submitting another request.',
+            ];
+        }
+
+        $trialBlock = $this->freeTrialBlockMessage($domain, $packageHub, $existing, $subscriptionStatus);
+        if ($trialBlock !== null) {
+            return [
+                'allowed' => false,
+                'intent' => $intent,
+                'package_hub_id' => (int) $packageHub->id,
+                'plan_title' => $packageHub->title,
+                'message' => $trialBlock,
+            ];
+        }
+
+        if ($this->paymentIntentService->shouldEnforceIntentRules($accessToken)) {
+            $validation = $this->paymentIntentService->validateSubmission(
+                $existing,
+                $packageHub,
+                $subscriptionStatus,
+                isset($data['intent']) ? (string) $data['intent'] : null
+            );
+
+            if (! $validation['allowed']) {
+                return [
+                    'allowed' => false,
+                    'intent' => $validation['intent'],
+                    'package_hub_id' => (int) $packageHub->id,
+                    'plan_title' => $packageHub->title,
+                    'message' => $validation['message'],
+                ];
+            }
+
+            $intent = $validation['intent'];
+        }
+
+        if ($this->planResolver->isCatalog($packageHub)) {
+            [$orderLimit, $totalAmount] = $this->resolveCatalogPaymentAmounts($packageHub, $data);
+        } else {
+            [$orderLimit, $totalAmount] = $this->resolveLegacyPaymentAmounts($packageHub, $data);
+        }
+
+        return [
+            'allowed' => true,
+            'intent' => $intent,
+            'package_hub_id' => (int) $packageHub->id,
+            'plan_title' => $packageHub->title,
+            'plan_type' => $this->planResolver->planType($packageHub),
+            'order_limit' => $orderLimit,
+            'total_amount' => $totalAmount,
+            'per_order_rate' => $this->planResolver->isCatalog($packageHub)
+                ? null
+                : (float) $packageHub->per_order_rate,
+            'pricing_note' => $this->pricingNote($intent, $subscriptionStatus, $remainingOrder),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function buildSubmissionGuide(PackagePaymentRequest $paymentRequest): array
+    {
+        $paymentRequest->loadMissing('packageHub:id,title');
+
+        $planTitle = $paymentRequest->packageHub?->title ?? 'Selected plan';
+
+        return [
+            'status' => 'pending_review',
+            'title' => 'Payment submitted successfully',
+            'message' => 'Your payment is pending admin verification. Your current subscription stays active until approval.',
+            'steps' => [
+                [
+                    'step' => 1,
+                    'label' => 'Payment submitted',
+                    'status' => 'completed',
+                    'detail' => "{$planTitle} — {$paymentRequest->total_amount} TK (Txn: {$paymentRequest->transaction_id})",
+                ],
+                [
+                    'step' => 2,
+                    'label' => 'Waiting for verification',
+                    'status' => 'in_progress',
+                    'detail' => 'Our team will verify your transaction shortly.',
+                ],
+                [
+                    'step' => 3,
+                    'label' => 'Plan activation',
+                    'status' => 'pending',
+                    'detail' => 'Your plan will update automatically after approval.',
+                ],
+            ],
+        ];
     }
 
     private function applyApprovedPaymentToExisting(
@@ -197,17 +394,25 @@ class PackagePaymentService
         $incomingIsCatalog = $this->planResolver->isCatalog($packageHub);
 
         if ($existingIsCatalog !== $incomingIsCatalog) {
-            throw ValidationException::withMessages([
-                'package_hub_id' => 'Cannot top up a '
-                    .($existingIsCatalog ? 'catalog' : 'legacy')
-                    .' subscription with a '
-                    .($incomingIsCatalog ? 'catalog' : 'legacy')
-                    .' plan. Assign a new plan from the admin panel or submit a matching renewal.',
-            ]);
+            return app(SubscriptionAdminService::class)->changePlan(
+                User::findOrFail($existing->user_id),
+                $existing,
+                $packageHub,
+                $this->paymentChangeData($paymentRequest)
+            );
         }
 
         if ($incomingIsCatalog) {
-            return $this->renewCatalogPackage($existing, $packageHub, $paymentRequest);
+            return $this->applyApprovedCatalogPayment($existing, $packageHub, $paymentRequest);
+        }
+
+        if ((int) $existing->package_hub_id !== (int) $packageHub->id) {
+            return app(SubscriptionAdminService::class)->changePlan(
+                User::findOrFail($existing->user_id),
+                $existing,
+                $packageHub,
+                $this->paymentChangeData($paymentRequest)
+            );
         }
 
         return $this->topUpLegacyPackage($existing, $paymentRequest);
@@ -275,6 +480,19 @@ class PackagePaymentService
             ));
     }
 
+    private function remainingOrderForDomain(User $user, string $domain): int
+    {
+        return (int) UserPackage::query()
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (UserPackage $package) => $this->domainNormalizer->matches(
+                $package->domain,
+                $domain
+            ))
+            ->sum('remaining_order');
+    }
+
     private function topUpLegacyPackage(UserPackage $package, PackagePaymentRequest $paymentRequest): UserPackage
     {
         $additionalOrders = $paymentRequest->order_limit;
@@ -297,7 +515,11 @@ class PackagePaymentService
         return $package->fresh();
     }
 
-    private function renewCatalogPackage(
+    /**
+     * Applies an approved catalog payment (renewal, upgrade, or downgrade).
+     * Catalog plan swaps always replace quota/expiry via applyCatalogRenewal().
+     */
+    private function applyApprovedCatalogPayment(
         UserPackage $package,
         PackageHub $packageHub,
         PackagePaymentRequest $paymentRequest
@@ -309,6 +531,22 @@ class PackagePaymentService
             'transaction_id' => $paymentRequest->transaction_id ?? $package->transaction_id,
             'transaction_number' => $paymentRequest->account_number ?? $package->transaction_number,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function paymentChangeData(PackagePaymentRequest $paymentRequest): array
+    {
+        return [
+            'domain' => $paymentRequest->domain,
+            'limit' => $paymentRequest->order_limit,
+            'transaction_method' => $paymentRequest->transaction_method ?? 'Cash',
+            'transaction_number' => $paymentRequest->account_number,
+            'transaction_id' => $paymentRequest->transaction_id,
+            'transaction_charge' => $paymentRequest->transaction_charge,
+            'note' => $paymentRequest->note,
+        ];
     }
 
     private function resolveSubscriptionStatus(?UserPackage $package, int $remainingOrder): string
@@ -330,5 +568,147 @@ class PackagePaymentService
         }
 
         return 'active';
+    }
+
+    private function assertPluginCanSubmitPayment(User $user, string $domain, ?AccessToken $accessToken): void
+    {
+        if ($accessToken === null) {
+            return;
+        }
+
+        if ($this->hasPendingPaymentForDomain($user, $domain)) {
+            throw ValidationException::withMessages([
+                'payment' => 'You already have a payment pending approval. Please wait for admin verification before submitting another request.',
+            ]);
+        }
+    }
+
+    private function hasPendingPaymentForDomain(User $user, string $domain): bool
+    {
+        $normalizedDomain = $this->domainNormalizer->normalize($domain) ?? $domain;
+
+        if (PackagePaymentRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->where('domain', $normalizedDomain)
+            ->exists()) {
+            return true;
+        }
+
+        return PackagePaymentRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->where('domain', '!=', $normalizedDomain)
+            ->get()
+            ->contains(fn (PackagePaymentRequest $request) => $this->domainNormalizer->matches(
+                $request->domain,
+                $normalizedDomain
+            ));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function assertPluginPaymentAmounts(
+        ?AccessToken $accessToken,
+        PackageHub $packageHub,
+        int $orderLimit,
+        array $data,
+        float $transactionCharge
+    ): void {
+        if ($accessToken === null || ! (bool) config('subscription_payments.validate_plugin_amounts', true)) {
+            return;
+        }
+
+        $expectedBase = $this->expectedBaseAmount($packageHub, $orderLimit);
+        $submittedTotal = round((float) ($data['total_amount'] ?? 0), 2);
+        $submittedBase = round($submittedTotal - $transactionCharge, 2);
+
+        if ($expectedBase <= 0 && $submittedBase <= 0) {
+            return;
+        }
+
+        if (abs($submittedBase - $expectedBase) > 0.01) {
+            throw ValidationException::withMessages([
+                'total_amount' => 'Payment amount does not match the selected plan. Refresh the page and try again.',
+            ]);
+        }
+    }
+
+    private function expectedBaseAmount(PackageHub $packageHub, int $orderLimit): float
+    {
+        if ($this->planResolver->isCatalog($packageHub)) {
+            return round((float) ($packageHub->package_price ?? 0), 2);
+        }
+
+        return round((float) $packageHub->per_order_rate * max(0, $orderLimit), 2);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapPendingPaymentPayload(PackagePaymentRequest $request): array
+    {
+        return [
+            'id' => $request->id,
+            'package_hub_id' => (int) $request->package_hub_id,
+            'plan_title' => $request->packageHub?->title,
+            'payment_intent' => $request->payment_intent,
+            'order_limit' => (int) $request->order_limit,
+            'total_amount' => (float) $request->total_amount,
+            'transaction_method' => $request->transaction_method,
+            'transaction_id' => $request->transaction_id,
+            'account_number' => $request->account_number,
+            'created_at' => $request->created_at?->toIso8601String(),
+        ];
+    }
+
+    private function pricingNote(
+        string $intent,
+        string $subscriptionStatus,
+        int $remainingOrder
+    ): string {
+        if ($intent === SubscriptionPaymentIntentService::INTENT_UPGRADE && $subscriptionStatus === 'active') {
+            $remainingDetail = $remainingOrder > 0
+                ? " You currently have {$remainingOrder} unused order(s)."
+                : '';
+
+            return 'Full plan price applies. Unused quota and remaining subscription time are not credited toward this upgrade.' . $remainingDetail;
+        }
+
+        if ($intent === SubscriptionPaymentIntentService::INTENT_DOWNGRADE && $subscriptionStatus === 'active') {
+            return 'Downgrade takes effect after payment approval. Unused quota and remaining subscription time are not credited.';
+        }
+
+        if ($intent === SubscriptionPaymentIntentService::INTENT_RENEW) {
+            return 'Renewal replaces your current quota with the purchased amount.';
+        }
+
+        if ($intent === SubscriptionPaymentIntentService::INTENT_SUBSCRIBE) {
+            return 'First-time subscription. Plan activates after payment approval.';
+        }
+
+        return 'Plan activates after payment approval.';
+    }
+
+    private function freeTrialBlockMessage(
+        string $domain,
+        PackageHub $packageHub,
+        ?UserPackage $existing,
+        string $subscriptionStatus
+    ): ?string {
+        if (! $this->planResolver->isFreeTrial($packageHub)) {
+            return null;
+        }
+
+        if ($this->domainTrial->hasDomainUsedFreeTrial($domain)) {
+            return 'This store has already used a free trial.';
+        }
+
+        if ($existing && $subscriptionStatus === 'active') {
+            return 'Free trial is not available while you have an active subscription.';
+        }
+
+        return null;
     }
 }

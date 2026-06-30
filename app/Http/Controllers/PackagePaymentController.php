@@ -31,6 +31,32 @@ class PackagePaymentController extends Controller
         return $this->successResponse($plans);
     }
 
+    public function billing(Request $request)
+    {
+        $user = User::find(Auth::id());
+        $accessToken = $request->attributes->get('access_token');
+
+        if (! $user || ! $accessToken) {
+            return $this->errorResponse('Unauthenticated', 401);
+        }
+
+        $alertService = app(\App\Services\SubscriptionAlertService::class);
+        $billingAlerts = collect($alertService->collectAlerts($user, $accessToken))
+            ->map(fn (array $alert) => [
+                'type' => $alert['type'],
+                'severity' => $alert['severity'],
+                'message' => $alert['message'],
+            ])
+            ->values()
+            ->all();
+
+        return $this->successResponse([
+            ...$this->packagePaymentService->billingSnapshot($user, $accessToken),
+            'alerts' => $billingAlerts,
+            'payment_methods' => app(\App\Services\SubscriptionPaymentConfigService::class)->forApi(),
+        ]);
+    }
+
     public function createRequest(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -43,6 +69,7 @@ class PackagePaymentController extends Controller
             'transaction_id' => 'required|string',
             'transaction_method' => 'required|string',
             'note' => 'nullable|string',
+            'intent' => 'nullable|string|in:subscribe,renew,upgrade,downgrade',
         ]);
 
         if ($validator->fails()) {
@@ -66,7 +93,41 @@ class PackagePaymentController extends Controller
             return $this->validationErrorResponse($e->errors());
         }
 
-        return $this->successResponse($paymentRequest, 'Payment request submitted successfully.');
+        $paymentRequest->load('packageHub:id,title');
+
+        return $this->successResponse([
+            ...$paymentRequest->toArray(),
+            'submission' => $this->packagePaymentService->buildSubmissionGuide($paymentRequest),
+        ], 'Payment request submitted successfully.');
+    }
+
+    public function quote(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'package_hub_id' => 'required|integer',
+            'order_limit' => 'nullable|integer|min:1',
+            'intent' => 'nullable|string|in:subscribe,renew,upgrade,downgrade',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->errors());
+        }
+
+        $user = User::find(Auth::id());
+        $token = $request->bearerToken();
+        $accessToken = \App\Models\AccessToken::findToken($token);
+
+        if (! $user || ! $accessToken) {
+            return $this->errorResponse('Unauthenticated', 401);
+        }
+
+        try {
+            $quote = $this->packagePaymentService->paymentQuote($user, $accessToken, $request->all());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        }
+
+        return $this->successResponse($quote);
     }
 
     public function history(Request $request)

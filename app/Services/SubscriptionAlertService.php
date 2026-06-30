@@ -133,10 +133,18 @@ class SubscriptionAlertService
             ));
 
         if ($pendingPayments->isNotEmpty()) {
+            $latestPending = $pendingPayments->sortByDesc('id')->first();
+            $latestPending?->loadMissing('packageHub:id,title');
+            $planTitle = $latestPending?->packageHub?->title ?? 'your selected plan';
+            $amount = $latestPending ? number_format((float) $latestPending->total_amount, 2) : null;
+            $detail = $amount !== null
+                ? " ({$planTitle}, {$amount} TK)"
+                : " ({$planTitle})";
+
             $alerts[] = $this->alert(
                 'payment_pending',
                 'info',
-                'Your payment request is pending admin approval.'
+                'Your payment request is pending admin approval' . $detail . '. Please wait for verification before submitting another payment.'
             );
         }
 
@@ -253,10 +261,18 @@ class SubscriptionAlertService
             ));
 
         if ($pendingPayments->isNotEmpty()) {
+            $latestPending = $pendingPayments->sortByDesc('id')->first();
+            $latestPending?->loadMissing('packageHub:id,title');
+            $planTitle = $latestPending?->packageHub?->title ?? 'your selected plan';
+            $amount = $latestPending ? number_format((float) $latestPending->total_amount, 2) : null;
+            $detail = $amount !== null
+                ? " ({$planTitle}, {$amount} TK)"
+                : " ({$planTitle})";
+
             $alerts[] = $this->alert(
                 'payment_pending',
                 'info',
-                'Your payment request is pending admin approval.'
+                'Your payment request is pending admin approval' . $detail . '. Please wait for verification before submitting another payment.'
             );
         }
 

@@ -38,6 +38,8 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
 
 Route::group(['middleware' => ['auth.packageRenewal'], 'prefix' => 'api/package', 'as' => 'package.'], function () {
     Route::get('/plans', [\App\Http\Controllers\PackagePaymentController::class, 'plans']);
+    Route::get('/billing', [\App\Http\Controllers\PackagePaymentController::class, 'billing']);
+    Route::get('/quote', [\App\Http\Controllers\PackagePaymentController::class, 'quote']);
     Route::post('/payment-request', [\App\Http\Controllers\PackagePaymentController::class, 'createRequest']);
     Route::get('/payment-history', [\App\Http\Controllers\PackagePaymentController::class, 'history']);
 });

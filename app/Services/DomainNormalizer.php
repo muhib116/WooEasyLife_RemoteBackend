@@ -36,6 +36,38 @@ class DomainNormalizer
             && $normalizedLeft === $normalizedRight;
     }
 
+    /**
+     * Narrow SQL candidates for legacy rows stored as full URLs or mixed case.
+     * Always confirm with matches() before trusting a row.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<\Illuminate\Database\Eloquent\Model>  $query
+     */
+    public function constrainMatchingDomain($query, string $column, string $normalizedDomain): void
+    {
+        $host = strtolower($normalizedDomain);
+
+        $query->whereNotNull($column)->where(function ($builder) use ($column, $host) {
+            $builder->whereRaw('LOWER('.$column.') = ?', [$host]);
+
+            foreach ($this->domainStoragePrefixes() as $prefix) {
+                $builder->orWhereRaw('LOWER('.$column.') LIKE ?', [strtolower($prefix.$host).'%']);
+            }
+        });
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function domainStoragePrefixes(): array
+    {
+        return [
+            'http://',
+            'https://',
+            'http://www.',
+            'https://www.',
+        ];
+    }
+
     public function hasDnsARecord(string $host): bool
     {
         if ($host === '') {

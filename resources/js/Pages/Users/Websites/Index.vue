@@ -72,6 +72,7 @@
             <PackageForm
                 :form="planForm"
                 :packages="packages"
+                :user-id="user.id"
                 :mode="planFormMode"
                 :hide-domain="planFormMode === 'change'"
                 :current-plan="planCurrentPackage"
@@ -448,39 +449,35 @@ const openGenerateLicense = (domain: string) => {
 };
 
 const handleSavePlan = () => {
+    const closeOnSuccess = () => {
+        showPlanForm.value = false;
+        planForm.reset();
+        planAdjustPackageHubId.value = null;
+        planChangeFromHubId.value = null;
+    };
+
     if (planFormMode.value === "adjust" && planForm.id) {
         planForm.post(route("users.updatePurchasePackage", props.user.id), {
-            onFinish() {
-                if (!planForm.hasErrors) {
-                    showPlanForm.value = false;
-                    planForm.reset();
-                    planAdjustPackageHubId.value = null;
-                }
-            },
+            onSuccess: closeOnSuccess,
         });
         return;
     }
 
     if (planFormMode.value === "change") {
         planForm.post(route("users.changeSubscription", props.user.id), {
-            onFinish() {
-                if (!planForm.hasErrors) {
-                    showPlanForm.value = false;
-                    planForm.reset();
-                }
-            },
+            onSuccess: closeOnSuccess,
         });
         return;
     }
 
-    planForm.post(route("users.purchasePackage", props.user.id), {
-        onFinish() {
-            if (!planForm.hasErrors) {
-                showPlanForm.value = false;
-                planForm.reset();
-            }
-        },
-    });
+    planForm
+        .transform((data) => ({
+            ...data,
+            require_new_website: planFormMode.value === "add",
+        }))
+        .post(route("users.purchasePackage", props.user.id), {
+            onSuccess: closeOnSuccess,
+        });
 };
 
 const handleEditLicense = (license: any, domain: string) => {

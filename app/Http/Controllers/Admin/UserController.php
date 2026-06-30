@@ -23,6 +23,7 @@ use App\Services\PlanAssignmentService;
 use App\Services\SubscriptionAlertService;
 use App\Services\SubscriptionPaymentConfigService;
 use App\Services\LicenseProvisioningService;
+use App\Services\MerchantDomainValidator;
 use App\Services\WebsiteAggregatorService;
 use App\Services\SubscriptionAdminService;
 use App\Services\WebsiteRemovalService;
@@ -576,7 +577,7 @@ class UserController extends Controller
         return back()->with('success', $message);
     }
 
-    public function purchase(Request $request, $id, PlanAssignmentService $planAssignment)
+    public function purchase(Request $request, $id, PlanAssignmentService $planAssignment, MerchantDomainValidator $domainValidator)
     {
         $user = User::findOrFail($id);
         $package = PackageHub::findOrFail($request->package_id);
@@ -595,15 +596,24 @@ class UserController extends Controller
         $request->validate($rules);
 
         try {
-            $userPackage = $planAssignment->assign($user, $package, $request->only([
-                'domain',
+            $normalizedDomain = $domainValidator->validate(
+                $user,
+                $request->domain,
+                forAdmin: true,
+                requireNewWebsite: $request->boolean('require_new_website')
+            );
+
+            $payload = $request->only([
                 'limit',
                 'transaction_method',
                 'transaction_number',
                 'transaction_id',
                 'transaction_charge',
                 'note',
-            ]));
+            ]);
+            $payload['domain'] = $normalizedDomain;
+
+            $userPackage = $planAssignment->assign($user, $package, $payload);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors());
         }
@@ -647,35 +657,33 @@ class UserController extends Controller
         ]);
     }
 
-    public function validateSetupDomain(Request $request, $userId, DomainNormalizer $domainNormalizer)
+    public function validateSetupDomain(Request $request, $userId, MerchantDomainValidator $domainValidator)
     {
         $request->validate([
             'domain' => 'required|string',
+            'require_new_website' => 'sometimes|boolean',
         ]);
 
-        $domain = $domainNormalizer->normalize($request->domain);
-        if (! $domain) {
+        $merchant = User::findOrFail($userId);
+
+        try {
+            $domain = $domainValidator->validate(
+                $merchant,
+                $request->domain,
+                forAdmin: true,
+                requireNewWebsite: $request->boolean('require_new_website')
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'valid' => false,
-                'message' => 'Enter a valid website domain (e.g. shop.example.com).',
+                'message' => $e->errors()['domain'][0] ?? 'This domain is not available.',
             ], 422);
-        }
-
-        if (! $domainNormalizer->hasDnsARecord($domain)) {
-            if (app()->environment('local') && in_array($domain, ['localhost', '127.0.0.1'], true)) {
-                // Allow local WordPress development hostnames without public DNS.
-            } else {
-                return response()->json([
-                    'valid' => false,
-                    'message' => 'Domain must resolve to a DNS A record before continuing.',
-                ], 422);
-            }
         }
 
         return response()->json([
             'valid' => true,
             'domain' => $domain,
-            'display_url' => 'https://' . $domain,
+            'display_url' => 'https://'.$domain,
         ]);
     }
 

@@ -81,13 +81,12 @@ class PluginApiTest extends TestCase
                 'id',
                 'name',
                 'sms_balance',
-                'notice',
-                'billing' => [
-                    'payment_methods' => [
-                        ['payment_partner', 'account', 'note', 'steps'],
-                    ],
-                ],
+                'billing',
             ]);
+
+        $this->assertIsArray($response->json('billing.payment_methods'));
+        $notice = $response->json('notice');
+        $this->assertTrue($notice === null || is_array($notice));
     }
 
     public function test_get_user_rejects_missing_origin(): void

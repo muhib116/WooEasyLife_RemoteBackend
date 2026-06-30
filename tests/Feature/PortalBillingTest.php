@@ -54,6 +54,32 @@ class PortalBillingTest extends TestCase
         ]);
     }
 
+    public function test_portal_payment_request_is_not_blocked_when_plugin_intent_enforcement_enabled(): void
+    {
+        [$merchant, $plan] = $this->createMerchantWithPlanAndPackage();
+
+        config(['subscription_payments.enforce_intent_rules' => true]);
+
+        $response = $this->actingAs($merchant)->post(route('portal.billing.payment-request'), [
+            'package_hub_id' => $plan->id,
+            'domain' => 'shop.example.com',
+            'order_limit' => 50,
+            'total_amount' => 50,
+            'transaction_method' => 'Bkash',
+            'transaction_id' => 'TXN-PORTAL-ACTIVE',
+            'account_number' => '01700000000',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('package_payment_requests', [
+            'user_id' => $merchant->id,
+            'transaction_id' => 'TXN-PORTAL-ACTIVE',
+            'payment_intent' => 'renew',
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_portal_billing_uses_plan_domains_without_website_row(): void
     {
         [$merchant, $plan] = $this->createMerchantWithPlanAndPackage(createWebsite: false);

@@ -124,6 +124,22 @@ watch(
                     // @ts-ignore
                     detail: page.props.flash?.error,
                     life: 3000,
+                    group: "br",
+                });
+            }
+            // @ts-ignore
+            const validationErrors = page.props.errors ?? {};
+            const errorMessages = Object.values(validationErrors).filter(
+                (message): message is string =>
+                    typeof message === "string" && message.length > 0,
+            );
+            if (errorMessages.length > 0) {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errorMessages.join(" "),
+                    life: 5000,
+                    group: "br",
                 });
             }
         }, 100);

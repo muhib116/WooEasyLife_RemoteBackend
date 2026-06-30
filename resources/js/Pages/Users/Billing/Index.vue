@@ -55,6 +55,11 @@
                             {{ data.package_hub?.title || "—" }}
                         </template>
                     </Column>
+                    <Column header="Intent">
+                        <template #body="{ data }">
+                            {{ formatPaymentIntentLabel(data.payment_intent) }}
+                        </template>
+                    </Column>
                     <Column field="order_limit" header="Orders" />
                     <Column field="account_number" header="Account" />
                     <Column field="transaction_id" header="Transaction ID" />
@@ -159,6 +164,7 @@ import { router, useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue/usetoast";
+import { formatPaymentIntentLabel } from "@/utils/formatLabels";
 
 defineOptions({
     name: "UserBillingIndex",

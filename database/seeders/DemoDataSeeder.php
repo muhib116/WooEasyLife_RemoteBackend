@@ -37,7 +37,7 @@ class DemoDataSeeder extends Seeder
     {
         $password = Hash::make('password');
         $admin = $this->seedAdminUsers($password);
-        $plans = $this->seedPackageHubs($admin);
+        $plans = $this->resolveCatalogPlans();
         $this->seedWhitelistedDomains();
         $this->seedMerchants($password, $plans, $admin);
     }
@@ -57,7 +57,7 @@ class DemoDataSeeder extends Seeder
                     'domain' => self::LOCAL_WORDPRESS_DOMAIN,
                     'title' => 'Local WordPress (8081)',
                     'wordpress_url' => self::LOCAL_WORDPRESS_URL,
-                    'plan' => 'Standard',
+                    'plan' => 'Starter – 1 Month',
                     'order_limit' => 100,
                     'remaining_order' => 75,
                     'handled' => 25,
@@ -114,35 +114,13 @@ class DemoDataSeeder extends Seeder
     /**
      * @return array<string, PackageHub>
      */
-    private function seedPackageHubs(User $admin): array
+    private function resolveCatalogPlans(): array
     {
-        $definitions = [
-            'Standard' => [
-                'description' => 'Standard order-based subscription',
-                'per_order_rate' => 1,
-                'is_active' => true,
-            ],
-            'Premium' => [
-                'description' => 'Premium order-based subscription',
-                'per_order_rate' => 1.5,
-                'is_active' => true,
-            ],
-        ];
+        $starter = PackageHub::query()
+            ->where('title', 'Starter – 1 Month')
+            ->firstOrFail();
 
-        $plans = [];
-
-        foreach ($definitions as $title => $data) {
-            $plans[$title] = PackageHub::updateOrCreate(
-                ['title' => $title],
-                [
-                    ...$data,
-                    'created_by' => $admin->id,
-                    'index' => count($plans) + 1,
-                ]
-            );
-        }
-
-        return $plans;
+        return ['Starter – 1 Month' => $starter];
     }
 
     private function seedWhitelistedDomains(): void

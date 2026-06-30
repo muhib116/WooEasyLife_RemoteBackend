@@ -138,7 +138,7 @@ class CatalogPlanAssignmentTest extends TestCase
         $this->assertTrue($updated->expires_at->greaterThan(now()));
     }
 
-    public function test_mixed_plan_top_up_is_rejected(): void
+    public function test_approving_catalog_payment_migrates_legacy_subscription(): void
     {
         $user = $this->createMerchant();
         $legacy = PackageHub::create([
@@ -148,7 +148,7 @@ class CatalogPlanAssignmentTest extends TestCase
         ]);
         $catalog = $this->createCatalogPlan();
 
-        UserPackage::create([
+        $existing = UserPackage::create([
             'title' => 'Standard',
             'domain' => 'shop.example.com',
             'user_id' => $user->id,
@@ -172,7 +172,70 @@ class CatalogPlanAssignmentTest extends TestCase
             'account_number' => '01700000000',
         ]);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
-        app(PackagePaymentService::class)->approve($paymentRequest);
+        $approved = app(PackagePaymentService::class)->approve($paymentRequest);
+
+        $this->assertFalse((bool) $existing->fresh()->is_active);
+        $this->assertSame('catalog', $approved->plan_type);
+        $this->assertSame($catalog->id, $approved->package_hub_id);
+        $this->assertSame(1000, $approved->remaining_order);
+        $this->assertNotNull($approved->expires_at);
+        $this->assertDatabaseHas('package_payment_requests', [
+            'id' => $paymentRequest->id,
+            'status' => 'approved',
+            'user_package_id' => $approved->id,
+        ]);
+    }
+
+    public function test_approving_catalog_payment_upgrades_to_different_catalog_hub(): void
+    {
+        $user = $this->createMerchant();
+        $basic = $this->createCatalogPlan([
+            'title' => 'Basic – 1 Month',
+            'order_rate_token' => 600,
+            'package_price' => 499,
+        ]);
+        $pro = $this->createCatalogPlan([
+            'title' => 'Pro – 1 Month',
+            'order_rate_token' => 2000,
+            'package_price' => 1999,
+            'index' => 2,
+        ]);
+
+        $existing = UserPackage::create([
+            'title' => $basic->title,
+            'domain' => 'shop.example.com',
+            'user_id' => $user->id,
+            'package_hub_id' => $basic->id,
+            'plan_type' => 'catalog',
+            'order_rate_token' => 600,
+            'package_duration' => '1_month',
+            'total_order_can_handle' => 600,
+            'remaining_order' => 100,
+            'total_order_handled' => 500,
+            'per_order_rate' => 0,
+            'total_cost' => 499,
+            'transaction_charge' => 0,
+            'is_active' => true,
+            'expires_at' => now()->addDays(10),
+        ]);
+
+        $paymentRequest = app(PackagePaymentService::class)->createRequest($user, [
+            'package_hub_id' => $pro->id,
+            'domain' => 'shop.example.com',
+            'total_amount' => 1999,
+            'transaction_method' => 'Bkash',
+            'transaction_id' => 'TXN-CAT-UP',
+            'account_number' => '01700000000',
+            'intent' => 'upgrade',
+        ]);
+
+        $updated = app(PackagePaymentService::class)->approve($paymentRequest);
+
+        $this->assertSame($existing->id, $updated->id);
+        $this->assertSame($pro->id, $updated->package_hub_id);
+        $this->assertSame('Pro – 1 Month', $updated->title);
+        $this->assertSame(2000, $updated->remaining_order);
+        $this->assertSame(0, $updated->total_order_handled);
+        $this->assertTrue($updated->expires_at->greaterThan(now()));
     }
 }

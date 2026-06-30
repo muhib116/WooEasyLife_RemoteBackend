@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\DB;
 class WebsiteSyncService
 {
     public function __construct(
-        protected DomainNormalizer $domainNormalizer
+        protected DomainNormalizer $domainNormalizer,
+        protected DomainAvailabilityService $domainAvailability
     ) {
     }
 
@@ -28,19 +29,26 @@ class WebsiteSyncService
             return null;
         }
 
-        $website = Website::query()->firstOrCreate(
-            [
-                'user_id' => $user->id,
-                'domain' => $normalized,
-            ],
-            [
-                'title' => $title ?: $normalized,
-                'status' => true,
-                'is_primary' => ! Website::query()->where('user_id', $user->id)->exists(),
-            ]
-        );
+        $existing = Website::query()
+            ->where('domain', $normalized)
+            ->first();
 
-        return $website;
+        if ($existing) {
+            $this->domainAvailability->rejectCrossUserWebsiteClaim($user, $normalized);
+            $this->domainAvailability->assertAvailableForUser($user, $normalized);
+
+            return $existing;
+        }
+
+        $this->domainAvailability->assertAvailableForUser($user, $normalized);
+
+        return Website::query()->create([
+            'user_id' => $user->id,
+            'domain' => $normalized,
+            'title' => $title ?: $normalized,
+            'status' => true,
+            'is_primary' => ! Website::query()->where('user_id', $user->id)->exists(),
+        ]);
     }
 
     /**
@@ -101,6 +109,7 @@ class WebsiteSyncService
         $stats = [
             'websites_created' => 0,
             'websites_existing' => 0,
+            'websites_skipped' => 0,
             'packages_linked' => 0,
             'tokens_linked' => 0,
         ];
@@ -120,6 +129,12 @@ class WebsiteSyncService
                 if ($website) {
                     $stats['websites_existing']++;
                 } else {
+                    if (! $this->domainAvailability->isAvailableForUser($user, $normalizedDomain)) {
+                        $stats['websites_skipped']++;
+
+                        continue;
+                    }
+
                     $stats['websites_created']++;
 
                     if (! $dryRun) {

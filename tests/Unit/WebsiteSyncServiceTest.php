@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\PackageHub;
 use App\Models\AccessToken;
 use App\Models\User;
 use App\Models\UserPackage;
@@ -10,6 +11,7 @@ use App\Services\WebsiteAggregatorService;
 use App\Services\WebsiteSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class WebsiteSyncServiceTest extends TestCase
@@ -103,5 +105,173 @@ class WebsiteSyncServiceTest extends TestCase
         $this->assertSame(1, $first['websites_created']);
         $this->assertSame(0, $second['websites_created']);
         $this->assertSame(1, Website::query()->where('user_id', $user->id)->count());
+    }
+
+    public function test_resolve_for_user_creates_website_for_new_domain(): void
+    {
+        $user = User::create([
+            'name' => 'Merchant',
+            'email' => 'new-domain@example.com',
+            'phone' => '01700000010',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $website = app(WebsiteSyncService::class)->resolveForUser($user, 'shop.example.com', 'My Shop');
+
+        $this->assertNotNull($website);
+        $this->assertSame('shop.example.com', $website->domain);
+        $this->assertSame($user->id, $website->user_id);
+        $this->assertTrue($website->is_primary);
+    }
+
+    public function test_resolve_for_user_returns_existing_website_for_same_user(): void
+    {
+        $user = User::create([
+            'name' => 'Merchant',
+            'email' => 'same-user@example.com',
+            'phone' => '01700000011',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $existing = Website::create([
+            'user_id' => $user->id,
+            'domain' => 'shop.example.com',
+            'title' => 'shop.example.com',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        $website = app(WebsiteSyncService::class)->resolveForUser($user, 'shop.example.com');
+
+        $this->assertSame($existing->id, $website->id);
+        $this->assertSame(1, Website::query()->where('domain', 'shop.example.com')->count());
+    }
+
+    public function test_resolve_for_user_rejects_domain_owned_by_other_merchant(): void
+    {
+        $owner = User::create([
+            'name' => 'Owner',
+            'email' => 'owner@example.com',
+            'phone' => '01700000012',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $intruder = User::create([
+            'name' => 'Intruder',
+            'email' => 'intruder@example.com',
+            'phone' => '01700000013',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $owner->id,
+            'domain' => 'shop.example.com',
+            'title' => 'shop.example.com',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        app(WebsiteSyncService::class)->resolveForUser($intruder, 'shop.example.com');
+    }
+
+    public function test_resolve_for_user_rejects_wrong_owner_even_when_kill_switch_off(): void
+    {
+        config(['domains.enforce_global_uniqueness' => false]);
+
+        $owner = User::create([
+            'name' => 'Owner',
+            'email' => 'owner3@example.com',
+            'phone' => '01700000016',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $intruder = User::create([
+            'name' => 'Intruder',
+            'email' => 'intruder3@example.com',
+            'phone' => '01700000017',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $owner->id,
+            'domain' => 'shop.example.com',
+            'title' => 'shop.example.com',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        app(WebsiteSyncService::class)->resolveForUser($intruder, 'shop.example.com');
+    }
+
+    public function test_backfill_skips_domain_owned_by_another_merchant(): void
+    {
+        $owner = User::create([
+            'name' => 'Owner',
+            'email' => 'owner2@example.com',
+            'phone' => '01700000014',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $intruder = User::create([
+            'name' => 'Intruder',
+            'email' => 'intruder2@example.com',
+            'phone' => '01700000015',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $owner->id,
+            'domain' => 'shop.example.com',
+            'title' => 'shop.example.com',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        UserPackage::create([
+            'title' => 'Standard',
+            'domain' => 'shop.example.com',
+            'user_id' => $intruder->id,
+            'package_hub_id' => PackageHub::create([
+                'title' => 'Standard',
+                'per_order_rate' => 1,
+                'is_active' => true,
+            ])->id,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 50,
+            'total_order_handled' => 50,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+        ]);
+
+        $stats = app(WebsiteSyncService::class)->backfillUser($intruder);
+
+        $this->assertSame(0, $stats['websites_created']);
+        $this->assertSame(1, $stats['websites_skipped']);
+        $this->assertDatabaseMissing('websites', [
+            'user_id' => $intruder->id,
+            'domain' => 'shop.example.com',
+        ]);
     }
 }

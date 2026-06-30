@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RequiredTableSeeder::class,
             DemoDataSeeder::class,
+            WebsiteSeeder::class,
             MerchantEmployeeSeeder::class,
         ]);
 

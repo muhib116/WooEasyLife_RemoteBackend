@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\PackageHub;
 use App\Models\Permission;
 use App\Models\Role;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
@@ -23,46 +21,9 @@ class RequiredTableSeeder extends Seeder
         $this->command?->info('Seeding required reference tables (roles, permissions, plans)...');
 
         $this->call(RolePermissionSeeder::class);
-        $this->seedPackageHubs();
         $this->call(PackageCatalogSeeder::class);
 
         $this->command?->info('Required reference tables seeded.');
-        $this->command?->comment('Roles: ' . Role::count() . ' | Permissions: ' . Permission::count() . ' | Plans: ' . PackageHub::count());
-    }
-
-    private function seedPackageHubs(): void
-    {
-        $createdBy = User::query()
-            ->where('role', 'admin')
-            ->orderBy('id')
-            ->value('id');
-
-        $definitions = [
-            'Standard' => [
-                'description' => 'Standard order-based subscription',
-                'per_order_rate' => 1,
-                'is_active' => true,
-            ],
-            'Premium' => [
-                'description' => 'Premium order-based subscription',
-                'per_order_rate' => 1.5,
-                'is_active' => true,
-            ],
-        ];
-
-        $index = 1;
-
-        foreach ($definitions as $title => $data) {
-            PackageHub::updateOrCreate(
-                ['title' => $title],
-                [
-                    ...$data,
-                    'created_by' => $createdBy,
-                    'index' => $index,
-                ]
-            );
-
-            $index++;
-        }
+        $this->command?->comment('Roles: ' . Role::count() . ' | Permissions: ' . Permission::count());
     }
 }

@@ -66,6 +66,11 @@
                             {{ data.package_hub?.title || "—" }}
                         </template>
                     </Column>
+                    <Column header="Intent">
+                        <template #body="{ data }">
+                            {{ formatPaymentIntentLabel(data.payment_intent) }}
+                        </template>
+                    </Column>
                     <Column field="order_limit" header="Orders" />
                     <Column field="transaction_id" header="Txn ID" />
                     <Column field="total_amount" header="Amount">
@@ -116,6 +121,7 @@ import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 import { router } from "@inertiajs/vue3";
 import { ref } from "vue";
 import { useConfirm } from "primevue";
+import { formatPaymentIntentLabel } from "@/utils/formatLabels";
 
 defineOptions({
     name: "PackagePaymentsIndex",

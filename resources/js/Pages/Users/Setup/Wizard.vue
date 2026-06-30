@@ -46,19 +46,27 @@
                             v-model="domainInput"
                             placeholder="shop.example.com"
                             class="w-full"
+                            :invalid="Boolean(domainError)"
                         />
-                        <p
-                            v-if="domainError"
-                            class="text-sm text-red-500"
-                        >
-                            {{ domainError }}
-                        </p>
-                        <p
-                            v-if="validatedDomain"
-                            class="text-sm text-emerald-600 dark:text-emerald-400"
-                        >
-                            Valid domain: {{ validatedDomain }}
-                        </p>
+                        <DomainValidationAlert
+                            v-if="validatingDomain"
+                            status="loading"
+                            title="Validating domain…"
+                            message="Checking format, DNS, and whether this store is available on WooEasyLife."
+                        />
+                        <DomainValidationAlert
+                            v-else-if="domainError"
+                            status="error"
+                            :title="domainValidationErrorTitle(domainError)"
+                            :message="domainError"
+                        />
+                        <DomainValidationAlert
+                            v-else-if="validatedDomain"
+                            status="success"
+                            title="Domain verified"
+                            :message="`${validatedDomain} is ready to use.`"
+                            hint="Click Continue to assign a subscription plan."
+                        />
                     </div>
                     <div class="flex justify-end gap-2">
                         <Link :href="route('users.view', user.id)">
@@ -217,7 +225,9 @@ import UserLayout from "../UserLayout.vue";
 import PageCard from "../fragments/PageCard.vue";
 import PackageForm from "../fragments/PackageForm.vue";
 import DomainFieldHint from "@/components/DomainFieldHint.vue";
+import DomainValidationAlert from "@/components/DomainValidationAlert.vue";
 import { Icon } from "@/plugins";
+import { extractDomainValidationError, domainValidationErrorTitle } from "@/utils/domainValidationMessages";
 import { Link, router, useForm } from "@inertiajs/vue3";
 import axios from "axios";
 import { computed, onMounted, ref } from "vue";
@@ -357,10 +367,8 @@ const validateDomain = async () => {
         validatedDomain.value = data.domain;
         planForm.domain = data.domain;
         currentStep.value = "plan";
-    } catch (error: any) {
-        domainError.value =
-            error?.response?.data?.message ||
-            "Could not validate this domain.";
+    } catch (error: unknown) {
+        domainError.value = extractDomainValidationError(error);
     } finally {
         validatingDomain.value = false;
     }

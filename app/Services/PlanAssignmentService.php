@@ -13,7 +13,8 @@ class PlanAssignmentService
     public function __construct(
         protected DomainNormalizer $domainNormalizer,
         protected WebsiteSyncService $websiteSync,
-        protected PackagePlanResolver $planResolver
+        protected PackagePlanResolver $planResolver,
+        protected DomainAvailabilityService $domainAvailability
     ) {
     }
 
@@ -40,6 +41,8 @@ class PlanAssignmentService
                 'domain' => 'Invalid domain',
             ]);
         }
+
+        $this->domainAvailability->assertAvailableForUser($user, $domain, forAdmin: true);
 
         $limit = (int) ($data['limit'] ?? 0);
         if ($limit <= 0) {
@@ -85,6 +88,8 @@ class PlanAssignmentService
                 'domain' => 'Invalid domain',
             ]);
         }
+
+        $this->domainAvailability->assertAvailableForUser($user, $domain, forAdmin: true);
 
         $tokens = (int) ($package->order_rate_token ?? 0);
         if ($tokens <= 0) {

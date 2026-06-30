@@ -78,6 +78,7 @@ class SubscriptionAlertApiTest extends TestCase
                     'expires_at',
                     'pending_payment_count',
                     'has_pending_payment',
+                    'pending_payments',
                     'alerts',
                 ],
             ]);

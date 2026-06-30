@@ -6,6 +6,7 @@ use App\Models\AccessToken;
 use App\Models\MerchantEmployee;
 use App\Models\PackagePaymentRequest;
 use App\Models\User;
+use App\Models\SmsBalance;
 use App\Models\UserBusiness;
 use App\Models\UserPackage;
 use App\Models\Website;
@@ -100,6 +101,15 @@ class WebsiteRemovalService
                     $normalizedDomain
                 ))
                 ->each(fn (UserBusiness $business) => $business->delete());
+
+            SmsBalance::query()
+                ->where('user_id', $user->id)
+                ->get()
+                ->filter(fn (SmsBalance $balance) => $this->domainNormalizer->matches(
+                    $balance->domain,
+                    $normalizedDomain
+                ))
+                ->each(fn (SmsBalance $balance) => $balance->delete());
 
             if ($website) {
                 MerchantEmployee::query()

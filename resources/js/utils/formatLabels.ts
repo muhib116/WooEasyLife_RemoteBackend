@@ -24,6 +24,21 @@ export function formatStatusLabel(value?: string | null): string {
     return map[normalized] ?? normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+export function formatPaymentIntentLabel(value?: string | null): string {
+    if (!value) {
+        return "—";
+    }
+
+    const map: Record<string, string> = {
+        subscribe: "Subscribe",
+        renew: "Renew",
+        upgrade: "Upgrade",
+        downgrade: "Downgrade",
+    };
+
+    return map[value] ?? formatStatusLabel(value);
+}
+
 export function formatSeverityLabel(value?: string | null): string {
     if (!value) {
         return "—";

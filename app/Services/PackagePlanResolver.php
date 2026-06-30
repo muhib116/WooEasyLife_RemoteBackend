@@ -45,6 +45,41 @@ class PackagePlanResolver
         };
     }
 
+    public function isFreeTrial(PackageHub $package): bool
+    {
+        return $package->package_duration === 'free_trial';
+    }
+
+    public function comparablePrice(PackageHub $package): float
+    {
+        if ($this->isCatalog($package)) {
+            return (float) ($package->package_price ?? 0);
+        }
+
+        return (float) $package->per_order_rate;
+    }
+
+    /**
+     * Negative => target is a higher tier (upgrade). Positive => lower tier (downgrade).
+     */
+    public function compareTier(PackageHub $current, PackageHub $target): int
+    {
+        if ($this->isFreeTrial($target) && ! $this->isFreeTrial($current)) {
+            return 1;
+        }
+
+        if ($this->isFreeTrial($current) && ! $this->isFreeTrial($target)) {
+            return -1;
+        }
+
+        $priceComparison = $this->comparablePrice($target) <=> $this->comparablePrice($current);
+        if ($priceComparison !== 0) {
+            return -$priceComparison;
+        }
+
+        return ((int) ($current->index ?? 0)) <=> ((int) ($target->index ?? 0));
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -67,6 +102,7 @@ class PackagePlanResolver
             'app_connect' => (bool) ($plan->app_connect ?? false),
             'total_website_connect' => $plan->total_website_connect,
             'is_special' => (bool) ($plan->is_special ?? false),
+            'index' => (int) ($plan->index ?? 0),
         ];
     }
 

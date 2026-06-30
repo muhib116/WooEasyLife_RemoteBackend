@@ -29,6 +29,7 @@ class BackfillWebsitesCommand extends Command
             'merchants' => 0,
             'websites_created' => 0,
             'websites_existing' => 0,
+            'websites_skipped' => 0,
             'packages_linked' => 0,
             'tokens_linked' => 0,
         ];
@@ -38,6 +39,7 @@ class BackfillWebsitesCommand extends Command
             $totals['merchants']++;
             $totals['websites_created'] += $stats['websites_created'];
             $totals['websites_existing'] += $stats['websites_existing'];
+            $totals['websites_skipped'] += $stats['websites_skipped'] ?? 0;
             $totals['packages_linked'] += $stats['packages_linked'];
             $totals['tokens_linked'] += $stats['tokens_linked'];
         };

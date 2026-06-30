@@ -81,8 +81,7 @@ class PackageCatalogSeederTest extends TestCase
 
         $this->seed(RequiredTableSeeder::class);
 
-        $this->assertNotNull(PackageHub::query()->where('title', 'Standard')->first());
         $this->assertNotNull(PackageHub::query()->where('title', 'Pro Plus – 1 Month')->first());
-        $this->assertGreaterThanOrEqual(7, PackageHub::query()->where('is_active', true)->count());
+        $this->assertGreaterThanOrEqual(5, PackageHub::query()->where('is_active', true)->count());
     }
 }
