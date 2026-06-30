@@ -2,7 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { primaryCtaLabel, primaryCtaShortLabel, primaryCtaUrl } from '@/utils/marketingCta';
-import '../../../css/marketing.css';
+import '../../css/marketing.css';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },

@@ -387,6 +387,7 @@ const toggleFaq = (i) => {
                         {{ primaryCtaLabelValue }}
                     </Link>
                 </div>
+            </div>
             </section>
         </ScrollReveal>
 
