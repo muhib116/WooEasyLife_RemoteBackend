@@ -50,6 +50,13 @@ class LandingPageService
                 ? $this->buildConversionFeatures($featuredPayload['features'] ?? [])
                 : [],
             'heroBullets' => config('landing.hero_bullets', []),
+            'hero' => config('landing.hero', []),
+            'roiScenarios' => config('landing.roi_scenarios', []),
+            'howItWorks' => config('landing.how_it_works', []),
+            'appShowcase' => config('landing.app_showcase', []),
+            'featureShowcases' => $featuredPayload
+                ? $this->buildFeatureShowcases($featuredPayload['features'] ?? [])
+                : [],
             'valuePillars' => $featuredPayload
                 ? $this->buildValuePillars($featuredPayload['features'] ?? [])
                 : [],
@@ -269,6 +276,44 @@ class LandingPageService
                 ];
             })
             ->filter(fn (array $pillar) => $pillar['enabled_count'] > 0)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, bool>  $features
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildFeatureShowcases(array $features): array
+    {
+        $labels = config('landing.labels', []);
+        $descriptions = config('landing.feature_descriptions', []);
+
+        return collect(config('landing.feature_showcases', []))
+            ->map(function (array $showcase) use ($features, $labels, $descriptions) {
+                $items = collect($showcase['feature_keys'] ?? [])
+                    ->filter(fn (string $key) => $features[$key] ?? false)
+                    ->map(fn (string $key) => [
+                        'key' => $key,
+                        'label' => $labels[$key] ?? Str::headline(str_replace('_', ' ', $key)),
+                        'description' => $descriptions[$key] ?? ($labels[$key] ?? $key),
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => $showcase['id'],
+                    'badge' => $showcase['badge'],
+                    'headline' => $showcase['headline'],
+                    'pain' => $showcase['pain'] ?? '',
+                    'solution' => $showcase['solution'] ?? '',
+                    'benefit' => $showcase['benefit'] ?? '',
+                    'accent' => $showcase['accent'] ?? 'violet',
+                    'features' => $items,
+                    'enabled_count' => count($items),
+                ];
+            })
+            ->filter(fn (array $showcase) => $showcase['enabled_count'] > 0)
             ->values()
             ->all();
     }

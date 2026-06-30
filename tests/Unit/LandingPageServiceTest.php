@@ -42,8 +42,12 @@ class LandingPageServiceTest extends TestCase
         $this->assertStringContainsString('টেক্সট', $payload['featureHighlights'][0]['label']);
         $this->assertNotEmpty($payload['conversionFeatures']);
         $this->assertNotEmpty($payload['heroBullets']);
-        $this->assertNotEmpty($payload['valuePillars']);
-        $this->assertSame('ai', $payload['valuePillars'][0]['id']);
+        $this->assertNotEmpty($payload['hero']);
+        $this->assertNotEmpty($payload['roiScenarios']);
+        $this->assertNotEmpty($payload['howItWorks']);
+        $this->assertNotEmpty($payload['appShowcase']);
+        $this->assertNotEmpty($payload['featureShowcases']);
+        $this->assertArrayHasKey('pain', $payload['featureShowcases'][0]);
         $this->assertNotEmpty($payload['stats']);
         $this->assertCount(1, $payload['plans']);
     }

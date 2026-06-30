@@ -1,0 +1,76 @@
+<script setup>
+import { Link } from '@inertiajs/vue3';
+
+defineProps({
+    hero: { type: Object, default: () => ({}) },
+    heroBullets: { type: Array, default: () => [] },
+    trialPlan: { type: Object, default: null },
+    primaryCtaUrl: { type: String, required: true },
+    primaryCtaLabel: { type: String, required: true },
+    primaryCtaExternal: { type: Boolean, default: false },
+});
+</script>
+
+<template>
+    <section class="relative overflow-hidden pb-8 pt-10 sm:pb-12 sm:pt-14 lg:pt-16">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,58,237,0.18),_transparent_55%)]" />
+        <div class="pointer-events-none absolute -right-32 top-20 h-72 w-72 rounded-full bg-violet-600/10 blur-3xl sm:h-96 sm:w-96" />
+
+        <div class="relative mx-auto max-w-6xl px-4 lg:px-8">
+            <div class="mx-auto max-w-3xl text-center lg:max-w-none lg:text-left">
+                <span
+                    v-if="hero.badge"
+                    class="mb-4 inline-flex rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-300"
+                >
+                    {{ hero.badge }}
+                </span>
+
+                <h1 class="text-3xl font-extrabold leading-[1.35] tracking-tight text-white sm:text-4xl sm:leading-[1.3] lg:text-5xl">
+                    {{ hero.headline }}
+                    <span
+                        v-if="hero.headline_accent"
+                        class="mt-1 block bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text pb-1 text-transparent"
+                    >
+                        {{ hero.headline_accent }}
+                    </span>
+                </h1>
+
+                <p v-if="hero.subheadline" class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg lg:mx-0">
+                    {{ hero.subheadline }}
+                </p>
+
+                <ul v-if="heroBullets.length" class="mx-auto mt-6 max-w-xl space-y-2.5 text-left lg:mx-0">
+                    <li
+                        v-for="item in heroBullets"
+                        :key="item"
+                        class="flex items-start gap-2.5 text-sm text-slate-200 sm:text-base"
+                    >
+                        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">✓</span>
+                        <span>{{ item }}</span>
+                    </li>
+                </ul>
+
+                <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                    <a
+                        :href="primaryCtaUrl"
+                        :target="primaryCtaExternal ? '_blank' : undefined"
+                        :rel="primaryCtaExternal ? 'noopener noreferrer' : undefined"
+                        class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-violet-900/40 transition hover:from-violet-500 hover:to-fuchsia-500"
+                    >
+                        {{ primaryCtaLabel }}
+                    </a>
+                    <Link
+                        :href="route('pricing')"
+                        class="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                    >
+                        প্যাকেজ ও মূল্য দেখুন
+                    </Link>
+                </div>
+
+                <p v-if="trialPlan" class="mt-4 text-sm text-slate-400">
+                    {{ trialPlan.title }} · {{ trialPlan.duration_label }} · {{ trialPlan.price_label }}
+                </p>
+            </div>
+        </div>
+    </section>
+</template>
