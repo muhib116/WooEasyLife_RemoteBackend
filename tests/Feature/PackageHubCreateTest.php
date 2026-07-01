@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\PackageHub;
 use App\Models\User;
+use App\Support\PackageCatalogFeatures;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -23,10 +24,10 @@ class PackageHubCreateTest extends TestCase
             'status' => true,
         ]);
 
-        $features = [
-            'fraud_customer_checker' => true,
-            'one_click_app_connect' => true,
-        ];
+        $features = PackageCatalogFeatures::map(
+            default: false,
+            enabledKeys: ['fraud_customer_checker', 'app_connect'],
+        );
 
         $response = $this->actingAs($admin)->post(route('packages.create'), [
             'package_name' => 'Pro Plus',

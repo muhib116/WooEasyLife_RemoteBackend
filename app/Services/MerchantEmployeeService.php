@@ -6,6 +6,9 @@ use App\Models\MerchantEmployee;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Website;
+use App\Services\Employee\EmployeeStoreSyncService;
+use App\Services\Employee\EmployeeStoreTargetResolver;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -17,21 +20,57 @@ class MerchantEmployeeService
 {
     public function __construct(
         protected RbacService $rbac,
-        protected WebsiteSyncService $websiteSyncService
+        protected WebsiteSyncService $websiteSyncService,
+        protected EmployeeStoreSyncService $employeeStoreSyncService,
+        protected EmployeeStoreTargetResolver $employeeStoreTargetResolver,
+        protected WebsiteUrlResolver $websiteUrlResolver
     ) {
     }
 
     /**
-     * @return Collection<int, Website>
+     * @return Collection<int, array<string, mixed>>
      */
     public function assignableWebsitesForMerchant(User $merchant): Collection
     {
         $this->websiteSyncService->backfillUser($merchant);
 
-        return Website::query()
+        $websites = Website::query()
             ->where('user_id', $merchant->id)
             ->orderBy('domain')
-            ->get(['id', 'domain', 'title']);
+            ->get(['id', 'domain', 'title', 'base_url']);
+
+        $configuredWebsiteIds = $this->employeeStoreTargetResolver
+            ->resolveTargets($merchant, $websites->pluck('id')->map(fn ($id) => (int) $id)->all())
+            ->pluck('website_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return $websites
+            ->map(fn (Website $website) => [
+                ...$this->formatAssignableWebsite($website),
+                'sync_configured' => in_array((int) $website->id, $configuredWebsiteIds, true),
+            ])
+            ->values();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function formatAssignableWebsite(Website $website): array
+    {
+        $baseUrl = trim((string) ($website->base_url ?? ''));
+        $domain = trim((string) ($website->domain ?? ''));
+        $candidates = $this->websiteUrlResolver->siteUrlCandidates($website);
+        $displayUrl = $candidates[0] ?? ($domain !== '' ? 'https://'.$domain : null);
+
+        return [
+            'id' => (int) $website->id,
+            'domain' => $domain,
+            'title' => $website->title,
+            'base_url' => $baseUrl !== '' ? rtrim($baseUrl, '/') : null,
+            'display_url' => $displayUrl,
+            'uses_base_url' => $baseUrl !== '',
+        ];
     }
 
     /**
@@ -67,18 +106,32 @@ class MerchantEmployeeService
         $role = $this->resolveMerchantRole($data['role_id'] ?? null);
         $websiteIds = $this->resolveWebsiteIds($merchant, $data);
 
-        $employee = MerchantEmployee::create([
-            'merchant_user_id' => $merchant->id,
-            'role_id' => $role->id,
-            'website_id' => $websiteIds[0] ?? null,
-            'name' => $data['name'],
-            'email' => $data['email'] ?? null,
-            'phone' => $data['phone'] ?? null,
-            'address' => $data['address'] ?? null,
-            'status' => (bool) ($data['status'] ?? true),
-            'notes' => $data['notes'] ?? null,
-            'created_by' => Auth::id(),
-        ]);
+        $this->assertEmployeeEmailRequired($data);
+
+        $this->assertNoDuplicateEmployeeContact($merchant, $data);
+
+        $status = (bool) ($data['status'] ?? true);
+
+        $this->assertEmployeeEmailSafeForWpSync($merchant, $data, $websiteIds, null, $data);
+
+        try {
+            $employee = MerchantEmployee::create([
+                'merchant_user_id' => $merchant->id,
+                'role_id' => $role->id,
+                'website_id' => $websiteIds[0] ?? null,
+                'name' => $data['name'],
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'status' => $status,
+                'notes' => $data['notes'] ?? null,
+                'created_by' => Auth::id(),
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages([
+                'email' => 'An employee with this email address or phone number already exists on your team.',
+            ]);
+        }
 
         $this->syncWebsites($employee, $merchant, $websiteIds);
         $this->storePhoto($employee, $data['photo'] ?? null);
@@ -87,7 +140,11 @@ class MerchantEmployeeService
             $this->syncPortalAccount($employee->fresh(), $merchant, (string) $data['portal_password']);
         }
 
-        return $employee->fresh(['role', 'website', 'websites', 'portalUser']);
+        $employee = $employee->fresh(['role', 'website', 'websites', 'portalUser']);
+
+        $this->employeeStoreSyncService->syncAfterCreate($merchant, $employee);
+
+        return $employee;
     }
 
     /**
@@ -97,9 +154,23 @@ class MerchantEmployeeService
     {
         $this->assertBelongsToMerchant($employee, $merchant);
 
+        $employee->loadMissing('websites');
+
+        $beforeWebsiteIds = $this->employeeStoreTargetResolver->resolveEffectiveWebsiteIds($merchant, $employee);
+        $beforeEmail = $employee->email;
+        $beforePhone = $employee->phone;
+        $beforeName = $employee->name;
+        $beforeStatus = (bool) $employee->status;
+
         $role = $this->resolveMerchantRole($data['role_id'] ?? $employee->role_id);
         $websiteIds = $this->resolveWebsiteIds($merchant, $data, $employee);
         $status = array_key_exists('status', $data) ? (bool) $data['status'] : $employee->status;
+
+        $this->assertEmployeeEmailRequired($data, $employee);
+
+        $this->assertNoDuplicateEmployeeContact($merchant, $data, $employee);
+
+        $this->assertEmployeeEmailSafeForWpSync($merchant, $data, $websiteIds, $employee, $data, $status);
 
         $employee->update([
             'role_id' => $role->id,
@@ -132,12 +203,26 @@ class MerchantEmployeeService
             $this->syncPortalAccount($employee->fresh(), $merchant, '');
         }
 
-        return $employee->fresh(['role', 'website', 'websites', 'portalUser']);
+        $employee = $employee->fresh(['role', 'website', 'websites', 'portalUser']);
+
+        $this->employeeStoreSyncService->syncAfterUpdate($merchant, $employee, [
+            'before_website_ids' => $beforeWebsiteIds,
+            'before_email' => $beforeEmail,
+            'before_phone' => $beforePhone,
+            'before_name' => $beforeName,
+            'before_status' => $beforeStatus,
+        ]);
+
+        return $employee;
     }
 
     public function delete(MerchantEmployee $employee, User $merchant): void
     {
         $this->assertBelongsToMerchant($employee, $merchant);
+
+        $employee->loadMissing('websites');
+        $this->employeeStoreSyncService->deleteOnAllAssignedStores($merchant, $employee);
+
         $this->revokePortalAccount($employee);
         $this->deletePhoto($employee);
         $employee->websites()->detach();
@@ -390,5 +475,203 @@ class MerchantEmployeeService
         if ((int) $employee->merchant_user_id !== (int) $merchant->id) {
             abort(404);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function assertEmployeeEmailRequired(
+        array $data,
+        ?MerchantEmployee $employee = null
+    ): void {
+        $email = array_key_exists('email', $data)
+            ? trim((string) $data['email'])
+            : trim((string) ($employee?->email ?? ''));
+
+        if ($email !== '') {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'email' => 'Employee email is required.',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function assertNoDuplicateEmployeeContact(
+        User $merchant,
+        array $data,
+        ?MerchantEmployee $employee = null
+    ): void {
+        $phone = trim((string) ($data['phone'] ?? $employee?->phone ?? ''));
+
+        if ($phone !== '') {
+            $phoneQuery = MerchantEmployee::query()
+                ->where('merchant_user_id', $merchant->id)
+                ->where('phone', $phone);
+
+            if ($employee) {
+                $phoneQuery->where('id', '!=', $employee->id);
+            }
+
+            if ($phoneQuery->exists()) {
+                throw ValidationException::withMessages([
+                    'phone' => 'An employee with this phone number already exists on your team.',
+                ]);
+            }
+        }
+
+        $email = array_key_exists('email', $data)
+            ? trim((string) $data['email'])
+            : trim((string) ($employee?->email ?? ''));
+
+        if ($email === '') {
+            return;
+        }
+
+        $emailQuery = MerchantEmployee::query()
+            ->where('merchant_user_id', $merchant->id)
+            ->whereNotNull('email')
+            ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower($email)]);
+
+        if ($employee) {
+            $emailQuery->where('id', '!=', $employee->id);
+        }
+
+        if ($emailQuery->exists()) {
+            throw ValidationException::withMessages([
+                'email' => 'An employee with this email address already exists on your team.',
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<int, int>  $websiteIds
+     */
+    private function assertEmployeeEmailSafeForWpSync(
+        User $merchant,
+        array $data,
+        array $websiteIds,
+        ?MerchantEmployee $employee = null,
+        ?array $payload = null,
+        ?bool $status = null
+    ): void {
+        $status = $status ?? (bool) ($data['status'] ?? true);
+
+        if (! $status) {
+            return;
+        }
+
+        if (! $this->shouldRequireEmployeeEmailForWpSync($merchant, $websiteIds)) {
+            return;
+        }
+
+        $email = array_key_exists('email', $payload ?? $data)
+            ? trim((string) ($payload ?? $data)['email'])
+            : trim((string) ($employee?->email ?? ''));
+
+        if ($email === '') {
+            return;
+        }
+
+        $merchantEmail = trim((string) $merchant->email);
+
+        if ($merchantEmail !== '' && strcasecmp($email, $merchantEmail) === 0) {
+            throw ValidationException::withMessages([
+                'email' => 'Employee email cannot be the same as the merchant account email. Use a different email for the employee WordPress login.',
+            ]);
+        }
+
+        $targetWebsiteIds = $this->resolveWebsiteIdsForWpValidation($merchant, $websiteIds);
+        $employeeId = (int) ($employee?->id ?? 0);
+
+        $this->employeeStoreSyncService->assertEmailAvailableOnStores(
+            $merchant,
+            $email,
+            $targetWebsiteIds,
+            $employeeId
+        );
+    }
+
+    /**
+     * @param  array<int, int>  $websiteIds
+     * @return array<int, int>
+     */
+    private function resolveWebsiteIdsForWpValidation(User $merchant, array $websiteIds): array
+    {
+        if ($websiteIds !== []) {
+            return $websiteIds;
+        }
+
+        return Website::query()
+            ->where('user_id', $merchant->id)
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * @param  array<int, int>  $websiteIds
+     */
+    private function shouldRequireEmployeeEmailForWpSync(User $merchant, array $websiteIds): bool
+    {
+        if ($websiteIds !== []) {
+            return true;
+        }
+
+        return Website::query()
+            ->where('user_id', $merchant->id)
+            ->exists();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function pullLastStoreSync(): array
+    {
+        return $this->employeeStoreSyncService->pullLastStoreSync();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    public function recentEmployeeSyncFailures(User $merchant, int $limit = 10)
+    {
+        return $this->employeeStoreSyncService->recentUnresolvedFailures($merchant, $limit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function redirectFlash(string $successMessage): array
+    {
+        $storeSync = $this->pullLastStoreSync();
+        $failureCount = collect($storeSync)
+            ->filter(fn (array $row) => ! ($row['success'] ?? false))
+            ->count();
+
+        $flash = [
+            'success' => $successMessage,
+            'store_sync' => $storeSync,
+        ];
+
+        if ($failureCount > 0) {
+            $unconfiguredCount = collect($storeSync)
+                ->filter(fn (array $row) => ! ($row['success'] ?? false)
+                    && ($row['message'] ?? '') === 'missing_store_target')
+                ->count();
+
+            if ($unconfiguredCount > 0 && $unconfiguredCount === $failureCount) {
+                $flash['warning'] = 'Employee saved. WordPress sync is pending on selected store(s) until the WooEasyLife plugin is connected.';
+            } else {
+                $flash['warning'] = "Employee saved. WordPress user sync failed on {$failureCount} store(s). Retries are scheduled automatically when possible.";
+            }
+        }
+
+        return $flash;
     }
 }

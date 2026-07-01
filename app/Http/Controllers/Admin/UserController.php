@@ -15,6 +15,7 @@ use App\Models\TransactionHistory;
 use App\Models\User;
 use App\Models\UserBusiness;
 use App\Models\UserPackage;
+use App\Models\Website;
 use App\Services\DomainNormalizer;
 use App\Services\MerchantSetupService;
 use App\Services\PackagePaymentService;
@@ -26,7 +27,10 @@ use App\Services\LicenseProvisioningService;
 use App\Services\MerchantDomainValidator;
 use App\Services\WebsiteAggregatorService;
 use App\Services\SubscriptionAdminService;
+use App\Services\WebsiteAdminService;
 use App\Services\WebsiteRemovalService;
+use App\Services\WebsiteSyncService;
+use App\Support\PackageCatalogFeatures;
 use App\Traits\Transaction;
 use App\Traits\Util;
 use Carbon\Carbon;
@@ -113,6 +117,9 @@ class UserController extends Controller
                 ));
             $remainingOrders = $userPackage->sum('remaining_order');
             $activePackage = $userPackage->sortByDesc('id')->first();
+            $packageHub = $activePackage?->package_hub_id
+                ? PackageHub::find($activePackage->package_hub_id)
+                : null;
             $user->remaining_order = $remainingOrders + 0;
             $user->active_package = $activePackage ? [
                 'id' => $activePackage->id,
@@ -122,7 +129,10 @@ class UserController extends Controller
                 'expires_at' => $activePackage->expires_at,
                 'remaining_order' => (int) $activePackage->remaining_order,
                 'total_order_can_handle' => (int) $activePackage->total_order_can_handle,
-                'features' => $activePackage->features ?? [],
+                'app_connect' => $activePackage->app_connect ?? $packageHub?->app_connect ?? false,
+                'total_website_connect' => $activePackage->total_website_connect
+                    ?? $packageHub?->total_website_connect,
+                'features' => PackageCatalogFeatures::expandForLegacyApi($activePackage->features ?? []),
             ] : null;
             $user->notice = $alertService->pluginNotices($user, $accessToken);
             $user->sms_balance = round($smsBalance, 2) + 0;
@@ -328,7 +338,7 @@ class UserController extends Controller
         return Inertia::render('Users/Websites/Index', [
             'user' => $user,
             'websites' => $websites,
-            'packages' => $planResolver->mapPlansPayload($activePlans),
+            'packages' => $planResolver->mapPlansForDisplay($activePlans),
             'user_packages' => $user_packages,
             'action' => request()->query('action'),
             'domain' => request()->query('domain'),
@@ -433,6 +443,7 @@ class UserController extends Controller
         $request->validate([
             'id' => 'required|integer',
             'domain' => 'nullable|string',
+            'base_url' => 'nullable|string|max:512',
             'note' => 'nullable|string|max:1000',
             'is_active' => 'nullable|boolean',
             'remaining_order' => 'nullable|integer|min:0',
@@ -485,16 +496,51 @@ class UserController extends Controller
             ]);
         }
 
-        $userPackage->update([
+        $updateData = [
             'updated_by' => Auth::id(),
             'note' => $request->input('note', $userPackage->note),
             'domain' => $domain,
             'is_active' => $isActive,
             'remaining_order' => $remainingOrder,
             'expires_at' => $expiresAt,
-        ]);
+        ];
 
-        app(\App\Services\WebsiteSyncService::class)->linkUserPackage($userPackage->fresh());
+        if (($userPackage->plan_type ?? 'legacy') === 'catalog' && $request->has('features')) {
+            $request->validate([
+                'features' => ['required', 'array'],
+                'app_connect' => ['sometimes', 'boolean'],
+                'total_website_connect' => ['nullable', 'integer', 'min:1', 'max:5'],
+            ]);
+
+            $appConnect = $request->has('app_connect')
+                ? $request->boolean('app_connect')
+                : (bool) ($userPackage->app_connect ?? false);
+
+            $updateData['features'] = PackageCatalogFeatures::normalize(
+                $request->input('features'),
+                $userPackage->features ?? [],
+            );
+            $updateData['app_connect'] = $appConnect;
+            $updateData['total_website_connect'] = $appConnect
+                ? ($request->input('total_website_connect') ?: null)
+                : null;
+        }
+
+        $userPackage->update($updateData);
+
+        app(WebsiteSyncService::class)->linkUserPackage($userPackage->fresh());
+
+        if ($request->has('base_url')) {
+            try {
+                app(WebsiteSyncService::class)->syncBaseUrlForDomain(
+                    User::findOrFail($id),
+                    $domain,
+                    $request->input('base_url')
+                );
+            } catch (ValidationException $e) {
+                return back()->withErrors($e->errors());
+            }
+        }
 
         return back()->with('success', 'Subscription adjustments saved.');
     }
@@ -562,6 +608,37 @@ class UserController extends Controller
         return back()->with('success', 'Subscription plan changed successfully.');
     }
 
+    public function updateWebsite(Request $request, $id, WebsiteAdminService $websiteAdmin)
+    {
+        $request->validate([
+            'website_id' => 'required|integer',
+            'title' => 'nullable|string|max:255',
+            'base_url' => 'nullable|string|max:512',
+            'status' => 'sometimes|boolean',
+            'is_primary' => 'sometimes|boolean',
+        ]);
+
+        $user = User::findOrFail($id);
+
+        $website = Website::query()
+            ->where('user_id', $user->id)
+            ->whereKey($request->integer('website_id'))
+            ->firstOrFail();
+
+        try {
+            $websiteAdmin->update($user, $website, [
+                'title' => $request->input('title'),
+                'base_url' => $request->input('base_url'),
+                'status' => $request->has('status') ? $request->boolean('status') : $website->status,
+                'is_primary' => $request->has('is_primary') ? $request->boolean('is_primary') : $website->is_primary,
+            ]);
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        return back()->with('success', 'Website updated successfully.');
+    }
+
     public function destroyWebsite(Request $request, $id, WebsiteRemovalService $websiteRemoval)
     {
         $request->validate([
@@ -596,6 +673,7 @@ class UserController extends Controller
 
         $rules = [
             'domain' => 'required',
+            'base_url' => 'nullable|string|max:512',
             'package_id' => 'required',
             'transaction_method' => 'required',
         ];
@@ -623,6 +701,7 @@ class UserController extends Controller
                 'note',
             ]);
             $payload['domain'] = $normalizedDomain;
+            $payload['base_url'] = $request->input('base_url');
 
             $userPackage = $planAssignment->assign($user, $package, $payload);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -659,7 +738,7 @@ class UserController extends Controller
         return Inertia::render('Users/Setup/Wizard', [
             'user' => $user,
             'setup' => $setup,
-            'packages' => $planResolver->mapPlansPayload($activePlans),
+            'packages' => $planResolver->mapPlansForDisplay($activePlans),
             'user_packages' => $userPackages,
             'default_package_id' => $defaultPackage?->id,
             'license_token' => session('license_token'),

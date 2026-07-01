@@ -4,14 +4,15 @@ namespace Database\Seeders;
 
 use App\Models\PackageHub;
 use App\Models\User;
+use App\Models\UserPackage;
 use App\Support\PackageCatalogFeatures;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds catalog-format packages (duration, tokens, pricing, features).
+ * Seeds catalog-format packages (duration, tokens, pricing, power features).
  *
  * Safe to re-run: uses updateOrCreate by title.
- * Does not modify existing plans outside the catalog definitions below.
+ * Does not create legacy pay-per-order plans.
  *
  * Usage:
  *   php artisan db:seed --class=PackageCatalogSeeder
@@ -25,6 +26,8 @@ class PackageCatalogSeeder extends Seeder
             ->orderBy('id')
             ->value('id');
 
+        $this->retireLegacyPackages();
+
         $definitions = [
             [
                 'title' => 'Free Trial',
@@ -37,6 +40,7 @@ class PackageCatalogSeeder extends Seeder
                 'total_website_connect' => null,
                 'is_special' => false,
                 'is_active' => true,
+                'index' => 1,
                 'features' => PackageCatalogFeatures::trialMap(),
             ],
             [
@@ -50,6 +54,7 @@ class PackageCatalogSeeder extends Seeder
                 'total_website_connect' => null,
                 'is_special' => false,
                 'is_active' => true,
+                'index' => 2,
                 'features' => PackageCatalogFeatures::starterMap(),
             ],
             [
@@ -63,12 +68,11 @@ class PackageCatalogSeeder extends Seeder
                 'total_website_connect' => 2,
                 'is_special' => false,
                 'is_active' => true,
+                'index' => 3,
                 'features' => PackageCatalogFeatures::map(
                     default: true,
                     disabledKeys: [
-                        'ai_image_to_order_create',
-                        'courier_webhook_integrations',
-                        'centralized_notifications',
+                        'ai_intelligence',
                     ],
                 ),
             ],
@@ -83,6 +87,7 @@ class PackageCatalogSeeder extends Seeder
                 'total_website_connect' => 3,
                 'is_special' => true,
                 'is_active' => true,
+                'index' => 4,
                 'features' => PackageCatalogFeatures::map(),
             ],
             [
@@ -96,13 +101,14 @@ class PackageCatalogSeeder extends Seeder
                 'total_website_connect' => null,
                 'is_special' => true,
                 'is_active' => true,
+                'index' => 5,
                 'features' => PackageCatalogFeatures::map(),
             ],
         ];
 
-        $baseIndex = (int) PackageHub::withTrashed()->max('index');
+        foreach ($definitions as $plan) {
+            $features = PackageCatalogFeatures::normalize($plan['features']);
 
-        foreach ($definitions as $offset => $plan) {
             PackageHub::updateOrCreate(
                 ['title' => $plan['title']],
                 [
@@ -114,15 +120,42 @@ class PackageCatalogSeeder extends Seeder
                     'package_price' => $plan['package_price'],
                     'app_connect' => $plan['app_connect'],
                     'total_website_connect' => $plan['total_website_connect'],
-                    'features' => $plan['features'],
+                    'features' => $features,
                     'is_active' => $plan['is_active'],
                     'is_special' => $plan['is_special'],
                     'created_by' => $createdBy,
-                    'index' => $baseIndex + $offset + 1,
+                    'index' => $plan['index'],
                 ],
             );
         }
 
         $this->command?->info('Catalog packages seeded: ' . count($definitions));
+    }
+
+    /**
+     * Deactivate legacy pay-per-order seed plans (Standard / Premium).
+     * Does not delete packages that are already assigned to merchants.
+     */
+    private function retireLegacyPackages(): void
+    {
+        $assignedLegacyIds = UserPackage::query()
+            ->whereNotNull('package_hub_id')
+            ->pluck('package_hub_id');
+
+        $retired = PackageHub::query()
+            ->whereNull('package_duration')
+            ->where(function ($query) {
+                $query
+                    ->whereIn('title', ['Standard', 'Premium'])
+                    ->orWhere('per_order_rate', '>', 0);
+            })
+            ->whereNotIn('id', $assignedLegacyIds)
+            ->update([
+                'is_active' => false,
+            ]);
+
+        if ($retired > 0) {
+            $this->command?->comment("Retired {$retired} unassigned legacy package(s).");
+        }
     }
 }

@@ -31,7 +31,7 @@
                     <div class="space-y-1">
                         <label for="employee_email" class="text-sm font-medium">
                             Email
-                            <span class="font-normal text-gray-500">(optional)</span>
+                            <span class="font-normal text-rose-500">(required)</span>
                         </label>
                         <InputText
                             id="employee_email"
@@ -154,6 +154,18 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         Leave empty to allow access across all merchant websites.
                     </p>
+                    <p
+                        v-if="localDevBaseUrlHint"
+                        class="text-xs text-amber-700 dark:text-amber-300"
+                    >
+                        {{ localDevBaseUrlHint }}
+                    </p>
+                    <p
+                        v-if="unconfiguredWebsiteHint"
+                        class="text-xs text-amber-700 dark:text-amber-300"
+                    >
+                        {{ unconfiguredWebsiteHint }}
+                    </p>
                     <p v-if="form.errors.website_ids" class="text-sm text-rose-500">
                         {{ form.errors.website_ids }}
                     </p>
@@ -209,7 +221,15 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 const props = defineProps<{
     form: any;
     roles: MerchantEmployeeRoleOption[];
-    websites: { id: number; domain: string; title?: string | null }[];
+    websites: {
+        id: number;
+        domain: string;
+        title?: string | null;
+        base_url?: string | null;
+        display_url?: string | null;
+        uses_base_url?: boolean;
+        sync_configured?: boolean;
+    }[];
     existingPhotoUrl?: string | null;
 }>();
 
@@ -223,12 +243,83 @@ const emit = defineEmits<{
 const photoInput = ref<HTMLInputElement | null>(null);
 const objectPhotoUrl = ref<string | null>(null);
 
+const isLocalDevDomain = (domain: string): boolean => {
+    const host = domain.toLowerCase().replace(/^https?:\/\//, "").split("/")[0] ?? "";
+
+    return host === "localhost"
+        || host === "127.0.0.1"
+        || host.startsWith("localhost:")
+        || host.startsWith("127.0.0.1:");
+};
+
+const formatWebsiteLabel = (website: (typeof props.websites)[number]): string => {
+    const name = website.title
+        ? `${website.domain} · ${website.title}`
+        : website.domain;
+
+    const label = website.display_url
+        ? `${name} — ${website.display_url}`
+        : name;
+
+    if (website.sync_configured === false) {
+        return `${label} (plugin not connected)`;
+    }
+
+    return label;
+};
+
 const websiteOptions = computed(() =>
     props.websites.map((website) => ({
-        label: website.title ? `${website.domain} · ${website.title}` : website.domain,
+        label: formatWebsiteLabel(website),
         value: website.id,
     })),
 );
+
+const localDevBaseUrlHint = computed(() => {
+    const selectedIds = Array.isArray(props.form.website_ids)
+        ? props.form.website_ids
+        : [];
+
+    const relevantWebsites = selectedIds.length
+        ? props.websites.filter((website) => selectedIds.includes(website.id))
+        : props.websites;
+
+    const needsBaseUrl = relevantWebsites.filter(
+        (website) => isLocalDevDomain(website.domain) && !website.base_url,
+    );
+
+    if (!needsBaseUrl.length) {
+        return "";
+    }
+
+    const labels = needsBaseUrl.map((website) => website.display_url || `https://${website.domain}`);
+
+    return `Local development stores without a WordPress base URL will sync using ${labels.join(", ")}. Set the base URL on Websites if WordPress runs on a different port or path.`;
+});
+
+const unconfiguredWebsiteHint = computed(() => {
+    const selectedIds = Array.isArray(props.form.website_ids)
+        ? props.form.website_ids
+        : [];
+
+    if (!selectedIds.length) {
+        return "";
+    }
+
+    const unconfigured = props.websites.filter(
+        (website) => selectedIds.includes(website.id) && website.sync_configured === false,
+    );
+
+    if (!unconfigured.length) {
+        return "";
+    }
+
+    const labels = unconfigured.map(
+        (website) => website.display_url || website.domain || `Website #${website.id}`,
+    );
+
+    return `These stores are not connected to WooEasyLife yet: ${labels.join(", ")}. The employee will be assigned, and WordPress sync will run once the plugin is activated on each store.`;
+});
 
 const selectedRole = computed(() =>
     props.roles.find((role) => role.id === props.form.role_id),

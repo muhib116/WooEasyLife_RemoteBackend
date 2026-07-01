@@ -1,4 +1,4 @@
-import type { PackageFeatureKey, PackageFeatures } from "@/types/packageCatalog";
+import type { PackageFeatures, PowerFeatureKey } from "@/types/packageCatalog";
 
 export type ActivePackage = {
     id: number;
@@ -13,14 +13,14 @@ export type ActivePackage = {
 
 export function isFeatureEnabled(
     features: ActivePackage["features"],
-    key: PackageFeatureKey,
+    key: PowerFeatureKey,
 ): boolean {
     return Boolean(features?.[key]);
 }
 
 export function hasPackageFeature(
     activePackage: ActivePackage | null | undefined,
-    key: PackageFeatureKey,
+    key: PowerFeatureKey,
 ): boolean {
     if (!activePackage) {
         return false;
@@ -31,14 +31,14 @@ export function hasPackageFeature(
 
 export function hasAllPackageFeatures(
     activePackage: ActivePackage | null | undefined,
-    keys: PackageFeatureKey[],
+    keys: PowerFeatureKey[],
 ): boolean {
     return keys.every((key) => hasPackageFeature(activePackage, key));
 }
 
 export function hasAnyPackageFeature(
     activePackage: ActivePackage | null | undefined,
-    keys: PackageFeatureKey[],
+    keys: PowerFeatureKey[],
 ): boolean {
     return keys.some((key) => hasPackageFeature(activePackage, key));
 }

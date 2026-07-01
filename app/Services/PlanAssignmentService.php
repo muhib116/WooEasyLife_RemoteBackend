@@ -73,6 +73,7 @@ class PlanAssignmentService
         ]);
 
         $this->websiteSync->linkUserPackage($userPackage);
+        $this->websiteSync->syncBaseUrlForDomain($user, $domain, $data['base_url'] ?? null);
 
         return $userPackage->fresh();
     }
@@ -108,6 +109,10 @@ class PlanAssignmentService
             'order_rate_token' => $tokens,
             'package_duration' => $package->package_duration,
             'features' => $package->features,
+            'app_connect' => (bool) ($package->app_connect ?? false),
+            'total_website_connect' => ($package->app_connect ?? false)
+                ? $package->total_website_connect
+                : null,
             'total_order_can_handle' => $tokens,
             'remaining_order' => $tokens,
             'total_order_handled' => 0,
@@ -124,6 +129,7 @@ class PlanAssignmentService
         ]);
 
         $this->websiteSync->linkUserPackage($userPackage);
+        $this->websiteSync->syncBaseUrlForDomain($user, $domain, $data['base_url'] ?? null);
 
         return $userPackage->fresh();
     }

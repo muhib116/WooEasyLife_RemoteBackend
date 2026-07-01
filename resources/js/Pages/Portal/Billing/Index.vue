@@ -135,6 +135,7 @@ import BillingAlertsPanel from "@/Pages/Portal/fragments/BillingAlertsPanel.vue"
 import PaymentRequestFormFields from "@/components/PaymentRequestFormFields.vue";
 import { dateFormat } from "@/Helper";
 import { router, useForm, usePage } from "@inertiajs/vue3";
+import { syncPaymentFormTotals } from "@/utils/paymentFormTotals";
 import { computed, ref, watch } from "vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { useToast } from "primevue/usetoast";
@@ -205,13 +206,7 @@ const paymentForm = useForm({
 });
 
 const syncSuggestedTotal = () => {
-    const plan = props.plans.find((item) => item.id === paymentForm.package_hub_id);
-
-    if (plan && paymentForm.order_limit) {
-        paymentForm.total_amount = Number(
-            (plan.per_order_rate * paymentForm.order_limit).toFixed(2),
-        );
-    }
+    syncPaymentFormTotals(paymentForm, props.plans);
 };
 
 const openForm = () => {

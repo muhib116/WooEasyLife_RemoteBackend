@@ -89,6 +89,10 @@ class SubscriptionAdminService
             'order_rate_token' => $tokens,
             'package_duration' => $packageHub->package_duration,
             'features' => $packageHub->features,
+            'app_connect' => (bool) ($packageHub->app_connect ?? false),
+            'total_website_connect' => ($packageHub->app_connect ?? false)
+                ? $packageHub->total_website_connect
+                : null,
             'total_order_can_handle' => $tokens,
             'remaining_order' => $tokens,
             'total_order_handled' => 0,

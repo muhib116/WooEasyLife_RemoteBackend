@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\PackageHub;
+use App\Support\PackageCatalogFeatures;
+use App\Support\PlanDisplayPresenter;
 use App\Support\WhatsappLink;
 use App\Services\PublicFraudCheckService;
 use Illuminate\Http\Request;
@@ -37,18 +39,20 @@ class LandingPageService
         $whatsappPhone = config('landing.whatsapp_phone');
 
         return [
-            'plans' => array_map(fn (array $plan) => $this->enrichPlanForLanding($plan), $planPayloads),
+            'plans' => $this->planResolver->mapPlansForDisplay($plans),
             'featuredPlan' => $featuredPayload
-                ? $this->enrichPlanForLanding($featuredPayload)
+                ? PlanDisplayPresenter::enrich($featuredPayload)
                 : null,
             'featureHighlights' => $featuredPayload
-                ? $this->buildFeatureHighlights($featuredPayload['features'] ?? [])
+                ? collect(PlanDisplayPresenter::buildTopFeatures($featuredPayload, 6))
+                    ->map(fn (array $item) => [...$item, 'icon' => 'check'])
+                    ->all()
                 : [],
             'featureGroups' => $featuredPayload
-                ? $this->buildFeatureGroups($featuredPayload['features'] ?? [])
+                ? $this->buildFeatureGroups($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'conversionFeatures' => $featuredPayload
-                ? $this->buildConversionFeatures($featuredPayload['features'] ?? [])
+                ? $this->buildConversionFeatures($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'heroBullets' => config('landing.hero_bullets', []),
             'hero' => config('landing.hero', []),
@@ -56,10 +60,10 @@ class LandingPageService
             'howItWorks' => config('landing.how_it_works', []),
             'appShowcase' => config('landing.app_showcase', []),
             'featureShowcases' => $featuredPayload
-                ? $this->buildFeatureShowcases($featuredPayload['features'] ?? [])
+                ? $this->buildFeatureShowcases($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'valuePillars' => $featuredPayload
-                ? $this->buildValuePillars($featuredPayload['features'] ?? [])
+                ? $this->buildValuePillars($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'stats' => config('landing.stats', []),
             'lossComparison' => config('landing.loss_comparison', []),
@@ -84,67 +88,12 @@ class LandingPageService
     }
 
     /**
-     * @param  array<string, mixed>  $plan
-     * @return array<string, mixed>
+     * @param  array<string, mixed>  $features
+     * @return array<string, bool>
      */
-    private function enrichPlanForLanding(array $plan): array
+    private function legacyFeatures(array $features): array
     {
-        $enabledCount = collect($plan['features'] ?? [])
-            ->filter(fn ($enabled) => (bool) $enabled)
-            ->count();
-
-        return array_merge($plan, [
-            'duration_label' => $this->durationLabel($plan['package_duration'] ?? null),
-            'price_label' => $this->priceLabel((float) ($plan['package_price'] ?? 0)),
-            'token_label' => $this->tokenLabel((int) ($plan['order_rate_token'] ?? 0)),
-            'website_label' => $this->websiteLabel($plan['total_website_connect'] ?? null),
-            'plain_description' => $this->plainDescription($plan['description'] ?? ''),
-            'enabled_feature_count' => $enabledCount,
-            'top_features' => $this->buildFeatureHighlights($plan['features'] ?? [], limit: 5),
-        ]);
-    }
-
-    private function durationLabel(?string $duration): string
-    {
-        return match ($duration) {
-            'free_trial' => '১৪ দিন ফ্রি ট্রায়াল',
-            '1_month' => 'মাসিক প্ল্যান',
-            '5_month' => '৫ মাসের প্ল্যান',
-            '1_year' => 'বার্ষিক প্ল্যান',
-            default => 'প্ল্যান',
-        };
-    }
-
-    private function priceLabel(float $price): string
-    {
-        if ($price <= 0) {
-            return '৳০';
-        }
-
-        return '৳'.number_format($price, 0, '.', ',');
-    }
-
-    private function tokenLabel(int $tokens): string
-    {
-        if ($tokens <= 0) {
-            return '—';
-        }
-
-        return number_format($tokens).' টোকেন';
-    }
-
-    private function websiteLabel(mixed $limit): string
-    {
-        if ($limit === null || $limit === '') {
-            return 'আনলিমিটেড ওয়েবসাইট';
-        }
-
-        return (string) $limit.'টি ওয়েবসাইট';
-    }
-
-    private function plainDescription(?string $html): string
-    {
-        return trim(strip_tags((string) $html));
+        return PackageCatalogFeatures::expandForLegacyApi($features);
     }
 
     /**

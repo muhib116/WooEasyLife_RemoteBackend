@@ -151,6 +151,116 @@ class WebsiteSyncServiceTest extends TestCase
         $this->assertSame(1, Website::query()->where('domain', 'shop.example.com')->count());
     }
 
+    public function test_resolve_for_user_persists_optional_base_url(): void
+    {
+        $user = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-base-url@example.com',
+            'phone' => '01700000088',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $website = app(WebsiteSyncService::class)->resolveForUser(
+            $user,
+            'localhost',
+            'Local WordPress',
+            'http://localhost:8081/wordpress/'
+        );
+
+        $this->assertNotNull($website);
+        $this->assertSame('localhost', $website->domain);
+        $this->assertSame('http://localhost:8081/wordpress', $website->base_url);
+    }
+
+    public function test_sync_base_url_for_domain_updates_existing_website(): void
+    {
+        $user = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-sync-base@example.com',
+            'phone' => '01700000087',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $user->id,
+            'domain' => 'localhost',
+            'title' => 'Local',
+            'status' => true,
+        ]);
+
+        $website = app(WebsiteSyncService::class)->syncBaseUrlForDomain(
+            $user,
+            'localhost',
+            'http://localhost:8081/wordpress'
+        );
+
+        $this->assertSame('http://localhost:8081/wordpress', $website?->base_url);
+    }
+
+    public function test_sync_base_url_rejects_host_mismatch_with_store_domain(): void
+    {
+        $user = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-host-mismatch@example.com',
+            'phone' => '01700000086',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $user->id,
+            'domain' => 'localhost',
+            'title' => 'Local',
+            'status' => true,
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        try {
+            app(WebsiteSyncService::class)->syncBaseUrlForDomain(
+                $user,
+                'localhost',
+                'http://evil.example.com/wordpress'
+            );
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('base_url', $exception->errors());
+
+            throw $exception;
+        }
+    }
+
+    public function test_resolve_for_user_rejects_invalid_base_url(): void
+    {
+        $user = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-invalid-base@example.com',
+            'phone' => '01700000085',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        try {
+            app(WebsiteSyncService::class)->resolveForUser(
+                $user,
+                'localhost',
+                'Local WordPress',
+                'not-a-valid-base-url'
+            );
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('base_url', $exception->errors());
+
+            throw $exception;
+        }
+    }
+
     public function test_resolve_for_user_rejects_domain_owned_by_other_merchant(): void
     {
         $owner = User::create([

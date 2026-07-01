@@ -197,6 +197,7 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('setup/validate-domain', [UserController::class, 'validateSetupDomain'])->name('setup.validateDomain');
         Route::post('setup/generate-license', [UserController::class, 'setupGenerateLicense'])->name('setup.generateLicense');
         Route::get('websites', [UserController::class, 'websites'])->name('websites');
+        Route::post('websites/update', [UserController::class, 'updateWebsite'])->name('websites.update');
         Route::post('websites/delete', [UserController::class, 'destroyWebsite'])->name('websites.delete');
         Route::get('api-keys', [UserController::class, 'apiKeys'])->name('apiKeys');
         Route::get('packages', [UserController::class, 'packages'])->name('packages');

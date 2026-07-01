@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PackageHub;
 use App\Models\UserPackage;
 use App\Services\PackagePlanResolver;
+use App\Support\PackageCatalogFeatures;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -31,6 +32,7 @@ class PackageHubController extends Controller
     public function create(Request $request)
     {
         $validated = $this->validateCatalogPayload($request);
+        $features = PackageCatalogFeatures::normalize($validated['features'] ?? []);
 
         PackageHub::create([
             'title' => $validated['package_name'],
@@ -46,7 +48,7 @@ class PackageHubController extends Controller
             'total_website_connect' => $request->boolean('app_connect')
                 ? ($validated['total_website_connect'] ?? null)
                 : null,
-            'features' => $validated['features'],
+            'features' => $features,
             'is_active' => $request->boolean('is_active'),
             'is_special' => $request->boolean('is_special'),
             'created_by' => Auth::id(),
@@ -65,6 +67,7 @@ class PackageHubController extends Controller
         }
 
         $validated = $this->validateCatalogPayload($request);
+        $features = PackageCatalogFeatures::normalize($validated['features'] ?? []);
 
         $package->update([
             'title' => $validated['package_name'],
@@ -79,7 +82,7 @@ class PackageHubController extends Controller
             'total_website_connect' => $request->boolean('app_connect')
                 ? ($validated['total_website_connect'] ?? null)
                 : null,
-            'features' => $validated['features'],
+            'features' => $features,
             'is_active' => $request->boolean('is_active'),
             'is_special' => $request->boolean('is_special'),
             'updated_by' => Auth::id(),

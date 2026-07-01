@@ -56,4 +56,26 @@ class PackagePlanResolverTest extends TestCase
         $this->assertSame(10000, $payload['order_rate_token']);
         $this->assertFalse($payload['requires_order_limit']);
     }
+
+    public function test_map_plans_for_display_enriches_catalog_plans(): void
+    {
+        $resolver = app(PackagePlanResolver::class);
+
+        $catalog = PackageHub::create([
+            'title' => 'Starter',
+            'per_order_rate' => 0,
+            'package_duration' => '1_month',
+            'order_rate_token' => 1000,
+            'package_price' => 999,
+            'is_active' => true,
+            'features' => ['fraud_customer_checker' => true],
+        ]);
+
+        $display = $resolver->mapPlansForDisplay([$catalog]);
+
+        $this->assertCount(1, $display);
+        $this->assertSame('মাসিক প্ল্যান', $display[0]['duration_label']);
+        $this->assertSame('যা পাবেন', $display[0]['features_heading']);
+        $this->assertSame('ফ্রড কাস্টমার চেকার', $display[0]['top_features'][0]['label']);
+    }
 }

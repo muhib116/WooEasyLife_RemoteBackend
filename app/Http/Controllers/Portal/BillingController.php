@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
-use App\Models\PackageHub;
 use App\Models\PackagePaymentRequest;
 use App\Models\User;
 use App\Models\UserPackage;
@@ -21,7 +20,8 @@ class BillingController extends Controller
     public function __construct(
         protected PackagePaymentService $packagePaymentService,
         protected SubscriptionAlertService $subscriptionAlertService,
-        protected WebsiteAggregatorService $websiteAggregator
+        protected WebsiteAggregatorService $websiteAggregator,
+        protected PackagePlanResolver $planResolver,
     ) {
     }
 
@@ -54,20 +54,15 @@ class BillingController extends Controller
         $packages = $packagesQuery->get();
 
         $domains = $this->resolveDomains($merchant, $scopedWebsiteIds);
-        $planResolver = app(PackagePlanResolver::class);
-        $activePlans = PackageHub::query()
-            ->where('is_active', true)
-            ->orderBy('index')
-            ->orderBy('id')
-            ->get();
-
         $alerts = $this->subscriptionAlertService->collectPortalAlerts($merchant, $domains);
         $tab = $request->query('tab', 'payments');
 
         return Inertia::render('Portal/Billing/Index', [
             'payments' => $payments,
             'packages' => $packages,
-            'plans' => $planResolver->mapPlansPayload($activePlans),
+            'plans' => $this->planResolver->mapPlansForDisplay(
+                $this->packagePaymentService->listActivePlans()
+            ),
             'domains' => $domains,
             'alerts' => $alerts,
             'tab' => $tab,

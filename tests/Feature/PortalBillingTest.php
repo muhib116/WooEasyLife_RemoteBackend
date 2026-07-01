@@ -54,6 +54,31 @@ class PortalBillingTest extends TestCase
         ]);
     }
 
+    public function test_portal_billing_includes_enriched_catalog_plans(): void
+    {
+        [$merchant] = $this->createMerchantWithPlanAndPackage();
+
+        PackageHub::create([
+            'title' => 'Growth – 1 Month',
+            'per_order_rate' => 0,
+            'package_price' => 2499,
+            'package_duration' => '1_month',
+            'order_rate_token' => 3000,
+            'is_active' => true,
+            'index' => 2,
+            'features' => ['fraud_customer_checker' => true],
+        ]);
+
+        $this->actingAs($merchant)
+            ->get(route('portal.billing'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('plans', 1)
+                ->where('plans.0.duration_label', 'মাসিক প্ল্যান')
+                ->where('plans.0.features_heading', 'যা পাবেন')
+                ->has('plans.0.top_features', 1));
+    }
+
     public function test_portal_payment_request_is_not_blocked_when_plugin_intent_enforcement_enabled(): void
     {
         [$merchant, $plan] = $this->createMerchantWithPlanAndPackage();

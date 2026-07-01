@@ -43,15 +43,19 @@
                 </Link>
             </nav>
         </div>
+
+        <Toast position="bottom-right" group="br" />
     </div>
 </template>
 
 <script setup lang="ts">
 import MerchantPortalHeader from "./fragments/MerchantPortalHeader.vue";
 import MerchantPortalSidebar from "./fragments/MerchantPortalSidebar.vue";
+import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";
 import { useMerchantPortalNav } from "@/composables/useMerchantPortalNav";
 import { Icon } from "@/plugins";
 import { Head, Link } from "@inertiajs/vue3";
+import Toast from "primevue/toast";
 import { ref } from "vue";
 
 defineProps<{
@@ -60,4 +64,6 @@ defineProps<{
 
 const sidebarOpen = ref(false);
 const { navItems } = useMerchantPortalNav();
+
+useInertiaFlashToasts();
 </script>

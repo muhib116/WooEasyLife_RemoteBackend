@@ -165,6 +165,7 @@ import {
     isCatalogPackage,
     planOptionLabel,
 } from "@/data/packageCatalogDraft";
+import { syncPaymentFormTotals } from "@/utils/paymentFormTotals";
 import { computed } from "vue";
 
 type PlanOption = {
@@ -252,21 +253,7 @@ const updateField = (field: string, value: unknown) => {
 };
 
 const syncTotalAmount = () => {
-    if (!selectedPlan.value) {
-        return;
-    }
-
-    if (isCatalogPackage(selectedPlan.value)) {
-        props.form.total_amount = suggestedTotal.value;
-        props.form.order_limit = selectedPlan.value.order_rate_token ?? 0;
-        return;
-    }
-
-    if (!props.form.order_limit) {
-        return;
-    }
-
-    props.form.total_amount = suggestedTotal.value;
+    syncPaymentFormTotals(props.form, props.plans);
 };
 
 const onPlanChange = (value: number | null) => {

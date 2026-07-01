@@ -106,8 +106,7 @@
                             {{ featureSummary.total }} total
                         </p>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                            {{ featureSummary.pluginCount }} plugin ·
-                            {{ featureSummary.appCount }} app
+                            power features enabled
                         </p>
                     </div>
                 </div>
@@ -145,67 +144,25 @@
         </div>
 
         <div
-            v-if="!isLegacy && (featureSummary.pluginLabels.length || featureSummary.appLabels.length)"
-            class="grid gap-4 lg:grid-cols-2"
+            v-if="!isLegacy && featureSummary.labels.length"
+            class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-slate-900"
         >
-            <div
-                v-if="featureSummary.pluginLabels.length"
-                class="flex flex-col rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-slate-900"
-            >
-                <p class="mb-3 shrink-0 text-sm font-semibold text-gray-800 dark:text-gray-200">
-                    Plugin features
-                    <span class="ml-1 font-normal text-gray-500 dark:text-gray-400">
-                        ({{ featureSummary.pluginCount }})
-                    </span>
-                </p>
-                <ul class="max-h-52 space-y-2 overflow-y-auto pr-1">
-                    <li
-                        v-for="label in featureSummary.pluginLabels"
-                        :key="label"
-                        class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
-                    >
-                        <i class="pi pi-check-circle mt-0.5 shrink-0 text-emerald-500" />
-                        <span>{{ label }}</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div
-                v-if="
-                    featureSummary.appLabels.length ||
-                    (pkg.app_connect && featureSummary.pluginCount > 0)
-                "
-                class="flex flex-col rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-slate-900"
-            >
-                <p class="mb-3 shrink-0 text-sm font-semibold text-gray-800 dark:text-gray-200">
-                    App features
-                    <span class="ml-1 font-normal text-gray-500 dark:text-gray-400">
-                        ({{ featureSummary.appCount }})
-                    </span>
-                </p>
-                <ul class="max-h-52 space-y-2 overflow-y-auto pr-1">
-                    <li
-                        v-if="pkg.app_connect && featureSummary.pluginCount > 0"
-                        class="flex items-start gap-2 border-b border-gray-100 pb-2 text-sm font-semibold text-gray-800 dark:border-gray-800 dark:text-gray-200"
-                    >
-                        <i class="pi pi-check-circle mt-0.5 shrink-0 text-emerald-500" />
-                        <span>
-                            All plugin features
-                            <span class="font-normal text-gray-500 dark:text-gray-400">
-                                ({{ featureSummary.pluginCount }})
-                            </span>
-                        </span>
-                    </li>
-                    <li
-                        v-for="label in featureSummary.appLabels"
-                        :key="label"
-                        class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
-                    >
-                        <i class="pi pi-check-circle mt-0.5 shrink-0 text-primary-500" />
-                        <span>{{ label }}</span>
-                    </li>
-                </ul>
-            </div>
+            <p class="mb-3 shrink-0 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                Power Full Features
+                <span class="ml-1 font-normal text-gray-500 dark:text-gray-400">
+                    ({{ featureSummary.total }})
+                </span>
+            </p>
+            <ul class="max-h-52 space-y-2 overflow-y-auto pr-1">
+                <li
+                    v-for="label in featureSummary.labels"
+                    :key="label"
+                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
+                >
+                    <i class="pi pi-check-circle mt-0.5 shrink-0 text-emerald-500" />
+                    <span>{{ label }}</span>
+                </li>
+            </ul>
         </div>
 
         <div
@@ -235,7 +192,7 @@
 
 <script setup lang="ts">
 import {
-    enabledFeatureLabels,
+    enabledPowerFeatureLabels,
     isCatalogPackage,
     packageDurationLabel,
     websiteConnectLabel,
@@ -265,14 +222,11 @@ const durationLabel = computed(() => {
 });
 
 const featureSummary = computed(() => {
-    const { plugin, app } = enabledFeatureLabels(props.pkg.features);
+    const labels = enabledPowerFeatureLabels(props.pkg.features);
 
     return {
-        pluginCount: plugin.length,
-        appCount: app.length,
-        pluginLabels: plugin,
-        appLabels: app,
-        total: plugin.length + app.length,
+        labels,
+        total: labels.length,
     };
 });
 

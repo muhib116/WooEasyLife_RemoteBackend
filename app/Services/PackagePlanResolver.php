@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PackageHub;
 use App\Models\UserPackage;
+use App\Support\PlanDisplayPresenter;
 use Illuminate\Support\Carbon;
 
 class PackagePlanResolver
@@ -104,6 +105,36 @@ class PackagePlanResolver
             'is_special' => (bool) ($plan->is_special ?? false),
             'index' => (int) ($plan->index ?? 0),
         ];
+    }
+
+    /**
+     * @param  iterable<int, PackageHub>  $plans
+     * @return array<int, array<string, mixed>>
+     */
+    public function mapPlansForDisplay(iterable $plans): array
+    {
+        return collect($plans)
+            ->map(fn (PackageHub $plan) => PlanDisplayPresenter::enrich($this->toPlanPayload($plan)))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  iterable<int, PackageHub>  $plans
+     * @return array<int, array<string, mixed>>
+     */
+    public function mapPlansForPluginApi(iterable $plans): array
+    {
+        return $this->mapPlansForDisplay($plans);
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @return array<string, mixed>
+     */
+    public function enrichPlanForPluginApi(array $plan): array
+    {
+        return PlanDisplayPresenter::enrich($plan);
     }
 
     /**

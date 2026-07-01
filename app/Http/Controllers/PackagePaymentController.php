@@ -24,7 +24,7 @@ class PackagePaymentController extends Controller
 
     public function plans()
     {
-        $plans = $this->planResolver->mapPlansPayload(
+        $plans = $this->planResolver->mapPlansForPluginApi(
             $this->packagePaymentService->listActivePlans()
         );
 

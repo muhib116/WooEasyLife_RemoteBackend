@@ -194,12 +194,14 @@
             </div>
         </section>
 
-        <section class="space-y-3">
+        <section
+            class="space-y-4 rounded-xl border border-primary-200 bg-primary-50/40 p-4 dark:border-primary-500/20 dark:bg-primary-500/5"
+        >
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3
                     class="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400"
                 >
-                    Plugin features
+                    Power Full Features
                 </h3>
                 <div class="flex gap-2">
                     <Button
@@ -208,7 +210,7 @@
                         size="small"
                         severity="secondary"
                         outlined
-                        @click="setPluginFeatures(true)"
+                        @click="setPowerFeatures(true)"
                     />
                     <Button
                         type="button"
@@ -216,60 +218,36 @@
                         size="small"
                         severity="secondary"
                         outlined
-                        @click="setPluginFeatures(false)"
+                        @click="setPowerFeatures(false)"
                     />
                 </div>
             </div>
 
-            <div
-                v-for="(items, group) in pluginFeatureGroups"
-                :key="group"
-                class="rounded-xl border border-gray-200 p-4 dark:border-gray-700"
-            >
-                <p class="mb-3 text-sm font-semibold text-gray-800 dark:text-gray-200">
-                    {{ group }}
-                </p>
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <label
-                        v-for="item in items"
-                        :key="item.key"
-                        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800/60"
-                    >
-                        <Checkbox
-                            v-model="draft.features[item.key]"
-                            :input-id="item.key"
-                            binary
-                        />
-                        <span class="text-sm text-gray-700 dark:text-gray-300">
-                            {{ item.label }}
-                        </span>
-                    </label>
-                </div>
-            </div>
-        </section>
-
-        <section
-            class="space-y-4 rounded-xl border border-primary-200 bg-primary-50/40 p-4 dark:border-primary-500/20 dark:bg-primary-500/5"
-        >
-            <div
-                class="flex cursor-pointer items-center justify-between gap-3"
-                @click="draft.app_connect = !draft.app_connect"
-            >
-                <div>
-                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                        App Connect
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Enable WooEasyLife Android app for this package
-                    </p>
-                </div>
-                <ToggleSwitch
-                    v-model="draft.app_connect"
-                    class="pointer-events-none"
-                />
+            <div class="grid gap-3 sm:grid-cols-2">
+                <label
+                    v-for="item in powerFeatureDefinitions"
+                    :key="item.key"
+                    class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 hover:bg-white/60 dark:hover:bg-slate-800/60"
+                    :class="{
+                        'opacity-60': item.key === 'app_store_limit' && !draft.features.app_connect,
+                    }"
+                >
+                    <Checkbox
+                        v-model="draft.features[item.key]"
+                        :input-id="item.key"
+                        binary
+                        :disabled="item.key === 'app_store_limit' && !draft.features.app_connect"
+                    />
+                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                        {{ item.label }}
+                    </span>
+                </label>
             </div>
 
-            <div v-if="draft.app_connect" class="space-y-4 border-t border-primary-200/80 pt-4 dark:border-primary-500/20">
+            <div
+                v-if="draft.features.app_connect"
+                class="space-y-4 border-t border-primary-200/80 pt-4 dark:border-primary-500/20"
+            >
                 <div>
                     <label
                         for="total_website_connect"
@@ -285,48 +263,11 @@
                         option-value="value"
                         placeholder="Select store limit"
                         class="w-full"
+                        :disabled="!draft.features.app_store_limit"
                     />
-                </div>
-
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                        App features
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Enable “অ্যাপ স্টোর লিমিট” to allow more than one store.
                     </p>
-                    <div class="flex gap-2">
-                        <Button
-                            type="button"
-                            label="Check all"
-                            size="small"
-                            severity="secondary"
-                            outlined
-                            @click="setAppFeatures(true)"
-                        />
-                        <Button
-                            type="button"
-                            label="Uncheck all"
-                            size="small"
-                            severity="secondary"
-                            outlined
-                            @click="setAppFeatures(false)"
-                        />
-                    </div>
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <label
-                        v-for="item in appFeatureDefinitions"
-                        :key="item.key"
-                        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 hover:bg-white/60 dark:hover:bg-slate-800/60"
-                    >
-                        <Checkbox
-                            v-model="draft.features[item.key]"
-                            :input-id="`app-${item.key}`"
-                            binary
-                        />
-                        <span class="text-sm text-gray-700 dark:text-gray-300">
-                            {{ item.label }}
-                        </span>
-                    </label>
                 </div>
             </div>
         </section>
@@ -369,12 +310,12 @@
 
 <script setup lang="ts">
 import {
-    APP_FEATURE_DEFINITIONS,
+    applyFeatureDrivenAppFields,
     buildPackagePayload,
-    groupedPluginFeatures,
     PACKAGE_DURATION_OPTIONS,
-    PLUGIN_FEATURE_DEFINITIONS,
+    POWER_FULL_FEATURE_DEFINITIONS,
     setAllFeatures,
+    syncDraftAppFields,
     WEBSITE_CONNECT_OPTIONS,
 } from "@/data/packageCatalogDraft";
 import { Classic as ClassicEditor } from "@/plugins/form/editor";
@@ -408,36 +349,55 @@ const isFreeTrial = computed(() => draft.package_duration === "free_trial");
 
 const durationOptions = PACKAGE_DURATION_OPTIONS;
 const websiteConnectOptions = WEBSITE_CONNECT_OPTIONS;
-const pluginFeatureGroups = groupedPluginFeatures();
-const appFeatureDefinitions = APP_FEATURE_DEFINITIONS;
+const powerFeatureDefinitions = POWER_FULL_FEATURE_DEFINITIONS;
 
 watch(
-    () => draft.app_connect,
+    () => draft.features.app_connect,
     (enabled) => {
+        draft.app_connect = enabled;
+
         if (!enabled) {
-            draft.features = setAllFeatures(
-                draft.features,
-                false,
-                APP_FEATURE_DEFINITIONS.map((item) => item.key),
-            );
+            draft.features.app_store_limit = false;
+            draft.total_website_connect = 1;
         }
     },
 );
 
-function setPluginFeatures(enabled: boolean) {
-    draft.features = setAllFeatures(
-        draft.features,
-        enabled,
-        PLUGIN_FEATURE_DEFINITIONS.map((item) => item.key),
-    );
-}
+watch(
+    () => draft.features.app_store_limit,
+    (enabled) => {
+        if (!draft.features.app_connect) {
+            draft.features.app_store_limit = false;
+            return;
+        }
 
-function setAppFeatures(enabled: boolean) {
+        if (!enabled) {
+            draft.total_website_connect = 1;
+        } else if (draft.total_website_connect === 1) {
+            draft.total_website_connect = 3;
+        }
+    },
+);
+
+watch(
+    () => draft.total_website_connect,
+    (value) => {
+        if (!draft.features.app_connect) {
+            return;
+        }
+
+        draft.features.app_store_limit =
+            value === "unlimited" || Number(value) > 1;
+    },
+);
+
+function setPowerFeatures(enabled: boolean) {
     draft.features = setAllFeatures(
         draft.features,
         enabled,
-        APP_FEATURE_DEFINITIONS.map((item) => item.key),
+        POWER_FULL_FEATURE_DEFINITIONS.map((item) => item.key),
     );
+    applyFeatureDrivenAppFields(draft);
 }
 
 function validate(): boolean {
@@ -477,6 +437,9 @@ function onSubmit() {
     if (!validate()) {
         return;
     }
+
+    syncDraftAppFields(draft);
+    applyFeatureDrivenAppFields(draft);
 
     const payload = buildPackagePayload(draft);
     saving.value = true;

@@ -1,11 +1,10 @@
 import type {
-    AppFeatureKey,
     PackageCatalogDraft,
     PackageCatalogPayload,
     PackageDuration,
     PackageFeatureKey,
     PackageFeatures,
-    PluginFeatureKey,
+    PowerFeatureKey,
     WebsiteConnectLimit,
 } from "@/types/packageCatalog";
 
@@ -44,234 +43,85 @@ export const WEBSITE_CONNECT_OPTIONS: {
     { label: "Unlimited", value: "unlimited" },
 ];
 
-export const PLUGIN_FEATURE_DEFINITIONS: {
-    key: PluginFeatureKey;
+export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
+    app_connect: [
+        "one_click_app_connect",
+        "multistore_order_notifications",
+        "customer_call_identifier",
+        "cross_store_order_detection",
+        "call_history_with_duration",
+        "common_dashboard",
+        "courier_movement_notification",
+        "notification_sound_management",
+        "centralized_notifications",
+    ],
+    app_store_limit: [
+        "multistore_order_notifications",
+        "cross_store_order_detection",
+        "common_dashboard",
+        "centralized_notifications",
+    ],
+    fraud_customer_checker: ["fraud_customer_checker"],
+    sms_management: ["customer_sms_for_order", "bulk_sms"],
+    missing_orders: ["missing_orders", "missing_order_one_click_create"],
+    fake_order_protection: [
+        "duplicate_order_validation",
+        "checkout_form_validation",
+        "checkout_otp_validation",
+        "daily_order_limit",
+        "store_api_checkout_protection",
+        "ip_block",
+        "phone_email_block",
+        "device_block",
+        "bd_ip_restriction",
+    ],
+    customer_blacklist: ["customer_blacklist"],
+    custom_status_management: ["custom_status_manage"],
+    employee_management: ["admin_employee_manage"],
+    courier_automation: [
+        "three_courier_partner_integration",
+        "courier_entry_automation",
+        "courier_auto_status_sync",
+        "courier_webhook_integrations",
+    ],
+    ai_intelligence: [
+        "ai_text_order_create",
+        "ai_image_to_order_create",
+        "ai_incomplete_address_autocomplete",
+        "ai_driven_customer_scoring",
+        "customer_delivery_history",
+        "customer_behavior_track",
+        "repeat_customer_identifier",
+    ],
+    label_and_pos_sticker_print: ["pos_sticker_print", "invoice_print"],
+};
+
+export const POWER_FULL_FEATURE_DEFINITIONS: {
+    key: PowerFeatureKey;
     label: string;
-    group: string;
 }[] = [
-    {
-        key: "three_courier_partner_integration",
-        label: "Three Courier Partner Integration",
-        group: "Courier",
-    },
-    {
-        key: "courier_entry_automation",
-        label: "Courier Entry Automation",
-        group: "Courier",
-    },
-    {
-        key: "courier_auto_status_sync",
-        label: "Automatic Status Sync with Courier Partner",
-        group: "Courier",
-    },
-    {
-        key: "courier_webhook_integrations",
-        label: "Courier Webhook Integrations",
-        group: "Courier",
-    },
-    {
-        key: "fraud_customer_checker",
-        label: "Fraud Customer Checker",
-        group: "Customer",
-    },
-    {
-        key: "customer_delivery_history",
-        label: "AI Driven Customer Delivery History",
-        group: "Customer",
-    },
-    {
-        key: "customer_sms_for_order",
-        label: "Customer SMS For Order",
-        group: "SMS",
-    },
-    { key: "bulk_sms", label: "Bulk SMS", group: "SMS" },
-    {
-        key: "ai_text_order_create",
-        label: "Text order create",
-        group: "AI Featuree",
-    },
-    {
-        key: "ai_image_to_order_create",
-        label: "Image To Order Create",
-        group: "AI Featuree",
-    },
-    {
-        key: "ai_incomplete_address_autocomplete",
-        label: "Incomplete Address Auto Complete",
-        group: "AI Featuree",
-    },
-    {
-        key: "ai_driven_customer_scoring",
-        label: "AI Driven Customer Scoring",
-        group: "AI Featuree",
-    },
-    {
-        key: "checkout_form_validation",
-        label: "Checkout Form Validation",
-        group: "Checkout",
-    },
-    {
-        key: "duplicate_order_validation",
-        label: "Duplicate Order Validation",
-        group: "Orders",
-    },
-    {
-        key: "checkout_otp_validation",
-        label: "Checkout Page OTP Validation",
-        group: "Checkout",
-    },
-    { key: "ip_block", label: "IP Block", group: "Block & restrict" },
-    {
-        key: "phone_email_block",
-        label: "Phone Number / Email Block",
-        group: "Block & restrict",
-    },
-    { key: "device_block", label: "Device Block", group: "Block & restrict" },
-    {
-        key: "bd_ip_restriction",
-        label: "IP Restriction (Only Bangladeshi IP)",
-        group: "Block & restrict",
-    },
-    {
-        key: "store_api_checkout_protection",
-        label: "Store API Checkout Protection",
-        group: "Checkout",
-    },
-    {
-        key: "daily_order_limit",
-        label: "Daily Order Limit",
-        group: "Checkout",
-    },
-    {
-        key: "custom_status_manage",
-        label: "Custom Status Manage",
-        group: "Orders",
-    },
-    {
-        key: "customer_blacklist",
-        label: "Customer Black List",
-        group: "Block & restrict",
-    },
-    {
-        key: "database_migration",
-        label: "Database Migration",
-        group: "Tools",
-    },
-    {
-        key: "marketing_tools",
-        label: "Marketing Tools",
-        group: "Tools",
-    },
-    { key: "missing_orders", label: "Missing Orders", group: "Orders" },
-    {
-        key: "missing_order_one_click_create",
-        label: "One Click Order Creation From Missing Order",
-        group: "Orders",
-    },
-    {
-        key: "pos_sticker_print",
-        label: "POS Sticker Print",
-        group: "Print",
-    },
-    { key: "invoice_print", label: "Invoice Print", group: "Print" },
-    { key: "order_cloning", label: "Order Cloning", group: "Orders" },
-    {
-        key: "customer_behavior_track",
-        label: "AI Driven Customer Behavior Track",
-        group: "Customer",
-    },
-    {
-        key: "repeat_customer_identifier",
-        label: "Repeat Customer Identifier",
-        group: "Customer",
-    },
-    {
-        key: "order_source_identifier",
-        label: "Order Source Identifier",
-        group: "Orders",
-    },
-    {
-        key: "inline_shipping_change",
-        label: "Inline Shipping Information Change",
-        group: "Orders",
-    },
-    {
-        key: "order_note_management",
-        label: "Order Note Management",
-        group: "Orders",
-    },
-    { key: "cod_change", label: "COD Change", group: "Orders" },
-    {
-        key: "ordered_product_management",
-        label: "Ordered Product Management",
-        group: "Orders",
-    },
-    {
-        key: "order_edit_product_variation",
-        label: "Order Edit With Product Variation Handle",
-        group: "Orders",
-    },
-    {
-        key: "quick_action_tool",
-        label: "Quick Action Tool",
-        group: "Orders",
-    },
+    { key: "app_connect", label: "অ্যাপ কানেক্ট" },
+    { key: "app_store_limit", label: "অ্যাপ স্টোর লিমিট" },
+    { key: "fraud_customer_checker", label: "ফ্রড কাস্টমার চেকার" },
+    { key: "sms_management", label: "এসএমএস ম্যানেজমেন্ট" },
+    { key: "missing_orders", label: "মিসিং অর্ডার" },
+    { key: "fake_order_protection", label: "ফেক অর্ডার প্রোটেকশন" },
+    { key: "customer_blacklist", label: "কাস্টমার ব্ল্যাকলিস্ট" },
+    { key: "custom_status_management", label: "কাস্টম স্ট্যাটাস ম্যানেজমেন্ট" },
+    { key: "employee_management", label: "এমপ্লয়ী ম্যানেজমেন্ট" },
+    { key: "courier_automation", label: "কুরিয়ার অটোমেশন" },
+    { key: "ai_intelligence", label: "এআই ইন্টেলিজেন্স" },
+    { key: "label_and_pos_sticker_print", label: "লেবেল ও POS স্টিকার প্রিন্ট" },
 ];
 
-export const APP_FEATURE_DEFINITIONS: {
-    key: AppFeatureKey;
-    label: string;
-}[] = [
-    {
-        key: "one_click_app_connect",
-        label: "One Click App Connect",
-    },
-    {
-        key: "multistore_order_notifications",
-        label: "Multi Store New Order Notification in App",
-    },
-    {
-        key: "customer_call_identifier",
-        label: "Customer Call Identifier",
-    },
-    {
-        key: "cross_store_order_detection",
-        label: "Cross Store Order Detection",
-    },
-    {
-        key: "call_history_with_duration",
-        label: "Call History with Duration",
-    },
-    {
-        key: "common_dashboard",
-        label: "Common Dashboard For All Connected Store",
-    },
-    {
-        key: "courier_movement_notification",
-        label: "Courier Product Movement Notification",
-    },
-    {
-        key: "notification_sound_management",
-        label: "Individual Notification Sound Management",
-    },
-    {
-        key: "admin_employee_manage",
-        label: "Admin and Employee Manage",
-    },
-    {
-        key: "centralized_notifications",
-        label: "Centralized Notifications",
-    },
-];
+const LEGACY_KEYS = new Set(
+    Object.values(POWER_TO_LEGACY_MAP).flatMap((keys) => keys),
+);
 
 function defaultFeatureMap(): PackageFeatures {
     const features = {} as PackageFeatures;
 
-    for (const item of PLUGIN_FEATURE_DEFINITIONS) {
-        features[item.key] = true;
-    }
-
-    for (const item of APP_FEATURE_DEFINITIONS) {
+    for (const item of POWER_FULL_FEATURE_DEFINITIONS) {
         features[item.key] = true;
     }
 
@@ -294,39 +144,117 @@ export function buildDefaultPackageDraft(): PackageCatalogDraft {
     };
 }
 
-export function groupedPluginFeatures(): Record<string, typeof PLUGIN_FEATURE_DEFINITIONS> {
-    return PLUGIN_FEATURE_DEFINITIONS.reduce(
-        (groups, item) => {
-            if (!groups[item.group]) {
-                groups[item.group] = [];
-            }
-
-            groups[item.group].push(item);
-
-            return groups;
-        },
-        {} as Record<string, typeof PLUGIN_FEATURE_DEFINITIONS>,
-    );
-}
-
 function resolveWebsiteConnectLimit(
     value: WebsiteConnectLimit,
     appConnect: boolean,
+    appStoreLimit: boolean,
 ): number | null {
     if (!appConnect) {
         return null;
     }
 
+    if (!appStoreLimit) {
+        return 1;
+    }
+
     return value === "unlimited" ? null : value;
+}
+
+function looksLikePowerFormat(
+    power: Partial<PackageFeatures>,
+    original: Record<string, boolean>,
+): boolean {
+    const powerKeyHits = Object.keys(power).filter((key) =>
+        POWER_FULL_FEATURE_DEFINITIONS.some((item) => item.key === key),
+    ).length;
+    const legacyKeyHits = Object.keys(original).filter((key) =>
+        LEGACY_KEYS.has(key),
+    ).length;
+
+    if (powerKeyHits === 0) {
+        return false;
+    }
+
+    return legacyKeyHits === 0 || powerKeyHits >= legacyKeyHits;
+}
+
+export function collapseToPowerFeatures(
+    features?: Partial<PackageFeatures> | Record<string, boolean> | null,
+): PackageFeatures {
+    const source = features ?? {};
+    const power = {} as PackageFeatures;
+
+    for (const item of POWER_FULL_FEATURE_DEFINITIONS) {
+        if (item.key in source) {
+            power[item.key] = Boolean(source[item.key]);
+        }
+    }
+
+    if (looksLikePowerFormat(power, source as Record<string, boolean>)) {
+        for (const item of POWER_FULL_FEATURE_DEFINITIONS) {
+            if (!(item.key in power)) {
+                power[item.key] = false;
+            }
+        }
+
+        return power;
+    }
+
+    const collapsed = {} as PackageFeatures;
+
+    for (const item of POWER_FULL_FEATURE_DEFINITIONS) {
+        collapsed[item.key] = false;
+    }
+
+    for (const item of POWER_FULL_FEATURE_DEFINITIONS) {
+        const legacyKeys = POWER_TO_LEGACY_MAP[item.key] ?? [];
+
+        collapsed[item.key] = legacyKeys.some((legacyKey) =>
+            Boolean(source[legacyKey]),
+        );
+
+        if (item.key in source) {
+            collapsed[item.key] =
+                Boolean(source[item.key]) || collapsed[item.key];
+        }
+    }
+
+    return collapsed;
+}
+
+export function syncDraftAppFields(draft: PackageCatalogDraft): void {
+    draft.features.app_connect = draft.app_connect;
+
+    const allowsMultiStore =
+        draft.app_connect &&
+        (draft.total_website_connect === "unlimited" ||
+            Number(draft.total_website_connect) > 1);
+
+    draft.features.app_store_limit = draft.app_connect && allowsMultiStore;
+}
+
+export function applyFeatureDrivenAppFields(draft: PackageCatalogDraft): void {
+    draft.app_connect = Boolean(draft.features.app_connect);
+
+    if (!draft.app_connect) {
+        draft.features.app_store_limit = false;
+        return;
+    }
+
+    if (!draft.features.app_store_limit) {
+        draft.total_website_connect = 1;
+    }
 }
 
 function normalizeFeaturesForPayload(
     draft: PackageCatalogDraft,
 ): PackageFeatures {
-    const features = { ...draft.features };
+    syncDraftAppFields(draft);
 
-    for (const item of APP_FEATURE_DEFINITIONS) {
-        features[item.key] = draft.app_connect ? features[item.key] : false;
+    const features = collapseToPowerFeatures(draft.features);
+
+    if (!features.app_connect) {
+        features.app_store_limit = false;
     }
 
     return features;
@@ -335,14 +263,10 @@ function normalizeFeaturesForPayload(
 export function buildPackagePayload(
     draft: PackageCatalogDraft,
 ): PackageCatalogPayload {
+    applyFeatureDrivenAppFields(draft);
+
     const features = normalizeFeaturesForPayload(draft);
     const enabledFeatureCount = Object.values(features).filter(Boolean).length;
-    const pluginFeatureCount = PLUGIN_FEATURE_DEFINITIONS.filter(
-        (item) => features[item.key],
-    ).length;
-    const appFeatureCount = APP_FEATURE_DEFINITIONS.filter(
-        (item) => features[item.key],
-    ).length;
 
     return {
         package_name: draft.package_name.trim(),
@@ -358,13 +282,110 @@ export function buildPackagePayload(
         total_website_connect: resolveWebsiteConnectLimit(
             draft.total_website_connect,
             draft.app_connect,
+            Boolean(features.app_store_limit),
         ),
         features,
         meta: {
             enabled_feature_count: enabledFeatureCount,
-            plugin_feature_count: pluginFeatureCount,
-            app_feature_count: appFeatureCount,
+            power_feature_count: enabledFeatureCount,
         },
+    };
+}
+
+export function buildAdjustAppFieldsFromSubscription(
+    userPackage?: {
+        app_connect?: boolean | null;
+        total_website_connect?: number | null;
+        features?: Partial<PackageFeatures> | Record<string, boolean> | null;
+    } | null,
+    hubPackage?: {
+        app_connect?: boolean;
+        total_website_connect?: number | null;
+        features?: Partial<PackageFeatures> | Record<string, boolean> | null;
+    } | null,
+): {
+    app_connect: boolean;
+    total_website_connect: WebsiteConnectLimit;
+    features: PackageFeatures;
+} {
+    const features = normalizeFeatureMap(
+        userPackage?.features ?? hubPackage?.features,
+    );
+
+    const appConnect =
+        userPackage?.app_connect ??
+        hubPackage?.app_connect ??
+        Boolean(features.app_connect);
+
+    features.app_connect = appConnect;
+
+    let totalWebsiteConnect: WebsiteConnectLimit;
+
+    if (userPackage?.app_connect !== null && userPackage?.app_connect !== undefined) {
+        totalWebsiteConnect =
+            userPackage.total_website_connect == null
+                ? "unlimited"
+                : (userPackage.total_website_connect as WebsiteConnectLimit);
+    } else if (hubPackage) {
+        totalWebsiteConnect =
+            hubPackage.total_website_connect == null
+                ? "unlimited"
+                : (hubPackage.total_website_connect as WebsiteConnectLimit);
+    } else {
+        totalWebsiteConnect = features.app_store_limit ? 3 : 1;
+    }
+
+    if (!appConnect) {
+        features.app_store_limit = false;
+        totalWebsiteConnect = 1;
+    } else {
+        features.app_store_limit =
+            totalWebsiteConnect === "unlimited" ||
+            Number(totalWebsiteConnect) > 1;
+    }
+
+    return {
+        app_connect: appConnect,
+        total_website_connect: totalWebsiteConnect,
+        features,
+    };
+}
+
+export function buildAdjustSubscriptionPayload<
+    T extends Record<string, unknown> & {
+        features: PackageFeatures;
+        app_connect: boolean;
+        total_website_connect: WebsiteConnectLimit;
+        plan_type?: string;
+    },
+>(form: T): T {
+    if (form.plan_type !== "catalog") {
+        return form;
+    }
+
+    form.app_connect = Boolean(form.features.app_connect);
+    form.features = { ...form.features, app_connect: form.app_connect };
+
+    if (!form.app_connect) {
+        form.features.app_store_limit = false;
+        form.total_website_connect = 1;
+    } else {
+        form.features.app_store_limit =
+            form.total_website_connect === "unlimited" ||
+            Number(form.total_website_connect) > 1;
+    }
+
+    const features = collapseToPowerFeatures(form.features);
+
+    return {
+        ...form,
+        app_connect: form.app_connect,
+        total_website_connect: resolveWebsiteConnectLimit(
+            form.total_website_connect,
+            form.app_connect,
+            Boolean(features.app_store_limit),
+        ) as unknown as WebsiteConnectLimit,
+        features,
     };
 }
 
@@ -378,13 +399,20 @@ export function setAllFeatures(
     keys?: PackageFeatureKey[],
 ): PackageFeatures {
     const next = { ...features };
-    const targetKeys = keys ?? (Object.keys(features) as PackageFeatureKey[]);
+    const targetKeys =
+        keys ?? POWER_FULL_FEATURE_DEFINITIONS.map((item) => item.key);
 
     for (const key of targetKeys) {
         next[key] = enabled;
     }
 
     return next;
+}
+
+export function normalizeFeatureMap(
+    features?: Partial<PackageFeatures> | Record<string, boolean> | null,
+): PackageFeatures {
+    return collapseToPowerFeatures(features);
 }
 
 export function isCatalogPackage(pkg: {
@@ -468,24 +496,6 @@ export function groupPlansForSelect(
     return groups;
 }
 
-function mergePackageFeatures(
-    stored?: Partial<PackageFeatures> | Record<string, boolean> | null,
-): PackageFeatures {
-    const features = defaultFeatureMap();
-
-    if (!stored) {
-        return features;
-    }
-
-    for (const key of Object.keys(features) as PackageFeatureKey[]) {
-        if (key in stored) {
-            features[key] = Boolean(stored[key]);
-        }
-    }
-
-    return features;
-}
-
 export function buildDraftFromPackageHub(pkg: {
     title?: string | null;
     package_duration?: PackageDuration | string | null;
@@ -500,6 +510,12 @@ export function buildDraftFromPackageHub(pkg: {
     features?: Partial<PackageFeatures> | Record<string, boolean> | null;
 }): PackageCatalogDraft {
     const appConnect = Boolean(pkg.app_connect);
+    const features = collapseToPowerFeatures(pkg.features);
+
+    features.app_connect = appConnect;
+    features.app_store_limit =
+        appConnect &&
+        (pkg.total_website_connect == null || pkg.total_website_connect > 1);
 
     return {
         package_name: pkg.title?.trim() || "",
@@ -515,7 +531,7 @@ export function buildDraftFromPackageHub(pkg: {
             pkg.total_website_connect == null
                 ? "unlimited"
                 : (pkg.total_website_connect as WebsiteConnectLimit),
-        features: mergePackageFeatures(pkg.features),
+        features,
     };
 }
 
@@ -534,16 +550,35 @@ export function websiteConnectLabel(
     return `${value} store${value === 1 ? "" : "s"}`;
 }
 
+export function enabledPowerFeatureLabels(
+    features?: Partial<PackageFeatures> | Record<string, boolean> | null,
+): string[] {
+    const normalized = collapseToPowerFeatures(features);
+
+    return POWER_FULL_FEATURE_DEFINITIONS.filter(
+        (item) => normalized[item.key],
+    ).map((item) => item.label);
+}
+
+/** @deprecated Use enabledPowerFeatureLabels */
 export function enabledFeatureLabels(
     features?: Partial<PackageFeatures> | Record<string, boolean> | null,
 ): { plugin: string[]; app: string[] } {
-    const plugin = PLUGIN_FEATURE_DEFINITIONS.filter(
-        (item) => features?.[item.key],
-    ).map((item) => item.label);
+    const labels = enabledPowerFeatureLabels(features);
 
-    const app = APP_FEATURE_DEFINITIONS.filter(
-        (item) => features?.[item.key],
-    ).map((item) => item.label);
-
-    return { plugin, app };
+    return {
+        plugin: labels.filter(
+            (label) =>
+                ![
+                    "অ্যাপ কানেক্ট",
+                    "অ্যাপ স্টোর লিমিট",
+                    "এমপ্লয়ী ম্যানেজমেন্ট",
+                ].includes(label),
+        ),
+        app: labels.filter((label) =>
+            ["অ্যাপ কানেক্ট", "অ্যাপ স্টোর লিমিট", "এমপ্লয়ী ম্যানেজমেন্ট"].includes(
+                label,
+            ),
+        ),
+    };
 }

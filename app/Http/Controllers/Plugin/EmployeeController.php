@@ -66,7 +66,7 @@ class EmployeeController extends Controller
 
         try {
             $website = $this->pluginEmployeeService->resolveCurrentWebsite($merchant, $request);
-            $employee = $this->pluginEmployeeService->create(
+            $result = $this->pluginEmployeeService->create(
                 $merchant,
                 $this->pluginEmployeeService->requestPayload($request),
                 $website['website_id']
@@ -76,7 +76,8 @@ class EmployeeController extends Controller
         }
 
         return $this->successResponse([
-            'employee' => $employee,
+            'employee' => $result['employee'],
+            'store_sync' => $result['store_sync'] ?? [],
         ], 'Employee created successfully.', 201);
     }
 
@@ -98,7 +99,7 @@ class EmployeeController extends Controller
 
         try {
             $website = $this->pluginEmployeeService->resolveCurrentWebsite($merchant, $request);
-            $updated = $this->pluginEmployeeService->update(
+            $result = $this->pluginEmployeeService->update(
                 $employee,
                 $merchant,
                 $this->pluginEmployeeService->requestPayload($request),
@@ -109,7 +110,8 @@ class EmployeeController extends Controller
         }
 
         return $this->successResponse([
-            'employee' => $updated,
+            'employee' => $result['employee'],
+            'store_sync' => $result['store_sync'] ?? [],
         ], 'Employee updated successfully.');
     }
 
@@ -118,9 +120,9 @@ class EmployeeController extends Controller
         $merchant = $this->merchant();
         $employee = $this->pluginEmployeeService->findForMerchant($merchant, $employeeId);
 
-        $this->pluginEmployeeService->delete($employee, $merchant);
+        $storeSync = $this->pluginEmployeeService->delete($employee, $merchant);
 
-        return $this->successResponse(null, 'Employee removed successfully.');
+        return $this->successResponse($storeSync, 'Employee removed successfully.');
     }
 
     private function merchant(): User

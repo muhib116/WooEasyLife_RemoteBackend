@@ -5,6 +5,7 @@ namespace App\Services\Courier;
 use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
 use App\Models\CourierShipment;
+use App\Models\Website;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -352,6 +353,18 @@ class WordPressCourierForwarder extends Controller
 
         if ($stored !== '') {
             $candidates[] = $stored;
+        }
+
+        if ($accessToken?->website_id) {
+            $website = Website::query()->find($accessToken->website_id);
+
+            if ($website?->base_url) {
+                $baseUrl = rtrim((string) $website->base_url, '/');
+
+                if ($baseUrl !== '' && ! in_array($baseUrl, $candidates, true)) {
+                    $candidates[] = $baseUrl;
+                }
+            }
         }
 
         $domain = trim((string) ($accessToken?->domain ?? $shipment->site_domain ?? ''));

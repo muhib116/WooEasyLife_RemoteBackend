@@ -94,16 +94,17 @@
                     paginator
                     :rows="10"
                     :rows-per-page-options="[10, 25, 50]"
-                    responsive-layout="scroll"
-                    class="professional-table text-sm"
+                    scrollable
+                    table-style="min-width: 72rem"
+                    class="package-catalog-table professional-table text-sm"
                 >
-                    <Column field="title" header="Package">
+                    <Column field="title" header="Package" style="min-width: 14rem">
                         <template #body="{ data }">
                             <div>
                                 <p
                                     class="font-semibold text-gray-900 dark:text-gray-100"
                                 >
-                                    <span class="inline-flex items-center gap-1.5">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
                                         {{ data.title || "Untitled" }}
                                         <span
                                             v-if="data.is_special"
@@ -124,22 +125,24 @@
                             </div>
                         </template>
                     </Column>
-                    <Column header="Duration">
+                    <Column header="Duration" style="min-width: 7rem">
                         <template #body="{ data }">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">
-                                {{ formatDuration(data.package_duration) }}
-                            </span>
-                            <p
-                                v-if="data.package_duration === 'free_trial' && data.trial_days"
-                                class="text-xs text-gray-500 dark:text-gray-400"
-                            >
-                                {{ data.trial_days }} days
-                            </p>
+                            <div class="whitespace-nowrap">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">
+                                    {{ formatDuration(data.package_duration) }}
+                                </span>
+                                <p
+                                    v-if="data.package_duration === 'free_trial' && data.trial_days"
+                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{ data.trial_days }} days
+                                </p>
+                            </div>
                         </template>
                     </Column>
-                    <Column header="Pricing">
+                    <Column header="Pricing" style="min-width: 8rem">
                         <template #body="{ data }">
-                            <div v-if="data.package_price != null">
+                            <div v-if="data.package_price != null" class="whitespace-nowrap">
                                 <p class="font-semibold text-gray-900 dark:text-gray-100">
                                     {{ formatPackagePrice(data.package_price) }}
                                 </p>
@@ -150,9 +153,9 @@
                             <span v-else class="text-gray-400">—</span>
                         </template>
                     </Column>
-                    <Column header="Tokens">
+                    <Column header="Tokens" style="min-width: 9rem">
                         <template #body="{ data }">
-                            <div v-if="data.order_rate_token != null">
+                            <div v-if="data.order_rate_token != null" class="whitespace-nowrap">
                                 <p class="font-semibold text-gray-900 dark:text-gray-100">
                                     {{ data.order_rate_token }}
                                 </p>
@@ -160,7 +163,7 @@
                                     order rate tokens
                                 </p>
                             </div>
-                            <div v-else-if="data.per_order_rate">
+                            <div v-else-if="data.per_order_rate" class="whitespace-nowrap">
                                 <p class="font-semibold text-gray-900 dark:text-gray-100">
                                     {{ data.per_order_rate }}
                                 </p>
@@ -171,7 +174,7 @@
                             <span v-else class="text-gray-400">—</span>
                         </template>
                     </Column>
-                    <Column header="App">
+                    <Column header="App" style="min-width: 4.5rem">
                         <template #body="{ data }">
                             <StatusBadge
                                 v-if="data.app_connect"
@@ -185,7 +188,7 @@
                             />
                         </template>
                     </Column>
-                    <Column header="Status">
+                    <Column header="Status" style="min-width: 5.5rem">
                         <template #body="{ data }">
                             <StatusBadge
                                 v-if="data.deleted_at"
@@ -199,22 +202,31 @@
                             />
                         </template>
                     </Column>
-                    <Column header="Created">
+                    <Column header="Created" style="min-width: 10rem">
                         <template #body="{ data }">
-                            <div>{{ formatDate(data.created_at) }}</div>
-                            <div
-                                class="text-xs text-gray-500 dark:text-gray-400"
-                            >
-                                {{ data.creator?.name || "System" }}
+                            <div class="whitespace-nowrap">
+                                <div>{{ formatDate(data.created_at) }}</div>
+                                <div
+                                    class="text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{ data.creator?.name || "System" }}
+                                </div>
                             </div>
                         </template>
                     </Column>
-                    <Column header="Updated">
+                    <Column header="Updated" style="min-width: 10rem">
                         <template #body="{ data }">
-                            {{ formatDate(data.updated_at) }}
+                            <div class="whitespace-nowrap">
+                                {{ formatDate(data.updated_at) }}
+                            </div>
                         </template>
                     </Column>
-                    <Column header="Actions" style="width: 8rem">
+                    <Column
+                        header="Actions"
+                        frozen
+                        align-frozen="right"
+                        style="width: 8rem; min-width: 8rem"
+                    >
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
                                 <Button
@@ -528,3 +540,47 @@ watch(
     { immediate: true },
 );
 </script>
+
+<style scoped>
+:deep(.package-catalog-table.professional-table .p-datatable-frozen-column) {
+    box-shadow: -6px 0 10px -6px rgb(15 23 42 / 0.12);
+}
+</style>
+
+<style>
+.package-catalog-table.professional-table .p-datatable-thead > tr > th.p-datatable-frozen-column {
+    z-index: 3;
+}
+
+.package-catalog-table.professional-table .p-datatable-tbody > tr > td.p-datatable-frozen-column {
+    z-index: 2;
+}
+
+html.dark .package-catalog-table.professional-table .p-datatable-frozen-column {
+    box-shadow: -6px 0 10px -6px rgb(0 0 0 / 0.35);
+}
+
+html.dark .package-catalog-table.professional-table .p-datatable-thead > tr > th.p-datatable-frozen-column {
+    background: rgb(30 41 59);
+}
+
+html.dark .package-catalog-table.professional-table .p-datatable-tbody > tr > td.p-datatable-frozen-column {
+    background: rgb(30 41 59);
+}
+
+html.dark .package-catalog-table.professional-table .p-datatable-tbody > tr:hover > td.p-datatable-frozen-column {
+    background: rgb(51 65 85);
+}
+
+html:not(.dark) .package-catalog-table.professional-table .p-datatable-thead > tr > th.p-datatable-frozen-column {
+    background: rgb(248 250 252);
+}
+
+html:not(.dark) .package-catalog-table.professional-table .p-datatable-tbody > tr > td.p-datatable-frozen-column {
+    background: rgb(255 255 255);
+}
+
+html:not(.dark) .package-catalog-table.professional-table .p-datatable-tbody > tr:hover > td.p-datatable-frozen-column {
+    background: rgb(248 250 252);
+}
+</style>

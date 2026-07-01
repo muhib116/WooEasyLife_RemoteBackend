@@ -122,13 +122,7 @@ class PluginEmployeeService
      */
     public function listWebsitesForMerchant(User $merchant): Collection
     {
-        return $this->employeeService
-            ->assignableWebsitesForMerchant($merchant)
-            ->map(fn (Website $website) => [
-                'id' => $website->id,
-                'domain' => $website->domain,
-                'title' => $website->title,
-            ]);
+        return $this->employeeService->assignableWebsitesForMerchant($merchant);
     }
 
     /**
@@ -159,27 +153,42 @@ class PluginEmployeeService
 
     /**
      * @param  array<string, mixed>  $data
+     * @return array{employee: array<string, mixed>, store_sync: array<int, array<string, mixed>>}
      */
     public function create(User $merchant, array $data, ?int $websiteId = null): array
     {
         $employee = $this->employeeService->create($merchant, $data);
 
-        return $this->formatEmployee($employee, $websiteId);
+        return [
+            'employee' => $this->formatEmployee($employee, $websiteId),
+            'store_sync' => $this->employeeService->pullLastStoreSync(),
+        ];
     }
 
     /**
      * @param  array<string, mixed>  $data
+     * @return array{employee: array<string, mixed>, store_sync: array<int, array<string, mixed>>}
      */
     public function update(MerchantEmployee $employee, User $merchant, array $data, ?int $websiteId = null): array
     {
         $employee = $this->employeeService->update($employee, $merchant, $data);
 
-        return $this->formatEmployee($employee, $websiteId);
+        return [
+            'employee' => $this->formatEmployee($employee, $websiteId),
+            'store_sync' => $this->employeeService->pullLastStoreSync(),
+        ];
     }
 
-    public function delete(MerchantEmployee $employee, User $merchant): void
+    /**
+     * @return array{store_sync: array<int, array<string, mixed>>}
+     */
+    public function delete(MerchantEmployee $employee, User $merchant): array
     {
         $this->employeeService->delete($employee, $merchant);
+
+        return [
+            'store_sync' => $this->employeeService->pullLastStoreSync(),
+        ];
     }
 
     /**
@@ -231,7 +240,7 @@ class PluginEmployeeService
     {
         return [
             'name' => ($updating ? 'sometimes|' : '').'required|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => ($updating ? 'sometimes|' : '').'required|email|max:255',
             'phone' => ($updating ? 'sometimes|' : '').'required|string|max:50',
             'address' => 'nullable|string|max:1000',
             'role_id' => ($updating ? 'sometimes|' : '').'required|integer',

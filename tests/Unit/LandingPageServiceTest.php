@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\PackageHub;
 use App\Services\LandingPageService;
+use App\Support\PackageCatalogFeatures;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -23,18 +24,7 @@ class LandingPageServiceTest extends TestCase
             'app_connect' => true,
             'is_special' => true,
             'is_active' => true,
-            'features' => [
-                'fraud_customer_checker' => true,
-                'ai_text_order_create' => true,
-                'ai_image_to_order_create' => true,
-                'common_dashboard' => true,
-                'multistore_order_notifications' => true,
-                'three_courier_partner_integration' => true,
-                'customer_sms_for_order' => true,
-                'admin_employee_manage' => true,
-                'call_history_with_duration' => true,
-                'order_source_identifier' => true,
-            ],
+            'features' => PackageCatalogFeatures::map(),
         ]);
 
         $payload = app(LandingPageService::class)->payload();
@@ -42,7 +32,7 @@ class LandingPageServiceTest extends TestCase
         $this->assertNotNull($payload['featuredPlan']);
         $this->assertSame('Pro Plus – 1 Month', $payload['featuredPlan']['title']);
         $this->assertNotEmpty($payload['featureHighlights']);
-        $this->assertStringContainsString('টেক্সট', $payload['featureHighlights'][0]['label']);
+        $this->assertSame('অ্যাপ কানেক্ট', $payload['featureHighlights'][0]['label']);
         $this->assertNotEmpty($payload['conversionFeatures']);
         $this->assertNotEmpty($payload['heroBullets']);
         $this->assertNotEmpty($payload['hero']);

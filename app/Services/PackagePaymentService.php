@@ -31,6 +31,7 @@ class PackagePaymentService
     {
         return PackageHub::query()
             ->where('is_active', true)
+            ->whereNotNull('package_duration')
             ->orderBy('index')
             ->orderBy('id')
             ->get();
@@ -356,30 +357,38 @@ class PackagePaymentService
     {
         $paymentRequest->loadMissing('packageHub:id,title');
 
-        $planTitle = $paymentRequest->packageHub?->title ?? 'Selected plan';
+        $display = config('package_catalog.plugin_display', []);
+        $planTitle = $paymentRequest->packageHub?->title
+            ?? ($display['submission_selected_plan_bn'] ?? 'নির্বাচিত প্ল্যান');
+        $amount = number_format((float) $paymentRequest->total_amount, 0, '.', ',');
+        $detail = str_replace(
+            [':plan', ':amount', ':txn'],
+            [$planTitle, $amount, (string) $paymentRequest->transaction_id],
+            $display['submission_step_detail_bn'] ?? ':plan — :amount টাকা (ট্রানজেকশন: :txn)',
+        );
 
         return [
             'status' => 'pending_review',
-            'title' => 'Payment submitted successfully',
-            'message' => 'Your payment is pending admin verification. Your current subscription stays active until approval.',
+            'title' => $display['submission_title_bn'] ?? 'পেমেন্ট সফলভাবে জমা হয়েছে',
+            'message' => $display['submission_message_bn'] ?? 'আপনার পেমেন্ট এডমিন যাচাইয়ের অপেক্ষায় আছে।',
             'steps' => [
                 [
                     'step' => 1,
-                    'label' => 'Payment submitted',
+                    'label' => $display['submission_step_submitted_bn'] ?? 'পেমেন্ট জমা হয়েছে',
                     'status' => 'completed',
-                    'detail' => "{$planTitle} — {$paymentRequest->total_amount} TK (Txn: {$paymentRequest->transaction_id})",
+                    'detail' => $detail,
                 ],
                 [
                     'step' => 2,
-                    'label' => 'Waiting for verification',
+                    'label' => $display['submission_step_waiting_bn'] ?? 'যাচাইয়ের অপেক্ষায়',
                     'status' => 'in_progress',
-                    'detail' => 'Our team will verify your transaction shortly.',
+                    'detail' => $display['submission_step_waiting_detail_bn'] ?? 'আমাদের টিম শীঘ্রই আপনার ট্রানজেকশন যাচাই করবে।',
                 ],
                 [
                     'step' => 3,
-                    'label' => 'Plan activation',
+                    'label' => $display['submission_step_activation_bn'] ?? 'প্ল্যান সক্রিয়করণ',
                     'status' => 'pending',
-                    'detail' => 'Your plan will update automatically after approval.',
+                    'detail' => $display['submission_step_activation_detail_bn'] ?? 'অনুমোদনের পর প্ল্যান স্বয়ংক্রিয়ভাবে আপডেট হবে।',
                 ],
             ],
         ];
@@ -668,27 +677,33 @@ class PackagePaymentService
         string $subscriptionStatus,
         int $remainingOrder
     ): string {
-        if ($intent === SubscriptionPaymentIntentService::INTENT_UPGRADE && $subscriptionStatus === 'active') {
-            $remainingDetail = $remainingOrder > 0
-                ? " You currently have {$remainingOrder} unused order(s)."
-                : '';
+        $notes = config('package_catalog.plugin_display.pricing_notes_bn', []);
 
-            return 'Full plan price applies. Unused quota and remaining subscription time are not credited toward this upgrade.' . $remainingDetail;
+        if ($intent === SubscriptionPaymentIntentService::INTENT_UPGRADE && $subscriptionStatus === 'active') {
+            if ($remainingOrder > 0) {
+                return str_replace(
+                    ':count',
+                    (string) $remainingOrder,
+                    $notes['upgrade_remaining'] ?? $notes['upgrade'] ?? ''
+                );
+            }
+
+            return $notes['upgrade'] ?? '';
         }
 
         if ($intent === SubscriptionPaymentIntentService::INTENT_DOWNGRADE && $subscriptionStatus === 'active') {
-            return 'Downgrade takes effect after payment approval. Unused quota and remaining subscription time are not credited.';
+            return $notes['downgrade'] ?? '';
         }
 
         if ($intent === SubscriptionPaymentIntentService::INTENT_RENEW) {
-            return 'Renewal replaces your current quota with the purchased amount.';
+            return $notes['renew'] ?? '';
         }
 
         if ($intent === SubscriptionPaymentIntentService::INTENT_SUBSCRIBE) {
-            return 'First-time subscription. Plan activates after payment approval.';
+            return $notes['subscribe'] ?? '';
         }
 
-        return 'Plan activates after payment approval.';
+        return $notes['default'] ?? '';
     }
 
     private function freeTrialBlockMessage(
@@ -702,7 +717,10 @@ class PackagePaymentService
         }
 
         if ($this->domainTrial->hasDomainUsedFreeTrial($domain)) {
-            return 'This store has already used a free trial.';
+            return config(
+                'package_catalog.plugin_display.pricing_notes_bn.free_trial_used',
+                'এই স্টোরের ফ্রি ট্রায়াল ইতিমধ্যে ব্যবহার করা হয়েছে।'
+            );
         }
 
         if ($existing && $subscriptionStatus === 'active') {

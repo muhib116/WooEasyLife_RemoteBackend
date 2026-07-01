@@ -54,7 +54,7 @@ class PackagePaymentAdminController extends Controller
         $user->loadCount(['websites', 'merchantEmployees']);
         $planResolver = app(PackagePlanResolver::class);
         $activePlans = PackageHub::query()->where('is_active', true)->orderBy('index')->orderBy('id')->get();
-        $plans = $planResolver->mapPlansPayload($activePlans);
+        $plans = $planResolver->mapPlansForDisplay($activePlans);
 
         $payments = PackagePaymentRequest::query()
             ->with('packageHub:id,title,per_order_rate')

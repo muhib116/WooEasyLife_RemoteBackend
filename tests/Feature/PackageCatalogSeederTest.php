@@ -44,9 +44,39 @@ class PackageCatalogSeederTest extends TestCase
         $this->assertSame('free_trial', $trial->package_duration);
         $this->assertSame(14, $trial->trial_days);
         $this->assertFalse($trial->app_connect);
-        $this->assertFalse($trial->features['ai_text_order_create'] ?? true);
+        $this->assertFalse($trial->features['ai_intelligence'] ?? true);
 
         $this->assertSame(5, PackageHub::query()->whereNotNull('package_duration')->count());
+        $this->assertSame(0, PackageHub::query()
+            ->whereNull('package_duration')
+            ->where('is_active', true)
+            ->count());
+    }
+
+    public function test_catalog_seeder_retires_unassigned_legacy_packages(): void
+    {
+        User::create([
+            'name' => 'Admin',
+            'email' => 'admin-legacy@example.com',
+            'phone' => '01700000002',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        PackageHub::create([
+            'title' => 'Standard',
+            'description' => 'Legacy plan',
+            'per_order_rate' => 1,
+            'is_active' => true,
+            'index' => 99,
+        ]);
+
+        $this->seed(PackageCatalogSeeder::class);
+
+        $legacy = PackageHub::query()->where('title', 'Standard')->first();
+        $this->assertNotNull($legacy);
+        $this->assertFalse($legacy->is_active);
     }
 
     public function test_catalog_seeder_is_idempotent(): void

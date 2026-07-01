@@ -15,6 +15,9 @@
             />
         </template>
 
+        <EmployeeStoreSyncNotice class="mb-4" />
+        <EmployeeStoreSyncRecentIssues class="mb-4" />
+
         <EmptyState
             v-if="!employees.length"
             title="No employees yet"
@@ -134,6 +137,8 @@ import TableActions from "../fragments/TableActions.vue";
 import TableActionButton from "../fragments/TableActionButton.vue";
 import EmptyState from "../fragments/EmptyState.vue";
 import EmployeeForm from "../fragments/EmployeeForm.vue";
+import EmployeeStoreSyncNotice from "@/components/EmployeeStoreSyncNotice.vue";
+import EmployeeStoreSyncRecentIssues from "@/components/EmployeeStoreSyncRecentIssues.vue";
 import { roleLabel } from "@/data/merchantEmployeeRoles";
 import { usePermissions } from "@/composables/usePermissions";
 import { router, useForm } from "@inertiajs/vue3";

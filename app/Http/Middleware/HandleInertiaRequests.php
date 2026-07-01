@@ -48,6 +48,8 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => session('success'),
                 'error' => session('error'),
+                'warning' => session('warning'),
+                'store_sync' => session('store_sync'),
                 'license_token' => session('license_token'),
             ],
             'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),

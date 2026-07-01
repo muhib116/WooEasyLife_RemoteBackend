@@ -54,7 +54,7 @@ class PackagePaymentApiTest extends TestCase
         ];
     }
 
-    private function createPlan(): PackageHub
+    private function createLegacyPlan(): PackageHub
     {
         return PackageHub::create([
             'title' => 'Standard',
@@ -63,6 +63,29 @@ class PackagePaymentApiTest extends TestCase
             'is_active' => true,
             'index' => 1,
         ]);
+    }
+
+    private function createCatalogPlan(): PackageHub
+    {
+        return PackageHub::create([
+            'title' => 'Standard',
+            'description' => 'Standard plan',
+            'per_order_rate' => 0,
+            'package_price' => 100,
+            'package_duration' => '1_month',
+            'order_rate_token' => 100,
+            'is_active' => true,
+            'index' => 1,
+            'features' => [
+                'fraud_customer_checker' => true,
+                'sms_management' => true,
+            ],
+        ]);
+    }
+
+    private function createPlan(): PackageHub
+    {
+        return $this->createLegacyPlan();
     }
 
     public function test_get_user_includes_additive_billing_fields(): void
@@ -122,7 +145,7 @@ class PackagePaymentApiTest extends TestCase
     public function test_plugin_can_list_plans_and_submit_payment_request(): void
     {
         [$user, $plainToken] = $this->createMerchantWithToken();
-        $plan = $this->createPlan();
+        $plan = $this->createCatalogPlan();
 
         $plansResponse = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
             ->getJson('/api/package/plans');
@@ -153,10 +176,46 @@ class PackagePaymentApiTest extends TestCase
         ]);
     }
 
+    public function test_plugin_plans_include_dynamic_bangla_display_payload(): void
+    {
+        [$user, $plainToken] = $this->createMerchantWithToken();
+        $this->createCatalogPlan();
+
+        $response = $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->getJson('/api/package/plans');
+
+        $response->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonStructure([
+                'data' => [
+                    [
+                        'id',
+                        'title',
+                        'duration_label',
+                        'price_label',
+                        'token_label',
+                        'website_label',
+                        'features_heading',
+                        'top_features',
+                        'all_features',
+                        'feature_lines',
+                        'summary_lines',
+                        'enabled_feature_count',
+                        'more_features_count',
+                    ],
+                ],
+            ])
+            ->assertJsonPath('data.0.duration_label', 'মাসিক প্ল্যান')
+            ->assertJsonPath('data.0.price_label', '৳100')
+            ->assertJsonPath('data.0.features_heading', 'যা পাবেন')
+            ->assertJsonPath('data.0.top_features.0.label', 'ফ্রড কাস্টমার চেকার');
+    }
+
     public function test_expired_token_can_still_access_package_renewal_routes(): void
     {
         [$user, $plainToken] = $this->createMerchantWithToken();
-        $plan = $this->createPlan();
+        $plan = $this->createCatalogPlan();
 
         AccessToken::query()
             ->where('tokenable_id', $user->id)
@@ -589,7 +648,9 @@ class PackagePaymentApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.submission.status', 'pending_review')
+            ->assertJsonPath('data.submission.title', 'পেমেন্ট সফলভাবে জমা হয়েছে')
             ->assertJsonPath('data.submission.steps.0.status', 'completed')
+            ->assertJsonPath('data.submission.steps.0.label', 'পেমেন্ট জমা হয়েছে')
             ->assertJsonPath('data.transaction_id', 'TXN-GUIDE');
     }
 

@@ -11,7 +11,9 @@ use App\Models\Website;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -196,6 +198,18 @@ class PluginEmployeeApiTest extends TestCase
         $this->assertTrue($shopBEmployees->get('All Websites Staff')['assigned_to_website']);
     }
 
+    private function attachAccessKeyToToken(User $merchant, string $plainToken, ?int $websiteId = null): void
+    {
+        AccessToken::query()
+            ->where('tokenable_type', User::class)
+            ->where('tokenable_id', $merchant->id)
+            ->where('token', hash('sha256', $plainToken))
+            ->update([
+                'access_key' => Crypt::encryptString($plainToken),
+                'website_id' => $websiteId,
+            ]);
+    }
+
     public function test_plugin_create_accepts_json_website_ids_payload(): void
     {
         [$merchant, $plainToken] = $this->createMerchantWithToken('shop-a.example.com');
@@ -212,10 +226,24 @@ class PluginEmployeeApiTest extends TestCase
             'status' => true,
         ]);
 
+        $this->attachAccessKeyToToken($merchant, $plainToken, $siteA->id);
+
+        Http::fake([
+            'https://shop-a.example.com/wp-json/wooeasylife/v1/employees/validate-wp-user-email' => Http::response([
+                'status' => true,
+                'message' => 'ok',
+            ], 200),
+            'https://shop-a.example.com/wp-json/wooeasylife/v1/employees/sync-wp-user' => Http::response([
+                'status' => true,
+                'message' => 'ok',
+            ], 200),
+        ]);
+
         $headers = $this->apiHeaders($plainToken, 'https://shop-a.example.com');
 
         $create = $this->withHeaders($headers)->post('/api/employees', [
             'name' => 'Site A Staff',
+            'email' => 'site-a-staff@example.com',
             'phone' => '01766666666',
             'role_id' => $this->merchantRoleId(),
             'status' => true,
@@ -289,6 +317,11 @@ class PluginEmployeeApiTest extends TestCase
             ['shop-a.example.com', 'shop-b.example.com'],
             $domains
         );
+
+        $firstWebsite = collect($response->json('data.websites'))->firstWhere('domain', 'shop-a.example.com');
+
+        $this->assertSame('https://shop-a.example.com', $firstWebsite['display_url'] ?? null);
+        $this->assertFalse($firstWebsite['uses_base_url'] ?? true);
     }
 
     public function test_plugin_multipart_post_update_matches_plugin_form(): void
@@ -299,6 +332,7 @@ class PluginEmployeeApiTest extends TestCase
         $create = $this->withHeaders($headers)->post('/api/employees', [
             'name' => 'Before Edit',
             'phone' => '01777777777',
+            'email' => 'before-edit@example.com',
             'role_id' => $this->merchantRoleId(),
             'status' => true,
             'website_ids' => '[]',
@@ -404,6 +438,7 @@ class PluginEmployeeApiTest extends TestCase
         $created = $this->withHeaders($this->apiHeaders($tokenA, 'https://shop-a.example.com'))
             ->postJson('/api/employees', [
                 'name' => 'Shared Staff',
+                'email' => 'shared-staff@example.com',
                 'phone' => '01733333333',
                 'role_id' => $this->merchantRoleId(),
             ]);
@@ -416,11 +451,12 @@ class PluginEmployeeApiTest extends TestCase
             ->assertJsonPath('data.employees.0.id', $employeeId);
 
         $this->withHeaders($this->apiHeaders($tokenB, 'https://shop-b.example.com'))
-            ->putJson('/api/employees/' . $employeeId, [
+            ->post('/api/employees/' . $employeeId, [
                 'name' => 'Updated From Shop B',
+                'email' => 'shared-staff@example.com',
                 'phone' => '01733333333',
                 'role_id' => $this->merchantRoleId(),
-            ])
+            ], ['Accept' => 'application/json'])
             ->assertOk()
             ->assertJsonPath('data.employee.name', 'Updated From Shop B');
     }
@@ -466,6 +502,7 @@ class PluginEmployeeApiTest extends TestCase
             ->post('/api/employees', [
                 'name' => 'Photo Staff',
                 'phone' => '01755555555',
+                'email' => 'photo-staff@example.com',
                 'role_id' => $this->merchantRoleId(),
                 'photo' => UploadedFile::fake()->image('employee.jpg'),
             ], ['Accept' => 'application/json']);

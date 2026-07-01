@@ -189,6 +189,9 @@ class DemoDataSeeder extends Seeder
             ['user_id' => $merchant->id, 'domain' => $domain],
             [
                 'title' => $site['title'] ?? $domain,
+                'base_url' => isset($site['wordpress_url'])
+                    ? app(\App\Services\WebsiteBaseUrlNormalizer::class)->normalize($site['wordpress_url'])
+                    : null,
                 'status' => true,
                 'is_primary' => true,
             ]
@@ -215,7 +218,7 @@ class DemoDataSeeder extends Seeder
             'remaining_order' => $site['remaining_order'],
             'total_order_handled' => $site['handled'],
             'total_order_can_handle' => $site['order_limit'],
-            'total_cost' => $plan->per_order_rate * $site['order_limit'],
+            'total_cost' => (float) ($plan->package_price ?? 0),
             'expires_at' => $site['subscription_expires_at'] ?? null,
             'is_active' => true,
             'updated_by' => $admin->id,
@@ -262,7 +265,7 @@ class DemoDataSeeder extends Seeder
             ],
             [
                 'use_details' => json_encode(['source' => 'seeder', 'note' => 'Sample usage']),
-                'cost' => 5 * $plan->per_order_rate,
+                'cost' => 0,
                 'total_order_handled' => min(5, $site['handled']),
                 'remaining_order' => max($site['remaining_order'], 0),
                 'created_by' => $admin->id,

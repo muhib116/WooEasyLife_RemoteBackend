@@ -45,9 +45,12 @@ class MerchantEmployeeSeeder extends Seeder
 
     private function seedEmployeesForMerchant(User $merchant, MerchantEmployeeService $employeeService): int
     {
-        $websites = $employeeService
-            ->assignableWebsitesForMerchant($merchant)
-            ->values();
+        app(\App\Services\WebsiteSyncService::class)->backfillUser($merchant);
+
+        $websites = Website::query()
+            ->where('user_id', $merchant->id)
+            ->orderBy('domain')
+            ->get();
 
         if ($websites->isEmpty()) {
             $this->command?->warn("Skipping employees for merchant #{$merchant->id}: no websites found.");

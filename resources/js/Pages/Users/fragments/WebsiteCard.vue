@@ -7,8 +7,14 @@
                 <div class="flex flex-wrap items-center gap-2">
                     <Icon name="PhGlobe" class="text-primary-500" />
                     <h3 class="truncate font-semibold text-gray-900 dark:text-white">
-                        {{ website.domain }}
+                        {{ website.title && website.title !== website.domain ? website.title : website.domain }}
                     </h3>
+                    <p
+                        v-if="website.title && website.title !== website.domain"
+                        class="truncate text-xs text-gray-500 dark:text-gray-400"
+                    >
+                        {{ website.domain }}
+                    </p>
                     <StatusBadge
                         :label="healthStatusLabel(website.health?.status)"
                         :variant="healthStatusVariant(website.health?.status)"

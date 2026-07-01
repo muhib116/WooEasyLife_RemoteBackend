@@ -88,19 +88,19 @@ class SubscriptionAlertService
             $alerts[] = $this->alert(
                 'quota_exhausted',
                 'danger',
-                'Your order quota is exhausted. Submit a payment request to renew your subscription.'
+                $this->billingAlertMessage('quota_exhausted')
             );
         } elseif ($remainingOrder <= config('subscription.quota_critical_threshold', 5)) {
             $alerts[] = $this->alert(
                 'quota_critical',
                 'danger',
-                "Only {$remainingOrder} orders remaining. Renew soon to avoid service interruption."
+                $this->billingAlertMessage('quota_critical', ['count' => $remainingOrder])
             );
         } elseif ($remainingOrder <= config('subscription.quota_low_threshold', 20)) {
             $alerts[] = $this->alert(
                 'quota_low',
                 'warning',
-                "Your remaining order quota is low ({$remainingOrder} left)."
+                $this->billingAlertMessage('quota_low', ['count' => $remainingOrder])
             );
         }
 
@@ -109,7 +109,7 @@ class SubscriptionAlertService
                 $alerts[] = $this->alert(
                     'subscription_expired',
                     'danger',
-                    'Your subscription plan has expired.'
+                    $this->billingAlertMessage('subscription_expired')
                 );
             } elseif (now()->diffInDays($activePackage->expires_at, false) <= config('subscription.subscription_expiring_days', 7)) {
                 $days = max(0, (int) now()->diffInDays($activePackage->expires_at, false));
@@ -117,8 +117,8 @@ class SubscriptionAlertService
                     'subscription_expiring',
                     'warning',
                     $days === 0
-                        ? 'Your subscription plan expires today.'
-                        : "Your subscription plan expires in {$days} day(s)."
+                        ? $this->billingAlertMessage('subscription_expiring_today')
+                        : $this->billingAlertMessage('subscription_expiring_days', ['days' => $days])
                 );
             }
         }
@@ -135,16 +135,11 @@ class SubscriptionAlertService
         if ($pendingPayments->isNotEmpty()) {
             $latestPending = $pendingPayments->sortByDesc('id')->first();
             $latestPending?->loadMissing('packageHub:id,title');
-            $planTitle = $latestPending?->packageHub?->title ?? 'your selected plan';
-            $amount = $latestPending ? number_format((float) $latestPending->total_amount, 2) : null;
-            $detail = $amount !== null
-                ? " ({$planTitle}, {$amount} TK)"
-                : " ({$planTitle})";
 
             $alerts[] = $this->alert(
                 'payment_pending',
                 'info',
-                'Your payment request is pending admin approval' . $detail . '. Please wait for verification before submitting another payment.'
+                $this->pendingPaymentAlertMessage($latestPending)
             );
         }
 
@@ -197,19 +192,19 @@ class SubscriptionAlertService
             $alerts[] = $this->alert(
                 'quota_exhausted',
                 'danger',
-                'Your order quota is exhausted. Submit a payment request to renew your subscription.'
+                $this->billingAlertMessage('quota_exhausted')
             );
         } elseif ($remainingOrder <= config('subscription.quota_critical_threshold', 5)) {
             $alerts[] = $this->alert(
                 'quota_critical',
                 'danger',
-                "Only {$remainingOrder} orders remaining. Renew soon to avoid service interruption."
+                $this->billingAlertMessage('quota_critical', ['count' => $remainingOrder])
             );
         } elseif ($remainingOrder <= config('subscription.quota_low_threshold', 20)) {
             $alerts[] = $this->alert(
                 'quota_low',
                 'warning',
-                "Your remaining order quota is low ({$remainingOrder} left)."
+                $this->billingAlertMessage('quota_low', ['count' => $remainingOrder])
             );
         }
 
@@ -218,7 +213,7 @@ class SubscriptionAlertService
                 $alerts[] = $this->alert(
                     'subscription_expired',
                     'danger',
-                    'Your subscription plan has expired.'
+                    $this->billingAlertMessage('subscription_expired')
                 );
             } elseif (now()->diffInDays($activePackage->expires_at, false) <= config('subscription.subscription_expiring_days', 7)) {
                 $days = max(0, (int) now()->diffInDays($activePackage->expires_at, false));
@@ -226,8 +221,8 @@ class SubscriptionAlertService
                     'subscription_expiring',
                     'warning',
                     $days === 0
-                        ? 'Your subscription plan expires today.'
-                        : "Your subscription plan expires in {$days} day(s)."
+                        ? $this->billingAlertMessage('subscription_expiring_today')
+                        : $this->billingAlertMessage('subscription_expiring_days', ['days' => $days])
                 );
             }
         }
@@ -237,7 +232,7 @@ class SubscriptionAlertService
                 $alerts[] = $this->alert(
                     'license_expired',
                     'danger',
-                    'Your license key has expired.'
+                    $this->billingAlertMessage('license_expired')
                 );
             } elseif (now()->diffInDays($accessToken->expires_at, false) <= config('subscription.license_expiring_days', 7)) {
                 $days = max(0, (int) now()->diffInDays($accessToken->expires_at, false));
@@ -245,8 +240,8 @@ class SubscriptionAlertService
                     'license_expiring',
                     'warning',
                     $days === 0
-                        ? 'Your license key expires today.'
-                        : "Your license key expires in {$days} day(s)."
+                        ? $this->billingAlertMessage('license_expiring_today')
+                        : $this->billingAlertMessage('license_expiring_days', ['days' => $days])
                 );
             }
         }
@@ -263,16 +258,11 @@ class SubscriptionAlertService
         if ($pendingPayments->isNotEmpty()) {
             $latestPending = $pendingPayments->sortByDesc('id')->first();
             $latestPending?->loadMissing('packageHub:id,title');
-            $planTitle = $latestPending?->packageHub?->title ?? 'your selected plan';
-            $amount = $latestPending ? number_format((float) $latestPending->total_amount, 2) : null;
-            $detail = $amount !== null
-                ? " ({$planTitle}, {$amount} TK)"
-                : " ({$planTitle})";
 
             $alerts[] = $this->alert(
                 'payment_pending',
                 'info',
-                'Your payment request is pending admin approval' . $detail . '. Please wait for verification before submitting another payment.'
+                $this->pendingPaymentAlertMessage($latestPending)
             );
         }
 
@@ -299,7 +289,7 @@ class SubscriptionAlertService
             $alerts[] = $this->alert(
                 'sms_low',
                 'info',
-                'Your SMS balance is less than 20TK.'
+                $this->billingAlertMessage('sms_low')
             );
         }
 
@@ -421,6 +411,32 @@ class SubscriptionAlertService
             'severity' => $severity,
             'message' => $message,
         ];
+    }
+
+    /**
+     * @param  array<string, string|int>  $replace
+     */
+    private function billingAlertMessage(string $key, array $replace = []): string
+    {
+        $template = config("package_catalog.plugin_display.billing_alerts_bn.{$key}", '');
+
+        foreach ($replace as $placeholder => $value) {
+            $template = str_replace(':'.$placeholder, (string) $value, $template);
+        }
+
+        return $template;
+    }
+
+    private function pendingPaymentAlertMessage(?PackagePaymentRequest $latestPending): string
+    {
+        $display = config('package_catalog.plugin_display.billing_alerts_bn', []);
+        $planTitle = $latestPending?->packageHub?->title
+            ?? ($display['payment_pending_plan_fallback'] ?? 'নির্বাচিত প্ল্যান');
+        $detail = $latestPending
+            ? ' ('.$planTitle.', '.number_format((float) $latestPending->total_amount, 2).' টাকা)'
+            : ' ('.$planTitle.')';
+
+        return $this->billingAlertMessage('payment_pending', ['detail' => $detail]);
     }
 
     private function shouldShowPluginNotice(User $user, AccessToken $accessToken, array $alert): bool

@@ -9,12 +9,14 @@ use App\Models\UserPackage;
 use App\Models\Website;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WebsiteSyncService
 {
     public function __construct(
         protected DomainNormalizer $domainNormalizer,
-        protected DomainAvailabilityService $domainAvailability
+        protected DomainAvailabilityService $domainAvailability,
+        protected WebsiteBaseUrlNormalizer $baseUrlNormalizer
     ) {
     }
 
@@ -22,12 +24,14 @@ class WebsiteSyncService
      * Find or create a website row for a merchant domain.
      * Does not modify existing package/token domain strings.
      */
-    public function resolveForUser(User $user, string $domain, ?string $title = null): ?Website
+    public function resolveForUser(User $user, string $domain, ?string $title = null, ?string $baseUrl = null): ?Website
     {
         $normalized = $this->domainNormalizer->normalize($domain);
         if (! $normalized) {
             return null;
         }
+
+        $normalizedBaseUrl = $this->normalizeBaseUrlForDomain($baseUrl, $normalized);
 
         $existing = Website::query()
             ->where('domain', $normalized)
@@ -37,7 +41,7 @@ class WebsiteSyncService
             $this->domainAvailability->rejectCrossUserWebsiteClaim($user, $normalized);
             $this->domainAvailability->assertAvailableForUser($user, $normalized);
 
-            return $existing;
+            return $this->applyBaseUrl($existing, $normalizedBaseUrl);
         }
 
         $this->domainAvailability->assertAvailableForUser($user, $normalized);
@@ -45,10 +49,70 @@ class WebsiteSyncService
         return Website::query()->create([
             'user_id' => $user->id,
             'domain' => $normalized,
+            'base_url' => $normalizedBaseUrl,
             'title' => $title ?: $normalized,
             'status' => true,
             'is_primary' => ! Website::query()->where('user_id', $user->id)->exists(),
         ]);
+    }
+
+    /**
+     * Persist an optional base URL on the merchant's website for a domain.
+     */
+    public function syncBaseUrlForDomain(User $user, string $domain, ?string $baseUrl): ?Website
+    {
+        $normalized = $this->domainNormalizer->normalize($domain);
+        if (! $normalized) {
+            return null;
+        }
+
+        $website = Website::query()
+            ->where('user_id', $user->id)
+            ->where('domain', $normalized)
+            ->first();
+
+        if (! $website) {
+            return null;
+        }
+
+        if ($baseUrl === null) {
+            return $website;
+        }
+
+        if (trim($baseUrl) === '') {
+            if ($website->base_url !== null) {
+                $website->update(['base_url' => null]);
+            }
+
+            return $website->fresh();
+        }
+
+        $normalizedBaseUrl = $this->normalizeBaseUrlForDomain($baseUrl, $normalized);
+
+        return $this->applyBaseUrl($website, $normalizedBaseUrl);
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function normalizeBaseUrlForDomain(?string $baseUrl, string $normalizedDomain): ?string
+    {
+        if ($baseUrl === null || trim($baseUrl) === '') {
+            return null;
+        }
+
+        return $this->baseUrlNormalizer->normalizeForDomain($baseUrl, $normalizedDomain);
+    }
+
+    private function applyBaseUrl(Website $website, ?string $baseUrl): Website
+    {
+        if ($baseUrl === null || $baseUrl === $website->base_url) {
+            return $website;
+        }
+
+        $website->update(['base_url' => $baseUrl]);
+
+        return $website->fresh();
     }
 
     /**

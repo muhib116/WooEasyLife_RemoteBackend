@@ -107,6 +107,49 @@
                         </div>
                     </div>
                 </FormSection>
+
+                <FormSection
+                    v-if="form.plan_type === 'catalog'"
+                    title="Power Full Features"
+                    step="3"
+                    hint="Toggle the 12 power features included in this merchant plan."
+                >
+                    <PackageFeaturesEditor
+                        v-model:features="form.features"
+                        v-model:website-connect-limit="form.total_website_connect"
+                        embedded
+                        show-website-connect
+                    />
+                    <p
+                        v-if="form.errors.features"
+                        class="text-sm text-rose-500"
+                    >
+                        {{ form.errors.features }}
+                    </p>
+                </FormSection>
+
+                <FormSection
+                    title="WordPress base URL"
+                    step="3"
+                    hint="Optional. Required for local dev when WordPress runs on a port or subdirectory."
+                >
+                    <InputText
+                        v-model="form.base_url"
+                        id="adjust_base_url"
+                        placeholder="http://localhost:8081/wordpress"
+                        class="!w-full"
+                        :invalid="Boolean(form.errors.base_url)"
+                    />
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Backend API calls use this URL when set. Leave empty to derive from the store domain.
+                    </p>
+                    <p
+                        v-if="form.errors.base_url"
+                        class="text-sm text-rose-500"
+                    >
+                        {{ form.errors.base_url }}
+                    </p>
+                </FormSection>
             </section>
         </template>
 
@@ -160,6 +203,28 @@
                     :message="domainValidationAlert.message"
                     :hint="domainValidationAlert.hint"
                 />
+                <div class="mt-4 space-y-1">
+                    <label for="base_url" class="text-sm font-medium">
+                        WordPress base URL
+                        <span class="font-normal text-gray-500">(optional)</span>
+                    </label>
+                    <InputText
+                        v-model="form.base_url"
+                        id="base_url"
+                        placeholder="http://localhost:8081/wordpress"
+                        class="!w-full"
+                        :invalid="Boolean(form.errors.base_url)"
+                    />
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Use when WordPress is not at the domain root — for example a local install on a port or subdirectory. Leave empty for production stores.
+                    </p>
+                    <p
+                        v-if="form.errors.base_url"
+                        class="text-sm text-rose-500"
+                    >
+                        {{ form.errors.base_url }}
+                    </p>
+                </div>
             </FormSection>
 
             <FormSection
@@ -355,6 +420,7 @@
 import DomainFieldHint from "@/components/DomainFieldHint.vue";
 import DomainValidationAlert from "@/components/DomainValidationAlert.vue";
 import OrderLimitPresets from "@/components/OrderLimitPresets.vue";
+import PackageFeaturesEditor from "@/components/PackageFeaturesEditor.vue";
 import PlanSelectSummary from "@/components/PlanSelectSummary.vue";
 import FormSection from "@/components/FormSection.vue";
 import {

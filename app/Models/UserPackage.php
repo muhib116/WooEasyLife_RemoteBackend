@@ -14,6 +14,8 @@ class UserPackage extends Model
         'expires_at' => 'datetime',
         'features' => 'array',
         'order_rate_token' => 'integer',
+        'app_connect' => 'boolean',
+        'total_website_connect' => 'integer',
     ];
 
     public function user() {

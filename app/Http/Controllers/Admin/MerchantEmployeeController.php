@@ -38,6 +38,7 @@ class MerchantEmployeeController extends Controller
                 'description' => $role->description,
             ]),
             'websites' => $this->employeeService->assignableWebsitesForMerchant($user),
+            'recent_sync_failures' => $this->employeeService->recentEmployeeSyncFailures($user),
         ]);
     }
 
@@ -53,7 +54,7 @@ class MerchantEmployeeController extends Controller
             return back()->withErrors($e->errors());
         }
 
-        return back()->with('success', 'Employee added successfully.');
+        return back()->with($this->employeeService->redirectFlash('Employee added successfully.'));
     }
 
     public function update(Request $request, $userId, $employeeId)
@@ -69,7 +70,7 @@ class MerchantEmployeeController extends Controller
             return back()->withErrors($e->errors());
         }
 
-        return back()->with('success', 'Employee updated successfully.');
+        return back()->with($this->employeeService->redirectFlash('Employee updated successfully.'));
     }
 
     public function destroy($userId, $employeeId)
@@ -79,7 +80,7 @@ class MerchantEmployeeController extends Controller
 
         $this->employeeService->delete($employee, $user);
 
-        return back()->with('success', 'Employee removed successfully.');
+        return back()->with($this->employeeService->redirectFlash('Employee removed successfully.'));
     }
 
     /**
@@ -89,7 +90,7 @@ class MerchantEmployeeController extends Controller
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => 'required|email|max:255',
             'phone' => 'required|string|max:50',
             'address' => 'nullable|string|max:1000',
             'role_id' => 'required|integer',

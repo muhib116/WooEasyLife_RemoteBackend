@@ -55,8 +55,10 @@
             modal
             :style="{ width: 'min(100vw - 2rem, 42rem)' }"
             :breakpoints="{ '960px': '92vw' }"
+            :content-style="planFormMode === 'adjust' ? 'max-height: min(75vh, 48rem); overflow-y: auto' : undefined"
             draggable
             dismissable-mask
+            @show="onPlanDialogShow"
             @hide="planForm.reset()"
         >
             <template #header>
@@ -110,6 +112,32 @@
             />
         </Dialog>
 
+        <Dialog
+            v-model:visible="showWebsiteForm"
+            modal
+            :style="{ width: 'min(100vw - 2rem, 42rem)' }"
+            :breakpoints="{ '960px': '92vw' }"
+            draggable
+            dismissable-mask
+            @hide="websiteForm.reset()"
+        >
+            <template #header>
+                <div class="pr-6">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        Edit Website
+                    </h2>
+                    <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                        Update store title, WordPress base URL, and website settings.
+                    </p>
+                </div>
+            </template>
+            <WebsiteForm
+                :form="websiteForm"
+                @close="showWebsiteForm = false"
+                @submit="handleSaveWebsite"
+            />
+        </Dialog>
+
         <Toast />
         <ConfirmDialog id="confirm" />
     </UserLayout>
@@ -120,10 +148,13 @@ import UserLayout from "../UserLayout.vue";
 import EmptyState from "../fragments/EmptyState.vue";
 import PackageForm from "../fragments/PackageForm.vue";
 import TokenForm from "../fragments/TokenForm.vue";
+import WebsiteForm from "../fragments/WebsiteForm.vue";
 import WebsiteCard from "../fragments/WebsiteCard.vue";
 import WebsiteHealthLegend from "@/components/WebsiteHealthLegend.vue";
+import { normalizeFeatureMap, buildAdjustAppFieldsFromSubscription, buildAdjustSubscriptionPayload } from "@/data/packageCatalogDraft";
+import type { PackageFeatures, WebsiteConnectLimit } from "@/types/packageCatalog";
 import { router, useForm } from "@inertiajs/vue3";
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue/usetoast";
 import { parseISO } from "date-fns";
@@ -151,6 +182,7 @@ const planFormMode = ref<"add" | "assign" | "adjust" | "change">("assign");
 const planAdjustPackageHubId = ref<number | null>(null);
 const planChangeFromHubId = ref<number | null>(null);
 const showLicenseForm = ref(false);
+const showWebsiteForm = ref(false);
 const licenseDomain = ref<string | null>(null);
 const actionMenu = ref();
 const menuItems = ref<any[]>([]);
@@ -164,6 +196,7 @@ const planForm = useForm({
     transaction_method: "Cash",
     transaction_charge: 0,
     domain: null as string | null,
+    base_url: null as string | null,
     note: null,
     limit: 300,
     remaining_order: null as number | null,
@@ -171,6 +204,18 @@ const planForm = useForm({
     expires_at: null as Date | null,
     is_active: true,
     plan_type: "legacy" as string,
+    features: normalizeFeatureMap() as PackageFeatures,
+    app_connect: false,
+    total_website_connect: 1 as WebsiteConnectLimit,
+});
+
+const websiteForm = useForm({
+    website_id: null as number | null,
+    domain: "" as string,
+    title: null as string | null,
+    base_url: null as string | null,
+    status: true,
+    is_primary: false,
 });
 
 const tokenForm = useForm({
@@ -314,6 +359,14 @@ const buildMenuItems = (website: any) => {
         });
     }
 
+    if (website.id) {
+        items.push({
+            label: "Edit website",
+            icon: "pi pi-pencil",
+            command: () => openEditWebsite(website),
+        });
+    }
+
     items.push({ separator: true });
     items.push({
         label: "Delete website",
@@ -334,10 +387,51 @@ const openAssignPlan = (domain?: string) => {
     planForm.reset();
     planForm.is_active = true;
     planForm.domain = domain ?? null;
+    planForm.base_url = domain
+        ? (props.websites.find((item) => item.domain === domain)?.base_url ?? null)
+        : null;
     planAdjustPackageHubId.value = null;
     planChangeFromHubId.value = null;
     planFormMode.value = domain ? "assign" : "add";
     showPlanForm.value = true;
+};
+
+const openEditWebsite = (website: any) => {
+    if (!website.id) {
+        return;
+    }
+
+    websiteForm.reset();
+    websiteForm.website_id = website.id;
+    websiteForm.domain = website.domain;
+    websiteForm.title = website.title ?? website.domain;
+    websiteForm.base_url = website.base_url ?? null;
+    websiteForm.status = website.website_status ?? true;
+    websiteForm.is_primary = Boolean(website.is_primary);
+    showWebsiteForm.value = true;
+};
+
+const handleSaveWebsite = () => {
+    websiteForm.post(route("users.websites.update", props.user.id), {
+        onSuccess: () => {
+            showWebsiteForm.value = false;
+            websiteForm.reset();
+        },
+    });
+};
+
+const onPlanDialogShow = () => {
+    if (planFormMode.value !== "adjust") {
+        return;
+    }
+
+    nextTick(() => {
+        const content = document.querySelector(".p-dialog-content");
+
+        if (content instanceof HTMLElement) {
+            content.scrollTop = 0;
+        }
+    });
 };
 
 const openAdjustPlan = (website: any) => {
@@ -355,6 +449,7 @@ const openAdjustPlan = (website: any) => {
     planForm.reset();
     planForm.id = subscription.id;
     planForm.domain = website.domain;
+    planForm.base_url = website.base_url ?? null;
     planForm.note = source?.note ?? null;
     planForm.remaining_order = subscription.remaining_order;
     planForm.total_order_can_handle = subscription.total_order_can_handle;
@@ -365,6 +460,16 @@ const openAdjustPlan = (website: any) => {
     planForm.expires_at = subscription.expires_at
         ? parseISO(subscription.expires_at)
         : null;
+
+    const hubPackage = props.packages.find(
+        (item) =>
+            item.id ===
+            (subscription.package_hub_id ?? source?.package_hub_id ?? null),
+    );
+    const appFields = buildAdjustAppFieldsFromSubscription(source, hubPackage);
+    planForm.features = appFields.features;
+    planForm.app_connect = appFields.app_connect;
+    planForm.total_website_connect = appFields.total_website_connect;
     showPlanForm.value = true;
 };
 
@@ -457,9 +562,11 @@ const handleSavePlan = () => {
     };
 
     if (planFormMode.value === "adjust" && planForm.id) {
-        planForm.post(route("users.updatePurchasePackage", props.user.id), {
-            onSuccess: closeOnSuccess,
-        });
+        planForm
+            .transform((data) => buildAdjustSubscriptionPayload(data))
+            .post(route("users.updatePurchasePackage", props.user.id), {
+                onSuccess: closeOnSuccess,
+            });
         return;
     }
 

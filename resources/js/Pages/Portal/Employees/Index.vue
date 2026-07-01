@@ -19,6 +19,9 @@
                 </template>
             </PageHeader>
 
+            <EmployeeStoreSyncNotice />
+            <EmployeeStoreSyncRecentIssues class="mt-4" />
+
             <PageCard no-padding>
                 <DataTable
                     :value="employees"
@@ -103,6 +106,8 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import TableActions from "@/Pages/Users/fragments/TableActions.vue";
 import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 import EmployeeForm from "@/Pages/Users/fragments/EmployeeForm.vue";
+import EmployeeStoreSyncNotice from "@/components/EmployeeStoreSyncNotice.vue";
+import EmployeeStoreSyncRecentIssues from "@/components/EmployeeStoreSyncRecentIssues.vue";
 import { roleLabel } from "@/data/merchantEmployeeRoles";
 import { usePermissions } from "@/composables/usePermissions";
 import { router, useForm } from "@inertiajs/vue3";

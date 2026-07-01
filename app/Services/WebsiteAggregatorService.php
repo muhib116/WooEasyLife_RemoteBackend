@@ -116,7 +116,8 @@ class WebsiteAggregatorService
             $website->title,
             (bool) $website->status,
             (bool) $website->is_primary,
-            $linkedEmployees
+            $linkedEmployees,
+            $website->base_url
         );
     }
 
@@ -173,7 +174,8 @@ class WebsiteAggregatorService
         ?string $title = null,
         ?bool $websiteStatus = null,
         ?bool $isPrimary = null,
-        array $linkedEmployees = []
+        array $linkedEmployees = [],
+        ?string $baseUrl = null
     ): array {
         $subscription = $this->primarySubscription($domainPackages);
         $licenses = $domainTokens->map(fn (AccessToken $token) => [
@@ -192,9 +194,10 @@ class WebsiteAggregatorService
             'id' => $websiteId,
             'domain' => $domain,
             'title' => $title,
+            'base_url' => $baseUrl,
             'website_status' => $websiteStatus,
             'is_primary' => $isPrimary,
-            'display_url' => 'https://' . $domain,
+            'display_url' => $baseUrl ? rtrim($baseUrl, '/') : 'https://' . $domain,
             'subscription' => $subscription,
             'licenses' => $licenses,
             'health' => $health,
