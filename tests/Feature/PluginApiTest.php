@@ -6,6 +6,7 @@ use App\Models\AccessToken;
 use App\Models\PackageHub;
 use App\Models\User;
 use App\Models\UserPackage;
+use App\Support\PackageCatalogFeatures;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -147,7 +148,12 @@ class PluginApiTest extends TestCase
             ->assertJsonPath('active_package.plan_type', 'catalog')
             ->assertJsonPath('active_package.package_hub_id', $plan->id)
             ->assertJsonPath('active_package.features.fraud_customer_checker', true)
-            ->assertJsonPath('active_package.features.bulk_sms', false);
+            ->assertJsonPath('active_package.features.sms_management', false);
+
+        $this->assertCount(
+            count(PackageCatalogFeatures::powerKeys()),
+            $response->json('active_package.features'),
+        );
     }
 
     public function test_get_user_returns_null_active_package_when_no_package(): void

@@ -132,7 +132,7 @@ class UserController extends Controller
                 'app_connect' => $activePackage->app_connect ?? $packageHub?->app_connect ?? false,
                 'total_website_connect' => $activePackage->total_website_connect
                     ?? $packageHub?->total_website_connect,
-                'features' => PackageCatalogFeatures::expandForLegacyApi($activePackage->features ?? []),
+                'features' => PackageCatalogFeatures::normalize($activePackage->features ?? []),
             ] : null;
             $user->notice = $alertService->pluginNotices($user, $accessToken);
             $user->sms_balance = round($smsBalance, 2) + 0;
