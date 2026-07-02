@@ -89,6 +89,12 @@ const failureMessage = (row: StoreSyncRow) => {
         return "network/connection error — see hub logs";
     }
 
+    if (row.message === "forward_failed") {
+        return row.http_status
+            ? `store rejected the request [HTTP ${row.http_status}]`
+            : "store rejected the request — check plugin license";
+    }
+
     return row.message ?? "";
 };
 </script>

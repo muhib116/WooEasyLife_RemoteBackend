@@ -6,6 +6,7 @@ use App\Models\MerchantEmployee;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Website;
+use App\Services\Employee\EmployeePhoneNormalizer;
 use App\Services\Employee\EmployeeStoreSyncService;
 use App\Services\Employee\EmployeeStoreTargetResolver;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -103,6 +104,8 @@ class MerchantEmployeeService
      */
     public function create(User $merchant, array $data): MerchantEmployee
     {
+        $data = $this->prepareEmployeeData($data);
+
         $role = $this->resolveMerchantRole($data['role_id'] ?? null);
         $websiteIds = $this->resolveWebsiteIds($merchant, $data);
 
@@ -153,6 +156,8 @@ class MerchantEmployeeService
     public function update(MerchantEmployee $employee, User $merchant, array $data): MerchantEmployee
     {
         $this->assertBelongsToMerchant($employee, $merchant);
+
+        $data = $this->prepareEmployeeData($data);
 
         $employee->loadMissing('websites');
 
@@ -227,6 +232,33 @@ class MerchantEmployeeService
         $this->deletePhoto($employee);
         $employee->websites()->detach();
         $employee->delete();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function prepareEmployeeData(array $data): array
+    {
+        if (! array_key_exists('phone', $data)) {
+            return $data;
+        }
+
+        $phone = trim((string) $data['phone']);
+
+        if ($phone === '') {
+            return $data;
+        }
+
+        if (! EmployeePhoneNormalizer::isValidForWpPassword($phone)) {
+            throw ValidationException::withMessages([
+                'phone' => 'Please enter a valid mobile number (for example 01XXXXXXXXX).',
+            ]);
+        }
+
+        $data['phone'] = EmployeePhoneNormalizer::normalize($phone);
+
+        return $data;
     }
 
     /**

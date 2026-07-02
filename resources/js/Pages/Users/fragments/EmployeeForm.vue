@@ -27,6 +27,9 @@
                         <p v-if="form.errors.phone" class="text-sm text-rose-500">
                             {{ form.errors.phone }}
                         </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ employeePhoneLoginHint }}
+                        </p>
                     </div>
                     <div class="space-y-1">
                         <label for="employee_email" class="text-sm font-medium">
@@ -216,6 +219,10 @@
 <script setup lang="ts">
 import FormSection from "@/components/FormSection.vue";
 import type { MerchantEmployeeRoleOption } from "@/data/merchantEmployeeRoles";
+import {
+    isValidEmployeePhonePassword,
+    normalizeEmployeePhone,
+} from "@/utils/employeePhonePassword";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 
 const props = defineProps<{
@@ -274,6 +281,17 @@ const websiteOptions = computed(() =>
         value: website.id,
     })),
 );
+
+const employeePhoneLoginHint = computed(() => {
+    const phone = String(props.form.phone ?? "");
+    const normalized = normalizeEmployeePhone(phone);
+
+    if (normalized && isValidEmployeePhonePassword(phone)) {
+        return `WordPress login uses email as username and ${normalized} as the default password. Changing the phone updates the password on the next save.`;
+    }
+
+    return "WordPress login uses the employee email and a normalized phone password (01XXXXXXXXX).";
+});
 
 const localDevBaseUrlHint = computed(() => {
     const selectedIds = Array.isArray(props.form.website_ids)

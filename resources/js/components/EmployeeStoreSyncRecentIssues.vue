@@ -75,6 +75,10 @@ const actionLabel = (action?: string) => {
 };
 
 const failureDetail = (row: SyncFailureRow) => {
+    if (row.message === "missing_store_target") {
+        return "plugin not connected yet";
+    }
+
     if (row.message && row.message !== "forward_failed" && row.message !== "forward_exception") {
         return row.http_status ? `${row.message} [HTTP ${row.http_status}]` : row.message;
     }
@@ -85,6 +89,10 @@ const failureDetail = (row: SyncFailureRow) => {
 
     if (row.message === "forward_exception") {
         return "network/connection error — see hub logs";
+    }
+
+    if (row.message === "forward_failed") {
+        return "store rejected the request — check plugin license";
     }
 
     return row.message ?? "";
