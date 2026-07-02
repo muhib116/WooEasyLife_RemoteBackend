@@ -402,15 +402,15 @@
 <body>
     <header class="site-header">
         <div class="site-header__inner">
-            <a class="brand" href="{{ $contactWebsite ?? 'https://api.wpsalehub.com' }}">
+            <a class="brand" href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">
                 <span class="brand__mark">WE</span>
                 <span>
                     WooEasyLife
                     <span class="brand__sub">by WPSaleHub</span>
                 </span>
             </a>
-            <a class="header-link" href="{{ $contactWebsite ?? 'https://api.wpsalehub.com' }}">
-                api.wpsalehub.com ↗
+            <a class="header-link" href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">
+                app.wpsalehub.com ↗
             </a>
         </div>
     </header>
@@ -427,7 +427,7 @@
 
     <footer class="site-footer">
         © {{ date('Y') }} WPSaleHub ·
-        <a href="{{ $contactWebsite ?? 'https://api.wpsalehub.com' }}">api.wpsalehub.com</a>
+        <a href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">app.wpsalehub.com</a>
     </footer>
 
     <script>

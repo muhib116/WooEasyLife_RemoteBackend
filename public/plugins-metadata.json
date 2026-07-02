@@ -2,20 +2,20 @@
   "name": "WooEasyLife",
   "slug": "woo-easy-life",
   "version": "1.3.7",
-  "download_url": "https://api.wpsalehub.com/download-plugins",
+  "download_url": "https://app.wpsalehub.com/download-plugins",
   "requires": {
     "wordpress": "5.0",
     "php": "7.4",
     "woocommerce": "5.0"
   },
-  "homepage": "https://api.wpsalehub.com/get-metadata",
+  "homepage": "https://app.wpsalehub.com/get-metadata",
   "sections": {
     "description": "Plugin description…",
     "changelog": "Version changelog…"
   },
   "icons": {
-    "1x": "https://api.wpsalehub.com/brand-asset/icon-128.png",
-    "2x": "https://api.wpsalehub.com/brand-asset/icon-256.png",
+    "1x": "https://app.wpsalehub.com/brand-asset/icon-128.png",
+    "2x": "https://app.wpsalehub.com/brand-asset/icon-256.png",
     "svg": null
   }
 }

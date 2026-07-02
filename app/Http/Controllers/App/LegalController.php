@@ -46,7 +46,7 @@ class LegalController extends Controller
             'effectiveDate' => $effectiveDate,
             'lastUpdated' => $lastUpdated,
             'contactEmail' => 'dev.muhibbullah@gmail.com',
-            'contactWebsite' => 'https://api.wpsalehub.com',
+            'contactWebsite' => 'https://app.wpsalehub.com',
         ]);
     }
 }

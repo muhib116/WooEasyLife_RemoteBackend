@@ -18,7 +18,7 @@ By installing or using the App, you agree to this Privacy Policy. If you do not 
 **Data controller:**
 
 WPSaleHub  
-Website: https://api.wpsalehub.com  
+Website: https://app.wpsalehub.com  
 Email: dev.muhibbullah@gmail.com
 
 For most store and customer data, **you (the merchant)** remain the controller of data processed through your own WordPress/WooCommerce site. We provide the App and related services to help you access and manage that data.
@@ -134,7 +134,7 @@ Firebase may process device and diagnostic data according to [Google's Privacy P
 
 **WPSaleHub API**
 
-Certain features (such as fraud/delivery checks, SMS, courier integrations, and license services) may be accessed through your WordPress store's proxy to `api.wpsalehub.com`. In those cases, relevant request data (for example, phone numbers for fraud checks) is processed to provide the requested feature.
+Certain features (such as fraud/delivery checks, SMS, courier integrations, and license services) may be accessed through your WordPress store's proxy to `app.wpsalehub.com`. In those cases, relevant request data (for example, phone numbers for fraud checks) is processed to provide the requested feature.
 
 ---
 
@@ -219,4 +219,4 @@ If you have questions about this Privacy Policy or our data practices, contact:
 
 **WPSaleHub**  
 Email: dev.muhibbullah@gmail.com  
-Website: https://api.wpsalehub.com
+Website: https://app.wpsalehub.com

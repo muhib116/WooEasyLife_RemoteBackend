@@ -110,7 +110,7 @@ If your license expires or is revoked, related features may stop working until a
 
 ## 9. Privacy
 
-Our collection and use of information is described in our [Privacy Policy](https://api.wpsalehub.com/wooeasylife/app/privacy-policy).
+Our collection and use of information is described in our [Privacy Policy](https://app.wpsalehub.com/wooeasylife/app/privacy-policy).
 
 By using the App, you acknowledge that you have read and understood the Privacy Policy.
 
@@ -180,4 +180,4 @@ If you have questions about these Terms, contact:
 
 **WPSaleHub**  
 Email: dev.muhibbullah@gmail.com  
-Website: https://api.wpsalehub.com
+Website: https://app.wpsalehub.com
