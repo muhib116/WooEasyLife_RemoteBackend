@@ -8,6 +8,7 @@ use App\Services\Plugin\PluginLogoUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
 class PluginsController extends Controller
@@ -22,37 +23,54 @@ class PluginsController extends Controller
 
     public function createVersion(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'version' => 'required|unique:plugins_versions,version',
             'file' => 'required|file|mimes:zip',
-            'settings' => 'required|json'
+            'settings' => 'required|json',
         ]);
 
-        $file = $request->file('file');
-        $destinationPath = storage_path('/app/private');
-
-        $settings = $this->normalizePluginSettings($request->settings);
-
-        // Create the directory if it does not exist
-        if (!file_exists($destinationPath)) {
-            mkdir($destinationPath, 0755, true);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
         }
 
-        $fileName = 'wpsalehub-' . $request->version . '.' . $file->extension();
-        $file->move($destinationPath, $fileName);
-        $path = 'app/private/' . $fileName;
-
-        $data = [
-            'version' => $request->version,
-            'path' => $path,
-            'download_count' => 0,
-            'created_by' => Auth::id(),
-            'settings' => $settings,
-        ];
-
-        PluginsVersion::create($data);
+        $this->storeNewPluginVersion(
+            $request->version,
+            $request->file('file'),
+            $this->normalizePluginSettings($request->settings),
+            Auth::id()
+        );
 
         return back()->with('success', 'Version created successfully');
+    }
+
+    public function createVersionApi(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'version' => 'required|unique:plugins_versions,version',
+            'file' => 'required|file|mimes:zip',
+            'settings' => 'required|json',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->errors());
+        }
+
+        try {
+            $version = $this->storeNewPluginVersion(
+                $request->version,
+                $request->file('file'),
+                $this->normalizePluginSettings($request->settings),
+                null
+            );
+        } catch (\Throwable $th) {
+            return $this->errorResponse('Unable to store plugin version', 500);
+        }
+
+        return $this->successResponse(
+            $version->fresh(),
+            'Version created successfully',
+            201
+        );
     }
     public function updateVersion(Request $request, $id)
     {
@@ -189,8 +207,6 @@ class PluginsController extends Controller
     }
 
     /**
-     * PluginsVersion casts settings as JSON, so values may already be an array.
-     *
      * @param mixed $settings
      * @return array<string, mixed>
      */
@@ -214,6 +230,31 @@ class PluginsController extends Controller
 
         return [];
     }
+
+    private function storeNewPluginVersion(
+        string $version,
+        \Illuminate\Http\UploadedFile $file,
+        array $settings,
+        ?int $createdBy
+    ): PluginsVersion {
+        $destinationPath = storage_path('/app/private');
+
+        if (! file_exists($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+
+        $fileName = 'wpsalehub-' . $version . '.' . $file->extension();
+        $file->move($destinationPath, $fileName);
+
+        return PluginsVersion::create([
+            'version' => $version,
+            'path' => 'app/private/' . $fileName,
+            'download_count' => 0,
+            'created_by' => $createdBy,
+            'settings' => $settings,
+        ]);
+    }
+
     public function pluginsMetadata()
     {
         $path = public_path('/app/private/plugins.zip');

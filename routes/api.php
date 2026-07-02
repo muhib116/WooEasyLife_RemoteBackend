@@ -50,6 +50,9 @@ Route::get('brand-asset/{asset}', [PluginsController::class, 'brandAsset'])
 Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
+Route::post('api/admin/plugins/versions', [PluginsController::class, 'createVersionApi'])
+    ->middleware('plugin.upload');
+
 Route::prefix('api/webhooks')->group(function () {
     Route::post('/pathao', [WebhookHubController::class, 'pathao']);
     Route::post('/pathao/sandbox', function (Request $request) {

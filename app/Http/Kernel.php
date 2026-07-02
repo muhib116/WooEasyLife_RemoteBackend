@@ -77,5 +77,6 @@ class Kernel extends HttpKernel
         'permission' => \App\Http\Middleware\EnsurePermission::class,
         'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
         'merchant.portal' => \App\Http\Middleware\EnsureMerchantPortalAccess::class,
+        'plugin.upload' => \App\Http\Middleware\EnsurePluginUploadApiKey::class,
     ];
 }

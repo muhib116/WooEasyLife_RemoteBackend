@@ -36,4 +36,8 @@ return [
         'sender_id' => env('BULKSMS_SENDER_ID', '8809617619992'),
     ],
 
+    'plugin_upload' => [
+        'api_key' => env('PLUGIN_UPLOAD_API_KEY'),
+    ],
+
 ];

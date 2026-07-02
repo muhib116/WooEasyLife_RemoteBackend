@@ -124,6 +124,25 @@ export const apiCategories: ApiCategory[] = [
                     2,
                 ),
             },
+            {
+                id: "upload-plugin-version",
+                name: "Upload Plugin Version",
+                method: "POST",
+                path: "/api/admin/plugins/versions",
+                auth: "token",
+                description:
+                    "Publishes a new plugin ZIP and metadata. Requires Authorization: Bearer {PLUGIN_UPLOAD_API_KEY}.",
+                requestExample: "multipart/form-data: version, settings (JSON string), file (zip)",
+                responseExample: JSON.stringify(
+                    {
+                        status: true,
+                        message: "Version created successfully",
+                        data: { id: 12, version: "1.4.0", path: "app/private/wpsalehub-1.4.0.zip" },
+                    },
+                    null,
+                    2,
+                ),
+            },
         ],
     },
     {
