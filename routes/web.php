@@ -349,8 +349,22 @@ Route::get('/clear-route', function () {
     echo 'Route cleared successfully';
 });
 
+Route::get('/clear-config', function () {
+    Artisan::call('config:clear');
+    echo 'Config cleared successfully';
+});
+
+Route::get('/clear-view', function () {
+    Artisan::call('view:clear');
+    echo 'View cleared successfully';
+});
+
+Route::get('/storage-link', function () {
+    Artisan::call('storage:link');
+    echo 'Storage link created successfully';
+});
+
 Route::get('/deploy/{secret}/setup', [DeployController::class, 'setup'])->name('deploy.setup');
 
 // https://inertiaui.com/inertia-tables
-
 // Http::get()
