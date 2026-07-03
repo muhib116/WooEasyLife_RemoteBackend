@@ -31,6 +31,9 @@ class DeployController extends Controller
         Artisan::call('db:seed', ['--force' => true]);
         $results['db:seed'] = trim(Artisan::output()) ?: 'ok';
 
+        Artisan::call('storage:link');
+        $results['storage:link'] = trim(Artisan::output()) ?: 'ok';
+
         foreach (['config:cache', 'route:cache', 'view:cache'] as $command) {
             Artisan::call($command);
             $results[$command] = trim(Artisan::output()) ?: 'ok';

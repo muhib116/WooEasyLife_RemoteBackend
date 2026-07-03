@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\WhitelistedDomainController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\Analysis\UseAnalysisController;
 use App\Http\Controllers\DeployController;
+use App\Http\Controllers\PublicStorageController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\PageBuilder;
@@ -46,6 +47,10 @@ use Inertia\Inertia;
 | 
 im_super=true
 */
+
+Route::get('/storage/{path}', [PublicStorageController::class, 'show'])
+    ->where('path', '.*')
+    ->name('public-storage.show');
 
 Route::get('/', function () {
     $landing = app(\App\Services\LandingPageService::class)->payload(request());
