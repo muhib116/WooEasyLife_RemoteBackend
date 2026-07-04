@@ -339,7 +339,7 @@ Route::get('/run-migration', function () {
 });
 
 Route::get('/migration-rollback', function () {
-    Artisan::call('migrate:rollback');
+    Artisan::call('migrate:rollback --step=1');
     echo 'Rollback successfully';
 });
 
