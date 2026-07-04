@@ -219,6 +219,7 @@ const sections: NavSection[] = [
             { title: "Pricing Plans", name: "packages.index", icon: "PhPackage" },
             { title: "Payment Requests", name: "packagePayments.index", icon: "PhCreditCard" },
             { title: "Subscription Alerts", name: "subscriptionAlerts.index", icon: "PhBellRinging" },
+            { title: "Customer Notices", name: "customerNotices.index", icon: "PhMegaphone" },
         ],
     },
     {

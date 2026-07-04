@@ -28,7 +28,7 @@
 
         <div v-if="showProgress" class="mb-5">
             <div class="mb-2 flex items-center justify-between text-sm">
-                <span class="text-gray-500 dark:text-gray-400">Usage</span>
+                <span class="text-gray-500 dark:text-gray-400">{{ progressLabel }}</span>
                 <span class="font-semibold text-gray-700 dark:text-gray-200">
                     {{ progressPercent }}%
                 </span>
@@ -95,7 +95,10 @@ const props = defineProps<{
     description?: string;
     showProgress?: boolean;
     progressPercent?: number;
+    progressLabel?: string;
 }>();
+
+const progressLabel = computed(() => props.progressLabel ?? "Usage");
 
 const gridColumnClass = computed(() => {
     const span = Number(props.data?.col_span ?? 1);

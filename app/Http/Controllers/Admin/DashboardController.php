@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
 use App\Models\CourierForwardRetry;
 use App\Models\CourierWebhookEvent;
+use App\Models\CustomerNotice;
+use App\Models\PackagePaymentRequest;
 use App\Models\SmsBalance;
 use App\Models\User;
 use App\Models\UserPackage;
@@ -45,90 +47,146 @@ class DashboardController extends Controller
 
     public function index()
     {
+        $tokenData = $this->packagePurchaseInfo();
+
         $data = [
-            // 'user' => ,
-            'users' => [
-                'title' => 'Users',
-                'link' => route('users.index'),
-                'link_text' => 'See User List',
-                'data' => $this->getUserStatistics()
-            ],
+            'overview' => $this->getOverview($tokenData),
             'tokens' => [
                 'col_span' => 2,
-                'title' => 'Tokens',
+                'title' => 'Token & Revenue',
                 'link' => route('tokenLedger'),
-                'link_text' => 'See Detail Token Ledger',
-                'data' => $this->packagePurchaseInfo()
+                'link_text' => 'Open Token Ledger',
+                'data' => $tokenData,
             ],
             'sms' => $this->getSmsInfo(),
-            'package_purchase' => $this->packagePurchaseInfo(),
             'expired_tokens' => $this->getExpiredTokenInfo(),
             'subscription_alerts' => $this->getSubscriptionAlertInfo(),
             'webhooks' => $this->getWebhookInfo(),
+            'customer_notices' => $this->getCustomerNoticeInfo(),
+            'payment_requests' => $this->getPaymentRequestInfo(),
         ];
 
         return Inertia::render('Dashboard/Dashboard', compact('data'));
     }
 
-    private function packagePurchaseInfo()
+    /**
+     * @return array<int, int|string>
+     */
+    private function excludedUserIds(): array
     {
         $adminUserIds = User::where('role', 'admin')->pluck('id');
         $testUsers = User::where('is_test', 1)->pluck('id');
-        $adminUserIds = User::where('role', 'admin')->pluck('id');
-        $testUsers = User::where('is_test', 1)->pluck('id');
-        $ids = [...($adminUserIds ?? []), ...($testUsers ?? [])];
+
+        return [...$adminUserIds, ...$testUsers];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $tokenData
+     * @return array<string, mixed>
+     */
+    private function getOverview(array $tokenData): array
+    {
+        $userQuery = User::query()->where('role', 'user');
+        $totalMerchants = $userQuery->count();
+
+        $currentMonthMerchants = (clone $userQuery)
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->count();
+
+        $previousMonthMerchants = (clone $userQuery)
+            ->whereYear('created_at', now()->subMonth()->year)
+            ->whereMonth('created_at', now()->subMonth()->month)
+            ->count();
+
+        if ($previousMonthMerchants > 0) {
+            $growthPct = (($currentMonthMerchants - $previousMonthMerchants) / $previousMonthMerchants) * 100;
+        } else {
+            $growthPct = $currentMonthMerchants > 0 ? 100 : 0;
+        }
+
+        $tokenSell = $this->statValue($tokenData, 'Token Sell');
+        $tokenUsed = $this->statValue($tokenData, 'Token Used');
+        $tokenUsagePercent = $tokenSell > 0
+            ? min(100, (int) round(($tokenUsed / $tokenSell) * 100))
+            : 0;
+
+        $packageQuery = UserPackage::query()
+            ->whereNotIn('user_id', $this->excludedUserIds())
+            ->where('is_active', true);
+
+        $activeSubscriptions = (clone $packageQuery)->count();
+        $expiringSubscriptions = (clone $packageQuery)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '>=', now())
+            ->where('expires_at', '<=', now()->addDays(7))
+            ->count();
+
+        $pendingPaymentsQuery = PackagePaymentRequest::query()->where('status', 'pending');
+        $pendingPayments = (clone $pendingPaymentsQuery)->count();
+        $pendingPaymentsAmount = (clone $pendingPaymentsQuery)->sum('total_amount');
+
+        return [
+            'merchants_total' => $totalMerchants,
+            'merchants_new_month' => $currentMonthMerchants,
+            'merchants_growth_pct' => number_format($growthPct, 2),
+            'merchants_growth_positive' => $growthPct >= 0,
+            'pending_payments' => $pendingPayments,
+            'pending_payments_amount' => number_format((float) $pendingPaymentsAmount, 2),
+            'platform_revenue' => $this->statFormatted($tokenData, 'Token Sell Price'),
+            'token_usage_percent' => $tokenUsagePercent,
+            'token_remaining' => $this->statFormatted($tokenData, 'Token Remaining'),
+            'active_subscriptions' => $activeSubscriptions,
+            'expiring_subscriptions' => $expiringSubscriptions,
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $stats
+     */
+    private function statValue(array $stats, string $title): float
+    {
+        foreach ($stats as $stat) {
+            if (($stat['title'] ?? null) === $title) {
+                return (float) str_replace(',', '', (string) ($stat['value'] ?? 0));
+            }
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $stats
+     */
+    private function statFormatted(array $stats, string $title): string
+    {
+        foreach ($stats as $stat) {
+            if (($stat['title'] ?? null) === $title) {
+                $value = (string) ($stat['value'] ?? '0');
+                $modifier = $stat['modifier'] ?? null;
+
+                return $modifier ? "{$value} {$modifier}" : $value;
+            }
+        }
+
+        return '0';
+    }
+
+    private function packagePurchaseInfo()
+    {
+        $ids = $this->excludedUserIds();
         $query = UserPackage::query()->whereNotIn('user_id', $ids);
 
         $token_sell = (clone $query)->sum('total_order_can_handle');
         $token_used = (clone $query)->sum('total_order_handled');
         $token_remaining = $token_sell - $token_used;
         $token_sell_price = (clone $query)->sum('total_cost');
-        $transaction_charge = (clone $query)->sum('transaction_charge');
 
         return [
             getBoxData('Token Sell', number_format($token_sell, 2)),
             getBoxData('Token Used', number_format($token_used, 2)),
             getBoxData('Token Remaining', number_format($token_remaining, 2)),
             getBoxData('Token Sell Price', number_format($token_sell_price, 2), 'TK'),
-            getBoxData('Transaction Charge', number_format($transaction_charge, 2), 'TK'),
-        ];
-    }
-
-    private function getUserStatistics()
-    {
-        // Base user query to filter users with role 'user'
-        $userQuery = User::query()->where('role', 'user');
-
-        // Get total user count
-        $totalUser = $userQuery->count();
-
-        // Clone the query to avoid modifying the base query
-        $currentMonthUsers = (clone $userQuery)
-            ->whereYear('created_at', now()->year)
-            ->whereMonth('created_at', now()->month)
-            ->count();
-
-        $previousMonthUsers = (clone $userQuery)
-            ->whereYear('created_at', now()->subMonth()->year)
-            ->whereMonth('created_at', now()->subMonth()->month)
-            ->count();
-
-        if ($previousMonthUsers > 0) {
-            $percentageChange = (($currentMonthUsers - $previousMonthUsers) / $previousMonthUsers) * 100;
-        } else {
-            $percentageChange = $currentMonthUsers > 0 ? 100 : 0; // If there were no users last month, assume a 100% increase
-        }
-
-
-        return [
-            getBoxData('Total User', $totalUser),
-            getBoxData('New User Of This Month', $currentMonthUsers),
-            getBoxData('Prev Month User', $previousMonthUsers),
-            getBoxData('Increase / Decrease', number_format($percentageChange, 2), '%'),
-            // 'total_user' => $totalUser,
-            // 'this_month_user' => $currentMonthUsers,
-            // 'previous_month_user' => $previousMonthUsers,
-            // 'percent_increase_from_previous_month' => $percentageChange
         ];
     }
 
@@ -310,5 +368,131 @@ class DashboardController extends Controller
             $builder->whereNull('payload_summary')
                 ->orWhere('payload_summary->source', '!=', self::ADMIN_TEST_SOURCE);
         });
+    }
+
+    private function getCustomerNoticeInfo()
+    {
+        $notices = CustomerNotice::query()->orderByDesc('priority')->orderByDesc('id')->get();
+
+        $live = 0;
+        $scheduled = 0;
+        $inactive = 0;
+
+        foreach ($notices as $notice) {
+            $status = $this->resolveNoticeStatus($notice);
+
+            match ($status) {
+                'live' => $live++,
+                'scheduled' => $scheduled++,
+                default => $inactive++,
+            };
+        }
+
+        $audienceLabels = [
+            'all' => 'All merchants',
+            'active_subscribers' => 'Active subscribers',
+            'expiring_soon' => 'Expiring soon',
+            'recent_expired' => 'Recently expired',
+            'not_renewed' => 'Not renewed',
+        ];
+
+        $typeLabels = [
+            'offer' => 'Offer',
+            'maintenance' => 'Maintenance',
+            'feature' => 'Feature',
+            'general' => 'General',
+        ];
+
+        $recent = $notices
+            ->filter(fn (CustomerNotice $notice) => in_array($this->resolveNoticeStatus($notice), ['live', 'scheduled'], true))
+            ->take(5)
+            ->map(function (CustomerNotice $notice) use ($audienceLabels, $typeLabels) {
+                return [
+                    'id' => $notice->id,
+                    'title' => $notice->title,
+                    'type' => $notice->type,
+                    'type_label' => $typeLabels[$notice->type] ?? $notice->type,
+                    'audience' => $notice->audience,
+                    'audience_label' => $audienceLabels[$notice->audience] ?? $notice->audience,
+                    'severity' => $notice->severity,
+                    'status' => $this->resolveNoticeStatus($notice),
+                ];
+            })
+            ->values();
+
+        return [
+            'title' => 'Customer Notices',
+            'link' => Route::has('customerNotices.index') ? route('customerNotices.index') : url('/customer-notices'),
+            'link_text' => 'Manage Notices',
+            'summary' => [
+                'total' => $notices->count(),
+                'live' => $live,
+                'scheduled' => $scheduled,
+                'inactive' => $inactive,
+            ],
+            'recent' => $recent,
+        ];
+    }
+
+    private function resolveNoticeStatus(CustomerNotice $notice): string
+    {
+        if (! $notice->is_active) {
+            return 'inactive';
+        }
+
+        $now = now();
+
+        if ($notice->starts_at && $notice->starts_at->isFuture()) {
+            return 'scheduled';
+        }
+
+        if ($notice->ends_at && $notice->ends_at->isPast()) {
+            return 'inactive';
+        }
+
+        return 'live';
+    }
+
+    private function getPaymentRequestInfo()
+    {
+        $baseQuery = PackagePaymentRequest::query();
+
+        $pending = (clone $baseQuery)->where('status', 'pending')->count();
+        $approved = (clone $baseQuery)->where('status', 'approved')->count();
+        $cancelled = (clone $baseQuery)->where('status', 'cancelled')->count();
+        $total = (clone $baseQuery)->count();
+        $pendingAmount = (clone $baseQuery)->where('status', 'pending')->sum('total_amount');
+
+        $recentPending = (clone $baseQuery)
+            ->where('status', 'pending')
+            ->with(['user:id,name', 'packageHub:id,title', 'website:id,domain'])
+            ->orderByDesc('id')
+            ->limit(6)
+            ->get()
+            ->map(function (PackagePaymentRequest $payment) {
+                return [
+                    'id' => $payment->id,
+                    'user_name' => $payment->user?->name,
+                    'domain' => $payment->website?->domain ?? $payment->domain,
+                    'package_title' => $payment->packageHub?->title,
+                    'total_amount' => number_format((float) ($payment->total_amount ?? 0), 2),
+                    'submitted_ago' => $payment->created_at?->diffForHumans(),
+                ];
+            })
+            ->values();
+
+        return [
+            'title' => 'Payment Requests',
+            'link' => Route::has('packagePayments.index') ? route('packagePayments.index') : url('/package-payments'),
+            'link_text' => 'Review Payments',
+            'summary' => [
+                'total' => $total,
+                'pending' => $pending,
+                'approved' => $approved,
+                'cancelled' => $cancelled,
+                'pending_amount' => number_format((float) $pendingAmount, 2),
+            ],
+            'recent' => $recentPending,
+        ];
     }
 }

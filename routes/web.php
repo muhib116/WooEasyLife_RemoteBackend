@@ -6,6 +6,7 @@ use App\Http\Controllers\App\PricingController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\CustomerNoticeController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeveloperController;
 use App\Http\Controllers\Admin\FollowUpController;
@@ -303,6 +304,13 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/', [WhitelistedDomainController::class, 'store'])->name('store');
         Route::put('/{whitelistedDomain}', [WhitelistedDomainController::class, 'update'])->name('update');
         Route::delete('/{whitelistedDomain}', [WhitelistedDomainController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::group(['as' => 'customerNotices.', 'prefix' => 'customer-notices'], function () {
+        Route::get('/', [CustomerNoticeController::class, 'index'])->name('index');
+        Route::post('/', [CustomerNoticeController::class, 'store'])->name('store');
+        Route::put('/{customerNotice}', [CustomerNoticeController::class, 'update'])->name('update');
+        Route::delete('/{customerNotice}', [CustomerNoticeController::class, 'destroy'])->name('destroy');
     });
 });
 

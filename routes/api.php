@@ -34,6 +34,7 @@ use Illuminate\Support\Facades\Route;
 // });
 Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], function () {
     Route::get('/get-user', [UserController::class, 'getUser']);
+    Route::get('/notices', [\App\Http\Controllers\Data\NoticeController::class, 'index']);
 });
 
 Route::group(['middleware' => ['auth.packageRenewal'], 'prefix' => 'api/package', 'as' => 'package.'], function () {

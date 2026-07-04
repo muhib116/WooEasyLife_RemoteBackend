@@ -34,7 +34,7 @@ class MerchantPortalTest extends TestCase
             'status' => true,
         ]);
 
-        $response = $this->post('/login', [
+        $response = $this->post('/muhib/login', [
             'email' => 'merchant@example.com',
             'password' => 'password',
         ]);
@@ -56,7 +56,7 @@ class MerchantPortalTest extends TestCase
             'status' => true,
         ]);
 
-        $response = $this->post('/login', [
+        $response = $this->post('/muhib/login', [
             'email' => 'admin@example.com',
             'password' => 'password',
         ]);
@@ -105,7 +105,7 @@ class MerchantPortalTest extends TestCase
             'portal_password' => 'password123',
         ]);
 
-        $this->post('/login', [
+        $this->post('/muhib/login', [
             'email' => 'viewer-staff@example.com',
             'password' => 'password123',
         ])->assertRedirect('/portal');

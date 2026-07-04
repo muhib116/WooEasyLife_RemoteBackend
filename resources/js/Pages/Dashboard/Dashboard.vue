@@ -1,6 +1,6 @@
 <template>
     <AuthenticatedLayout title="Dashboard">
-        <div class="space-y-6">
+        <div class="space-y-8">
             <PageHeader
                 title="Dashboard"
                 :description="`${greeting}, ${authUser?.name || 'Admin'} · ${formattedDate}`"
@@ -21,87 +21,87 @@
                 </template>
             </PageHeader>
 
-            <div
-                v-if="healthAlerts.length"
-                class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
-            >
-                <div
-                    v-for="alert in healthAlerts"
-                    :key="alert.label"
-                    class="flex items-center gap-3 rounded-2xl border px-4 py-3.5"
-                    :class="alert.className"
-                >
+            <section v-if="healthAlerts.length" class="space-y-3">
+                <DashboardSectionHeading title="Action Required" />
+                <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                     <div
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                        :class="alert.iconBg"
+                        v-for="alert in healthAlerts"
+                        :key="alert.label"
+                        class="flex items-center gap-3 rounded-2xl border px-4 py-3.5"
+                        :class="alert.className"
                     >
-                        <Icon :name="alert.icon" class="text-lg" :class="alert.iconClass" />
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                            :class="alert.iconBg"
+                        >
+                            <Icon :name="alert.icon" class="text-lg" :class="alert.iconClass" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                {{ alert.label }}
+                            </p>
+                            <p class="text-xs text-gray-600 dark:text-gray-300/80">
+                                {{ alert.detail }}
+                            </p>
+                        </div>
+                        <Link
+                            v-if="alert.href"
+                            :href="alert.href"
+                            class="text-theme-xs shrink-0 rounded-lg border border-current/20 px-2.5 py-1.5 font-medium transition hover:bg-white/40 dark:hover:bg-black/20"
+                        >
+                            {{ alert.actionLabel }}
+                        </Link>
                     </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {{ alert.label }}
-                        </p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ alert.detail }}
-                        </p>
-                    </div>
-                    <Link
-                        v-if="alert.href"
-                        :href="alert.href"
-                        class="text-theme-xs shrink-0 rounded-lg border border-current/20 px-2.5 py-1.5 font-medium transition hover:bg-white/40 dark:hover:bg-black/20"
-                    >
-                        Review
-                    </Link>
                 </div>
-            </div>
+            </section>
 
             <section class="space-y-4">
-                <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Overview
-                    </h2>
-                </div>
-
+                <DashboardSectionHeading
+                    title="Overview"
+                    :href="route('users.index')"
+                    link-text="All merchants"
+                />
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <Link :href="route('users.index')" class="block cursor-pointer transition hover:-translate-y-0.5">
+                    <Link :href="route('users.index')" class="block h-full">
                         <StatCard
-                            title="Total Users"
-                            :value="findStat(usersStats, 'Total User')"
+                            title="Merchants"
+                            :value="overview.merchants_total"
                             icon="PhUsers"
-                            subtitle="Registered merchant accounts"
+                            :subtitle="`${overview.merchants_new_month} new this month`"
+                            :badge="`${overview.merchants_growth_pct}%`"
+                            badge-label="vs last month"
+                            :badge-positive="overview.merchants_growth_positive"
                         />
                     </Link>
-                    <Link :href="route('users.index')" class="block cursor-pointer transition hover:-translate-y-0.5">
+                    <Link :href="route('packagePayments.index')" class="block h-full">
                         <StatCard
-                            title="New Users"
-                            :value="findStat(usersStats, 'New User Of This Month')"
-                            icon="PhUserPlus"
-                            :badge="`${findStat(usersStats, 'Increase / Decrease')}%`"
-                            badge-label="vs last month"
-                            :badge-positive="userGrowthPositive"
+                            title="Pending Payments"
+                            :value="overview.pending_payments"
+                            icon="PhCreditCard"
+                            :subtitle="`${overview.pending_payments_amount} TK awaiting review`"
+                            :highlight="overview.pending_payments > 0"
                             accent-class="bg-emerald-500"
                             icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
                             icon-class="text-emerald-600 dark:text-emerald-400"
                         />
                     </Link>
-                    <StatCard
-                        title="SMS Balance"
-                        :value="`${sms.total_balance} TK`"
-                        icon="PhChatCircleText"
-                        subtitle="Total balance across users"
-                        accent-class="bg-sky-500"
-                        icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
-                        icon-class="text-sky-600 dark:text-sky-400"
-                    />
-                    <Link :href="route('webhooks.index')" class="block cursor-pointer transition hover:-translate-y-0.5">
+                    <Link :href="route('tokenLedger')" class="block h-full">
                         <StatCard
-                            title="Webhook Events"
-                            :value="webhooks.total_events ?? 0"
-                            icon="PhArrowClockwise"
-                            :subtitle="webhookSubtitle"
-                            :badge="`${webhooks.success_rate ?? 0}%`"
-                            badge-label="forward success"
-                            :badge-positive="(webhooks.pending_retries ?? 0) === 0"
+                            title="Platform Revenue"
+                            :value="overview.platform_revenue"
+                            icon="PhCoins"
+                            :subtitle="`${overview.token_remaining} orders remaining`"
+                            accent-class="bg-amber-500"
+                            icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
+                            icon-class="text-amber-600 dark:text-amber-400"
+                        />
+                    </Link>
+                    <Link :href="route('subscriptionAlerts.index')" class="block h-full">
+                        <StatCard
+                            title="Active Plans"
+                            :value="overview.active_subscriptions"
+                            icon="PhPackage"
+                            :subtitle="subscriptionsSubtitle"
                             accent-class="bg-violet-500"
                             icon-bg-class="bg-violet-50 dark:bg-violet-500/15"
                             icon-class="text-violet-600 dark:text-violet-400"
@@ -111,63 +111,87 @@
             </section>
 
             <section class="space-y-4">
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Platform Metrics
-                </h2>
-
-                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    <GroupListBox
-                        :data="getData('users')"
-                        icon="PhUsersThree"
-                        description="User growth and registration overview"
+                <DashboardSectionHeading
+                    title="Needs Attention"
+                    :href="hasAttentionItems ? route('packagePayments.index') : undefined"
+                    :link-text="hasAttentionItems ? 'Review items' : undefined"
+                />
+                <div v-if="hasAttentionItems" class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <PaymentRequestsPanel
+                        v-if="(paymentRequests.summary?.pending ?? 0) > 0"
+                        :data="paymentRequests"
                     />
-                    <GroupListBox
-                        :data="getData('tokens')"
-                        icon="PhCoins"
-                        description="Token sales, usage, and revenue"
-                        show-progress
-                        :progress-percent="tokenUsagePercent"
+                    <SubscriptionAlertsPanel
+                        v-if="(subscriptionAlerts.summary?.total ?? 0) > 0"
+                        :data="subscriptionAlerts"
+                    />
+                    <ExpiredTokensPanel
+                        v-if="showTokenPanel"
+                        :data="expiredTokens"
                     />
                 </div>
+                <AllClearCard v-else />
             </section>
 
             <section class="space-y-4">
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    System Health
-                </h2>
-
-                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    <ExpiredTokensPanel :data="expiredTokens" />
-                    <SubscriptionAlertsPanel :data="subscriptionAlerts" />
-                    <WebhookActivityPanel :data="webhooks" />
+                <DashboardSectionHeading
+                    title="Revenue & Usage"
+                    :href="route('tokenLedger')"
+                    link-text="Token ledger"
+                />
+                <div class="grid grid-cols-1 gap-4">
+                    <GroupListBox
+                        :data="getData('tokens')"
+                        icon="PhCoins"
+                        description="Order capacity sold, consumed, and remaining across all merchants"
+                        show-progress
+                        progress-label="Token utilization"
+                        :progress-percent="overview.token_usage_percent"
+                    />
                 </div>
             </section>
 
-            <PageCard
-                title="SMS Overview"
-                description="Balance, recharge, and delivery metrics"
-            >
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <section v-if="showActivitySection" class="space-y-4">
+                <DashboardSectionHeading
+                    title="Platform Activity"
+                    :href="route('webhooks.index')"
+                    link-text="Webhook log"
+                />
+                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <WebhookActivityPanel
+                        v-if="showWebhookPanel"
+                        :data="webhooks"
+                    />
+                    <CustomerNoticesPanel
+                        v-if="(customerNotices.summary?.total ?? 0) > 0"
+                        :data="customerNotices"
+                    />
+                </div>
+            </section>
+
+            <section v-if="showSmsSection" class="space-y-4">
+                <DashboardSectionHeading title="SMS" />
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <Widget
-                        title="User SMS Balance"
+                        title="User Balance"
                         :value="`${sms.total_balance} TK`"
                         icon="PhWallet"
-                        right-text="Held by users"
+                        right-text="Held by merchants"
                     />
                     <Widget
                         title="Total Recharged"
                         :value="`${sms.total_sms_recharge} TK`"
                         icon="PhArrowCircleUp"
-                        right-text="All-time recharge"
+                        right-text="All-time top-ups"
                     />
                     <Widget
-                        title="SMS Sent"
+                        title="Messages Sent"
                         :value="sms.total_sms_sent"
                         icon="PhPaperPlaneTilt"
-                        right-text="Messages delivered"
+                        right-text="Delivered messages"
                     />
                 </div>
-            </PageCard>
+            </section>
         </div>
     </AuthenticatedLayout>
 </template>
@@ -175,22 +199,34 @@
 <script setup lang="ts">
 import AuthenticatedLayout from "@/layouts/AuthenticatedLayout.vue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
-import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import ExpiredTokensPanel from "./fragments/ExpiredTokensPanel.vue";
 import SubscriptionAlertsPanel from "./fragments/SubscriptionAlertsPanel.vue";
+import PaymentRequestsPanel from "./fragments/PaymentRequestsPanel.vue";
+import CustomerNoticesPanel from "./fragments/CustomerNoticesPanel.vue";
 import WebhookActivityPanel from "./fragments/WebhookActivityPanel.vue";
 import GroupListBox from "./fragments/GroupListBox.vue";
 import StatCard from "./fragments/StatCard.vue";
 import Widget from "./fragments/Widget.vue";
+import DashboardSectionHeading from "./fragments/DashboardSectionHeading.vue";
+import AllClearCard from "./fragments/AllClearCard.vue";
 import { Icon } from "@/plugins";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 import { get } from "lodash";
 import type { IconName } from "@/types";
 
-type StatItem = {
-    title: string;
-    value: string | number;
+type OverviewData = {
+    merchants_total: number;
+    merchants_new_month: number;
+    merchants_growth_pct: string;
+    merchants_growth_positive: boolean;
+    pending_payments: number;
+    pending_payments_amount: string;
+    platform_revenue: string;
+    token_usage_percent: number;
+    token_remaining: string;
+    active_subscriptions: number;
+    expiring_subscriptions: number;
 };
 
 type ExpiredTokenData = {
@@ -261,12 +297,53 @@ type SubscriptionAlertData = {
     }>;
 };
 
-type DashboardData = {
-    users: {
-        data: StatItem[];
+type CustomerNoticeData = {
+    title?: string;
+    link?: string;
+    link_text?: string;
+    summary?: {
+        total: number;
+        live: number;
+        scheduled: number;
+        inactive: number;
     };
+    recent?: Array<{
+        id: number;
+        title: string;
+        type: string;
+        type_label: string;
+        audience: string;
+        audience_label: string;
+        severity: string;
+        status: string;
+    }>;
+};
+
+type PaymentRequestData = {
+    title?: string;
+    link?: string;
+    link_text?: string;
+    summary?: {
+        total: number;
+        pending: number;
+        approved: number;
+        cancelled: number;
+        pending_amount?: string;
+    };
+    recent?: Array<{
+        id: number;
+        user_name: string | null;
+        domain: string | null;
+        package_title: string | null;
+        total_amount: string;
+        submitted_ago: string | null;
+    }>;
+};
+
+type DashboardData = {
+    overview: OverviewData;
     tokens: {
-        data: StatItem[];
+        data: Array<{ title: string; value: string | number }>;
     };
     sms: {
         total_balance: string;
@@ -276,6 +353,8 @@ type DashboardData = {
     expired_tokens: ExpiredTokenData;
     subscription_alerts: SubscriptionAlertData;
     webhooks: WebhookData;
+    customer_notices: CustomerNoticeData;
+    payment_requests: PaymentRequestData;
 };
 
 const props = defineProps<{
@@ -287,8 +366,20 @@ const authUser = computed(() => page.props.auth?.user as { name?: string } | nul
 
 const getData = (key: string) => get(props.data, key);
 
-const usersStats = computed(() => get(props.data, "users.data", []) as StatItem[]);
-const tokensStats = computed(() => get(props.data, "tokens.data", []) as StatItem[]);
+const overview = computed(() => get(props.data, "overview", {
+    merchants_total: 0,
+    merchants_new_month: 0,
+    merchants_growth_pct: "0.00",
+    merchants_growth_positive: true,
+    pending_payments: 0,
+    pending_payments_amount: "0.00",
+    platform_revenue: "0 TK",
+    token_usage_percent: 0,
+    token_remaining: "0",
+    active_subscriptions: 0,
+    expiring_subscriptions: 0,
+}) as OverviewData);
+
 const sms = computed(() => get(props.data, "sms", {
     total_balance: "0",
     total_sms_sent: "0",
@@ -321,47 +412,55 @@ const webhooks = computed(() => get(props.data, "webhooks", {
     partners: [],
 }) as WebhookData);
 
-const webhookSubtitle = computed(() => {
-    const pending = webhooks.value.pending_retries ?? 0;
+const customerNotices = computed(() => get(props.data, "customer_notices", {
+    summary: { total: 0, live: 0, scheduled: 0, inactive: 0 },
+    recent: [],
+}) as CustomerNoticeData);
 
-    if (pending > 0) {
-        return `${pending} pending ${pending === 1 ? "retry" : "retries"}`;
+const paymentRequests = computed(() => get(props.data, "payment_requests", {
+    summary: { total: 0, pending: 0, approved: 0, cancelled: 0, pending_amount: "0.00" },
+    recent: [],
+}) as PaymentRequestData);
+
+const subscriptionsSubtitle = computed(() => {
+    const expiring = overview.value.expiring_subscriptions;
+
+    if (expiring > 0) {
+        return `${expiring} expiring within 7 days`;
     }
 
-    if (webhooks.value.last_event_at) {
-        return `Last event: ${webhooks.value.last_event_at}`;
-    }
-
-    return "No webhook events yet";
+    return "Active merchant subscriptions";
 });
 
-const findStat = (stats: StatItem[], title: string) => {
-    const item = stats.find((stat) => stat.title === title);
-    return item?.value ?? "0";
-};
-
-const parseStatNumber = (stats: StatItem[], title: string) => {
-    const value = String(findStat(stats, title)).replace(/,/g, "");
-    return Number.parseFloat(value) || 0;
-};
-
-const tokenSell = computed(() => parseStatNumber(tokensStats.value, "Token Sell"));
-const tokenUsed = computed(() => parseStatNumber(tokensStats.value, "Token Used"));
-
-const tokenUsagePercent = computed(() => {
-    if (tokenSell.value <= 0) {
-        return 0;
-    }
-
-    return Math.min(100, Math.round((tokenUsed.value / tokenSell.value) * 100));
+const showTokenPanel = computed(() => {
+    return (expiredTokens.value.expired ?? 0) > 0 || (expiredTokens.value.expiring_soon ?? 0) > 0;
 });
 
-const userGrowthPositive = computed(() => {
-    const growth = Number.parseFloat(
-        String(findStat(usersStats.value, "Increase / Decrease")),
-    );
+const hasAttentionItems = computed(() => {
+    return (paymentRequests.value.summary?.pending ?? 0) > 0
+        || (subscriptionAlerts.value.summary?.total ?? 0) > 0
+        || showTokenPanel.value;
+});
 
-    return Number.isNaN(growth) ? true : growth >= 0;
+const showWebhookPanel = computed(() => {
+    const wh = webhooks.value;
+
+    return (wh.total_events ?? 0) > 0
+        || (wh.pending_retries ?? 0) > 0
+        || (wh.failed_count ?? 0) > 0
+        || (wh.orphan_count ?? 0) > 0;
+});
+
+const showActivitySection = computed(() => {
+    return showWebhookPanel.value || (customerNotices.value.summary?.total ?? 0) > 0;
+});
+
+const showSmsSection = computed(() => {
+    const balance = Number.parseFloat(String(sms.value.total_balance).replace(/,/g, ""));
+    const sent = Number.parseFloat(String(sms.value.total_sms_sent).replace(/,/g, ""));
+    const recharged = Number.parseFloat(String(sms.value.total_sms_recharge).replace(/,/g, ""));
+
+    return balance > 0 || sent > 0 || recharged > 0;
 });
 
 const greeting = computed(() => {
@@ -389,9 +488,9 @@ const formattedDate = computed(() => {
 
 const quickActions: { label: string; name: string; icon: IconName }[] = [
     { label: "Merchants", name: "users.index", icon: "PhUsers" },
-    { label: "Webhooks", name: "webhooks.index", icon: "PhArrowClockwise" },
+    { label: "Payments", name: "packagePayments.index", icon: "PhCreditCard" },
+    { label: "Alerts", name: "subscriptionAlerts.index", icon: "PhBellRinging" },
     { label: "Token Ledger", name: "tokenLedger", icon: "PhCoins" },
-    { label: "Pricing Plans", name: "packages.index", icon: "PhPackage" },
 ];
 
 type HealthAlert = {
@@ -399,6 +498,8 @@ type HealthAlert = {
     detail: string;
     icon: IconName;
     href?: string;
+    actionLabel: string;
+    priority: number;
     className: string;
     iconBg: string;
     iconClass: string;
@@ -407,13 +508,29 @@ type HealthAlert = {
 const healthAlerts = computed<HealthAlert[]>(() => {
     const alerts: HealthAlert[] = [];
 
+    const pendingPayments = paymentRequests.value.summary?.pending ?? 0;
+    const criticalSubscriptions = subscriptionAlerts.value.summary?.danger ?? 0;
+    const warningSubscriptions = subscriptionAlerts.value.summary?.warning ?? 0;
     const pendingRetries = webhooks.value.pending_retries ?? 0;
     const failedWebhooks =
         (webhooks.value.failed_count ?? 0) + (webhooks.value.orphan_count ?? 0);
     const expiredCount = expiredTokens.value.expired ?? 0;
     const expiringSoon = expiredTokens.value.expiring_soon ?? 0;
-    const criticalSubscriptions = subscriptionAlerts.value.summary?.danger ?? 0;
-    const warningSubscriptions = subscriptionAlerts.value.summary?.warning ?? 0;
+
+    if (pendingPayments > 0) {
+        alerts.push({
+            label: "Payment requests pending",
+            detail: `${pendingPayments} manual ${pendingPayments === 1 ? "payment" : "payments"} · ${paymentRequests.value.summary?.pending_amount ?? "0.00"} TK`,
+            icon: "PhCreditCard",
+            href: route("packagePayments.index"),
+            actionLabel: "Review",
+            priority: 1,
+            className:
+                "border-emerald-200 bg-emerald-50/80 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100",
+            iconBg: "bg-emerald-100 dark:bg-emerald-500/20",
+            iconClass: "text-emerald-600 dark:text-emerald-300",
+        });
+    }
 
     if (criticalSubscriptions > 0) {
         alerts.push({
@@ -421,6 +538,8 @@ const healthAlerts = computed<HealthAlert[]>(() => {
             detail: `${criticalSubscriptions} merchants need immediate attention`,
             icon: "PhBellRinging",
             href: route("subscriptionAlerts.index"),
+            actionLabel: "View",
+            priority: 2,
             className:
                 "border-rose-200 bg-rose-50/80 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
             iconBg: "bg-rose-100 dark:bg-rose-500/20",
@@ -432,19 +551,8 @@ const healthAlerts = computed<HealthAlert[]>(() => {
             detail: `${warningSubscriptions} merchants have expiring plans or low quota`,
             icon: "PhBell",
             href: route("subscriptionAlerts.index"),
-            className:
-                "border-amber-200 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
-            iconBg: "bg-amber-100 dark:bg-amber-500/20",
-            iconClass: "text-amber-600 dark:text-amber-300",
-        });
-    }
-
-    if (pendingRetries > 0) {
-        alerts.push({
-            label: "Webhook retries pending",
-            detail: `${pendingRetries} forward ${pendingRetries === 1 ? "retry" : "retries"} waiting in queue`,
-            icon: "PhClock",
-            href: route("webhooks.index"),
+            actionLabel: "View",
+            priority: 3,
             className:
                 "border-amber-200 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
             iconBg: "bg-amber-100 dark:bg-amber-500/20",
@@ -458,10 +566,25 @@ const healthAlerts = computed<HealthAlert[]>(() => {
             detail: `${failedWebhooks} failed or orphan events need review`,
             icon: "PhWarningCircle",
             href: route("webhooks.index"),
+            actionLabel: "Inspect",
+            priority: 4,
             className:
                 "border-rose-200 bg-rose-50/80 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
             iconBg: "bg-rose-100 dark:bg-rose-500/20",
             iconClass: "text-rose-600 dark:text-rose-300",
+        });
+    } else if (pendingRetries > 0) {
+        alerts.push({
+            label: "Webhook retries pending",
+            detail: `${pendingRetries} forward ${pendingRetries === 1 ? "retry" : "retries"} waiting in queue`,
+            icon: "PhClock",
+            href: route("webhooks.index"),
+            actionLabel: "Inspect",
+            priority: 5,
+            className:
+                "border-amber-200 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+            iconBg: "bg-amber-100 dark:bg-amber-500/20",
+            iconClass: "text-amber-600 dark:text-amber-300",
         });
     }
 
@@ -471,6 +594,8 @@ const healthAlerts = computed<HealthAlert[]>(() => {
             detail: `${expiredCount} merchant tokens are no longer valid`,
             icon: "PhKey",
             href: route("users.index"),
+            actionLabel: "Manage",
+            priority: 6,
             className:
                 "border-rose-200 bg-rose-50/80 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
             iconBg: "bg-rose-100 dark:bg-rose-500/20",
@@ -482,6 +607,8 @@ const healthAlerts = computed<HealthAlert[]>(() => {
             detail: `${expiringSoon} tokens expire within 7 days`,
             icon: "PhHourglassMedium",
             href: route("users.index"),
+            actionLabel: "Manage",
+            priority: 7,
             className:
                 "border-sky-200 bg-sky-50/80 text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100",
             iconBg: "bg-sky-100 dark:bg-sky-500/20",
@@ -489,6 +616,8 @@ const healthAlerts = computed<HealthAlert[]>(() => {
         });
     }
 
-    return alerts;
+    return alerts
+        .sort((left, right) => left.priority - right.priority)
+        .slice(0, 3);
 });
 </script>

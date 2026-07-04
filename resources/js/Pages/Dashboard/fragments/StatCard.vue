@@ -1,12 +1,17 @@
 <template>
     <div
-        class="box-bg box-color box-border group relative overflow-hidden rounded-2xl border p-5 transition-shadow hover:shadow-md"
+        class="box-bg box-color box-border group relative flex h-full min-h-[9.25rem] flex-col overflow-hidden rounded-2xl border p-5 transition-all duration-200 hover:shadow-md"
+        :class="
+            highlight
+                ? 'border-emerald-300/80 ring-1 ring-emerald-200/60 dark:border-emerald-500/40 dark:ring-emerald-500/20'
+                : ''
+        "
     >
         <div
             class="absolute -right-3 -top-3 h-24 w-24 rounded-full opacity-10"
             :class="accentClass"
         />
-        <div class="relative flex items-start justify-between gap-3">
+        <div class="relative flex flex-1 items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
                 <p class="text-theme-sm text-gray-500 dark:text-gray-400">
                     {{ title }}
@@ -76,6 +81,7 @@ withDefaults(
         iconBgClass?: string;
         iconClass?: string;
         badgeClass?: string;
+        highlight?: boolean;
     }>(),
     {
         badgePositive: true,
