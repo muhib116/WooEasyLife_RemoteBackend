@@ -12,11 +12,11 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('body');
-            $table->string('type')->default('general');
-            $table->string('severity')->default('info');
-            $table->string('audience')->default('all');
+            $table->string('type', 32)->default('general');
+            $table->string('severity', 16)->default('info');
+            $table->string('audience', 32)->default('all');
             $table->string('cta_label')->nullable();
-            $table->string('cta_url')->nullable();
+            $table->string('cta_url', 512)->nullable();
             $table->boolean('is_dismissible')->default(true);
             $table->boolean('is_active')->default(true);
             $table->integer('priority')->default(0);
