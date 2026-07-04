@@ -17,48 +17,66 @@ return [
     |
     */
     'power_feature_keys' => [
+        'create_order',
+        'order_cloning',
+        'call_and_status_log',
+        'ai_intelligence',
         'app_connect',
         'app_store_limit',
-        'fraud_customer_checker',
-        'sms_management',
-        'missing_orders',
-        'fake_order_protection',
-        'customer_blacklist',
-        'custom_status_management',
-        'employee_management',
         'courier_automation',
-        'ai_intelligence',
+        'custom_status_management',
+        'customer_blacklist',
+        'employee_management',
+        'fake_order_protection',
+        'fraud_customer_checker',
+        'customer_delivery_history',
+        'customer_behavior',
         'label_and_pos_sticker_print',
+        'missing_orders',
+        'sms_management',
+        'pixel_protection',
     ],
 
     'power_feature_labels_bn' => [
+        'create_order' => 'কাস্টম অর্ডার তৈরি',
+        'order_cloning' => 'অর্ডার ক্লোনিং',
+        'call_and_status_log' => 'কল ও স্ট্যাটাস লগ',
+        'ai_intelligence' => 'এআই ইন্টেলিজেন্স',
         'app_connect' => 'অ্যাপ কানেক্ট',
         'app_store_limit' => 'অ্যাপ স্টোর লিমিট',
-        'fraud_customer_checker' => 'ফ্রড কাস্টমার চেকার',
-        'sms_management' => 'এসএমএস ম্যানেজমেন্ট',
-        'missing_orders' => 'মিসিং অর্ডার',
-        'fake_order_protection' => 'ফেক অর্ডার প্রোটেকশন',
-        'customer_blacklist' => 'কাস্টমার ব্ল্যাকলিস্ট',
-        'custom_status_management' => 'কাস্টম স্ট্যাটাস ম্যানেজমেন্ট',
-        'employee_management' => 'এমপ্লয়ী ম্যানেজমেন্ট',
         'courier_automation' => 'কুরিয়ার অটোমেশন',
-        'ai_intelligence' => 'এআই ইন্টেলিজেন্স',
+        'custom_status_management' => 'কাস্টম স্ট্যাটাস ম্যানেজমেন্ট',
+        'customer_blacklist' => 'কাস্টমার ব্ল্যাকলিস্ট',
+        'employee_management' => 'এমপ্লয়ী ম্যানেজমেন্ট',
+        'fake_order_protection' => 'ফেক অর্ডার প্রোটেকশন',
+        'fraud_customer_checker' => 'ফ্রড কাস্টমার চেকার',
+        'customer_delivery_history' => 'কাস্টমার ডেলিভারি হিস্ট্রি',
+        'customer_behavior' => 'কাস্টমার বিহেভিয়ার',
         'label_and_pos_sticker_print' => 'লেবেল ও POS স্টিকার প্রিন্ট',
+        'missing_orders' => 'মিসিং অর্ডার',
+        'sms_management' => 'এসএমএস ম্যানেজমেন্ট',
+        'pixel_protection' => 'পিক্সেল প্রোটেকশন',
     ],
 
     'power_feature_labels_en' => [
+        'create_order' => 'Custom order create',
+        'order_cloning' => 'Order cloning',
+        'call_and_status_log' => 'Call and status log',
+        'ai_intelligence' => 'AI intelligence',
         'app_connect' => 'WooEasyLife App Connect',
         'app_store_limit' => 'Multi-store support',
-        'fraud_customer_checker' => 'Fraud customer checker',
-        'sms_management' => 'SMS management',
-        'missing_orders' => 'Missing orders',
-        'fake_order_protection' => 'Fake order protection',
-        'customer_blacklist' => 'Customer black list',
-        'custom_status_management' => 'Custom status management',
-        'employee_management' => 'Employee management',
         'courier_automation' => 'Courier automation',
-        'ai_intelligence' => 'AI intelligence',
+        'custom_status_management' => 'Custom status management',
+        'customer_blacklist' => 'Customer black list',
+        'employee_management' => 'Employee management',
+        'fake_order_protection' => 'Fake order protection',
+        'fraud_customer_checker' => 'Fraud customer checker',
+        'customer_delivery_history' => 'Customer delivery history',
+        'customer_behavior' => 'Customer behavior',
         'label_and_pos_sticker_print' => 'Label & POS sticker print',
+        'missing_orders' => 'Missing orders',
+        'sms_management' => 'SMS management',
+        'pixel_protection' => 'Pixel protection',
     ],
 
     /*
@@ -95,6 +113,7 @@ return [
         'pos_sticker_print',
         'invoice_print',
         'order_cloning',
+        'customer_order_create',
         'customer_behavior_track',
         'repeat_customer_identifier',
         'order_source_identifier',
@@ -106,6 +125,7 @@ return [
         'quick_action_tool',
         'courier_auto_status_sync',
         'courier_webhook_integrations',
+        'pixel_protection',
     ],
 
     'app_feature_keys' => [
@@ -179,12 +199,28 @@ return [
     ],
 
     'power_to_legacy' => [
+        'create_order' => [
+            'customer_order_create',
+        ],
+        'order_cloning' => [
+            'order_cloning',
+        ],
+        'call_and_status_log' => [
+            'call_history_with_duration',
+            'customer_call_identifier',
+            'order_note_management',
+            'order_source_identifier',
+        ],
+        'ai_intelligence' => [
+            'ai_text_order_create',
+            'ai_image_to_order_create',
+            'ai_incomplete_address_autocomplete',
+            'ai_driven_customer_scoring',
+        ],
         'app_connect' => [
             'one_click_app_connect',
             'multistore_order_notifications',
-            'customer_call_identifier',
             'cross_store_order_detection',
-            'call_history_with_duration',
             'common_dashboard',
             'courier_movement_notification',
             'notification_sound_management',
@@ -196,16 +232,20 @@ return [
             'common_dashboard',
             'centralized_notifications',
         ],
-        'fraud_customer_checker' => [
-            'fraud_customer_checker',
+        'courier_automation' => [
+            'three_courier_partner_integration',
+            'courier_entry_automation',
+            'courier_auto_status_sync',
+            'courier_webhook_integrations',
         ],
-        'sms_management' => [
-            'customer_sms_for_order',
-            'bulk_sms',
+        'custom_status_management' => [
+            'custom_status_manage',
         ],
-        'missing_orders' => [
-            'missing_orders',
-            'missing_order_one_click_create',
+        'customer_blacklist' => [
+            'customer_blacklist',
+        ],
+        'employee_management' => [
+            'admin_employee_manage',
         ],
         'fake_order_protection' => [
             'duplicate_order_validation',
@@ -218,33 +258,30 @@ return [
             'device_block',
             'bd_ip_restriction',
         ],
-        'customer_blacklist' => [
-            'customer_blacklist',
+        'fraud_customer_checker' => [
+            'fraud_customer_checker',
         ],
-        'custom_status_management' => [
-            'custom_status_manage',
-        ],
-        'employee_management' => [
-            'admin_employee_manage',
-        ],
-        'courier_automation' => [
-            'three_courier_partner_integration',
-            'courier_entry_automation',
-            'courier_auto_status_sync',
-            'courier_webhook_integrations',
-        ],
-        'ai_intelligence' => [
-            'ai_text_order_create',
-            'ai_image_to_order_create',
-            'ai_incomplete_address_autocomplete',
-            'ai_driven_customer_scoring',
+        'customer_delivery_history' => [
             'customer_delivery_history',
+        ],
+        'customer_behavior' => [
             'customer_behavior_track',
             'repeat_customer_identifier',
         ],
         'label_and_pos_sticker_print' => [
             'pos_sticker_print',
             'invoice_print',
+        ],
+        'missing_orders' => [
+            'missing_orders',
+            'missing_order_one_click_create',
+        ],
+        'sms_management' => [
+            'customer_sms_for_order',
+            'bulk_sms',
+        ],
+        'pixel_protection' => [
+            'pixel_protection',
         ],
     ],
 ];

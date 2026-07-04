@@ -44,12 +44,24 @@ export const WEBSITE_CONNECT_OPTIONS: {
 ];
 
 export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
+    create_order: ["customer_order_create"],
+    order_cloning: ["order_cloning"],
+    call_and_status_log: [
+        "call_history_with_duration",
+        "customer_call_identifier",
+        "order_note_management",
+        "order_source_identifier",
+    ],
+    ai_intelligence: [
+        "ai_text_order_create",
+        "ai_image_to_order_create",
+        "ai_incomplete_address_autocomplete",
+        "ai_driven_customer_scoring",
+    ],
     app_connect: [
         "one_click_app_connect",
         "multistore_order_notifications",
-        "customer_call_identifier",
         "cross_store_order_detection",
-        "call_history_with_duration",
         "common_dashboard",
         "courier_movement_notification",
         "notification_sound_management",
@@ -61,9 +73,15 @@ export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
         "common_dashboard",
         "centralized_notifications",
     ],
-    fraud_customer_checker: ["fraud_customer_checker"],
-    sms_management: ["customer_sms_for_order", "bulk_sms"],
-    missing_orders: ["missing_orders", "missing_order_one_click_create"],
+    courier_automation: [
+        "three_courier_partner_integration",
+        "courier_entry_automation",
+        "courier_auto_status_sync",
+        "courier_webhook_integrations",
+    ],
+    custom_status_management: ["custom_status_manage"],
+    customer_blacklist: ["customer_blacklist"],
+    employee_management: ["admin_employee_manage"],
     fake_order_protection: [
         "duplicate_order_validation",
         "checkout_form_validation",
@@ -75,43 +93,37 @@ export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
         "device_block",
         "bd_ip_restriction",
     ],
-    customer_blacklist: ["customer_blacklist"],
-    custom_status_management: ["custom_status_manage"],
-    employee_management: ["admin_employee_manage"],
-    courier_automation: [
-        "three_courier_partner_integration",
-        "courier_entry_automation",
-        "courier_auto_status_sync",
-        "courier_webhook_integrations",
-    ],
-    ai_intelligence: [
-        "ai_text_order_create",
-        "ai_image_to_order_create",
-        "ai_incomplete_address_autocomplete",
-        "ai_driven_customer_scoring",
-        "customer_delivery_history",
-        "customer_behavior_track",
-        "repeat_customer_identifier",
-    ],
+    fraud_customer_checker: ["fraud_customer_checker"],
+    customer_delivery_history: ["customer_delivery_history"],
+    customer_behavior: ["customer_behavior_track", "repeat_customer_identifier"],
     label_and_pos_sticker_print: ["pos_sticker_print", "invoice_print"],
+    missing_orders: ["missing_orders", "missing_order_one_click_create"],
+    sms_management: ["customer_sms_for_order", "bulk_sms"],
+    pixel_protection: ["pixel_protection"],
 };
 
 export const POWER_FULL_FEATURE_DEFINITIONS: {
     key: PowerFeatureKey;
     label: string;
 }[] = [
+    { key: "create_order", label: "কাস্টম অর্ডার তৈরি" },
+    { key: "order_cloning", label: "অর্ডার ক্লোনিং" },
+    { key: "call_and_status_log", label: "কল ও স্ট্যাটাস লগ" },
+    { key: "ai_intelligence", label: "এআই ইন্টেলিজেন্স" },
     { key: "app_connect", label: "অ্যাপ কানেক্ট" },
     { key: "app_store_limit", label: "অ্যাপ স্টোর লিমিট" },
-    { key: "fraud_customer_checker", label: "ফ্রড কাস্টমার চেকার" },
-    { key: "sms_management", label: "এসএমএস ম্যানেজমেন্ট" },
-    { key: "missing_orders", label: "মিসিং অর্ডার" },
-    { key: "fake_order_protection", label: "ফেক অর্ডার প্রোটেকশন" },
-    { key: "customer_blacklist", label: "কাস্টমার ব্ল্যাকলিস্ট" },
-    { key: "custom_status_management", label: "কাস্টম স্ট্যাটাস ম্যানেজমেন্ট" },
-    { key: "employee_management", label: "এমপ্লয়ী ম্যানেজমেন্ট" },
     { key: "courier_automation", label: "কুরিয়ার অটোমেশন" },
-    { key: "ai_intelligence", label: "এআই ইন্টেলিজেন্স" },
+    { key: "custom_status_management", label: "কাস্টম স্ট্যাটাস ম্যানেজমেন্ট" },
+    { key: "customer_blacklist", label: "কাস্টমার ব্ল্যাকলিস্ট" },
+    { key: "employee_management", label: "এমপ্লয়ী ম্যানেজমেন্ট" },
+    { key: "fake_order_protection", label: "ফেক অর্ডার প্রোটেকশন" },
+    { key: "fraud_customer_checker", label: "ফ্রড কাস্টমার চেকার" },
+    { key: "customer_delivery_history", label: "কাস্টমার ডেলিভারি হিস্ট্রি" },
+    { key: "customer_behavior", label: "কাস্টমার বিহেভিয়ার" },
     { key: "label_and_pos_sticker_print", label: "লেবেল ও POS স্টিকার প্রিন্ট" },
+    { key: "missing_orders", label: "মিসিং অর্ডার" },
+    { key: "sms_management", label: "এসএমএস ম্যানেজমেন্ট" },
+    { key: "pixel_protection", label: "পিক্সেল প্রোটেকশন" },
 ];
 
 const LEGACY_KEYS = new Set(

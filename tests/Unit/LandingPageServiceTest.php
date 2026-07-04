@@ -32,7 +32,7 @@ class LandingPageServiceTest extends TestCase
         $this->assertNotNull($payload['featuredPlan']);
         $this->assertSame('Pro Plus – 1 Month', $payload['featuredPlan']['title']);
         $this->assertNotEmpty($payload['featureHighlights']);
-        $this->assertSame('অ্যাপ কানেক্ট', $payload['featureHighlights'][0]['label']);
+        $this->assertSame('কাস্টম অর্ডার তৈরি', $payload['featureHighlights'][0]['label']);
         $this->assertNotEmpty($payload['conversionFeatures']);
         $this->assertNotEmpty($payload['heroBullets']);
         $this->assertNotEmpty($payload['hero']);

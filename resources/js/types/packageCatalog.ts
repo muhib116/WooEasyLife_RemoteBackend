@@ -7,18 +7,24 @@ export type PackageDuration =
 export type WebsiteConnectLimit = 1 | 2 | 3 | 4 | 5 | "unlimited";
 
 export type PowerFeatureKey =
+    | "create_order"
+    | "order_cloning"
+    | "call_and_status_log"
+    | "ai_intelligence"
     | "app_connect"
     | "app_store_limit"
-    | "fraud_customer_checker"
-    | "sms_management"
-    | "missing_orders"
-    | "fake_order_protection"
-    | "customer_blacklist"
-    | "custom_status_management"
-    | "employee_management"
     | "courier_automation"
-    | "ai_intelligence"
-    | "label_and_pos_sticker_print";
+    | "custom_status_management"
+    | "customer_blacklist"
+    | "employee_management"
+    | "fake_order_protection"
+    | "fraud_customer_checker"
+    | "customer_delivery_history"
+    | "customer_behavior"
+    | "label_and_pos_sticker_print"
+    | "missing_orders"
+    | "sms_management"
+    | "pixel_protection";
 
 export type PackageFeatureKey = PowerFeatureKey;
 

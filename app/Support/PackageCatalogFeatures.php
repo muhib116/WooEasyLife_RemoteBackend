@@ -152,7 +152,7 @@ class PackageCatalogFeatures
     }
 
     /**
-     * Normalize persisted/admin input to the 12 power keys.
+     * Normalize persisted/admin input to the configured power keys.
      *
      * @param  array<string, mixed>|null  $input
      * @param  array<string, bool>|null  $fallback
@@ -173,7 +173,36 @@ class PackageCatalogFeatures
             }
         }
 
+        self::applyLegacyPowerKeyInference($normalized, $input);
+
         return $normalized;
+    }
+
+    /**
+     * Infer newly split power keys from parent toggles on packages saved before the split.
+     *
+     * @param  array<string, bool>  $normalized
+     * @param  array<string, mixed>|null  $input
+     */
+    private static function applyLegacyPowerKeyInference(array &$normalized, ?array $input): void
+    {
+        if ($input === null) {
+            return;
+        }
+
+        $explicit = static fn (string $key): bool => array_key_exists($key, $input);
+
+        if (! $explicit('customer_delivery_history') && ($normalized['ai_intelligence'] ?? false)) {
+            $normalized['customer_delivery_history'] = true;
+        }
+
+        if (! $explicit('customer_behavior') && ($normalized['ai_intelligence'] ?? false)) {
+            $normalized['customer_behavior'] = true;
+        }
+
+        if (! $explicit('call_and_status_log') && ($normalized['app_connect'] ?? false)) {
+            $normalized['call_and_status_log'] = true;
+        }
     }
 
     /**

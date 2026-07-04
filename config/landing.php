@@ -480,7 +480,7 @@ return [
         'missing_order_one_click_create' => 'ওয়ান ক্লিক মিসিং অর্ডার',
         'pos_sticker_print' => 'POS স্টিকার প্রিন্ট',
         'invoice_print' => 'ইনভয়েস প্রিন্ট',
-        'order_cloning' => 'অর্ডার ক্লোন',
+        'order_cloning' => 'অর্ডার ক্লোনিং',
         'customer_behavior_track' => 'কাস্টমার বিহেভিয়ার ট্র্যাক',
         'repeat_customer_identifier' => 'রিপিট কাস্টমার শনাক্ত',
         'order_source_identifier' => 'অর্ডারে স্টাফ অ্যাসাইন ও সোর্স',

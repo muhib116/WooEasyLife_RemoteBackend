@@ -61,8 +61,8 @@ class PackageCatalogFeaturesTest extends TestCase
 
         $this->assertSame(
             [
-                'মিসিং অর্ডার',
                 'কাস্টমার ব্ল্যাকলিস্ট',
+                'মিসিং অর্ডার',
             ],
             $lines,
         );
@@ -96,5 +96,63 @@ class PackageCatalogFeaturesTest extends TestCase
         ]);
 
         $this->assertSame([], $lines);
+    }
+
+    public function test_normalize_includes_all_power_keys_with_defaults(): void
+    {
+        $normalized = PackageCatalogFeatures::normalize([
+            'fraud_customer_checker' => true,
+        ]);
+
+        $this->assertCount(count(PackageCatalogFeatures::powerKeys()), $normalized);
+        $this->assertTrue($normalized['fraud_customer_checker']);
+        $this->assertArrayHasKey('create_order', $normalized);
+        $this->assertArrayHasKey('order_cloning', $normalized);
+        $this->assertArrayHasKey('call_and_status_log', $normalized);
+        $this->assertArrayHasKey('customer_delivery_history', $normalized);
+        $this->assertArrayHasKey('customer_behavior', $normalized);
+        $this->assertArrayHasKey('pixel_protection', $normalized);
+    }
+
+    public function test_normalize_infers_split_keys_from_legacy_parent_toggles(): void
+    {
+        $normalized = PackageCatalogFeatures::normalize([
+            'ai_intelligence' => true,
+            'app_connect' => true,
+            'missing_orders' => true,
+        ]);
+
+        $this->assertTrue($normalized['customer_delivery_history']);
+        $this->assertTrue($normalized['customer_behavior']);
+        $this->assertFalse($normalized['create_order']);
+        $this->assertTrue($normalized['call_and_status_log']);
+    }
+
+    public function test_expand_for_legacy_api_includes_new_power_keys(): void
+    {
+        $legacy = PackageCatalogFeatures::expandForLegacyApi([
+            'create_order' => true,
+            'order_cloning' => true,
+            'call_and_status_log' => true,
+            'customer_delivery_history' => true,
+            'customer_behavior' => true,
+            'pixel_protection' => true,
+        ]);
+
+        $this->assertTrue($legacy['customer_order_create']);
+        $this->assertTrue($legacy['order_cloning']);
+        $this->assertTrue($legacy['call_history_with_duration']);
+        $this->assertTrue($legacy['customer_delivery_history']);
+        $this->assertTrue($legacy['customer_behavior_track']);
+        $this->assertTrue($legacy['pixel_protection']);
+    }
+
+    public function test_map_defaults_all_power_keys_to_true(): void
+    {
+        $features = PackageCatalogFeatures::map(default: true);
+
+        foreach (PackageCatalogFeatures::powerKeys() as $key) {
+            $this->assertTrue($features[$key], "Expected {$key} to default to true");
+        }
     }
 }

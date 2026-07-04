@@ -36,7 +36,7 @@ class PlanDisplayPresenterTest extends TestCase
         $this->assertNull($enriched['more_features_label']);
         $this->assertSame('ফ্রড কাস্টমার চেকার', $enriched['top_features'][0]['label']);
         $this->assertSame(
-            ['ফ্রড কাস্টমার চেকার', 'এসএমএস ম্যানেজমেন্ট', 'মিসিং অর্ডার'],
+            ['ফ্রড কাস্টমার চেকার', 'মিসিং অর্ডার', 'এসএমএস ম্যানেজমেন্ট'],
             $enriched['feature_lines'],
         );
     }
