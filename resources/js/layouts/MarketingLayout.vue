@@ -148,7 +148,7 @@ onUnmounted(() => {
                 <div class="hidden shrink-0 items-center gap-2 lg:flex">
                     <Link
                         v-if="canLogin"
-                        :href="route('login')"
+                        :href="route('merchant.login')"
                         class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition"
                         :class="isDark ? 'text-slate-300 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100'"
                     >
@@ -240,7 +240,7 @@ onUnmounted(() => {
                 >
                     <Link
                         v-if="canLogin"
-                        :href="route('login')"
+                        :href="route('merchant.login')"
                         class="rounded-xl border px-4 py-3 text-center text-sm font-semibold transition"
                         :class="isDark
                             ? 'border-white/10 text-white hover:bg-white/5'
@@ -317,7 +317,7 @@ onUnmounted(() => {
                         <div class="mt-4 flex flex-col gap-2.5">
                             <Link
                                 v-if="canLogin"
-                                :href="route('login')"
+                                :href="route('merchant.login')"
                                 class="text-sm text-slate-400 transition hover:text-white"
                             >
                                 লগইন

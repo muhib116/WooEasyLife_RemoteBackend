@@ -375,7 +375,7 @@ const toggleFaq = (i) => {
                     </a>
                     <Link
                         v-if="canLogin"
-                        :href="route('login')"
+                        :href="route('merchant.login')"
                         class="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/10"
                     >
                         লগইন

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\MerchantAuthenticatedSessionController;
+use App\Http\Controllers\Auth\MerchantSocialAuthController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
@@ -21,6 +23,19 @@ Route::middleware('guest')->group(function () {
         ->name('login');
 
     Route::post('muhib/login', [AuthenticatedSessionController::class, 'store']);
+
+    Route::get('marchent/login', [MerchantAuthenticatedSessionController::class, 'create'])
+        ->name('merchant.login');
+
+    Route::post('marchent/login', [MerchantAuthenticatedSessionController::class, 'store']);
+
+    Route::get('marchent/auth/{provider}/redirect', [MerchantSocialAuthController::class, 'redirect'])
+        ->whereIn('provider', ['google', 'facebook'])
+        ->name('merchant.auth.redirect');
+
+    Route::get('marchent/auth/{provider}/callback', [MerchantSocialAuthController::class, 'callback'])
+        ->whereIn('provider', ['google', 'facebook'])
+        ->name('merchant.auth.callback');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');

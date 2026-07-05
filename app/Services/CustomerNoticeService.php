@@ -25,7 +25,7 @@ class CustomerNoticeService
      */
     public function liveNotices(): Collection
     {
-        return Cache::remember(self::CACHE_KEY, now()->addMinutes(5), function () {
+        return Cache::remember(self::CACHE_KEY, now()->addMinute(), function () {
             return CustomerNotice::query()
                 ->active()
                 ->orderByDesc('priority')

@@ -23,6 +23,53 @@ class MerchantPortalTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
+    public function test_merchant_login_screen_can_be_rendered(): void
+    {
+        $response = $this->get('/marchent/login');
+
+        $response->assertStatus(200);
+    }
+
+    public function test_merchant_cannot_login_via_admin_route(): void
+    {
+        User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant@example.com',
+            'phone' => '01700000000',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $response = $this->post('/muhib/login', [
+            'email' => 'merchant@example.com',
+            'password' => 'password',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_admin_cannot_login_via_merchant_route(): void
+    {
+        User::create([
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
+            'phone' => '01700000099',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $response = $this->post('/marchent/login', [
+            'email' => 'admin@example.com',
+            'password' => 'password',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
     public function test_merchant_owner_can_login_and_access_portal_dashboard(): void
     {
         $merchant = User::create([
@@ -34,7 +81,7 @@ class MerchantPortalTest extends TestCase
             'status' => true,
         ]);
 
-        $response = $this->post('/muhib/login', [
+        $response = $this->post('/marchent/login', [
             'email' => 'merchant@example.com',
             'password' => 'password',
         ]);
@@ -105,7 +152,7 @@ class MerchantPortalTest extends TestCase
             'portal_password' => 'password123',
         ]);
 
-        $this->post('/muhib/login', [
+        $this->post('/marchent/login', [
             'email' => 'viewer-staff@example.com',
             'password' => 'password123',
         ])->assertRedirect('/portal');

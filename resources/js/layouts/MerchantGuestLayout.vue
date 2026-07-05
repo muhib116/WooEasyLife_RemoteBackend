@@ -15,25 +15,22 @@
                     </div>
                     <div>
                         <p class="text-lg font-bold text-white">WooEasyLife</p>
-                        <p class="text-xs text-amber-400/80">Bangladesh e-commerce platform</p>
+                        <p class="text-xs text-amber-400/80">Merchant portal</p>
                     </div>
                 </Link>
             </div>
 
             <div class="relative space-y-8">
                 <div class="space-y-4">
-                    <span class="inline-flex rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
-                        Admin console
-                    </span>
                     <h1 class="max-w-lg text-3xl font-extrabold leading-tight tracking-tight text-white xl:text-4xl">
-                        Manage merchants, couriers
+                        Run your store with
                         <span class="bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 bg-clip-text text-transparent">
-                            &amp; APIs
+                            fraud checks, SMS
                         </span>
-                        in one place
+                        &amp; billing
                     </h1>
                     <p class="max-w-md text-sm leading-relaxed text-slate-400">
-                        Platform operations for Bangladesh e-commerce — fraud checks, SMS, couriers, and package billing.
+                        Manage websites, recharge packages, track orders, and give your team secure portal access — all in one place.
                     </p>
                 </div>
 
@@ -72,7 +69,7 @@
                     </div>
                     <div>
                         <p class="font-bold text-white">WooEasyLife</p>
-                        <p class="text-xs text-slate-400">Admin sign in</p>
+                        <p class="text-xs text-slate-400">Merchant portal</p>
                     </div>
                 </Link>
                 <Link
@@ -96,9 +93,9 @@
 import { Link } from '@inertiajs/vue3';
 
 const features = [
-    'Merchant & package management',
-    'Fraud check & courier integrations',
-    'SMS balance and billing oversight',
-    'Secure operator access controls',
+    'Website & package management',
+    'SMS balance and billing recharge',
+    'Free fraud check on customer numbers',
+    'Team roles with portal permissions',
 ];
 </script>

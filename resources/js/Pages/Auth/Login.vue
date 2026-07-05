@@ -2,62 +2,77 @@
     <GuestLayout>
         <Head title="Log in" />
 
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+        <div class="mb-7">
+            <h2 class="text-2xl font-bold tracking-tight text-white">
                 Welcome back
             </h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Sign in to the WooEasyLife admin console or merchant portal.
-                Merchants and team members are redirected to the portal automatically.
+            <p class="mt-2 text-sm leading-relaxed text-slate-400">
+                Sign in to the WooEasyLife admin console for platform operators and support staff.
             </p>
         </div>
 
         <div
             v-if="status"
-            class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+            class="mb-5 flex items-start gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
         >
-            {{ status }}
+            <i class="pi pi-check-circle mt-0.5 text-emerald-400" />
+            <span>{{ status }}</span>
         </div>
 
         <form class="space-y-5" @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email address" />
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1.5 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                    placeholder="admin@example.com"
-                />
-                <InputError class="mt-2" :message="form.errors.email" />
+            <div class="space-y-2">
+                <label for="email" class="text-sm font-medium text-slate-300">
+                    Email address
+                </label>
+                <IconField class="w-full">
+                    <InputIcon class="pi pi-envelope text-slate-500" />
+                    <InputText
+                        id="email"
+                        v-model="form.email"
+                        type="email"
+                        class="w-full"
+                        placeholder="you@company.com"
+                        required
+                        autofocus
+                        autocomplete="username"
+                        :invalid="!!form.errors.email"
+                    />
+                </IconField>
+                <small v-if="form.errors.email" class="block text-sm text-rose-400">
+                    {{ form.errors.email }}
+                </small>
             </div>
 
-            <div>
-                <InputLabel for="password" value="Password" />
-                <TextInput
+            <div class="space-y-2">
+                <label for="password" class="text-sm font-medium text-slate-300">
+                    Password
+                </label>
+                <Password
                     id="password"
-                    type="password"
-                    class="mt-1.5 block w-full"
                     v-model="form.password"
+                    class="w-full"
+                    input-class="w-full"
+                    placeholder="Enter your password"
+                    :feedback="false"
+                    toggle-mask
                     required
                     autocomplete="current-password"
-                    placeholder="Enter your password"
+                    :invalid="!!form.errors.password"
                 />
-                <InputError class="mt-2" :message="form.errors.password" />
+                <small v-if="form.errors.password" class="block text-sm text-rose-400">
+                    {{ form.errors.password }}
+                </small>
             </div>
 
-            <div class="flex items-center justify-between">
-                <label class="flex items-center gap-2">
+            <div class="flex items-center justify-between gap-4">
+                <label class="flex cursor-pointer items-center gap-2.5">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Remember me</span>
+                    <span class="text-sm text-slate-400">Remember me</span>
                 </label>
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                    class="text-sm font-medium text-amber-400 transition hover:text-amber-300"
                 >
                     Forgot password?
                 </Link>
@@ -66,21 +81,29 @@
             <Button
                 type="submit"
                 label="Sign in"
-                class="w-full"
+                icon="pi pi-sign-in"
+                class="w-full !border-0 !bg-gradient-to-r !from-amber-500 !to-yellow-500 !font-bold !text-black shadow-lg shadow-amber-900/30 hover:!from-amber-400 hover:!to-yellow-400"
                 :loading="form.processing"
                 :disabled="form.processing"
             />
         </form>
+
+        <p class="mt-6 text-center text-xs text-slate-500">
+            Store owner or team member?
+            <Link
+                :href="route('merchant.login')"
+                class="font-medium text-amber-400 transition hover:text-amber-300"
+            >
+                Sign in to merchant portal
+            </Link>
+        </p>
     </GuestLayout>
 </template>
 
 <script setup>
-import Checkbox from "@/components/Checkbox.vue";
-import InputError from "@/components/InputError.vue";
-import InputLabel from "@/components/InputLabel.vue";
-import TextInput from "@/components/TextInput.vue";
-import { Head, Link, useForm } from "@inertiajs/vue3";
-import { GuestLayout } from "@/layouts";
+import Checkbox from '@/components/Checkbox.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { GuestLayout } from '@/layouts';
 
 defineProps({
     canResetPassword: Boolean,
@@ -88,14 +111,14 @@ defineProps({
 });
 
 const form = useForm({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
     remember: false,
 });
 
 const submit = () => {
-    form.post(route("login"), {
-        onFinish: () => form.reset("password"),
+    form.post(route('login'), {
+        onFinish: () => form.reset('password'),
     });
 };
 </script>

@@ -105,7 +105,7 @@ const openPurchase = (plan) => {
     }
 
     if (!authUser.value && props.canLogin) {
-        router.visit(`${route('login')}?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
+        router.visit(`${route('merchant.login')}?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
         return;
     }
 
@@ -114,7 +114,7 @@ const openPurchase = (plan) => {
         return;
     }
 
-    router.visit(route('login'));
+    router.visit(route('merchant.login'));
 };
 
 const submitPayment = () => {
