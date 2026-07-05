@@ -199,6 +199,7 @@ class PackagePaymentApiTest extends TestCase
                         'features_heading',
                         'top_features',
                         'all_features',
+                        'catalog_features',
                         'feature_lines',
                         'summary_lines',
                         'enabled_feature_count',
@@ -208,7 +209,7 @@ class PackagePaymentApiTest extends TestCase
             ])
             ->assertJsonPath('data.0.duration_label', 'মাসিক প্ল্যান')
             ->assertJsonPath('data.0.price_label', '৳100')
-            ->assertJsonPath('data.0.features_heading', 'যা পাবেন')
+            ->assertJsonPath('data.0.features_heading', 'প্ল্যান ফিচার')
             ->assertJsonPath('data.0.top_features.0.label', 'ফ্রড কাস্টমার চেকার');
     }
 

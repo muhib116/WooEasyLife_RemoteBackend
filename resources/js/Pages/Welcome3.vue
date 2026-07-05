@@ -15,6 +15,7 @@ import FraudBenefitGrid from '@/components/marketing/FraudBenefitGrid.vue';
 import ValuePillarsSection from '@/components/marketing/ValuePillarsSection.vue';
 import ConversionFeaturesSection from '@/components/marketing/ConversionFeaturesSection.vue';
 import ScrollReveal from '@/components/marketing/ScrollReveal.vue';
+import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
 import { primaryCtaLabel, primaryCtaUrl, merchantLoginHref, merchantLoginLabel } from '@/utils/marketingCta';
 
 const props = defineProps({
@@ -237,32 +238,20 @@ const toggleFaq = (i) => {
                         ]"
                     >
                         <span
-                            v-if="plan.package_duration === 'free_trial'"
-                            class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-3 py-0.5 text-xs font-bold text-black"
+                            v-if="plan.badge_label"
+                            class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-xs font-bold"
+                            :class="plan.package_duration === 'free_trial'
+                                ? 'bg-emerald-400 text-emerald-950'
+                                : 'bg-amber-400 text-amber-950'"
                         >
-                            শুরু করুন এখান থেকে
-                        </span>
-                        <span
-                            v-else-if="plan.is_special"
-                            class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-3 py-0.5 text-xs font-bold text-amber-950"
-                        >
-                            সবচেয়ে জনপ্রিয়
+                            {{ plan.badge_label }}
                         </span>
                         <p class="text-sm text-slate-400">{{ plan.duration_label }}</p>
                         <h3 class="mt-1 text-lg font-bold text-white sm:text-xl">{{ plan.title }}</h3>
                         <p class="mt-2 text-3xl font-extrabold text-white sm:text-4xl">{{ plan.price_label }}</p>
                         <p class="text-sm text-slate-400">{{ plan.token_label }}</p>
                         <p v-if="plan.website_label" class="mt-1 text-xs text-slate-500">{{ plan.website_label }}</p>
-                        <ul class="mt-5 flex-1 space-y-2">
-                            <li
-                                v-for="f in plan.top_features"
-                                :key="f.key"
-                                class="flex gap-2 text-sm text-slate-300"
-                            >
-                                <span class="shrink-0 text-emerald-400">✓</span>
-                                <span>{{ f.label }}</span>
-                            </li>
-                        </ul>
+                        <PlanFeatureList :plan="plan" compact />
                         <Link
                             :href="route('pricing')"
                             class="mt-6 block rounded-xl py-3 text-center text-sm font-bold transition"

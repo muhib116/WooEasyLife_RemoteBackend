@@ -3,6 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import PaymentRequestFormFields from '@/components/PaymentRequestFormFields.vue';
+import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
 import Dialog from 'primevue/dialog';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
@@ -35,17 +36,7 @@ const displayPlans = computed(() => {
 
 const isFreeTrial = (plan) => plan.package_duration === 'free_trial';
 
-const planBadge = (plan) => {
-    if (isFreeTrial(plan)) {
-        return 'বিনামূল্যে শুরু';
-    }
-
-    if (plan.is_special) {
-        return 'সবচেয়ে জনপ্রিয়';
-    }
-
-    return null;
-};
+const planBadge = (plan) => plan.badge_label ?? null;
 
 const planBadgeClass = (plan) => {
     if (isFreeTrial(plan)) {
@@ -198,28 +189,11 @@ onMounted(() => {
                         <p class="mt-2 text-4xl font-extrabold text-white">{{ plan.price_label }}</p>
                         <p class="mt-1 text-sm text-slate-400">{{ plan.token_label }}</p>
                         <p v-if="plan.website_label" class="text-sm text-slate-400">{{ plan.website_label }}</p>
-                        <p v-if="plan.app_connect" class="mt-2 text-xs font-semibold text-emerald-400">
-                            ✓ মোবাইল অ্যাপ অন্তর্ভুক্ত
-                        </p>
                         <p v-if="plan.plain_description" class="mt-3 text-sm text-slate-400">
                             {{ plan.plain_description }}
                         </p>
 
-                        <ul class="mt-5 flex-1 space-y-2 border-t border-white/10 pt-5">
-                            <li
-                                v-for="feature in plan.top_features"
-                                :key="feature.key"
-                                class="flex items-start gap-2 text-sm text-slate-300"
-                            >
-                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                {{ feature.label }}
-                            </li>
-                            <li class="text-xs text-slate-500">
-                                + আরও {{ Math.max(0, plan.enabled_feature_count - plan.top_features.length) }} ফিচার
-                            </li>
-                        </ul>
+                        <PlanFeatureList :plan="plan" />
 
                         <button
                             type="button"

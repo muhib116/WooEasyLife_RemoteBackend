@@ -75,7 +75,7 @@ class PackagePlanResolverTest extends TestCase
 
         $this->assertCount(1, $display);
         $this->assertSame('মাসিক প্ল্যান', $display[0]['duration_label']);
-        $this->assertSame('যা পাবেন', $display[0]['features_heading']);
+        $this->assertSame('প্ল্যান ফিচার', $display[0]['features_heading']);
         $this->assertSame('ফ্রড কাস্টমার চেকার', $display[0]['top_features'][0]['label']);
     }
 }

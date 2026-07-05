@@ -75,7 +75,7 @@ class PortalBillingTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->has('plans', 1)
                 ->where('plans.0.duration_label', 'মাসিক প্ল্যান')
-                ->where('plans.0.features_heading', 'যা পাবেন')
+                ->where('plans.0.features_heading', 'প্ল্যান ফিচার')
                 ->has('plans.0.top_features', 1));
     }
 

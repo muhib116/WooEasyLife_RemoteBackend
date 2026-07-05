@@ -29,12 +29,15 @@ class PlanDisplayPresenterTest extends TestCase
         $this->assertSame('মাসিক প্ল্যান', $enriched['duration_label']);
         $this->assertSame('৳999', $enriched['price_label']);
         $this->assertSame('1,000 টোকেন', $enriched['token_label']);
-        $this->assertSame('যা পাবেন', $enriched['features_heading']);
+        $this->assertSame('প্ল্যান ফিচার', $enriched['features_heading']);
         $this->assertCount(3, $enriched['all_features']);
         $this->assertCount(3, $enriched['top_features']);
         $this->assertSame(3, $enriched['enabled_feature_count']);
         $this->assertNull($enriched['more_features_label']);
         $this->assertSame('ফ্রড কাস্টমার চেকার', $enriched['top_features'][0]['label']);
+        $this->assertCount(count(config('package_catalog.power_feature_keys', [])), $enriched['catalog_features']);
+        $this->assertTrue(collect($enriched['catalog_features'])->firstWhere('key', 'fraud_customer_checker')['enabled']);
+        $this->assertFalse(collect($enriched['catalog_features'])->firstWhere('key', 'create_order')['enabled']);
         $this->assertSame(
             ['ফ্রড কাস্টমার চেকার', 'মিসিং অর্ডার', 'এসএমএস ম্যানেজমেন্ট'],
             $enriched['feature_lines'],

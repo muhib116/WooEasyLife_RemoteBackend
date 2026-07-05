@@ -29,6 +29,8 @@ class PricingPageTest extends TestCase
             ->component('Pricing/Index')
             ->has('plans', 1)
             ->where('plans.0.title', 'Starter – 1 Month')
+            ->has('plans.0.catalog_features', count(config('package_catalog.power_feature_keys', [])))
+            ->where('plans.0.catalog_features.0.key', config('package_catalog.power_feature_keys.0'))
             ->has('conversionFeatures'));
     }
 }

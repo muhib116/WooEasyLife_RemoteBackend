@@ -152,7 +152,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'plugin_display' => [
-        'features_heading_bn' => 'যা পাবেন',
+        'features_heading_bn' => 'প্ল্যান ফিচার',
         'app_connect_label_bn' => 'মোবাইল অ্যাপ অন্তর্ভুক্ত',
         'badge_free_trial_bn' => 'বিনামূল্যে শুরু',
         'badge_special_bn' => 'সবচেয়ে জনপ্রিয়',

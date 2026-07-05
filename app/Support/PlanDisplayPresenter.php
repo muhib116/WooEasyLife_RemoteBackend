@@ -19,6 +19,9 @@ class PlanDisplayPresenter
         $allFeatures = $isCatalog
             ? self::buildAllFeatures($plan)
             : [];
+        $catalogFeatures = $isCatalog
+            ? self::buildCatalogFeatures($plan)
+            : [];
         $enabledCount = count($allFeatures);
 
         $enriched = array_merge($plan, [
@@ -26,9 +29,10 @@ class PlanDisplayPresenter
             'enabled_feature_count' => $enabledCount,
             'top_features' => $topFeatures,
             'all_features' => $allFeatures,
+            'catalog_features' => $catalogFeatures,
             'more_features_count' => max(0, $enabledCount - count($topFeatures)),
             'more_features_label' => self::moreFeaturesLabel(max(0, $enabledCount - count($topFeatures))),
-            'features_heading' => self::config('features_heading_bn', 'যা পাবেন'),
+            'features_heading' => self::config('features_heading_bn', 'প্ল্যান ফিচার'),
             'badge_label' => self::badgeLabel($plan),
             'feature_lines' => array_column($allFeatures, 'label'),
             'summary_lines' => self::buildSummaryLines($plan),
@@ -107,9 +111,9 @@ class PlanDisplayPresenter
 
     /**
      * @param  array<string, mixed>  $plan
-     * @return array<int, array{key: string, label: string}>
+     * @return array<int, array{key: string, label: string, enabled: bool}>
      */
-    private static function enabledFeatureEntries(array $plan): array
+    public static function buildCatalogFeatures(array $plan): array
     {
         if (! self::isCatalogPlan($plan)) {
             return [];
@@ -120,17 +124,30 @@ class PlanDisplayPresenter
         $entries = [];
 
         foreach (PackageCatalogFeatures::powerKeys() as $key) {
-            if (! ($power[$key] ?? false)) {
-                continue;
-            }
-
             $entries[] = [
                 'key' => $key,
                 'label' => $labels[$key] ?? Str::headline(str_replace('_', ' ', $key)),
+                'enabled' => (bool) ($power[$key] ?? false),
             ];
         }
 
         return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     * @return array<int, array{key: string, label: string}>
+     */
+    private static function enabledFeatureEntries(array $plan): array
+    {
+        return collect(self::buildCatalogFeatures($plan))
+            ->filter(fn (array $entry) => $entry['enabled'])
+            ->map(fn (array $entry) => [
+                'key' => $entry['key'],
+                'label' => $entry['label'],
+            ])
+            ->values()
+            ->all();
     }
 
     /**
