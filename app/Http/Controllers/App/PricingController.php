@@ -35,7 +35,7 @@ class PricingController extends Controller
         }
 
         return Inertia::render('Pricing/Index', array_merge($landing->payload(), [
-            'canLogin' => Route::has('login'),
+            'canLogin' => Route::has('merchant.login'),
             'domains' => $domains,
             'canPurchase' => $canPurchase,
             'preselectedPlanId' => $request->integer('plan') ?: null,

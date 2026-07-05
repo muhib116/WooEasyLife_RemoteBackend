@@ -1,7 +1,7 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onUnmounted, ref, watch } from 'vue';
-import { primaryCtaLabel, primaryCtaShortLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import { primaryCtaLabel, primaryCtaShortLabel, primaryCtaUrl, merchantLoginHref, merchantLoginLabel } from '@/utils/marketingCta';
 import '../../css/marketing.css';
 
 const props = defineProps({
@@ -46,6 +46,8 @@ const contactUrl = computed(() => props.whatsappUrl || marketing.value.whatsapp_
 const headerCtaUrl = computed(() => primaryCtaUrl());
 const headerCtaLabel = computed(() => primaryCtaLabel());
 const headerCtaShortLabel = computed(() => primaryCtaShortLabel());
+const merchantLoginLink = computed(() => merchantLoginHref(page.props.auth));
+const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth));
 
 const helplineDisplay = computed(() => {
     const phone = marketing.value.helpline;
@@ -148,14 +150,14 @@ onUnmounted(() => {
                 <div class="hidden shrink-0 items-center gap-2 lg:flex">
                     <Link
                         v-if="canLogin"
-                        :href="route('merchant.login')"
+                        :href="merchantLoginLink"
                         class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition"
                         :class="isDark ? 'text-slate-300 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100'"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
-                        লগইন
+                        {{ merchantLoginText }}
                     </Link>
                     <Link
                         :href="headerCtaUrl"
@@ -240,14 +242,14 @@ onUnmounted(() => {
                 >
                     <Link
                         v-if="canLogin"
-                        :href="route('merchant.login')"
+                        :href="merchantLoginLink"
                         class="rounded-xl border px-4 py-3 text-center text-sm font-semibold transition"
                         :class="isDark
                             ? 'border-white/10 text-white hover:bg-white/5'
                             : 'border-slate-200 text-slate-800 hover:bg-slate-50'"
                         @click="closeMobile"
                     >
-                        লগইন
+                        {{ merchantLoginText }}
                     </Link>
                     <Link
                         :href="headerCtaUrl"
@@ -317,10 +319,10 @@ onUnmounted(() => {
                         <div class="mt-4 flex flex-col gap-2.5">
                             <Link
                                 v-if="canLogin"
-                                :href="route('merchant.login')"
+                                :href="merchantLoginLink"
                                 class="text-sm text-slate-400 transition hover:text-white"
                             >
-                                লগইন
+                                {{ merchantLoginText }}
                             </Link>
                             <Link
                                 :href="route('pricing')"

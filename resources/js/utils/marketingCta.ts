@@ -14,3 +14,25 @@ export function primaryCtaShortLabel(): string {
 export function primaryCtaUrl(): string {
     return route('pricing');
 }
+
+type MarketingAuthProps = {
+    user?: { id: number } | null;
+    portal?: unknown | null;
+};
+
+/** Public marketing login always targets the merchant portal sign-in. */
+export function merchantLoginHref(auth?: MarketingAuthProps | null): string {
+    if (auth?.portal) {
+        return route('portal.dashboard');
+    }
+
+    return route('merchant.login');
+}
+
+export function merchantLoginLabel(auth?: MarketingAuthProps | null): string {
+    if (auth?.portal) {
+        return 'পোর্টাল';
+    }
+
+    return 'লগইন';
+}

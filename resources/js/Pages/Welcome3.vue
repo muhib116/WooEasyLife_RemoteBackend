@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
@@ -15,7 +15,7 @@ import FraudBenefitGrid from '@/components/marketing/FraudBenefitGrid.vue';
 import ValuePillarsSection from '@/components/marketing/ValuePillarsSection.vue';
 import ConversionFeaturesSection from '@/components/marketing/ConversionFeaturesSection.vue';
 import ScrollReveal from '@/components/marketing/ScrollReveal.vue';
-import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import { primaryCtaLabel, primaryCtaUrl, merchantLoginHref, merchantLoginLabel } from '@/utils/marketingCta';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -55,6 +55,9 @@ const previewPlans = computed(() => {
 
 const primaryCtaUrlValue = computed(() => primaryCtaUrl());
 const primaryCtaLabelValue = computed(() => primaryCtaLabel());
+const page = usePage();
+const merchantLoginLink = computed(() => merchantLoginHref(page.props.auth));
+const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth));
 
 const pricingHook = computed(() => {
     const featured = props.featuredPlan;
@@ -375,10 +378,10 @@ const toggleFaq = (i) => {
                     </a>
                     <Link
                         v-if="canLogin"
-                        :href="route('merchant.login')"
+                        :href="merchantLoginLink"
                         class="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/10"
                     >
-                        লগইন
+                        {{ merchantLoginText }}
                     </Link>
                     <Link
                         :href="primaryCtaUrlValue"

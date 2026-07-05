@@ -57,7 +57,7 @@ Route::get('/', function () {
     $landing = app(\App\Services\LandingPageService::class)->payload(request());
 
     return Inertia::render('Welcome3', array_merge($landing, [
-        'canLogin' => Route::has('login'),
+        'canLogin' => Route::has('merchant.login'),
         'canRegister' => Route::has('register'),
     ]));
 });
