@@ -16,10 +16,15 @@ class MerchantSocialAuthController extends Controller
 {
     private const PROVIDERS = ['google', 'facebook'];
 
-    public function redirect(Request $request, string $provider): SymfonyRedirectResponse
+    public function redirect(Request $request, string $provider): SymfonyRedirectResponse|RedirectResponse
     {
         $this->ensureProviderSupported($provider);
         $this->ensureProviderConfigured($provider);
+
+        if ($response = $this->redirectIfSocialiteMissing()) {
+            return $response;
+        }
+
         $this->rememberRedirect($request);
 
         return Socialite::driver($provider)->redirect();
@@ -32,6 +37,10 @@ class MerchantSocialAuthController extends Controller
     ): RedirectResponse {
         $this->ensureProviderSupported($provider);
         $this->ensureProviderConfigured($provider);
+
+        if ($response = $this->redirectIfSocialiteMissing()) {
+            return $response;
+        }
 
         try {
             $socialUser = Socialite::driver($provider)->user();
@@ -76,5 +85,16 @@ class MerchantSocialAuthController extends Controller
         if (is_string($redirect) && str_starts_with($redirect, '/') && ! str_starts_with($redirect, '//')) {
             session(['url.intended' => $redirect]);
         }
+    }
+
+    private function redirectIfSocialiteMissing(): ?RedirectResponse
+    {
+        if (class_exists('Laravel\Socialite\Facades\Socialite')) {
+            return null;
+        }
+
+        return redirect()
+            ->route('merchant.login')
+            ->withErrors(['email' => 'Social login is not available on the server yet. Please sign in with email or contact support.']);
     }
 }

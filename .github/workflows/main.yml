@@ -16,12 +16,19 @@ jobs:
         with:
           node-version: '20.11.0'
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, bcmath
+
       - name: 🔨 Build Project
         run: |
           npm install
           npm run build
-      # - name: Installing Composer
-        # run: composer install
+
+      - name: Installing Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
 
       - name: 📂 Sync files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
