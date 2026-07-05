@@ -44,11 +44,13 @@
             </nav>
         </div>
 
+        <AdminConfirmDialog />
         <Toast position="bottom-right" group="br" />
     </div>
 </template>
 
 <script setup lang="ts">
+import AdminConfirmDialog from "@/Pages/Users/fragments/AdminConfirmDialog.vue";
 import MerchantPortalHeader from "./fragments/MerchantPortalHeader.vue";
 import MerchantPortalSidebar from "./fragments/MerchantPortalSidebar.vue";
 import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";

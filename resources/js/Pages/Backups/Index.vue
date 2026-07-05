@@ -330,7 +330,6 @@
             </template>
         </Dialog>
 
-        <ConfirmDialog />
     </AuthenticatedLayout>
 </template>
 

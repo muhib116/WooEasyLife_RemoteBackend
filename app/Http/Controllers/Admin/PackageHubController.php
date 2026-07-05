@@ -23,6 +23,10 @@ class PackageHubController extends Controller
     {
         $packages = PackageHub::withTrashed()
             ->with('creator')
+            ->withCount([
+                'subscriptions',
+                'subscriptions as active_subscriptions_count' => fn ($query) => $query->where('is_active', true),
+            ])
             ->orderBy('id', 'desc')
             ->get();
 
@@ -110,6 +114,41 @@ class PackageHubController extends Controller
         $package->delete();
 
         return back()->with('success', 'Package deleted successfully!');
+    }
+
+    public function restore(int $id)
+    {
+        $package = PackageHub::withTrashed()->findOrFail($id);
+
+        if (! $package->trashed()) {
+            return back()->with('error', 'This package is not deleted.');
+        }
+
+        $package->update(['updated_by' => Auth::id()]);
+        $package->restore();
+
+        return back()->with('success', 'Package restored successfully!');
+    }
+
+    public function toggleStatus(int $id)
+    {
+        $package = PackageHub::withTrashed()->findOrFail($id);
+
+        if ($package->trashed()) {
+            return back()->with(
+                'error',
+                'Deleted packages must be restored before changing status.',
+            );
+        }
+
+        $package->update([
+            'is_active' => ! $package->is_active,
+            'updated_by' => Auth::id(),
+        ]);
+
+        $label = $package->is_active ? 'enabled' : 'disabled';
+
+        return back()->with('success', "Package {$label} successfully!");
     }
 
     /**

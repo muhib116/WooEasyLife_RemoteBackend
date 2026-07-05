@@ -279,6 +279,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/create', [PackageHubController::class, 'create'])->name('create');
         Route::post('/{id}/update', [PackageHubController::class, 'update'])->name('update');
         Route::post('/{id}/delete', [PackageHubController::class, 'destroy'])->name('delete');
+        Route::post('/{id}/restore', [PackageHubController::class, 'restore'])->name('restore');
+        Route::post('/{id}/toggle-status', [PackageHubController::class, 'toggleStatus'])->name('toggleStatus');
     });
 
     Route::group(['as' => 'packagePayments.', 'prefix' => 'package-payments'], function () {

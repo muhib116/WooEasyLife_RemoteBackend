@@ -804,7 +804,6 @@
             </template>
         </AdminDialog>
 
-        <ConfirmDialog class="admin-confirm-dialog" />
     </AuthenticatedLayout>
 </template>
 
@@ -1463,9 +1462,17 @@ const confirmDeleteEvents = () => {
             count
         ),
         icon: "pi pi-exclamation-triangle",
-        rejectLabel: "Cancel",
-        acceptLabel: count >= (summary.bulk_delete_warning_threshold || 50) ? "Delete all" : "Delete",
-        acceptClass: "p-button-danger",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: count >= (summary.bulk_delete_warning_threshold || 50) ? "Delete all" : "Delete",
+            severity: "danger",
+            size: "small",
+        },
         accept: () => deleteEvents(),
     });
 };
@@ -1485,9 +1492,17 @@ const confirmDeleteRetries = () => {
             "Completed retries are not included."
         ),
         icon: "pi pi-exclamation-triangle",
-        rejectLabel: "Cancel",
-        acceptLabel: "Delete",
-        acceptClass: "p-button-danger",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Delete",
+            severity: "danger",
+            size: "small",
+        },
         accept: () => deleteRetries(),
     });
 };
@@ -1497,9 +1512,17 @@ const confirmDeleteSingleEvent = (event: { id: number; consignment_id?: string |
         header: "Delete webhook event?",
         message: `Delete event for consignment ${event.consignment_id || event.id}? Linked retry rows will also be removed.`,
         icon: "pi pi-exclamation-triangle",
-        rejectLabel: "Cancel",
-        acceptLabel: "Delete",
-        acceptClass: "p-button-danger",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Delete",
+            severity: "danger",
+            size: "small",
+        },
         accept: () => {
             deletingEventId.value = event.id;
             deleteEvents([event.id]);
@@ -1512,9 +1535,17 @@ const confirmDeleteSingleRetry = (retry: { id: number; consignment_id?: string |
         header: "Delete retry row?",
         message: `Delete retry row for consignment ${retry.consignment_id || retry.id}?`,
         icon: "pi pi-exclamation-triangle",
-        rejectLabel: "Cancel",
-        acceptLabel: "Delete",
-        acceptClass: "p-button-danger",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Delete",
+            severity: "danger",
+            size: "small",
+        },
         accept: () => {
             deletingRetryId.value = retry.id;
             deleteRetries([retry.id]);

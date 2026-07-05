@@ -139,7 +139,6 @@
         </Dialog>
 
         <Toast />
-        <ConfirmDialog id="confirm" />
     </UserLayout>
 </template>
 

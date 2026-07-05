@@ -106,7 +106,6 @@
             </PageCard>
         </div>
 
-        <ConfirmDialog id="confirm" />
     </AuthenticatedLayout>
 </template>
 

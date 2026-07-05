@@ -125,7 +125,6 @@
             />
         </Dialog>
 
-        <ConfirmDialog id="confirm" />
     </UserLayout>
 </template>
 

@@ -94,7 +94,6 @@
                 />
             </Dialog>
 
-            <ConfirmDialog id="confirm" />
         </div>
     </MerchantPortalLayout>
 </template>

@@ -313,7 +313,6 @@
             :selected-user="selectedUser"
         />
 
-        <ConfirmDialog />
     </AuthenticatedLayout>
 </template>
 

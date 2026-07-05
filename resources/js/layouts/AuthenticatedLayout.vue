@@ -62,11 +62,13 @@
             </div>
         </Dialog>
 
+        <AdminConfirmDialog />
         <Toast position="bottom-right" group="br" />
     </div>
 </template>
 
 <script setup lang="ts">
+import AdminConfirmDialog from "@/Pages/Users/fragments/AdminConfirmDialog.vue";
 import LeftSidebar from "./fragments/LeftSidebar.vue";
 import AppHeader from "./fragments/AppHeader.vue";
 import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";

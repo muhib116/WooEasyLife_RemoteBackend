@@ -100,6 +100,22 @@
                         class="rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-3 dark:border-gray-800 dark:bg-slate-950/50"
                     >
                         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Subscriptions
+                        </p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            <span class="block text-lg font-bold">
+                                {{ pkg.subscriptions_count ?? 0 }}
+                            </span>
+                            <span class="mt-0.5 block text-xs font-normal text-gray-500 dark:text-gray-400">
+                                {{ pkg.active_subscriptions_count ?? 0 }} active
+                            </span>
+                        </p>
+                    </div>
+
+                    <div
+                        class="rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-3 dark:border-gray-800 dark:bg-slate-950/50"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                             Features enabled
                         </p>
                         <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">

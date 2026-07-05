@@ -95,7 +95,7 @@
                     :rows="10"
                     :rows-per-page-options="[10, 25, 50]"
                     scrollable
-                    table-style="min-width: 72rem"
+                    table-style="min-width: 78rem"
                     class="package-catalog-table professional-table text-sm"
                 >
                     <Column field="title" header="Package" style="min-width: 14rem">
@@ -188,6 +188,18 @@
                             />
                         </template>
                     </Column>
+                    <Column header="Subscriptions" style="min-width: 7rem">
+                        <template #body="{ data }">
+                            <div class="whitespace-nowrap">
+                                <p class="font-semibold text-gray-900 dark:text-gray-100">
+                                    {{ data.subscriptions_count ?? 0 }}
+                                </p>
+                                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                    {{ data.active_subscriptions_count ?? 0 }} active
+                                </p>
+                            </div>
+                        </template>
+                    </Column>
                     <Column header="Status" style="min-width: 5.5rem">
                         <template #body="{ data }">
                             <StatusBadge
@@ -195,11 +207,28 @@
                                 label="Deleted"
                                 variant="danger"
                             />
-                            <StatusBadge
+                            <button
                                 v-else
-                                :label="data.is_active ? 'Active' : 'Disabled'"
-                                :variant="data.is_active ? 'success' : 'neutral'"
-                            />
+                                type="button"
+                                class="cursor-pointer rounded-full transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 disabled:cursor-wait disabled:opacity-60"
+                                :disabled="togglingPackageId === data.id"
+                                :aria-label="
+                                    data.is_active
+                                        ? 'Disable package'
+                                        : 'Enable package'
+                                "
+                                v-tooltip.top="
+                                    data.is_active
+                                        ? 'Click to disable'
+                                        : 'Click to enable'
+                                "
+                                @click="togglePackageStatus(data)"
+                            >
+                                <StatusBadge
+                                    :label="data.is_active ? 'Active' : 'Disabled'"
+                                    :variant="data.is_active ? 'success' : 'neutral'"
+                                />
+                            </button>
                         </template>
                     </Column>
                     <Column header="Created" style="min-width: 10rem">
@@ -258,6 +287,16 @@
                                     v-tooltip.top="'Delete package'"
                                     @click="confirmDelete(data)"
                                 />
+                                <Button
+                                    v-if="data.deleted_at"
+                                    icon="pi pi-replay"
+                                    size="small"
+                                    severity="success"
+                                    text
+                                    rounded
+                                    v-tooltip.top="'Restore package'"
+                                    @click="confirmRestore(data)"
+                                />
                             </div>
                         </template>
                     </Column>
@@ -295,7 +334,6 @@
             />
         </AdminDialog>
 
-        <ConfirmDialog />
         <Toast />
     </AuthenticatedLayout>
 </template>
@@ -339,6 +377,7 @@ const showForm = ref(false);
 const showView = ref(false);
 const formMode = ref<"create" | "edit">("create");
 const editingPackageId = ref<number | null>(null);
+const togglingPackageId = ref<number | null>(null);
 const viewingPackage = ref<Record<string, any> | null>(null);
 const packageDraft = reactive(buildDefaultPackageDraft());
 
@@ -346,6 +385,7 @@ const statusOptions = [
     { label: "All", value: "all" },
     { label: "Active", value: "active" },
     { label: "Disabled", value: "disabled" },
+    { label: "Deleted", value: "deleted" },
 ];
 
 const stats = computed(() => {
@@ -376,6 +416,8 @@ const filteredPackages = computed(() => {
         list = list.filter((p) => p.is_active && !p.deleted_at);
     } else if (statusFilter.value === "disabled") {
         list = list.filter((p) => !p.is_active && !p.deleted_at);
+    } else if (statusFilter.value === "deleted") {
+        list = list.filter((p) => p.deleted_at);
     }
 
     const keyword = search.value.trim().toLowerCase();
@@ -453,16 +495,18 @@ const confirmDelete = (pkg: Record<string, any>) => {
 
     confirm.require({
         header: "Delete package?",
-        message: `Delete "${pkg.title || "Untitled"}"? ${assignedWarning}`,
+        message: `"${pkg.title || "Untitled"}" will be removed.\n\n${assignedWarning}`,
         icon: "pi pi-exclamation-triangle",
         rejectProps: {
             label: "Cancel",
             severity: "secondary",
             outlined: true,
+            size: "small",
         },
         acceptProps: {
             label: "Delete",
             severity: "danger",
+            size: "small",
         },
         accept: () => {
             router.post(
@@ -476,6 +520,73 @@ const confirmDelete = (pkg: Record<string, any>) => {
                         }
                     },
                 },
+            );
+        },
+    });
+};
+
+const submitTogglePackageStatus = (pkg: Record<string, any>) => {
+    togglingPackageId.value = pkg.id;
+
+    router.post(
+        route("packages.toggleStatus", pkg.id),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                togglingPackageId.value = null;
+            },
+        },
+    );
+};
+
+const togglePackageStatus = (pkg: Record<string, any>) => {
+    if (pkg.is_active) {
+        confirm.require({
+            header: "Disable package?",
+            message: `"${pkg.title || "Untitled"}" will be hidden from new merchant assignment and purchase.\n\nExisting subscriptions are not affected.`,
+            icon: "pi pi-exclamation-triangle",
+            rejectProps: {
+                label: "Cancel",
+                severity: "secondary",
+                outlined: true,
+                size: "small",
+            },
+            acceptProps: {
+                label: "Disable",
+                severity: "danger",
+                size: "small",
+            },
+            accept: () => submitTogglePackageStatus(pkg),
+        });
+
+        return;
+    }
+
+    submitTogglePackageStatus(pkg);
+};
+
+const confirmRestore = (pkg: Record<string, any>) => {
+    confirm.require({
+        header: "Restore package?",
+        message: `"${pkg.title || "Untitled"}" will be restored and available for assignment again.`,
+        icon: "pi pi-replay",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Restore",
+            severity: "success",
+            size: "small",
+        },
+        accept: () => {
+            router.post(
+                route("packages.restore", pkg.id),
+                {},
+                { preserveScroll: true },
             );
         },
     });
@@ -505,6 +616,22 @@ const packageDescriptionPreview = (pkg: { description?: string | null }) => {
 
     return text.length > 120 ? `${text.slice(0, 120)}…` : text;
 };
+
+watch(
+    () => props.packages,
+    (packages) => {
+        if (!viewingPackage.value?.id || !packages?.length) {
+            return;
+        }
+
+        const fresh = packages.find((p) => p.id === viewingPackage.value?.id);
+
+        if (fresh) {
+            viewingPackage.value = fresh;
+        }
+    },
+    { deep: true },
+);
 
 watch(
     () => page.props.flash?.success,

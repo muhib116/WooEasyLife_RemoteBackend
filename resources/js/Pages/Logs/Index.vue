@@ -155,7 +155,6 @@
             </PageCard>
         </div>
 
-        <ConfirmDialog />
         <Popover ref="op" @hide="hidePopover">
             <div class="min-w-[16rem] space-y-1 p-1 text-sm">
                 <div>Line: {{ selectedItem?.lineInfo?.line }}</div>

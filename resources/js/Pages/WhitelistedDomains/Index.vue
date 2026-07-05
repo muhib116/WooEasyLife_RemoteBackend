@@ -172,7 +172,6 @@
             </template>
         </AdminDialog>
 
-        <ConfirmDialog />
     </AuthenticatedLayout>
 </template>
 

@@ -172,7 +172,6 @@
             />
         </AdminDialog>
 
-        <ConfirmDialog />
         <Toast />
     </AuthenticatedLayout>
 </template>

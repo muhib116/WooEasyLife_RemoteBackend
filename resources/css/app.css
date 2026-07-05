@@ -243,6 +243,7 @@
     }
 
     .admin-dialog.p-dialog,
+    .admin-confirm-dialog.p-confirmdialog,
     .p-confirmdialog {
         border: 1px solid rgb(226 232 240);
         border-radius: 1rem;
@@ -250,11 +251,13 @@
         box-shadow: 0 25px 50px -12px rgb(15 23 42 / 0.18);
     }
 
+    .admin-confirm-dialog.p-confirmdialog,
     .p-confirmdialog {
-        width: min(100vw - 2rem, 26rem) !important;
+        width: min(100vw - 2rem, 28rem) !important;
     }
 
     .dark .admin-dialog.p-dialog,
+    .dark .admin-confirm-dialog.p-confirmdialog,
     .dark .p-confirmdialog {
         background: rgb(30 41 59) !important;
         border-color: rgb(51 65 85) !important;
@@ -263,6 +266,7 @@
     }
 
     .admin-dialog .p-dialog-header,
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-header,
     .p-confirmdialog .p-dialog-header {
         background: rgb(248 250 252);
         border-bottom: 1px solid rgb(241 245 249);
@@ -270,6 +274,7 @@
         color: rgb(15 23 42);
     }
 
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-header,
     .p-confirmdialog .p-dialog-header {
         background: transparent;
         border-bottom: none;
@@ -280,12 +285,14 @@
     }
 
     .dark .admin-dialog .p-dialog-header,
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-header,
     .dark .p-confirmdialog .p-dialog-header {
         background: rgb(15 23 42 / 0.55);
         border-bottom-color: rgb(51 65 85);
         color: rgb(241 245 249);
     }
 
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-header,
     .dark .p-confirmdialog .p-dialog-header {
         background: transparent;
         border-bottom: none;
@@ -293,33 +300,104 @@
     }
 
     .dark .admin-dialog .p-dialog-header .p-button,
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-header .p-button,
     .dark .p-confirmdialog .p-dialog-header .p-button {
         color: rgb(203 213 225) !important;
         background: rgb(51 65 85 / 0.45) !important;
         border-color: transparent !important;
     }
 
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-header .p-button,
     .dark .p-confirmdialog .p-dialog-header .p-button {
         color: rgb(148 163 184) !important;
         background: transparent !important;
     }
 
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-header .p-button:not(:disabled):hover,
     .dark .p-confirmdialog .p-dialog-header .p-button:not(:disabled):hover {
         color: rgb(226 232 240) !important;
         background: rgb(51 65 85 / 0.65) !important;
     }
 
     .admin-dialog .p-dialog-content,
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-content,
     .p-confirmdialog .p-dialog-content {
         background: rgb(255 255 255);
         color: rgb(51 65 85);
         padding: 1.25rem;
     }
 
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-content,
     .p-confirmdialog .p-dialog-content {
         align-items: flex-start;
         background: transparent;
-        padding: 0.5rem 1.5rem 0.25rem;
+        padding: 0.75rem 1.5rem 0.25rem;
+    }
+
+    .admin-confirm-dialog__content {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .admin-confirm-dialog__icon-wrap {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 9999px;
+        font-size: 1.125rem;
+    }
+
+    .admin-confirm-dialog__icon-wrap.is-warning {
+        background: rgb(251 191 36 / 0.14);
+        color: rgb(217 119 6);
+    }
+
+    .admin-confirm-dialog__icon-wrap.is-danger {
+        background: rgb(244 63 94 / 0.12);
+        color: rgb(225 29 72);
+    }
+
+    .admin-confirm-dialog__icon-wrap.is-success {
+        background: rgb(34 197 94 / 0.12);
+        color: rgb(22 163 74);
+    }
+
+    .dark .admin-confirm-dialog__icon-wrap.is-warning {
+        background: rgb(245 158 11 / 0.16);
+        color: rgb(251 191 36);
+    }
+
+    .dark .admin-confirm-dialog__icon-wrap.is-danger {
+        background: rgb(244 63 94 / 0.16);
+        color: rgb(251 113 133);
+    }
+
+    .dark .admin-confirm-dialog__icon-wrap.is-success {
+        background: rgb(34 197 94 / 0.16);
+        color: rgb(74 222 128);
+    }
+
+    .admin-confirm-dialog__copy {
+        min-width: 0;
+        flex: 1;
+        padding-top: 0.125rem;
+    }
+
+    .admin-confirm-dialog__message {
+        margin: 0;
+        line-height: 1.6;
+        font-size: 0.9375rem;
+        color: rgb(100 116 139);
+        white-space: pre-line;
+    }
+
+    .dark .admin-confirm-dialog__message {
+        color: rgb(148 163 184);
     }
 
     .p-confirmdialog .p-confirmdialog-message {
@@ -329,11 +407,13 @@
     }
 
     .dark .admin-dialog .p-dialog-content,
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-content,
     .dark .p-confirmdialog .p-dialog-content {
         background: rgb(30 41 59) !important;
         color: rgb(226 232 240);
     }
 
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-content,
     .dark .p-confirmdialog .p-dialog-content {
         background: transparent !important;
     }
@@ -343,6 +423,7 @@
     }
 
     .admin-dialog .p-dialog-footer,
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-footer,
     .p-confirmdialog .p-dialog-footer {
         display: flex;
         justify-content: flex-end;
@@ -352,23 +433,32 @@
         padding: 0.875rem 1.25rem;
     }
 
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-footer,
     .p-confirmdialog .p-dialog-footer {
         background: transparent;
-        border-top: none;
+        border-top: 1px solid rgb(241 245 249);
         gap: 0.625rem;
+        margin-top: 0.25rem;
         padding: 1rem 1.5rem 1.25rem;
     }
 
     .dark .admin-dialog .p-dialog-footer,
-    .dark .p-confirmdialog .p-dialog-footer,
-    .dark .admin-confirm-dialog .p-dialog-footer {
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-footer,
+    .dark .p-confirmdialog .p-dialog-footer {
         background: rgb(15 23 42 / 0.4);
         border-top-color: rgb(51 65 85);
     }
 
+    .dark .admin-confirm-dialog.p-confirmdialog .p-dialog-footer,
     .dark .p-confirmdialog .p-dialog-footer {
         background: transparent;
-        border-top: none;
+        border-top-color: rgb(51 65 85 / 0.8);
+    }
+
+    .admin-confirm-dialog .p-confirmdialog-reject-button,
+    .admin-confirm-dialog .p-confirmdialog-accept-button {
+        min-width: 5.25rem;
+        font-size: 0.875rem;
     }
 
     .p-confirmdialog .p-confirmdialog-reject-button.p-button-outlined,
@@ -410,9 +500,15 @@
         border-color: rgb(244 63 94) !important;
     }
 
-    .dark .admin-confirm-dialog.p-dialog,
-    .dark .admin-confirm-dialog .p-dialog {
-        background: rgb(30 41 59) !important;
+    .dark .p-confirmdialog .p-confirmdialog-accept-button.p-button-success {
+        background: rgb(22 163 74) !important;
+        border-color: rgb(22 163 74) !important;
+        color: rgb(255 255 255) !important;
+    }
+
+    .dark .p-confirmdialog .p-confirmdialog-accept-button.p-button-success:not(:disabled):hover {
+        background: rgb(34 197 94) !important;
+        border-color: rgb(34 197 94) !important;
     }
 
     .dark {

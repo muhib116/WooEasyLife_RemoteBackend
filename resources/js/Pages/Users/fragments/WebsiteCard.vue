@@ -231,11 +231,12 @@
                 </p>
             </section>
 
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
                 <Button
                     :label="primaryAction.label"
                     :icon="primaryAction.icon"
                     size="small"
+                    class="shrink-0"
                     @click="primaryAction.run()"
                 />
                 <template v-if="website.subscription">
@@ -246,6 +247,7 @@
                         size="small"
                         severity="secondary"
                         outlined
+                        class="shrink-0"
                         v-tooltip.top="'Reset tokens and extend expiry for a new plan period'"
                         @click="$emit('renew-plan')"
                     />
@@ -256,6 +258,7 @@
                         size="small"
                         severity="secondary"
                         outlined
+                        class="shrink-0"
                         v-tooltip.top="'Legacy plans renew through Billing — add order quota there'"
                         @click="$emit('renew-via-billing')"
                     />
@@ -265,6 +268,7 @@
                         size="small"
                         severity="secondary"
                         outlined
+                        class="shrink-0"
                         @click="$emit('change-plan')"
                     />
                     <Button
@@ -273,6 +277,7 @@
                         size="small"
                         severity="secondary"
                         outlined
+                        class="shrink-0"
                         v-tooltip.top="'Override quota, expiry, or active status'"
                         @click="$emit('adjust-subscription')"
                     />

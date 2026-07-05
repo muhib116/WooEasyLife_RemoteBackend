@@ -103,7 +103,6 @@
             </PageCard>
         </div>
 
-        <ConfirmDialog />
         <Dialog
             v-model:visible="selectedItem"
             header="Session Payload"
