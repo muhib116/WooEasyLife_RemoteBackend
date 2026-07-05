@@ -14,6 +14,10 @@ use Inertia\Response;
 
 class AuthenticatedSessionController extends Controller
 {
+    public const ADMIN_LOGIN_UNLOCK_SESSION_KEY = 'admin_login_unlocked';
+
+    public const ADMIN_LOGIN_REQUIRED_CLICKS = 10;
+
     /**
      * Display the login view.
      */
@@ -27,7 +31,19 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
+            'adminLoginUnlocked' => (bool) $request->session()->get(self::ADMIN_LOGIN_UNLOCK_SESSION_KEY),
+            'adminLoginRequiredClicks' => self::ADMIN_LOGIN_REQUIRED_CLICKS,
         ]);
+    }
+
+    /**
+     * Reveal the admin login form after the client-side click gate.
+     */
+    public function unlock(Request $request): RedirectResponse
+    {
+        $request->session()->put(self::ADMIN_LOGIN_UNLOCK_SESSION_KEY, true);
+
+        return redirect()->route('login');
     }
 
     /**
@@ -35,6 +51,12 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        if (! $request->session()->get(self::ADMIN_LOGIN_UNLOCK_SESSION_KEY)) {
+            return back()->withErrors([
+                'email' => 'Admin sign-in is not available.',
+            ]);
+        }
+
         $request->authenticate();
 
         $user = $request->user();

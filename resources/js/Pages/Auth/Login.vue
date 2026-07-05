@@ -1,5 +1,17 @@
 <template>
-    <GuestLayout>
+    <div
+        v-if="!adminLoginUnlocked"
+        class="flex min-h-svh cursor-default select-none items-center justify-center bg-slate-950 px-6"
+    >
+        <Head title="Not found" />
+
+        <div class="text-center">
+            <p class="text-6xl font-bold tracking-tight text-slate-800">404</p>
+            <p class="mt-3 text-sm text-slate-600">Page not found</p>
+        </div>
+    </div>
+
+    <GuestLayout v-else>
         <Head title="Log in" />
 
         <div class="mb-7">
@@ -102,18 +114,68 @@
 
 <script setup>
 import Checkbox from '@/components/Checkbox.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { GuestLayout } from '@/layouts';
 
-defineProps({
+const props = defineProps({
     canResetPassword: Boolean,
     status: String,
+    adminLoginUnlocked: {
+        type: Boolean,
+        default: false,
+    },
+    adminLoginRequiredClicks: {
+        type: Number,
+        default: 10,
+    },
 });
+
+const CLICK_RESET_MS = 2000;
+
+const clickCount = ref(0);
+const lastClickAt = ref(0);
+const unlocking = ref(false);
 
 const form = useForm({
     email: '',
     password: '',
     remember: false,
+});
+
+const handleGateClick = () => {
+    if (props.adminLoginUnlocked || unlocking.value) {
+        return;
+    }
+
+    const now = Date.now();
+
+    if (lastClickAt.value && now - lastClickAt.value > CLICK_RESET_MS) {
+        clickCount.value = 0;
+    }
+
+    lastClickAt.value = now;
+    clickCount.value += 1;
+
+    if (clickCount.value >= props.adminLoginRequiredClicks) {
+        unlocking.value = true;
+        router.post(route('login.unlock'), {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                unlocking.value = false;
+            },
+        });
+    }
+};
+
+onMounted(() => {
+    if (!props.adminLoginUnlocked) {
+        window.addEventListener('click', handleGateClick);
+    }
+});
+
+onUnmounted(() => {
+    window.removeEventListener('click', handleGateClick);
 });
 
 const submit = () => {

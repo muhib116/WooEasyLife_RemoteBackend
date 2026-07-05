@@ -22,6 +22,9 @@ Route::middleware('guest')->group(function () {
     Route::get('muhib/login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
+    Route::post('muhib/login/unlock', [AuthenticatedSessionController::class, 'unlock'])
+        ->name('login.unlock');
+
     Route::post('muhib/login', [AuthenticatedSessionController::class, 'store']);
 
     Route::get('marchent/login', [MerchantAuthenticatedSessionController::class, 'create'])

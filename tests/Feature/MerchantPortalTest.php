@@ -103,6 +103,8 @@ class MerchantPortalTest extends TestCase
             'status' => true,
         ]);
 
+        $this->post('/muhib/login/unlock');
+
         $response = $this->post('/muhib/login', [
             'email' => 'admin@example.com',
             'password' => 'password',

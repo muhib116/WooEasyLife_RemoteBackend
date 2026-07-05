@@ -16,11 +16,29 @@ class AuthenticationTest extends TestCase
         $response = $this->get('/muhib/login');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Auth/Login')
+            ->where('adminLoginUnlocked', false));
+    }
+
+    public function test_admin_login_is_hidden_until_unlocked(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->post('/muhib/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
         $user = User::factory()->create();
+
+        $this->post('/muhib/login/unlock');
 
         $response = $this->post('/muhib/login', [
             'email' => $user->email,
@@ -34,6 +52,8 @@ class AuthenticationTest extends TestCase
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();
+
+        $this->post('/muhib/login/unlock');
 
         $this->post('/muhib/login', [
             'email' => $user->email,
