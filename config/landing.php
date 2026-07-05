@@ -1,14 +1,29 @@
 <?php
 
 return [
-    'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE'),
+    'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE', '8801770989591'),
 
     'whatsapp_default_message' => env(
         'LANDING_WHATSAPP_DEFAULT_MESSAGE',
-        'সালাম, আমি WooEasyLife সম্পর্কে জানতে চাই।',
+        'সালাম, আমি WooEasyLife সাবস্ক্রিপশন নিতে চাই।',
     ),
 
-    'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE')),
+    'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE', '8801770989591')),
+
+    'subscription_wizard' => [
+        'title' => 'সাবস্ক্রিপশন কিনুন',
+        'support_hint' => 'কোনো ধাপ বুঝতে সমস্যা? WhatsApp-এ সরাসরি সাহায্য নিন।',
+        'steps' => [
+            'plan' => 'প্ল্যান',
+            'contact' => 'আপনার তথ্য',
+            'payment' => 'পেমেন্ট করুন',
+            'confirm' => 'তথ্য জমা দিন',
+            'done' => 'সম্পন্ন',
+        ],
+        'free_trial_hint' => 'ফ্রি ট্রায়াল শুরু করতে লগইন করুন অথবা WhatsApp-এ যোগাযোগ করুন।',
+        'success_title' => 'আপনার অনুরোধ জমা হয়েছে!',
+        'success_message' => 'আমাদের টিম ২৪ ঘণ্টার মধ্যে যাচাই করে আপনার প্ল্যান সক্রিয় করবে। WhatsApp-এ আপডেট পেতে পারেন।',
+    ],
 
     'location' => 'ঢাকা, বাংলাদেশ',
 

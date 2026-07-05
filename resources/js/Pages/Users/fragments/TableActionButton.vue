@@ -31,6 +31,7 @@ const ACTION_ICONS: Record<string, string> = {
     key: "pi pi-key",
     map: "pi pi-map",
     approve: "pi pi-check",
+    contact: "pi pi-phone",
     reject: "pi pi-times",
     navigate: "pi pi-arrow-right",
 };
@@ -81,6 +82,7 @@ const resolvedSeverity = computed(() => {
         case "approve":
             return "success";
         case "edit":
+        case "contact":
             return "info";
         default:
             return "secondary";

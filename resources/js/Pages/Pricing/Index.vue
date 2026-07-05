@@ -1,10 +1,9 @@
 <script setup>
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, ref, watch } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
-import PaymentRequestFormFields from '@/components/PaymentRequestFormFields.vue';
 import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
-import Dialog from 'primevue/dialog';
+import SubscriptionWizard from '@/components/marketing/SubscriptionWizard.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 
@@ -17,11 +16,15 @@ const props = defineProps({
     domains: { type: Array, default: () => [] },
     canPurchase: { type: Boolean, default: false },
     preselectedPlanId: { type: Number, default: null },
+    paymentMethods: { type: Array, default: () => [] },
+    subscriptionWizard: { type: Object, default: () => ({}) },
+    whatsappSupportUrl: { type: String, default: null },
+    whatsappDisplayPhone: { type: String, default: '01770989591' },
 });
 
 const page = usePage();
 const toast = useToast();
-const showPaymentForm = ref(false);
+const showWizard = ref(false);
 const selectedPlan = ref(null);
 
 const authUser = computed(() => page.props.auth?.user ?? null);
@@ -46,90 +49,33 @@ const planBadgeClass = (plan) => {
     return 'bg-amber-400 text-amber-950';
 };
 
-const paymentForm = useForm({
-    domain: '',
-    package_hub_id: null,
-    order_limit: 100,
-    total_amount: null,
-    transaction_method: 'Bkash',
-    transaction_id: '',
-    account_number: '',
-    transaction_charge: 0,
-    note: '',
-});
-
 const purchaseLabel = (plan) => {
     if (isFreeTrial(plan)) {
         return 'ফ্রি ট্রায়াল শুরু করুন';
     }
 
-    if (props.canPurchase && props.domains.length) {
-        return 'এখনই কিনুন';
-    }
-
-    if (hasPortal.value && !props.domains.length) {
-        return 'ওয়েবসাইট যোগ করুন';
-    }
-
-    if (props.canLogin && !authUser.value) {
-        return 'লগইন করে কিনুন';
-    }
-
-    return props.whatsappUrl ? 'যোগাযোগ করুন' : 'শুরু করুন';
+    return 'এখনই সাবস্ক্রাইব করুন';
 };
 
 const openPurchase = (plan) => {
-    if (props.canPurchase && props.domains.length) {
-        selectedPlan.value = plan;
-        paymentForm.reset();
-        paymentForm.domain = props.domains[0] ?? '';
-        paymentForm.package_hub_id = plan.id;
-        paymentForm.order_limit = plan.order_rate_token || 100;
-        paymentForm.total_amount = plan.package_price ?? null;
-        showPaymentForm.value = true;
-        return;
-    }
-
-    if (hasPortal.value && !props.domains.length) {
-        router.visit(route('portal.websites'));
-        return;
-    }
-
-    if (!authUser.value && props.canLogin) {
-        router.visit(`${route('merchant.login')}?redirect=${encodeURIComponent(`/pricing?plan=${plan.id}`)}`);
-        return;
-    }
-
-    if (props.whatsappUrl) {
-        window.open(props.whatsappUrl, '_blank', 'noopener,noreferrer');
-        return;
-    }
-
-    router.visit(route('merchant.login'));
+    selectedPlan.value = plan;
+    showWizard.value = true;
 };
 
-const submitPayment = () => {
-    paymentForm.post(route('portal.billing.payment-request'), {
-        onSuccess: () => {
-            showPaymentForm.value = false;
-            paymentForm.reset();
+watch(
+    () => page.props.flash?.subscription_submitted,
+    (payload) => {
+        if (payload) {
+            showWizard.value = true;
             toast.add({
                 severity: 'success',
                 summary: 'সফল',
-                detail: 'পেমেন্ট রিকোয়েস্ট জমা হয়েছে। অনুমোদনের জন্য অপেক্ষা করুন।',
-                life: 5000,
+                detail: 'আপনার সাবস্ক্রিপশন অনুরোধ জমা হয়েছে।',
+                life: 6000,
             });
-        },
-        onError: () => {
-            toast.add({
-                severity: 'error',
-                summary: 'ত্রুটি',
-                detail: 'পেমেন্ট রিকোয়েস্ট জমা দেওয়া যায়নি।',
-                life: 4000,
-            });
-        },
-    });
-};
+        }
+    },
+);
 
 onMounted(() => {
     if (!props.preselectedPlanId) {
@@ -153,14 +99,17 @@ onMounted(() => {
                     আপনার ব্যবসার জন্য সঠিক প্ল্যান বেছে নিন
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
-                    সব প্যাকেজে স্বচ্ছ মূল্য, টোকেন-ভিত্তিক ব্যবহার ও প্রিমিয়াম ফিচার।
-                    লগইন করে সরাসরি সাবস্ক্রিপশন কিনতে পারবেন।
+                    সহজ ধাপে bKash/Rocket পেমেন্ট করুন — কোনো টেকনিক্যাল জ্ঞান লাগবে না।
+                    সমস্যা হলে WhatsApp-এ {{ whatsappDisplayPhone }} নম্বরে সাহায্য নিন।
+                </p>
+                <p class="mt-3 text-sm text-slate-500">
+                    লগইন ছাড়াই সাবস্ক্রিপশন অনুরোধ করতে পারবেন — প্ল্যান বেছে নিয়ে ফর্ম পূরণ করুন।
                 </p>
                 <p
                     v-if="authUser && canPurchase"
                     class="mt-4 text-sm font-medium text-emerald-400"
                 >
-                    আপনি লগইন আছেন — পছন্দের প্ল্যানে «এখনই কিনুন» ক্লিক করুন।
+                    আপনি লগইন আছেন — পছন্দের প্ল্যানে «এখনই সাবস্ক্রাইব করুন» ক্লিক করুন।
                 </p>
             </div>
         </section>
@@ -248,17 +197,21 @@ onMounted(() => {
             <div class="mx-auto max-w-3xl px-4 text-center">
                 <h2 class="text-3xl font-bold text-white">এখনই শুরু করুন</h2>
                 <p class="mt-3 text-amber-50">
-                    প্রশ্ন থাকলে হোয়াটসঅ্যাপে যোগাযোগ করুন, অথবা লগইন করে পেমেন্ট জমা দিন।
+                    প্ল্যান বেছে নিন → তথ্য দিন → bKash/Rocket পেমেন্ট → লেনদেন আইডি জমা দিন।
+                    কোথাও আটকে গেলে WhatsApp করুন।
                 </p>
                 <div class="mt-6 flex flex-wrap justify-center gap-3">
                     <a
-                        v-if="whatsappUrl"
-                        :href="whatsappUrl"
+                        v-if="whatsappSupportUrl || whatsappUrl"
+                        :href="whatsappSupportUrl || whatsappUrl"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="rounded-xl bg-white px-6 py-3 text-sm font-bold text-amber-950"
+                        class="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-amber-950"
                     >
-                        হোয়াটসঅ্যাপে যোগাযোগ
+                        <svg class="h-5 w-5 text-emerald-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                        </svg>
+                        WhatsApp: {{ whatsappDisplayPhone }}
                     </a>
                     <Link
                         v-if="canLogin && hasPortal"
@@ -271,25 +224,17 @@ onMounted(() => {
             </div>
         </section>
 
-        <Dialog
-            v-model:visible="showPaymentForm"
-            header="সাবস্ক্রিপশন কিনুন"
-            modal
-            :style="{ width: 'min(100vw - 2rem, 42rem)' }"
-            draggable
-            dismissable-mask
-        >
-            <PaymentRequestFormFields
-                v-if="showPaymentForm"
-                :form="paymentForm"
-                :plans="plans"
-                :domains="domains"
-                empty-domains-message="কোনো ওয়েবসাইট পাওয়া যায়নি। প্রথমে ওয়েবসাইট যোগ করুন।"
-                submit-label="পেমেন্ট জমা দিন"
-                @submit="submitPayment"
-                @cancel="showPaymentForm = false"
-            />
-        </Dialog>
+        <SubscriptionWizard
+            v-model:visible="showWizard"
+            :plan="selectedPlan"
+            :plans="plans"
+            :domains="domains"
+            :payment-methods="paymentMethods"
+            :subscription-wizard="subscriptionWizard"
+            :whatsapp-support-url="whatsappSupportUrl || whatsappUrl"
+            :whatsapp-display-phone="whatsappDisplayPhone"
+            :can-login="canLogin"
+        />
 
         <Toast />
     </MarketingLayout>

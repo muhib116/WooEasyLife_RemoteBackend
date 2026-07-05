@@ -210,7 +210,9 @@ class PackagePaymentApiTest extends TestCase
             ->assertJsonPath('data.0.duration_label', 'মাসিক প্ল্যান')
             ->assertJsonPath('data.0.price_label', '৳100')
             ->assertJsonPath('data.0.features_heading', 'প্ল্যান ফিচার')
-            ->assertJsonPath('data.0.top_features.0.label', 'ফ্রড কাস্টমার চেকার');
+            ->assertJsonPath('data.0.top_features.0.label', 'ফ্রড কাস্টমার চেকার')
+            ->assertJsonCount(count(config('package_catalog.power_feature_keys', [])), 'data.0.catalog_features')
+            ->assertJsonPath('data.0.catalog_features.0.key', config('package_catalog.power_feature_keys.0'));
     }
 
     public function test_expired_token_can_still_access_package_renewal_routes(): void

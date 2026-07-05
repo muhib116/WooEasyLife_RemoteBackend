@@ -51,6 +51,7 @@ class HandleInertiaRequests extends Middleware
                 'warning' => session('warning'),
                 'store_sync' => session('store_sync'),
                 'license_token' => session('license_token'),
+                'subscription_submitted' => session('subscription_submitted'),
             ],
             'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
             'marketing' => [

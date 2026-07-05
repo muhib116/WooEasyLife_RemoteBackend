@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\App\LegalController;
+use App\Http\Controllers\App\PublicSubscriptionController;
 use App\Http\Controllers\App\PricingController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\MerchantEmployeeController;
+use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PackagePaymentAdminController;
 use App\Http\Controllers\Admin\RoleAdminController;
 use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
@@ -71,6 +73,9 @@ Route::prefix('public/fraud-check')->name('landing.fraud-check.')->group(functio
 });
 
 Route::get('/pricing', PricingController::class)->name('pricing');
+Route::post('/pricing/subscribe', [PublicSubscriptionController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('pricing.subscribe');
 
 Route::prefix('wooeasylife/app')->name('wooeasylife.app.')->group(function () {
     Route::get('/privacy-policy', [LegalController::class, 'privacyPolicy'])
@@ -287,6 +292,15 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/', [PackagePaymentAdminController::class, 'index'])
             ->middleware('permission:payments.view')
             ->name('index');
+    });
+
+    Route::group(['as' => 'orders.', 'prefix' => 'orders'], function () {
+        Route::get('/', [OrderAdminController::class, 'index'])
+            ->middleware('permission:payments.view')
+            ->name('index');
+        Route::post('/{order}/status', [OrderAdminController::class, 'updateStatus'])
+            ->middleware('permission:payments.approve')
+            ->name('updateStatus');
     });
 
     Route::group(['as' => 'subscriptionAlerts.', 'prefix' => 'subscription-alerts'], function () {

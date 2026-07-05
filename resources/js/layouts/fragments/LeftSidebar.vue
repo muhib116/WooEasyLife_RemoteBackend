@@ -221,6 +221,7 @@ const sections: NavSection[] = [
                 icon: "PhCurrencyCircleDollar",
                 children: [
                     { title: "Pricing Plans", name: "packages.index", icon: "PhPackage" },
+                    { title: "Landing Orders", name: "orders.index", icon: "PhShoppingCart" },
                     { title: "Payment Requests", name: "packagePayments.index", icon: "PhCreditCard" },
                     { title: "Customer Notices", name: "customerNotices.index", icon: "PhMegaphone" },
                 ],
@@ -251,6 +252,7 @@ const expandedGroups = reactive<Record<string, boolean>>({
     Merchants: Boolean(route().current("users.*")),
     "Plans & Billing": Boolean(
         route().current("packages.*")
+            || route().current("orders.*")
             || route().current("packagePayments.*")
             || route().current("customerNotices.*"),
     ),
