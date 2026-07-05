@@ -37,12 +37,30 @@ class HandleInertiaRequests extends Middleware
         $rbac = app(RbacService::class);
         $portal = app(MerchantPortalContext::class);
 
+        $accessArea = match (true) {
+            $user?->role === 'admin' => 'admin',
+            in_array($user?->role, ['user', 'merchant_staff'], true) => 'portal',
+            default => null,
+        };
+
+        $accessLabel = match (true) {
+            $user?->role === 'admin' => 'Platform Admin',
+            $user?->role === 'user' => 'Merchant',
+            $user?->role === 'merchant_staff' => 'Merchant Team',
+            default => null,
+        };
+
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $user,
-                'permissions' => $user ? $rbac->permissionSlugsFor($user) : [],
+                'permissions' => $user ? match (true) {
+                    in_array($user->role, ['user', 'merchant_staff'], true) => $rbac->merchantPermissionSlugsFor($user),
+                    default => $rbac->permissionSlugsFor($user),
+                } : [],
                 'is_super_admin' => $user ? $rbac->isSuperAdmin($user) : false,
+                'access_area' => $accessArea,
+                'access_label' => $accessLabel,
                 'portal' => $user ? $portal->sharePayload($user) : null,
             ],
             'flash' => [

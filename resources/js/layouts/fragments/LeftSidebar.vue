@@ -167,7 +167,8 @@
 <script setup lang="ts">
 import { Icon } from "@/plugins";
 import { Link } from "@inertiajs/vue3";
-import { reactive } from "vue";
+import { computed, reactive } from "vue";
+import { usePermissions } from "@/composables/usePermissions";
 import type { IconName } from "@/types";
 
 defineEmits<{
@@ -178,12 +179,14 @@ type NavChild = {
     title: string;
     name: string;
     icon: IconName;
+    permission?: string;
 };
 
 type NavItem = {
     title: string;
     name?: string;
     icon: IconName;
+    permission?: string;
     children?: NavChild[];
 };
 
@@ -192,10 +195,17 @@ type NavSection = {
     items: NavItem[];
 };
 
-const sections: NavSection[] = [
+const allSections: NavSection[] = [
     {
         label: "Overview",
-        items: [{ title: "Dashboard", name: "dashboard", icon: "PhChartBar" }],
+        items: [
+            {
+                title: "Dashboard",
+                name: "dashboard",
+                icon: "PhChartBar",
+                permission: "dashboard.view",
+            },
+        ],
     },
     {
         label: "Merchants",
@@ -204,49 +214,159 @@ const sections: NavSection[] = [
                 title: "Merchants",
                 icon: "PhUsers",
                 children: [
-                    { title: "All Merchants", name: "users.index", icon: "PhUsersThree" },
-                    { title: "Trashed Merchants", name: "users.trashed", icon: "PhTrash" },
+                    {
+                        title: "All Merchants",
+                        name: "users.index",
+                        icon: "PhUsersThree",
+                        permission: "merchants.view",
+                    },
+                    {
+                        title: "Trashed Merchants",
+                        name: "users.trashed",
+                        icon: "PhTrash",
+                        permission: "merchants.manage",
+                    },
                 ],
             },
-            { title: "Fraud Checker", name: "frauds.index", icon: "PhUserCheck" },
-            { title: "Whitelisted Domains", name: "whitelistedDomains.index", icon: "PhGlobe" },
+            {
+                title: "Fraud Checker",
+                name: "frauds.index",
+                icon: "PhUserCheck",
+                permission: "merchants.view",
+            },
+            {
+                title: "Whitelisted Domains",
+                name: "whitelistedDomains.index",
+                icon: "PhGlobe",
+                permission: "merchants.manage",
+            },
         ],
     },
     {
         label: "Platform",
         items: [
-            { title: "Plugin Versions", name: "plugins.index", icon: "PhPlugsConnected" },
+            {
+                title: "Plugin Versions",
+                name: "plugins.index",
+                icon: "PhPlugsConnected",
+                permission: "licenses.manage",
+            },
             {
                 title: "Plans & Billing",
                 icon: "PhCurrencyCircleDollar",
                 children: [
-                    { title: "Pricing Plans", name: "packages.index", icon: "PhPackage" },
-                    { title: "Landing Orders", name: "orders.index", icon: "PhShoppingCart" },
-                    { title: "Payment Requests", name: "packagePayments.index", icon: "PhCreditCard" },
-                    { title: "Customer Notices", name: "customerNotices.index", icon: "PhMegaphone" },
+                    {
+                        title: "Pricing Plans",
+                        name: "packages.index",
+                        icon: "PhPackage",
+                        permission: "billing.view",
+                    },
+                    {
+                        title: "Landing Orders",
+                        name: "orders.index",
+                        icon: "PhShoppingCart",
+                        permission: "payments.view",
+                    },
+                    {
+                        title: "Payment Requests",
+                        name: "packagePayments.index",
+                        icon: "PhCreditCard",
+                        permission: "payments.view",
+                    },
+                    {
+                        title: "Customer Notices",
+                        name: "customerNotices.index",
+                        icon: "PhMegaphone",
+                        permission: "billing.manage",
+                    },
                 ],
             },
-            { title: "Subscription Alerts", name: "subscriptionAlerts.index", icon: "PhBellRinging" },
+            {
+                title: "Subscription Alerts",
+                name: "subscriptionAlerts.index",
+                icon: "PhBellRinging",
+                permission: "billing.view",
+            },
         ],
     },
     {
         label: "Analytics",
         items: [
-            { title: "Visitor Report", name: "visitor.index", icon: "PhChartLineUp" },
-            { title: "Use Analysis", name: "useAnalysis.index", icon: "PhChartScatter" },
+            {
+                title: "Visitor Report",
+                name: "visitor.index",
+                icon: "PhChartLineUp",
+                permission: "dashboard.view",
+            },
+            {
+                title: "Use Analysis",
+                name: "useAnalysis.index",
+                icon: "PhChartScatter",
+                permission: "dashboard.view",
+            },
         ],
     },
     {
         label: "System",
         items: [
-            { title: "Webhook Activities", name: "webhooks.index", icon: "PhArrowClockwise" },
-            { title: "Error Logs", name: "logs.index", icon: "PhBug" },
-            { title: "Roles & Access", name: "roles.index", icon: "PhShieldCheck" },
-            { title: "Database Backups", name: "backups.index", icon: "PhFloppyDiskBack" },
-            { title: "Developer API", name: "developer.index", icon: "PhCode" },
+            {
+                title: "Webhook Activities",
+                name: "webhooks.index",
+                icon: "PhArrowClockwise",
+                permission: "roles.manage",
+            },
+            {
+                title: "Error Logs",
+                name: "logs.index",
+                icon: "PhBug",
+                permission: "roles.manage",
+            },
+            {
+                title: "Roles & Access",
+                name: "roles.index",
+                icon: "PhShieldCheck",
+                permission: "roles.manage",
+            },
+            {
+                title: "Database Backups",
+                name: "backups.index",
+                icon: "PhFloppyDiskBack",
+                permission: "roles.manage",
+            },
+            {
+                title: "Developer API",
+                name: "developer.index",
+                icon: "PhCode",
+                permission: "roles.manage",
+            },
         ],
     },
 ];
+
+const { can } = usePermissions();
+
+const canSee = (permission?: string) => !permission || can(permission);
+
+const filterItem = (item: NavItem): NavItem | null => {
+    if (item.children?.length) {
+        const children = item.children.filter((child) => canSee(child.permission));
+
+        return children.length ? { ...item, children } : null;
+    }
+
+    return canSee(item.permission) ? item : null;
+};
+
+const sections = computed(() =>
+    allSections
+        .map((section) => ({
+            ...section,
+            items: section.items
+                .map(filterItem)
+                .filter((item): item is NavItem => item !== null),
+        }))
+        .filter((section) => section.items.length > 0),
+);
 
 const expandedGroups = reactive<Record<string, boolean>>({
     Merchants: Boolean(route().current("users.*")),

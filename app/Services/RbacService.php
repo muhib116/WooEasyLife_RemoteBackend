@@ -33,19 +33,15 @@ class RbacService
 
     public function hasPermission(User $user, string $permission): bool
     {
+        if (in_array($user->role, ['user', 'merchant_staff'], true)) {
+            return in_array($permission, $this->merchantPermissionSlugsFor($user), true);
+        }
+
         if ($user->role === 'admin') {
             if ($this->isSuperAdmin($user)) {
                 return true;
             }
 
-            return in_array($permission, $this->permissionSlugsFor($user), true);
-        }
-
-        if ($user->role === 'user') {
-            return in_array($permission, self::MERCHANT_OWNER_PERMISSIONS, true);
-        }
-
-        if ($user->role === 'merchant_staff') {
             return in_array($permission, $this->permissionSlugsFor($user), true);
         }
 
@@ -55,18 +51,8 @@ class RbacService
     /**
      * @return array<int, string>
      */
-    public function permissionSlugsFor(User $user): array
+    public function merchantPermissionSlugsFor(User $user): array
     {
-        if ($user->role === 'admin') {
-            if ($this->isSuperAdmin($user)) {
-                return Permission::query()->orderBy('slug')->pluck('slug')->all();
-            }
-
-            $role = $user->adminRole?->loadMissing('permissions');
-
-            return $role?->permissions->pluck('slug')->sort()->values()->all() ?? [];
-        }
-
         if ($user->role === 'user') {
             return self::MERCHANT_OWNER_PERMISSIONS;
         }
@@ -83,6 +69,24 @@ class RbacService
                 ->sort()
                 ->values()
                 ->all() ?? [];
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function permissionSlugsFor(User $user): array
+    {
+        if ($user->role === 'admin') {
+            if ($this->isSuperAdmin($user)) {
+                return Permission::query()->orderBy('slug')->pluck('slug')->all();
+            }
+
+            $role = $user->adminRole?->loadMissing('permissions');
+
+            return $role?->permissions->pluck('slug')->sort()->values()->all() ?? [];
         }
 
         return [];

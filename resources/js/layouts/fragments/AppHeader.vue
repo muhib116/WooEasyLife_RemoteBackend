@@ -74,6 +74,12 @@
                         <p class="truncate text-xs text-gray-500 dark:text-gray-400">
                             {{ user?.email }}
                         </p>
+                        <p
+                            v-if="accessLabel"
+                            class="mt-1 inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-700 dark:bg-primary-500/15 dark:text-primary-300"
+                        >
+                            {{ accessLabel }}
+                        </p>
                     </div>
                     <Link
                         :href="route('profile.edit')"
@@ -84,6 +90,7 @@
                         Profile
                     </Link>
                     <Link
+                        v-if="canViewDashboard"
                         :href="route('dashboard')"
                         class="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-slate-700"
                         @click="menuOpen = false"
@@ -109,6 +116,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Icon } from "@/plugins";
 import { useTheme } from "@/composable";
+import { usePermissions } from "@/composables/usePermissions";
 import { Link, router, usePage } from "@inertiajs/vue3";
 
 defineProps<{
@@ -125,8 +133,11 @@ defineEmits<{
 const page = usePage();
 const menuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
+const { can } = usePermissions();
 
 const user = computed(() => page.props.auth?.user as { name?: string; email?: string } | null);
+const accessLabel = computed(() => (page.props.auth as any)?.access_label as string | null);
+const canViewDashboard = computed(() => can("dashboard.view"));
 
 const userInitial = computed(() => {
     const name = user.value?.name?.trim();

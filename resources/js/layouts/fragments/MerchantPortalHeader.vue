@@ -14,19 +14,25 @@
                 <p class="truncate text-base font-semibold text-gray-900 dark:text-white">
                     {{ title }}
                 </p>
-                <p
-                    v-if="portal?.is_staff"
-                    class="truncate text-xs text-gray-500 dark:text-gray-400"
-                >
-                    {{ portal.employee?.role }} ·
-                    {{ portal.employee?.website_domain || "All websites" }}
-                </p>
+                        <p
+                            v-if="portal?.is_staff"
+                            class="truncate text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            {{ portal.employee?.role }} ·
+                            {{ portal.employee?.website_domain || "All websites" }}
+                        </p>
+                        <p
+                            v-else-if="accessLabel"
+                            class="truncate text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            {{ accessLabel }}
+                        </p>
             </div>
         </div>
 
         <div class="flex items-center gap-2">
             <Link
-                :href="route('profile.edit')"
+                :href="route('portal.profile')"
                 class="hidden text-sm font-medium text-gray-700 hover:text-gray-900 sm:inline-flex dark:text-gray-200"
             >
                 Profile
@@ -58,4 +64,5 @@ defineEmits<{
 
 const page = usePage();
 const portal = computed(() => (page.props.auth as any)?.portal);
+const accessLabel = computed(() => (page.props.auth as any)?.access_label as string | null);
 </script>

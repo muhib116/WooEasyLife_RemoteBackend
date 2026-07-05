@@ -12,6 +12,10 @@ defineProps({
     status: {
         type: String,
     },
+    updateRoute: {
+        type: String,
+        default: 'profile.update',
+    },
 });
 
 const user = usePage().props.auth.user;
@@ -32,7 +36,7 @@ const form = useForm({
             </p>
         </header>
 
-        <form @submit.prevent="form.patch(route('profile.update'))" class="mt-6 space-y-6">
+        <form @submit.prevent="form.patch(route(updateRoute))" class="mt-6 space-y-6">
             <div>
                 <InputLabel for="name" value="Name" />
 

@@ -113,6 +113,79 @@ class MerchantPortalTest extends TestCase
         $response->assertRedirect('/dashboard');
     }
 
+    public function test_merchant_can_access_portal_profile(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-profile@example.com',
+            'phone' => '01700000010',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->actingAs($merchant)
+            ->get(route('portal.profile'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Portal/Profile'));
+    }
+
+    public function test_merchant_profile_update_redirects_back_to_portal_profile(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-profile2@example.com',
+            'phone' => '01700000011',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->actingAs($merchant)
+            ->patch(route('portal.profile.update'), [
+                'name' => 'Updated Merchant',
+                'email' => 'merchant-profile2@example.com',
+            ])
+            ->assertRedirect(route('portal.profile'));
+
+        $this->assertDatabaseHas('users', [
+            'id' => $merchant->id,
+            'name' => 'Updated Merchant',
+        ]);
+    }
+
+    public function test_merchant_cannot_access_admin_profile(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-profile-block@example.com',
+            'phone' => '01700000012',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->actingAs($merchant)
+            ->get(route('profile.edit'))
+            ->assertRedirect(route('portal.dashboard'));
+    }
+
+    public function test_merchant_cannot_access_admin_users_page(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-users-block@example.com',
+            'phone' => '01700000013',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->actingAs($merchant)
+            ->get(route('users.index'))
+            ->assertRedirect(route('portal.dashboard'));
+    }
+
     public function test_merchant_cannot_access_admin_dashboard(): void
     {
         $merchant = User::create([

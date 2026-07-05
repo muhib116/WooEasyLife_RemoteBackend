@@ -72,9 +72,9 @@ import AdminConfirmDialog from "@/Pages/Users/fragments/AdminConfirmDialog.vue";
 import LeftSidebar from "./fragments/LeftSidebar.vue";
 import AppHeader from "./fragments/AppHeader.vue";
 import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";
-import { Head } from "@inertiajs/vue3";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import { useTheme } from "@/composable";
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { get } from "lodash";
 
 withDefaults(
@@ -87,6 +87,15 @@ withDefaults(
         skipWrapper: false,
     },
 );
+
+const page = usePage();
+const accessArea = computed(() => (page.props.auth as any)?.access_area);
+
+onMounted(() => {
+    if (accessArea.value === "portal") {
+        router.visit(route("portal.dashboard"), { replace: true });
+    }
+});
 
 const sidebarOpen = ref(false);
 const themeDialog = ref(false);

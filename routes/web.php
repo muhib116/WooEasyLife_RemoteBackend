@@ -90,17 +90,11 @@ Route::get('/curl', [CurlController::class, 'index']);
 // Route::get('download-plugins', [PluginsController::class, 'downloadApp']);
 // Route::get('get-metadata', [PluginsController::class, 'getMetadata']);
 
-Route::middleware(['auth', 'auth.active'])->group(function () {
+Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('/icons', function () {
-        return Inertia::render('Icons/Index');
-    })->name('icons');
-});
-
-Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () {
     Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
     Route::post('/fraud-stream', [FraudCheckController::class, 'checkStream'])->name('adminCheckStream');
     Route::get('/icons', function () {
@@ -110,7 +104,9 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         return Inertia::render('Icons/Prime');
     })->name('icons.prime');
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware('permission:dashboard.view')
+        ->name('dashboard');
     Route::get('/token-ledger', [TokenLedgerController::class, 'tokenLedger'])->name('tokenLedger');
     Route::any('/get-token-ledger', [TokenLedgerController::class, 'getTokenLedger'])->name('getTokenLedger');
 
