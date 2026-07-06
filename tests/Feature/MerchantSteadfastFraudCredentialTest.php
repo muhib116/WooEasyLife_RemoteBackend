@@ -92,6 +92,47 @@ it('uses merchant steadfast credentials instead of env defaults', function () {
     });
 });
 
+it('falls back to platform credentials when merchant portal login fails', function () {
+    config([
+        'fraud-checker-bd-courier.steadfast.user' => 'platform@steadfast.test',
+        'fraud-checker-bd-courier.steadfast.password' => 'platform-password',
+    ]);
+
+    Cache::flush();
+
+    Http::fake(function ($request) {
+        if (str_contains($request->url(), '/login') && $request->method() === 'GET') {
+            return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+        }
+
+        if (str_contains($request->url(), '/login') && $request->method() === 'POST') {
+            if (($request->data()['password'] ?? '') === 'wrong-password') {
+                return Http::response('', 401);
+            }
+
+            return Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+        }
+
+        if (str_contains($request->url(), '/user/frauds/check/')) {
+            return Http::response([
+                'delivered' => 0,
+                'cancelled' => 0,
+                'frauds' => [],
+            ], 200);
+        }
+
+        return Http::response('', 404);
+    });
+
+    $checker = app(SteadfastFraudChecker::class);
+    $report = $checker->check('01770989591', [
+        'username' => 'merchant@steadfast.test',
+        'password' => 'wrong-password',
+    ]);
+
+    expect($report['api_success'] ?? false)->toBeTrue();
+});
+
 it('caches credential lookup on the request to avoid duplicate queries', function () {
     $user = User::create([
         'name' => 'Merchant',

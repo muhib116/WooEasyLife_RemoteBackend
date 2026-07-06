@@ -95,6 +95,30 @@ it('rejects invalid phone numbers', function () {
     app(FraudCheckService::class)->getReport('12345');
 })->throws(\InvalidArgumentException::class);
 
+it('marks successful empty steadfast responses as ok instead of unavailable', function () {
+    $steadfast = Mockery::mock(SteadfastFraudChecker::class);
+    $steadfast->shouldReceive('check')->once()->with('01712345678', null)->andReturn([
+        'total_order' => 0,
+        'confirmed' => 0,
+        'cancel' => 0,
+        'success_rate' => 'No order history found!',
+        'data_type' => 'delivery',
+        'frauds' => [],
+        'api_success' => true,
+    ]);
+
+    $pathao = Mockery::mock(PathaoFraudChecker::class);
+    $pathao->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport());
+
+    $paperfly = Mockery::mock(PaperflyFraudChecker::class);
+    $paperfly->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport());
+
+    $report = fraudCheckServiceWithMocks($steadfast, $pathao, $paperfly)->getReport('01712345678');
+
+    expect($report['courier'][0]['report']['status'])->toBe('ok');
+    expect($report['courier'][0]['report']['message'])->toBe('No delivery history found on Steadfast.');
+});
+
 it('uses pathao customer rating when order counts are unavailable', function () {
     $steadfast = Mockery::mock(SteadfastFraudChecker::class);
     $steadfast->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport(['frauds' => []]));

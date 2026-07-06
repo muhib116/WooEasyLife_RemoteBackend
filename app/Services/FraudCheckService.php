@@ -155,13 +155,24 @@ class FraudCheckService
 
     private function withCourierStatus(array $report, string $courier): array
     {
-        if (($report['total_order'] ?? 0) > 0 || !empty($report['frauds'])) {
+        if (($report['total_order'] ?? 0) > 0 || ! empty($report['frauds'])) {
             $report['status'] = 'ok';
 
             return $report;
         }
 
-        if (($report['data_type'] ?? 'delivery') === 'rating' || !empty($report['customer_rating'])) {
+        if (! empty($report['api_success'])) {
+            $report['status'] = 'ok';
+            $report['message'] = match ($courier) {
+                'Steadfast' => 'No delivery history found on Steadfast.',
+                'Paperfly' => 'No delivery records found on Paperfly.',
+                default => 'No delivery history found.',
+            };
+
+            return $report;
+        }
+
+        if (($report['data_type'] ?? 'delivery') === 'rating' || ! empty($report['customer_rating'])) {
             $report['status'] = 'rating_only';
 
             return $report;
@@ -177,7 +188,9 @@ class FraudCheckService
 
         $report['status'] = 'unavailable';
         $report['message'] = match ($courier) {
-            'Steadfast' => 'Steadfast session expired. Credentials will auto-refresh on next check.',
+            'Steadfast' => ! empty($report['credential_error'])
+                ? 'Steadfast portal credentials are invalid or expired. Update them in courier settings.'
+                : 'Steadfast session expired. Credentials will auto-refresh on next check.',
             'Pathao' => 'Pathao returned no delivery data for this number.',
             'Paperfly' => 'Paperfly has no delivery records for this number.',
             default => 'No data returned.',

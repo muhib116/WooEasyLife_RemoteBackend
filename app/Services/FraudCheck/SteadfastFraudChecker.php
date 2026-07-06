@@ -38,24 +38,64 @@ class SteadfastFraudChecker
 
     private function performCheck(string $phone): array
     {
+        $report = $this->runCredentialCheck($phone);
+
+        if ($this->isUsableReport($report)) {
+            return $report;
+        }
+
+        if ($this->credentials !== null && $this->platformCredentialsDifferFromMerchant()) {
+            LogHelper::saveLog(
+                'Steadfast fraud check fallback',
+                'Merchant portal credentials returned no data; retrying with platform credentials.'
+            );
+
+            $merchantCredentials = $this->credentials;
+            $this->credentials = null;
+
+            try {
+                $fallbackReport = $this->runCredentialCheck($phone);
+
+                if ($this->isUsableReport($fallbackReport)) {
+                    return $fallbackReport;
+                }
+
+                return $fallbackReport;
+            } finally {
+                $this->credentials = $merchantCredentials;
+            }
+        }
+
+        return $report;
+    }
+
+    private function runCredentialCheck(string $phone): array
+    {
         if ($this->hasCredentials()) {
             $report = $this->checkViaCachedSession($phone);
 
-            if ($this->hasDeliveryData($report)) {
+            if ($this->isUsableReport($report)) {
                 return $report;
             }
 
             $report = $this->checkViaLogin($phone);
 
-            if ($this->hasDeliveryData($report)) {
+            if ($this->isUsableReport($report)) {
                 return $report;
+            }
+
+            if ($this->credentials !== null) {
+                return CourierReportFormatter::emptyReport([
+                    'frauds' => [],
+                    'credential_error' => true,
+                ]);
             }
         }
 
         if ($this->credentials === null && file_exists($this->legacyCurlPath())) {
             $legacyReport = $this->checkViaLegacyCurl($phone);
 
-            if ($this->hasDeliveryData($legacyReport)) {
+            if ($this->isUsableReport($legacyReport)) {
                 return $legacyReport;
             }
 
@@ -67,6 +107,21 @@ class SteadfastFraudChecker
         }
 
         return CourierReportFormatter::emptyReport(['frauds' => []]);
+    }
+
+    private function isUsableReport(array $report): bool
+    {
+        return $this->hasDeliveryData($report) || ! empty($report['api_success']);
+    }
+
+    private function platformCredentialsDifferFromMerchant(): bool
+    {
+        if (! $this->isConfigured() || $this->credentials === null) {
+            return false;
+        }
+
+        return config('fraud-checker-bd-courier.steadfast.user') !== ($this->credentials['username'] ?? null)
+            || config('fraud-checker-bd-courier.steadfast.password') !== ($this->credentials['password'] ?? null);
     }
 
     private function hasCredentials(): bool
@@ -199,6 +254,14 @@ class SteadfastFraudChecker
                     return $attempt;
                 }
 
+                if ($this->isUsableReport($attempt)) {
+                    return $attempt;
+                }
+
+                if (! empty($attempt['auth_failed'])) {
+                    return $attempt;
+                }
+
                 $report = $attempt;
             } catch (\Throwable $th) {
                 LogHelper::saveLog('Steadfast fraud check error', $host . ': ' . $th->getMessage());
@@ -259,7 +322,7 @@ class SteadfastFraudChecker
         if (!$loginResponse->successful() && !$loginResponse->redirect()) {
             LogHelper::saveLog('Steadfast fraud check error', "Login failed on {$host} with status " . $loginResponse->status());
 
-            return $report;
+            return array_merge($report, ['auth_failed' => true]);
         }
 
         $sessionCookies = $this->mergeCookies(
@@ -270,7 +333,7 @@ class SteadfastFraudChecker
         if (!isset($sessionCookies['steadfast_courier_session'])) {
             LogHelper::saveLog('Steadfast fraud check error', "Login on {$host} did not create a session cookie");
 
-            return $report;
+            return array_merge($report, ['auth_failed' => true]);
         }
 
         $this->storeSession($host, $sessionCookies);
@@ -329,7 +392,9 @@ class SteadfastFraudChecker
             return $report;
         }
 
-        return CourierReportFormatter::fromSteadfast($payload);
+        return array_merge(CourierReportFormatter::fromSteadfast($payload), [
+            'api_success' => true,
+        ]);
     }
 
     private function checkViaLegacyCurl(string $phone): array
@@ -364,7 +429,9 @@ class SteadfastFraudChecker
                 return $report;
             }
 
-            return CourierReportFormatter::fromSteadfast($payload);
+            return array_merge(CourierReportFormatter::fromSteadfast($payload), [
+                'api_success' => true,
+            ]);
         } catch (\Throwable $th) {
             LogHelper::saveLog('Steadfast legacy curl fraud check error', $th->getMessage());
         }

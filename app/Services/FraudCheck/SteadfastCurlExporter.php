@@ -41,7 +41,31 @@ CURL;
 
         $payload = json_decode($output, true);
 
-        return is_array($payload)
-            && (isset($payload['total_delivered']) || isset($payload['frauds']));
+        if (! is_array($payload)) {
+            return false;
+        }
+
+        if (isset($payload['message'], $payload['exception']) || isset($payload['error'])) {
+            return false;
+        }
+
+        $deliveryFields = [
+            'total_delivered',
+            'delivered',
+            'total_cancelled',
+            'cancelled',
+            'cancel',
+            'total_order',
+            'total',
+            'frauds',
+        ];
+
+        foreach ($deliveryFields as $field) {
+            if (array_key_exists($field, $payload)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
