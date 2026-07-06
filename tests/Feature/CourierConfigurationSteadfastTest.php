@@ -6,6 +6,7 @@ use App\Models\AccessToken;
 use App\Models\CourierConfiguration;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -140,5 +141,53 @@ class CourierConfigurationSteadfastTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('data.steadfast.settings.username', 'merchant@steadfast.test')
             ->assertJsonPath('data.steadfast.settings.password', '');
+    }
+
+    public function test_steadfast_configuration_update_clears_cached_fraud_session(): void
+    {
+        [$user, $plainToken] = $this->createMerchantWithToken();
+
+        $configuration = CourierConfiguration::create([
+            'user_id' => $user->id,
+            'title' => 'Steadfast',
+            'slug' => 'steadfast',
+            'api_key' => 'api-key-123',
+            'secret_key' => 'secret-key-456',
+            'is_active' => true,
+            'settings' => [
+                'username' => 'merchant@steadfast.test',
+                'password' => 'portal-password',
+            ],
+        ]);
+
+        $oldCredentials = [
+            'username' => 'merchant@steadfast.test',
+            'password' => 'portal-password',
+        ];
+
+        Cache::put(
+            \App\Services\FraudCheck\SteadfastFraudChecker::sessionCacheKeyFor($oldCredentials),
+            ['host' => 'www.steadfast.com.bd', 'cookies' => ['steadfast_courier_session' => 'cached']],
+            now()->addHour(),
+        );
+
+        $this->withHeaders($this->apiHeaders($plainToken, 'https://shop.example.com'))
+            ->postJson('/api/courier/save-configuration', [
+                'id' => $configuration->id,
+                'title' => 'Steadfast',
+                'slug' => 'steadfast',
+                'api_key' => 'api-key-123',
+                'secret_key' => 'secret-key-456',
+                'is_active' => true,
+                'settings' => [
+                    'username' => 'merchant@steadfast.test',
+                    'password' => 'new-portal-password',
+                ],
+            ])
+            ->assertOk();
+
+        $this->assertFalse(Cache::has(
+            \App\Services\FraudCheck\SteadfastFraudChecker::sessionCacheKeyFor($oldCredentials)
+        ));
     }
 }

@@ -20,7 +20,9 @@ class FraudCheckController extends Controller
 
     public function index()
     {
-        return Inertia::render('FraudCheck/Index');
+        return Inertia::render('FraudCheck/Index', [
+            'debugMode' => config('app.debug'),
+        ]);
     }
 
     public function saveSteadfastCurl(Request $request)
@@ -62,6 +64,13 @@ class FraudCheckController extends Controller
     public function getExpire()
     {
         return PathaoCourier::GET_ACCESS_TOKEN_EXPIRY_DAYS_LEFT();
+    }
+
+    public function expireSession()
+    {
+        abort_unless(config('app.debug'), 404);
+
+        return response()->json($this->fraudCheckService->expireSessions());
     }
 
     public function renewExpire()

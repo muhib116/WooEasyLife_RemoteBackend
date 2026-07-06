@@ -243,9 +243,9 @@ class RedXController extends Controller
         }
 
         $responseData = [];
-        $config = $this->resolveCatalogConfig($request);
-        $environment = $config
-            ? $this->courierAccountService->environmentFromConfig($config)
+        $catalogConfig = $this->resolveCatalogConfig($request);
+        $environment = $catalogConfig
+            ? $this->courierAccountService->environmentFromConfig($catalogConfig)
             : null;
         $groups = $this->shipmentService->groupConsignmentsByAccount('redx', $trackingIds, $environment);
 
@@ -261,7 +261,7 @@ class RedXController extends Controller
             );
 
             if (!$config) {
-                $config = $this->resolveConfig($request);
+                $config = $catalogConfig;
             }
 
             if (!$config) {
@@ -269,6 +269,10 @@ class RedXController extends Controller
             }
 
             $responseData += $this->redxService->getTrackingStatuses($config, $ids);
+        }
+
+        if ($responseData === [] && $catalogConfig === null) {
+            return $this->errorResponse('The RedX settings are not configured properly.');
         }
 
         return $this->successResponse($responseData);
@@ -287,6 +291,17 @@ class RedXController extends Controller
             'balance_available' => false,
             'message' => 'RedX does not expose a merchant balance API.',
         ]);
+    }
+
+    private function resolveCatalogConfig(Request $request)
+    {
+        $config = $this->resolveConfig($request);
+
+        if (!$config) {
+            return null;
+        }
+
+        return $this->applyEnvironmentToConfig($config, $request->input('environment'));
     }
 
     private function resolveConfig(Request $request)
@@ -314,5 +329,24 @@ class RedXController extends Controller
         }
 
         return $this->redxService->getConfig(Auth::id());
+    }
+
+    private function applyEnvironmentToConfig($config, $environment)
+    {
+        if ($environment === null || $environment === '') {
+            return $config;
+        }
+
+        $settings = is_array($config->settings) ? $config->settings : [];
+        $previousEnvironment = $settings['environment'] ?? 'sandbox';
+        $settings['environment'] = $environment === 'live' ? 'live' : 'sandbox';
+
+        if ($previousEnvironment !== $settings['environment']) {
+            unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
+        }
+
+        $config->settings = $settings;
+
+        return $config;
     }
 }

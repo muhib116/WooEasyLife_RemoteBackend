@@ -1,14 +1,27 @@
 <?php
 
 use App\Services\FraudCheck\CourierReportFormatter;
+use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\FraudCheck\PaperflyFraudChecker;
 use App\Services\FraudCheck\PathaoFraudChecker;
 use App\Services\FraudCheck\SteadfastFraudChecker;
 use App\Services\FraudCheckService;
 
+function fraudCheckServiceWithMocks(
+    $steadfast,
+    $pathao,
+    $paperfly,
+    ?MerchantSteadfastFraudCredentialResolver $resolver = null,
+): FraudCheckService {
+    $resolver ??= Mockery::mock(MerchantSteadfastFraudCredentialResolver::class);
+    $resolver->shouldReceive('resolveFromCurrentRequest')->andReturn(null);
+
+    return new FraudCheckService($steadfast, $pathao, $paperfly, $resolver);
+}
+
 it('returns the legacy fraud check response structure', function () {
     $steadfast = Mockery::mock(SteadfastFraudChecker::class);
-    $steadfast->shouldReceive('check')->once()->with('01712345678')->andReturn([
+    $steadfast->shouldReceive('check')->once()->with('01712345678', null)->andReturn([
         'total_order' => 9,
         'confirmed' => 7,
         'cancel' => 2,
@@ -32,7 +45,7 @@ it('returns the legacy fraud check response structure', function () {
         'success_rate' => '75%',
     ]);
 
-    $service = new FraudCheckService($steadfast, $pathao, $paperfly);
+    $service = fraudCheckServiceWithMocks($steadfast, $pathao, $paperfly);
     $report = $service->getReport('01712345678');
 
     expect($report)->toHaveKeys([
@@ -50,6 +63,32 @@ it('returns the legacy fraud check response structure', function () {
     expect($report['courier'])->toHaveCount(3);
     expect($report['courier'][0]['title'])->toBe('Stead Fast');
     expect($report['courier'][0]['report']['frauds'])->toHaveCount(1);
+});
+
+it('passes merchant steadfast credentials to the checker when resolved from request', function () {
+    $merchantCredentials = [
+        'username' => 'merchant@steadfast.test',
+        'password' => 'portal-password',
+    ];
+
+    $steadfast = Mockery::mock(SteadfastFraudChecker::class);
+    $steadfast->shouldReceive('check')
+        ->once()
+        ->with('01712345678', $merchantCredentials)
+        ->andReturn(CourierReportFormatter::emptyReport(['frauds' => []]));
+
+    $pathao = Mockery::mock(PathaoFraudChecker::class);
+    $pathao->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport());
+
+    $paperfly = Mockery::mock(PaperflyFraudChecker::class);
+    $paperfly->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport());
+
+    $resolver = Mockery::mock(MerchantSteadfastFraudCredentialResolver::class);
+    $resolver->shouldReceive('resolveFromCurrentRequest')->once()->andReturn($merchantCredentials);
+
+    $report = (new FraudCheckService($steadfast, $pathao, $paperfly, $resolver))->getReport('01712345678');
+
+    expect($report)->toHaveKey('courier');
 });
 
 it('rejects invalid phone numbers', function () {
@@ -74,7 +113,7 @@ it('uses pathao customer rating when order counts are unavailable', function () 
     $paperfly = Mockery::mock(PaperflyFraudChecker::class);
     $paperfly->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport());
 
-    $report = (new FraudCheckService($steadfast, $pathao, $paperfly))->getReport('01712345678');
+    $report = fraudCheckServiceWithMocks($steadfast, $pathao, $paperfly)->getReport('01712345678');
 
     expect($report['success_rate'])->toBe('Good Customer');
 });

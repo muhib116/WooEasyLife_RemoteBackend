@@ -66,3 +66,94 @@
         transform: none;
     }
 }
+
+/* Subscription wizard — dark modal aligned with marketing pages */
+.p-dialog-mask:has(.marketing-dialog) {
+    backdrop-filter: blur(6px);
+    background: rgb(0 0 0 / 0.75) !important;
+}
+
+.marketing-dialog.p-dialog {
+    width: min(100vw - 1rem, 44rem) !important;
+    max-height: calc(100dvh - 1rem);
+    margin: 0.5rem;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 1rem;
+    overflow: hidden;
+    background: #111111 !important;
+    color: rgb(226 232 240);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.65);
+}
+
+@media (min-width: 640px) {
+    .marketing-dialog.p-dialog {
+        margin: 1.5rem auto;
+        border-radius: 1.25rem;
+    }
+}
+
+.marketing-dialog .p-dialog-header {
+    background: #0a0a0a !important;
+    border-bottom: 1px solid rgb(255 255 255 / 0.08) !important;
+    padding: 0.875rem 1rem !important;
+    color: #fff !important;
+}
+
+@media (min-width: 640px) {
+    .marketing-dialog .p-dialog-header {
+        padding: 1rem 1.25rem !important;
+    }
+}
+
+.marketing-dialog .p-dialog-title {
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em;
+}
+
+.marketing-dialog .p-dialog-header-actions .p-button {
+    color: rgb(203 213 225) !important;
+    background: rgb(255 255 255 / 0.06) !important;
+    border-color: transparent !important;
+    width: 2rem !important;
+    height: 2rem !important;
+}
+
+.marketing-dialog .p-dialog-header-actions .p-button:not(:disabled):hover {
+    background: rgb(255 255 255 / 0.12) !important;
+    color: #fff !important;
+}
+
+.marketing-dialog .p-dialog-content {
+    background: #111111 !important;
+    color: rgb(226 232 240) !important;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.marketing-dialog .subscription-wizard-body {
+    max-height: calc(100dvh - 7.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) {
+    .marketing-dialog .subscription-wizard-body {
+        max-height: calc(100dvh - 9rem);
+        padding: 1.25rem;
+    }
+}
+
+.marketing-dialog select,
+.marketing-dialog input,
+.marketing-dialog textarea {
+    color-scheme: dark;
+}
+
+.marketing-dialog select option {
+    background: #161616;
+    color: #fff;
+}
+

@@ -13,15 +13,32 @@ class SteadfastFraudChecker
 {
     private const HOSTS = ['www.steadfast.com.bd', 'steadfast.com.bd'];
 
+    /** @var array{username: string, password: string}|null */
+    private ?array $credentials = null;
+
     public function isConfigured(): bool
     {
         return filled(config('fraud-checker-bd-courier.steadfast.user'))
             && filled(config('fraud-checker-bd-courier.steadfast.password'));
     }
 
-    public function check(string $phone): array
+    /**
+     * @param  array{username?: string, password?: string}|null  $credentials
+     */
+    public function check(string $phone, ?array $credentials = null): array
     {
-        if ($this->isConfigured()) {
+        $this->credentials = $credentials;
+
+        try {
+            return $this->performCheck($phone);
+        } finally {
+            $this->credentials = null;
+        }
+    }
+
+    private function performCheck(string $phone): array
+    {
+        if ($this->hasCredentials()) {
             $report = $this->checkViaCachedSession($phone);
 
             if ($this->hasDeliveryData($report)) {
@@ -35,7 +52,7 @@ class SteadfastFraudChecker
             }
         }
 
-        if (file_exists($this->legacyCurlPath())) {
+        if ($this->credentials === null && file_exists($this->legacyCurlPath())) {
             $legacyReport = $this->checkViaLegacyCurl($phone);
 
             if ($this->hasDeliveryData($legacyReport)) {
@@ -45,11 +62,38 @@ class SteadfastFraudChecker
             return $legacyReport;
         }
 
-        if (!$this->isConfigured()) {
+        if (! $this->hasCredentials()) {
             LogHelper::saveLog('Steadfast fraud check skipped', 'STEADFAST_USER and STEADFAST_PASSWORD are not configured.');
         }
 
         return CourierReportFormatter::emptyReport(['frauds' => []]);
+    }
+
+    private function hasCredentials(): bool
+    {
+        return filled($this->resolveUsername()) && filled($this->resolvePassword());
+    }
+
+    private function resolveUsername(): ?string
+    {
+        $username = $this->credentials['username'] ?? null;
+
+        if (filled($username)) {
+            return (string) $username;
+        }
+
+        return config('fraud-checker-bd-courier.steadfast.user');
+    }
+
+    private function resolvePassword(): ?string
+    {
+        $password = $this->credentials['password'] ?? null;
+
+        if (filled($password)) {
+            return (string) $password;
+        }
+
+        return config('fraud-checker-bd-courier.steadfast.password');
     }
 
     private function hasDeliveryData(array $report): bool
@@ -61,7 +105,34 @@ class SteadfastFraudChecker
 
     private function sessionCacheKey(): string
     {
-        return 'fraud_check_steadfast_session_' . md5((string) config('fraud-checker-bd-courier.steadfast.user'));
+        if ($this->credentials !== null) {
+            return self::sessionCacheKeyFor($this->credentials);
+        }
+
+        return self::sessionCacheKeyFor(null, (string) $this->resolveUsername());
+    }
+
+    /**
+     * @param  array{username?: string, password?: string}|null  $credentials
+     */
+    public static function sessionCacheKeyFor(?array $credentials = null, ?string $username = null): string
+    {
+        if ($credentials !== null) {
+            $username = trim((string) ($credentials['username'] ?? ''));
+            $password = trim((string) ($credentials['password'] ?? ''));
+
+            return 'fraud_check_steadfast_session_' . md5($username . '|' . $password);
+        }
+
+        return 'fraud_check_steadfast_session_' . md5((string) $username);
+    }
+
+    /**
+     * @param  array{username: string, password: string}  $credentials
+     */
+    public function forgetSessionForCredentials(array $credentials): void
+    {
+        Cache::forget(self::sessionCacheKeyFor($credentials));
     }
 
     private function storeSession(string $host, array $cookies): void
@@ -70,6 +141,21 @@ class SteadfastFraudChecker
             'host' => $host,
             'cookies' => $cookies,
         ], now()->addMinutes(55));
+    }
+
+    public function expireSession(): bool
+    {
+        $hadCachedSession = Cache::has($this->sessionCacheKey());
+        $this->forgetSession();
+
+        $curlPath = $this->legacyCurlPath();
+        $hadLegacyCurl = file_exists($curlPath);
+
+        if ($hadLegacyCurl) {
+            @unlink($curlPath);
+        }
+
+        return $hadCachedSession || $hadLegacyCurl;
     }
 
     private function forgetSession(): void
@@ -166,8 +252,8 @@ class SteadfastFraudChecker
             ->withHeaders(['Referer' => $this->url('/login', $host)])
             ->post($this->url('/login', $host), [
                 '_token' => $csrfToken,
-                'email' => config('fraud-checker-bd-courier.steadfast.user'),
-                'password' => config('fraud-checker-bd-courier.steadfast.password'),
+                'email' => $this->resolveUsername(),
+                'password' => $this->resolvePassword(),
             ]);
 
         if (!$loginResponse->successful() && !$loginResponse->redirect()) {
@@ -188,7 +274,10 @@ class SteadfastFraudChecker
         }
 
         $this->storeSession($host, $sessionCookies);
-        SteadfastCurlExporter::save($host, $sessionCookies, $phone);
+
+        if ($this->credentials === null) {
+            SteadfastCurlExporter::save($host, $sessionCookies, $phone);
+        }
 
         return $this->fetchFraudReport($phone, $host, $sessionCookies, invalidateCacheOnFailure: true);
     }

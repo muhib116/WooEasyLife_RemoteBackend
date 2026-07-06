@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Services\FraudCheck\CourierReportFormatter;
+use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\FraudCheck\PaperflyFraudChecker;
 use App\Services\FraudCheck\PathaoFraudChecker;
 use App\Services\FraudCheck\SteadfastCurlExporter;
@@ -16,6 +17,7 @@ class FraudCheckService
         private SteadfastFraudChecker $steadfastFraudChecker,
         private PathaoFraudChecker $pathaoFraudChecker,
         private PaperflyFraudChecker $paperflyFraudChecker,
+        private MerchantSteadfastFraudCredentialResolver $steadfastCredentialResolver,
     ) {}
 
     public function normalizePhone(?string $phone): string
@@ -33,11 +35,15 @@ class FraudCheckService
         return $phone;
     }
 
-    public function getReport(string $phone): array
+    public function getReport(string $phone, ?array $steadfastCredentials = null): array
     {
         $phone = $this->normalizePhone($phone);
 
-        $steadfastResponse = $this->steadfastFraudChecker->check($phone);
+        if ($steadfastCredentials === null) {
+            $steadfastCredentials = $this->steadfastCredentialResolver->resolveFromCurrentRequest();
+        }
+
+        $steadfastResponse = $this->steadfastFraudChecker->check($phone, $steadfastCredentials);
         $pathaoResponse = $this->pathaoFraudChecker->check($phone);
         $paperFlyResponse = $this->paperflyFraudChecker->check($phone);
 
@@ -90,6 +96,20 @@ class FraudCheckService
         }
 
         return $users;
+    }
+
+    public function expireSessions(): array
+    {
+        $steadfastExpired = $this->steadfastFraudChecker->expireSession();
+        $paperflyExpired = $this->paperflyFraudChecker->expireToken();
+
+        return [
+            'message' => 'Courier sessions expired. The next fraud check will re-authenticate.',
+            'cleared' => [
+                'steadfast' => $steadfastExpired,
+                'paperfly' => $paperflyExpired,
+            ],
+        ];
     }
 
     public function credentialStatus(): array

@@ -5,7 +5,8 @@ import { planEnabledFeatureCount, resolvePlanCatalogFeatures } from '@/utils/pla
 const props = defineProps({
     plan: { type: Object, required: true },
     compact: { type: Boolean, default: false },
-    showCount: { type: Boolean, default: true },
+    showCount: { type: Boolean, default: false },
+    scrollable: { type: Boolean, default: false },
 });
 
 const features = computed(() => resolvePlanCatalogFeatures(props.plan));
@@ -24,15 +25,11 @@ const heading = computed(() => props.plan.features_heading || 'প্ল্য�
                 ({{ enabledCount }}/{{ features.length }})
             </span>
         </p>
-        <p
-            v-else
-            class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500"
-        >
-            {{ heading }}
-        </p>
         <ul
-            class="space-y-1.5 overflow-y-auto pr-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]"
-            :class="compact ? 'max-h-52' : 'max-h-80'"
+            class="space-y-2"
+            :class="scrollable
+                ? 'max-h-52 overflow-y-auto pr-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]'
+                : ''"
         >
             <li
                 v-for="feature in features"

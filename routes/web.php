@@ -333,6 +333,7 @@ Route::group(['as' => 'frauds.', 'prefix' => 'q8w1d9zp7kuo2vrb5m6cnx0ahjls4et3if
     Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
     Route::post('/get-expire', [FraudCheckController::class, 'getExpire'])->name('getExpire');
     Route::post('/renew-expire', [FraudCheckController::class, 'renewExpire'])->name('renewExpire');
+    Route::post('/expire-session', [FraudCheckController::class, 'expireSession'])->name('expireSession');
     Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
 });
 

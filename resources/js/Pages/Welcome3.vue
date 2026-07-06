@@ -251,7 +251,7 @@ const toggleFaq = (i) => {
                         <p class="mt-2 text-3xl font-extrabold text-white sm:text-4xl">{{ plan.price_label }}</p>
                         <p class="text-sm text-slate-400">{{ plan.token_label }}</p>
                         <p v-if="plan.website_label" class="mt-1 text-xs text-slate-500">{{ plan.website_label }}</p>
-                        <PlanFeatureList :plan="plan" compact />
+                        <PlanFeatureList :plan="plan" />
                         <Link
                             :href="route('pricing')"
                             class="mt-6 block rounded-xl py-3 text-center text-sm font-bold transition"

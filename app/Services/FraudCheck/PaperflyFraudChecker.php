@@ -16,6 +16,15 @@ class PaperflyFraudChecker
             && filled(config('fraud-checker-bd-courier.paperfly.password'));
     }
 
+    public function expireToken(): bool
+    {
+        $cacheKey = $this->tokenCacheKey();
+        $hadToken = Cache::has($cacheKey);
+        Cache::forget($cacheKey);
+
+        return $hadToken;
+    }
+
     public function check(string $phone): array
     {
         if (!$this->isConfigured()) {
@@ -57,18 +66,22 @@ class PaperflyFraudChecker
         return CourierReportFormatter::fromPaperfly($response->json() ?? []);
     }
 
+    private function tokenCacheKey(): string
+    {
+        return 'fraud_check_paperfly_token_' . md5((string) config('fraud-checker-bd-courier.paperfly.user'));
+    }
+
     private function getToken(bool $forceRefresh = false): string
     {
-        $username = config('fraud-checker-bd-courier.paperfly.user');
-        $cacheKey = 'fraud_check_paperfly_token_' . md5((string) $username);
+        $cacheKey = $this->tokenCacheKey();
 
         if ($forceRefresh) {
             Cache::forget($cacheKey);
         }
 
-        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($username) {
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () {
             $response = Http::timeout(30)->post("{$this->baseUrl}/authentication/login_using_password.php", [
-                'username' => $username,
+                'username' => config('fraud-checker-bd-courier.paperfly.user'),
                 'password' => config('fraud-checker-bd-courier.paperfly.password'),
             ]);
 

@@ -7,6 +7,8 @@ use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierWebhookSettingsService;
+use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
+use App\Services\FraudCheck\SteadfastFraudChecker;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -19,7 +21,9 @@ class ConfigurationController extends Controller
 
     public function __construct(
         protected CourierAccountService $courierAccountService,
-        protected CourierWebhookSettingsService $webhookSettingsService
+        protected CourierWebhookSettingsService $webhookSettingsService,
+        protected MerchantSteadfastFraudCredentialResolver $steadfastFraudCredentialResolver,
+        protected SteadfastFraudChecker $steadfastFraudChecker,
     ) {
     }
 
@@ -151,10 +155,13 @@ class ConfigurationController extends Controller
 
         if ($request->slug === 'steadfast') {
             $existingSettings = [];
+            $previousSteadfastCredentials = null;
 
             if ($request->filled('id')) {
                 $existing = CourierConfiguration::find($request->id);
                 $existingSettings = is_array($existing?->settings) ? $existing->settings : [];
+                $previousSteadfastCredentials = $this->steadfastFraudCredentialResolver
+                    ->credentialsFromSettings($existingSettings);
             }
 
             $password = trim((string) $request->input('settings.password'));
@@ -257,7 +264,12 @@ class ConfigurationController extends Controller
 
         // if ($statusCode != 200) {
         //     return $this->errorResponse('Invalid api key or secret key.');
-        // }
+        //         }
+
+        $webhookSecretOverride = null;
+        if ($request->slug === 'pathao' && is_array($request->settings)) {
+            $webhookSecretOverride = trim((string) ($request->input('settings.webhook_secret') ?? ''));
+        }
 
         // Check if ID is provided for an existing record
         if ($request->filled('id')) {
@@ -269,9 +281,17 @@ class ConfigurationController extends Controller
             $configuration = CourierConfiguration::create($data);
         }
 
-        $webhookSecretOverride = null;
-        if ($request->slug === 'pathao' && is_array($request->settings)) {
-            $webhookSecretOverride = trim((string) ($request->input('settings.webhook_secret') ?? ''));
+        if ($request->slug === 'steadfast') {
+            if ($previousSteadfastCredentials ?? null) {
+                $this->steadfastFraudChecker->forgetSessionForCredentials($previousSteadfastCredentials);
+            }
+
+            $updatedCredentials = $this->steadfastFraudCredentialResolver
+                ->credentialsFromSettings(is_array($configuration->settings) ? $configuration->settings : []);
+
+            if ($updatedCredentials) {
+                $this->steadfastFraudChecker->forgetSessionForCredentials($updatedCredentials);
+            }
         }
 
         $sync = $this->courierAccountService->syncAccountForConfiguration(

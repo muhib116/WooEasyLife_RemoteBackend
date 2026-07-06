@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\LogHelper;
+use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\WhitelistedDomainService;
 use App\Traits\ApiResponseTrait;
 use App\Traits\Util;
@@ -15,6 +16,7 @@ class ValidateWhitelistedFraudDomain
 
     public function __construct(
         private WhitelistedDomainService $whitelistedDomainService,
+        private MerchantSteadfastFraudCredentialResolver $steadfastCredentialResolver,
     ) {}
 
     public function handle(Request $request, Closure $next)
@@ -28,6 +30,10 @@ class ValidateWhitelistedFraudDomain
         }
 
         if (!$this->whitelistedDomainService->isAllowed($requestDomain)) {
+            if ($this->steadfastCredentialResolver->hasCredentialsForRequest($request)) {
+                return $next($request);
+            }
+
             LogHelper::saveLog('Fraud check domain blocked', "Domain not whitelisted: {$requestDomain}");
 
             return $this->errorResponse('This domain is not allowed to use fraud check', 403);

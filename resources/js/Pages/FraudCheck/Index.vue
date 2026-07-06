@@ -14,7 +14,7 @@
             />
 
             <PageCard title="Phone Lookup" description="Enter a Bangladesh mobile number to check">
-                <div class="mx-auto max-w-md">
+                <div class="mx-auto max-w-md space-y-3">
                     <InputGroup>
                         <InputMask
                             v-model="form.phone"
@@ -29,6 +29,33 @@
                             @click="handleSearch"
                         />
                     </InputGroup>
+
+                    <div
+                        v-if="props.debugMode"
+                        class="flex flex-col items-center gap-2 rounded-xl border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3 dark:border-amber-500/40 dark:bg-amber-500/10"
+                    >
+                        <p class="text-xs font-medium text-amber-800 dark:text-amber-300">
+                            Debug: force courier sessions to expire
+                        </p>
+                        <Button
+                            label="Expire courier sessions"
+                            icon="pi pi-sign-out"
+                            severity="danger"
+                            outlined
+                            size="small"
+                            :loading="expiringSession"
+                            @click="expireSessions"
+                        />
+                        <p
+                            v-if="sessionExpireMessage"
+                            class="text-xs"
+                            :class="sessionExpireError
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-emerald-600 dark:text-emerald-400'"
+                        >
+                            {{ sessionExpireMessage }}
+                        </p>
+                    </div>
                 </div>
 
                 <div
@@ -143,7 +170,10 @@
             </PageCard>
         </div>
 
-        <div v-if="showClick" class="mt-4 text-center">
+        <div
+            v-if="props.debugMode && $page.props?.auth?.user?.id"
+            class="mt-4 flex justify-center"
+        >
             <Link
                 :href="route('frauds.expire')"
                 class="text-sm text-primary-600 hover:underline dark:text-primary-400"
@@ -158,7 +188,7 @@
 import { AuthenticatedLayout } from "@/layouts";
 import { useForm, Link } from "@inertiajs/vue3";
 import SecurityOn from "@/images/security_on.svg";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { ref } from "vue";
 import axios from "axios";
 import SlangItems from "./SlangItems.vue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
@@ -168,37 +198,17 @@ defineOptions({
     name: "FraudCheck",
 });
 
+const props = defineProps({
+    debugMode: { type: Boolean, default: false },
+});
+
 const isLoading = ref(false);
+const expiringSession = ref(false);
 const response = ref<any>(null);
 const errorMessage = ref("");
-const showClick = ref(false);
+const sessionExpireMessage = ref("");
+const sessionExpireError = ref(false);
 const slangs = ref<any[]>([]);
-
-let clickCount = 0;
-let timer: ReturnType<typeof setTimeout> | null = null;
-
-function handleWindowClick() {
-    clickCount++;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-        clickCount = 0;
-    }, 200);
-    if (clickCount >= 6) {
-        showClick.value = true;
-        clickCount = 0;
-        if (timer) clearTimeout(timer);
-        timer = null;
-    }
-}
-
-onMounted(() => {
-    window.addEventListener("click", handleWindowClick);
-});
-
-onBeforeUnmount(() => {
-    window.removeEventListener("click", handleWindowClick);
-    if (timer) clearTimeout(timer);
-});
 
 const form = useForm({
     phone: "",
@@ -216,6 +226,27 @@ const courierRateClass = (report: any) => {
     }
 
     return "text-slate-500";
+};
+
+const expireSessions = async () => {
+    expiringSession.value = true;
+    sessionExpireMessage.value = "";
+    sessionExpireError.value = false;
+
+    try {
+        const { data } = await axios.post(route("frauds.expireSession"));
+        const cleared = data?.cleared
+            ? ` (Steadfast: ${data.cleared.steadfast ? "cleared" : "none"}, Paperfly: ${data.cleared.paperfly ? "cleared" : "none"})`
+            : "";
+        sessionExpireMessage.value = (data?.message || "Courier sessions expired.") + cleared;
+    } catch (error: any) {
+        sessionExpireError.value = true;
+        sessionExpireMessage.value =
+            error?.response?.data?.message ||
+            "Unable to expire courier sessions. Please try again.";
+    } finally {
+        expiringSession.value = false;
+    }
 };
 
 const handleSearch = async () => {
