@@ -304,6 +304,12 @@ const allSections: NavSection[] = [
                 icon: "PhChartScatter",
                 permission: "dashboard.view",
             },
+            {
+                title: "Order Intelligence",
+                name: "orderIntelligence.index",
+                icon: "PhBrain",
+                permission: "dashboard.view",
+            },
         ],
     },
     {

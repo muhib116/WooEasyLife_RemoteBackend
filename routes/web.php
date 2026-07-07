@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\FollowUpController;
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\MerchantEmployeeController;
+use App\Http\Controllers\Admin\OrderIntelligenceAdminController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PackagePaymentAdminController;
 use App\Http\Controllers\Admin\RoleAdminController;
@@ -254,6 +255,19 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/get-use-report', [UseAnalysisController::class, 'getUseReport'])->name('getUseReport');
     });
 
+    Route::group(['as' => 'orderIntelligence.', 'prefix' => 'order-intelligence', 'middleware' => 'permission:dashboard.view'], function () {
+        Route::get('/', [OrderIntelligenceAdminController::class, 'index'])->name('index');
+        Route::get('/customers', [OrderIntelligenceAdminController::class, 'customers'])->name('customers');
+        Route::get('/orders', [OrderIntelligenceAdminController::class, 'orders'])->name('orders');
+        Route::get('/records', [OrderIntelligenceAdminController::class, 'records'])->name('records');
+        Route::get('/api-docs', [OrderIntelligenceAdminController::class, 'apiDocs'])->name('apiDocs');
+        Route::get('/merchants/{accessTokenId}/dashboard', [OrderIntelligenceAdminController::class, 'merchantDashboard'])->name('merchantDashboard');
+        Route::get('/data/customers', [OrderIntelligenceAdminController::class, 'customersList'])->name('customersList');
+        Route::get('/data/customer-lookup', [OrderIntelligenceAdminController::class, 'customerLookup'])->name('customerLookup');
+        Route::get('/data/orders', [OrderIntelligenceAdminController::class, 'ordersList'])->name('ordersList');
+        Route::get('/data/records/{table}', [OrderIntelligenceAdminController::class, 'recordsTable'])->name('recordsTable');
+        Route::post('/reindex-search', [OrderIntelligenceAdminController::class, 'reindexSearch'])->name('reindexSearch');
+    });
 
 
     Route::group(['as' => 'developer.', 'prefix' => 'developer'], function () {

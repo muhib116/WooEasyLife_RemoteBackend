@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\LogHelper;
 use App\Services\FraudCheckService;
+use App\Services\OrderIntelligence\FraudCheckCoordinator;
 use Enan\PathaoCourier\Facades\PathaoCourier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -16,6 +17,7 @@ class FraudCheckController extends Controller
 {
     public function __construct(
         private FraudCheckService $fraudCheckService,
+        private FraudCheckCoordinator $fraudCheckCoordinator,
     ) {}
 
     public function index()
@@ -128,10 +130,12 @@ class FraudCheckController extends Controller
 
         try {
             if (is_array($request->data)) {
-                return $this->successResponse($this->fraudCheckService->checkMultiple($request->data));
+                return $this->successResponse(
+                    $this->fraudCheckCoordinator->checkMultiple($request, $request->data),
+                );
             }
 
-            $response = $this->fraudCheckService->getReport((string) $request->phone);
+            $response = $this->fraudCheckCoordinator->checkSingle($request, $request->all());
 
             return response()->json($response);
         } catch (InvalidArgumentException $e) {
@@ -165,7 +169,7 @@ class FraudCheckController extends Controller
                 $processed++;
 
                 try {
-                    $report = $this->fraudCheckService->getReport((string) $number['phone']);
+                    $report = $this->fraudCheckCoordinator->checkSingle($request, $number);
                 } catch (\Throwable $th) {
                     LogHelper::saveLog('Fraud stream check error', $th->getMessage());
                     $report = [

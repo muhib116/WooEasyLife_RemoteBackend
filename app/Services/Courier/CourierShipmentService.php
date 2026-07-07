@@ -5,13 +5,15 @@ namespace App\Services\Courier;
 use App\Models\AccessToken;
 use App\Models\CourierConfiguration;
 use App\Models\CourierShipment;
+use App\Services\OrderIntelligence\CourierEntryIngestor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class CourierShipmentService
 {
     public function __construct(
-        protected CourierAccountService $accountService
+        protected CourierAccountService $accountService,
+        protected CourierEntryIngestor $courierEntryIngestor,
     ) {
     }
 
@@ -58,7 +60,7 @@ class CourierShipmentService
 
             if ($accessToken && $accountId) {
                 try {
-                    CourierShipment::query()->updateOrCreate(
+                    $shipment = CourierShipment::query()->updateOrCreate(
                         [
                             'partner' => $partner,
                             'consignment_id' => $consignmentId,
@@ -76,6 +78,8 @@ class CourierShipmentService
                             'status' => (string) ($order['status'] ?? 'pending'),
                         ]
                     );
+
+                    $this->courierEntryIngestor->ingestFromShipment($shipment);
                 } catch (\Throwable $exception) {
                     Log::warning('Courier shipment mapping failed; order create still succeeded.', [
                         'partner' => $partner,
