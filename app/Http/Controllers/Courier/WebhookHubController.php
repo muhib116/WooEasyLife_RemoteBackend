@@ -10,6 +10,7 @@ use App\Services\Courier\CourierForwardRetryService;
 use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\CourierWebhookEventService;
 use App\Services\Courier\WordPressCourierForwarder;
+use App\Services\OrderIntelligence\WebhookOrderIngestor;
 use Illuminate\Http\Request;
 
 class WebhookHubController extends Controller
@@ -21,7 +22,8 @@ class WebhookHubController extends Controller
         protected CourierShipmentService $shipmentService,
         protected WordPressCourierForwarder $forwarder,
         protected CourierWebhookEventService $eventService,
-        protected CourierForwardRetryService $retryService
+        protected CourierForwardRetryService $retryService,
+        protected WebhookOrderIngestor $webhookOrderIngestor,
     ) {
     }
 
@@ -175,6 +177,8 @@ class WebhookHubController extends Controller
                 'message' => 'Webhook received successfully.',
             ], $this->successStatusForPartner($partner));
         }
+
+        $this->webhookOrderIngestor->ingest($shipment, $payload, $event);
 
         $forwardPayload = array_merge($payload, [
             'order_id' => (int) $shipment->wc_order_id,

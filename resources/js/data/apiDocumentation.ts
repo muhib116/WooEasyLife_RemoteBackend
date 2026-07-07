@@ -1050,6 +1050,115 @@ export const apiCategories: ApiCategory[] = [
         ],
     },
     {
+        id: "order-intelligence",
+        title: "Order Intelligence",
+        description: "Platform customer profiles, order lifecycle, analytics, and AI features",
+        icon: "PhBrain",
+        endpoints: [
+            {
+                id: "intel-suggest",
+                name: "Customer Suggest",
+                method: "GET",
+                path: "/api/intel/suggest",
+                auth: "full",
+                description:
+                    "Autocomplete phone numbers and customer names from the platform intelligence index. Useful for checkout forms.",
+                queryParams: [
+                    { name: "q", type: "string", required: true, description: "Search query (min 3 chars, phone prefix or name)" },
+                    { name: "limit", type: "integer", required: false, description: "Max results (default 8, max 20)" },
+                ],
+                responseExample: JSON.stringify(
+                    {
+                        suggestions: [
+                            { phone: "01712345678", name: "Rahim Uddin", risk_tier: "safe" },
+                        ],
+                    },
+                    null,
+                    2,
+                ),
+            },
+            {
+                id: "intel-customer",
+                name: "Customer Profile",
+                method: "GET",
+                path: "/api/intel/customer",
+                auth: "full",
+                description:
+                    "Returns platform-wide delivery stats, courier snapshots, fraud notes, and merchant-scoped order history for a phone number.",
+                queryParams: [
+                    { name: "phone", type: "string", required: true, description: "BD mobile number" },
+                ],
+                notes: "Send wc_order_id, name, address, product, price on fraud-check to link orders for webhook updates.",
+            },
+            {
+                id: "intel-dashboard",
+                name: "Merchant Dashboard",
+                method: "GET",
+                path: "/api/intel/dashboard",
+                auth: "full",
+                description:
+                    "Summary stats, status breakdown, top products, and recent orders for the authenticated merchant token.",
+            },
+            {
+                id: "intel-orders",
+                name: "Merchant Orders",
+                method: "GET",
+                path: "/api/intel/orders",
+                auth: "full",
+                description: "Paginated platform orders for the authenticated merchant.",
+                queryParams: [
+                    { name: "status", type: "string", required: false, description: "Filter by platform status (new_order, delivered, etc.)" },
+                    { name: "page", type: "integer", required: false, description: "Page number (default 1)" },
+                    { name: "per_page", type: "integer", required: false, description: "Items per page (default 20, max 100)" },
+                ],
+            },
+            {
+                id: "intel-ai-customer",
+                name: "AI Customer Profile",
+                method: "GET",
+                path: "/api/intel/ai/customer",
+                auth: "full",
+                description: "AI-enriched customer profile with risk score and behavioral features.",
+                queryParams: [
+                    { name: "phone", type: "string", required: true, description: "BD mobile number" },
+                ],
+            },
+            {
+                id: "intel-ai-features",
+                name: "AI Feature Export",
+                method: "GET",
+                path: "/api/intel/ai/features",
+                auth: "full",
+                description: "Paginated export of AI feature vectors for merchant customers (ML/analytics pipelines).",
+                queryParams: [
+                    { name: "page", type: "integer", required: false, description: "Page number" },
+                    { name: "per_page", type: "integer", required: false, description: "Items per page (max 200)" },
+                ],
+            },
+            {
+                id: "intel-analytics-products",
+                name: "Product Analytics",
+                method: "GET",
+                path: "/api/intel/analytics/products",
+                auth: "full",
+                description: "Top products by order count. Scope merchant (default) or global.",
+                queryParams: [
+                    { name: "scope", type: "string", required: false, description: "merchant | global" },
+                    { name: "limit", type: "integer", required: false, description: "Max products (default 20)" },
+                ],
+            },
+            {
+                id: "intel-analytics-platform",
+                name: "Platform Analytics",
+                method: "GET",
+                path: "/api/intel/analytics/platform",
+                auth: "full",
+                description:
+                    "Platform-wide totals: customers, orders, revenue, risk distribution, and status distribution.",
+            },
+        ],
+    },
+    {
         id: "fraud",
         title: "Fraud Checker",
         description: "Customer delivery success rate lookup",
@@ -1061,10 +1170,16 @@ export const apiCategories: ApiCategory[] = [
                 method: "POST",
                 path: "/api/fraud-check",
                 auth: "full",
-                description: "Checks customer delivery history across Pathao, Steadfast, and Paperfly. Pass a single phone or bulk data array.",
+                description:
+                    "Checks customer delivery history across Pathao, Steadfast, and Paperfly. Also ingests order data into Order Intelligence when phone + order context is sent.",
                 params: [
                     { name: "phone", type: "string", required: false, description: "Single BD mobile number" },
                     { name: "data", type: "array", required: false, description: "Bulk: [{ id, phone }, ...] returns report per entry" },
+                    { name: "wc_order_id", type: "string", required: false, description: "WooCommerce order ID — links order for webhook lifecycle updates" },
+                    { name: "name", type: "string", required: false, description: "Customer name snapshot" },
+                    { name: "address", type: "string", required: false, description: "Delivery address snapshot" },
+                    { name: "product", type: "string", required: false, description: "Product title snapshot" },
+                    { name: "price", type: "number", required: false, description: "Order amount" },
                 ],
                 requestExample: JSON.stringify({ phone: "01712345678" }, null, 2),
                 responseExample: JSON.stringify(
@@ -1129,6 +1244,10 @@ export const apiCategories: ApiCategory[] = [
 
 export const allEndpoints = apiCategories.flatMap((c) =>
     c.endpoints.map((e) => ({ ...e, categoryId: c.id, categoryTitle: c.title })),
+);
+
+export const orderIntelligenceCategories = apiCategories.filter((c) =>
+    ["order-intelligence", "fraud", "webhooks"].includes(c.id),
 );
 
 export const authLabels: Record<AuthLevel, string> = {

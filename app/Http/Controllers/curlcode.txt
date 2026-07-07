@@ -1,0 +1,8 @@
+curl -s 'https://steadfast.com.bd/user/frauds/check/01770989591' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -b 'XSRF-TOKEN=eyJpdiI6InlOeHBMQnNzZjArVFlJS0VCSWlSSkE9PSIsInZhbHVlIjoiS0VXNWV5L1RyZzlMY2J4Q01EZFpHNXpURkVsaHZ1TFdMKzgxalk3Z0VHODdPcUNzcmRleS9yelBEblFJVk5BOVlZUHZpOVVocHJwaUc3NTRWZW1GM3FFTkVwd0VRejJFMlhUQzZWbUhoeXBmekJkWHVoUW5icVlsd3VrTFBnQlYiLCJtYWMiOiI3NzUwN2IyOGI5MWRiZGYyNjZlMDc3N2ZiOWFjNDNjM2M3ZTI1YzlmMjZhMTg0OGRiZjE4YTQ3ZjBiMzRiM2FjIiwidGFnIjoiIn0%3D; steadfast_courier_session=eyJpdiI6Imtqd1RWVnFEeTVVbmRNM3NZTUNBdEE9PSIsInZhbHVlIjoicGEvTGFRRURIOHdhRDZ1WVNjbDA0eXRQNERNZkhEN1V4aENUcTA5NW9vaXQ4UHUvbDFUTVpZZEo3eXZrbTkwcm9TQ3p1NTA5L0FVUWcrY3h6ZzZtRXJwTlhnWmkxdEdPZTVPcWZhemVhSERwdTRzTlN1dGRML09XRUh1WEliSUUiLCJtYWMiOiI0NGRiOTYxZWUzYTNhMTQ0ZDBhMzc5MmZhZDJkM2Q2YTJlNTdiOWY2NGU0ZDMxMWIyNDZhZWM1MDcxODJhNjhhIiwidGFnIjoiIn0%3D' \
+  -H 'referer: https://steadfast.com.bd/user/frauds/check' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' \
+  -H 'x-requested-with: XMLHttpRequest' \
+  -H 'x-xsrf-token: eyJpdiI6InlOeHBMQnNzZjArVFlJS0VCSWlSSkE9PSIsInZhbHVlIjoiS0VXNWV5L1RyZzlMY2J4Q01EZFpHNXpURkVsaHZ1TFdMKzgxalk3Z0VHODdPcUNzcmRleS9yelBEblFJVk5BOVlZUHZpOVVocHJwaUc3NTRWZW1GM3FFTkVwd0VRejJFMlhUQzZWbUhoeXBmekJkWHVoUW5icVlsd3VrTFBnQlYiLCJtYWMiOiI3NzUwN2IyOGI5MWRiZGYyNjZlMDc3N2ZiOWFjNDNjM2M3ZTI1YzlmMjZhMTg0OGRiZjE4YTQ3ZjBiMzRiM2FjIiwidGFnIjoiIn0='

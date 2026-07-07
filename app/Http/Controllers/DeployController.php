@@ -7,9 +7,46 @@ use Illuminate\Support\Facades\Artisan;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use Throwable;
 
 class DeployController extends Controller
 {
+    /**
+     * Production deploy — run after uploading new code (no terminal required).
+     *
+     * Visit: GET /deploy/{DEPLOY_SECRET}
+     */
+    public function deploy(string $secret): JsonResponse
+    {
+        if (! $this->isAuthorized($secret)) {
+            abort(404);
+        }
+
+        $results = [];
+
+        $results['optimize:clear'] = $this->runArtisan('optimize:clear');
+        $results['migrate'] = $this->runArtisan('migrate', ['--force' => true]);
+        $results['storage:link'] = $this->runArtisan('storage:link', [], allowFailure: true);
+        $results['optimize'] = $this->runArtisan('optimize');
+        $results['order-intelligence:reindex-search'] = $this->runArtisan(
+            'order-intelligence:reindex-search',
+            [],
+            allowFailure: true
+        );
+        $results['queue:restart'] = $this->runArtisan('queue:restart', [], allowFailure: true);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Deploy complete. Upload vendor/ via FTP or run composer install if dependencies changed.',
+            'results' => $results,
+        ]);
+    }
+
+    /**
+     * First-time server setup — migrations, seed, caches, permissions.
+     *
+     * Visit: GET /deploy/{DEPLOY_SECRET}/setup
+     */
     public function setup(string $secret): JsonResponse
     {
         if (! $this->isAuthorized($secret)) {
@@ -19,24 +56,17 @@ class DeployController extends Controller
         $results = [];
 
         if (empty(config('app.key'))) {
-            Artisan::call('key:generate', ['--force' => true]);
-            $results['key:generate'] = trim(Artisan::output()) ?: 'ok';
+            $results['key:generate'] = $this->runArtisan('key:generate', ['--force' => true]);
         } else {
             $results['key:generate'] = 'skipped (APP_KEY already set)';
         }
 
-        Artisan::call('migrate', ['--force' => true]);
-        $results['migrate'] = trim(Artisan::output()) ?: 'ok';
-
-        Artisan::call('db:seed', ['--force' => true]);
-        $results['db:seed'] = trim(Artisan::output()) ?: 'ok';
-
-        Artisan::call('storage:link');
-        $results['storage:link'] = trim(Artisan::output()) ?: 'ok';
+        $results['migrate'] = $this->runArtisan('migrate', ['--force' => true]);
+        $results['db:seed'] = $this->runArtisan('db:seed', ['--force' => true]);
+        $results['storage:link'] = $this->runArtisan('storage:link', [], allowFailure: true);
 
         foreach (['config:cache', 'route:cache', 'view:cache'] as $command) {
-            Artisan::call($command);
-            $results[$command] = trim(Artisan::output()) ?: 'ok';
+            $results[$command] = $this->runArtisan($command);
         }
 
         $results['permissions'] = $this->fixPermissions();
@@ -50,9 +80,36 @@ class DeployController extends Controller
 
     private function isAuthorized(string $secret): bool
     {
-        $deploySecret = (string) env('DEPLOY_SECRET', config('app.deploy_secret'));
+        $deploySecret = (string) config('app.deploy_secret');
 
         return filled($deploySecret) && hash_equals($deploySecret, $secret);
+    }
+
+    /**
+     * @param  array<string, mixed>  $parameters
+     */
+    private function runArtisan(string $command, array $parameters = [], bool $allowFailure = false): string
+    {
+        try {
+            $exitCode = Artisan::call($command, $parameters);
+            $output = trim(Artisan::output());
+
+            if ($exitCode !== 0 && ! $allowFailure) {
+                return $output !== '' ? $output : "failed (exit {$exitCode})";
+            }
+
+            if ($exitCode !== 0) {
+                return $output !== '' ? "skipped: {$output}" : 'skipped';
+            }
+
+            return $output !== '' ? $output : 'ok';
+        } catch (Throwable $e) {
+            if ($allowFailure) {
+                return 'skipped: '.$e->getMessage();
+            }
+
+            throw $e;
+        }
     }
 
     /**

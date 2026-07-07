@@ -11,6 +11,7 @@ use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\Data\DataController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Hub\HubController;
+use App\Http\Controllers\OrderIntelligenceController;
 use App\Http\Controllers\Plugin\EmployeeController as PluginEmployeeController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
@@ -188,5 +189,22 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::post('/fraud-check-stream', [FraudCheckController::class, 'checkStream'])
             ->middleware('check.fraudWhitelist')
             ->name('checkStream');
+
+        Route::get('/intel/suggest', [OrderIntelligenceController::class, 'suggest'])
+            ->name('intelSuggest');
+        Route::get('/intel/customer', [OrderIntelligenceController::class, 'customer'])
+            ->name('intelCustomer');
+        Route::get('/intel/dashboard', [OrderIntelligenceController::class, 'dashboard'])
+            ->name('intelDashboard');
+        Route::get('/intel/orders', [OrderIntelligenceController::class, 'orders'])
+            ->name('intelOrders');
+        Route::get('/intel/ai/customer', [OrderIntelligenceController::class, 'aiCustomer'])
+            ->name('intelAiCustomer');
+        Route::get('/intel/ai/features', [OrderIntelligenceController::class, 'aiFeatures'])
+            ->name('intelAiFeatures');
+        Route::get('/intel/analytics/products', [OrderIntelligenceController::class, 'analyticsProducts'])
+            ->name('intelAnalyticsProducts');
+        Route::get('/intel/analytics/platform', [OrderIntelligenceController::class, 'analyticsPlatform'])
+            ->name('intelAnalyticsPlatform');
     });
 });
