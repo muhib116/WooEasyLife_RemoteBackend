@@ -27,9 +27,6 @@ jobs:
           npm install
           npm run build
 
-      # - name: Installing Composer dependencies
-      #   run: composer install --no-dev --optimize-autoloader --no-interaction
-
       - name: 📂 Sync files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
