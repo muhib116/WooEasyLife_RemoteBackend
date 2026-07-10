@@ -150,6 +150,13 @@
                                     </span>
                                 </p>
                                 <p
+                                    v-else-if="item.report?.data_type === 'fraud_reports'"
+                                    class="mt-1 text-xs text-slate-500"
+                                >
+                                    Fraud reports:
+                                    {{ item.report.frauds_count ?? 0 }}
+                                </p>
+                                <p
                                     v-else-if="item.report?.message"
                                     class="mt-1 text-xs text-amber-600 dark:text-amber-400"
                                 >
@@ -163,7 +170,7 @@
 
             <PageCard
                 v-if="slangs?.length"
-                title="Steadfast Fraud Reports"
+                title="Fraud Reports"
                 :description="`${slangs.length} reported issue${slangs.length === 1 ? '' : 's'}`"
             >
                 <SlangItems :items="slangs" />
@@ -236,7 +243,7 @@ const expireSessions = async () => {
     try {
         const { data } = await axios.post(route("frauds.expireSession"));
         const cleared = data?.cleared
-            ? ` (Steadfast: ${data.cleared.steadfast ? "cleared" : "none"}, Paperfly: ${data.cleared.paperfly ? "cleared" : "none"})`
+            ? ` (Steadfast: ${data.cleared.steadfast ? "cleared" : "none"}, Paperfly: ${data.cleared.paperfly ? "cleared" : "none"}, RedX: ${data.cleared.redx ? "cleared" : "none"}, Carrybee: ${data.cleared.carrybee ? "cleared" : "none"})`
             : "";
         sessionExpireMessage.value = (data?.message || "Courier sessions expired.") + cleared;
     } catch (error: any) {

@@ -1171,7 +1171,7 @@ export const apiCategories: ApiCategory[] = [
                 path: "/api/fraud-check",
                 auth: "full",
                 description:
-                    "Checks customer delivery history across Pathao, Steadfast, and Paperfly. Also ingests order data into Order Intelligence when phone + order context is sent.",
+                    "Checks customer delivery history across Steadfast, Pathao, Paperfly, RedX, and Carrybee. Totals aggregate count-based couriers (Steadfast + RedX by default). Also ingests order data into Order Intelligence when phone + order context is sent.",
                 params: [
                     { name: "phone", type: "string", required: false, description: "Single BD mobile number" },
                     { name: "data", type: "array", required: false, description: "Bulk: [{ id, phone }, ...] returns report per entry" },
@@ -1183,10 +1183,25 @@ export const apiCategories: ApiCategory[] = [
                 ],
                 requestExample: JSON.stringify({ phone: "01712345678" }, null, 2),
                 responseExample: JSON.stringify(
-                    { confirmed: 12, cancel: 2, total_order: 14, success_rate: "85.71%" },
+                    {
+                        total_order: 14,
+                        confirmed: 12,
+                        cancel: 2,
+                        success_rate: "86%",
+                        carrybee_frauds_count: 0,
+                        frauds: [],
+                        courier: [
+                            { title: "Stead Fast", report: { total_order: 9, confirmed: 7, cancel: 2, success_rate: "78%" } },
+                            { title: "Pathao", report: { customer_rating: "good_customer", data_type: "rating" } },
+                            { title: "Paper Fly", report: { total_order: 0 } },
+                            { title: "RedX", report: { total_order: 5, confirmed: 5, cancel: 0, success_rate: "100%" } },
+                            { title: "Carrybee", report: { data_type: "fraud_reports", frauds_count: 0 } },
+                        ],
+                    },
                     null,
                     2,
                 ),
+                notes: "Toggle RedX/Carrybee with FRAUD_CHECK_INCLUDE_REDX / FRAUD_CHECK_INCLUDE_CARRYBEE. Carrybee is always excluded from delivery totals (fraud-report counts only) and exposed via carrybee_frauds_count + frauds[].",
             },
             {
                 id: "fraud-check-stream",

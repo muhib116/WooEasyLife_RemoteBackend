@@ -81,6 +81,7 @@ class PlatformIntelligenceReader
                 'cancel' => $snapshot->cancel,
                 'success_rate' => $snapshot->success_rate,
                 'customer_rating' => $snapshot->customer_rating,
+                'frauds_count' => $snapshot->frauds_count,
                 'fetched_at' => optional($snapshot->fetched_at)?->toIso8601String(),
             ])
             ->values()

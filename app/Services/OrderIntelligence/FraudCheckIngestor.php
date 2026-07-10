@@ -22,12 +22,16 @@ class FraudCheckIngestor
      * @param  array<string, mixed>  $steadfastReport
      * @param  array<string, mixed>  $pathaoReport
      * @param  array<string, mixed>  $paperflyReport
+     * @param  array<string, mixed>  $redxReport
+     * @param  array<string, mixed>  $carrybeeReport
      */
     public function ingest(
         FraudCheckOrderContext $context,
         array $steadfastReport,
         array $pathaoReport,
         array $paperflyReport,
+        array $redxReport = [],
+        array $carrybeeReport = [],
     ): void {
         if (! config('order_intelligence.enabled', true)) {
             return;
@@ -46,6 +50,8 @@ class FraudCheckIngestor
                 steadfastReport: $steadfastReport,
                 pathaoReport: $pathaoReport,
                 paperflyReport: $paperflyReport,
+                redxReport: $redxReport,
+                carrybeeReport: $carrybeeReport,
                 sourceAccessTokenId: $context->accessTokenId,
             );
 

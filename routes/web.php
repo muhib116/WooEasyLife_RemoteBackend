@@ -11,7 +11,9 @@ use App\Http\Controllers\Admin\CustomerNoticeController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeveloperController;
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\Admin\FraudPackageTestController;
 use App\Http\Controllers\Admin\LogController;
+use App\Http\Controllers\Admin\MerchantEmployeeController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderIntelligenceAdminController;
 use App\Http\Controllers\Admin\OrderAdminController;
@@ -252,6 +254,11 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     Route::group(['as' => 'useAnalysis.', 'prefix' => 'use-analysis'], function () {
         Route::get('/', [UseAnalysisController::class, 'index'])->name('index');
         Route::post('/get-use-report', [UseAnalysisController::class, 'getUseReport'])->name('getUseReport');
+    });
+
+    Route::group(['as' => 'fraudPackageTest.', 'prefix' => 'fraud-package-test', 'middleware' => 'permission:dashboard.view'], function () {
+        Route::get('/', [FraudPackageTestController::class, 'index'])->name('index');
+        Route::post('/check', [FraudPackageTestController::class, 'check'])->name('check');
     });
 
     Route::group(['as' => 'orderIntelligence.', 'prefix' => 'order-intelligence', 'middleware' => 'permission:dashboard.view'], function () {

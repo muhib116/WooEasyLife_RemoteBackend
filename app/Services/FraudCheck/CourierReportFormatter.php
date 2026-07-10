@@ -143,7 +143,10 @@ class CourierReportFormatter
 
     public static function shouldIncludeInTotals(array $report): bool
     {
-        if (($report['data_type'] ?? 'delivery') === 'rating' && (int) ($report['total_order'] ?? 0) === 0) {
+        $dataType = $report['data_type'] ?? 'delivery';
+
+        // Rating-only and fraud-report-only payloads must never inflate delivery totals.
+        if (in_array($dataType, ['rating', 'fraud_reports'], true) && (int) ($report['total_order'] ?? 0) === 0) {
             return false;
         }
 

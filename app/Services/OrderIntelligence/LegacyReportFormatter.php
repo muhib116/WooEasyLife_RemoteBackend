@@ -16,8 +16,15 @@ class LegacyReportFormatter
         $steadfast = $this->snapshotToReport($this->findSnapshot($courierStats, 'steadfast'));
         $pathao = $this->snapshotToReport($this->findSnapshot($courierStats, 'pathao'));
         $paperfly = $this->snapshotToReport($this->findSnapshot($courierStats, 'paperfly'));
+        $redx = $this->snapshotToReport($this->findSnapshot($courierStats, 'redx'));
+        $carrybee = $this->snapshotToReport($this->findSnapshot($courierStats, 'carrybee'));
 
-        $totals = CourierReportFormatter::aggregateTotals($steadfast, $pathao, $paperfly);
+        $aggregateReports = [$steadfast, $pathao, $paperfly];
+        if (config('fraud_check.aggregate_redx', true)) {
+            $aggregateReports[] = $redx;
+        }
+
+        $totals = CourierReportFormatter::aggregateTotals(...$aggregateReports);
         $totalOrder = (int) ceil($totals['total_order']);
         $confirmOrder = (int) ceil($totals['confirmed']);
         $cancelOrder = (int) ceil($totals['cancel']);
@@ -29,6 +36,7 @@ class LegacyReportFormatter
         }
 
         $frauds = $this->formatFrauds($platformData['courier_fraud_notes'] ?? []);
+        $carrybeeFraudsCount = (int) ($carrybee['frauds_count'] ?? 0);
         $successRate = $this->resolveSuccessRate(
             $totalOrder,
             $confirmOrder,
@@ -36,7 +44,22 @@ class LegacyReportFormatter
             $steadfast,
             $pathao,
             $paperfly,
+            $redx,
         );
+
+        $courier = [
+            ['title' => 'Stead Fast', 'report' => $this->withPlatformCourierMeta($steadfast, 'Steadfast')],
+            ['title' => 'Pathao', 'report' => $this->withPlatformCourierMeta($pathao, 'Pathao')],
+            ['title' => 'Paper Fly', 'report' => $this->withPlatformCourierMeta($paperfly, 'Paperfly')],
+        ];
+
+        if (config('fraud_check.include_redx', true)) {
+            $courier[] = ['title' => 'RedX', 'report' => $this->withPlatformCourierMeta($redx, 'RedX')];
+        }
+
+        if (config('fraud_check.include_carrybee', true)) {
+            $courier[] = ['title' => 'Carrybee', 'report' => $this->withPlatformCourierMeta($carrybee, 'Carrybee')];
+        }
 
         return [
             'total_order' => $totalOrder,
@@ -44,11 +67,8 @@ class LegacyReportFormatter
             'frauds' => $frauds,
             'cancel' => $cancelOrder,
             'success_rate' => $successRate,
-            'courier' => [
-                ['title' => 'Stead Fast', 'report' => $this->withPlatformCourierMeta($steadfast, 'Steadfast')],
-                ['title' => 'Pathao', 'report' => $this->withPlatformCourierMeta($pathao, 'Pathao')],
-                ['title' => 'Paper Fly', 'report' => $this->withPlatformCourierMeta($paperfly, 'Paperfly')],
-            ],
+            'carrybee_frauds_count' => $carrybeeFraudsCount,
+            'courier' => $courier,
             'platform_intelligence' => $platformData['platform_intelligence'] ?? null,
             'your_store' => $platformData['your_store'] ?? null,
             'courier_fraud_notes' => $platformData['courier_fraud_notes'] ?? [],
@@ -81,16 +101,39 @@ class LegacyReportFormatter
             return CourierReportFormatter::emptyReport(['source' => 'platform_cache']);
         }
 
+        $courier = (string) ($snapshot['courier'] ?? '');
+        $fraudsCount = (int) ($snapshot['frauds_count'] ?? 0);
+
+        if ($courier === 'carrybee') {
+            return CourierReportFormatter::emptyReport([
+                'data_type' => 'fraud_reports',
+                'frauds_count' => $fraudsCount,
+                'api_success' => true,
+                'success_rate' => $fraudsCount > 0
+                    ? "{$fraudsCount} fraud report(s)"
+                    : 'No fraud reports',
+                'source' => 'platform_cache',
+                'fetched_at' => $snapshot['fetched_at'] ?? null,
+            ]);
+        }
+
+        $extra = array_filter([
+            'total_order' => (int) ($snapshot['total_order'] ?? 0),
+            'success_rate' => $snapshot['success_rate'] ?? null,
+            'customer_rating' => $snapshot['customer_rating'] ?? null,
+            'frauds_count' => $fraudsCount > 0 ? $fraudsCount : null,
+            'source' => 'platform_cache',
+            'fetched_at' => $snapshot['fetched_at'] ?? null,
+        ], fn ($value) => $value !== null);
+
+        if (! empty($snapshot['customer_rating']) && (int) ($snapshot['total_order'] ?? 0) === 0) {
+            $extra['data_type'] = 'rating';
+        }
+
         return CourierReportFormatter::fromCounts(
             (int) ($snapshot['confirmed'] ?? 0),
             (int) ($snapshot['cancel'] ?? 0),
-            array_filter([
-                'total_order' => (int) ($snapshot['total_order'] ?? 0),
-                'success_rate' => $snapshot['success_rate'] ?? null,
-                'customer_rating' => $snapshot['customer_rating'] ?? null,
-                'source' => 'platform_cache',
-                'fetched_at' => $snapshot['fetched_at'] ?? null,
-            ], fn ($value) => $value !== null),
+            $extra,
         );
     }
 
@@ -129,6 +172,7 @@ class LegacyReportFormatter
                 'details' => $note['details'] ?? '',
                 'consignment_id' => $note['consignment_id'] ?? null,
                 'created_at' => $note['created_at'] ?? null,
+                'courier' => $note['courier'] ?? null,
             ],
             $notes,
         );
@@ -139,6 +183,7 @@ class LegacyReportFormatter
      * @param  array<string, mixed>  $steadfast
      * @param  array<string, mixed>  $pathao
      * @param  array<string, mixed>  $paperfly
+     * @param  array<string, mixed>  $redx
      */
     private function resolveSuccessRate(
         int $totalOrder,
@@ -147,6 +192,7 @@ class LegacyReportFormatter
         array $steadfast,
         array $pathao,
         array $paperfly,
+        array $redx = [],
     ): string {
         if ($totalOrder > 0) {
             return ceil(($confirmOrder / $totalOrder) * 100) . '%';
@@ -156,7 +202,11 @@ class LegacyReportFormatter
             return (string) $rates['delivery_rate'];
         }
 
-        foreach ([$steadfast, $pathao, $paperfly] as $report) {
+        foreach ([$steadfast, $pathao, $paperfly, $redx] as $report) {
+            if (($report['data_type'] ?? 'delivery') === 'fraud_reports') {
+                continue;
+            }
+
             if (! empty($report['customer_rating'])) {
                 return CourierReportFormatter::formatRating((string) $report['customer_rating']);
             }
@@ -177,8 +227,19 @@ class LegacyReportFormatter
      */
     private function withPlatformCourierMeta(array $report, string $courier): array
     {
-        if (($report['total_order'] ?? 0) > 0 || ! empty($report['frauds'])) {
+        if (
+            ($report['total_order'] ?? 0) > 0
+            || ! empty($report['frauds'])
+            || (int) ($report['frauds_count'] ?? 0) > 0
+        ) {
             $report['status'] = 'ok';
+
+            return $report;
+        }
+
+        if (($report['data_type'] ?? 'delivery') === 'fraud_reports') {
+            $report['status'] = 'ok';
+            $report['message'] = 'No fraud reports found on Carrybee (platform cache).';
 
             return $report;
         }
@@ -201,6 +262,8 @@ class LegacyReportFormatter
         $report['message'] = match ($courier) {
             'Steadfast' => 'No delivery history found on Steadfast (platform cache).',
             'Paperfly' => 'No delivery records found on Paperfly (platform cache).',
+            'RedX' => 'No delivery history found on RedX (platform cache).',
+            'Carrybee' => 'No fraud reports found on Carrybee (platform cache).',
             default => 'No delivery history found (platform cache).',
         };
 

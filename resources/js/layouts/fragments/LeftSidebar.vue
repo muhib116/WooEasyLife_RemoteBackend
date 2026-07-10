@@ -235,6 +235,12 @@ const allSections: NavSection[] = [
                 permission: "merchants.view",
             },
             {
+                title: "Fraud Package Test",
+                name: "fraudPackageTest.index",
+                icon: "PhFlask",
+                permission: "dashboard.view",
+            },
+            {
                 title: "Whitelisted Domains",
                 name: "whitelistedDomains.index",
                 icon: "PhGlobe",

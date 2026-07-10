@@ -60,7 +60,6 @@ class FraudCheckCoordinator
      */
     public function checkMultiple(Request $request, array $items): array
     {
-        $accessToken = $this->courierAccountService->resolveAccessToken($request);
         $users = [];
 
         foreach ($items as $item) {
@@ -85,13 +84,26 @@ class FraudCheckCoordinator
     private function ingestExternalReport(?AccessToken $accessToken, array $payload, array $report): void
     {
         $context = $this->fraudCheckIngestor->resolveContextFromToken($accessToken, $payload);
-        [$steadfast, $pathao, $paperfly] = $this->extractCourierReports($report);
+        $couriers = $this->extractCourierReportsByTitle($report);
+
+        $steadfast = $couriers['steadfast'];
+        $pathao = $couriers['pathao'];
+        $paperfly = $couriers['paperfly'];
+        $redx = $couriers['redx'];
+        $carrybee = $couriers['carrybee'];
 
         if (! empty($report['frauds']) && empty($steadfast['frauds'])) {
             $steadfast['frauds'] = $report['frauds'];
         }
 
-        $this->fraudCheckIngestor->ingest($context, $steadfast, $pathao, $paperfly);
+        $this->fraudCheckIngestor->ingest(
+            $context,
+            $steadfast,
+            $pathao,
+            $paperfly,
+            $redx,
+            $carrybee,
+        );
     }
 
     /**
@@ -131,16 +143,45 @@ class FraudCheckCoordinator
 
     /**
      * @param  array<string, mixed>  $report
-     * @return array{0: array<string, mixed>, 1: array<string, mixed>, 2: array<string, mixed>}
+     * @return array{
+     *     steadfast: array<string, mixed>,
+     *     pathao: array<string, mixed>,
+     *     paperfly: array<string, mixed>,
+     *     redx: array<string, mixed>,
+     *     carrybee: array<string, mixed>
+     * }
      */
-    private function extractCourierReports(array $report): array
+    private function extractCourierReportsByTitle(array $report): array
     {
-        $couriers = $report['courier'] ?? [];
-
-        return [
-            is_array($couriers[0]['report'] ?? null) ? $couriers[0]['report'] : [],
-            is_array($couriers[1]['report'] ?? null) ? $couriers[1]['report'] : [],
-            is_array($couriers[2]['report'] ?? null) ? $couriers[2]['report'] : [],
+        $mapped = [
+            'steadfast' => [],
+            'pathao' => [],
+            'paperfly' => [],
+            'redx' => [],
+            'carrybee' => [],
         ];
+
+        foreach ($report['courier'] ?? [] as $entry) {
+            if (! is_array($entry) || ! is_array($entry['report'] ?? null)) {
+                continue;
+            }
+
+            $title = strtolower(trim((string) ($entry['title'] ?? '')));
+
+            $key = match (true) {
+                str_contains($title, 'stead') => 'steadfast',
+                str_contains($title, 'pathao') => 'pathao',
+                str_contains($title, 'paper') => 'paperfly',
+                str_contains($title, 'redx') || str_contains($title, 'red x') => 'redx',
+                str_contains($title, 'carry') => 'carrybee',
+                default => null,
+            };
+
+            if ($key !== null) {
+                $mapped[$key] = $entry['report'];
+            }
+        }
+
+        return $mapped;
     }
 }

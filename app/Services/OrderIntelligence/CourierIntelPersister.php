@@ -13,6 +13,8 @@ class CourierIntelPersister
      * @param  array<string, mixed>  $steadfastReport
      * @param  array<string, mixed>  $pathaoReport
      * @param  array<string, mixed>  $paperflyReport
+     * @param  array<string, mixed>  $redxReport
+     * @param  array<string, mixed>  $carrybeeReport
      */
     public function persistFromFraudCheckReports(
         PlatformCustomer $customer,
@@ -20,6 +22,8 @@ class CourierIntelPersister
         array $steadfastReport,
         array $pathaoReport,
         array $paperflyReport,
+        array $redxReport = [],
+        array $carrybeeReport = [],
         ?int $sourceAccessTokenId = null,
     ): void {
         $now = now();
@@ -28,6 +32,23 @@ class CourierIntelPersister
         $this->upsertSnapshot($customer, $phoneNormalized, 'pathao', $pathaoReport, $now, $sourceAccessTokenId);
         $this->upsertSnapshot($customer, $phoneNormalized, 'paperfly', $paperflyReport, $now, $sourceAccessTokenId);
 
+        if ($redxReport !== []) {
+            $this->upsertSnapshot($customer, $phoneNormalized, 'redx', $redxReport, $now, $sourceAccessTokenId);
+        }
+
+        if ($carrybeeReport !== []) {
+            $this->upsertSnapshot($customer, $phoneNormalized, 'carrybee', $carrybeeReport, $now, $sourceAccessTokenId);
+
+            $carrybeeFraudsCount = (int) ($carrybeeReport['frauds_count'] ?? 0);
+            if ($carrybeeFraudsCount > 0) {
+                $this->upsertFraudReport($customer, $phoneNormalized, [
+                    'name' => 'Carrybee',
+                    'details' => "{$carrybeeFraudsCount} fraud report(s) recorded on Carrybee",
+                    'courier' => 'carrybee',
+                ], $sourceAccessTokenId, $now);
+            }
+        }
+
         $frauds = is_array($steadfastReport['frauds'] ?? null) ? $steadfastReport['frauds'] : [];
 
         foreach ($frauds as $fraud) {
@@ -35,7 +56,10 @@ class CourierIntelPersister
                 continue;
             }
 
-            $this->upsertFraudReport($customer, $phoneNormalized, $fraud, $sourceAccessTokenId, $now);
+            $this->upsertFraudReport($customer, $phoneNormalized, [
+                ...$fraud,
+                'courier' => $fraud['courier'] ?? 'steadfast',
+            ], $sourceAccessTokenId, $now);
         }
     }
 
@@ -50,6 +74,10 @@ class CourierIntelPersister
         Carbon $fetchedAt,
         ?int $sourceAccessTokenId,
     ): void {
+        $fraudsCount = array_key_exists('frauds_count', $report)
+            ? (int) $report['frauds_count']
+            : count(is_array($report['frauds'] ?? null) ? $report['frauds'] : []);
+
         CourierCustomerSnapshot::query()->updateOrCreate(
             [
                 'platform_customer_id' => $customer->id,
@@ -62,7 +90,7 @@ class CourierIntelPersister
                 'cancel' => (int) ($report['cancel'] ?? 0),
                 'success_rate' => isset($report['success_rate']) ? (string) $report['success_rate'] : null,
                 'customer_rating' => isset($report['customer_rating']) ? (string) $report['customer_rating'] : null,
-                'frauds_count' => count(is_array($report['frauds'] ?? null) ? $report['frauds'] : []),
+                'frauds_count' => $fraudsCount,
                 'raw_report' => $report,
                 'fetched_at' => $fetchedAt,
                 'source_access_token_id' => $sourceAccessTokenId,
@@ -86,10 +114,11 @@ class CourierIntelPersister
             return;
         }
 
+        $courier = (string) ($fraud['courier'] ?? 'steadfast');
         $consignmentId = trim((string) ($fraud['consignment_id'] ?? ''));
         $reportedAt = $fraud['created_at'] ?? null;
         $fingerprint = hash('sha256', implode('|', [
-            'steadfast',
+            $courier,
             $phoneNormalized,
             $details,
             $consignmentId,
@@ -108,7 +137,7 @@ class CourierIntelPersister
         CourierFraudReport::query()->create([
             'platform_customer_id' => $customer->id,
             'phone_normalized' => $phoneNormalized,
-            'courier' => 'steadfast',
+            'courier' => $courier,
             'reporter_name' => isset($fraud['name']) ? (string) $fraud['name'] : null,
             'details' => $details,
             'consignment_id' => $consignmentId !== '' ? $consignmentId : null,

@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Services\FraudCheck\CarrybeeFraudChecker;
 use App\Services\FraudCheck\CourierReportFormatter;
 use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\FraudCheck\PaperflyFraudChecker;
 use App\Services\FraudCheck\PathaoFraudChecker;
+use App\Services\FraudCheck\RedxFraudChecker;
 use App\Services\FraudCheck\SteadfastCurlExporter;
 use App\Services\FraudCheck\SteadfastFraudChecker;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,8 @@ class FraudCheckService
         private SteadfastFraudChecker $steadfastFraudChecker,
         private PathaoFraudChecker $pathaoFraudChecker,
         private PaperflyFraudChecker $paperflyFraudChecker,
+        private RedxFraudChecker $redxFraudChecker,
+        private CarrybeeFraudChecker $carrybeeFraudChecker,
         private MerchantSteadfastFraudCredentialResolver $steadfastCredentialResolver,
     ) {}
 
@@ -28,7 +32,7 @@ class FraudCheckService
             $phone = '0' . substr($phone, 2);
         }
 
-        if (!preg_match('/^01[3-9]\d{8}$/', $phone)) {
+        if (! preg_match('/^01[3-9]\d{8}$/', $phone)) {
             throw new InvalidArgumentException('The provided phone number is invalid. Use a Bangladesh mobile number like 017XXXXXXXX.');
         }
 
@@ -43,41 +47,66 @@ class FraudCheckService
             $steadfastCredentials = $this->steadfastCredentialResolver->resolveFromCurrentRequest();
         }
 
-        $steadfastResponse = $this->steadfastFraudChecker->check($phone, $steadfastCredentials);
-        $pathaoResponse = $this->pathaoFraudChecker->check($phone);
-        $paperFlyResponse = $this->paperflyFraudChecker->check($phone);
-
-        $steadfastResponse = $this->withCourierStatus($steadfastResponse, 'Steadfast');
-        $pathaoResponse = $this->withCourierStatus($pathaoResponse, 'Pathao');
-        $paperFlyResponse = $this->withCourierStatus($paperFlyResponse, 'Paperfly');
-
-        $totals = CourierReportFormatter::aggregateTotals(
-            $steadfastResponse,
-            $pathaoResponse,
-            $paperFlyResponse,
+        $steadfastResponse = $this->withCourierStatus(
+            $this->steadfastFraudChecker->check($phone, $steadfastCredentials),
+            'Steadfast',
         );
+        $pathaoResponse = $this->withCourierStatus(
+            $this->pathaoFraudChecker->check($phone),
+            'Pathao',
+        );
+        $paperFlyResponse = $this->withCourierStatus(
+            $this->paperflyFraudChecker->check($phone),
+            'Paperfly',
+        );
+
+        $courier = [
+            ['title' => 'Stead Fast', 'report' => $steadfastResponse],
+            ['title' => 'Pathao', 'report' => $pathaoResponse],
+            ['title' => 'Paper Fly', 'report' => $paperFlyResponse],
+        ];
+
+        $aggregateReports = [$steadfastResponse, $pathaoResponse, $paperFlyResponse];
+        $successRateReports = [$steadfastResponse, $pathaoResponse, $paperFlyResponse];
+        $carrybeeResponse = null;
+
+        if (config('fraud_check.include_redx', true)) {
+            $redxResponse = $this->withCourierStatus(
+                $this->redxFraudChecker->check($phone),
+                'RedX',
+            );
+            $courier[] = ['title' => 'RedX', 'report' => $redxResponse];
+            $successRateReports[] = $redxResponse;
+
+            if (config('fraud_check.aggregate_redx', true)) {
+                $aggregateReports[] = $redxResponse;
+            }
+        }
+
+        if (config('fraud_check.include_carrybee', true)) {
+            $carrybeeResponse = $this->withCourierStatus(
+                $this->carrybeeFraudChecker->check($phone),
+                'Carrybee',
+            );
+            $courier[] = ['title' => 'Carrybee', 'report' => $carrybeeResponse];
+            // Carrybee is fraud-report-only — never use it for delivery success_rate fallback.
+        }
+
+        $totals = CourierReportFormatter::aggregateTotals(...$aggregateReports);
 
         $totalOrder = (int) ceil($totals['total_order']);
         $confirmOrder = (int) ceil($totals['confirmed']);
         $cancelOrder = (int) ceil($totals['cancel']);
+        $carrybeeFraudsCount = (int) ($carrybeeResponse['frauds_count'] ?? 0);
 
         return [
             'total_order' => $totalOrder,
             'confirmed' => $confirmOrder,
-            'frauds' => $steadfastResponse['frauds'] ?? [],
+            'frauds' => $this->mergeFrauds($steadfastResponse['frauds'] ?? [], $carrybeeFraudsCount),
             'cancel' => $cancelOrder,
-            'success_rate' => $this->resolveSuccessRate(
-                $totalOrder,
-                $confirmOrder,
-                $steadfastResponse,
-                $pathaoResponse,
-                $paperFlyResponse,
-            ),
-            'courier' => [
-                ['title' => 'Stead Fast', 'report' => $steadfastResponse],
-                ['title' => 'Pathao', 'report' => $pathaoResponse],
-                ['title' => 'Paper Fly', 'report' => $paperFlyResponse],
-            ],
+            'success_rate' => $this->resolveSuccessRate($totalOrder, $confirmOrder, ...$successRateReports),
+            'carrybee_frauds_count' => $carrybeeFraudsCount,
+            'courier' => $courier,
         ];
     }
 
@@ -88,7 +117,7 @@ class FraudCheckService
         foreach ($numbers as $number) {
             $phone = is_array($number) ? ($number['phone'] ?? null) : null;
 
-            if (!$phone) {
+            if (! $phone) {
                 continue;
             }
 
@@ -100,14 +129,13 @@ class FraudCheckService
 
     public function expireSessions(): array
     {
-        $steadfastExpired = $this->steadfastFraudChecker->expireSession();
-        $paperflyExpired = $this->paperflyFraudChecker->expireToken();
-
         return [
             'message' => 'Courier sessions expired. The next fraud check will re-authenticate.',
             'cleared' => [
-                'steadfast' => $steadfastExpired,
-                'paperfly' => $paperflyExpired,
+                'steadfast' => $this->steadfastFraudChecker->expireSession(),
+                'paperfly' => $this->paperflyFraudChecker->expireToken(),
+                'redx' => $this->redxFraudChecker->expireSession(),
+                'carrybee' => $this->carrybeeFraudChecker->expireSession(),
             ],
         ];
     }
@@ -129,17 +157,49 @@ class FraudCheckService
             'steadfast_login' => $this->steadfastFraudChecker->isConfigured(),
             'steadfast_legacy_curl' => file_exists(SteadfastCurlExporter::path()),
             'paperfly' => $this->paperflyFraudChecker->isConfigured(),
+            'redx' => $this->redxFraudChecker->isConfigured(),
+            'carrybee' => $this->carrybeeFraudChecker->isConfigured(),
+            'include_redx' => (bool) config('fraud_check.include_redx', true),
+            'include_carrybee' => (bool) config('fraud_check.include_carrybee', true),
         ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $steadfastFrauds
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergeFrauds(array $steadfastFrauds, int $carrybeeFraudsCount): array
+    {
+        $frauds = array_values(array_filter(
+            $steadfastFrauds,
+            fn ($fraud) => is_array($fraud),
+        ));
+
+        if ($carrybeeFraudsCount > 0) {
+            $frauds[] = [
+                'name' => 'Carrybee',
+                'details' => "{$carrybeeFraudsCount} fraud report(s) on Carrybee",
+                'courier' => 'carrybee',
+                'consignment_id' => null,
+                'created_at' => null,
+            ];
+        }
+
+        return $frauds;
     }
 
     private function resolveSuccessRate(int $totalOrder, int $confirmOrder, array ...$courierReports): string
     {
         if ($totalOrder > 0) {
-            return ceil(($confirmOrder / $totalOrder) * 100) . '%';
+            return ceil(($confirmOrder / $totalOrder) * 100).'%';
         }
 
         foreach ($courierReports as $report) {
-            if (!empty($report['customer_rating'])) {
+            if (($report['data_type'] ?? 'delivery') === 'fraud_reports') {
+                continue;
+            }
+
+            if (! empty($report['customer_rating'])) {
                 return CourierReportFormatter::formatRating((string) $report['customer_rating']);
             }
 
@@ -155,7 +215,11 @@ class FraudCheckService
 
     private function withCourierStatus(array $report, string $courier): array
     {
-        if (($report['total_order'] ?? 0) > 0 || ! empty($report['frauds'])) {
+        if (
+            ($report['total_order'] ?? 0) > 0
+            || ! empty($report['frauds'])
+            || (int) ($report['frauds_count'] ?? 0) > 0
+        ) {
             $report['status'] = 'ok';
 
             return $report;
@@ -166,8 +230,16 @@ class FraudCheckService
             $report['message'] = match ($courier) {
                 'Steadfast' => 'No delivery history found on Steadfast.',
                 'Paperfly' => 'No delivery records found on Paperfly.',
+                'RedX' => 'No delivery history found on RedX.',
+                'Carrybee' => 'No fraud reports found on Carrybee.',
                 default => 'No delivery history found.',
             };
+
+            return $report;
+        }
+
+        if (($report['data_type'] ?? 'delivery') === 'fraud_reports') {
+            $report['status'] = 'ok';
 
             return $report;
         }
@@ -193,6 +265,8 @@ class FraudCheckService
                 : 'Steadfast session expired. Credentials will auto-refresh on next check.',
             'Pathao' => 'Pathao returned no delivery data for this number.',
             'Paperfly' => 'Paperfly has no delivery records for this number.',
+            'RedX' => $report['message'] ?? 'RedX returned no delivery data for this number.',
+            'Carrybee' => $report['message'] ?? 'Carrybee returned no data for this number.',
             default => 'No data returned.',
         };
 
