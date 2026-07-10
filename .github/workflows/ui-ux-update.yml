@@ -27,7 +27,7 @@ jobs:
           npm install
           npm run build
 
-      - name: Installing Composer dependencies
+      - name: 📦 Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
       - name: 📂 Sync files
