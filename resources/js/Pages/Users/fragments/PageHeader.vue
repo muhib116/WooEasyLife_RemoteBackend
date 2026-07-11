@@ -28,7 +28,7 @@
             </div>
             <div
                 v-if="$slots.actions"
-                class="flex flex-wrap items-center gap-2"
+                class="flex shrink-0 flex-wrap items-center gap-2 self-start lg:self-center"
             >
                 <slot name="actions" />
             </div>

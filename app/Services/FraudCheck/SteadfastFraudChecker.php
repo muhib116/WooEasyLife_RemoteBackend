@@ -16,10 +16,13 @@ class SteadfastFraudChecker
     /** @var array{username: string, password: string}|null */
     private ?array $credentials = null;
 
+    public function __construct(
+        private FraudPartnerCredentialResolver $partnerCredentials,
+    ) {}
+
     public function isConfigured(): bool
     {
-        return filled(config('fraud-checker-bd-courier.steadfast.user'))
-            && filled(config('fraud-checker-bd-courier.steadfast.password'));
+        return $this->partnerCredentials->isConfigured('steadfast');
     }
 
     /**
@@ -71,28 +74,67 @@ class SteadfastFraudChecker
 
     private function runCredentialCheck(string $phone): array
     {
-        if ($this->hasCredentials()) {
-            $report = $this->checkViaCachedSession($phone);
+        // Explicit merchant credentials (plugin/API token path): single account.
+        if ($this->credentials !== null) {
+            if ($this->hasCredentials()) {
+                $report = $this->checkViaCachedSession($phone);
 
-            if ($this->isUsableReport($report)) {
-                return $report;
-            }
+                if ($this->isUsableReport($report)) {
+                    return $report;
+                }
 
-            $report = $this->checkViaLogin($phone);
+                $report = $this->checkViaLogin($phone);
 
-            if ($this->isUsableReport($report)) {
-                return $report;
-            }
+                if ($this->isUsableReport($report)) {
+                    return $report;
+                }
 
-            if ($this->credentials !== null) {
                 return CourierReportFormatter::emptyReport([
                     'frauds' => [],
                     'credential_error' => true,
                 ]);
             }
+        } elseif ($this->partnerCredentials->isConfigured('steadfast')) {
+            // Platform multi-cred: reuse any warm session first.
+            foreach ($this->partnerCredentials->candidates('steadfast') as $candidate) {
+                $this->credentials = [
+                    'username' => $candidate['identifier'],
+                    'password' => $candidate['password'],
+                ];
+
+                try {
+                    $report = $this->checkViaCachedSession($phone);
+                    if ($this->isUsableReport($report)) {
+                        return $report;
+                    }
+                } finally {
+                    $this->credentials = null;
+                }
+            }
+
+            // Session expired / cold: pick a random account, then failover.
+            foreach ($this->partnerCredentials->loginCandidates('steadfast') as $candidate) {
+                $this->credentials = [
+                    'username' => $candidate['identifier'],
+                    'password' => $candidate['password'],
+                ];
+
+                try {
+                    $report = $this->checkViaLogin($phone);
+                    if ($this->isUsableReport($report)) {
+                        $this->partnerCredentials->markSuccess($candidate['id']);
+
+                        return $report;
+                    }
+
+                    $this->partnerCredentials->markFailure($candidate['id'], 'Steadfast login/check failed');
+                } finally {
+                    $this->credentials = null;
+                }
+            }
         }
 
-        if ($this->credentials === null && file_exists($this->legacyCurlPath())) {
+        if (file_exists($this->legacyCurlPath())) {
             $legacyReport = $this->checkViaLegacyCurl($phone);
 
             if ($this->isUsableReport($legacyReport)) {
@@ -102,8 +144,8 @@ class SteadfastFraudChecker
             return $legacyReport;
         }
 
-        if (! $this->hasCredentials()) {
-            LogHelper::saveLog('Steadfast fraud check skipped', 'STEADFAST_USER and STEADFAST_PASSWORD are not configured.');
+        if (! $this->partnerCredentials->isConfigured('steadfast')) {
+            LogHelper::saveLog('Steadfast fraud check skipped', 'No Steadfast credentials configured in admin or .env.');
         }
 
         return CourierReportFormatter::emptyReport(['frauds' => []]);
@@ -120,8 +162,13 @@ class SteadfastFraudChecker
             return false;
         }
 
-        return config('fraud-checker-bd-courier.steadfast.user') !== ($this->credentials['username'] ?? null)
-            || config('fraud-checker-bd-courier.steadfast.password') !== ($this->credentials['password'] ?? null);
+        $platform = $this->partnerCredentials->primary('steadfast');
+        if ($platform === null) {
+            return false;
+        }
+
+        return $platform['identifier'] !== ($this->credentials['username'] ?? null)
+            || $platform['password'] !== ($this->credentials['password'] ?? null);
     }
 
     private function hasCredentials(): bool
@@ -137,7 +184,7 @@ class SteadfastFraudChecker
             return (string) $username;
         }
 
-        return config('fraud-checker-bd-courier.steadfast.user');
+        return $this->partnerCredentials->primary('steadfast')['identifier'] ?? null;
     }
 
     private function resolvePassword(): ?string
@@ -148,7 +195,7 @@ class SteadfastFraudChecker
             return (string) $password;
         }
 
-        return config('fraud-checker-bd-courier.steadfast.password');
+        return $this->partnerCredentials->primary('steadfast')['password'] ?? null;
     }
 
     private function hasDeliveryData(array $report): bool
@@ -200,17 +247,29 @@ class SteadfastFraudChecker
 
     public function expireSession(): bool
     {
-        $hadCachedSession = Cache::has($this->sessionCacheKey());
-        $this->forgetSession();
+        $cleared = $this->partnerCredentials->forgetSessionCaches('steadfast') > 0;
+
+        // Also clear platform/merchant session keys that may use the steadfast_session_ prefix.
+        foreach ($this->partnerCredentials->candidates('steadfast') as $candidate) {
+            $key = self::sessionCacheKeyFor([
+                'username' => $candidate['identifier'],
+                'password' => $candidate['password'],
+            ]);
+            if (Cache::has($key)) {
+                Cache::forget($key);
+                $cleared = true;
+            }
+        }
 
         $curlPath = $this->legacyCurlPath();
         $hadLegacyCurl = file_exists($curlPath);
 
         if ($hadLegacyCurl) {
             @unlink($curlPath);
+            $cleared = true;
         }
 
-        return $hadCachedSession || $hadLegacyCurl;
+        return $cleared;
     }
 
     private function forgetSession(): void

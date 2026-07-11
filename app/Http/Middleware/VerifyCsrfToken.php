@@ -13,6 +13,8 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         'api/put-message',
-        'fraud-stream'
+        'fraud-stream',
+        'deploy',
+        'deploy/setup',
     ];
 }

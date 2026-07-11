@@ -6,25 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\FollowUp;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 class FollowUpController extends Controller
 {
-
-    public function sendMessage(Request $request) {
-        $message = 'hi this is from laravel';
-        $userId = $request->input('user_id');
-        $followUps = FollowUp::orderBy('id', 'desc')->get();
-
-        $response = Http::post('https://socket.skyflightbd.com/message', [
-            'message' => $followUps,
-            'userId' => $userId
-        ]);
-
-        return response()->json($response->json());
-    }
-    
     public function index() {
         $followUps = FollowUp::orderBy('id', 'desc')->get();
         return Inertia::render('FollowUp/Index', compact('followUps'));

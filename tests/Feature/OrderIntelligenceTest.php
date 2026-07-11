@@ -180,6 +180,383 @@ it('serves fraud check from platform cache without external courier calls', func
     Bus::assertNotDispatched(RefreshCourierSnapshotsJob::class);
 });
 
+it('serves stale platform cache and queues background refresh without blocking', function () {
+    config([
+        'order_intelligence.fraud_check.mode' => 'hybrid',
+        'order_intelligence.fraud_check.stale_while_revalidate' => true,
+        'order_intelligence.fraud_check.max_snapshot_staleness_hours' => 5,
+        'queue.default' => 'sync',
+    ]);
+
+    [$user, $token] = createOrderIntelligenceToken();
+    $customer = app(CustomerResolver::class)->resolve('01711223344', 'Stale User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01711223344',
+        'courier' => 'steadfast',
+        'total_order' => 83,
+        'confirmed' => 60,
+        'cancel' => 23,
+        'success_rate' => '73%',
+        'frauds_count' => 0,
+        'fetched_at' => now()->subHours(6),
+    ]);
+
+    app(StatsProjector::class)->project($customer->id);
+
+    $this->mock(FraudCheckService::class, function ($mock) {
+        $mock->shouldReceive('normalizePhone')->andReturnUsing(fn ($phone) => $phone);
+        $mock->shouldNotReceive('getReport');
+    });
+
+    $refreshCalled = false;
+    $this->mock(\App\Services\OrderIntelligence\CourierSnapshotRefresher::class, function ($mock) use (&$refreshCalled) {
+        $mock->shouldReceive('refresh')
+            ->once()
+            ->withArgs(function ($phone, $tokenId, $couriers) {
+                return $phone === '01711223344'
+                    && is_array($couriers)
+                    && in_array('steadfast', $couriers, true);
+            })
+            ->andReturnUsing(function () use (&$refreshCalled) {
+                $refreshCalled = true;
+
+                return true;
+            });
+    });
+
+    $request = Request::create('/api/fraud-check', 'POST', [
+        'phone' => '01711223344',
+    ]);
+    $request->headers->set('Authorization', 'Bearer test-token');
+
+    AccessToken::unguarded(function () use ($token) {
+        $token->token = hash('sha256', 'test-token');
+        $token->save();
+    });
+
+    $report = app(FraudCheckCoordinator::class)->checkSingle($request, $request->all());
+
+    expect($report['source'])->toBe('platform')
+        ->and($report['total_order'])->toBe(83)
+        ->and($report['confirmed'])->toBe(60)
+        ->and($report['cancel'])->toBe(23)
+        ->and($report)->toHaveKeys(['total_order', 'confirmed', 'frauds', 'cancel', 'success_rate', 'courier']);
+
+    app()->terminate();
+
+    expect($refreshCalled)->toBeTrue();
+});
+
+it('serves platform cache when only one courier snapshot failed', function () {
+    config([
+        'order_intelligence.fraud_check.mode' => 'hybrid',
+        'order_intelligence.fraud_check.stale_while_revalidate' => true,
+        'queue.default' => 'sync',
+    ]);
+
+    [$user, $token] = createOrderIntelligenceToken();
+    $customer = app(CustomerResolver::class)->resolve('01799880011', 'Failed Cache User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01799880011',
+        'courier' => 'steadfast',
+        'total_order' => 66,
+        'confirmed' => 50,
+        'cancel' => 16,
+        'success_rate' => '76%',
+        'frauds_count' => 0,
+        'fetched_at' => now(),
+    ]);
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01799880011',
+        'courier' => 'carrybee',
+        'total_order' => 0,
+        'confirmed' => 0,
+        'cancel' => 0,
+        'success_rate' => 'No order history found!',
+        'frauds_count' => 0,
+        'raw_report' => [
+            'unavailable' => true,
+            'fetch_failed' => true,
+            'message' => 'cURL error 56: Connection reset by peer',
+        ],
+        'fetched_at' => now()->subHours(6),
+    ]);
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01799880011',
+        'courier' => 'pathao',
+        'total_order' => 0,
+        'confirmed' => 0,
+        'cancel' => 0,
+        'customer_rating' => 'good_customer',
+        'success_rate' => 'Good Customer',
+        'frauds_count' => 0,
+        'fetched_at' => now(),
+    ]);
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01799880011',
+        'courier' => 'paperfly',
+        'total_order' => 0,
+        'confirmed' => 0,
+        'cancel' => 0,
+        'success_rate' => 'No order history found!',
+        'frauds_count' => 0,
+        'raw_report' => ['api_success' => true],
+        'fetched_at' => now(),
+    ]);
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01799880011',
+        'courier' => 'redx',
+        'total_order' => 1,
+        'confirmed' => 1,
+        'cancel' => 0,
+        'success_rate' => '100%',
+        'frauds_count' => 0,
+        'fetched_at' => now(),
+    ]);
+
+    app(StatsProjector::class)->project($customer->id);
+
+    $this->mock(FraudCheckService::class, function ($mock) {
+        $mock->shouldReceive('normalizePhone')->andReturnUsing(fn ($phone) => $phone);
+        $mock->shouldNotReceive('getReport');
+    });
+
+    $refreshCalledWith = null;
+    $this->mock(\App\Services\OrderIntelligence\CourierSnapshotRefresher::class, function ($mock) use (&$refreshCalledWith) {
+        $mock->shouldReceive('refresh')->once()->andReturnUsing(function ($phone, $tokenId, $couriers) use (&$refreshCalledWith) {
+            $refreshCalledWith = $couriers;
+
+            return true;
+        });
+    });
+
+    $request = Request::create('/api/fraud-check', 'POST', ['phone' => '01799880011']);
+    AccessToken::unguarded(function () use ($token) {
+        $token->token = hash('sha256', 'test-token');
+        $token->save();
+    });
+    $request->headers->set('Authorization', 'Bearer test-token');
+
+    $report = app(FraudCheckCoordinator::class)->checkSingle($request, $request->all());
+    app()->terminate();
+
+    expect($report['source'])->toBe('platform')
+        ->and($report['total_order'])->toBe(67)
+        ->and($report['confirmed'])->toBe(51)
+        ->and($refreshCalledWith)->toBe(['carrybee']);
+});
+
+it('partial refresh only calls failed or stale couriers', function () {
+    config([
+        'order_intelligence.fraud_check.partial_refresh' => true,
+        'fraud_check.include_redx' => true,
+        'fraud_check.include_carrybee' => true,
+    ]);
+
+    Illuminate\Support\Facades\Cache::flush();
+
+    $customer = app(CustomerResolver::class)->resolve('01733445566', 'Partial Refresh User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01733445566',
+        'courier' => 'steadfast',
+        'total_order' => 10,
+        'confirmed' => 8,
+        'cancel' => 2,
+        'success_rate' => '80%',
+        'fetched_at' => now(),
+    ]);
+
+    $this->mock(FraudCheckService::class, function ($mock) {
+        $mock->shouldReceive('checkCourier')
+            ->once()
+            ->with('carrybee', '01733445566')
+            ->andReturn([
+                'total_order' => 0,
+                'confirmed' => 0,
+                'cancel' => 0,
+                'api_success' => true,
+                'success_rate' => 'No order history found!',
+            ]);
+        $mock->shouldNotReceive('getReport');
+    });
+
+    $ok = app(\App\Services\OrderIntelligence\CourierSnapshotRefresher::class)
+        ->refresh('01733445566', null, ['carrybee']);
+
+    expect($ok)->toBeTrue();
+
+    $carrybee = CourierCustomerSnapshot::query()
+        ->where('phone_normalized', '01733445566')
+        ->where('courier', 'carrybee')
+        ->first();
+
+    $steadfast = CourierCustomerSnapshot::query()
+        ->where('phone_normalized', '01733445566')
+        ->where('courier', 'steadfast')
+        ->first();
+
+    expect($carrybee)->not->toBeNull()
+        ->and($steadfast->total_order)->toBe(10)
+        ->and($steadfast->confirmed)->toBe(8);
+});
+
+it('preserves useful courier snapshots when a partner fetch fails', function () {
+    config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
+
+    $customer = app(CustomerResolver::class)->resolve('01755667788', 'Preserve User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01755667788',
+        'courier' => 'steadfast',
+        'total_order' => 83,
+        'confirmed' => 60,
+        'cancel' => 23,
+        'success_rate' => '73%',
+        'frauds_count' => 0,
+        'fetched_at' => now()->subHours(6),
+    ]);
+
+    app(\App\Services\OrderIntelligence\CourierIntelPersister::class)->persistFromFraudCheckReports(
+        customer: $customer,
+        phoneNormalized: '01755667788',
+        steadfastReport: [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'success_rate' => 'No order history found!',
+            'unavailable' => true,
+            'message' => 'Steadfast login failed',
+        ],
+        pathaoReport: [
+            'total_order' => 2,
+            'confirmed' => 2,
+            'cancel' => 0,
+            'success_rate' => '100%',
+            'api_success' => true,
+        ],
+        paperflyReport: [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'api_success' => true,
+        ],
+        redxReport: [
+            'total_order' => 1,
+            'confirmed' => 1,
+            'cancel' => 0,
+            'success_rate' => '100%',
+            'api_success' => true,
+        ],
+    );
+
+    $steadfast = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'steadfast')
+        ->first();
+
+    $pathao = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'pathao')
+        ->first();
+
+    $redx = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'redx')
+        ->first();
+
+    expect($steadfast->total_order)->toBe(83)
+        ->and($steadfast->confirmed)->toBe(60)
+        ->and($steadfast->cancel)->toBe(23)
+        ->and($pathao->total_order)->toBe(2)
+        ->and($redx->total_order)->toBe(1);
+});
+
+it('stores failed courier fetches as refreshable placeholders instead of fresh empty success', function () {
+    config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
+
+    $customer = app(CustomerResolver::class)->resolve('01744556677', 'Fail Placeholder User');
+
+    app(\App\Services\OrderIntelligence\CourierIntelPersister::class)->persistFromFraudCheckReports(
+        customer: $customer,
+        phoneNormalized: '01744556677',
+        steadfastReport: [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'success_rate' => 'No order history found!',
+            'status' => 'unavailable',
+            'message' => 'Steadfast session expired. Credentials will auto-refresh on next check.',
+        ],
+        pathaoReport: [],
+        paperflyReport: [],
+    );
+
+    $steadfast = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'steadfast')
+        ->first();
+
+    expect($steadfast)->not->toBeNull()
+        ->and($steadfast->raw_report['fetch_failed'] ?? false)->toBeTrue()
+        ->and($steadfast->fetched_at->lt(now()->subHours(5)))->toBeTrue();
+});
+
+it('allows authentic empty courier responses to overwrite previous snapshot data', function () {
+    config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
+
+    $customer = app(CustomerResolver::class)->resolve('01766778899', 'Empty OK User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01766778899',
+        'courier' => 'redx',
+        'total_order' => 1,
+        'confirmed' => 1,
+        'cancel' => 0,
+        'success_rate' => '100%',
+        'frauds_count' => 0,
+        'fetched_at' => now()->subHours(1),
+    ]);
+
+    app(\App\Services\OrderIntelligence\CourierIntelPersister::class)->persistFromFraudCheckReports(
+        customer: $customer,
+        phoneNormalized: '01766778899',
+        steadfastReport: [],
+        pathaoReport: [],
+        paperflyReport: [],
+        redxReport: [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'success_rate' => 'No order history found!',
+            'api_success' => true,
+        ],
+    );
+
+    $redx = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'redx')
+        ->first();
+
+    expect($redx->total_order)->toBe(0)
+        ->and($redx->confirmed)->toBe(0);
+});
+
 it('formats legacy fraud check response from platform intelligence', function () {
     $formatted = app(LegacyReportFormatter::class)->format([
         'platform_intelligence' => [

@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Http;
 
 class PathaoFraudChecker
 {
+    public function __construct(
+        private FraudPartnerCredentialResolver $credentials,
+    ) {}
+
     public function check(string $phone): array
     {
         if ($this->hasMerchantCredentials()) {
@@ -42,9 +46,31 @@ class PathaoFraudChecker
         return CourierReportFormatter::emptyReport();
     }
 
+    public function expireSession(): bool
+    {
+        $cleared = false;
+        $secretToken = config('pathao-courier.pathao_secret_token');
+
+        if (filled($secretToken)) {
+            $updated = DB::table(config('pathao-courier.pathao_db_table_name'))
+                ->where('secret_token', $secretToken)
+                ->whereNotNull('token')
+                ->update([
+                    'token' => null,
+                    'refresh_token' => null,
+                    'expires_in' => null,
+                    'updated_at' => now(),
+                ]);
+
+            $cleared = $updated > 0;
+        }
+
+        return $cleared;
+    }
+
     private function hasHermesTokenInDatabase(): bool
     {
-        if (!filled(config('pathao-courier.pathao_secret_token'))) {
+        if (! filled(config('pathao-courier.pathao_secret_token'))) {
             return false;
         }
 
@@ -58,14 +84,12 @@ class PathaoFraudChecker
     {
         return filled(config('pathao-courier.pathao_client_id'))
             && filled(config('pathao-courier.pathao_client_secret'))
-            && filled(config('fraud-checker-bd-courier.pathao.user'))
-            && filled(config('fraud-checker-bd-courier.pathao.password'));
+            && $this->hasMerchantCredentials();
     }
 
     private function hasMerchantCredentials(): bool
     {
-        return filled(config('fraud-checker-bd-courier.pathao.user'))
-            && filled(config('fraud-checker-bd-courier.pathao.password'));
+        return $this->credentials->isConfigured('pathao');
     }
 
     private function hasDeliveryData(array $report): bool
@@ -93,43 +117,53 @@ class PathaoFraudChecker
     private function checkViaHermesIssueToken(string $phone): array
     {
         try {
-            $tokenResponse = Http::timeout(30)
-                ->acceptJson()
-                ->post('https://api-hermes.pathao.com/aladdin/api/v1/issue-token', [
-                    'client_id' => config('pathao-courier.pathao_client_id'),
-                    'client_secret' => config('pathao-courier.pathao_client_secret'),
-                    'grant_type' => config('pathao-courier.pathao_grant_type_password'),
-                    'username' => config('fraud-checker-bd-courier.pathao.user'),
-                    'password' => config('fraud-checker-bd-courier.pathao.password'),
+            foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
+                $tokenResponse = Http::timeout(30)
+                    ->acceptJson()
+                    ->post('https://api-hermes.pathao.com/aladdin/api/v1/issue-token', [
+                        'client_id' => config('pathao-courier.pathao_client_id'),
+                        'client_secret' => config('pathao-courier.pathao_client_secret'),
+                        'grant_type' => config('pathao-courier.pathao_grant_type_password'),
+                        'username' => $candidate['identifier'],
+                        'password' => $candidate['password'],
+                    ]);
+
+                $tokenBody = $tokenResponse->json();
+                $accessToken = Arr::get($tokenBody, 'access_token');
+
+                if (! $tokenResponse->successful() || empty($accessToken)) {
+                    $this->credentials->markFailure($candidate['id'], 'Hermes issue-token failed');
+                    LogHelper::saveLog('Pathao fraud check error', json_encode($tokenBody));
+
+                    continue;
+                }
+
+                $this->persistHermesToken($tokenBody);
+                $this->credentials->markSuccess($candidate['id']);
+
+                $successResponse = Http::timeout(30)
+                    ->acceptJson()
+                    ->withToken($accessToken)
+                    ->post('https://api-hermes.pathao.com/api/v1/user/success', [
+                        'phone' => $phone,
+                    ]);
+
+                if (! $successResponse->successful()) {
+                    $this->credentials->markFailure(
+                        $candidate['id'],
+                        'Hermes success API failed HTTP '.$successResponse->status(),
+                    );
+                    LogHelper::saveLog('Pathao fraud check error', 'Hermes success API failed with status '.$successResponse->status());
+
+                    continue;
+                }
+
+                return $this->mapPathaoPayload([
+                    'data' => $successResponse->json(),
                 ]);
-
-            $tokenBody = $tokenResponse->json();
-            $accessToken = Arr::get($tokenBody, 'access_token');
-
-            if (!$tokenResponse->successful() || empty($accessToken)) {
-                LogHelper::saveLog('Pathao fraud check error', json_encode($tokenBody));
-
-                return CourierReportFormatter::emptyReport();
             }
 
-            $this->persistHermesToken($tokenBody);
-
-            $successResponse = Http::timeout(30)
-                ->acceptJson()
-                ->withToken($accessToken)
-                ->post('https://api-hermes.pathao.com/api/v1/user/success', [
-                    'phone' => $phone,
-                ]);
-
-            if (!$successResponse->successful()) {
-                LogHelper::saveLog('Pathao fraud check error', 'Hermes success API failed with status ' . $successResponse->status());
-
-                return CourierReportFormatter::emptyReport();
-            }
-
-            return $this->mapPathaoPayload([
-                'data' => $successResponse->json(),
-            ]);
+            return CourierReportFormatter::emptyReport();
         } catch (\Throwable $th) {
             LogHelper::saveLog('Pathao fraud check error', $th->getMessage());
 
@@ -140,37 +174,48 @@ class PathaoFraudChecker
     private function checkViaMerchantPortal(string $phone): array
     {
         try {
-            $loginResponse = Http::timeout(30)
-                ->acceptJson()
-                ->post('https://merchant.pathao.com/api/v1/login', [
-                    'username' => config('fraud-checker-bd-courier.pathao.user'),
-                    'password' => config('fraud-checker-bd-courier.pathao.password'),
+            foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
+                $loginResponse = Http::timeout(30)
+                    ->acceptJson()
+                    ->post('https://merchant.pathao.com/api/v1/login', [
+                        'username' => $candidate['identifier'],
+                        'password' => $candidate['password'],
+                    ]);
+
+                $accessToken = trim((string) $loginResponse->json('access_token'));
+
+                if (! $loginResponse->successful() || $accessToken === '') {
+                    $this->credentials->markFailure($candidate['id'], 'Merchant login failed');
+                    LogHelper::saveLog('Pathao fraud check error', $loginResponse->body());
+
+                    continue;
+                }
+
+                $successResponse = Http::timeout(30)
+                    ->acceptJson()
+                    ->withToken($accessToken)
+                    ->post('https://merchant.pathao.com/api/v1/user/success', [
+                        'phone' => $phone,
+                    ]);
+
+                if (! $successResponse->successful()) {
+                    $this->credentials->markFailure(
+                        $candidate['id'],
+                        'Merchant success API failed HTTP '.$successResponse->status(),
+                    );
+                    LogHelper::saveLog('Pathao fraud check error', 'Merchant success API failed with status '.$successResponse->status());
+
+                    continue;
+                }
+
+                $this->credentials->markSuccess($candidate['id']);
+
+                return $this->mapPathaoPayload([
+                    'data' => $successResponse->json('data', []),
                 ]);
-
-            $accessToken = trim((string) $loginResponse->json('access_token'));
-
-            if (!$loginResponse->successful() || $accessToken === '') {
-                LogHelper::saveLog('Pathao fraud check error', $loginResponse->body());
-
-                return CourierReportFormatter::emptyReport();
             }
 
-            $successResponse = Http::timeout(30)
-                ->acceptJson()
-                ->withToken($accessToken)
-                ->post('https://merchant.pathao.com/api/v1/user/success', [
-                    'phone' => $phone,
-                ]);
-
-            if (!$successResponse->successful()) {
-                LogHelper::saveLog('Pathao fraud check error', 'Merchant success API failed with status ' . $successResponse->status());
-
-                return CourierReportFormatter::emptyReport();
-            }
-
-            return $this->mapPathaoPayload([
-                'data' => $successResponse->json('data', []),
-            ]);
+            return CourierReportFormatter::emptyReport();
         } catch (\Throwable $th) {
             LogHelper::saveLog('Pathao fraud check error', $th->getMessage());
 

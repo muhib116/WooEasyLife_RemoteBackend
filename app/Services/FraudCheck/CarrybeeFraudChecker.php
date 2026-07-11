@@ -10,24 +10,24 @@ use Throwable;
 
 class CarrybeeFraudChecker
 {
+    public function __construct(
+        private FraudPartnerCredentialResolver $credentials,
+    ) {}
+
     public function isConfigured(): bool
     {
-        return filled(config('courier-checker.carrybee.phone'))
-            && filled(config('courier-checker.carrybee.password'));
+        return $this->credentials->isConfigured('carrybee');
     }
 
     public function expireSession(): bool
     {
-        $had = Cache::has($this->cacheKey());
-        Cache::forget($this->cacheKey());
-
-        return $had;
+        return $this->credentials->forgetSessionCaches('carrybee') > 0;
     }
 
     public function check(string $phone): array
     {
         if (! $this->isConfigured()) {
-            LogHelper::saveLog('Carrybee fraud check skipped', 'CARRYBEE_PHONE / CARRYBEE_PASSWORD are not configured.');
+            LogHelper::saveLog('Carrybee fraud check skipped', 'No Carrybee credentials configured in admin or .env.');
 
             return CourierReportFormatter::emptyReport();
         }
@@ -41,13 +41,10 @@ class CarrybeeFraudChecker
                 ]);
             }
 
-            // Correct endpoint (package used a broken businesses/{id}/fraud-check path).
-            $response = $this->client()
-                ->withToken($auth['accessToken'])
-                ->get('https://api-merchant.carrybee.com/api/v2/fraud-check/'.$phone);
+            $response = $this->fetchCustomer($phone, $auth['accessToken'], $auth['businessId']);
 
             if ($response->status() === 401) {
-                Cache::forget($this->cacheKey());
+                Cache::forget($auth['cache_key']);
                 $auth = $this->authenticate(force: true);
                 if ($auth === null) {
                     return CourierReportFormatter::emptyReport([
@@ -56,9 +53,7 @@ class CarrybeeFraudChecker
                     ]);
                 }
 
-                $response = $this->client()
-                    ->withToken($auth['accessToken'])
-                    ->get('https://api-merchant.carrybee.com/api/v2/fraud-check/'.$phone);
+                $response = $this->fetchCustomer($phone, $auth['accessToken'], $auth['businessId']);
             }
 
             if (! $response->successful() || $response->json('error')) {
@@ -66,25 +61,21 @@ class CarrybeeFraudChecker
 
                 return CourierReportFormatter::emptyReport([
                     'unavailable' => true,
-                    'message' => 'Carrybee fraud-check failed (HTTP '.$response->status().').',
+                    'message' => 'Carrybee customer lookup failed (HTTP '.$response->status().').',
                 ]);
             }
 
-            $count = (int) ($response->json('data.count') ?? 0);
+            $this->credentials->markSuccess($auth['credential_id']);
 
-            return array_merge(CourierReportFormatter::emptyReport([
-                'data_type' => 'fraud_reports',
-                'frauds_count' => $count,
-                'api_success' => true,
-                'success_rate' => $count > 0
-                    ? "{$count} fraud report(s)"
-                    : 'No fraud reports',
-            ]), [
-                // Carrybee public fraud API currently returns report count only.
-                'total_order' => 0,
-                'confirmed' => 0,
-                'cancel' => 0,
-            ]);
+            $data = $response->json('data');
+            if (! is_array($data)) {
+                return CourierReportFormatter::emptyReport([
+                    'api_success' => true,
+                    'message' => 'No delivery history found on Carrybee.',
+                ]);
+            }
+
+            return $this->mapCustomerPayload($data);
         } catch (Throwable $e) {
             LogHelper::saveLog('Carrybee fraud check error', $e->getMessage());
 
@@ -96,75 +87,170 @@ class CarrybeeFraudChecker
     }
 
     /**
-     * @return array{accessToken: string, businessId: string}|null
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function mapCustomerPayload(array $data): array
+    {
+        $total = (int) ($data['total_order'] ?? $data['total'] ?? 0);
+        $cancel = (int) ($data['cancelled_order'] ?? $data['cancel'] ?? $data['cancelled'] ?? 0);
+        $confirmed = (int) ($data['success_order'] ?? $data['delivered'] ?? $data['confirmed'] ?? 0);
+        $fraudsCount = (int) ($data['fraud_count'] ?? $data['frauds_count'] ?? 0);
+        $rawRate = $data['success_rate'] ?? null;
+
+        // Prefer API success_rate over (total - cancel), which would treat pending as delivered.
+        if ($confirmed === 0 && $total > 0 && is_numeric($rawRate)) {
+            $confirmed = (int) round($total * ((float) $rawRate / 100));
+            $confirmed = max(0, min($confirmed, $total));
+        }
+
+        if ($confirmed === 0 && $total > 0 && $cancel > 0) {
+            $confirmed = max(0, $total - $cancel);
+        }
+
+        // Only invent cancel when the API omitted it entirely.
+        $hasExplicitCancel = array_key_exists('cancelled_order', $data)
+            || array_key_exists('cancel', $data)
+            || array_key_exists('cancelled', $data);
+
+        if (! $hasExplicitCancel && $cancel === 0 && $total > $confirmed) {
+            $cancel = $total - $confirmed;
+        }
+
+        if ($total === 0 && ($confirmed > 0 || $cancel > 0)) {
+            $total = $confirmed + $cancel;
+        }
+
+        $successRate = null;
+        if (is_numeric($rawRate)) {
+            $successRate = ((int) ceil((float) $rawRate)).'%';
+        } elseif (is_string($rawRate) && $rawRate !== '') {
+            $successRate = $rawRate;
+        }
+
+        return CourierReportFormatter::fromCounts($confirmed, $cancel, array_filter([
+            'total_order' => $total,
+            'success_rate' => $successRate,
+            'frauds_count' => $fraudsCount,
+            'customer_name' => isset($data['name']) ? (string) $data['name'] : null,
+            'api_success' => true,
+            'data_type' => 'delivery',
+        ], fn ($value) => $value !== null));
+    }
+
+    private function fetchCustomer(string $phone, string $accessToken, string $businessId)
+    {
+        if (! filled($businessId)) {
+            throw new \RuntimeException('Carrybee business id missing from session.');
+        }
+
+        return $this->client()
+            ->withToken($accessToken)
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Origin' => 'https://merchant.carrybee.com',
+                'Referer' => 'https://merchant.carrybee.com/',
+            ])
+            ->get('https://api-merchant.carrybee.com/api/v2/businesses/'.$businessId.'/customers/'.$phone);
+    }
+
+    /**
+     * @return array{accessToken: string, businessId: string, cache_key: string, credential_id: int|null}|null
      */
     private function authenticate(bool $force = false): ?array
     {
-        if (! $force && ($cached = Cache::get($this->cacheKey()))) {
-            if (is_array($cached) && filled($cached['accessToken'] ?? null)) {
-                return $cached;
+        if (! $force) {
+            foreach ($this->credentials->candidates('carrybee') as $candidate) {
+                $cacheKey = $this->credentials->sessionCacheKey('carrybee', $candidate['identifier']);
+                $cached = Cache::get($cacheKey);
+                if (is_array($cached) && filled($cached['accessToken'] ?? null) && filled($cached['businessId'] ?? null)) {
+                    return [
+                        'accessToken' => (string) $cached['accessToken'],
+                        'businessId' => (string) $cached['businessId'],
+                        'cache_key' => $cacheKey,
+                        'credential_id' => $candidate['id'],
+                    ];
+                }
             }
         }
 
-        $jar = new CookieJar();
-        $headers = [
-            'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            'Accept' => 'application/json',
-            'Referer' => 'https://merchant.carrybee.com/login',
-            'Origin' => 'https://merchant.carrybee.com',
-        ];
+        // Session expired / no cache: random active credential, then failover.
+        foreach ($this->credentials->loginCandidates('carrybee') as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey('carrybee', $candidate['identifier']);
 
-        $csrf = $this->client()
-            ->withOptions(['cookies' => $jar])
-            ->withHeaders($headers)
-            ->get('https://merchant.carrybee.com/api/auth/csrf');
+            if ($force) {
+                Cache::forget($cacheKey);
+            }
 
-        $csrfToken = $csrf->json('csrfToken');
-        if (! $csrf->successful() || ! filled($csrfToken)) {
-            return null;
+            $jar = new CookieJar();
+            $headers = [
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept' => 'application/json',
+                'Referer' => 'https://merchant.carrybee.com/login',
+                'Origin' => 'https://merchant.carrybee.com',
+            ];
+
+            $csrf = $this->client()
+                ->withOptions(['cookies' => $jar])
+                ->withHeaders($headers)
+                ->get('https://merchant.carrybee.com/api/auth/csrf');
+
+            $csrfToken = $csrf->json('csrfToken');
+            if (! $csrf->successful() || ! filled($csrfToken)) {
+                $this->credentials->markFailure($candidate['id'], 'CSRF fetch failed');
+
+                continue;
+            }
+
+            $phone = (string) $candidate['identifier'];
+            $loginPhone = str_starts_with($phone, '+88') ? $phone : '+88'.$phone;
+
+            $this->client()
+                ->withOptions(['cookies' => $jar])
+                ->withHeaders($headers)
+                ->asForm()
+                ->post('https://merchant.carrybee.com/api/auth/callback/login?', [
+                    'phone' => $loginPhone,
+                    'password' => $candidate['password'],
+                    'csrfToken' => $csrfToken,
+                    'callbackUrl' => 'https://merchant.carrybee.com/login',
+                ]);
+
+            $session = $this->client()
+                ->withOptions(['cookies' => $jar])
+                ->withHeaders($headers)
+                ->get('https://merchant.carrybee.com/api/auth/session');
+
+            $accessToken = $session->json('accessToken');
+            $businessId = (string) ($session->json('user.selectedBusinessId') ?? '');
+
+            if (! $session->successful() || ! filled($accessToken) || ! filled($businessId)) {
+                $this->credentials->markFailure(
+                    $candidate['id'],
+                    'Session missing token/business: '.substr($session->body(), 0, 200),
+                );
+                LogHelper::saveLog('Carrybee fraud check error', 'Session missing token/business: '.substr($session->body(), 0, 300));
+
+                continue;
+            }
+
+            $payload = [
+                'accessToken' => (string) $accessToken,
+                'businessId' => $businessId,
+            ];
+
+            Cache::put($cacheKey, $payload, now()->addMinutes(50));
+            $this->credentials->markUsed($candidate['id']);
+
+            return [
+                'accessToken' => (string) $accessToken,
+                'businessId' => $businessId,
+                'cache_key' => $cacheKey,
+                'credential_id' => $candidate['id'],
+            ];
         }
 
-        $phone = (string) config('courier-checker.carrybee.phone');
-        $loginPhone = str_starts_with($phone, '+88') ? $phone : '+88'.$phone;
-
-        $this->client()
-            ->withOptions(['cookies' => $jar])
-            ->withHeaders($headers)
-            ->asForm()
-            ->post('https://merchant.carrybee.com/api/auth/callback/login?', [
-                'phone' => $loginPhone,
-                'password' => config('courier-checker.carrybee.password'),
-                'csrfToken' => $csrfToken,
-                'callbackUrl' => 'https://merchant.carrybee.com/login',
-            ]);
-
-        $session = $this->client()
-            ->withOptions(['cookies' => $jar])
-            ->withHeaders($headers)
-            ->get('https://merchant.carrybee.com/api/auth/session');
-
-        $accessToken = $session->json('accessToken');
-        $businessId = (string) ($session->json('user.selectedBusinessId') ?? '');
-
-        if (! $session->successful() || ! filled($accessToken)) {
-            LogHelper::saveLog('Carrybee fraud check error', 'Session missing token: '.substr($session->body(), 0, 300));
-
-            return null;
-        }
-
-        $payload = [
-            'accessToken' => (string) $accessToken,
-            'businessId' => $businessId,
-        ];
-
-        Cache::put($this->cacheKey(), $payload, now()->addMinutes(50));
-
-        return $payload;
-    }
-
-    private function cacheKey(): string
-    {
-        return 'fraud_check_carrybee_token_'.md5((string) config('courier-checker.carrybee.phone'));
+        return null;
     }
 
     private function client()

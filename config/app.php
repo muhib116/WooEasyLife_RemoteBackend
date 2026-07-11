@@ -21,6 +21,12 @@ return [
     'deploy_secret' => env('DEPLOY_SECRET'),
 
     /*
+    | First-time /deploy/setup (migrate + seed). Keep false on production
+    | after the server is installed.
+    */
+    'deploy_allow_setup' => (bool) env('DEPLOY_ALLOW_SETUP', false),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

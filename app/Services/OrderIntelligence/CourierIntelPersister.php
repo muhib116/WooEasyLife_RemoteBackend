@@ -74,6 +74,63 @@ class CourierIntelPersister
         Carbon $fetchedAt,
         ?int $sourceAccessTokenId,
     ): void {
+        if ($report === []) {
+            return;
+        }
+
+        $existing = CourierCustomerSnapshot::query()
+            ->where('platform_customer_id', $customer->id)
+            ->where('courier', $courier)
+            ->first();
+
+        // Never treat failed/blocked fetches as fresh successful cache.
+        if ($this->isFailedFetch($report)) {
+            $staleHours = max(1, (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 5)) + 1;
+            $preserve = (bool) config('order_intelligence.fraud_check.preserve_snapshot_on_failure', true);
+
+            if ($preserve && $existing && $this->snapshotHasUsefulData($existing)) {
+                $raw = is_array($existing->raw_report) ? $existing->raw_report : [];
+
+                // Keep last-good counts, but mark failed + stale so partial refresh retries.
+                $existing->fill([
+                    'phone_normalized' => $phoneNormalized,
+                    'raw_report' => array_merge($raw, $report, [
+                        'fetch_failed' => true,
+                        'preserved_on_failure' => true,
+                    ]),
+                    'fetched_at' => now()->subHours($staleHours),
+                    'source_access_token_id' => $sourceAccessTokenId,
+                ])->save();
+
+                return;
+            }
+
+            CourierCustomerSnapshot::query()->updateOrCreate(
+                [
+                    'platform_customer_id' => $customer->id,
+                    'courier' => $courier,
+                ],
+                [
+                    'phone_normalized' => $phoneNormalized,
+                    'total_order' => 0,
+                    'confirmed' => 0,
+                    'cancel' => 0,
+                    'success_rate' => isset($report['success_rate']) ? (string) $report['success_rate'] : 'No order history found!',
+                    'customer_rating' => null,
+                    'frauds_count' => 0,
+                    'raw_report' => array_merge($report, ['fetch_failed' => true]),
+                    'fetched_at' => now()->subHours($staleHours),
+                    'source_access_token_id' => $sourceAccessTokenId,
+                ],
+            );
+
+            return;
+        }
+
+        if ($this->shouldPreserveExistingSnapshot($existing, $report)) {
+            return;
+        }
+
         $fraudsCount = array_key_exists('frauds_count', $report)
             ? (int) $report['frauds_count']
             : count(is_array($report['frauds'] ?? null) ? $report['frauds'] : []);
@@ -96,6 +153,88 @@ class CourierIntelPersister
                 'source_access_token_id' => $sourceAccessTokenId,
             ],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     */
+    private function isFailedFetch(array $report): bool
+    {
+        if (! empty($report['unavailable']) || ! empty($report['credential_error']) || ! empty($report['fetch_failed'])) {
+            return true;
+        }
+
+        $message = strtolower((string) ($report['message'] ?? ''));
+
+        foreach ([
+            'session expired',
+            'credentials are invalid',
+            'credential',
+            'login failed',
+            're-login failed',
+            'token expired',
+            'temporarily unavailable',
+        ] as $needle) {
+            if ($message !== '' && str_contains($message, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Keep last known good courier data when a partner is blocked/unavailable.
+     * Authentic empty responses (api_success) are allowed to overwrite.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    private function shouldPreserveExistingSnapshot(?CourierCustomerSnapshot $existing, array $report): bool
+    {
+        if (! config('order_intelligence.fraud_check.preserve_snapshot_on_failure', true)) {
+            return false;
+        }
+
+        if ($existing === null || ! $this->snapshotHasUsefulData($existing)) {
+            return false;
+        }
+
+        if ($this->isFailedFetch($report)) {
+            return true;
+        }
+
+        if ($this->reportHasUsefulData($report)) {
+            return false;
+        }
+
+        // Successful empty lookup may clear history; failed/ambiguous empty must not.
+        if (! empty($report['api_success'])) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function snapshotHasUsefulData(CourierCustomerSnapshot $snapshot): bool
+    {
+        return (int) $snapshot->total_order > 0
+            || (int) $snapshot->confirmed > 0
+            || (int) $snapshot->cancel > 0
+            || (int) $snapshot->frauds_count > 0
+            || filled($snapshot->customer_rating);
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     */
+    private function reportHasUsefulData(array $report): bool
+    {
+        return (int) ($report['total_order'] ?? 0) > 0
+            || (int) ($report['confirmed'] ?? 0) > 0
+            || (int) ($report['cancel'] ?? 0) > 0
+            || (int) ($report['frauds_count'] ?? 0) > 0
+            || ! empty($report['frauds'])
+            || filled($report['customer_rating'] ?? null);
     }
 
     /**

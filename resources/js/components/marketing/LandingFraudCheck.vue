@@ -29,8 +29,45 @@ const fraudNotes = computed(() => {
 
 const courierLogos = {
     'Stead Fast': '/images/steadfast.svg',
+    Steadfast: '/images/steadfast.svg',
     Pathao: '/images/pathao.svg',
-    'Paper Fly': '/images/redx.svg',
+    'Paper Fly': '/images/paperfly.png',
+    Paperfly: '/images/paperfly.png',
+    RedX: '/images/redx.svg',
+    'Red X': '/images/redx.svg',
+    Carrybee: '/images/carrybee.svg',
+};
+
+const resolveCourierLogo = (title) => {
+    const key = String(title ?? '').trim();
+
+    if (courierLogos[key]) {
+        return courierLogos[key];
+    }
+
+    const normalized = key.toLowerCase();
+
+    if (normalized.includes('stead')) {
+        return '/images/steadfast.svg';
+    }
+
+    if (normalized.includes('pathao')) {
+        return '/images/pathao.svg';
+    }
+
+    if (normalized.includes('paper')) {
+        return '/images/paperfly.png';
+    }
+
+    if (normalized.includes('red')) {
+        return '/images/redx.svg';
+    }
+
+    if (normalized.includes('carry')) {
+        return '/images/carrybee.svg';
+    }
+
+    return null;
 };
 
 const riskClass = (tone) => {
@@ -222,13 +259,19 @@ const handleSearch = async () => {
                             class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-3"
                         >
                             <div class="flex items-center gap-3">
-                                <div class="flex h-10 w-16 items-center justify-center rounded-lg bg-white px-2">
+                                <div class="flex h-10 w-[4.75rem] shrink-0 items-center justify-center rounded-lg bg-white px-1.5">
                                     <img
-                                        v-if="courierLogos[item.title]"
-                                        :src="courierLogos[item.title]"
+                                        v-if="resolveCourierLogo(item.title)"
+                                        :src="resolveCourierLogo(item.title)"
                                         :alt="item.title"
-                                        class="max-h-6 max-w-full object-contain"
+                                        class="h-7 w-auto max-w-full object-contain"
                                     >
+                                    <span
+                                        v-else
+                                        class="text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+                                    >
+                                        {{ item.title }}
+                                    </span>
                                 </div>
                                 <div>
                                     <p class="text-sm font-semibold text-white">{{ item.title }}</p>

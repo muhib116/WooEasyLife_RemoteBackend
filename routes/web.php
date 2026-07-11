@@ -9,9 +9,10 @@ use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomerNoticeController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DatabaseMigrationController;
 use App\Http\Controllers\Admin\DeveloperController;
+use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\FollowUpController;
-use App\Http\Controllers\Admin\FraudPackageTestController;
 use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\MerchantEmployeeController;
 use App\Http\Controllers\Admin\OrderController;
@@ -34,10 +35,10 @@ use App\Http\Controllers\DeployController;
 use App\Http\Controllers\PublicStorageController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\FraudCheckController;
+use App\Http\Controllers\FraudPartnerCredentialController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SmsController;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -127,7 +128,7 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/clear-all-session', [SessionController::class, 'clearAllSession'])->name('clearAllSession');
     });
 
-    Route::group(['as' => 'backups.', 'prefix' => 'backups'], function () {
+    Route::group(['as' => 'backups.', 'prefix' => 'backups', 'middleware' => 'permission:roles.manage'], function () {
         Route::get('/', [BackupController::class, 'index'])->name('index');
         Route::get('/get-backups', [BackupController::class, 'getBackups'])->name('getBackups');
         Route::get('/server-requirements', [BackupController::class, 'serverRequirements'])->name('serverRequirements');
@@ -138,6 +139,19 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/import-status/{import_id}', [BackupController::class, 'importStatus'])->name('importStatus');
         Route::get('/download-backup/{file_name}', [BackupController::class, 'downloadBackup'])->name('downloadBackup');
         Route::post('/delete-file/{file_name}', [BackupController::class, 'deleteFile'])->name('deleteFile');
+    });
+
+    Route::group(['as' => 'migrations.', 'prefix' => 'migrations', 'middleware' => 'permission:roles.manage'], function () {
+        Route::get('/', [DatabaseMigrationController::class, 'index'])->name('index');
+        Route::get('/status', [DatabaseMigrationController::class, 'status'])->name('status');
+        Route::post('/run', [DatabaseMigrationController::class, 'migrate'])->name('run');
+        Route::post('/rollback', [DatabaseMigrationController::class, 'rollback'])->name('rollback');
+    });
+
+    Route::group(['as' => 'maintenance.', 'prefix' => 'maintenance', 'middleware' => 'permission:roles.manage'], function () {
+        Route::get('/', [SystemMaintenanceController::class, 'index'])->name('index');
+        Route::get('/status', [SystemMaintenanceController::class, 'status'])->name('status');
+        Route::post('/run', [SystemMaintenanceController::class, 'run'])->name('run');
     });
 
     Route::group(['as' => 'webhooks.', 'prefix' => 'webhooks'], function () {
@@ -256,11 +270,6 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/get-use-report', [UseAnalysisController::class, 'getUseReport'])->name('getUseReport');
     });
 
-    Route::group(['as' => 'fraudPackageTest.', 'prefix' => 'fraud-package-test', 'middleware' => 'permission:dashboard.view'], function () {
-        Route::get('/', [FraudPackageTestController::class, 'index'])->name('index');
-        Route::post('/check', [FraudPackageTestController::class, 'check'])->name('check');
-    });
-
     Route::group(['as' => 'orderIntelligence.', 'prefix' => 'order-intelligence', 'middleware' => 'permission:dashboard.view'], function () {
         Route::get('/', [OrderIntelligenceAdminController::class, 'index'])->name('index');
         Route::get('/customers', [OrderIntelligenceAdminController::class, 'customers'])->name('customers');
@@ -344,71 +353,32 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::put('/{customerNotice}', [CustomerNoticeController::class, 'update'])->name('update');
         Route::delete('/{customerNotice}', [CustomerNoticeController::class, 'destroy'])->name('destroy');
     });
-});
 
-Route::group(['as' => 'frauds.', 'prefix' => 'q8w1d9zp7kuo2vrb5m6cnx0ahjls4et3ifyugpdbq2m1vnz0l'], function () {
-    Route::get('/', [FraudCheckController::class, 'index'])->name('index');
-    Route::get('/expire', [FraudCheckController::class, 'expire'])->name('expire');
-    Route::post('/save-steadfast-curl', [FraudCheckController::class, 'saveSteadfastCurl'])->name('saveSteadfastCurl');
-    Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
-    Route::post('/get-expire', [FraudCheckController::class, 'getExpire'])->name('getExpire');
-    Route::post('/renew-expire', [FraudCheckController::class, 'renewExpire'])->name('renewExpire');
-    Route::post('/expire-session', [FraudCheckController::class, 'expireSession'])->name('expireSession');
-    Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
-});
+    // Obfuscated path kept for bookmarks; auth + platform.admin are required.
+    Route::group(['as' => 'frauds.', 'prefix' => 'q8w1d9zp7kuo2vrb5m6cnx0ahjls4et3ifyugpdbq2m1vnz0l'], function () {
+        Route::get('/', [FraudCheckController::class, 'index'])->name('index');
+        Route::get('/expire', [FraudCheckController::class, 'expire'])->name('expire');
+        Route::post('/save-steadfast-curl', [FraudCheckController::class, 'saveSteadfastCurl'])->name('saveSteadfastCurl');
+        Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');
+        Route::post('/get-expire', [FraudCheckController::class, 'getExpire'])->name('getExpire');
+        Route::post('/renew-expire', [FraudCheckController::class, 'renewExpire'])->name('renewExpire');
+        Route::post('/expire-session', [FraudCheckController::class, 'expireSession'])->name('expireSession');
+        Route::post('/check', [FraudCheckController::class, 'check'])->name('check');
+        Route::get('/runtime-config', [FraudCheckController::class, 'runtimeConfig'])->name('runtimeConfig');
+        Route::put('/runtime-config', [FraudCheckController::class, 'updateRuntimeConfig'])->name('updateRuntimeConfig');
+        Route::post('/runtime-config/reset', [FraudCheckController::class, 'resetRuntimeConfig'])->name('resetRuntimeConfig');
 
-Route::get('/send-message', [FollowUpController::class, 'sendMessage']);
+        Route::get('/credentials', [FraudPartnerCredentialController::class, 'index'])->name('credentials');
+        Route::post('/credentials', [FraudPartnerCredentialController::class, 'store'])->name('credentials.store');
+        Route::put('/credentials/{credential}', [FraudPartnerCredentialController::class, 'update'])->name('credentials.update');
+        Route::delete('/credentials/{credential}', [FraudPartnerCredentialController::class, 'destroy'])->name('credentials.destroy');
+    });
+});
 
 require __DIR__ . '/portal.php';
 require __DIR__ . '/auth.php';
 
-Route::get('/get-ip', function () {
-    return request()->ip();
-});
-
-Route::get('/run-migration', function () {
-    Artisan::call('migrate');
-    echo 'Success';
-});
-
-Route::get('/migration-rollback', function () {
-    Artisan::call('migrate:rollback --step=1');
-    echo 'Rollback successfully';
-});
-
-Route::get('/clear-cache', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('route:clear');
-    Artisan::call('view:clear');
-    Artisan::call('optimize:clear');    
-    echo 'Cache cleared successfully';
-});
-
-Route::get('/clear-route', function () {
-    Artisan::call('route:clear');
-    echo 'Route cleared successfully';
-});
-
-Route::get('/clear-config', function () {
-    Artisan::call('config:clear');
-    echo 'Config cleared successfully';
-});
-
-Route::get('/clear-view', function () {
-    Artisan::call('view:clear');
-    echo 'View cleared successfully';
-});
-
-Route::get('/storage-link', function () {
-    Artisan::call('storage:link');
-    echo 'Storage link created successfully';
-});
-
-// Production deploy (no terminal): GET /deploy/{DEPLOY_SECRET}
-Route::get('/deploy/{secret}', [DeployController::class, 'deploy'])->name('deploy');
-// First-time setup only: GET /deploy/{DEPLOY_SECRET}/setup
-Route::get('/deploy/{secret}/setup', [DeployController::class, 'setup'])->name('deploy.setup');
-
-// https://inertiaui.com/inertia-tables
-// Http::get()
+// Production deploy (no terminal): POST with X-Deploy-Secret header (secret must not appear in the URL)
+Route::post('/deploy', [DeployController::class, 'deploy'])->name('deploy');
+// First-time setup only — also requires DEPLOY_ALLOW_SETUP=true
+Route::post('/deploy/setup', [DeployController::class, 'setup'])->name('deploy.setup');

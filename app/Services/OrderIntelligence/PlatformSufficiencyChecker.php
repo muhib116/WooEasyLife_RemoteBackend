@@ -25,6 +25,18 @@ class PlatformSufficiencyChecker
             return $this->hasAnyPlatformSignal($platformData);
         }
 
+        // hybrid: prefer cache to avoid hammering courier partners.
+        if (config('order_intelligence.fraud_check.stale_while_revalidate', true)) {
+            // Serve cache whenever we have at least one successful courier snapshot.
+            // A single failed partner (e.g. Carrybee) must not force a full live re-check.
+            if ($this->hasUsefulSuccessfulSnapshots($platformData)) {
+                return true;
+            }
+
+            return $this->hasAnyPlatformSignal($platformData)
+                && ! $this->hasFailedSnapshots($platformData);
+        }
+
         return $this->hasFreshCourierSnapshots($platformData)
             || $this->hasFreshPlatformStats($platformData)
             || (! empty($platformData['courier_fraud_notes']) && $this->hasFreshCourierSnapshots($platformData, strict: false));
@@ -35,17 +47,118 @@ class PlatformSufficiencyChecker
      */
     public function shouldRefreshSnapshots(?array $platformData): bool
     {
+        return $this->couriersNeedingRefresh($platformData) !== [];
+    }
+
+    /**
+     * Couriers that should be re-fetched in the background.
+     *
+     * @param  array<string, mixed>|null  $platformData
+     * @return list<string>
+     */
+    public function couriersNeedingRefresh(?array $platformData): array
+    {
+        $required = $this->configuredCouriers();
+
         if ($platformData === null) {
-            return true;
+            return $required;
         }
 
-        $courierStats = $platformData['courier_stats'] ?? [];
+        $snapshots = $platformData['courier_stats'] ?? [];
 
-        if ($courierStats === []) {
-            return true;
+        if ($snapshots === []) {
+            return $required;
         }
 
-        return ! $this->hasFreshCourierSnapshots($platformData);
+        $byCourier = [];
+        foreach ($snapshots as $snapshot) {
+            if (is_array($snapshot) && filled($snapshot['courier'] ?? null)) {
+                $byCourier[(string) $snapshot['courier']] = $snapshot;
+            }
+        }
+
+        $maxHours = (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 5);
+        $need = [];
+
+        foreach ($required as $courier) {
+            if (! isset($byCourier[$courier])) {
+                $need[] = $courier;
+
+                continue;
+            }
+
+            $snapshot = $byCourier[$courier];
+
+            if (! empty($snapshot['fetch_failed'])) {
+                $need[] = $courier;
+
+                continue;
+            }
+
+            $fetchedAt = $snapshot['fetched_at'] ?? null;
+
+            if ($fetchedAt === null || ! $this->isWithinHours((string) $fetchedAt, $maxHours)) {
+                $need[] = $courier;
+            }
+        }
+
+        return $need;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function configuredCouriers(): array
+    {
+        $couriers = ['steadfast', 'pathao', 'paperfly'];
+
+        if (config('fraud_check.include_redx', true)) {
+            $couriers[] = 'redx';
+        }
+
+        if (config('fraud_check.include_carrybee', true)) {
+            $couriers[] = 'carrybee';
+        }
+
+        return $couriers;
+    }
+
+    /**
+     * @param  array<string, mixed>  $platformData
+     */
+    private function hasFailedSnapshots(array $platformData): bool
+    {
+        foreach ($platformData['courier_stats'] ?? [] as $snapshot) {
+            if (is_array($snapshot) && ! empty($snapshot['fetch_failed'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $platformData
+     */
+    private function hasUsefulSuccessfulSnapshots(array $platformData): bool
+    {
+        foreach ($platformData['courier_stats'] ?? [] as $snapshot) {
+            if (! is_array($snapshot) || ! empty($snapshot['fetch_failed'])) {
+                continue;
+            }
+
+            if (
+                (int) ($snapshot['total_order'] ?? 0) > 0
+                || (int) ($snapshot['confirmed'] ?? 0) > 0
+                || (int) ($snapshot['cancel'] ?? 0) > 0
+                || (int) ($snapshot['frauds_count'] ?? 0) > 0
+                || filled($snapshot['customer_rating'] ?? null)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -84,48 +197,14 @@ class PlatformSufficiencyChecker
     }
 
     /**
+     * Snapshots are fresh when every non-failed configured courier row
+     * was fetched within the TTL window.
+     *
      * @param  array<string, mixed>  $platformData
      */
     private function hasFreshCourierSnapshots(array $platformData, bool $strict = true): bool
     {
-        $snapshots = $platformData['courier_stats'] ?? [];
-
-        if ($snapshots === []) {
-            return false;
-        }
-
-        $maxHours = (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 24);
-        $hasSignal = false;
-
-        foreach ($snapshots as $snapshot) {
-            if (! is_array($snapshot)) {
-                continue;
-            }
-
-            $hasData = ((int) ($snapshot['total_order'] ?? 0)) > 0
-                || ((int) ($snapshot['confirmed'] ?? 0)) > 0
-                || filled($snapshot['customer_rating'] ?? null);
-
-            if ($hasData) {
-                $hasSignal = true;
-            }
-
-            $fetchedAt = $snapshot['fetched_at'] ?? null;
-
-            if ($fetchedAt === null) {
-                if ($strict) {
-                    return false;
-                }
-
-                continue;
-            }
-
-            if (! $this->isWithinHours($fetchedAt, $maxHours)) {
-                return false;
-            }
-        }
-
-        return $hasSignal;
+        return $this->couriersNeedingRefresh($platformData) === [];
     }
 
     /**

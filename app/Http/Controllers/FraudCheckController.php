@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\LogHelper;
 use App\Services\FraudCheckService;
 use App\Services\OrderIntelligence\FraudCheckCoordinator;
+use App\Services\OrderIntelligence\FraudCheckRuntimeConfig;
 use Enan\PathaoCourier\Facades\PathaoCourier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +20,38 @@ class FraudCheckController extends Controller
     public function __construct(
         private FraudCheckService $fraudCheckService,
         private FraudCheckCoordinator $fraudCheckCoordinator,
+        private FraudCheckRuntimeConfig $fraudCheckRuntimeConfig,
     ) {}
 
     public function index()
     {
         return Inertia::render('FraudCheck/Index', [
             'debugMode' => config('app.debug'),
+            'runtimeConfig' => $this->fraudCheckRuntimeConfig->snapshot(),
+        ]);
+    }
+
+    public function runtimeConfig(): JsonResponse
+    {
+        return response()->json($this->fraudCheckRuntimeConfig->snapshot());
+    }
+
+    public function updateRuntimeConfig(Request $request): JsonResponse
+    {
+        $allowed = array_keys(FraudCheckRuntimeConfig::FIELDS);
+        $payload = $request->only($allowed);
+
+        return response()->json([
+            'message' => 'Fraud check configuration saved.',
+            'config' => $this->fraudCheckRuntimeConfig->update($payload),
+        ]);
+    }
+
+    public function resetRuntimeConfig(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Fraud check configuration reset to .env defaults.',
+            'config' => $this->fraudCheckRuntimeConfig->resetToEnv(),
         ]);
     }
 

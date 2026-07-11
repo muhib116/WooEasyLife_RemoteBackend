@@ -20,8 +20,11 @@ class LegacyReportFormatter
         $carrybee = $this->snapshotToReport($this->findSnapshot($courierStats, 'carrybee'));
 
         $aggregateReports = [$steadfast, $pathao, $paperfly];
-        if (config('fraud_check.aggregate_redx', true)) {
+        if (config('fraud_check.include_redx', true) && config('fraud_check.aggregate_redx', true)) {
             $aggregateReports[] = $redx;
+        }
+        if (config('fraud_check.include_carrybee', true) && config('fraud_check.aggregate_carrybee', true)) {
+            $aggregateReports[] = $carrybee;
         }
 
         $totals = CourierReportFormatter::aggregateTotals(...$aggregateReports);
@@ -45,6 +48,7 @@ class LegacyReportFormatter
             $pathao,
             $paperfly,
             $redx,
+            $carrybee,
         );
 
         $courier = [
@@ -104,14 +108,12 @@ class LegacyReportFormatter
         $courier = (string) ($snapshot['courier'] ?? '');
         $fraudsCount = (int) ($snapshot['frauds_count'] ?? 0);
 
-        if ($courier === 'carrybee') {
+        if ($courier === 'carrybee' && (int) ($snapshot['total_order'] ?? 0) === 0 && $fraudsCount > 0) {
             return CourierReportFormatter::emptyReport([
                 'data_type' => 'fraud_reports',
                 'frauds_count' => $fraudsCount,
                 'api_success' => true,
-                'success_rate' => $fraudsCount > 0
-                    ? "{$fraudsCount} fraud report(s)"
-                    : 'No fraud reports',
+                'success_rate' => "{$fraudsCount} fraud report(s)",
                 'source' => 'platform_cache',
                 'fetched_at' => $snapshot['fetched_at'] ?? null,
             ]);
@@ -184,6 +186,7 @@ class LegacyReportFormatter
      * @param  array<string, mixed>  $pathao
      * @param  array<string, mixed>  $paperfly
      * @param  array<string, mixed>  $redx
+     * @param  array<string, mixed>  $carrybee
      */
     private function resolveSuccessRate(
         int $totalOrder,
@@ -193,6 +196,7 @@ class LegacyReportFormatter
         array $pathao,
         array $paperfly,
         array $redx = [],
+        array $carrybee = [],
     ): string {
         if ($totalOrder > 0) {
             return ceil(($confirmOrder / $totalOrder) * 100) . '%';
@@ -202,7 +206,7 @@ class LegacyReportFormatter
             return (string) $rates['delivery_rate'];
         }
 
-        foreach ([$steadfast, $pathao, $paperfly, $redx] as $report) {
+        foreach ([$steadfast, $pathao, $paperfly, $redx, $carrybee] as $report) {
             if (($report['data_type'] ?? 'delivery') === 'fraud_reports') {
                 continue;
             }
@@ -227,25 +231,33 @@ class LegacyReportFormatter
      */
     private function withPlatformCourierMeta(array $report, string $courier): array
     {
+        $report['source'] = $report['source'] ?? 'platform_cache';
+        $report['from_cache'] = true;
+
         if (
             ($report['total_order'] ?? 0) > 0
             || ! empty($report['frauds'])
             || (int) ($report['frauds_count'] ?? 0) > 0
         ) {
             $report['status'] = 'ok';
+            $report['cache_label'] = 'platform cache';
 
             return $report;
         }
 
         if (($report['data_type'] ?? 'delivery') === 'fraud_reports') {
             $report['status'] = 'ok';
-            $report['message'] = 'No fraud reports found on Carrybee (platform cache).';
+            if ((int) ($report['frauds_count'] ?? 0) === 0) {
+                $report['message'] = 'No fraud reports found on Carrybee (platform cache).';
+            }
+            $report['cache_label'] = 'platform cache';
 
             return $report;
         }
 
         if (($report['data_type'] ?? 'delivery') === 'rating' || ! empty($report['customer_rating'])) {
             $report['status'] = 'rating_only';
+            $report['cache_label'] = 'platform cache';
 
             return $report;
         }
@@ -254,16 +266,18 @@ class LegacyReportFormatter
 
         if ($rate !== '' && $rate !== 'No order history found!') {
             $report['status'] = 'ok';
+            $report['cache_label'] = 'platform cache';
 
             return $report;
         }
 
         $report['status'] = 'ok';
+        $report['cache_label'] = 'platform cache';
         $report['message'] = match ($courier) {
             'Steadfast' => 'No delivery history found on Steadfast (platform cache).',
             'Paperfly' => 'No delivery records found on Paperfly (platform cache).',
             'RedX' => 'No delivery history found on RedX (platform cache).',
-            'Carrybee' => 'No fraud reports found on Carrybee (platform cache).',
+            'Carrybee' => 'No delivery history found on Carrybee (platform cache).',
             default => 'No delivery history found (platform cache).',
         };
 

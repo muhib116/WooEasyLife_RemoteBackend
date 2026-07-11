@@ -23,6 +23,7 @@ function fraudCheckServiceWithMocks(
         'fraud_check.include_redx' => $includeRedx,
         'fraud_check.include_carrybee' => $includeCarrybee,
         'fraud_check.aggregate_redx' => true,
+        'fraud_check.aggregate_carrybee' => true,
     ]);
 
     $resolver ??= Mockery::mock(MerchantSteadfastFraudCredentialResolver::class);
@@ -106,12 +107,12 @@ it('includes redx in courier list and aggregate totals when enabled', function (
 
     $carrybee = Mockery::mock(CarrybeeFraudChecker::class);
     $carrybee->shouldReceive('check')->once()->with('01712345678')->andReturn([
-        'total_order' => 0,
+        'total_order' => 1,
         'confirmed' => 0,
-        'cancel' => 0,
-        'success_rate' => '2 fraud report(s)',
-        'data_type' => 'fraud_reports',
-        'frauds_count' => 2,
+        'cancel' => 1,
+        'success_rate' => '0%',
+        'data_type' => 'delivery',
+        'frauds_count' => 0,
         'api_success' => true,
     ]);
 
@@ -134,14 +135,12 @@ it('includes redx in courier list and aggregate totals when enabled', function (
         'RedX',
         'Carrybee',
     ]);
-    // RedX counts are aggregated; Carrybee fraud-report counts are not.
-    expect($report['total_order'])->toBe(15);
+    // RedX + Carrybee delivery counts are aggregated.
+    expect($report['total_order'])->toBe(16);
     expect($report['confirmed'])->toBe(12);
-    expect($report['cancel'])->toBe(3);
-    expect($report['success_rate'])->toBe('80%');
-    expect($report['carrybee_frauds_count'])->toBe(2);
-    expect($report['frauds'])->toHaveCount(1);
-    expect($report['frauds'][0]['courier'])->toBe('carrybee');
+    expect($report['cancel'])->toBe(4);
+    expect($report['success_rate'])->toBe('75%');
+    expect($report['carrybee_frauds_count'])->toBe(0);
     expect($report['courier'][4]['report']['status'])->toBe('ok');
 });
 
@@ -166,6 +165,8 @@ it('does not use carrybee fraud-report text as overall success rate', function (
         'api_success' => true,
     ]);
 
+    config(['fraud_check.aggregate_carrybee' => true]);
+
     $report = fraudCheckServiceWithMocks(
         $steadfast,
         $pathao,
@@ -179,6 +180,7 @@ it('does not use carrybee fraud-report text as overall success rate', function (
 
     expect($report['success_rate'])->toBe('No order history found!');
     expect($report['carrybee_frauds_count'])->toBe(3);
+    expect($report['total_order'])->toBe(0);
     expect($report['frauds'][0]['details'])->toContain('3 fraud report');
 });
 
@@ -257,4 +259,56 @@ it('uses pathao customer rating when order counts are unavailable', function () 
     $report = fraudCheckServiceWithMocks($steadfast, $pathao, $paperfly)->getReport('01712345678');
 
     expect($report['success_rate'])->toBe('Good Customer');
+});
+
+it('preserves courier-specific empty messages when api_success is set', function () {
+    $steadfast = Mockery::mock(SteadfastFraudChecker::class);
+    $steadfast->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport(['frauds' => []]));
+
+    $pathao = Mockery::mock(PathaoFraudChecker::class);
+    $pathao->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport());
+
+    $paperfly = Mockery::mock(PaperflyFraudChecker::class);
+    $paperfly->shouldReceive('check')->once()->andReturn(CourierReportFormatter::emptyReport([
+        'api_success' => true,
+        'message' => 'Paperfly found matches but returned no delivery detail rows for this merchant account.',
+    ]));
+
+    $report = fraudCheckServiceWithMocks($steadfast, $pathao, $paperfly)->getReport('01712345678');
+
+    expect($report['courier'][2]['report']['status'])->toBe('ok');
+    expect($report['courier'][2]['report']['message'])->toContain('no delivery detail rows');
+});
+
+it('maps carrybee customer payload using success_rate instead of treating pending as delivered', function () {
+    $checker = new CarrybeeFraudChecker();
+    $method = new ReflectionMethod(CarrybeeFraudChecker::class, 'mapCustomerPayload');
+    $method->setAccessible(true);
+
+    $withPending = $method->invoke($checker, [
+        'total_order' => 10,
+        'cancelled_order' => 1,
+        'success_rate' => 80,
+        'fraud_count' => 2,
+        'name' => 'Test Customer',
+    ]);
+
+    expect($withPending['total_order'])->toBe(10);
+    expect($withPending['confirmed'])->toBe(8);
+    expect($withPending['cancel'])->toBe(1);
+    expect($withPending['success_rate'])->toBe('80%');
+    expect($withPending['frauds_count'])->toBe(2);
+    expect($withPending['data_type'])->toBe('delivery');
+
+    $allCancelled = $method->invoke($checker, [
+        'total_order' => 1,
+        'cancelled_order' => 1,
+        'success_rate' => 0,
+        'fraud_count' => 0,
+    ]);
+
+    expect($allCancelled['total_order'])->toBe(1);
+    expect($allCancelled['confirmed'])->toBe(0);
+    expect($allCancelled['cancel'])->toBe(1);
+    expect($allCancelled['success_rate'])->toBe('0%');
 });

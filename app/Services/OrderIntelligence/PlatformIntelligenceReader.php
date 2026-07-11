@@ -83,9 +83,31 @@ class PlatformIntelligenceReader
                 'customer_rating' => $snapshot->customer_rating,
                 'frauds_count' => $snapshot->frauds_count,
                 'fetched_at' => optional($snapshot->fetched_at)?->toIso8601String(),
+                'fetch_failed' => $this->snapshotFetchFailed($snapshot),
             ])
             ->values()
             ->all();
+    }
+
+    private function snapshotFetchFailed(CourierCustomerSnapshot $snapshot): bool
+    {
+        $raw = is_array($snapshot->raw_report) ? $snapshot->raw_report : [];
+
+        if (! empty($raw['unavailable']) || ! empty($raw['credential_error']) || ! empty($raw['fetch_failed'])) {
+            return true;
+        }
+
+        $message = strtolower((string) ($raw['message'] ?? ''));
+
+        foreach (['session expired', 'credentials are invalid', 'login failed', 're-login failed', 'token expired'] as $needle) {
+            if ($message !== '' && str_contains($message, $needle)) {
+                return true;
+            }
+        }
+
+        return ($raw['status'] ?? null) === 'unavailable'
+            && (int) $snapshot->total_order === 0
+            && ! filled($snapshot->customer_rating);
     }
 
     /**

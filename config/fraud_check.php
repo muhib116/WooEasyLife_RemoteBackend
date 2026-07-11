@@ -19,14 +19,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | Only count-based delivery data should affect total_order / confirmed /
-    | cancel / success_rate.
-    |
-    | RedX returns real delivery counts → include in totals.
-    | Carrybee returns fraud-report counts only → never include in totals
-    | (even if FRAUD_CHECK_AGGREGATE_CARRYBEE is flipped on by mistake,
-    | CourierReportFormatter also skips data_type=fraud_reports).
+    | cancel / success_rate. RedX and Carrybee both return real delivery
+    | counts from their merchant customer APIs.
     |
     */
     'aggregate_redx' => (bool) env('FRAUD_CHECK_AGGREGATE_REDX', true),
-    'aggregate_carrybee' => false,
+    'aggregate_carrybee' => (bool) env('FRAUD_CHECK_AGGREGATE_CARRYBEE', true),
 ];

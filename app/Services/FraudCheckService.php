@@ -89,7 +89,11 @@ class FraudCheckService
                 'Carrybee',
             );
             $courier[] = ['title' => 'Carrybee', 'report' => $carrybeeResponse];
-            // Carrybee is fraud-report-only — never use it for delivery success_rate fallback.
+            $successRateReports[] = $carrybeeResponse;
+
+            if (config('fraud_check.aggregate_carrybee', true)) {
+                $aggregateReports[] = $carrybeeResponse;
+            }
         }
 
         $totals = CourierReportFormatter::aggregateTotals(...$aggregateReports);
@@ -108,6 +112,48 @@ class FraudCheckService
             'carrybee_frauds_count' => $carrybeeFraudsCount,
             'courier' => $courier,
         ];
+    }
+
+    /**
+     * Fetch a single courier report (used by partial background refresh).
+     *
+     * @return array<string, mixed>
+     */
+    public function checkCourier(string $courier, string $phone, ?array $steadfastCredentials = null): array
+    {
+        $phone = $this->normalizePhone($phone);
+        $courier = strtolower(trim($courier));
+
+        if ($steadfastCredentials === null && $courier === 'steadfast') {
+            $steadfastCredentials = $this->steadfastCredentialResolver->resolveFromCurrentRequest();
+        }
+
+        return match ($courier) {
+            'steadfast' => $this->withCourierStatus(
+                $this->steadfastFraudChecker->check($phone, $steadfastCredentials),
+                'Steadfast',
+            ),
+            'pathao' => $this->withCourierStatus(
+                $this->pathaoFraudChecker->check($phone),
+                'Pathao',
+            ),
+            'paperfly' => $this->withCourierStatus(
+                $this->paperflyFraudChecker->check($phone),
+                'Paperfly',
+            ),
+            'redx' => $this->withCourierStatus(
+                $this->redxFraudChecker->check($phone),
+                'RedX',
+            ),
+            'carrybee' => $this->withCourierStatus(
+                $this->carrybeeFraudChecker->check($phone),
+                'Carrybee',
+            ),
+            default => CourierReportFormatter::emptyReport([
+                'unavailable' => true,
+                'message' => "Unknown courier [{$courier}].",
+            ]),
+        };
     }
 
     public function checkMultiple(array $numbers): array
@@ -130,21 +176,25 @@ class FraudCheckService
     public function expireSessions(): array
     {
         return [
-            'message' => 'Courier sessions expired. The next fraud check will re-authenticate.',
+            'message' => 'Courier login sessions expired. Platform fraud cache (courier snapshots) was not cleared — only partner session cookies/tokens. The next live courier call will re-authenticate.',
             'cleared' => [
                 'steadfast' => $this->steadfastFraudChecker->expireSession(),
+                'pathao' => $this->pathaoFraudChecker->expireSession(),
                 'paperfly' => $this->paperflyFraudChecker->expireToken(),
                 'redx' => $this->redxFraudChecker->expireSession(),
                 'carrybee' => $this->carrybeeFraudChecker->expireSession(),
             ],
+            'platform_cache_cleared' => false,
         ];
     }
 
     public function credentialStatus(): array
     {
+        $resolver = app(\App\Services\FraudCheck\FraudPartnerCredentialResolver::class);
+        $pathaoConfigured = $resolver->isConfigured('pathao');
+
         return [
-            'pathao_merchant_login' => filled(config('fraud-checker-bd-courier.pathao.user'))
-                && filled(config('fraud-checker-bd-courier.pathao.password')),
+            'pathao_merchant_login' => $pathaoConfigured,
             'pathao_hermes_token' => filled(config('pathao-courier.pathao_secret_token'))
                 && DB::table(config('pathao-courier.pathao_db_table_name'))
                     ->where('secret_token', config('pathao-courier.pathao_secret_token'))
@@ -152,8 +202,7 @@ class FraudCheckService
                     ->exists(),
             'pathao_issue_token' => filled(config('pathao-courier.pathao_client_id'))
                 && filled(config('pathao-courier.pathao_client_secret'))
-                && filled(config('fraud-checker-bd-courier.pathao.user'))
-                && filled(config('fraud-checker-bd-courier.pathao.password')),
+                && $pathaoConfigured,
             'steadfast_login' => $this->steadfastFraudChecker->isConfigured(),
             'steadfast_legacy_curl' => file_exists(SteadfastCurlExporter::path()),
             'paperfly' => $this->paperflyFraudChecker->isConfigured(),
@@ -227,13 +276,15 @@ class FraudCheckService
 
         if (! empty($report['api_success'])) {
             $report['status'] = 'ok';
-            $report['message'] = match ($courier) {
-                'Steadfast' => 'No delivery history found on Steadfast.',
-                'Paperfly' => 'No delivery records found on Paperfly.',
-                'RedX' => 'No delivery history found on RedX.',
-                'Carrybee' => 'No fraud reports found on Carrybee.',
-                default => 'No delivery history found.',
-            };
+            if (empty($report['message'])) {
+                $report['message'] = match ($courier) {
+                    'Steadfast' => 'No delivery history found on Steadfast.',
+                    'Paperfly' => 'No delivery records found on Paperfly.',
+                    'RedX' => 'No delivery history found on RedX.',
+                    'Carrybee' => 'No delivery history found on Carrybee.',
+                    default => 'No delivery history found.',
+                };
+            }
 
             return $report;
         }

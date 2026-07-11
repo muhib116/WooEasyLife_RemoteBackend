@@ -13,31 +13,31 @@ class RedxFraudChecker
 
     private const STATS_URL = 'https://redx.com.bd/api/redx_se/admin/parcel/customer-success-return-rate';
 
+    public function __construct(
+        private FraudPartnerCredentialResolver $credentials,
+    ) {}
+
     public function isConfigured(): bool
     {
-        return filled(config('courier-checker.redx.phone'))
-            && filled(config('courier-checker.redx.password'));
+        return $this->credentials->isConfigured('redx');
     }
 
     public function expireSession(): bool
     {
-        $had = Cache::has($this->cacheKey());
-        Cache::forget($this->cacheKey());
-
-        return $had;
+        return $this->credentials->forgetSessionCaches('redx') > 0;
     }
 
     public function check(string $phone): array
     {
         if (! $this->isConfigured()) {
-            LogHelper::saveLog('RedX fraud check skipped', 'REDX_PHONE / REDX_PASSWORD are not configured.');
+            LogHelper::saveLog('RedX fraud check skipped', 'No RedX credentials configured in admin or .env.');
 
             return CourierReportFormatter::emptyReport();
         }
 
         try {
-            $token = $this->accessToken();
-            if ($token === null) {
+            $auth = $this->resolveToken();
+            if ($auth === null) {
                 return CourierReportFormatter::emptyReport([
                     'unavailable' => true,
                     'message' => 'RedX login failed with configured credentials.',
@@ -45,15 +45,15 @@ class RedxFraudChecker
             }
 
             $response = $this->client()
-                ->withToken($token)
+                ->withToken($auth['token'])
                 ->get(self::STATS_URL, [
                     'phoneNumber' => '88'.$phone,
                 ]);
 
             if ($response->status() === 401) {
-                Cache::forget($this->cacheKey());
-                $token = $this->accessToken(force: true);
-                if ($token === null) {
+                Cache::forget($auth['cache_key']);
+                $auth = $this->resolveToken(force: true);
+                if ($auth === null) {
                     return CourierReportFormatter::emptyReport([
                         'unavailable' => true,
                         'message' => 'RedX token expired and re-login failed.',
@@ -61,7 +61,7 @@ class RedxFraudChecker
                 }
 
                 $response = $this->client()
-                    ->withToken($token)
+                    ->withToken($auth['token'])
                     ->get(self::STATS_URL, [
                         'phoneNumber' => '88'.$phone,
                     ]);
@@ -75,6 +75,8 @@ class RedxFraudChecker
                     'message' => 'RedX stats request failed (HTTP '.$response->status().').',
                 ]);
             }
+
+            $this->credentials->markSuccess($auth['credential_id']);
 
             $data = $response->json('data', []);
             $success = (int) ($data['deliveredParcels'] ?? 0);
@@ -96,33 +98,60 @@ class RedxFraudChecker
         }
     }
 
-    private function accessToken(bool $force = false): ?string
+    /**
+     * @return array{token: string, cache_key: string, credential_id: int|null}|null
+     */
+    private function resolveToken(bool $force = false): ?array
     {
-        if (! $force && ($cached = Cache::get($this->cacheKey()))) {
-            return (string) $cached;
+        if (! $force) {
+            foreach ($this->credentials->candidates('redx') as $candidate) {
+                $cacheKey = $this->credentials->sessionCacheKey('redx', $candidate['identifier']);
+                if ($cached = Cache::get($cacheKey)) {
+                    return [
+                        'token' => (string) $cached,
+                        'cache_key' => $cacheKey,
+                        'credential_id' => $candidate['id'],
+                    ];
+                }
+            }
         }
 
-        $response = $this->client()->post(self::LOGIN_URL, [
-            'phone' => '88'.config('courier-checker.redx.phone'),
-            'password' => config('courier-checker.redx.password'),
-        ]);
+        // Session expired / no cache: pick a random active credential, then failover.
+        foreach ($this->credentials->loginCandidates('redx') as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey('redx', $candidate['identifier']);
 
-        $token = $response->json('data.accessToken');
+            if ($force) {
+                Cache::forget($cacheKey);
+            }
 
-        if (! $response->successful() || ! filled($token)) {
-            LogHelper::saveLog('RedX fraud check error', 'Login failed: '.substr($response->body(), 0, 300));
+            $response = $this->client()->post(self::LOGIN_URL, [
+                'phone' => '88'.$candidate['identifier'],
+                'password' => $candidate['password'],
+            ]);
 
-            return null;
+            $token = $response->json('data.accessToken');
+
+            if (! $response->successful() || ! filled($token)) {
+                $this->credentials->markFailure(
+                    $candidate['id'],
+                    'Login failed: '.substr($response->body(), 0, 200),
+                );
+                LogHelper::saveLog('RedX fraud check error', 'Login failed for '.$candidate['identifier'].': '.substr($response->body(), 0, 300));
+
+                continue;
+            }
+
+            Cache::put($cacheKey, $token, now()->addMinutes(50));
+            $this->credentials->markUsed($candidate['id']);
+
+            return [
+                'token' => (string) $token,
+                'cache_key' => $cacheKey,
+                'credential_id' => $candidate['id'],
+            ];
         }
 
-        Cache::put($this->cacheKey(), $token, now()->addMinutes(50));
-
-        return (string) $token;
-    }
-
-    private function cacheKey(): string
-    {
-        return 'fraud_check_redx_token_'.md5((string) config('courier-checker.redx.phone'));
+        return null;
     }
 
     private function client()

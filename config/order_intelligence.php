@@ -8,7 +8,18 @@ return [
         'mode' => env('ORDER_INTELLIGENCE_FRAUD_CHECK_MODE', 'hybrid'),
         'min_platform_orders' => (int) env('ORDER_INTELLIGENCE_MIN_PLATFORM_ORDERS', 1),
         'max_stats_staleness_hours' => (int) env('ORDER_INTELLIGENCE_MAX_STATS_STALENESS_HOURS', 72),
-        'max_snapshot_staleness_hours' => (int) env('ORDER_INTELLIGENCE_MAX_SNAPSHOT_STALENESS_HOURS', 24),
+        // How long courier snapshots are considered fresh (default 5 hours).
+        'max_snapshot_staleness_hours' => (int) env('ORDER_INTELLIGENCE_MAX_SNAPSHOT_STALENESS_HOURS', 5),
+        // hybrid: serve last known cache immediately; refresh in background when stale.
+        'stale_while_revalidate' => (bool) env('ORDER_INTELLIGENCE_STALE_WHILE_REVALIDATE', true),
+        // Never replace a useful courier snapshot with a failed/blocked fetch.
+        'preserve_snapshot_on_failure' => (bool) env('ORDER_INTELLIGENCE_PRESERVE_SNAPSHOT_ON_FAILURE', true),
+        // Single-flight refresh cooldown per phone (seconds).
+        'refresh_unique_for_seconds' => (int) env('ORDER_INTELLIGENCE_REFRESH_UNIQUE_FOR', 900),
+        // Only re-hit failed/stale couriers during background refresh (not all five).
+        'partial_refresh' => (bool) env('ORDER_INTELLIGENCE_PARTIAL_REFRESH', true),
+        // Admin/dev: include decision trail on fraud-check responses + Log::debug.
+        'debug_trace' => (bool) env('ORDER_INTELLIGENCE_DEBUG_TRACE', false),
     ],
 
     'suggest' => [

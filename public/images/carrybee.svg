@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 56" fill="none" role="img" aria-label="Carrybee">
+  <circle cx="28" cy="28" r="22" fill="#F5A524"/>
+  <path d="M19 30c2.8-5.2 7.4-8.2 12.6-8.2 3.2 0 6 1.2 8 3.2" fill="none" stroke="#5C3A00" stroke-width="3.2" stroke-linecap="round"/>
+  <circle cx="21.5" cy="22.5" r="2.2" fill="#5C3A00"/>
+  <text x="60" y="38" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="32" font-weight="800" letter-spacing="-0.8" fill="#111827">Carrybee</text>
+</svg>

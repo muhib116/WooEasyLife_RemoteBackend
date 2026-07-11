@@ -230,23 +230,35 @@ const allSections: NavSection[] = [
             },
             {
                 title: "Fraud Checker",
-                name: "frauds.index",
                 icon: "PhUserCheck",
                 permission: "merchants.view",
-            },
-            {
-                title: "Fraud Package Test",
-                name: "fraudPackageTest.index",
-                icon: "PhFlask",
-                permission: "dashboard.view",
+                children: [
+                    {
+                        title: "Phone Check",
+                        name: "frauds.index",
+                        icon: "PhMagnifyingGlass",
+                        permission: "merchants.view",
+                    },
+                    {
+                        title: "Partner Credentials",
+                        name: "frauds.credentials",
+                        icon: "PhKey",
+                        permission: "merchants.view",
+                    },
+                    {
+                        title: "Token & CURL",
+                        name: "frauds.expire",
+                        icon: "PhGear",
+                        permission: "merchants.view",
+                    },
+                ],
             },
             {
                 title: "Whitelisted Domains",
                 name: "whitelistedDomains.index",
                 icon: "PhGlobe",
                 permission: "merchants.manage",
-            },
-        ],
+            },        ],
     },
     {
         label: "Platform",
@@ -343,6 +355,18 @@ const allSections: NavSection[] = [
                 title: "Database Backups",
                 name: "backups.index",
                 icon: "PhFloppyDiskBack",
+                permission: "roles.manage",
+            },
+            {
+                title: "Database Migrations",
+                name: "migrations.index",
+                icon: "PhStack",
+                permission: "roles.manage",
+            },
+            {
+                title: "System Maintenance",
+                name: "maintenance.index",
+                icon: "PhWrench",
                 permission: "roles.manage",
             },
             {
