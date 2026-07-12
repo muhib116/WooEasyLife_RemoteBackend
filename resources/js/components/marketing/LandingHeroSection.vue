@@ -72,7 +72,7 @@ defineProps({
                     class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-amber-400 transition hover:text-amber-300 lg:justify-start"
                 >
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">📞</span>
-                    ফ্রি ফ্রড চেক — নম্বর দিয়ে দেখুন কাস্টমার কেমন
+                    শুধু নম্বর দিন, কাস্টমারের কুরিয়ার হিস্টোরি দেখে নিন — একদম ফ্রি
                 </a>
 
                 <p v-if="trialPlan" class="mt-4 text-sm text-slate-400">

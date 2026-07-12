@@ -157,10 +157,10 @@ const toggleFaq = (i) => {
                         ফ্রি টুল — এখনই চেষ্টা করুন
                     </span>
                     <h2 class="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                        নম্বর দিন — কাস্টমার কেমন, সাথে সাথে জানুন
+                        শুধু ফোন নম্বর দিন — কাস্টমারের কুরিয়ার হিস্টোরি দেখুন।
                     </h2>
                     <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-                        অ্যাকাউন্ট ছাড়াই কুরিয়ার ডেলিভারি রেকর্ড দেখুন। অর্ডার পাঠানোর আগেই সিদ্ধান্ত নিন।
+                        অ্যাকাউন্ট ছাড়াই Courier History দেখুন। তারপর অর্ডার কনফার্ম করুন।
                     </p>
                 </div>
                 <LandingFraudCheck :fraud-check="fraudCheck" />

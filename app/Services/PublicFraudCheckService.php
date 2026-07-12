@@ -38,7 +38,7 @@ class PublicFraudCheckService
             'daily_search_count' => $displayCount,
             'daily_search_label' => $this->formatCountLabel($displayCount),
             'daily_search_phrase' => 'আজকে '.$this->formatCountLabel($displayCount).' বার সার্চ হয়েছে',
-            'free_search_note' => 'রেজিস্ট্রেশন ছাড়াই প্রতিদিন '.$limit.'টি ফ্রি সার্চ',
+            'free_search_note' => 'রেজিস্ট্রেশন ছাড়াই · প্রতিদিন '.$this->toBnDigits((string) $limit).'টি ফ্রি কাস্টমার চেক',
             'demo' => config('landing.fraud_check.demo'),
         ];
     }

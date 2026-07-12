@@ -155,7 +155,7 @@ const titleClass = (accent) => {
 
             <!-- Supporting savings scenarios -->
             <div v-if="scenarios.length" class="mt-12">
-                <p class="text-center text-sm font-semibold text-slate-400">আরও যেভাবে সময় ও টাকা বাঁচে</p>
+                <p class="text-center text-sm font-semibold text-slate-400">আরও যেসব কাজে আপনার সময় ও খরচ কমবে</p>
                 <div class="mt-6 grid gap-4 sm:grid-cols-2">
                     <article
                         v-for="item in scenarios"

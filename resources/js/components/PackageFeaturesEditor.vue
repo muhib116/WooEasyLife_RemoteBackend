@@ -63,10 +63,13 @@
                         }"
                     >
                         <Checkbox
-                            v-model="features[item.key]"
+                            :model-value="Boolean(features[item.key])"
                             :input-id="`power-${item.key}`"
                             binary
                             :disabled="item.key === 'app_store_limit' && !features.app_connect"
+                            @update:model-value="
+                                (value) => (features[item.key] = Boolean(value))
+                            "
                         />
                         <span class="text-sm text-gray-700 dark:text-gray-300">
                             {{ item.label }}

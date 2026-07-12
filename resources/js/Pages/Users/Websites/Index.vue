@@ -442,18 +442,21 @@ const openAdjustPlan = (website: any) => {
 
     planFormMode.value = "adjust";
     const source = props.user_packages.find(
-        (item) => item.id === subscription.id,
+        (item) => Number(item.id) === Number(subscription.id),
     );
+    // Prefer the live subscription row (includes features). Fall back to user_packages.
+    const subscriptionRow = source ?? subscription;
 
     planForm.reset();
     planForm.id = subscription.id;
     planForm.domain = website.domain;
     planForm.base_url = website.base_url ?? null;
-    planForm.note = source?.note ?? null;
+    planForm.note = subscriptionRow?.note ?? null;
     planForm.remaining_order = subscription.remaining_order;
     planForm.total_order_can_handle = subscription.total_order_can_handle;
     planForm.is_active = Boolean(subscription.is_active);
-    planForm.plan_type = source?.plan_type ?? subscription.plan_type ?? "legacy";
+    planForm.plan_type =
+        subscriptionRow?.plan_type ?? subscription.plan_type ?? "legacy";
     planAdjustPackageHubId.value =
         subscription.package_hub_id ?? source?.package_hub_id ?? null;
     planForm.expires_at = subscription.expires_at
@@ -462,11 +465,16 @@ const openAdjustPlan = (website: any) => {
 
     const hubPackage = props.packages.find(
         (item) =>
-            item.id ===
-            (subscription.package_hub_id ?? source?.package_hub_id ?? null),
+            Number(item.id) ===
+            Number(
+                subscription.package_hub_id ?? source?.package_hub_id ?? null,
+            ),
     );
-    const appFields = buildAdjustAppFieldsFromSubscription(source, hubPackage);
-    planForm.features = appFields.features;
+    const appFields = buildAdjustAppFieldsFromSubscription(
+        subscriptionRow,
+        hubPackage,
+    );
+    planForm.features = { ...appFields.features };
     planForm.app_connect = appFields.app_connect;
     planForm.total_website_connect = appFields.total_website_connect;
     showPlanForm.value = true;

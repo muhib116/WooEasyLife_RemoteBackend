@@ -516,9 +516,10 @@ class UserController extends Controller
                 ? $request->boolean('app_connect')
                 : (bool) ($userPackage->app_connect ?? false);
 
+            // Admin adjust sends the full power-feature map; do not fall back to
+            // previous values or unchecked boxes would be ignored on save.
             $updateData['features'] = PackageCatalogFeatures::normalize(
                 $request->input('features'),
-                $userPackage->features ?? [],
             );
             $updateData['app_connect'] = $appConnect;
             $updateData['total_website_connect'] = $appConnect

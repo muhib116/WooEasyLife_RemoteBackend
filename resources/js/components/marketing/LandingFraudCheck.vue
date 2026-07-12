@@ -165,7 +165,7 @@ const handleSearch = async () => {
 
         <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/80 shadow-2xl shadow-amber-900/20">
             <div class="border-b border-white/10 px-4 py-4 sm:px-5">
-                <p class="text-sm font-semibold text-white">নম্বর দিন — ফেক অর্ডার আগেই ধরুন</p>
+                <p class="text-sm font-semibold text-white">নম্বর দিন — রিটার্নের ঝুঁকি কমান।</p>
                 <p class="mt-1 text-xs text-slate-400">
                     কুরিয়ার ডেলিভারি হিস্ট্রি দেখে অর্ডার কনফার্মের আগেই বুঝে নিন কাস্টমার কেমন
                 </p>

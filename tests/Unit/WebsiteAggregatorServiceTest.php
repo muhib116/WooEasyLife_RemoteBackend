@@ -60,6 +60,8 @@ class WebsiteAggregatorServiceTest extends TestCase
         $this->assertCount(1, $websites);
         $this->assertSame('shop.example.com', $websites[0]['domain']);
         $this->assertSame(50, $websites[0]['subscription']['remaining_order']);
+        $this->assertArrayHasKey('features', $websites[0]['subscription']);
+        $this->assertArrayHasKey('app_connect', $websites[0]['subscription']);
         $this->assertCount(1, $websites[0]['licenses']);
         $this->assertTrue($websites[0]['health']['ready_for_plugin']);
         $this->assertSame('connected', $websites[0]['health']['status']);

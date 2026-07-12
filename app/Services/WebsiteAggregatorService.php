@@ -271,6 +271,10 @@ class WebsiteAggregatorService
                 : null,
             'package_duration' => $active->package_duration,
             'expires_at' => $active->expires_at,
+            'app_connect' => $active->app_connect,
+            'total_website_connect' => $active->total_website_connect,
+            'features' => $active->features ?? [],
+            'note' => $active->note,
         ];
     }
 
