@@ -11,12 +11,15 @@ import LossComparisonSection from '@/components/marketing/LossComparisonSection.
 import HowItWorksSection from '@/components/marketing/HowItWorksSection.vue';
 import FeatureShowcaseSection from '@/components/marketing/FeatureShowcaseSection.vue';
 import AppShowcaseSection from '@/components/marketing/AppShowcaseSection.vue';
+import DownloadGateSection from '@/components/marketing/DownloadGateSection.vue';
 import IntegrationsSection from '@/components/marketing/IntegrationsSection.vue';
 import ContactSupportSection from '@/components/marketing/ContactSupportSection.vue';
 import EnterpriseCtaSection from '@/components/marketing/EnterpriseCtaSection.vue';
 import FraudBenefitGrid from '@/components/marketing/FraudBenefitGrid.vue';
 import ScrollReveal from '@/components/marketing/ScrollReveal.vue';
 import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
+import SubscriptionWizard from '@/components/marketing/SubscriptionWizard.vue';
+import PendingSubscriptionBanner from '@/components/marketing/PendingSubscriptionBanner.vue';
 import { primaryCtaLabel, primaryCtaUrl, merchantLoginHref, merchantLoginLabel } from '@/utils/marketingCta';
 
 const props = defineProps({
@@ -43,9 +46,29 @@ const props = defineProps({
     appDownloadUrl: { type: String, default: null },
     playStoreUrl: { type: String, default: null },
     fraudCheck: { type: Object, default: () => ({}) },
+    domains: { type: Array, default: () => [] },
+    subscriptionWizard: { type: Object, default: () => ({}) },
+    subscriptionPaymentMethods: { type: Array, default: () => [] },
+    whatsappSupportUrl: { type: String, default: null },
+    whatsappDisplayPhone: { type: String, default: '01770989591' },
+    pluginDownloadUrl: { type: String, default: null },
+    pendingSubscriptionInquiry: { type: Object, default: null },
 });
 
 const openFaq = ref(null);
+const showWizard = ref(false);
+const selectedPlan = ref(null);
+
+const hasPendingInquiry = computed(() => Boolean(props.pendingSubscriptionInquiry?.id));
+
+const openPurchase = (plan) => {
+    if (!plan || hasPendingInquiry.value) {
+        return;
+    }
+
+    selectedPlan.value = plan;
+    showWizard.value = true;
+};
 
 const trialPlan = computed(() =>
     props.plans.find((p) => p.package_duration === 'free_trial') ?? null,
@@ -237,6 +260,13 @@ const toggleFaq = (i) => {
                     </p>
                 </div>
 
+                <div v-if="pendingSubscriptionInquiry" class="mx-auto mt-8 max-w-3xl">
+                    <PendingSubscriptionBanner
+                        :inquiry="pendingSubscriptionInquiry"
+                        :whatsapp-url="whatsappSupportUrl || whatsappContactUrl"
+                    />
+                </div>
+
                 <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
                     <article
                         v-for="plan in previewPlans"
@@ -248,6 +278,7 @@ const toggleFaq = (i) => {
                                 : plan.is_special
                                     ? 'border-amber-400/50 bg-amber-500/10 shadow-xl shadow-amber-900/30'
                                     : 'border-white/10 bg-white/5',
+                            hasPendingInquiry ? 'opacity-70' : '',
                         ]"
                     >
                         <span
@@ -265,17 +296,21 @@ const toggleFaq = (i) => {
                         <p class="text-sm text-slate-400">{{ plan.token_label }}</p>
                         <p v-if="plan.website_label" class="mt-1 text-xs text-slate-500">{{ plan.website_label }}</p>
                         <PlanFeatureList :plan="plan" />
-                        <Link
-                            :href="route('pricing')"
-                            class="mt-6 block rounded-xl py-3 text-center text-sm font-bold transition"
+                        <button
+                            type="button"
+                            class="mt-6 w-full rounded-xl py-3 text-center text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60"
                             :class="plan.package_duration === 'free_trial'
                                 ? 'bg-amber-500 text-black hover:bg-amber-400'
                                 : plan.is_special
                                     ? 'bg-amber-500 text-black hover:bg-amber-400'
                                     : 'border border-white/15 text-white hover:bg-white/10'"
+                            :disabled="hasPendingInquiry"
+                            @click="openPurchase(plan)"
                         >
-                            {{ plan.package_duration === 'free_trial' ? 'ফ্রি ট্রায়াল শুরু করুন' : 'এই প্ল্যান কিনুন' }}
-                        </Link>
+                            {{ hasPendingInquiry
+                                ? 'অনুরোধ প্রক্রিয়াধীন'
+                                : (plan.package_duration === 'free_trial' ? 'ফ্রি ট্রায়াল শুরু করুন' : 'এই প্ল্যান কিনুন') }}
+                        </button>
                     </article>
                 </div>
 
@@ -306,12 +341,14 @@ const toggleFaq = (i) => {
                         {{ trialPlan.title }} — {{ trialPlan.duration_label }}।
                         নিজে ব্যবহার করে দেখুন, ভালো লাগলে প্ল্যান নিন।
                     </p>
-                    <Link
-                        :href="primaryCtaUrlValue"
-                        class="mt-6 inline-flex rounded-xl bg-white px-8 py-3.5 text-sm font-bold text-amber-950 shadow-lg hover:bg-amber-50"
+                    <button
+                        type="button"
+                        class="mt-6 inline-flex rounded-xl bg-white px-8 py-3.5 text-sm font-bold text-amber-950 shadow-lg hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        :disabled="hasPendingInquiry"
+                        @click="openPurchase(trialPlan)"
                     >
-                        {{ primaryCtaLabelValue }}
-                    </Link>
+                        {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : 'ফ্রি ট্রায়াল শুরু করুন' }}
+                    </button>
                 </div>
             </div>
             </section>
@@ -323,10 +360,20 @@ const toggleFaq = (i) => {
                 :app-showcase="appShowcase"
                 :app-download-url="appDownloadUrl"
                 :play-store-url="playStoreUrl"
+                :plugin-download-url="pluginDownloadUrl"
             />
         </ScrollReveal>
 
-        <!-- 15. FAQ -->
+        <!-- 15. Gated downloads (name + phone OTP) -->
+        <ScrollReveal :delay="80">
+            <DownloadGateSection
+                :app-download-url="appDownloadUrl"
+                :plugin-download-url="pluginDownloadUrl"
+                :play-store-url="playStoreUrl"
+            />
+        </ScrollReveal>
+
+        <!-- 16. FAQ -->
         <ScrollReveal as="section" id="faq" class="scroll-mt-24 border-t border-white/10 bg-[#111111] py-14 sm:py-20">
             <div class="mx-auto max-w-3xl px-4 lg:px-8">
                 <h2 class="text-center text-2xl font-bold text-white sm:text-3xl">যা জানতে চান</h2>
@@ -390,12 +437,14 @@ const toggleFaq = (i) => {
                     >
                         {{ merchantLoginText }}
                     </Link>
-                    <Link
-                        :href="primaryCtaUrlValue"
-                        class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-8 py-3.5 text-sm font-bold text-black shadow-xl shadow-amber-900/50 hover:bg-amber-400"
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-8 py-3.5 text-sm font-bold text-black shadow-xl shadow-amber-900/50 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        :disabled="hasPendingInquiry"
+                        @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0])"
                     >
-                        {{ primaryCtaLabelValue }}
-                    </Link>
+                        {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : primaryCtaLabelValue }}
+                    </button>
                 </div>
             </div>
             </section>
@@ -403,12 +452,27 @@ const toggleFaq = (i) => {
 
         <!-- Mobile sticky CTA -->
         <div class="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0a0a]/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md md:hidden">
-            <Link
-                :href="primaryCtaUrlValue"
-                class="flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 py-3 text-sm font-bold text-black"
+            <button
+                type="button"
+                class="flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="hasPendingInquiry"
+                @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0])"
             >
-                {{ primaryCtaLabelValue }}
-            </Link>
+                {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : primaryCtaLabelValue }}
+            </button>
         </div>
+
+        <SubscriptionWizard
+            v-model:visible="showWizard"
+            :plan="selectedPlan"
+            :plans="plans"
+            :domains="domains"
+            :payment-methods="subscriptionPaymentMethods"
+            :subscription-wizard="subscriptionWizard"
+            :whatsapp-support-url="whatsappSupportUrl || whatsappUrl"
+            :whatsapp-display-phone="whatsappDisplayPhone"
+            :can-login="canLogin"
+            :pending-inquiry="pendingSubscriptionInquiry"
+        />
     </MarketingLayout>
 </template>

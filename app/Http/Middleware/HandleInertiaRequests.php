@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\WhatsappLink;
+use App\Services\LandingSettingsService;
 use App\Services\MerchantPortalContext;
 use App\Services\RbacService;
 use App\Services\SubscriptionPaymentConfigService;
@@ -36,6 +37,7 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $rbac = app(RbacService::class);
         $portal = app(MerchantPortalContext::class);
+        $landingSettings = app(LandingSettingsService::class);
 
         $accessArea = match (true) {
             $user?->role === 'admin' => 'admin',
@@ -73,17 +75,24 @@ class HandleInertiaRequests extends Middleware
             ],
             'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
             'marketing' => [
-                'helpline' => config('landing.helpline_phone'),
+                'helpline' => $landingSettings->adminPhone(),
+                'admin_email' => $landingSettings->adminEmail(),
+                'admin_whatsapp' => $landingSettings->adminWhatsapp(),
                 'location' => config('landing.location'),
                 'footer_tagline' => config('landing.footer_tagline'),
                 'footer_tagline_en' => config('landing.footer_tagline_en'),
                 'trust_badges' => config('landing.trust_badges', []),
                 'announcement' => config('landing.announcement', []),
-                'whatsapp_url' => WhatsappLink::url(config('landing.whatsapp_phone')),
+                'whatsapp_url' => WhatsappLink::url($landingSettings->adminWhatsapp()),
                 'whatsapp_contact_url' => WhatsappLink::url(
-                    config('landing.whatsapp_phone'),
+                    $landingSettings->adminWhatsapp(),
                     config('landing.whatsapp_default_message'),
                 ),
+                'payment_numbers' => [
+                    'bkash' => $landingSettings->bkashNumber(),
+                    'rocket' => $landingSettings->rocketNumber(),
+                    'nagad' => $landingSettings->nagadNumber(),
+                ],
             ],
         ];
     }

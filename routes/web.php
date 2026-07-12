@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\CustomerNoticeController;
+use App\Http\Controllers\Admin\LandingSettingsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DatabaseMigrationController;
 use App\Http\Controllers\Admin\DeveloperController;
@@ -59,12 +60,45 @@ Route::get('/storage/{path}', [PublicStorageController::class, 'show'])
     ->name('public-storage.show');
 
 Route::get('/', function () {
+    $landingSettings = app(\App\Services\LandingSettingsService::class);
     $landing = app(\App\Services\LandingPageService::class)->payload(request());
+    $whatsapp = $landingSettings->adminWhatsapp();
+    $subscriptionService = app(\App\Services\PublicSubscriptionService::class);
+    $pendingInquiry = $subscriptionService->resolvePendingForVisitor(
+        request()->user(),
+        request()->session()->get(\App\Services\PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY),
+    );
+
+    if (! $pendingInquiry) {
+        request()->session()->forget(\App\Services\PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY);
+    }
 
     return Inertia::render('Welcome3', array_merge($landing, [
         'canLogin' => Route::has('merchant.login'),
         'canRegister' => Route::has('register'),
+        'domains' => [],
+        'subscriptionWizard' => config('landing.subscription_wizard', []),
+        'subscriptionPaymentMethods' => app(\App\Services\SubscriptionPaymentConfigService::class)->forApi(),
+        'whatsappSupportUrl' => \App\Support\WhatsappLink::url(
+            $whatsapp,
+            'সালাম, WooEasyLife সাবস্ক্রিপশন নিতে সাহায্য চাই।',
+        ),
+        'whatsappDisplayPhone' => $landing['whatsappDisplayPhone'] ?? $whatsapp,
+        'pendingSubscriptionInquiry' => $pendingInquiry,
     ]));
+});
+
+Route::prefix('public/download-gate')->name('landing.download-gate.')->group(function () {
+    Route::post('/send-otp', [\App\Http\Controllers\PublicDownloadGateController::class, 'sendOtp'])
+        ->middleware('throttle:8,1')
+        ->name('send-otp');
+    Route::post('/verify-otp', [\App\Http\Controllers\PublicDownloadGateController::class, 'verifyOtp'])
+        ->middleware('throttle:20,1')
+        ->name('verify-otp');
+    Route::get('/download/{asset}', [\App\Http\Controllers\PublicDownloadGateController::class, 'download'])
+        ->where('asset', 'apk|plugin')
+        ->middleware('throttle:30,1')
+        ->name('download');
 });
 
 Route::prefix('public/fraud-check')->name('landing.fraud-check.')->group(function () {
@@ -360,6 +394,15 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/', [CustomerNoticeController::class, 'store'])->name('store');
         Route::put('/{customerNotice}', [CustomerNoticeController::class, 'update'])->name('update');
         Route::delete('/{customerNotice}', [CustomerNoticeController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::group([
+        'as' => 'landingSettings.',
+        'prefix' => 'landing-settings',
+        'middleware' => 'permission:billing.manage',
+    ], function () {
+        Route::get('/', [LandingSettingsController::class, 'index'])->name('index');
+        Route::put('/', [LandingSettingsController::class, 'update'])->name('update');
     });
 
     // Obfuscated path kept for bookmarks; auth + platform.admin are required.

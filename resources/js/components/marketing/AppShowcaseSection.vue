@@ -5,6 +5,7 @@ const props = defineProps({
     appShowcase: { type: Object, default: () => ({}) },
     appDownloadUrl: { type: String, default: null },
     playStoreUrl: { type: String, default: null },
+    pluginDownloadUrl: { type: String, default: null },
 });
 
 const ROTATE_MS = 3500;
@@ -178,24 +179,16 @@ const onPointerLeave = () => {
                         </div>
                     </div>
 
-                    <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <div class="mt-6">
                         <a
-                            v-if="appDownloadUrl"
-                            :href="appDownloadUrl"
+                            href="#downloads"
                             class="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-amber-400"
-                            download
                         >
-                            APK ডাউনলোড
+                            অ্যাপ ও প্লাগইন ডাউনলোড →
                         </a>
-                        <a
-                            v-if="playStoreUrl"
-                            :href="playStoreUrl"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                        >
-                            Google Play
-                        </a>
+                        <p class="mt-2 text-xs text-slate-500">
+                            ডাউনলোডের আগে নাম ও ফোন OTP যাচাই লাগবে।
+                        </p>
                     </div>
                 </div>
 

@@ -4,12 +4,31 @@ namespace App\Services;
 
 class SubscriptionPaymentConfigService
 {
+    public function __construct(
+        private LandingSettingsService $landingSettings,
+    ) {}
+
     /**
      * @return array<int, array<string, mixed>>
      */
     public function methods(): array
     {
+        $accounts = [
+            'bKash' => $this->landingSettings->bkashNumber(),
+            'Rocket' => $this->landingSettings->rocketNumber(),
+            'Nagad' => $this->landingSettings->nagadNumber(),
+        ];
+
         return collect(config('subscription_payments.methods', []))
+            ->map(function (array $method) use ($accounts) {
+                $partner = (string) ($method['payment_partner'] ?? '');
+
+                if ($partner !== '' && filled($accounts[$partner] ?? null)) {
+                    $method['account'] = $accounts[$partner];
+                }
+
+                return $method;
+            })
             ->filter(fn (array $method) => ! empty($method['payment_partner']) && ! empty($method['account']))
             ->values()
             ->all();

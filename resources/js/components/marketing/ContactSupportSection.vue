@@ -14,10 +14,13 @@ const page = usePage();
 const contactUrl = computed(
     () => props.whatsappContactUrl || page.props.marketing?.whatsapp_contact_url || null,
 );
+
+const adminEmail = computed(() => page.props.marketing?.admin_email || null);
+const helpline = computed(() => page.props.marketing?.helpline || null);
 </script>
 
 <template>
-    <section v-if="contactUrl" class="px-4 py-10 sm:py-14">
+    <section v-if="contactUrl || adminEmail || helpline" class="px-4 py-10 sm:py-14">
         <div class="mx-auto max-w-4xl">
             <div
                 class="flex flex-col items-center justify-between gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md sm:flex-row sm:gap-8 sm:p-8"
@@ -32,9 +35,29 @@ const contactUrl = computed(
                         </svg>
                         প্রতিটি ফিচারের পেজেই বিল্ট-ইন ভিডিও টিউটোরিয়াল — আটকে গেলে সাথে সাথেই সমাধান
                     </p>
+                    <div
+                        v-if="helpline || adminEmail"
+                        class="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-slate-400 sm:justify-start sm:text-sm"
+                    >
+                        <a
+                            v-if="helpline"
+                            :href="`tel:${helpline}`"
+                            class="transition hover:text-white"
+                        >
+                            {{ helpline }}
+                        </a>
+                        <a
+                            v-if="adminEmail"
+                            :href="`mailto:${adminEmail}`"
+                            class="transition hover:text-white"
+                        >
+                            {{ adminEmail }}
+                        </a>
+                    </div>
                 </div>
 
                 <a
+                    v-if="contactUrl"
                     :href="contactUrl"
                     target="_blank"
                     rel="noopener noreferrer"

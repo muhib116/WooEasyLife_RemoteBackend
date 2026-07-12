@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Website;
 use App\Services\LandingPageService;
+use App\Services\LandingSettingsService;
 use App\Services\MerchantPortalContext;
+use App\Services\PublicSubscriptionService;
 use App\Services\RbacService;
 use App\Services\SubscriptionPaymentConfigService;
 use App\Services\WebsiteAggregatorService;
@@ -22,7 +24,8 @@ class PricingController extends Controller
         LandingPageService $landing,
         MerchantPortalContext $portalContext,
         WebsiteAggregatorService $websiteAggregator,
-        RbacService $rbac
+        RbacService $rbac,
+        PublicSubscriptionService $subscriptionService,
     ) {
         $user = $request->user();
         $domains = [];
@@ -36,7 +39,18 @@ class PricingController extends Controller
             $canPurchase = $rbac->hasPermission($user, 'billing.manage');
         }
 
-        return Inertia::render('Pricing/Index', array_merge($landing->payload(), [
+        $payload = $landing->payload();
+        $whatsapp = app(LandingSettingsService::class)->adminWhatsapp();
+        $pendingInquiry = $subscriptionService->resolvePendingForVisitor(
+            $user,
+            $request->session()->get(PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY),
+        );
+
+        if (! $pendingInquiry) {
+            $request->session()->forget(PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY);
+        }
+
+        return Inertia::render('Pricing/Index', array_merge($payload, [
             'canLogin' => Route::has('merchant.login'),
             'domains' => $domains,
             'canPurchase' => $canPurchase,
@@ -44,10 +58,11 @@ class PricingController extends Controller
             'paymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
             'subscriptionWizard' => config('landing.subscription_wizard', []),
             'whatsappSupportUrl' => WhatsappLink::url(
-                config('landing.whatsapp_phone'),
+                $whatsapp,
                 'সালাম, WooEasyLife সাবস্ক্রিপশন নিতে সাহায্য চাই।',
             ),
-            'whatsappDisplayPhone' => '01770989591',
+            'whatsappDisplayPhone' => $payload['whatsappDisplayPhone'] ?? $whatsapp,
+            'pendingSubscriptionInquiry' => $pendingInquiry,
         ]));
     }
 

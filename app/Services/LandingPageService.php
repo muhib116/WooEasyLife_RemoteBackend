@@ -15,6 +15,7 @@ class LandingPageService
     public function __construct(
         protected PackagePlanResolver $planResolver,
         protected PublicFraudCheckService $publicFraudCheckService,
+        protected LandingSettingsService $landingSettings,
     ) {
     }
 
@@ -36,7 +37,7 @@ class LandingPageService
             ? $this->planResolver->toPlanPayload($featured)
             : ($planPayloads[0] ?? null);
 
-        $whatsappPhone = config('landing.whatsapp_phone');
+        $whatsappPhone = $this->landingSettings->adminWhatsapp();
 
         return [
             'plans' => $this->planResolver->mapPlansForDisplay($plans),
@@ -78,11 +79,35 @@ class LandingPageService
                 $whatsappPhone,
                 config('landing.whatsapp_default_message'),
             ),
-            'appDownloadUrl' => env('WOOEASYLIFE_ANDROID_DOWNLOAD_URL'),
-            'playStoreUrl' => env('WOOEASYLIFE_PLAY_STORE_URL'),
+            'whatsappDisplayPhone' => $this->displayPhone($whatsappPhone),
+            'adminEmail' => $this->landingSettings->adminEmail(),
+            'adminPhone' => $this->landingSettings->adminPhone(),
+            'paymentNumbers' => [
+                'bkash' => $this->landingSettings->bkashNumber(),
+                'rocket' => $this->landingSettings->rocketNumber(),
+                'nagad' => $this->landingSettings->nagadNumber(),
+            ],
+            'appDownloadUrl' => $this->landingSettings->appDownloadUrl(),
+            'playStoreUrl' => $this->landingSettings->playStoreUrl(),
+            'pluginDownloadUrl' => $this->landingSettings->pluginDownloadUrl(),
             'fraudCheck' => $this->publicFraudCheckService->meta($request?->ip()),
             'fraudBenefitCards' => config('landing.fraud_benefit_cards', []),
         ];
+    }
+
+    private function displayPhone(?string $phone): ?string
+    {
+        if (! filled($phone)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+        if (strlen($digits) === 13 && str_starts_with($digits, '880')) {
+            return '0'.substr($digits, 2);
+        }
+
+        return $phone;
     }
 
     private function resolveFeaturedPlan($plans): ?PackageHub

@@ -10,10 +10,13 @@ use Illuminate\Validation\ValidationException;
 
 class PublicSubscriptionService
 {
+    public const SESSION_PENDING_INQUIRY_KEY = 'pending_subscription_inquiry_id';
+
     public function __construct(
         protected DomainNormalizer $domainNormalizer,
         protected PackagePaymentService $packagePaymentService,
         protected PackagePlanResolver $planResolver,
+        protected DomainAvailabilityService $domainAvailability,
     ) {
     }
 
@@ -27,6 +30,16 @@ class PublicSubscriptionService
         if (! $domain) {
             throw ValidationException::withMessages([
                 'website_url' => 'সঠিক ওয়েবসাইট URL বা ডোমেইন লিখুন (যেমন: myshop.com)।',
+            ]);
+        }
+
+        $this->assertDomainAvailableForPublicSubscribe($user, $domain);
+
+        $duplicate = $this->findOpenDuplicate($user, $domain, $data);
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'subscription' => $this->duplicateMessage($duplicate),
+                'website_url' => $this->duplicateMessage($duplicate),
             ]);
         }
 
@@ -98,7 +111,7 @@ class PublicSubscriptionService
                 'transaction_id' => $data['transaction_id'] ?? null,
                 'account_number' => $data['account_number'] ?? null,
                 'note' => $note,
-                'status' => 'pending',
+                'status' => SubscriptionInquiry::STATUS_PENDING,
                 'source' => 'landing_pricing',
                 'package_payment_request_id' => $paymentRequestId,
             ]);
@@ -108,6 +121,174 @@ class PublicSubscriptionService
                 'payment_request_id' => $paymentRequestId,
             ];
         });
+    }
+
+    /**
+     * Pending/in-progress inquiry for the current visitor (session and/or auth).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function resolvePendingForVisitor(?User $user, ?int $sessionInquiryId = null): ?array
+    {
+        $inquiry = null;
+
+        if ($sessionInquiryId) {
+            $inquiry = SubscriptionInquiry::query()
+                ->open()
+                ->whereKey($sessionInquiryId)
+                ->with('packageHub:id,title')
+                ->first();
+        }
+
+        if (! $inquiry && $user) {
+            $inquiry = SubscriptionInquiry::query()
+                ->open()
+                ->where(function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+
+                    if (filled($user->email)) {
+                        $query->orWhereRaw('LOWER(email) = ?', [strtolower((string) $user->email)]);
+                    }
+                })
+                ->with('packageHub:id,title')
+                ->latest('id')
+                ->first();
+        }
+
+        return $inquiry ? $this->serializePending($inquiry) : null;
+    }
+
+    /**
+     * Reject domains already registered to another merchant
+     * (websites, packages, license tokens, businesses, SMS balances).
+     */
+    public function assertDomainAvailableForPublicSubscribe(?User $user, string $domain): void
+    {
+        $normalized = $this->domainAvailability->normalize($domain);
+        if (! $normalized) {
+            throw ValidationException::withMessages([
+                'website_url' => 'সঠিক ওয়েবসাইট URL বা ডোমেইন লিখুন (যেমন: myshop.com)।',
+            ]);
+        }
+
+        if (! $this->domainAvailability->isEnforcementEnabled()) {
+            return;
+        }
+
+        $ownerId = $this->domainAvailability->findOwnerUserId($normalized);
+
+        if ($ownerId === null) {
+            return;
+        }
+
+        if ($user && (int) $user->id === (int) $ownerId) {
+            return;
+        }
+
+        $message = 'এই ডোমেইন ইতিমধ্যে WooEasyLife-এ অন্য মার্চেন্টের অধীনে নিবন্ধিত। প্রয়োজনে সাপোর্টে যোগাযোগ করুন।';
+
+        throw ValidationException::withMessages([
+            'website_url' => $message,
+            'subscription' => $message,
+        ]);
+    }
+
+    /**
+     * Duplicate = same domain AND (same email OR same phone) in open inquiries.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function findOpenDuplicate(?User $user, string $domain, array $data): ?SubscriptionInquiry
+    {
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        $phones = array_values(array_unique(array_filter([
+            $this->normalizePhone($data['contact_number'] ?? null),
+            $this->normalizePhone($data['whatsapp_number'] ?? null),
+        ])));
+
+        if ($email === '' && $phones === []) {
+            return null;
+        }
+
+        $candidates = SubscriptionInquiry::query()
+            ->open()
+            ->where('domain', $domain)
+            ->with('packageHub:id,title')
+            ->latest('id')
+            ->limit(50)
+            ->get();
+
+        return $candidates->first(function (SubscriptionInquiry $inquiry) use ($email, $phones) {
+            if ($email !== '' && strtolower((string) $inquiry->email) === $email) {
+                return true;
+            }
+
+            if ($phones === []) {
+                return false;
+            }
+
+            $storedPhones = array_filter([
+                $this->normalizePhone($inquiry->contact_number),
+                $this->normalizePhone($inquiry->whatsapp_number),
+            ]);
+
+            return count(array_intersect($phones, $storedPhones)) > 0;
+        });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function serializePending(SubscriptionInquiry $inquiry): array
+    {
+        $statusLabel = match ($inquiry->status) {
+            SubscriptionInquiry::STATUS_CONTACTED => 'যোগাযোগ চলছে',
+            default => 'যাচাইয়ের অপেক্ষায়',
+        };
+
+        return [
+            'id' => $inquiry->id,
+            'status' => $inquiry->status,
+            'status_label' => $statusLabel,
+            'domain' => $inquiry->domain,
+            'plan_title' => $inquiry->packageHub?->title,
+            'email' => $inquiry->email,
+            'created_at' => optional($inquiry->created_at)?->toIso8601String(),
+            'message' => $this->duplicateMessage($inquiry),
+        ];
+    }
+
+    public function duplicateMessage(SubscriptionInquiry $inquiry): string
+    {
+        $plan = $inquiry->packageHub?->title;
+        $domain = $inquiry->domain;
+
+        if ($plan && $domain) {
+            return "আপনার «{$plan}» অনুরোধ ({$domain}) এখনও প্রক্রিয়াধীন। অনুমোদন না হওয়া পর্যন্ত নতুন সাবস্ক্রিপশন অনুরোধ করা যাবে না।";
+        }
+
+        if ($domain) {
+            return "আপনার {$domain} ডোমেইনের সাবস্ক্রিপশন অনুরোধ এখনও প্রক্রিয়াধীন। অনুমোদন না হওয়া পর্যন্ত আবার অনুরোধ করা যাবে না।";
+        }
+
+        return 'আপনার একটি সাবস্ক্রিপশন অনুরোধ এখনও প্রক্রিয়াধীন। অনুমোদন না হওয়া পর্যন্ত নতুন অনুরোধ করা যাবে না।';
+    }
+
+    public function normalizePhone(?string $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $value) ?? '';
+
+        if ($digits === '') {
+            return null;
+        }
+
+        if (str_starts_with($digits, '880') && strlen($digits) === 13) {
+            $digits = '0'.substr($digits, 3);
+        } elseif (str_starts_with($digits, '88') && strlen($digits) === 12) {
+            $digits = '0'.substr($digits, 2);
+        }
+
+        return $digits !== '' ? $digits : null;
     }
 
     /**

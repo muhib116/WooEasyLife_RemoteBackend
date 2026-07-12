@@ -60,5 +60,18 @@ return [
                 'Confirmation SMS থেকে Transaction ID কপি করে ফর্মে লিখুন।',
             ],
         ],
+        [
+            'payment_partner' => 'Nagad',
+            'account' => env('LANDING_NAGAD_NUMBER', env('SUBSCRIPTION_PAYMENT_NAGAD', '01770989591')),
+            'note' => 'Nagad "Send Money" ফি সাবস্ক্রিপশনের পরিমাণের সাথে যোগ হবে।',
+            'steps' => [
+                'Nagad অ্যাপ খুলুন অথবা *167# ডায়াল করুন।',
+                '"Send Money" বেছে নিন।',
+                'নিচে দেখানো Nagad নম্বরে টাকা পাঠান।',
+                'প্ল্যানের মোট মূল্য (ফি সহ) লিখুন।',
+                'Nagad PIN দিয়ে নিশ্চিত করুন।',
+                'Confirmation SMS থেকে Transaction ID কপি করে ফর্মে লিখুন।',
+            ],
+        ],
     ],
 ];

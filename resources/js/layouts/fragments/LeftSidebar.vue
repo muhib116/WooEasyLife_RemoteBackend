@@ -297,6 +297,12 @@ const allSections: NavSection[] = [
                         icon: "PhMegaphone",
                         permission: "billing.manage",
                     },
+                    {
+                        title: "Landing Settings",
+                        name: "landingSettings.index",
+                        icon: "PhDeviceMobile",
+                        permission: "billing.manage",
+                    },
                 ],
             },
             {
@@ -410,7 +416,8 @@ const expandedGroups = reactive<Record<string, boolean>>({
         route().current("packages.*")
             || route().current("orders.*")
             || route().current("packagePayments.*")
-            || route().current("customerNotices.*"),
+            || route().current("customerNotices.*")
+            || route().current("landingSettings.*"),
     ),
 });
 

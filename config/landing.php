@@ -10,6 +10,14 @@ return [
 
     'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE', '8801770989591')),
 
+    'admin_email' => env('LANDING_ADMIN_EMAIL', env('MAIL_FROM_ADDRESS')),
+
+    'bkash_number' => env('LANDING_BKASH_NUMBER', env('SUBSCRIPTION_PAYMENT_BKASH', '01770989591')),
+
+    'rocket_number' => env('LANDING_ROCKET_NUMBER', env('SUBSCRIPTION_PAYMENT_ROCKET', '01770989591')),
+
+    'nagad_number' => env('LANDING_NAGAD_NUMBER', '01770989591'),
+
     'subscription_wizard' => [
         'title' => 'সাবস্ক্রিপশন কিনুন',
         'support_hint' => 'কোনো ধাপ বুঝতে সমস্যা? WhatsApp-এ সরাসরি সাহায্য নিন।',

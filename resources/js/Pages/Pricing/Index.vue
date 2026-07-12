@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
 import SubscriptionWizard from '@/components/marketing/SubscriptionWizard.vue';
+import PendingSubscriptionBanner from '@/components/marketing/PendingSubscriptionBanner.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 
@@ -20,6 +21,7 @@ const props = defineProps({
     subscriptionWizard: { type: Object, default: () => ({}) },
     whatsappSupportUrl: { type: String, default: null },
     whatsappDisplayPhone: { type: String, default: '01770989591' },
+    pendingSubscriptionInquiry: { type: Object, default: null },
 });
 
 const page = usePage();
@@ -29,6 +31,7 @@ const selectedPlan = ref(null);
 
 const authUser = computed(() => page.props.auth?.user ?? null);
 const hasPortal = computed(() => Boolean(page.props.auth?.portal));
+const hasPendingInquiry = computed(() => Boolean(props.pendingSubscriptionInquiry?.id));
 
 const displayPlans = computed(() => {
     const trial = props.plans.filter((plan) => plan.package_duration === 'free_trial');
@@ -50,6 +53,10 @@ const planBadgeClass = (plan) => {
 };
 
 const purchaseLabel = (plan) => {
+    if (hasPendingInquiry.value) {
+        return 'অনুরোধ প্রক্রিয়াধীন';
+    }
+
     if (isFreeTrial(plan)) {
         return 'ফ্রি ট্রায়াল শুরু করুন';
     }
@@ -58,6 +65,10 @@ const purchaseLabel = (plan) => {
 };
 
 const openPurchase = (plan) => {
+    if (!plan || hasPendingInquiry.value) {
+        return;
+    }
+
     selectedPlan.value = plan;
     showWizard.value = true;
 };
@@ -78,7 +89,7 @@ watch(
 );
 
 onMounted(() => {
-    if (!props.preselectedPlanId) {
+    if (hasPendingInquiry.value || !props.preselectedPlanId) {
         return;
     }
 
@@ -106,11 +117,17 @@ onMounted(() => {
                     লগইন ছাড়াই সাবস্ক্রিপশন অনুরোধ করতে পারবেন — প্ল্যান বেছে নিয়ে ফর্ম পূরণ করুন।
                 </p>
                 <p
-                    v-if="authUser && canPurchase"
+                    v-if="authUser && canPurchase && !hasPendingInquiry"
                     class="mt-4 text-sm font-medium text-emerald-400"
                 >
                     আপনি লগইন আছেন — পছন্দের প্ল্যানে «এখনই সাবস্ক্রাইব করুন» ক্লিক করুন।
                 </p>
+                <div v-if="pendingSubscriptionInquiry" class="mx-auto mt-8 max-w-3xl text-left">
+                    <PendingSubscriptionBanner
+                        :inquiry="pendingSubscriptionInquiry"
+                        :whatsapp-url="whatsappSupportUrl || whatsappUrl"
+                    />
+                </div>
             </div>
         </section>
 
@@ -120,10 +137,13 @@ onMounted(() => {
                     <article
                         v-for="plan in displayPlans"
                         :key="plan.id"
-                        class="relative flex flex-col rounded-2xl border p-6 transition hover:-translate-y-0.5"
-                        :class="plan.is_special
-                            ? 'border-amber-400/50 bg-amber-500/10 shadow-xl shadow-amber-900/30'
-                            : 'border-white/10 bg-white/5'"
+                        class="relative flex flex-col rounded-2xl border p-6 transition"
+                        :class="[
+                            plan.is_special
+                                ? 'border-amber-400/50 bg-amber-500/10 shadow-xl shadow-amber-900/30'
+                                : 'border-white/10 bg-white/5',
+                            hasPendingInquiry ? 'opacity-70' : 'hover:-translate-y-0.5',
+                        ]"
                     >
                         <span
                             v-if="planBadge(plan)"
@@ -146,10 +166,11 @@ onMounted(() => {
 
                         <button
                             type="button"
-                            class="mt-6 w-full rounded-xl py-3 text-sm font-bold transition"
+                            class="mt-6 w-full rounded-xl py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60"
                             :class="plan.is_special
                                 ? 'bg-amber-500 text-black hover:bg-amber-400'
                                 : 'border border-white/15 text-white hover:bg-white/10'"
+                            :disabled="hasPendingInquiry"
                             @click="openPurchase(plan)"
                         >
                             {{ purchaseLabel(plan) }}
@@ -234,6 +255,7 @@ onMounted(() => {
             :whatsapp-support-url="whatsappSupportUrl || whatsappUrl"
             :whatsapp-display-phone="whatsappDisplayPhone"
             :can-login="canLogin"
+            :pending-inquiry="pendingSubscriptionInquiry"
         />
 
         <Toast />
