@@ -82,6 +82,42 @@ class MarketingSeoController extends Controller
         );
     }
 
+    public function courierIntent(
+        Request $request,
+        string $courier,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        $map = [
+            'pathao' => ['name' => 'Pathao', 'seo' => 'pathao_fraud_check'],
+            'steadfast' => ['name' => 'Steadfast', 'seo' => 'steadfast_fraud_check'],
+            'redx' => ['name' => 'RedX', 'seo' => 'redx_fraud_check'],
+        ];
+
+        $key = strtolower($courier);
+        if (! isset($map[$key])) {
+            abort(404);
+        }
+
+        $payload = $landing->payload($request);
+        $whatsapp = $landingSettings->adminWhatsapp();
+        $seoMeta = $seo->forPage($map[$key]['seo']);
+
+        return Inertia::render('Seo/CourierIntent', [
+            'courierName' => $map[$key]['name'],
+            'canLogin' => Route::has('merchant.login'),
+            'seo' => $seoMeta,
+            'fraudCheck' => $payload['fraudCheck'] ?? [],
+            'whatsappUrl' => $payload['whatsappUrl'] ?? null,
+            'whatsappContactUrl' => WhatsappLink::url(
+                $whatsapp,
+                config('landing.whatsapp_default_message'),
+            ),
+            'faqs' => $seoMeta['faqs'] ?? [],
+        ])->withViewData(['seo' => $seoMeta]);
+    }
+
     private function renderSeoPage(
         Request $request,
         LandingPageService $landing,

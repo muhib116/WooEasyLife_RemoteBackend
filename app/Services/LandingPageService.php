@@ -111,6 +111,7 @@ class LandingPageService
             'pluginDownloadUrl' => $this->landingSettings->pluginDownloadUrl(),
             'fraudCheck' => $this->publicFraudCheckService->meta($request?->ip()),
             'fraudBenefitCards' => config('landing.fraud_benefit_cards', []),
+            'caseStudies' => config('landing.case_studies', []),
         ];
     }
 

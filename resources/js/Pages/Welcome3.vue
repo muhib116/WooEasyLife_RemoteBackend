@@ -17,6 +17,7 @@ import IntegrationsSection from '@/components/marketing/IntegrationsSection.vue'
 import ContactSupportSection from '@/components/marketing/ContactSupportSection.vue';
 import EnterpriseCtaSection from '@/components/marketing/EnterpriseCtaSection.vue';
 import FraudBenefitGrid from '@/components/marketing/FraudBenefitGrid.vue';
+import CaseStudiesSection from '@/components/marketing/CaseStudiesSection.vue';
 import ScrollReveal from '@/components/marketing/ScrollReveal.vue';
 import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
 import SubscriptionWizard from '@/components/marketing/SubscriptionWizard.vue';
@@ -37,6 +38,7 @@ const props = defineProps({
     appShowcase: { type: Object, default: () => ({}) },
     featureShowcases: { type: Array, default: () => [] },
     fraudBenefitCards: { type: Object, default: () => ({}) },
+    caseStudies: { type: Object, default: () => ({}) },
     stats: { type: Array, default: () => [] },
     courierPerformance: { type: Object, default: () => ({}) },
     lossComparison: { type: Object, default: () => ({}) },
@@ -271,6 +273,11 @@ const toggleFaq = (i) => {
         <!-- 4. What you get from fraud check -->
         <ScrollReveal :delay="80">
             <FraudBenefitGrid :section="fraudBenefitCards" />
+        </ScrollReveal>
+
+        <!-- 4b. Case studies — anonymized merchant savings -->
+        <ScrollReveal :delay="70">
+            <CaseStudiesSection :section="caseStudies" />
         </ScrollReveal>
 
         <!-- 5. ROI calculator — money-first for BD merchants -->

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\App\LegalController;
+use App\Http\Controllers\App\BlogController;
+use App\Http\Controllers\App\EnglishMarketingController;
 use App\Http\Controllers\App\MarketingSeoController;
 use App\Http\Controllers\App\PublicSubscriptionController;
 use App\Http\Controllers\App\PricingController;
@@ -105,6 +107,27 @@ Route::get('/courier-auto-entry', [MarketingSeoController::class, 'courierAutoEn
     ->name('seo.courier-auto-entry');
 Route::get('/fraudbd-alternative', [MarketingSeoController::class, 'fraudBdAlternative'])
     ->name('seo.fraudbd-alternative');
+Route::get('/pathao-fraud-check', [MarketingSeoController::class, 'courierIntent'])
+    ->defaults('courier', 'pathao')
+    ->name('seo.pathao-fraud-check');
+Route::get('/steadfast-fraud-check', [MarketingSeoController::class, 'courierIntent'])
+    ->defaults('courier', 'steadfast')
+    ->name('seo.steadfast-fraud-check');
+Route::get('/redx-fraud-check', [MarketingSeoController::class, 'courierIntent'])
+    ->defaults('courier', 'redx')
+    ->name('seo.redx-fraud-check');
+
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])
+    ->where('slug', '[a-z0-9\-]+')
+    ->name('blog.show');
+
+Route::prefix('en')->name('seo.en.')->group(function () {
+    Route::get('/', [EnglishMarketingController::class, 'home'])->name('home');
+    Route::get('/bd-fraud-checker', [EnglishMarketingController::class, 'bdFraudChecker'])
+        ->name('bd-fraud-checker');
+    Route::get('/blog', [EnglishMarketingController::class, 'blogIndex'])->name('blog');
+});
 
 Route::prefix('public/download-gate')->name('landing.download-gate.')->group(function () {
     Route::post('/send-otp', [\App\Http\Controllers\PublicDownloadGateController::class, 'sendOtp'])

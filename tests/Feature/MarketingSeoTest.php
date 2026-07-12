@@ -96,7 +96,7 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('id="seo-prerender"', false);
         $response->assertSee('<h1>', false);
         $response->assertSee('lang="bn-BD"', false);
-        $response->assertSee('/images/seo/og-default.png', false);
+        $response->assertSee('/images/seo/og-default.jpg', false);
         $response->assertSee('<noscript>', false);
     }
 
@@ -119,6 +119,35 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('noindex', false);
     }
 
+    public function test_blog_and_courier_intent_pages(): void
+    {
+        $this->get('/blog')->assertOk();
+        $this->get('/blog/fake-order-komano')->assertOk();
+        $this->get('/pathao-fraud-check')->assertOk();
+        $this->get('/steadfast-fraud-check')->assertOk();
+        $this->get('/redx-fraud-check')->assertOk();
+    }
+
+    public function test_english_hreflang_pages(): void
+    {
+        $home = $this->get('/en');
+        $home->assertOk();
+        $home->assertSee('hreflang="en"', false);
+        $home->assertSee('hreflang="bn-BD"', false);
+
+        $this->get('/en/bd-fraud-checker')->assertOk();
+        $this->get('/en/blog')->assertOk();
+    }
+
+    public function test_og_image_is_compressed_jpg(): void
+    {
+        $response = $this->get('/');
+        $response->assertOk();
+        $response->assertSee('/images/seo/og-default.jpg', false);
+        $this->assertFileExists(public_path('images/seo/og-default.jpg'));
+        $this->assertFileExists(public_path('images/seo/og-default.webp'));
+    }
+
     public function test_sitemap_lists_marketing_urls(): void
     {
         $response = $this->get('/sitemap.xml');
@@ -129,6 +158,9 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/fake-order-protection', false);
         $response->assertSee('/courier-auto-entry', false);
         $response->assertSee('/fraudbd-alternative', false);
+        $response->assertSee('/pathao-fraud-check', false);
+        $response->assertSee('/blog', false);
+        $response->assertSee('/en/bd-fraud-checker', false);
         $response->assertSee('/pricing', false);
     }
 

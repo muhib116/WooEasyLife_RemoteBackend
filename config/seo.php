@@ -3,12 +3,17 @@
 return [
     'site_name' => 'WooEasyLife',
 
-    'default_og_image' => '/images/seo/og-default.png',
+    'default_og_image' => '/images/seo/og-default.jpg',
 
-    'og_image_width' => 1024,
-    'og_image_height' => 535,
+    'og_image_width' => 1200,
+    'og_image_height' => 630,
 
     'html_lang' => 'bn-BD',
+
+    'gsc' => [
+        'site_url' => env('SEO_GSC_SITE_URL'), // e.g. https://app.wpsalehub.com/
+        'access_token' => env('SEO_GSC_ACCESS_TOKEN'),
+    ],
 
     'organization' => [
         'name' => 'WooEasyLife',
@@ -28,6 +33,11 @@ return [
             'canonical_path' => '/',
             'prerender_h1' => 'WooEasyLife — BD Fraud Checker ও ফ্রড চেকার',
             'prerender_lead' => 'বাংলাদেশি WooCommerce সেলারদের জন্য ফ্রি ফ্রড চেকার, ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও হারানো অর্ডার রিকভারি — এক প্ল্যাটফর্মে।',
+            'hreflang_paths' => [
+                'bn-BD' => '/',
+                'en' => '/en',
+                'x-default' => '/',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
             ],
@@ -74,6 +84,11 @@ return [
             'canonical_path' => '/bd-fraud-checker',
             'prerender_h1' => 'BD Fraud Checker — ফ্রি ফ্রড চেকার বাংলাদেশ',
             'prerender_lead' => 'ফোন নম্বর দিয়ে Pathao, Steadfast ও RedX কুরিয়ার হিস্টোরি যাচাই করুন। অর্ডার কনফার্মের আগে ফেক অর্ডারের ঝুঁকি কমান।',
+            'hreflang_paths' => [
+                'bn-BD' => '/bd-fraud-checker',
+                'en' => '/en/bd-fraud-checker',
+                'x-default' => '/bd-fraud-checker',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'BD Fraud Checker', 'path' => '/bd-fraud-checker'],
@@ -175,6 +190,176 @@ return [
                 ],
             ],
         ],
+
+        'pathao_fraud_check' => [
+            'title' => 'Pathao Fraud Check বাংলাদেশ — ফ্রি কুরিয়ার হিস্টোরি | WooEasyLife',
+            'description' => 'Pathao fraud check বাংলাদেশ। ফোন নম্বর দিয়ে Pathao কুরিয়ার ডেলিভারি ও রিটার্ন হিস্টোরি চেক করুন। COD ফেক অর্ডার কমান — ফ্রি BD fraud checker।',
+            'canonical_path' => '/pathao-fraud-check',
+            'prerender_h1' => 'Pathao Fraud Check বাংলাদেশ',
+            'prerender_lead' => 'ফোন নম্বর দিয়ে Pathao কুরিয়ার হিস্টোরি যাচাই করুন। অর্ডার কনফার্মের আগে ফেক অর্ডারের ঝুঁকি কমান।',
+            'breadcrumbs' => [
+                ['name' => 'হোম', 'path' => '/'],
+                ['name' => 'Pathao Fraud Check', 'path' => '/pathao-fraud-check'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'Pathao fraud check কীভাবে কাজ করে?',
+                    'a' => 'কাস্টমারের মোবাইল নম্বর দিলে WooEasyLife Pathao সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখায়।',
+                ],
+                [
+                    'q' => 'শুধু Pathao দেখা যায় নাকি অন্য কুরিয়ারও?',
+                    'a' => 'একই টুলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের রেকর্ড একসাথে দেখা যায়।',
+                ],
+                [
+                    'q' => 'এটি কি ফ্রি?',
+                    'a' => 'হ্যাঁ — অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়।',
+                ],
+            ],
+        ],
+
+        'steadfast_fraud_check' => [
+            'title' => 'Steadfast Fraud Check বাংলাদেশ — ফ্রি কুরিয়ার হিস্টোরি | WooEasyLife',
+            'description' => 'Steadfast fraud check বাংলাদেশ। ফোন নম্বর দিয়ে Steadfast কুরিয়ার ডেলিভারি ও রিটার্ন হিস্টোরি চেক করুন। COD ফেক অর্ডার কমান।',
+            'canonical_path' => '/steadfast-fraud-check',
+            'prerender_h1' => 'Steadfast Fraud Check বাংলাদেশ',
+            'prerender_lead' => 'ফোন নম্বর দিয়ে Steadfast কুরিয়ার হিস্টোরি যাচাই করুন। অর্ডার কনফার্মের আগে ফেক অর্ডারের ঝুঁকি কমান।',
+            'breadcrumbs' => [
+                ['name' => 'হোম', 'path' => '/'],
+                ['name' => 'Steadfast Fraud Check', 'path' => '/steadfast-fraud-check'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'Steadfast fraud check কীভাবে কাজ করে?',
+                    'a' => 'মোবাইল নম্বর ইনপুট করলে Steadfast সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন রেকর্ড দেখা যায়।',
+                ],
+                [
+                    'q' => 'Pathao ও Steadfast দুটোই কি চেক করা যায়?',
+                    'a' => 'হ্যাঁ — একই BD fraud checker টুলে একাধিক কুরিয়ারের হিস্টোরি একসাথে পাবেন।',
+                ],
+                [
+                    'q' => 'ফ্রি কিভাবে চেক করব?',
+                    'a' => 'এই পেজে বা /bd-fraud-checker-এ নম্বর দিয়ে অ্যাকাউন্ট ছাড়াই চেক করুন।',
+                ],
+            ],
+        ],
+
+        'redx_fraud_check' => [
+            'title' => 'RedX Fraud Check বাংলাদেশ — ফ্রি কুরিয়ার হিস্টোরি | WooEasyLife',
+            'description' => 'RedX fraud check বাংলাদেশ। ফোন নম্বর দিয়ে RedX কুরিয়ার ডেলিভারি ও রিটার্ন হিস্টোরি চেক করুন। COD ফেক অর্ডার কমান।',
+            'canonical_path' => '/redx-fraud-check',
+            'prerender_h1' => 'RedX Fraud Check বাংলাদেশ',
+            'prerender_lead' => 'ফোন নম্বর দিয়ে RedX কুরিয়ার হিস্টোরি যাচাই করুন। অর্ডার কনফার্মের আগে ফেক অর্ডারের ঝুঁকি কমান।',
+            'breadcrumbs' => [
+                ['name' => 'হোম', 'path' => '/'],
+                ['name' => 'RedX Fraud Check', 'path' => '/redx-fraud-check'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'RedX fraud check কীভাবে কাজ করে?',
+                    'a' => 'কাস্টমারের ফোন নম্বর দিলে RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখা যায়।',
+                ],
+                [
+                    'q' => 'অন্যান্য কুরিয়ারও কি একসাথে দেখা যায়?',
+                    'a' => 'হ্যাঁ — Pathao, Steadfast ও RedX একই টুলে চেক করা যায়।',
+                ],
+                [
+                    'q' => 'এটি কি ফ্রি?',
+                    'a' => 'হ্যাঁ — ল্যান্ডিং পেজে অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়।',
+                ],
+            ],
+        ],
+
+        'blog_index' => [
+            'title' => 'ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস | WooEasyLife',
+            'description' => 'WooEasyLife ব্লগ — বাংলাদেশি WooCommerce সেলারদের জন্য ফেক অর্ডার কমানো, কুরিয়ার হিস্টোরি চেক ও রিটার্ন লস কমানোর গাইড।',
+            'canonical_path' => '/blog',
+            'prerender_h1' => 'ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস',
+            'prerender_lead' => 'বাংলাদেশি COD সেলারদের জন্য প্র্যাকটিক্যাল গাইড ও টিপস।',
+            'hreflang_paths' => [
+                'bn-BD' => '/blog',
+                'en' => '/en/blog',
+                'x-default' => '/blog',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'হোম', 'path' => '/'],
+                ['name' => 'ব্লগ', 'path' => '/blog'],
+            ],
+            'faqs' => [],
+        ],
+
+        'en_home' => [
+            'title' => 'WooEasyLife — BD Fraud Checker for WooCommerce COD Sellers',
+            'description' => 'Free BD fraud checker for Bangladesh. Verify Pathao, Steadfast, RedX courier history, block fake COD orders, and auto-enter parcels. 14-day free trial.',
+            'canonical_path' => '/en',
+            'html_lang' => 'en',
+            'prerender_h1' => 'WooEasyLife — BD Fraud Checker for WooCommerce',
+            'prerender_lead' => 'Stop fake COD orders, check courier history, and automate Pathao, Steadfast, and RedX entry from one Bangladesh-focused WooCommerce platform.',
+            'hreflang_paths' => [
+                'bn-BD' => '/',
+                'en' => '/en',
+                'x-default' => '/',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'What is a BD fraud checker?',
+                    'a' => 'It checks a customer phone number against courier delivery and return history so you can decide before confirming a COD order.',
+                ],
+                [
+                    'q' => 'Is WooEasyLife only a checker tool?',
+                    'a' => 'No. Besides fraud checks, you get checkout OTP, fake-order blocking, courier auto-entry, missing-order recovery, and a mobile app.',
+                ],
+            ],
+        ],
+
+        'en_bd_fraud_checker' => [
+            'title' => 'BD Fraud Checker — Free Courier History Check | WooEasyLife',
+            'description' => 'Free BD fraud checker. Enter a phone number to review Pathao, Steadfast, and RedX delivery history before confirming COD orders in Bangladesh.',
+            'canonical_path' => '/en/bd-fraud-checker',
+            'html_lang' => 'en',
+            'prerender_h1' => 'BD Fraud Checker — Free Courier History Check',
+            'prerender_lead' => 'Verify customer courier history before you ship. Built for Bangladesh WooCommerce COD merchants.',
+            'hreflang_paths' => [
+                'bn-BD' => '/bd-fraud-checker',
+                'en' => '/en/bd-fraud-checker',
+                'x-default' => '/bd-fraud-checker',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'BD Fraud Checker', 'path' => '/en/bd-fraud-checker'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'How does the free check work?',
+                    'a' => 'Enter the customer mobile number to see supported courier delivery and return records. Limited free daily checks are available without an account.',
+                ],
+                [
+                    'q' => 'Which couriers are supported?',
+                    'a' => 'Pathao, Steadfast, RedX and other couriers supported inside WooEasyLife.',
+                ],
+            ],
+        ],
+
+        'en_blog_index' => [
+            'title' => 'Blog — Fake Orders, Fraud Checks & COD Tips | WooEasyLife',
+            'description' => 'Guides for Bangladesh WooCommerce sellers on fake order prevention, courier history checks, and reducing return losses.',
+            'canonical_path' => '/en/blog',
+            'html_lang' => 'en',
+            'prerender_h1' => 'Blog — COD Fraud & Operations Guides',
+            'prerender_lead' => 'Practical English guides for Bangladesh WooCommerce COD sellers.',
+            'hreflang_paths' => [
+                'bn-BD' => '/blog',
+                'en' => '/en/blog',
+                'x-default' => '/blog',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Blog', 'path' => '/en/blog'],
+            ],
+            'faqs' => [],
+        ],
     ],
 
     'sitemap' => [
@@ -185,6 +370,13 @@ return [
             ['path' => '/fake-order-protection', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/courier-auto-entry', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/fraudbd-alternative', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/pathao-fraud-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/steadfast-fraud-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/redx-fraud-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/blog', 'priority' => '0.8', 'changefreq' => 'weekly'],
+            ['path' => '/en', 'priority' => '0.85', 'changefreq' => 'weekly'],
+            ['path' => '/en/bd-fraud-checker', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/blog', 'priority' => '0.75', 'changefreq' => 'weekly'],
             ['path' => '/wooeasylife/app/privacy-policy', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/app/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],
         ],

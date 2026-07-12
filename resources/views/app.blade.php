@@ -17,6 +17,11 @@
         @if (! empty($seo['canonical']))
             <link rel="canonical" href="{{ $seo['canonical'] }}">
         @endif
+        @foreach (($seo['hreflang'] ?? []) as $alt)
+            @if (! empty($alt['hreflang']) && ! empty($alt['url']))
+                <link rel="alternate" hreflang="{{ $alt['hreflang'] }}" href="{{ $alt['url'] }}">
+            @endif
+        @endforeach
         @if (! empty($seo['title']))
             <meta property="og:title" content="{{ $seo['title'] }}">
             <meta name="twitter:title" content="{{ $seo['title'] }}">
@@ -29,13 +34,14 @@
             <meta property="og:url" content="{{ $seo['canonical'] }}">
         @endif
         <meta property="og:type" content="{{ $seo['og_type'] ?? 'website' }}">
-        <meta property="og:locale" content="bn_BD">
+        <meta property="og:locale" content="{{ str_replace('-', '_', $seo['html_lang'] ?? 'bn_BD') }}">
         <meta property="og:site_name" content="{{ config('seo.site_name', 'WooEasyLife') }}">
         @if (! empty($seo['og_image']))
             <meta property="og:image" content="{{ $seo['og_image'] }}">
             <meta property="og:image:width" content="{{ $seo['og_image_width'] ?? 1200 }}">
             <meta property="og:image:height" content="{{ $seo['og_image_height'] ?? 630 }}">
             <meta name="twitter:image" content="{{ $seo['og_image'] }}">
+            <link rel="preload" as="image" href="{{ $seo['og_image'] }}" fetchpriority="high">
         @endif
         <meta name="twitter:card" content="summary_large_image">
         @if (! empty($seo['json_ld']))

@@ -31,6 +31,11 @@ class SeoMetaService
         $breadcrumbs = $config['breadcrumbs'] ?? [];
         $prerenderH1 = (string) ($config['prerender_h1'] ?? $title);
         $prerenderLead = (string) ($config['prerender_lead'] ?? $description);
+        $htmlLang = (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD'));
+        $hreflang = $this->buildHreflang($config['hreflang_paths'] ?? [
+            $htmlLang => $canonicalPath,
+            'x-default' => $canonicalPath,
+        ]);
 
         return [
             'page' => $page,
@@ -43,7 +48,8 @@ class SeoMetaService
             'og_image_height' => (int) config('seo.og_image_height', 630),
             'og_type' => $config['og_type'] ?? 'website',
             'robots' => $config['robots'] ?? 'index,follow',
-            'html_lang' => (string) config('seo.html_lang', 'bn-BD'),
+            'html_lang' => $htmlLang,
+            'hreflang' => $hreflang,
             'faqs' => $faqs,
             'breadcrumbs' => $this->normalizeBreadcrumbs($breadcrumbs),
             'prerender_h1' => $prerenderH1,
@@ -109,6 +115,24 @@ class SeoMetaService
         }
 
         return $base.$path;
+    }
+
+    /**
+     * @param  array<string, string>  $paths  hreflang => path
+     * @return list<array{hreflang: string, url: string}>
+     */
+    private function buildHreflang(array $paths): array
+    {
+        $out = [];
+
+        foreach ($paths as $hreflang => $path) {
+            $out[] = [
+                'hreflang' => (string) $hreflang,
+                'url' => $this->absoluteUrl((string) $path),
+            ];
+        }
+
+        return $out;
     }
 
     /**
