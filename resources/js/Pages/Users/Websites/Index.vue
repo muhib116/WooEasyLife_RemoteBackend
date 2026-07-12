@@ -470,8 +470,15 @@ const openAdjustPlan = (website: any) => {
                 subscription.package_hub_id ?? source?.package_hub_id ?? null,
             ),
     );
+    // Always pass the subscription id so feature toggles use the merchant
+    // snapshot (same as get-user), never the PackageHub catalog defaults.
     const appFields = buildAdjustAppFieldsFromSubscription(
-        subscriptionRow,
+        {
+            id: subscription.id,
+            app_connect: subscriptionRow?.app_connect,
+            total_website_connect: subscriptionRow?.total_website_connect,
+            features: subscriptionRow?.features ?? source?.features ?? {},
+        },
         hubPackage,
     );
     planForm.features = { ...appFields.features };

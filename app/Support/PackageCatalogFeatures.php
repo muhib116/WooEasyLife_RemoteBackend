@@ -127,7 +127,6 @@ class PackageCatalogFeatures
             default: true,
             disabledKeys: [
                 'app_connect',
-                'app_store_limit',
                 'ai_intelligence',
                 'employee_management',
             ],

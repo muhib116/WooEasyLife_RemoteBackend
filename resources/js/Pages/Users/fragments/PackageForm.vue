@@ -112,7 +112,7 @@
                     v-if="form.plan_type === 'catalog'"
                     title="Power Full Features"
                     step="3"
-                    hint="Toggle the 12 power features included in this merchant plan."
+                    hint="Toggle the power features included in this merchant plan."
                 >
                     <PackageFeaturesEditor
                         v-model:features="form.features"

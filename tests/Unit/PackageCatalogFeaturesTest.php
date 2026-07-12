@@ -155,4 +155,18 @@ class PackageCatalogFeaturesTest extends TestCase
             $this->assertTrue($features[$key], "Expected {$key} to default to true");
         }
     }
+
+    public function test_normalize_strips_removed_app_store_limit_key(): void
+    {
+        $normalized = PackageCatalogFeatures::normalize([
+            'app_connect' => true,
+            'app_store_limit' => true,
+            'fraud_customer_checker' => true,
+        ]);
+
+        $this->assertTrue($normalized['app_connect']);
+        $this->assertTrue($normalized['fraud_customer_checker']);
+        $this->assertArrayNotHasKey('app_store_limit', $normalized);
+        $this->assertNotContains('app_store_limit', PackageCatalogFeatures::powerKeys());
+    }
 }

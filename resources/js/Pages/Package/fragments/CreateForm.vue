@@ -228,15 +228,11 @@
                     v-for="item in powerFeatureDefinitions"
                     :key="item.key"
                     class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 hover:bg-white/60 dark:hover:bg-slate-800/60"
-                    :class="{
-                        'opacity-60': item.key === 'app_store_limit' && !draft.features.app_connect,
-                    }"
                 >
                     <Checkbox
                         v-model="draft.features[item.key]"
                         :input-id="item.key"
                         binary
-                        :disabled="item.key === 'app_store_limit' && !draft.features.app_connect"
                     />
                     <span class="text-sm text-gray-700 dark:text-gray-300">
                         {{ item.label }}
@@ -261,12 +257,11 @@
                         :options="websiteConnectOptions"
                         option-label="label"
                         option-value="value"
-                        placeholder="Select store limit"
+                        placeholder="Select website connect limit"
                         class="w-full"
-                        :disabled="!draft.features.app_store_limit"
                     />
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Enable “অ্যাপ স্টোর লিমিট” to allow more than one store.
+                        How many stores this plan can connect when App Connect is enabled.
                     </p>
                 </div>
             </div>
@@ -357,37 +352,8 @@ watch(
         draft.app_connect = enabled;
 
         if (!enabled) {
-            draft.features.app_store_limit = false;
             draft.total_website_connect = 1;
         }
-    },
-);
-
-watch(
-    () => draft.features.app_store_limit,
-    (enabled) => {
-        if (!draft.features.app_connect) {
-            draft.features.app_store_limit = false;
-            return;
-        }
-
-        if (!enabled) {
-            draft.total_website_connect = 1;
-        } else if (draft.total_website_connect === 1) {
-            draft.total_website_connect = 3;
-        }
-    },
-);
-
-watch(
-    () => draft.total_website_connect,
-    (value) => {
-        if (!draft.features.app_connect) {
-            return;
-        }
-
-        draft.features.app_store_limit =
-            value === "unlimited" || Number(value) > 1;
     },
 );
 

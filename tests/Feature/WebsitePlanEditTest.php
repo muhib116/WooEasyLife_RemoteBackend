@@ -194,13 +194,11 @@ class WebsitePlanEditTest extends TestCase
             'index' => 2,
             'features' => PackageCatalogFeatures::normalize([
                 'app_connect' => true,
-                'app_store_limit' => false,
             ]),
         ]);
 
         $features = PackageCatalogFeatures::normalize([
             'app_connect' => true,
-            'app_store_limit' => false,
         ]);
 
         $userPackage = UserPackage::create([
@@ -225,7 +223,7 @@ class WebsitePlanEditTest extends TestCase
         ]);
 
         $updatedFeatures = array_merge($features, [
-            'app_store_limit' => true,
+            'courier_automation' => true,
         ]);
 
         $response = $this->actingAs($admin)->post(
@@ -246,7 +244,8 @@ class WebsitePlanEditTest extends TestCase
 
         $this->assertTrue($userPackage->app_connect);
         $this->assertSame(3, $userPackage->total_website_connect);
-        $this->assertTrue($userPackage->features['app_store_limit']);
+        $this->assertTrue($userPackage->features['app_connect']);
+        $this->assertArrayNotHasKey('app_store_limit', $userPackage->features);
     }
 
     public function test_legacy_packages_route_redirects_to_websites(): void

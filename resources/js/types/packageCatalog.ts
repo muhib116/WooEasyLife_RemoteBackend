@@ -12,7 +12,6 @@ export type PowerFeatureKey =
     | "call_and_status_log"
     | "ai_intelligence"
     | "app_connect"
-    | "app_store_limit"
     | "courier_automation"
     | "custom_status_management"
     | "customer_blacklist"

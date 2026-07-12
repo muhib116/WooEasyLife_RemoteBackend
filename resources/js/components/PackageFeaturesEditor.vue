@@ -58,15 +58,11 @@
                         v-for="item in powerFeatureDefinitions"
                         :key="item.key"
                         class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-slate-800/60"
-                        :class="{
-                            'opacity-60': item.key === 'app_store_limit' && !features.app_connect,
-                        }"
                     >
                         <Checkbox
                             :model-value="Boolean(features[item.key])"
                             :input-id="`power-${item.key}`"
                             binary
-                            :disabled="item.key === 'app_store_limit' && !features.app_connect"
                             @update:model-value="
                                 (value) => (features[item.key] = Boolean(value))
                             "
@@ -96,12 +92,11 @@
                     :options="websiteConnectOptions"
                     option-label="label"
                     option-value="value"
-                    placeholder="Select store limit"
+                    placeholder="Select website connect limit"
                     class="w-full"
-                    :disabled="!features.app_store_limit"
                 />
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Enable “অ্যাপ স্টোর লিমিট” to allow more than one store.
+                    How many stores this plan can connect when App Connect is enabled.
                 </p>
             </div>
         </div>
@@ -150,40 +145,8 @@ watch(
         }
 
         if (!enabled) {
-            features.value.app_store_limit = false;
             websiteConnectLimit.value = 1;
         }
-    },
-);
-
-watch(
-    () => features.value.app_store_limit,
-    (enabled) => {
-        if (!websiteConnectLimit.value || !features.value.app_connect) {
-            if (!features.value.app_connect) {
-                features.value.app_store_limit = false;
-            }
-
-            return;
-        }
-
-        if (!enabled) {
-            websiteConnectLimit.value = 1;
-        } else if (websiteConnectLimit.value === 1) {
-            websiteConnectLimit.value = 3;
-        }
-    },
-);
-
-watch(
-    () => websiteConnectLimit.value,
-    (value) => {
-        if (!value || !features.value.app_connect) {
-            return;
-        }
-
-        features.value.app_store_limit =
-            value === "unlimited" || Number(value) > 1;
     },
 );
 </script>

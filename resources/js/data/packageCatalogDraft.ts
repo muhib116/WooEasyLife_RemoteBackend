@@ -67,12 +67,6 @@ export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
         "notification_sound_management",
         "centralized_notifications",
     ],
-    app_store_limit: [
-        "multistore_order_notifications",
-        "cross_store_order_detection",
-        "common_dashboard",
-        "centralized_notifications",
-    ],
     courier_automation: [
         "three_courier_partner_integration",
         "courier_entry_automation",
@@ -111,7 +105,6 @@ export const POWER_FULL_FEATURE_DEFINITIONS: {
     { key: "call_and_status_log", label: "কল ও স্ট্যাটাস লগ" },
     { key: "ai_intelligence", label: "এআই ইন্টেলিজেন্স" },
     { key: "app_connect", label: "অ্যাপ কানেক্ট" },
-    { key: "app_store_limit", label: "অ্যাপ স্টোর লিমিট" },
     { key: "courier_automation", label: "কুরিয়ার অটোমেশন" },
     { key: "custom_status_management", label: "কাস্টম স্ট্যাটাস ম্যানেজমেন্ট" },
     { key: "customer_blacklist", label: "কাস্টমার ব্ল্যাকলিস্ট" },
@@ -159,14 +152,9 @@ export function buildDefaultPackageDraft(): PackageCatalogDraft {
 function resolveWebsiteConnectLimit(
     value: WebsiteConnectLimit,
     appConnect: boolean,
-    appStoreLimit: boolean,
 ): number | null {
     if (!appConnect) {
         return null;
-    }
-
-    if (!appStoreLimit) {
-        return 1;
     }
 
     return value === "unlimited" ? null : value;
@@ -237,23 +225,15 @@ export function collapseToPowerFeatures(
 export function syncDraftAppFields(draft: PackageCatalogDraft): void {
     draft.features.app_connect = draft.app_connect;
 
-    const allowsMultiStore =
-        draft.app_connect &&
-        (draft.total_website_connect === "unlimited" ||
-            Number(draft.total_website_connect) > 1);
-
-    draft.features.app_store_limit = draft.app_connect && allowsMultiStore;
+    if (!draft.app_connect) {
+        draft.total_website_connect = 1;
+    }
 }
 
 export function applyFeatureDrivenAppFields(draft: PackageCatalogDraft): void {
     draft.app_connect = Boolean(draft.features.app_connect);
 
     if (!draft.app_connect) {
-        draft.features.app_store_limit = false;
-        return;
-    }
-
-    if (!draft.features.app_store_limit) {
         draft.total_website_connect = 1;
     }
 }
@@ -263,13 +243,7 @@ function normalizeFeaturesForPayload(
 ): PackageFeatures {
     syncDraftAppFields(draft);
 
-    const features = collapseToPowerFeatures(draft.features);
-
-    if (!features.app_connect) {
-        features.app_store_limit = false;
-    }
-
-    return features;
+    return collapseToPowerFeatures(draft.features);
 }
 
 export function buildPackagePayload(
@@ -294,7 +268,6 @@ export function buildPackagePayload(
         total_website_connect: resolveWebsiteConnectLimit(
             draft.total_website_connect,
             draft.app_connect,
-            Boolean(features.app_store_limit),
         ),
         features,
         meta: {
@@ -306,6 +279,7 @@ export function buildPackagePayload(
 
 export function buildAdjustAppFieldsFromSubscription(
     userPackage?: {
+        id?: number | null;
         app_connect?: boolean | null;
         total_website_connect?: number | null;
         features?: Partial<PackageFeatures> | Record<string, boolean> | null;
@@ -320,14 +294,22 @@ export function buildAdjustAppFieldsFromSubscription(
     total_website_connect: WebsiteConnectLimit;
     features: PackageFeatures;
 } {
-    const features = normalizeFeatureMap(
-        userPackage?.features ?? hubPackage?.features,
-    );
+    // Existing subscriptions must use the merchant snapshot only.
+    // Falling back to PackageHub features is wrong: catalog plans like Pro Plus
+    // are often "all on" while user_packages.features may disable some keys.
+    // get-user reads the snapshot — the Adjust UI must show the same source.
+    const rawFeatures =
+        userPackage?.id != null
+            ? (userPackage.features ?? {})
+            : (userPackage?.features ?? hubPackage?.features);
+
+    const features = normalizeFeatureMap(rawFeatures);
 
     const appConnect =
         userPackage?.app_connect ??
-        hubPackage?.app_connect ??
-        Boolean(features.app_connect);
+        (userPackage?.id != null
+            ? Boolean(features.app_connect)
+            : (hubPackage?.app_connect ?? Boolean(features.app_connect)));
 
     features.app_connect = appConnect;
 
@@ -344,16 +326,11 @@ export function buildAdjustAppFieldsFromSubscription(
                 ? "unlimited"
                 : (hubPackage.total_website_connect as WebsiteConnectLimit);
     } else {
-        totalWebsiteConnect = features.app_store_limit ? 3 : 1;
+        totalWebsiteConnect = 1;
     }
 
     if (!appConnect) {
-        features.app_store_limit = false;
         totalWebsiteConnect = 1;
-    } else {
-        features.app_store_limit =
-            totalWebsiteConnect === "unlimited" ||
-            Number(totalWebsiteConnect) > 1;
     }
 
     return {
@@ -379,12 +356,7 @@ export function buildAdjustSubscriptionPayload<
     form.features = { ...form.features, app_connect: form.app_connect };
 
     if (!form.app_connect) {
-        form.features.app_store_limit = false;
         form.total_website_connect = 1;
-    } else {
-        form.features.app_store_limit =
-            form.total_website_connect === "unlimited" ||
-            Number(form.total_website_connect) > 1;
     }
 
     const features = collapseToPowerFeatures(form.features);
@@ -395,7 +367,6 @@ export function buildAdjustSubscriptionPayload<
         total_website_connect: resolveWebsiteConnectLimit(
             form.total_website_connect,
             form.app_connect,
-            Boolean(features.app_store_limit),
         ) as unknown as WebsiteConnectLimit,
         features,
     };
@@ -525,9 +496,6 @@ export function buildDraftFromPackageHub(pkg: {
     const features = collapseToPowerFeatures(pkg.features);
 
     features.app_connect = appConnect;
-    features.app_store_limit =
-        appConnect &&
-        (pkg.total_website_connect == null || pkg.total_website_connect > 1);
 
     return {
         package_name: pkg.title?.trim() || "",
@@ -540,9 +508,11 @@ export function buildDraftFromPackageHub(pkg: {
         is_special: Boolean(pkg.is_special),
         app_connect: appConnect,
         total_website_connect:
-            pkg.total_website_connect == null
-                ? "unlimited"
-                : (pkg.total_website_connect as WebsiteConnectLimit),
+            !appConnect
+                ? 1
+                : pkg.total_website_connect == null
+                    ? "unlimited"
+                    : (pkg.total_website_connect as WebsiteConnectLimit),
         features,
     };
 }
@@ -581,16 +551,10 @@ export function enabledFeatureLabels(
     return {
         plugin: labels.filter(
             (label) =>
-                ![
-                    "অ্যাপ কানেক্ট",
-                    "অ্যাপ স্টোর লিমিট",
-                    "এমপ্লয়ী ম্যানেজমেন্ট",
-                ].includes(label),
+                !["অ্যাপ কানেক্ট", "এমপ্লয়ী ম্যানেজমেন্ট"].includes(label),
         ),
         app: labels.filter((label) =>
-            ["অ্যাপ কানেক্ট", "অ্যাপ স্টোর লিমিট", "এমপ্লয়ী ম্যানেজমেন্ট"].includes(
-                label,
-            ),
+            ["অ্যাপ কানেক্ট", "এমপ্লয়ী ম্যানেজমেন্ট"].includes(label),
         ),
     };
 }
