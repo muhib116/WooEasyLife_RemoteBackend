@@ -6,13 +6,14 @@
             <span class="page-hero__eyebrow">Legal · Terms</span>
             <h1 class="page-hero__title">Terms of Service</h1>
             <p class="page-hero__lead">
-                Rules and conditions for using WooEasyLife to manage your WooCommerce stores from our Android app.
+                {{ $lead }}
             </p>
             <div class="meta-badges">
                 <span class="meta-badge"><strong>Effective</strong> {{ $effectiveDate }}</span>
                 <span class="meta-badge"><strong>Updated</strong> {{ $lastUpdated }}</span>
-                <span class="meta-badge"><strong>App</strong> com.wooeasylife.woo_easy_life</span>
+                <span class="meta-badge"><strong>App</strong> {{ $appId }}</span>
             </div>
+
         </div>
     </div>
 @endsection

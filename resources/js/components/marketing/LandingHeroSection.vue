@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 defineProps({
     hero: { type: Object, default: () => ({}) },
     heroBullets: { type: Array, default: () => [] },
+    heroTrustBadges: { type: Array, default: () => [] },
     trialPlan: { type: Object, default: null },
     primaryCtaUrl: { type: String, required: true },
     primaryCtaLabel: { type: String, required: true },
@@ -71,12 +72,28 @@ defineProps({
                     class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-amber-400 transition hover:text-amber-300 lg:justify-start"
                 >
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">📞</span>
-                    Free fraud check — number দিন, customer কেমন জেনে নিন
+                    ফ্রি ফ্রড চেক — নম্বর দিয়ে দেখুন কাস্টমার কেমন
                 </a>
 
                 <p v-if="trialPlan" class="mt-4 text-sm text-slate-400">
                     {{ trialPlan.title }} · {{ trialPlan.duration_label }} · {{ trialPlan.price_label }}
                 </p>
+
+                <ul
+                    v-if="heroTrustBadges.length"
+                    class="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 lg:justify-start"
+                >
+                    <li
+                        v-for="badge in heroTrustBadges"
+                        :key="badge"
+                        class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400"
+                    >
+                        <svg class="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ badge }}
+                    </li>
+                </ul>
             </div>
         </div>
     </section>

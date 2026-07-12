@@ -28,17 +28,18 @@ class PublicFraudCheckService
     {
         $limit = $this->dailyFreeLimit();
         $used = $ip ? $this->ipUsageCount($ip) : 0;
-        $dailyCount = $this->dailySearchCount();
+        $displayCount = $this->displayDailySearchCount();
 
         return [
             'enabled' => $this->isEnabled(),
             'daily_free_limit' => $limit,
             'used_searches' => $used,
             'remaining_searches' => max(0, $limit - $used),
-            'daily_search_count' => $dailyCount,
-            'daily_search_label' => $this->formatCountLabel($dailyCount),
-            'daily_search_phrase' => 'আজকে '.$this->formatCountLabel($dailyCount).' বার সার্চ হয়েছে',
+            'daily_search_count' => $displayCount,
+            'daily_search_label' => $this->formatCountLabel($displayCount),
+            'daily_search_phrase' => 'আজকে '.$this->formatCountLabel($displayCount).' বার সার্চ হয়েছে',
             'free_search_note' => 'রেজিস্ট্রেশন ছাড়াই প্রতিদিন '.$limit.'টি ফ্রি সার্চ',
+            'demo' => config('landing.fraud_check.demo'),
         ];
     }
 
@@ -81,19 +82,50 @@ class PublicFraudCheckService
         return (int) Cache::get($this->dailyCountKey(), 0);
     }
 
+    /**
+     * Real searches plus a time-weighted social-proof baseline so the public
+     * counter never shows a dead "0" early in the day.
+     */
+    public function displayDailySearchCount(): int
+    {
+        $real = $this->dailySearchCount();
+        $base = (int) config('landing.fraud_check.daily_search_base', 0);
+
+        if ($base <= 0) {
+            return $real;
+        }
+
+        $now = now();
+        $secondsIntoDay = $now->getTimestamp() - $now->copy()->startOfDay()->getTimestamp();
+        // At least 15% of the base shows in the early morning, ramping to 100%.
+        $fraction = max(0.15, min(1.0, $secondsIntoDay / 86400));
+        // Deterministic per-day variation (±10%) so it isn't identical daily.
+        $jitter = 0.9 + ((int) $now->format('Ymd') % 21) / 100;
+
+        return (int) round($base * $fraction * $jitter) + $real;
+    }
+
     public function formatCountLabel(int $count): string
     {
         if ($count >= 100000) {
-            return number_format($count / 100000, 1).' লক্ষ';
+            return $this->toBnDigits(number_format($count / 100000, 1)).' লক্ষ';
         }
 
         if ($count >= 1000) {
             $formatted = number_format($count / 1000, 1);
 
-            return rtrim(rtrim($formatted, '0'), '.').'K+';
+            return $this->toBnDigits(rtrim(rtrim($formatted, '0'), '.')).'K+';
         }
 
-        return (string) $count;
+        return $this->toBnDigits((string) $count);
+    }
+
+    private function toBnDigits(string $value): string
+    {
+        return strtr($value, [
+            '0' => '০', '1' => '১', '2' => '২', '3' => '৩', '4' => '৪',
+            '5' => '৫', '6' => '৬', '7' => '৭', '8' => '৮', '9' => '৯',
+        ]);
     }
 
     private function ipUsageCount(string $ip): int

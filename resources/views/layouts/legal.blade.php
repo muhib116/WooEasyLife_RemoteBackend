@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="WooEasyLife mobile app privacy policy for WooCommerce merchants.">
-    <title>{{ $title ?? 'WooEasyLife' }}</title>
+    <meta name="description" content="{{ $metaDescription ?? 'Legal information from WPSaleHub.' }}">
+    <title>{{ $title ?? 'WPSaleHub' }}</title>
+
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700&display=swap" rel="stylesheet">
     <style>
@@ -403,12 +404,13 @@
     <header class="site-header">
         <div class="site-header__inner">
             <a class="brand" href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">
-                <span class="brand__mark">WE</span>
+                <span class="brand__mark">{{ $brandMark ?? 'WE' }}</span>
                 <span>
-                    WooEasyLife
+                    {{ $brandName ?? 'WooEasyLife' }}
                     <span class="brand__sub">by WPSaleHub</span>
                 </span>
             </a>
+
             <a class="header-link" href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">
                 app.wpsalehub.com ↗
             </a>

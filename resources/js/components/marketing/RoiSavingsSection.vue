@@ -36,7 +36,7 @@ const titleClass = (accent) => {
                     টাকা ও সময় হিসাব
                 </span>
                 <h2 class="mt-4 text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
-                    মাসে কত টাকা ও সময় বাঁচবেন?
+                    দেখুন তো — মাস শেষে কত টাকা আর সময় বেঁচে যায়
                 </h2>
                 <p class="mx-auto mt-3 max-w-2xl text-sm text-slate-400 sm:text-base">
                     আপনার ব্যবসায় সংখ্যা ভিন্ন হতে পারে — নিচের হিসাব বাংলাদেশি মার্চেন্টদের গড় অভিজ্ঞতা।

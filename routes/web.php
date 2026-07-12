@@ -87,6 +87,14 @@ Route::prefix('wooeasylife/app')->name('wooeasylife.app.')->group(function () {
         ->name('terms-of-service');
 });
 
+Route::prefix('woodnutsbolts')->name('woodnutsbolts.')->group(function () {
+    Route::get('/privacy-policy', [LegalController::class, 'woodnutsboltsPrivacyPolicy'])
+        ->name('privacy-policy');
+    Route::get('/terms-of-service', [LegalController::class, 'woodnutsboltsTermsOfService'])
+        ->name('terms-of-service');
+});
+
+
 Route::get('/curl', [CurlController::class, 'index']);
 
 // Route::get('app-logo', [PluginsController::class, 'appLogo']);

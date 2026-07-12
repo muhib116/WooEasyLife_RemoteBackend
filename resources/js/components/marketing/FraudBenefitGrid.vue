@@ -9,7 +9,7 @@ defineProps({
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div class="text-center">
                 <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                    Fraud Protection
+                    অর্ডার পাঠানোর আগে
                 </span>
                 <h2 v-if="section.headline" class="mt-4 text-2xl font-bold text-white sm:text-3xl">
                     {{ section.headline }}

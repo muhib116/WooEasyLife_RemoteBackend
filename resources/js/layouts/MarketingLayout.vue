@@ -18,6 +18,11 @@ const mobileOpen = ref(false);
 
 const marketing = computed(() => page.props.marketing ?? {});
 
+const announcement = computed(() => marketing.value.announcement ?? {});
+const announcementMessages = computed(() =>
+    announcement.value.enabled === false ? [] : (announcement.value.messages ?? []),
+);
+
 const pricingNavHref = computed(() =>
     props.activeNav === 'home' ? '/#pricing' : route('pricing'),
 );
@@ -112,6 +117,24 @@ onUnmounted(() => {
         :class="isDark ? 'bg-brand-black text-slate-100' : 'bg-slate-50 text-slate-900'"
         lang="bn"
     >
+        <!-- Announcement / offer bar -->
+        <div
+            v-if="announcementMessages.length"
+            class="overflow-hidden border-b py-2 text-xs font-medium"
+            :class="isDark ? 'border-amber-500/20 bg-amber-500/10 text-amber-200' : 'border-primary-700 bg-primary-600 text-white'"
+        >
+            <div class="marketing-marquee flex w-max gap-10 whitespace-nowrap pl-10">
+                <span
+                    v-for="(msg, i) in [...announcementMessages, ...announcementMessages]"
+                    :key="i"
+                    class="inline-flex items-center gap-2"
+                >
+                    <span class="text-amber-400" aria-hidden="true">✦</span>
+                    {{ msg }}
+                </span>
+            </div>
+        </div>
+
         <header
             class="sticky top-0 z-40 relative border-b backdrop-blur-xl supports-[backdrop-filter]:backdrop-blur-xl"
             :class="isDark
@@ -401,3 +424,28 @@ onUnmounted(() => {
         </a>
     </div>
 </template>
+
+<style scoped>
+.marketing-marquee {
+    animation: marketing-marquee-scroll 32s linear infinite;
+}
+
+.marketing-marquee:hover {
+    animation-play-state: paused;
+}
+
+@keyframes marketing-marquee-scroll {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .marketing-marquee {
+        animation: none;
+    }
+}
+</style>

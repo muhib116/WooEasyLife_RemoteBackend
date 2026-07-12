@@ -6,13 +6,14 @@
             <span class="page-hero__eyebrow">Legal · Privacy</span>
             <h1 class="page-hero__title">Privacy Policy</h1>
             <p class="page-hero__lead">
-                How WooEasyLife collects, uses, and protects data when you manage your WooCommerce store from our Android app.
+                {{ $lead }}
             </p>
             <div class="meta-badges">
                 <span class="meta-badge"><strong>Effective</strong> {{ $effectiveDate }}</span>
                 <span class="meta-badge"><strong>Updated</strong> {{ $lastUpdated }}</span>
-                <span class="meta-badge"><strong>App</strong> com.wooeasylife.woo_easy_life</span>
+                <span class="meta-badge"><strong>App</strong> {{ $appId }}</span>
             </div>
+
         </div>
     </div>
 @endsection

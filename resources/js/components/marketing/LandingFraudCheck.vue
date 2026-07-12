@@ -21,6 +21,11 @@ const remainingSearches = computed(() => meta.value?.remaining_searches ?? 0);
 const dailySearchPhrase = computed(() => meta.value?.daily_search_phrase ?? '');
 const freeSearchNote = computed(() => meta.value?.free_search_note ?? '');
 
+const demo = computed(() => meta.value?.demo ?? props.fraudCheck?.demo ?? null);
+const showDemo = computed(
+    () => !result.value && !isLoading.value && !errorMessage.value && !limitMessage.value && !!demo.value,
+);
+
 const fraudNotes = computed(() => {
     const notes = result.value?.report?.frauds ?? result.value?.frauds ?? [];
 
@@ -160,9 +165,9 @@ const handleSearch = async () => {
 
         <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/80 shadow-2xl shadow-amber-900/20">
             <div class="border-b border-white/10 px-4 py-4 sm:px-5">
-                <p class="text-sm font-semibold text-white">Number দিন — fake order আগেই ধরুন</p>
+                <p class="text-sm font-semibold text-white">নম্বর দিন — ফেক অর্ডার আগেই ধরুন</p>
                 <p class="mt-1 text-xs text-slate-400">
-                    Courier delivery history দেখে order confirm করার আগেই customer কেমন — জেনে নিন
+                    কুরিয়ার ডেলিভারি হিস্ট্রি দেখে অর্ডার কনফার্মের আগেই বুঝে নিন কাস্টমার কেমন
                 </p>
             </div>
 
@@ -213,6 +218,74 @@ const handleSearch = async () => {
                 <div v-if="isLoading" class="mt-6 flex flex-col items-center gap-3 py-8 text-sm text-slate-400">
                     <div class="h-10 w-10 animate-spin rounded-full border-2 border-amber-500/30 border-t-amber-400" />
                     কুরিয়ার ডাটা যাচাই হচ্ছে...
+                </div>
+
+                <!-- Sample report shown before the first search -->
+                <div v-else-if="showDemo" class="relative mt-6 space-y-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                            নমুনা রিপোর্ট — উপরে নম্বর দিয়ে নিজে চেক করুন
+                        </span>
+                    </div>
+
+                    <div class="pointer-events-none space-y-4 opacity-80">
+                        <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                            <div>
+                                <p class="text-xs text-slate-400">সার্চ করা নম্বর</p>
+                                <p class="text-lg font-bold text-white">{{ demo.phone_masked }}</p>
+                            </div>
+                            <span class="rounded-full border px-3 py-1 text-xs font-bold" :class="riskClass(demo.risk_tone)">
+                                {{ demo.risk_label }}
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                                <p class="text-xs text-slate-400">মোট</p>
+                                <p class="text-xl font-bold text-white">{{ demo.total_order }}</p>
+                            </div>
+                            <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
+                                <p class="text-xs text-emerald-300">ডেলিভারি</p>
+                                <p class="text-xl font-bold text-emerald-300">{{ demo.confirmed }}</p>
+                            </div>
+                            <div class="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-center">
+                                <p class="text-xs text-rose-300">রিটার্ন</p>
+                                <p class="text-xl font-bold text-rose-300">{{ demo.cancel }}</p>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                            <p class="text-xs text-slate-400">সাকসেস রেট</p>
+                            <p class="mt-1 text-2xl font-extrabold text-amber-300">{{ demo.success_rate }}</p>
+                        </div>
+
+                        <div v-if="demo.couriers?.length" class="space-y-2">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">কুরিয়ার ভিত্তিক রিপোর্ট</p>
+                            <div
+                                v-for="item in demo.couriers"
+                                :key="item.title"
+                                class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-3"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-[4.75rem] shrink-0 items-center justify-center rounded-lg bg-white px-1.5">
+                                        <img
+                                            v-if="resolveCourierLogo(item.title)"
+                                            :src="resolveCourierLogo(item.title)"
+                                            :alt="item.title"
+                                            class="h-7 w-auto max-w-full object-contain"
+                                        >
+                                        <span v-else class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{{ item.title }}</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-white">{{ item.title }}</p>
+                                        <p class="text-xs text-slate-400">{{ item.confirmed }} ডেলিভারি · {{ item.cancel }} রিটার্ন</p>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-bold text-emerald-400">{{ item.success_rate }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div v-else-if="result?.report" class="mt-6 space-y-4">

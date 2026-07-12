@@ -42,7 +42,26 @@ const screenshotAlt = computed(
                         </li>
                     </ul>
 
-                    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                    <div
+                        v-if="appShowcase.rating || appShowcase.download_count"
+                        class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2"
+                    >
+                        <div v-if="appShowcase.rating" class="flex items-center gap-1.5">
+                            <span class="text-amber-400" aria-hidden="true">★★★★★</span>
+                            <span class="text-sm font-bold text-white">{{ appShowcase.rating }}</span>
+                            <span v-if="appShowcase.rating_count" class="text-xs text-slate-400">
+                                ({{ appShowcase.rating_count }} রিভিউ)
+                            </span>
+                        </div>
+                        <div v-if="appShowcase.download_count" class="flex items-center gap-1.5 text-sm text-slate-300">
+                            <svg class="h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                            </svg>
+                            <span class="font-bold text-white">{{ appShowcase.download_count }}</span> ডাউনলোড
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex flex-col gap-3 sm:flex-row">
                         <a
                             v-if="appDownloadUrl"
                             :href="appDownloadUrl"

@@ -78,6 +78,7 @@ class HandleInertiaRequests extends Middleware
                 'footer_tagline' => config('landing.footer_tagline'),
                 'footer_tagline_en' => config('landing.footer_tagline_en'),
                 'trust_badges' => config('landing.trust_badges', []),
+                'announcement' => config('landing.announcement', []),
                 'whatsapp_url' => WhatsappLink::url(config('landing.whatsapp_phone')),
                 'whatsapp_contact_url' => WhatsappLink::url(
                     config('landing.whatsapp_phone'),

@@ -6,7 +6,7 @@ const props = defineProps({
 });
 
 const defaultOpenId = () =>
-    props.showcases.find((s) => s.id === 'team')?.id
+    props.showcases.find((s) => s.id === 'fraud')?.id
     ?? props.showcases[0]?.id
     ?? null;
 
@@ -18,7 +18,7 @@ watch(
     () => props.showcases,
     (showcases) => {
         if (!openId.value && showcases.length) {
-            openId.value = showcases.find((s) => s.id === 'team')?.id ?? showcases[0].id;
+            openId.value = showcases.find((s) => s.id === 'fraud')?.id ?? showcases[0].id;
         }
     },
     { immediate: true },
@@ -193,6 +193,37 @@ const accentStyles = (accent) => {
                                     <span>{{ item }}</span>
                                 </li>
                             </ul>
+
+                            <!-- Profit / ROI calculation -->
+                            <div
+                                v-if="showcase.profit"
+                                class="mb-6 rounded-2xl border p-4 sm:p-5"
+                                :class="accentStyles(showcase.accent).scenario"
+                            >
+                                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">সম্ভাব্য মাসিক লাভ</p>
+                                    <p
+                                        class="text-2xl font-extrabold sm:text-3xl"
+                                        :class="accentStyles(showcase.accent).highlight"
+                                    >
+                                        {{ showcase.profit.monthly }}
+                                        <span class="text-sm font-semibold text-slate-400">/ মাস</span>
+                                    </p>
+                                </div>
+                                <p v-if="showcase.profit.basis" class="mt-1.5 text-xs leading-relaxed text-slate-400">
+                                    হিসাব: {{ showcase.profit.basis }}
+                                </p>
+                                <p
+                                    v-if="showcase.profit.highlight"
+                                    class="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-medium leading-relaxed text-emerald-100"
+                                >
+                                    💡 {{ showcase.profit.highlight }}
+                                </p>
+                                <p v-if="showcase.profit.compare" class="mt-3 text-sm font-semibold leading-relaxed text-white">
+                                    {{ showcase.profit.compare }}
+                                </p>
+                                <p class="mt-2 text-[11px] text-slate-500">* আনুমানিক হিসাব; আপনার প্রকৃত সংখ্যা ভিন্ন হতে পারে।</p>
+                            </div>
 
                             <div
                                 class="grid gap-6 lg:grid-cols-2 lg:gap-8"

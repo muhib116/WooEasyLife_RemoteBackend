@@ -28,7 +28,7 @@ const scrollToFraudCheck = () => {
         <div class="relative mx-auto max-w-6xl px-4 lg:px-8">
             <div class="mx-auto max-w-3xl text-center">
                 <span class="inline-flex rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-300">
-                    লস অ্যাভার্সন
+                    তুলনা করে দেখুন
                 </span>
                 <h2 class="mt-4 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
                     {{ lossComparison.headline }}

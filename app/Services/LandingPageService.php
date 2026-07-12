@@ -55,8 +55,11 @@ class LandingPageService
                 ? $this->buildConversionFeatures($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'heroBullets' => config('landing.hero_bullets', []),
+            'heroTrustBadges' => config('landing.hero_trust_badges', []),
             'hero' => config('landing.hero', []),
+            'integrations' => config('landing.integrations', []),
             'roiScenarios' => config('landing.roi_scenarios', []),
+            'roiCalculator' => config('landing.roi_calculator', []),
             'howItWorks' => config('landing.how_it_works', []),
             'appShowcase' => config('landing.app_showcase', []),
             'featureShowcases' => $featuredPayload
@@ -66,8 +69,10 @@ class LandingPageService
                 ? $this->buildValuePillars($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'stats' => config('landing.stats', []),
+            'courierPerformance' => config('landing.courier_performance', []),
             'lossComparison' => config('landing.loss_comparison', []),
             'paymentMethods' => config('landing.payment_methods', []),
+            'enterpriseCta' => config('landing.enterprise_cta', []),
             'whatsappUrl' => WhatsappLink::url($whatsappPhone),
             'whatsappContactUrl' => WhatsappLink::url(
                 $whatsappPhone,
@@ -269,6 +274,7 @@ class LandingPageService
                     'solution' => $showcase['solution'] ?? '',
                     'benefit' => $showcase['benefit'] ?? '',
                     'highlights' => $showcase['highlights'] ?? [],
+                    'profit' => $showcase['profit'] ?? null,
                     'read_more' => $showcase['read_more'] ?? [],
                     'scenario' => $showcase['scenario'] ?? null,
                     'accent' => $showcase['accent'] ?? 'violet',
