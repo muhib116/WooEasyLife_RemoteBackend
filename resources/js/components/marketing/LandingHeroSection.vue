@@ -69,10 +69,10 @@ defineProps({
                 <a
                     v-if="fraudCheckEnabled"
                     href="#fraud-check"
-                    class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-amber-400 transition hover:text-amber-300 lg:justify-start"
+                    class="mt-4 inline-flex max-w-full items-start gap-2 text-left text-sm font-semibold leading-snug text-amber-400 transition hover:text-amber-300 lg:items-center lg:justify-start"
                 >
-                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">📞</span>
-                    শুধু নম্বর দিন, কাস্টমারের কুরিয়ার হিস্টোরি দেখে নিন — একদম ফ্রি
+                    <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10 sm:mt-0">📞</span>
+                    <span>শুধু নম্বর দিন, কাস্টমারের কুরিয়ার হিস্টোরি দেখে নিন — একদম ফ্রি</span>
                 </a>
 
                 <p v-if="trialPlan" class="mt-4 text-sm text-slate-400">

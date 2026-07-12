@@ -111,7 +111,7 @@ const rateTextColor = (rate) => {
                     class="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5"
                 >
                     <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3">
+                        <div class="flex min-w-0 flex-1 items-center gap-3">
                             <div class="flex h-10 w-[4.75rem] shrink-0 items-center justify-center rounded-lg bg-white px-1.5">
                                 <img
                                     :src="courier.logo"
@@ -119,15 +119,15 @@ const rateTextColor = (rate) => {
                                     class="h-6 w-auto max-w-full object-contain"
                                 />
                             </div>
-                            <div>
+                            <div class="min-w-0">
                                 <p class="text-sm font-semibold text-white">{{ courier.name }}</p>
-                                <p v-if="courier.delivered || courier.returned" class="text-xs text-slate-400">
+                                <p v-if="courier.delivered || courier.returned" class="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-slate-400">
                                     <span v-if="courier.delivered" class="text-emerald-400">● {{ courier.delivered }} ডেলিভারি</span>
-                                    <span v-if="courier.returned" class="ml-2 text-rose-400">● {{ courier.returned }} রিটার্ন</span>
+                                    <span v-if="courier.returned" class="text-rose-400">● {{ courier.returned }} রিটার্ন</span>
                                 </p>
                             </div>
                         </div>
-                        <span class="text-lg font-extrabold" :class="rateTextColor(courier.success_rate)">
+                        <span class="shrink-0 text-lg font-extrabold" :class="rateTextColor(courier.success_rate)">
                             {{ courier.success_rate }}%
                         </span>
                     </div>

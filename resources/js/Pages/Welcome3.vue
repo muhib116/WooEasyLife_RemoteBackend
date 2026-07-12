@@ -136,7 +136,7 @@ const toggleFaq = (i) => {
         :whatsapp-url="whatsappUrl"
         active-nav="home"
         suppress-mobile-whatsapp-fab
-        class="pb-20 md:pb-0"
+        class="pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
     >
         <!-- 1. Hero -->
         <LandingHeroSection
@@ -402,10 +402,10 @@ const toggleFaq = (i) => {
         </ScrollReveal>
 
         <!-- Mobile sticky CTA -->
-        <div class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0a0a0a]/95 p-3 backdrop-blur-md md:hidden">
+        <div class="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0a0a]/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md md:hidden">
             <Link
                 :href="primaryCtaUrlValue"
-                class="flex w-full items-center justify-center rounded-xl bg-amber-500 py-3 text-sm font-bold text-black"
+                class="flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 py-3 text-sm font-bold text-black"
             >
                 {{ primaryCtaLabelValue }}
             </Link>

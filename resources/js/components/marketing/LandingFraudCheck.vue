@@ -240,18 +240,18 @@ const handleSearch = async () => {
                             </span>
                         </div>
 
-                        <div class="grid grid-cols-3 gap-3">
-                            <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
-                                <p class="text-xs text-slate-400">মোট</p>
-                                <p class="text-xl font-bold text-white">{{ demo.total_order }}</p>
+                        <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                            <div class="rounded-xl border border-white/10 bg-white/5 p-2.5 text-center sm:p-3">
+                                <p class="text-[11px] text-slate-400 sm:text-xs">মোট</p>
+                                <p class="text-lg font-bold text-white sm:text-xl">{{ demo.total_order }}</p>
                             </div>
-                            <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
-                                <p class="text-xs text-emerald-300">ডেলিভারি</p>
-                                <p class="text-xl font-bold text-emerald-300">{{ demo.confirmed }}</p>
+                            <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-center sm:p-3">
+                                <p class="text-[11px] text-emerald-300 sm:text-xs">ডেলিভারি</p>
+                                <p class="text-lg font-bold text-emerald-300 sm:text-xl">{{ demo.confirmed }}</p>
                             </div>
-                            <div class="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-center">
-                                <p class="text-xs text-rose-300">রিটার্ন</p>
-                                <p class="text-xl font-bold text-rose-300">{{ demo.cancel }}</p>
+                            <div class="rounded-xl border border-rose-500/20 bg-rose-500/10 p-2.5 text-center sm:p-3">
+                                <p class="text-[11px] text-rose-300 sm:text-xs">রিটার্ন</p>
+                                <p class="text-lg font-bold text-rose-300 sm:text-xl">{{ demo.cancel }}</p>
                             </div>
                         </div>
 
@@ -265,9 +265,9 @@ const handleSearch = async () => {
                             <div
                                 v-for="item in demo.couriers"
                                 :key="item.title"
-                                class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-3"
+                                class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-3 py-3 sm:px-4"
                             >
-                                <div class="flex items-center gap-3">
+                                <div class="flex min-w-0 flex-1 items-center gap-3">
                                     <div class="flex h-10 w-[4.75rem] shrink-0 items-center justify-center rounded-lg bg-white px-1.5">
                                         <img
                                             v-if="resolveCourierLogo(item.title)"
@@ -277,12 +277,12 @@ const handleSearch = async () => {
                                         >
                                         <span v-else class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{{ item.title }}</span>
                                     </div>
-                                    <div>
-                                        <p class="text-sm font-semibold text-white">{{ item.title }}</p>
-                                        <p class="text-xs text-slate-400">{{ item.confirmed }} ডেলিভারি · {{ item.cancel }} রিটার্ন</p>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-white">{{ item.title }}</p>
+                                        <p class="text-xs leading-snug text-slate-400">{{ item.confirmed }} ডেলিভারি · {{ item.cancel }} রিটার্ন</p>
                                     </div>
                                 </div>
-                                <span class="text-sm font-bold text-emerald-400">{{ item.success_rate }}</span>
+                                <span class="shrink-0 text-sm font-bold text-emerald-400">{{ item.success_rate }}</span>
                             </div>
                         </div>
                     </div>
@@ -302,18 +302,18 @@ const handleSearch = async () => {
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
-                            <p class="text-xs text-slate-400">মোট</p>
-                            <p class="text-xl font-bold text-white">{{ result.report.total_order ?? 0 }}</p>
+                    <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                        <div class="rounded-xl border border-white/10 bg-white/5 p-2.5 text-center sm:p-3">
+                            <p class="text-[11px] text-slate-400 sm:text-xs">মোট</p>
+                            <p class="text-lg font-bold text-white sm:text-xl">{{ result.report.total_order ?? 0 }}</p>
                         </div>
-                        <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
-                            <p class="text-xs text-emerald-300">ডেলিভারি</p>
-                            <p class="text-xl font-bold text-emerald-300">{{ result.report.confirmed ?? 0 }}</p>
+                        <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-center sm:p-3">
+                            <p class="text-[11px] text-emerald-300 sm:text-xs">ডেলিভারি</p>
+                            <p class="text-lg font-bold text-emerald-300 sm:text-xl">{{ result.report.confirmed ?? 0 }}</p>
                         </div>
-                        <div class="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-center">
-                            <p class="text-xs text-rose-300">রিটার্ন</p>
-                            <p class="text-xl font-bold text-rose-300">{{ result.report.cancel ?? 0 }}</p>
+                        <div class="rounded-xl border border-rose-500/20 bg-rose-500/10 p-2.5 text-center sm:p-3">
+                            <p class="text-[11px] text-rose-300 sm:text-xs">রিটার্ন</p>
+                            <p class="text-lg font-bold text-rose-300 sm:text-xl">{{ result.report.cancel ?? 0 }}</p>
                         </div>
                     </div>
 
@@ -329,9 +329,9 @@ const handleSearch = async () => {
                         <div
                             v-for="item in result.report.courier"
                             :key="item.title"
-                            class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-3"
+                            class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-3 py-3 sm:px-4"
                         >
-                            <div class="flex items-center gap-3">
+                            <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <div class="flex h-10 w-[4.75rem] shrink-0 items-center justify-center rounded-lg bg-white px-1.5">
                                     <img
                                         v-if="resolveCourierLogo(item.title)"
@@ -346,15 +346,15 @@ const handleSearch = async () => {
                                         {{ item.title }}
                                     </span>
                                 </div>
-                                <div>
-                                    <p class="text-sm font-semibold text-white">{{ item.title }}</p>
-                                    <p v-if="item.report?.total_order > 0" class="text-xs text-slate-400">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-white">{{ item.title }}</p>
+                                    <p v-if="item.report?.total_order > 0" class="text-xs leading-snug text-slate-400">
                                         {{ item.report.confirmed }} ডেলিভারি · {{ item.report.cancel }} রিটার্ন
                                     </p>
                                     <p v-else class="text-xs text-slate-500">কোনো ডেলিভারি ডাটা নেই</p>
                                 </div>
                             </div>
-                            <span class="text-sm font-bold" :class="courierRateClass(item.report)">
+                            <span class="shrink-0 text-sm font-bold" :class="courierRateClass(item.report)">
                                 {{ item.report?.success_rate }}
                             </span>
                         </div>

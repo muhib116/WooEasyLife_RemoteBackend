@@ -21,7 +21,7 @@ const scrollToFraudCheck = () => {
 </script>
 
 <template>
-    <section v-if="lossComparison.headline" class="relative overflow-hidden py-20 sm:py-24">
+    <section v-if="lossComparison.headline" class="relative overflow-hidden py-14 sm:py-20 lg:py-24">
         <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_left,_rgba(239,68,68,0.08),_transparent_50%)]" />
         <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_right,_rgba(16,185,129,0.1),_transparent_50%)]" />
 
@@ -30,10 +30,10 @@ const scrollToFraudCheck = () => {
                 <span class="inline-flex rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-300">
                     তুলনা করে দেখুন
                 </span>
-                <h2 class="mt-4 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
+                <h2 class="mt-4 text-2xl font-extrabold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
                     {{ lossComparison.headline }}
                 </h2>
-                <p v-if="lossComparison.subtitle" class="mt-4 text-base leading-relaxed text-slate-400 sm:text-lg">
+                <p v-if="lossComparison.subtitle" class="mt-3 text-sm leading-relaxed text-slate-400 sm:mt-4 sm:text-lg">
                     {{ lossComparison.subtitle }}
                 </p>
             </div>

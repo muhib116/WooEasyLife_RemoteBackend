@@ -122,10 +122,10 @@ const accentStyles = (accent) => {
                     সম্পূর্ণ ফিচার গাইড
                 </span>
                 <h2 class="mt-4 text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
-                    আপনি কী পাবেন — বিস্তারিত
+                    আপনার ব্যবসার জন্য প্রতিটি ফিচার
                 </h2>
                 <p class="mx-auto mt-3 max-w-2xl text-sm text-slate-400 sm:text-base">
-                    প্রতিটি ফিচারে ব্যথা → সমাধান → লাভ। সংক্ষেপে দেখুন, «আরও পড়ুন» দিয়ে গভীরে যান।
+                    কীভাবে সময় বাঁচাবে, লস কমাবে ও বিক্রি বাড়াবে—এক নজরে দেখুন।
                 </p>
             </div>
 
@@ -200,13 +200,15 @@ const accentStyles = (accent) => {
                                 class="mb-6 rounded-2xl border p-4 sm:p-5"
                                 :class="accentStyles(showcase.accent).scenario"
                             >
-                                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">সম্ভাব্য মাসিক লাভ</p>
+                                <div class="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">
+                                        {{ showcase.profit.label ?? 'প্রতি মাসে সম্ভাব্য সাশ্রয়' }}
+                                    </p>
                                     <p
                                         class="text-2xl font-extrabold sm:text-3xl"
                                         :class="accentStyles(showcase.accent).highlight"
                                     >
-                                        {{ showcase.profit.monthly }}
+                                        ≈ {{ showcase.profit.monthly }}
                                         <span class="text-sm font-semibold text-slate-400">/ মাস</span>
                                     </p>
                                 </div>
@@ -222,7 +224,9 @@ const accentStyles = (accent) => {
                                 <p v-if="showcase.profit.compare" class="mt-3 text-sm font-semibold leading-relaxed text-white">
                                     {{ showcase.profit.compare }}
                                 </p>
-                                <p class="mt-2 text-[11px] text-slate-500">* আনুমানিক হিসাব; আপনার প্রকৃত সংখ্যা ভিন্ন হতে পারে।</p>
+                                <p class="mt-2 text-[11px] text-slate-500">
+                                    {{ showcase.profit.note ?? 'এটি একটি উদাহরণভিত্তিক হিসাব। প্রকৃত সাশ্রয় আপনার অর্ডার, রিটার্ন ও ব্যবসার ধরন অনুযায়ী ভিন্ন হতে পারে।' }}
+                                </p>
                             </div>
 
                             <div
@@ -296,7 +300,7 @@ const accentStyles = (accent) => {
                                                     <button
                                                         v-if="feat.detail && feat.detail !== feat.description"
                                                         type="button"
-                                                        class="mt-2 text-xs font-semibold transition hover:opacity-80"
+                                                        class="mt-2 inline-flex min-h-10 items-center rounded-lg px-2 py-2 text-xs font-semibold transition hover:bg-white/5 hover:opacity-90"
                                                         :class="accentStyles(showcase.accent).highlight"
                                                         @click="toggleFeatureDetail(showcase.id, feat.key)"
                                                     >

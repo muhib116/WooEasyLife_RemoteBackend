@@ -102,7 +102,7 @@ const titleClass = (accent) => {
                                 :min="slider.min"
                                 :max="slider.max"
                                 :step="slider.step"
-                                class="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-amber-500"
+                                class="mt-3 h-3 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-amber-500 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-amber-400"
                             />
                             <div class="mt-1 flex justify-between text-[11px] text-slate-500">
                                 <span>{{ slider.prefix ?? '' }}{{ formatBnNumber(slider.min) }}{{ slider.suffix ?? '' }}</span>

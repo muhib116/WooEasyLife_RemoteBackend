@@ -197,13 +197,13 @@ onUnmounted(() => {
                 <div class="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:hidden">
                     <Link
                         :href="headerCtaUrl"
-                        class="inline-flex max-w-[7.5rem] items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 px-2.5 py-2 text-xs font-bold text-black shadow-md shadow-amber-900/30 sm:max-w-none sm:px-3.5 sm:text-sm"
+                        class="inline-flex min-h-11 max-w-[8.5rem] items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-2.5 text-xs font-bold text-black shadow-md shadow-amber-900/30 sm:max-w-none sm:px-3.5 sm:text-sm"
                     >
                         <span class="truncate">{{ headerCtaShortLabel }}</span>
                     </Link>
                     <button
                         type="button"
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition sm:h-10 sm:w-10"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition"
                         :class="isDark
                             ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
                             : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"

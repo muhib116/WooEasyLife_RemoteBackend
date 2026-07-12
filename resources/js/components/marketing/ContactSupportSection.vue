@@ -25,7 +25,7 @@ const contactUrl = computed(
                 <div class="text-center sm:text-left">
                     <h2 class="text-xl font-bold text-white sm:text-2xl">{{ headline }}</h2>
                     <p class="mt-1.5 text-sm text-slate-400 sm:text-base">{{ subheadline }}</p>
-                    <p class="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs text-slate-300 sm:text-sm">
+                    <p class="mt-3 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2 text-left text-xs leading-snug text-slate-300 sm:justify-start sm:rounded-full sm:py-1.5 sm:text-sm">
                         <svg class="h-4 w-4 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
