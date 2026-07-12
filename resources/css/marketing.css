@@ -67,6 +67,63 @@
     }
 }
 
+/* Landing hero — entrance + atmosphere */
+.landing-hero__glow {
+    animation: landing-hero-glow 8s ease-in-out infinite alternate;
+}
+
+.landing-hero__glow--delayed {
+    animation-delay: 2.5s;
+    animation-duration: 10s;
+}
+
+@keyframes landing-hero-glow {
+    from {
+        opacity: 0.55;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(-12px, 10px, 0) scale(1.08);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .landing-hero__item {
+        opacity: 0;
+        transform: translateY(18px);
+        animation: landing-hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .landing-hero__item--1 { animation-delay: 0.05s; }
+    .landing-hero__item--2 { animation-delay: 0.12s; }
+    .landing-hero__item--3 { animation-delay: 0.18s; }
+    .landing-hero__item--4 { animation-delay: 0.28s; }
+    .landing-hero__item--5 { animation-delay: 0.36s; }
+    .landing-hero__item--6 { animation-delay: 0.44s; }
+    .landing-hero__item--7 { animation-delay: 0.52s; }
+    .landing-hero__item--8 { animation-delay: 0.6s; }
+}
+
+@keyframes landing-hero-rise {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-hero__glow,
+    .landing-hero__glow--delayed {
+        animation: none;
+    }
+
+    .landing-hero__item {
+        opacity: 1;
+        transform: none;
+    }
+}
+
 /* Subscription wizard — dark modal aligned with marketing pages */
 .p-dialog-mask:has(.marketing-dialog) {
     backdrop-filter: blur(6px);

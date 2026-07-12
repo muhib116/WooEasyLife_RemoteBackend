@@ -11,6 +11,20 @@ use Illuminate\Http\Request;
 
 class PublicSubscriptionController extends Controller
 {
+    public function validateFields(Request $request, PublicSubscriptionService $subscriptionService)
+    {
+        $data = $request->validate([
+            'website_url' => 'nullable|string|max:255',
+            'email' => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:30',
+            'whatsapp_number' => 'nullable|string|max:30',
+        ]);
+
+        return response()->json(
+            $subscriptionService->validateRealtime($request->user(), $data)
+        );
+    }
+
     public function store(
         Request $request,
         PublicSubscriptionService $subscriptionService,

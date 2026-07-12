@@ -133,6 +133,39 @@ class PublicSubscriptionTest extends TestCase
         $this->assertSame(1, SubscriptionInquiry::count());
     }
 
+    public function test_realtime_validate_endpoint_flags_taken_merchant_domain(): void
+    {
+        config(['domains.enforce_global_uniqueness' => true]);
+
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'owner3@example.com',
+            'phone' => '01700000003',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'live-shop.com',
+            'title' => 'live-shop.com',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        $response = $this->postJson(route('pricing.subscribe.validate'), [
+            'website_url' => 'live-shop.com',
+            'email' => 'buyer@example.com',
+            'contact_number' => '01711111111',
+            'whatsapp_number' => '01711111111',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('errors.website_url', fn ($message) => is_string($message) && $message !== '');
+    }
+
     public function test_duplicate_is_blocked_when_domain_and_email_match(): void
     {
         $plan = $this->createPaidPlan();

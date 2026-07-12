@@ -110,6 +110,9 @@ Route::prefix('public/fraud-check')->name('landing.fraud-check.')->group(functio
 });
 
 Route::get('/pricing', PricingController::class)->name('pricing');
+Route::post('/pricing/subscribe/validate', [PublicSubscriptionController::class, 'validateFields'])
+    ->middleware('throttle:30,1')
+    ->name('pricing.subscribe.validate');
 Route::post('/pricing/subscribe', [PublicSubscriptionController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('pricing.subscribe');

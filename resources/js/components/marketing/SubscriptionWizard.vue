@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch, onUnmounted } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import Dialog from 'primevue/dialog';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
@@ -30,10 +31,28 @@ const toast = useToast();
 const currentStep = ref(0);
 const submittedSummary = ref(null);
 const domainFieldError = ref(null);
+const nameFieldError = ref(null);
 const emailFieldError = ref(null);
 const mobileFieldError = ref(null);
 const whatsappFieldError = ref(null);
+const addressFieldError = ref(null);
 const senderNumberFieldError = ref(null);
+const transactionIdFieldError = ref(null);
+const domainChecking = ref(false);
+const touched = ref({
+    website_url: false,
+    customer_name: false,
+    email: false,
+    contact_number: false,
+    whatsapp_number: false,
+    address: false,
+    transaction_id: false,
+    account_number: false,
+});
+
+let localValidateTimer = null;
+let serverValidateTimer = null;
+let serverValidateSerial = 0;
 
 const stepKeys = ['plan', 'contact', 'payment', 'confirm'];
 
@@ -124,10 +143,24 @@ const resetWizard = () => {
     currentStep.value = 0;
     submittedSummary.value = null;
     domainFieldError.value = null;
+    nameFieldError.value = null;
     emailFieldError.value = null;
     mobileFieldError.value = null;
     whatsappFieldError.value = null;
+    addressFieldError.value = null;
     senderNumberFieldError.value = null;
+    transactionIdFieldError.value = null;
+    domainChecking.value = false;
+    touched.value = {
+        website_url: false,
+        customer_name: false,
+        email: false,
+        contact_number: false,
+        whatsapp_number: false,
+        address: false,
+        transaction_id: false,
+        account_number: false,
+    };
     form.clearErrors();
     form.reset();
     applyPlanToForm(props.plan);
@@ -255,10 +288,13 @@ const close = () => emit('update:visible', false);
 const currentStepLabel = computed(() => activeSteps.value[currentStep.value]?.label ?? '');
 
 const websiteUrlError = computed(() => domainFieldError.value || form.errors.website_url || null);
+const nameError = computed(() => nameFieldError.value || form.errors.customer_name || null);
 const emailError = computed(() => emailFieldError.value || form.errors.email || null);
 const mobileError = computed(() => mobileFieldError.value || form.errors.contact_number || null);
 const whatsappError = computed(() => whatsappFieldError.value || form.errors.whatsapp_number || null);
+const addressError = computed(() => addressFieldError.value || form.errors.address || null);
 const senderNumberError = computed(() => senderNumberFieldError.value || form.errors.account_number || null);
+const transactionIdError = computed(() => transactionIdFieldError.value || form.errors.transaction_id || null);
 
 const isDomainInputValid = computed(() => {
     if (props.domains.length) {
@@ -267,7 +303,7 @@ const isDomainInputValid = computed(() => {
 
     const domain = normalizeDomainInput(form.website_url);
 
-    return Boolean(domain && isValidDomainHost(domain) && !domainFieldError.value);
+    return Boolean(domain && isValidDomainHost(domain) && !domainFieldError.value && !domainChecking.value);
 });
 
 const contactFieldsValid = computed(() => Boolean(
@@ -277,103 +313,357 @@ const contactFieldsValid = computed(() => Boolean(
     && isValidBdMobile(form.contact_number)
     && isValidBdMobile(form.whatsapp_number)
     && form.address?.trim()
+    && !nameFieldError.value
     && !emailFieldError.value
     && !mobileFieldError.value
-    && !whatsappFieldError.value,
+    && !whatsappFieldError.value
+    && !addressFieldError.value
+    && !domainFieldError.value
 ));
 
-const onDomainInput = () => {
-    if (domainFieldError.value) {
-        domainFieldError.value = null;
-    }
+const markTouched = (field) => {
+    touched.value[field] = true;
+};
 
-    if (form.errors.website_url) {
-        form.clearErrors('website_url');
+const clearServerFieldError = (field) => {
+    if (form.errors[field]) {
+        form.clearErrors(field);
     }
 };
 
-const onDomainBlur = () => {
+const validateNameLocal = (force = false) => {
+    if (!force && !touched.value.customer_name && !form.customer_name?.trim()) {
+        nameFieldError.value = null;
+        return true;
+    }
+
+    if (!form.customer_name?.trim()) {
+        nameFieldError.value = 'আপনার নাম লিখুন।';
+        return false;
+    }
+
+    nameFieldError.value = null;
+    return true;
+};
+
+const validateEmailLocal = (force = false) => {
+    const value = form.email?.trim() ?? '';
+    if (!force && !touched.value.email && value === '') {
+        emailFieldError.value = null;
+        return true;
+    }
+
+    const result = validateEmail(form.email);
+    emailFieldError.value = result.message;
+    return result.valid;
+};
+
+const validateMobileLocal = (force = false) => {
+    const value = form.contact_number?.trim() ?? '';
+    if (!force && !touched.value.contact_number && value === '') {
+        mobileFieldError.value = null;
+        return true;
+    }
+
+    // Avoid noisy errors while user is still typing a short number.
+    if (!force && value !== '' && value.replace(/\D/g, '').length < 11) {
+        mobileFieldError.value = null;
+        return false;
+    }
+
+    const result = validateBdMobile(form.contact_number, 'মোবাইল নম্বর');
+    mobileFieldError.value = result.message;
+    if (result.valid && result.value) {
+        form.contact_number = result.value;
+    }
+    return result.valid;
+};
+
+const validateWhatsappLocal = (force = false) => {
+    const value = form.whatsapp_number?.trim() ?? '';
+    if (!force && !touched.value.whatsapp_number && value === '') {
+        whatsappFieldError.value = null;
+        return true;
+    }
+
+    if (!force && value !== '' && value.replace(/\D/g, '').length < 11) {
+        whatsappFieldError.value = null;
+        return false;
+    }
+
+    const result = validateBdMobile(form.whatsapp_number, 'WhatsApp নম্বর');
+    whatsappFieldError.value = result.message;
+    if (result.valid && result.value) {
+        form.whatsapp_number = result.value;
+    }
+    return result.valid;
+};
+
+const validateAddressLocal = (force = false) => {
+    if (!force && !touched.value.address && !form.address?.trim()) {
+        addressFieldError.value = null;
+        return true;
+    }
+
+    if (!form.address?.trim()) {
+        addressFieldError.value = 'ঠিকানা লিখুন।';
+        return false;
+    }
+
+    addressFieldError.value = null;
+    return true;
+};
+
+const validateDomainLocal = (force = false) => {
     if (props.domains.length) {
-        return;
+        domainFieldError.value = null;
+        return true;
+    }
+
+    const value = form.website_url?.trim() ?? '';
+    if (!force && !touched.value.website_url && value === '') {
+        domainFieldError.value = null;
+        return true;
     }
 
     const result = validateDomainInput(form.website_url);
     domainFieldError.value = result.message;
-
-    if (result.valid && result.domain) {
-        form.website_url = result.domain;
-    }
+    return result.valid;
 };
 
-const onEmailInput = () => {
-    emailFieldError.value = null;
-    if (form.errors.email) {
-        form.clearErrors('email');
+const validateTransactionIdLocal = (force = false) => {
+    const value = form.transaction_id?.trim() ?? '';
+    if (!force && !touched.value.transaction_id && value === '') {
+        transactionIdFieldError.value = null;
+        return true;
     }
+
+    if (!value) {
+        transactionIdFieldError.value = 'ট্রানজেকশন আইডি লিখুন।';
+        return false;
+    }
+
+    if (value.length < 4) {
+        transactionIdFieldError.value = 'সঠিক ট্রানজেকশন আইডি লিখুন।';
+        return false;
+    }
+
+    transactionIdFieldError.value = null;
+    return true;
 };
 
-const onEmailBlur = () => {
-    const result = validateEmail(form.email);
-    emailFieldError.value = result.message;
-
-    if (result.valid && result.value) {
-        form.email = result.value;
+const validateSenderLocal = (force = false) => {
+    const value = form.account_number?.trim() ?? '';
+    if (!force && !touched.value.account_number && value === '') {
+        senderNumberFieldError.value = null;
+        return true;
     }
-};
 
-const onMobileInput = () => {
-    mobileFieldError.value = null;
-    if (form.errors.contact_number) {
-        form.clearErrors('contact_number');
+    if (!force && value !== '' && value.replace(/\D/g, '').length < 11) {
+        senderNumberFieldError.value = null;
+        return false;
     }
-};
 
-const onMobileBlur = () => {
-    const result = validateBdMobile(form.contact_number, 'মোবাইল নম্বর');
-    mobileFieldError.value = result.message;
-
-    if (result.valid && result.value) {
-        form.contact_number = result.value;
-    }
-};
-
-const onWhatsappInput = () => {
-    whatsappFieldError.value = null;
-    if (form.errors.whatsapp_number) {
-        form.clearErrors('whatsapp_number');
-    }
-};
-
-const onWhatsappBlur = () => {
-    const result = validateBdMobile(form.whatsapp_number, 'WhatsApp নম্বর');
-    whatsappFieldError.value = result.message;
-
-    if (result.valid && result.value) {
-        form.whatsapp_number = result.value;
-    }
-};
-
-const onSenderNumberInput = () => {
-    senderNumberFieldError.value = null;
-    if (form.errors.account_number) {
-        form.clearErrors('account_number');
-    }
-};
-
-const onSenderNumberBlur = () => {
     const result = validateBdMobile(form.account_number, 'পাঠানোর নম্বর');
     senderNumberFieldError.value = result.message;
-
     if (result.valid && result.value) {
         form.account_number = result.value;
     }
+    return result.valid;
+};
+
+const runLocalContactValidation = (force = false) => {
+    validateDomainLocal(force);
+    validateNameLocal(force);
+    validateEmailLocal(force);
+    validateMobileLocal(force);
+    validateWhatsappLocal(force);
+    validateAddressLocal(force);
+};
+
+const scheduleLocalValidation = () => {
+    if (localValidateTimer) {
+        clearTimeout(localValidateTimer);
+    }
+
+    localValidateTimer = setTimeout(() => {
+        runLocalContactValidation(false);
+    }, 280);
+};
+
+const scheduleServerValidation = () => {
+    if (serverValidateTimer) {
+        clearTimeout(serverValidateTimer);
+    }
+
+    serverValidateTimer = setTimeout(() => {
+        void runServerValidation();
+    }, 550);
+};
+
+const runServerValidation = async () => {
+    if (props.domains.length) {
+        return;
+    }
+
+    const domainResult = validateDomainInput(form.website_url);
+    if (!domainResult.valid) {
+        return;
+    }
+
+    const serial = ++serverValidateSerial;
+    domainChecking.value = true;
+
+    try {
+        const { data } = await axios.post(route('pricing.subscribe.validate'), {
+            website_url: domainResult.domain || form.website_url,
+            email: form.email,
+            contact_number: form.contact_number,
+            whatsapp_number: form.whatsapp_number,
+        });
+
+        if (serial !== serverValidateSerial) {
+            return;
+        }
+
+        if (data.normalized?.website_url) {
+            form.website_url = data.normalized.website_url;
+        }
+
+        if (data.errors?.website_url) {
+            domainFieldError.value = data.errors.website_url;
+        } else if (!domainFieldError.value || domainFieldError.value.includes('নিবন্ধিত') || domainFieldError.value.includes('প্রক্রিয়াধীন')) {
+            // Clear only server-sourced domain errors when server says OK.
+            if (!validateDomainInput(form.website_url).message) {
+                domainFieldError.value = null;
+            }
+        }
+
+        if (data.errors?.email && touched.value.email) {
+            emailFieldError.value = data.errors.email;
+        }
+        if (data.errors?.contact_number && touched.value.contact_number) {
+            mobileFieldError.value = data.errors.contact_number;
+        }
+        if (data.errors?.whatsapp_number && touched.value.whatsapp_number) {
+            whatsappFieldError.value = data.errors.whatsapp_number;
+        }
+    } catch {
+        // Keep local validation; ignore transient network errors for UX.
+    } finally {
+        if (serial === serverValidateSerial) {
+            domainChecking.value = false;
+        }
+    }
+};
+
+const onDomainInput = () => {
+    markTouched('website_url');
+    clearServerFieldError('website_url');
+    scheduleLocalValidation();
+    scheduleServerValidation();
+};
+
+const onDomainBlur = () => {
+    markTouched('website_url');
+    validateDomainLocal(true);
+    scheduleServerValidation();
+};
+
+const onNameInput = () => {
+    markTouched('customer_name');
+    clearServerFieldError('customer_name');
+    scheduleLocalValidation();
+};
+
+const onNameBlur = () => {
+    markTouched('customer_name');
+    validateNameLocal(true);
+};
+
+const onEmailInput = () => {
+    markTouched('email');
+    clearServerFieldError('email');
+    scheduleLocalValidation();
+    scheduleServerValidation();
+};
+
+const onEmailBlur = () => {
+    markTouched('email');
+    const result = validateEmail(form.email);
+    emailFieldError.value = result.message;
+    if (result.valid && result.value) {
+        form.email = result.value;
+    }
+    scheduleServerValidation();
+};
+
+const onMobileInput = () => {
+    markTouched('contact_number');
+    clearServerFieldError('contact_number');
+    scheduleLocalValidation();
+    scheduleServerValidation();
+};
+
+const onMobileBlur = () => {
+    markTouched('contact_number');
+    validateMobileLocal(true);
+    scheduleServerValidation();
+};
+
+const onWhatsappInput = () => {
+    markTouched('whatsapp_number');
+    clearServerFieldError('whatsapp_number');
+    scheduleLocalValidation();
+    scheduleServerValidation();
+};
+
+const onWhatsappBlur = () => {
+    markTouched('whatsapp_number');
+    validateWhatsappLocal(true);
+    scheduleServerValidation();
+};
+
+const onAddressInput = () => {
+    markTouched('address');
+    clearServerFieldError('address');
+    scheduleLocalValidation();
+};
+
+const onAddressBlur = () => {
+    markTouched('address');
+    validateAddressLocal(true);
+};
+
+const onTransactionIdInput = () => {
+    markTouched('transaction_id');
+    clearServerFieldError('transaction_id');
+    validateTransactionIdLocal(false);
+};
+
+const onTransactionIdBlur = () => {
+    markTouched('transaction_id');
+    validateTransactionIdLocal(true);
+};
+
+const onSenderNumberInput = () => {
+    markTouched('account_number');
+    clearServerFieldError('account_number');
+    validateSenderLocal(false);
+};
+
+const onSenderNumberBlur = () => {
+    markTouched('account_number');
+    validateSenderLocal(true);
 };
 
 const paymentFieldsValid = computed(() => Boolean(
     form.transaction_method
     && form.transaction_id?.trim()
+    && form.transaction_id.trim().length >= 4
     && isValidBdMobile(form.account_number)
-    && !senderNumberFieldError.value,
+    && !senderNumberFieldError.value
+    && !transactionIdFieldError.value,
 ));
 
 const canGoNext = computed(() => {
@@ -393,73 +683,55 @@ const canGoNext = computed(() => {
 });
 
 const contactValidationMessage = () => {
-    const missing = [];
+    ['website_url', 'customer_name', 'email', 'contact_number', 'whatsapp_number', 'address']
+        .forEach((key) => { touched.value[key] = true; });
 
-    if (props.domains.length) {
-        if (!form.website_url?.trim()) {
-            missing.push('ডোমেইন নাম/ওয়েবসাইটের নাম');
-        }
-    } else {
-        const domainResult = validateDomainInput(form.website_url);
+    runLocalContactValidation(true);
 
-        if (!domainResult.valid) {
-            domainFieldError.value = domainResult.message;
-
-            return {
-                summary: 'ডোমেইন যাচাই প্রয়োজন',
-                detail: domainResult.message,
-                missing: ['ডোমেইন নাম/ওয়েবসাইটের নাম'],
-            };
-        }
-
-        form.website_url = domainResult.domain;
-        domainFieldError.value = null;
+    if (!props.domains.length && (domainFieldError.value || !isDomainInputValid.value)) {
+        return {
+            summary: 'ডোমেইন যাচাই প্রয়োজন',
+            detail: domainFieldError.value || 'সঠিক ডোমেইন নাম লিখুন।',
+            missing: ['ডোমেইন নাম/ওয়েবসাইটের নাম'],
+        };
     }
 
-    if (!form.customer_name?.trim()) {
-        missing.push('নাম');
+    if (nameFieldError.value || !form.customer_name?.trim()) {
+        validateNameLocal(true);
     }
 
-    const emailResult = validateEmail(form.email);
-    if (!emailResult.valid) {
-        emailFieldError.value = emailResult.message;
-
+    if (emailFieldError.value || !isValidEmail(form.email)) {
         return {
             summary: 'ইমেইল যাচাই প্রয়োজন',
-            detail: emailResult.message,
+            detail: emailFieldError.value || 'সঠিক ইমেইল ঠিকানা লিখুন।',
             missing: ['ইমেইল'],
         };
     }
-    form.email = emailResult.value;
-    emailFieldError.value = null;
 
-    const mobileResult = validateBdMobile(form.contact_number, 'মোবাইল নম্বর');
-    if (!mobileResult.valid) {
-        mobileFieldError.value = mobileResult.message;
-
+    if (mobileFieldError.value || !isValidBdMobile(form.contact_number)) {
         return {
             summary: 'মোবাইল নম্বর যাচাই প্রয়োজন',
-            detail: mobileResult.message,
+            detail: mobileFieldError.value || 'সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।',
             missing: ['মোবাইল নম্বর'],
         };
     }
-    form.contact_number = mobileResult.value;
-    mobileFieldError.value = null;
 
-    const whatsappResult = validateBdMobile(form.whatsapp_number, 'WhatsApp নম্বর');
-    if (!whatsappResult.valid) {
-        whatsappFieldError.value = whatsappResult.message;
-
+    if (whatsappFieldError.value || !isValidBdMobile(form.whatsapp_number)) {
         return {
             summary: 'WhatsApp নম্বর যাচাই প্রয়োজন',
-            detail: whatsappResult.message,
+            detail: whatsappFieldError.value || 'সঠিক বাংলাদেশি WhatsApp নম্বর লিখুন।',
             missing: ['WhatsApp নম্বর'],
         };
     }
-    form.whatsapp_number = whatsappResult.value;
-    whatsappFieldError.value = null;
 
-    if (!form.address?.trim()) {
+    const missing = [];
+    if (props.domains.length && !form.website_url?.trim()) {
+        missing.push('ডোমেইন নাম/ওয়েবসাইটের নাম');
+    }
+    if (nameFieldError.value || !form.customer_name?.trim()) {
+        missing.push('নাম');
+    }
+    if (addressFieldError.value || !form.address?.trim()) {
         missing.push('ঠিকানা');
     }
 
@@ -475,27 +747,26 @@ const contactValidationMessage = () => {
 };
 
 const paymentValidationMessage = () => {
+    touched.value.transaction_id = true;
+    touched.value.account_number = true;
+    validateTransactionIdLocal(true);
+    validateSenderLocal(true);
+
     const missing = [];
 
     if (!form.transaction_method) {
         missing.push('পেমেন্ট পদ্ধতি');
     }
-    if (!form.transaction_id?.trim()) {
+    if (transactionIdFieldError.value || !form.transaction_id?.trim()) {
         missing.push('ট্রানজেকশন আইডি');
     }
-
-    const senderResult = validateBdMobile(form.account_number, 'পাঠানোর নম্বর');
-    if (!senderResult.valid) {
-        senderNumberFieldError.value = senderResult.message;
-
+    if (senderNumberFieldError.value || !isValidBdMobile(form.account_number)) {
         return {
             summary: 'পাঠানোর নম্বর যাচাই প্রয়োজন',
-            detail: senderResult.message,
+            detail: senderNumberFieldError.value || 'সঠিক বাংলাদেশি পাঠানোর নম্বর লিখুন।',
             missing: ['পাঠানোর নম্বর'],
         };
     }
-    form.account_number = senderResult.value;
-    senderNumberFieldError.value = null;
 
     if (!missing.length) {
         return null;
@@ -532,7 +803,14 @@ const currentValidationMessage = () => {
     };
 };
 
-const nextStep = () => {
+const nextStep = async () => {
+    if (currentStep.value === 1) {
+        ['website_url', 'customer_name', 'email', 'contact_number', 'whatsapp_number', 'address']
+            .forEach((key) => { touched.value[key] = true; });
+        runLocalContactValidation(true);
+        await runServerValidation();
+    }
+
     if (!canGoNext.value) {
         showValidationToast(currentValidationMessage());
         return;
@@ -622,6 +900,12 @@ const stepProgressClass = (index) => {
 };
 
 onUnmounted(() => {
+    if (localValidateTimer) {
+        clearTimeout(localValidateTimer);
+    }
+    if (serverValidateTimer) {
+        clearTimeout(serverValidateTimer);
+    }
     document.body.style.overflow = '';
 });
 </script>
@@ -800,15 +1084,25 @@ onUnmounted(() => {
                                 @input="onDomainInput"
                                 @blur="onDomainBlur"
                             >
-                            <p class="text-xs text-slate-500">WooCommerce সাইটের ডোমেইন বা ওয়েবসাইটের নাম লিখুন</p>
+                            <p class="text-xs text-slate-500">
+                                {{ domainChecking ? 'ডোমেইন যাচাই করা হচ্ছে...' : 'WooCommerce সাইটের ডোমেইন বা ওয়েবসাইটের নাম লিখুন' }}
+                            </p>
+                            <small v-if="websiteUrlError" class="block text-red-400">{{ websiteUrlError }}</small>
                         </div>
-                        <small v-if="websiteUrlError" class="text-red-400">{{ websiteUrlError }}</small>
 
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="sm:col-span-2 space-y-1">
                                 <label class="text-sm font-medium text-slate-300">নাম *</label>
-                                <input v-model="form.customer_name" type="text" placeholder="আপনার নাম" autocomplete="name" :class="fieldClass(form.errors.customer_name)">
-                                <small v-if="form.errors.customer_name" class="text-red-400">{{ form.errors.customer_name }}</small>
+                                <input
+                                    v-model="form.customer_name"
+                                    type="text"
+                                    placeholder="আপনার নাম"
+                                    autocomplete="name"
+                                    :class="fieldClass(nameError)"
+                                    @input="onNameInput"
+                                    @blur="onNameBlur"
+                                >
+                                <small v-if="nameError" class="block text-red-400">{{ nameError }}</small>
                             </div>
                             <div class="space-y-1">
                                 <label class="text-sm font-medium text-slate-300">ইমেইল *</label>
@@ -822,7 +1116,7 @@ onUnmounted(() => {
                                     @input="onEmailInput"
                                     @blur="onEmailBlur"
                                 >
-                                <small v-if="emailError" class="text-red-400">{{ emailError }}</small>
+                                <small v-if="emailError" class="block text-red-400">{{ emailError }}</small>
                             </div>
                             <div class="space-y-1">
                                 <label class="text-sm font-medium text-slate-300">মোবাইল নম্বর *</label>
@@ -836,7 +1130,7 @@ onUnmounted(() => {
                                     @input="onMobileInput"
                                     @blur="onMobileBlur"
                                 >
-                                <small v-if="mobileError" class="text-red-400">{{ mobileError }}</small>
+                                <small v-if="mobileError" class="block text-red-400">{{ mobileError }}</small>
                             </div>
                             <div class="space-y-1">
                                 <label class="text-sm font-medium text-slate-300">WhatsApp নম্বর *</label>
@@ -850,7 +1144,7 @@ onUnmounted(() => {
                                     @input="onWhatsappInput"
                                     @blur="onWhatsappBlur"
                                 >
-                                <small v-if="whatsappError" class="text-red-400">{{ whatsappError }}</small>
+                                <small v-if="whatsappError" class="block text-red-400">{{ whatsappError }}</small>
                             </div>
                             <div class="sm:col-span-2 space-y-1">
                                 <label class="text-sm font-medium text-slate-300">ঠিকানা *</label>
@@ -858,9 +1152,11 @@ onUnmounted(() => {
                                     v-model="form.address"
                                     rows="2"
                                     placeholder="জেলা, উপজেলা, বিস্তারিত ঠিকানা"
-                                    :class="fieldClass(form.errors.address)"
+                                    :class="fieldClass(addressError)"
+                                    @input="onAddressInput"
+                                    @blur="onAddressBlur"
                                 />
-                                <small v-if="form.errors.address" class="text-red-400">{{ form.errors.address }}</small>
+                                <small v-if="addressError" class="block text-red-400">{{ addressError }}</small>
                             </div>
                         </div>
                     </div>
@@ -924,8 +1220,15 @@ onUnmounted(() => {
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="space-y-1 sm:col-span-2">
                                 <label class="text-sm font-medium text-slate-300">ট্রানজেকশন আইডি *</label>
-                                <input v-model="form.transaction_id" type="text" placeholder="যেমন: 8N7A2XX" :class="fieldClass(form.errors.transaction_id)">
-                                <small v-if="form.errors.transaction_id" class="text-red-400">{{ form.errors.transaction_id }}</small>
+                                <input
+                                    v-model="form.transaction_id"
+                                    type="text"
+                                    placeholder="যেমন: 8N7A2XX"
+                                    :class="fieldClass(transactionIdError)"
+                                    @input="onTransactionIdInput"
+                                    @blur="onTransactionIdBlur"
+                                >
+                                <small v-if="transactionIdError" class="block text-red-400">{{ transactionIdError }}</small>
                             </div>
                             <div class="sm:col-span-2 space-y-1">
                                 <label class="text-sm font-medium text-slate-300">যে নম্বর থেকে পাঠিয়েছেন *</label>
@@ -938,7 +1241,7 @@ onUnmounted(() => {
                                     @input="onSenderNumberInput"
                                     @blur="onSenderNumberBlur"
                                 >
-                                <small v-if="senderNumberError" class="text-red-400">{{ senderNumberError }}</small>
+                                <small v-if="senderNumberError" class="block text-red-400">{{ senderNumberError }}</small>
                             </div>
                             <div class="sm:col-span-2 space-y-1">
                                 <label class="text-sm font-medium text-slate-300">অতিরিক্ত নোট (ঐচ্ছিক)</label>

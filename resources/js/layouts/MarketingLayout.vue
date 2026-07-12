@@ -76,25 +76,6 @@ const helplineDisplay = computed(() => {
     return phone;
 });
 
-const paymentNumberLines = computed(() => {
-    const numbers = marketing.value.payment_numbers || {};
-    const lines = [];
-
-    if (numbers.bkash) {
-        lines.push({ label: 'bKash', value: numbers.bkash });
-    }
-
-    if (numbers.rocket) {
-        lines.push({ label: 'Rocket', value: numbers.rocket });
-    }
-
-    if (numbers.nagad) {
-        lines.push({ label: 'Nagad', value: numbers.nagad });
-    }
-
-    return lines;
-});
-
 const navLinkClass = (key) => {
     const active = props.activeNav === key;
 
@@ -420,17 +401,6 @@ onUnmounted(() => {
                                     {{ marketing.admin_email }}
                                 </a>
                             </p>
-                            <div
-                                v-if="paymentNumberLines.length"
-                                class="space-y-1 text-sm text-slate-500"
-                            >
-                                <p
-                                    v-for="line in paymentNumberLines"
-                                    :key="line.label"
-                                >
-                                    {{ line.label }}: <span class="text-slate-300">{{ line.value }}</span>
-                                </p>
-                            </div>
                             <p v-if="marketing.location" class="text-sm text-slate-500">
                                 {{ marketing.location }}
                             </p>

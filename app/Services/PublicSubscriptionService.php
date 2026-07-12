@@ -159,6 +159,77 @@ class PublicSubscriptionService
     }
 
     /**
+     * Soft validation for realtime UI (does not throw).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{ok: bool, errors: array<string, string>, normalized: array<string, string|null>}
+     */
+    public function validateRealtime(?User $user, array $data): array
+    {
+        $errors = [];
+        $normalized = [
+            'website_url' => null,
+            'email' => null,
+            'contact_number' => null,
+            'whatsapp_number' => null,
+        ];
+
+        $rawDomain = trim((string) ($data['website_url'] ?? $data['domain'] ?? ''));
+        if ($rawDomain !== '') {
+            $domain = $this->domainNormalizer->normalize($rawDomain);
+            if (! $domain) {
+                $errors['website_url'] = 'সঠিক ডোমেইন নাম লিখুন (যেমন: myshop.com)।';
+            } else {
+                $normalized['website_url'] = $domain;
+
+                try {
+                    $this->assertDomainAvailableForPublicSubscribe($user, $domain);
+                } catch (ValidationException $e) {
+                    $errors['website_url'] = $e->errors()['website_url'][0]
+                        ?? 'এই ডোমেইন ব্যবহার করা যাবে না।';
+                }
+
+                if (! isset($errors['website_url'])) {
+                    $duplicate = $this->findOpenDuplicate($user, $domain, $data);
+                    if ($duplicate) {
+                        $errors['website_url'] = $this->duplicateMessage($duplicate);
+                        $errors['subscription'] = $this->duplicateMessage($duplicate);
+                    }
+                }
+            }
+        }
+
+        $rawEmail = trim((string) ($data['email'] ?? ''));
+        if ($rawEmail !== '') {
+            if (! filter_var($rawEmail, FILTER_VALIDATE_EMAIL)) {
+                $errors['email'] = 'সঠিক ইমেইল ঠিকানা লিখুন (যেমন: name@example.com)।';
+            } else {
+                $normalized['email'] = strtolower($rawEmail);
+            }
+        }
+
+        foreach (['contact_number' => 'মোবাইল নম্বর', 'whatsapp_number' => 'WhatsApp নম্বর'] as $field => $label) {
+            $rawPhone = trim((string) ($data[$field] ?? ''));
+            if ($rawPhone === '') {
+                continue;
+            }
+
+            $phone = $this->normalizePhone($rawPhone);
+            if (! $phone || ! preg_match('/^01[3-9]\d{8}$/', $phone)) {
+                $errors[$field] = "সঠিক বাংলাদেশি {$label} লিখুন (যেমন: 017XXXXXXXX)।";
+            } else {
+                $normalized[$field] = $phone;
+            }
+        }
+
+        return [
+            'ok' => $errors === [],
+            'errors' => $errors,
+            'normalized' => $normalized,
+        ];
+    }
+
+    /**
      * Reject domains already registered to another merchant
      * (websites, packages, license tokens, businesses, SMS balances).
      */
