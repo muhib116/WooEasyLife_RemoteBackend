@@ -73,6 +73,10 @@ class MerchantAuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if ($user->must_change_password ?? false) {
+            return redirect()->route('portal.password.force');
+        }
+
         return redirect()->intended(RouteServiceProvider::PORTAL_HOME);
     }
 }

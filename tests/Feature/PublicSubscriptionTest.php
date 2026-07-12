@@ -7,6 +7,7 @@ use App\Models\SubscriptionInquiry;
 use App\Models\User;
 use App\Models\Website;
 use App\Mail\SubscriptionInquiryAdminMail;
+use App\Services\DomainNormalizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -26,6 +27,44 @@ class PublicSubscriptionTest extends TestCase
             'landing.rocket_number' => '01770989591',
             'landing.nagad_number' => '01770989591',
         ]);
+
+        $this->mockDnsPass();
+    }
+
+    private function mockDnsPass(): void
+    {
+        $this->mock(DomainNormalizer::class, function ($mock) {
+            $real = new DomainNormalizer();
+
+            $mock->shouldReceive('normalize')
+                ->andReturnUsing(fn (?string $input) => $real->normalize($input));
+            $mock->shouldReceive('matches')
+                ->andReturnUsing(fn (?string $left, ?string $right) => $real->matches($left, $right));
+            $mock->shouldReceive('constrainMatchingDomain')
+                ->andReturnUsing(function ($query, $column, $domain) use ($real) {
+                    $real->constrainMatchingDomain($query, $column, $domain);
+                });
+            $mock->shouldReceive('hasDnsARecord')->andReturn(true);
+            $mock->shouldReceive('resolvesPublicly')->andReturn(true);
+        });
+    }
+
+    private function mockDnsFail(): void
+    {
+        $this->mock(DomainNormalizer::class, function ($mock) {
+            $real = new DomainNormalizer();
+
+            $mock->shouldReceive('normalize')
+                ->andReturnUsing(fn (?string $input) => $real->normalize($input));
+            $mock->shouldReceive('matches')
+                ->andReturnUsing(fn (?string $left, ?string $right) => $real->matches($left, $right));
+            $mock->shouldReceive('constrainMatchingDomain')
+                ->andReturnUsing(function ($query, $column, $domain) use ($real) {
+                    $real->constrainMatchingDomain($query, $column, $domain);
+                });
+            $mock->shouldReceive('hasDnsARecord')->andReturn(false);
+            $mock->shouldReceive('resolvesPublicly')->andReturn(false);
+        });
     }
 
     public function test_guest_can_submit_pricing_subscription_inquiry(): void
@@ -129,6 +168,46 @@ class PublicSubscriptionTest extends TestCase
         $response->assertRedirect('/pricing');
         $response->assertSessionHasErrors('transaction_method');
         $this->assertSame(0, SubscriptionInquiry::count());
+    }
+
+    public function test_submit_rejects_domain_without_dns(): void
+    {
+        $this->mockDnsFail();
+
+        $plan = $this->createPaidPlan();
+
+        $response = $this->from('/pricing')->post(route('pricing.subscribe'), [
+            'package_hub_id' => $plan->id,
+            'website_url' => 'no-dns-shop.test',
+            'customer_name' => 'Karim',
+            'email' => 'nodns@example.com',
+            'contact_number' => '01711111111',
+            'whatsapp_number' => '01711111111',
+            'address' => 'Dhaka',
+            'transaction_method' => 'Bkash',
+            'transaction_id' => 'TXN777',
+            'account_number' => '01711111111',
+        ]);
+
+        $response->assertRedirect('/pricing');
+        $response->assertSessionHasErrors('website_url');
+        $this->assertSame(0, SubscriptionInquiry::count());
+    }
+
+    public function test_realtime_validate_rejects_domain_without_dns(): void
+    {
+        $this->mockDnsFail();
+
+        $response = $this->postJson(route('pricing.subscribe.validate'), [
+            'website_url' => 'no-dns-shop.test',
+            'email' => 'buyer@example.com',
+            'contact_number' => '01711111111',
+            'whatsapp_number' => '01711111111',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('errors.website_url', fn ($message) => is_string($message) && str_contains($message, 'DNS'));
     }
 
     public function test_guest_cannot_subscribe_domain_owned_by_merchant(): void

@@ -18,6 +18,11 @@ return [
 
     'nagad_number' => env('LANDING_NAGAD_NUMBER', env('SUBSCRIPTION_PAYMENT_NAGAD')),
 
+    'conversion_notifications' => [
+        'email' => (bool) env('LANDING_CONVERT_NOTIFY_EMAIL', true),
+        'sms' => (bool) env('LANDING_CONVERT_NOTIFY_SMS', true),
+    ],
+
     'app_download_url' => env('WOOEASYLIFE_ANDROID_DOWNLOAD_URL'),
 
     'play_store_url' => env('WOOEASYLIFE_PLAY_STORE_URL'),

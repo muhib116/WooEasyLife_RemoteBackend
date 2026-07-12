@@ -35,6 +35,7 @@ class GlobalDomainUniquenessTest extends TestCase
                     && $normalizedLeft === $normalizedRight;
             });
             $mock->shouldReceive('hasDnsARecord')->andReturn(true);
+            $mock->shouldReceive('resolvesPublicly')->andReturn(true);
             $mock->shouldReceive('constrainMatchingDomain')
                 ->andReturnUsing(function ($query, $column, $domain) {
                     (new \App\Services\DomainNormalizer())->constrainMatchingDomain($query, $column, $domain);

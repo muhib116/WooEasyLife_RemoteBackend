@@ -25,6 +25,7 @@ class MerchantSetupWizardTest extends TestCase
                 return 'shop.example.com';
             });
             $mock->shouldReceive('hasDnsARecord')->andReturn(true);
+            $mock->shouldReceive('resolvesPublicly')->andReturn(true);
             $mock->shouldReceive('matches')
                 ->andReturnUsing(function (?string $left, ?string $right) {
                     return (new DomainNormalizer())->matches($left, $right);

@@ -28,7 +28,7 @@ class OrderAdminTest extends TestCase
     {
         $admin = $this->adminUser();
 
-        PackageHub::create([
+        $plan = PackageHub::create([
             'title' => 'Starter – 1 Month',
             'per_order_rate' => 0,
             'package_duration' => '1_month',
@@ -38,16 +38,20 @@ class OrderAdminTest extends TestCase
             'features' => ['fraud_customer_checker' => true],
         ]);
 
-        $this->post(route('pricing.subscribe'), [
-            'package_hub_id' => 1,
-            'website_url' => 'myshop.com',
+        \App\Models\SubscriptionInquiry::create([
+            'package_hub_id' => $plan->id,
+            'domain' => 'myshop.com',
             'email' => 'buyer@example.com',
             'contact_number' => '01711111111',
             'whatsapp_number' => '01770989591',
             'address' => 'Dhaka',
+            'order_limit' => 1000,
+            'total_amount' => 999,
             'transaction_method' => 'Bkash',
             'transaction_id' => 'TXN999',
             'account_number' => '01711111111',
+            'status' => 'pending',
+            'source' => 'landing_pricing',
         ]);
 
         $response = $this->actingAs($admin)->get(route('orders.index'));

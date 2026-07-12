@@ -29,7 +29,7 @@ class MerchantDomainValidator
             ]);
         }
 
-        if (! $this->domainNormalizer->hasDnsARecord($domain)) {
+        if (! $this->domainNormalizer->resolvesPublicly($domain)) {
             if (! (app()->environment('local') && in_array($domain, ['localhost', '127.0.0.1'], true))) {
                 throw ValidationException::withMessages([
                     'domain' => 'Domain must resolve to a DNS A record before continuing.',

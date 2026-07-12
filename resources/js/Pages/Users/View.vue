@@ -35,12 +35,24 @@
                                         label="Test User"
                                         variant="info"
                                     />
+                                    <StatusBadge
+                                        v-if="acquisitionLabel"
+                                        :label="acquisitionLabel"
+                                        variant="warning"
+                                    />
                                 </div>
                                 <p
                                     class="mt-1 text-sm text-gray-500 dark:text-gray-400"
                                 >
                                     {{ roleLabel }} account
                                 </p>
+                                <Link
+                                    v-if="landingOrderId"
+                                    :href="route('orders.show', landingOrderId)"
+                                    class="mt-2 inline-flex text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
+                                >
+                                    Open Landing Order #{{ landingOrderId }}
+                                </Link>
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -203,6 +215,32 @@ const props = defineProps<{
 const showForm = ref(false);
 
 const roleLabel = computed(() => formatUserRoleLabel(props.user?.role));
+
+const acquisitionLabel = computed(() => {
+    const source = String(props.user?.acquisition_source || "");
+
+    if (!source) {
+        return null;
+    }
+
+    if (source.startsWith("landing_order:")) {
+        return `From Landing Order #${source.replace("landing_order:", "")}`;
+    }
+
+    return source;
+});
+
+const landingOrderId = computed(() => {
+    const source = String(props.user?.acquisition_source || "");
+
+    if (!source.startsWith("landing_order:")) {
+        return null;
+    }
+
+    const id = Number(source.replace("landing_order:", ""));
+
+    return Number.isFinite(id) && id > 0 ? id : null;
+});
 
 const contactItems = computed(() => {
     const items: { label: string; value: string; icon: IconName }[] = [];

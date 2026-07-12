@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\DownloadGateFieldException;
 use App\LogHelper;
 use App\Models\DownloadLead;
 use App\Services\Employee\EmployeePhoneNormalizer;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -22,10 +22,11 @@ class DownloadGateService
 
     public function __construct(
         private DomainNormalizer $domainNormalizer,
+        private BulkSmsService $bulkSms,
     ) {}
 
     /**
-     * @return array{ok: bool, message: string, resend_after?: int, website?: string}
+     * @return array{ok: bool, message: string, resend_after?: int, website?: string, debug_otp?: string}
      */
     public function sendOtp(string $name, string $phone, string $website, string $ip): array
     {
@@ -64,36 +65,39 @@ class DownloadGateService
             'ip' => $ip,
         ], self::OTP_TTL_SECONDS);
 
-        $sent = $this->sendSms(
+        $smsResult = $this->bulkSms->send(
             $phone,
-            "WooEasyLife OTP: {$code}. এটা কারো সাথে শেয়ার করবেন না। {$code} কোডটি ".((int) (self::OTP_TTL_SECONDS / 60)).' মিনিটের জন্য বৈধ।',
+            "WooEasyLife OTP: {$code}. Do not share this code. Valid for ".(int) (self::OTP_TTL_SECONDS / 60).' minutes.',
         );
 
-        if (! $sent) {
-            LogHelper::saveLog('download gate otp sms failed', "phone={$phone}");
+        if (! $smsResult['ok']) {
+            LogHelper::saveLog(
+                'download gate otp sms failed',
+                "phone={$phone}; code={$smsResult['response_code']}; message={$smsResult['message']}"
+            );
 
-            $hasGateway = filled(config('services.bulksms.api_key'));
-
-            if ($hasGateway || ! app()->environment(['local', 'testing'])) {
-                Cache::forget($cacheKey);
-
-                throw new InvalidArgumentException('SMS পাঠানো যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+            // Local/testing: keep OTP so developers can continue without BulkSMS IP whitelist.
+            if (app()->environment(['local', 'testing'])) {
+                return [
+                    'ok' => true,
+                    'message' => 'লোকাল মোড: SMS পাঠানো যায়নি ('.$smsResult['message'].')। নিচের debug OTP ব্যবহার করুন।',
+                    'resend_after' => self::OTP_RESEND_SECONDS,
+                    'website' => $website,
+                    'debug_otp' => $code,
+                ];
             }
+
+            Cache::forget($cacheKey);
+
+            throw new InvalidArgumentException($this->userFacingSmsError($smsResult));
         }
 
-        $payload = [
+        return [
             'ok' => true,
             'message' => 'আপনার ফোনে OTP পাঠানো হয়েছে।',
             'resend_after' => self::OTP_RESEND_SECONDS,
             'website' => $website,
         ];
-
-        if (! filled(config('services.bulksms.api_key')) && app()->environment(['local', 'testing'])) {
-            $payload['debug_otp'] = $code;
-            $payload['message'] = 'লোকাল মোড: OTP SMS ছাড়াই জেনারেট হয়েছে।';
-        }
-
-        return $payload;
     }
 
     /**
@@ -191,7 +195,7 @@ class DownloadGateService
         $normalized = EmployeePhoneNormalizer::normalize($phone);
 
         if (! preg_match('/^01[3-9]\d{8}$/', $normalized)) {
-            throw new InvalidArgumentException('সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01XXXXXXXXX)।');
+            throw new DownloadGateFieldException('সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01XXXXXXXXX)।', 'phone');
         }
 
         return $normalized;
@@ -199,10 +203,21 @@ class DownloadGateService
 
     public function normalizeAndValidateWebsite(string $website): string
     {
-        $domain = $this->domainNormalizer->normalize($website);
+        $raw = trim($website);
+
+        if ($raw === '') {
+            throw new DownloadGateFieldException('সঠিক ওয়েবসাইট/ডোমেইন দিন (যেমন: shop.example.com)।', 'website');
+        }
+
+        // Reject full page/console links — only a store domain is accepted (same intent as merchant setup).
+        if ($this->looksLikePageUrl($raw)) {
+            throw new DownloadGateFieldException('শুধু ওয়েবসাইটের ডোমেইন দিন (যেমন: myshop.com), পূর্ণ পেজ লিংক নয়।', 'website');
+        }
+
+        $domain = $this->domainNormalizer->normalize($raw);
 
         if ($domain === null || $domain === '') {
-            throw new InvalidArgumentException('সঠিক ওয়েবসাইট/ডোমেইন দিন (যেমন: shop.example.com)।');
+            throw new DownloadGateFieldException('সঠিক ওয়েবসাইট/ডোমেইন দিন (যেমন: shop.example.com)।', 'website');
         }
 
         if (filter_var($domain, FILTER_VALIDATE_IP)) {
@@ -210,56 +225,66 @@ class DownloadGateService
                 return $domain;
             }
 
-            throw new InvalidArgumentException('IP অ্যাড্রেস নয় — আপনার ওয়েবসাইটের ডোমেইন দিন।');
+            throw new DownloadGateFieldException('IP অ্যাড্রেস নয় — আপনার ওয়েবসাইটের ডোমেইন দিন।', 'website');
         }
 
         if (! preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i', $domain)
             && ! (app()->environment(['local', 'testing']) && $domain === 'localhost')) {
-            throw new InvalidArgumentException('সঠিক ডোমেইন ফরম্যাট দিন (যেমন: example.com)।');
+            throw new DownloadGateFieldException('সঠিক ডোমেইন ফরম্যাট দিন (যেমন: example.com)।', 'website');
         }
 
-        if (! $this->domainResolves($domain)) {
-            throw new InvalidArgumentException('এই ডোমেইনটি আসল/লাইভ নয় বলে মনে হচ্ছে (DNS পাওয়া যায়নি)। সঠিক ওয়েবসাইট দিন।');
+        if (! $this->domainNormalizer->resolvesPublicly($domain)) {
+            throw new DownloadGateFieldException('ডোমেইনের DNS A রেকর্ড পাওয়া যায়নি। লাইভ ওয়েবসাইটের সঠিক ডোমেইন দিন।', 'website');
         }
 
         return $domain;
     }
 
-    private function domainResolves(string $host): bool
+    /**
+     * @return array{ok: bool, message?: string, website?: string, error_field?: string}
+     */
+    public function validateWebsite(string $website): array
     {
-        if (app()->environment(['local', 'testing']) && in_array($host, ['localhost', '127.0.0.1'], true)) {
-            return true;
-        }
+        try {
+            $domain = $this->normalizeAndValidateWebsite($website);
 
-        if ($this->hostHasDnsRecords($host)) {
-            return true;
+            return [
+                'ok' => true,
+                'website' => $domain,
+                'message' => 'ডোমেইন যাচাই হয়েছে।',
+            ];
+        } catch (DownloadGateFieldException $e) {
+            return [
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'error_field' => $e->field,
+            ];
         }
-
-        if (str_starts_with($host, 'www.')) {
-            return $this->hostHasDnsRecords(substr($host, 4));
-        }
-
-        return $this->hostHasDnsRecords('www.'.$host);
     }
 
-    private function hostHasDnsRecords(string $host): bool
+    private function looksLikePageUrl(string $raw): bool
     {
-        if ($host === '') {
+        $candidate = $raw;
+
+        if (! preg_match('#^https?://#i', $candidate)) {
+            if (! str_contains($candidate, '/')) {
+                return false;
+            }
+
+            $candidate = 'https://'.$candidate;
+        }
+
+        $parts = parse_url($candidate);
+
+        if (! is_array($parts)) {
             return false;
         }
 
-        if ($this->domainNormalizer->hasDnsARecord($host)) {
-            return true;
-        }
+        $path = $parts['path'] ?? '';
+        $query = $parts['query'] ?? '';
+        $fragment = $parts['fragment'] ?? '';
 
-        $aaaa = @dns_get_record($host, DNS_AAAA) ?: [];
-        if ($aaaa !== []) {
-            return true;
-        }
-
-        $cname = @dns_get_record($host, DNS_CNAME) ?: [];
-
-        return $cname !== [];
+        return ($path !== '' && $path !== '/') || $query !== '' || $fragment !== '';
     }
 
     private function otpCacheKey(string $phone): string
@@ -267,34 +292,18 @@ class DownloadGateService
         return 'download_gate_otp:'.$phone;
     }
 
-    private function sendSms(string $phone, string $message): bool
+    /**
+     * @param  array{ok: bool, response_code: int|null, message: string|null, raw: string|null}  $smsResult
+     */
+    private function userFacingSmsError(array $smsResult): string
     {
-        $apiKey = config('services.bulksms.api_key');
+        $code = $smsResult['response_code'] ?? null;
 
-        if (! $apiKey) {
-            return false;
-        }
-
-        try {
-            $response = Http::timeout(15)->get('http://bulksmsbd.net/api/smsapi', [
-                'api_key' => $apiKey,
-                'type' => 'text',
-                'number' => $phone,
-                'senderid' => config('services.bulksms.sender_id'),
-                'message' => $message,
-            ]);
-
-            if (! $response->successful()) {
-                LogHelper::saveLog('download gate sms failed', $response->body());
-
-                return false;
-            }
-
-            return true;
-        } catch (\Throwable $th) {
-            LogHelper::saveLog('download gate sms failed', $th->getMessage());
-
-            return false;
-        }
+        return match ($code) {
+            1032 => 'SMS সার্ভারের IP whitelist করা নেই। BulkSMSBD প্যানেলে সার্ভার IP whitelist করুন।',
+            1007 => 'SMS ব্যালেন্স শেষ। অনুগ্রহ করে পরে আবার চেষ্টা করুন।',
+            1002 => 'SMS Sender ID সঠিক নয়। কনফিগারেশন চেক করুন।',
+            default => 'SMS পাঠানো যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+        };
     }
 }

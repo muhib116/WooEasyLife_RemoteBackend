@@ -274,6 +274,12 @@ class PublicSubscriptionService
             ]);
         }
 
+        if (! $this->domainNormalizer->resolvesPublicly($normalized)) {
+            throw ValidationException::withMessages([
+                'website_url' => 'ডোমেইনের DNS A রেকর্ড পাওয়া যায়নি। লাইভ ওয়েবসাইটের সঠিক ডোমেইন দিন।',
+            ]);
+        }
+
         if (! $this->domainAvailability->isEnforcementEnabled()) {
             return;
         }

@@ -35,6 +35,7 @@ class LicenseProvisioningServiceTest extends TestCase
                 return $normalize($left) === $normalize($right);
             });
             $mock->shouldReceive('hasDnsARecord')->andReturn(true);
+            $mock->shouldReceive('resolvesPublicly')->andReturn(true);
             $mock->shouldReceive('constrainMatchingDomain')
                 ->andReturnUsing(function ($query, $column, $domain) {
                     (new DomainNormalizer())->constrainMatchingDomain($query, $column, $domain);
@@ -187,6 +188,7 @@ class LicenseProvisioningServiceTest extends TestCase
                 return $normalize($left) === $normalize($right);
             });
             $mock->shouldReceive('hasDnsARecord')->andReturn(true);
+            $mock->shouldReceive('resolvesPublicly')->andReturn(true);
             $mock->shouldReceive('constrainMatchingDomain')
                 ->andReturnUsing(function ($query, $column, $domain) {
                     (new DomainNormalizer())->constrainMatchingDomain($query, $column, $domain);

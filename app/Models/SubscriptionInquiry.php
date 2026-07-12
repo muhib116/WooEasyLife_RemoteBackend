@@ -28,6 +28,8 @@ class SubscriptionInquiry extends Model
         'order_limit' => 'integer',
         'total_amount' => 'float',
         'transaction_charge' => 'float',
+        'converted_at' => 'datetime',
+        'conversion_meta' => 'array',
     ];
 
     public function user(): BelongsTo

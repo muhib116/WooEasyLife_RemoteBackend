@@ -82,7 +82,12 @@
                         <template #body="{ data }">
                             <div>
                                 <div class="font-medium">
-                                    {{ data.customer_name || data.user?.name || "Guest" }}
+                                    <Link
+                                        :href="route('orders.show', data.id)"
+                                        class="text-primary-600 hover:underline dark:text-primary-400"
+                                    >
+                                        {{ data.customer_name || data.user?.name || "Guest" }}
+                                    </Link>
                                 </div>
                                 <div class="text-xs text-gray-500">{{ data.email }}</div>
                                 <div class="text-xs text-gray-500">{{ data.contact_number }}</div>
@@ -135,6 +140,11 @@
                         <template #body="{ data }">
                             <TableActions>
                                 <TableActionButton
+                                    action="view"
+                                    tooltip="View details"
+                                    @click="router.visit(route('orders.show', data.id))"
+                                />
+                                <TableActionButton
                                     v-if="data.status === 'pending'"
                                     action="contact"
                                     tooltip="Mark contacted"
@@ -143,8 +153,20 @@
                                 <TableActionButton
                                     v-if="data.status !== 'converted'"
                                     action="approve"
-                                    tooltip="Mark converted"
-                                    @click="confirmStatusUpdate(data, 'converted')"
+                                    tooltip="Convert to merchant"
+                                    @click="openConvertDialog(data)"
+                                />
+                                <TableActionButton
+                                    v-if="data.status === 'converted' && data.converted_access_token_id"
+                                    action="key"
+                                    tooltip="Reveal license"
+                                    @click="revealLicense(data)"
+                                />
+                                <TableActionButton
+                                    v-if="data.status === 'converted' && data.user_id"
+                                    action="navigate"
+                                    tooltip="Open merchant"
+                                    @click="router.visit(route('users.view', data.user_id))"
                                 />
                                 <TableActionButton
                                     v-if="data.status !== 'rejected'"
@@ -190,11 +212,271 @@
                                     {{ data.source || "landing_pricing" }}
                                 </p>
                             </div>
+                            <div v-if="data.user_id">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    Merchant
+                                </p>
+                                <Link
+                                    :href="route('users.view', data.user_id)"
+                                    class="mt-1 inline-flex text-sm text-primary-600 hover:underline dark:text-primary-400"
+                                >
+                                    Open merchant #{{ data.user_id }}
+                                </Link>
+                            </div>
                         </div>
                     </template>
                 </DataTable>
             </PageCard>
         </div>
+
+        <!-- Verify before convert -->
+        <Dialog
+            v-model:visible="convertDialogVisible"
+            modal
+            header="Convert to merchant"
+            :style="{ width: '34rem' }"
+            :breakpoints="{ '640px': '95vw' }"
+            :closable="!converting"
+            :close-on-escape="!converting"
+        >
+            <div v-if="convertTarget" class="space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                    Verify this landing order data carefully. Confirming will create (or update)
+                    the merchant, add the website, assign the plan, record billing, and issue a license.
+                </p>
+
+                <div class="rounded-xl border border-gray-200 bg-slate-50 p-4 text-sm dark:border-gray-700 dark:bg-slate-900/50">
+                    <dl class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Name</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.customer_name || "—" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Website</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.domain }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Plan</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.package_hub?.title || "—" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Amount</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.total_amount }} TK
+                                <span v-if="convertTarget.transaction_method" class="text-gray-500">
+                                    · {{ convertTarget.transaction_method }}
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Txn ID</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.transaction_id || "—" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Sender</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.account_number || "—" }}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Phone / WhatsApp</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.contact_number }}
+                                <span v-if="convertTarget.whatsapp_number" class="text-gray-500">
+                                    / {{ convertTarget.whatsapp_number }}
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Address</dt>
+                            <dd class="mt-0.5 font-medium text-gray-900 dark:text-white">
+                                {{ convertTarget.address || "—" }}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div
+                    v-if="previewLoading"
+                    class="rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-500 dark:border-gray-700"
+                >
+                    Checking domain DNS and conflicts…
+                </div>
+
+                <div
+                    v-else-if="convertPreview"
+                    class="space-y-3"
+                >
+                    <div
+                        v-if="convertPreview.blockers?.length"
+                        class="rounded-xl border border-rose-300/50 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100"
+                    >
+                        <p class="font-semibold">Cannot convert yet</p>
+                        <ul class="mt-2 list-disc space-y-1 pl-5">
+                            <li v-for="item in convertPreview.blockers" :key="item">{{ item }}</li>
+                        </ul>
+                    </div>
+
+                    <div
+                        v-if="convertPreview.warnings?.length"
+                        class="rounded-xl border border-amber-300/50 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+                    >
+                        <p class="font-semibold">Warnings</p>
+                        <ul class="mt-2 list-disc space-y-1 pl-5">
+                            <li v-for="item in convertPreview.warnings" :key="item">{{ item }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-200 bg-slate-50 p-3 text-xs text-gray-600 dark:border-gray-700 dark:bg-slate-900/50 dark:text-gray-300">
+                        <p>
+                            DNS:
+                            <span :class="convertPreview.dns_ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                                {{ convertPreview.dns_ok ? 'OK' : 'Missing A record' }}
+                            </span>
+                            · Merchant:
+                            {{ convertPreview.user_resolution?.label || '—' }}
+                            · Billing:
+                            {{ convertPreview.payment_resolution?.action || '—' }}
+                        </p>
+                        <p
+                            v-if="convertPreview.credentials?.must_change_password"
+                            class="mt-1"
+                        >
+                            New merchant must change password on first portal login.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-amber-300/50 bg-amber-50 p-4 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <p class="font-semibold text-amber-800 dark:text-amber-200">Login credentials</p>
+                    <ul class="mt-2 space-y-1 text-amber-900/90 dark:text-amber-100/90">
+                        <li>
+                            <span class="text-amber-700/80 dark:text-amber-200/70">Username (email):</span>
+                            {{ convertTarget.email }}
+                        </li>
+                        <li>
+                            <span class="text-amber-700/80 dark:text-amber-200/70">Password (phone):</span>
+                            {{ convertTarget.contact_number }}
+                            <span class="text-xs text-amber-700/70 dark:text-amber-200/60">
+                                — only applied when creating a new merchant
+                            </span>
+                        </li>
+                        <li class="text-xs text-amber-700/80 dark:text-amber-200/70">
+                            Source tag: landing_order:{{ convertTarget.id }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <template #footer>
+                <Button
+                    label="Cancel"
+                    severity="secondary"
+                    outlined
+                    :disabled="converting"
+                    @click="convertDialogVisible = false"
+                />
+                <Button
+                    label="Confirm & convert"
+                    icon="pi pi-check"
+                    severity="success"
+                    :loading="converting || previewLoading"
+                    :disabled="converting || previewLoading || !canConfirmConvert"
+                    @click="submitConvert"
+                />
+            </template>
+        </Dialog>
+
+        <!-- Success: license + merchant nav -->
+        <Dialog
+            v-model:visible="successDialogVisible"
+            modal
+            header="Merchant ready"
+            :style="{ width: '34rem' }"
+            :breakpoints="{ '640px': '95vw' }"
+        >
+            <div class="space-y-4 text-sm">
+                <p class="text-gray-600 dark:text-gray-300">
+                    Conversion completed. Copy the license key and open the merchant panel when ready.
+                </p>
+
+                <div
+                    v-if="successNotifySummary"
+                    class="rounded-xl border border-gray-200 bg-slate-50 p-3 text-sm dark:border-gray-700 dark:bg-slate-900/50"
+                >
+                    {{ successNotifySummary }}
+                </div>
+
+                <div
+                    v-if="successLoginEmail"
+                    class="rounded-xl border border-gray-200 bg-slate-50 p-3 dark:border-gray-700 dark:bg-slate-900/50"
+                >
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Login email</p>
+                    <p class="mt-1 font-medium text-gray-900 dark:text-white">{{ successLoginEmail }}</p>
+                    <p
+                        v-if="successUserCreated"
+                        class="mt-1 text-xs text-gray-500"
+                    >
+                        Initial password is the customer phone number from the order.
+                    </p>
+                    <p
+                        v-else
+                        class="mt-1 text-xs text-gray-500"
+                    >
+                        Existing merchant account was reused — password was not changed.
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">License key</p>
+                    <div class="mt-2 flex gap-2">
+                        <InputText
+                            :model-value="successLicenseToken || ''"
+                            readonly
+                            class="w-full font-mono text-xs"
+                        />
+                        <Button
+                            icon="pi pi-copy"
+                            severity="secondary"
+                            outlined
+                            :disabled="!successLicenseToken"
+                            @click="copyLicense"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <template #footer>
+                <Button
+                    label="Close"
+                    severity="secondary"
+                    outlined
+                    @click="successDialogVisible = false"
+                />
+                <Button
+                    v-if="successOrderId"
+                    label="Open order"
+                    icon="pi pi-eye"
+                    severity="secondary"
+                    outlined
+                    @click="goToOrder"
+                />
+                <Button
+                    v-if="successUserId"
+                    label="Open merchant panel"
+                    icon="pi pi-arrow-right"
+                    @click="goToMerchant"
+                />
+            </template>
+        </Dialog>
     </AuthenticatedLayout>
 </template>
 
@@ -208,12 +490,16 @@ import TableActions from "@/Pages/Users/fragments/TableActions.vue";
 import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import { dateFormat } from "@/Helper";
-import { router } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
+import { Link, router, usePage } from "@inertiajs/vue3";
+import { computed, ref, watch } from "vue";
 import { useConfirm } from "primevue";
+import { useToast } from "primevue/usetoast";
+import axios from "axios";
 import InputText from "primevue/inputtext";
 import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
+import Dialog from "primevue/dialog";
+import Button from "primevue/button";
 
 defineOptions({
     name: "OrdersIndex",
@@ -231,11 +517,46 @@ const props = defineProps<{
     search?: string;
 }>();
 
+const page = usePage();
 const confirm = useConfirm();
+const toast = useToast();
+
 const activeStatus = ref(props.status || "pending");
 const searchQuery = ref(props.search || "");
 const expandedRows = ref({});
+const convertDialogVisible = ref(false);
+const convertTarget = ref<any | null>(null);
+const convertPreview = ref<any | null>(null);
+const previewLoading = ref(false);
+const converting = ref(false);
+const successDialogVisible = ref(false);
+const successLicenseToken = ref<string | null>(null);
+const successUserId = ref<number | null>(null);
+const successOrderId = ref<number | null>(null);
+const successLoginEmail = ref<string | null>(null);
+const successUserCreated = ref(false);
+const successNotifyEmail = ref(false);
+const successNotifySms = ref(false);
 
+const canConfirmConvert = computed(() => Boolean(convertPreview.value?.ok));
+
+const successNotifySummary = computed(() => {
+    const parts = [];
+
+    if (successNotifyEmail.value) {
+        parts.push("email");
+    }
+
+    if (successNotifySms.value) {
+        parts.push("SMS");
+    }
+
+    if (! parts.length) {
+        return null;
+    }
+
+    return `Merchant notified via ${parts.join(" + ")}.`;
+});
 const statCards = [
     { label: "Pending", value: "pending", countKey: "pending", icon: "PhHourglass", accentClass: "bg-amber-500" },
     { label: "Contacted", value: "contacted", countKey: "contacted", icon: "PhChatCircle", accentClass: "bg-sky-500" },
@@ -302,11 +623,6 @@ const statusConfirmCopy: Record<string, { header: string; message: string; accep
         message: "Use this when you have reached the customer by phone or WhatsApp.",
         acceptLabel: "Mark contacted",
     },
-    converted: {
-        header: "Mark as converted?",
-        message: "Use this when the subscription is active or payment is fully processed.",
-        acceptLabel: "Mark converted",
-    },
     rejected: {
         header: "Reject this order?",
         message: "The inquiry will be marked rejected. This does not notify the customer automatically.",
@@ -318,6 +634,10 @@ const statusConfirmCopy: Record<string, { header: string; message: string; accep
 const confirmStatusUpdate = (item: { id: number }, status: string) => {
     const copy = statusConfirmCopy[status];
 
+    if (!copy) {
+        return;
+    }
+
     confirm.require({
         header: copy.header,
         message: copy.message,
@@ -328,4 +648,114 @@ const confirmStatusUpdate = (item: { id: number }, status: string) => {
         },
     });
 };
+
+const openConvertDialog = async (item: any) => {
+    convertTarget.value = item;
+    convertPreview.value = null;
+    convertDialogVisible.value = true;
+    previewLoading.value = true;
+
+    try {
+        const { data } = await axios.get(route('orders.convertPreview', { order: item.id }));
+        convertPreview.value = data;
+    } catch (e: any) {
+        convertPreview.value = {
+            ok: false,
+            blockers: [e?.response?.data?.message || 'Could not run conversion pre-checks.'],
+            warnings: [],
+        };
+    } finally {
+        previewLoading.value = false;
+    }
+};
+
+const revealLicense = (item: { id: number }) => {
+    router.post(route('orders.revealLicense', { order: item.id }), {}, { preserveScroll: true });
+};
+
+const submitConvert = () => {
+    if (! convertTarget.value?.id || converting.value || ! canConfirmConvert.value) {
+        return;
+    }
+
+    converting.value = true;
+
+    router.post(
+        route('orders.convert', { order: convertTarget.value.id }),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                converting.value = false;
+            },
+            onSuccess: () => {
+                convertDialogVisible.value = false;
+            },
+        },
+    );
+};
+
+const copyLicense = async () => {
+    if (!successLicenseToken.value) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(successLicenseToken.value);
+        toast.add({
+            severity: "success",
+            summary: "Copied",
+            detail: "License key copied to clipboard",
+            life: 2500,
+            group: "br",
+        });
+    } catch {
+        toast.add({
+            severity: "error",
+            summary: "Copy failed",
+            detail: "Could not copy license key",
+            life: 3000,
+            group: "br",
+        });
+    }
+};
+
+const goToMerchant = () => {
+    if (! successUserId.value) {
+        return;
+    }
+
+    router.visit(route("users.view", successUserId.value));
+};
+
+const goToOrder = () => {
+    if (! successOrderId.value) {
+        return;
+    }
+
+    router.visit(route("orders.show", successOrderId.value));
+};
+
+watch(
+    () => page.props.flash,
+    (flash: any) => {
+        if (! flash?.license_token || ! flash?.converted_user_id) {
+            return;
+        }
+
+        successLicenseToken.value = String(flash.license_token);
+        successUserId.value = Number(flash.converted_user_id);
+        successOrderId.value = flash.converted_order_id
+            ? Number(flash.converted_order_id)
+            : null;
+        successLoginEmail.value = flash.converted_login_email
+            ? String(flash.converted_login_email)
+            : null;
+        successUserCreated.value = Boolean(flash.converted_user_created);
+        successNotifyEmail.value = Boolean(flash.converted_notify_email);
+        successNotifySms.value = Boolean(flash.converted_notify_sms);
+        successDialogVisible.value = true;
+    },
+    { immediate: true, deep: true },
+);
 </script>

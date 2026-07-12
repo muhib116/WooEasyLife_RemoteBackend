@@ -1179,7 +1179,7 @@ onUnmounted(() => {
                                 @blur="onDomainBlur"
                             >
                             <p class="text-xs text-slate-500">
-                                {{ domainChecking ? 'ডোমেইন যাচাই করা হচ্ছে...' : 'WooCommerce সাইটের ডোমেইন বা ওয়েবসাইটের নাম লিখুন' }}
+                                {{ domainChecking ? 'DNS যাচাই করা হচ্ছে...' : 'লাইভ WooCommerce ডোমেইন দিন — DNS A রেকর্ড যাচাই করা হবে।' }}
                             </p>
                             <small v-if="websiteUrlError" class="block text-red-400">{{ websiteUrlError }}</small>
                         </div>

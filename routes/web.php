@@ -95,6 +95,9 @@ Route::prefix('public/download-gate')->name('landing.download-gate.')->group(fun
     Route::post('/verify-otp', [\App\Http\Controllers\PublicDownloadGateController::class, 'verifyOtp'])
         ->middleware('throttle:20,1')
         ->name('verify-otp');
+    Route::post('/validate-website', [\App\Http\Controllers\PublicDownloadGateController::class, 'validateWebsite'])
+        ->middleware('throttle:30,1')
+        ->name('validate-website');
     Route::get('/download/{asset}', [\App\Http\Controllers\PublicDownloadGateController::class, 'download'])
         ->where('asset', 'apk|plugin')
         ->middleware('throttle:30,1')
@@ -368,9 +371,21 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/', [OrderAdminController::class, 'index'])
             ->middleware('permission:payments.view')
             ->name('index');
+        Route::get('/{order}', [OrderAdminController::class, 'show'])
+            ->middleware('permission:payments.view')
+            ->name('show');
         Route::post('/{order}/status', [OrderAdminController::class, 'updateStatus'])
             ->middleware('permission:payments.approve')
             ->name('updateStatus');
+        Route::get('/{order}/convert-preview', [OrderAdminController::class, 'convertPreview'])
+            ->middleware('permission:payments.approve')
+            ->name('convertPreview');
+        Route::post('/{order}/convert', [OrderAdminController::class, 'convert'])
+            ->middleware('permission:payments.approve')
+            ->name('convert');
+        Route::post('/{order}/reveal-license', [OrderAdminController::class, 'revealLicense'])
+            ->middleware('permission:payments.approve')
+            ->name('revealLicense');
     });
 
     Route::group(['as' => 'subscriptionAlerts.', 'prefix' => 'subscription-alerts'], function () {

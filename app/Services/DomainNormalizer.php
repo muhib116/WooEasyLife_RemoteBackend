@@ -78,4 +78,31 @@ class DomainNormalizer
 
         return ! empty($records);
     }
+
+    /**
+     * Same public DNS check used for merchant website setup.
+     * Allows localhost/127.0.0.1 only in local & testing.
+     */
+    public function resolvesPublicly(string $host): bool
+    {
+        $host = strtolower(trim($host));
+
+        if ($host === '') {
+            return false;
+        }
+
+        if (app()->environment(['local', 'testing']) && in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return true;
+        }
+
+        if ($this->hasDnsARecord($host)) {
+            return true;
+        }
+
+        if (str_starts_with($host, 'www.')) {
+            return $this->hasDnsARecord(substr($host, 4));
+        }
+
+        return $this->hasDnsARecord('www.'.$host);
+    }
 }

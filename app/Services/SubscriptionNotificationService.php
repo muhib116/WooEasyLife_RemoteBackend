@@ -127,34 +127,10 @@ class SubscriptionNotificationService
             return false;
         }
 
-        $apiKey = config('services.bulksms.api_key');
-        if (! $apiKey) {
-            return false;
-        }
-
         $message = $this->formatSmsMessage($user, $domain, $alert);
+        $result = app(BulkSmsService::class)->send($phone, $message);
 
-        try {
-            $response = Http::timeout(15)->get('http://bulksmsbd.net/api/smsapi', [
-                'api_key' => $apiKey,
-                'type' => 'text',
-                'number' => $phone,
-                'senderid' => config('services.bulksms.sender_id'),
-                'message' => $message,
-            ]);
-
-            if (! $response->successful()) {
-                LogHelper::saveLog('subscription sms failed', $response->body());
-
-                return false;
-            }
-
-            return true;
-        } catch (\Throwable $th) {
-            LogHelper::saveLog('subscription sms failed', $th->getMessage());
-
-            return false;
-        }
+        return $result['ok'];
     }
 
     /**

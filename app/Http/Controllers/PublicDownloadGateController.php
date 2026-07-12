@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DownloadGateFieldException;
 use App\LogHelper;
 use App\Models\PluginsVersion;
 use App\Services\DownloadGateService;
@@ -38,8 +39,18 @@ class PublicDownloadGateController extends Controller
             $status = ($result['ok'] ?? false) ? 200 : 429;
 
             return response()->json($result, $status);
+        } catch (DownloadGateFieldException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_field' => $e->field,
+                'errors' => [
+                    $e->field => $e->getMessage(),
+                ],
+            ], 422);
         } catch (InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (\Throwable $th) {
             LogHelper::saveLog('download gate send otp error', $th->getMessage());
 
@@ -47,6 +58,17 @@ class PublicDownloadGateController extends Controller
                 'message' => 'OTP পাঠানো যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।',
             ], 500);
         }
+    }
+
+    public function validateWebsite(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'website' => ['required', 'string', 'max:255'],
+        ]);
+
+        $result = $this->downloadGate->validateWebsite((string) $validated['website']);
+
+        return response()->json($result, ($result['ok'] ?? false) ? 200 : 422);
     }
 
     public function verifyOtp(Request $request): JsonResponse

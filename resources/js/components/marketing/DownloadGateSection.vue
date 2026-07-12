@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import axios from 'axios';
+import { validateDomainInput } from '@/utils/domain';
 
 const props = defineProps({
     appDownloadUrl: { type: String, default: null },
@@ -16,16 +17,147 @@ const otp = ref('');
 const downloadToken = ref('');
 const verifiedWebsite = ref('');
 const loading = ref(false);
+const websiteChecking = ref(false);
+const websiteDnsOk = ref(null); // null | true | false
 const error = ref('');
+const websiteFieldError = ref('');
+const phoneFieldError = ref('');
 const info = ref('');
 const resendAfter = ref(0);
 const debugOtp = ref('');
 
 let resendTimer = null;
+let websiteValidateController = null;
 
 const hasApk = computed(() => Boolean(props.appDownloadUrl));
 const hasPlugin = computed(() => Boolean(props.pluginDownloadUrl));
 const hasAnyFile = computed(() => hasApk.value || hasPlugin.value);
+
+const looksLikePageUrl = (raw) => {
+    const value = String(raw ?? '').trim();
+
+    if (!value) {
+        return false;
+    }
+
+    let candidate = value;
+
+    if (!/^https?:\/\//i.test(candidate)) {
+        if (!candidate.includes('/')) {
+            return false;
+        }
+
+        candidate = `https://${candidate}`;
+    }
+
+    try {
+        const parsed = new URL(candidate);
+        const path = parsed.pathname || '';
+        const query = parsed.search || '';
+        const fragment = parsed.hash || '';
+
+        return (path !== '' && path !== '/') || query !== '' || fragment !== '';
+    } catch {
+        return false;
+    }
+};
+
+const validateWebsiteLocal = () => {
+    const raw = website.value.trim();
+
+    if (!raw) {
+        websiteDnsOk.value = false;
+        websiteFieldError.value = 'সঠিক ওয়েবসাইট/ডোমেইন দিন (যেমন: shop.example.com)।';
+
+        return false;
+    }
+
+    if (looksLikePageUrl(raw)) {
+        websiteDnsOk.value = false;
+        websiteFieldError.value = 'শুধু ওয়েবসাইটের ডোমেইন দিন (যেমন: myshop.com), পূর্ণ পেজ লিংক নয়।';
+
+        return false;
+    }
+
+    const result = validateDomainInput(raw);
+
+    if (!result.valid) {
+        websiteDnsOk.value = false;
+        websiteFieldError.value = result.message || 'সঠিক ডোমেইন ফরম্যাট দিন (যেমন: example.com)।';
+
+        return false;
+    }
+
+    return true;
+};
+
+const markWebsiteDirty = () => {
+    websiteDnsOk.value = null;
+    websiteFieldError.value = '';
+
+    if (websiteValidateController) {
+        websiteValidateController.abort();
+        websiteValidateController = null;
+    }
+};
+
+const ensureWebsiteDns = async () => {
+    if (!validateWebsiteLocal()) {
+        return false;
+    }
+
+    if (websiteDnsOk.value === true) {
+        return true;
+    }
+
+    if (websiteValidateController) {
+        websiteValidateController.abort();
+    }
+
+    const controller = new AbortController();
+    websiteValidateController = controller;
+    websiteChecking.value = true;
+
+    try {
+        const { data } = await axios.post(
+            route('landing.download-gate.validate-website'),
+            { website: website.value.trim() },
+            { signal: controller.signal },
+        );
+
+        if (controller.signal.aborted) {
+            return false;
+        }
+
+        if (data?.website) {
+            website.value = data.website;
+        }
+
+        websiteDnsOk.value = true;
+        websiteFieldError.value = '';
+
+        return true;
+    } catch (e) {
+        if (axios.isCancel?.(e) || e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') {
+            return false;
+        }
+
+        websiteDnsOk.value = false;
+        websiteFieldError.value = e?.response?.data?.message
+            || 'ডোমেইনের DNS A রেকর্ড পাওয়া যায়নি। লাইভ ওয়েবসাইটের সঠিক ডোমেইন দিন।';
+
+        return false;
+    } finally {
+        if (websiteValidateController === controller) {
+            websiteValidateController = null;
+            websiteChecking.value = false;
+        }
+    }
+};
+
+const validateWebsiteOnBlur = async () => {
+    await ensureWebsiteDns();
+};
 
 const startResendCountdown = (seconds) => {
     resendAfter.value = Math.max(0, Number(seconds) || 0);
@@ -52,9 +184,25 @@ const sendOtp = async () => {
     error.value = '';
     info.value = '';
     debugOtp.value = '';
+    phoneFieldError.value = '';
+
+    if (!validateWebsiteLocal()) {
+        return;
+    }
+
+    if (websiteDnsOk.value === false) {
+        return;
+    }
+
     loading.value = true;
 
     try {
+        const dnsOk = await ensureWebsiteDns();
+
+        if (!dnsOk) {
+            return;
+        }
+
         const { data } = await axios.post(route('landing.download-gate.send-otp'), {
             name: name.value.trim(),
             phone: phone.value.trim(),
@@ -68,14 +216,32 @@ const sendOtp = async () => {
             return;
         }
 
+        if (data.website) {
+            website.value = data.website;
+        }
+
         info.value = data.message || 'OTP পাঠানো হয়েছে।';
         debugOtp.value = data.debug_otp || '';
         verifiedWebsite.value = data.website || website.value.trim();
+        websiteFieldError.value = '';
+        websiteDnsOk.value = true;
         step.value = 'otp';
         startResendCountdown(data.resend_after ?? 60);
     } catch (e) {
-        error.value = e?.response?.data?.message || 'OTP পাঠানো যায়নি। আবার চেষ্টা করুন।';
-        startResendCountdown(e?.response?.data?.resend_after ?? 0);
+        const payload = e?.response?.data || {};
+        const fieldErrors = payload.errors || {};
+        const errorField = payload.error_field;
+
+        if (errorField === 'website' || fieldErrors.website) {
+            websiteDnsOk.value = false;
+            websiteFieldError.value = fieldErrors.website || payload.message || '';
+        } else if (errorField === 'phone' || fieldErrors.phone) {
+            phoneFieldError.value = fieldErrors.phone || payload.message || '';
+        } else {
+            error.value = payload.message || 'OTP পাঠানো যায়নি। আবার চেষ্টা করুন।';
+        }
+
+        startResendCountdown(payload.resend_after ?? 0);
     } finally {
         loading.value = false;
     }
@@ -120,6 +286,9 @@ const resetFlow = () => {
     downloadToken.value = '';
     verifiedWebsite.value = '';
     error.value = '';
+    websiteFieldError.value = '';
+    phoneFieldError.value = '';
+    websiteDnsOk.value = null;
     info.value = '';
     debugOtp.value = '';
 };
@@ -176,10 +345,15 @@ const resetFlow = () => {
                                 maxlength="255"
                                 autocomplete="url"
                                 inputmode="url"
-                                class="mt-2 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none ring-amber-400/40 placeholder:text-slate-500 focus:ring-2"
+                                class="mt-2 w-full rounded-xl border bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none ring-amber-400/40 placeholder:text-slate-500 focus:ring-2"
+                                :class="websiteFieldError ? 'border-rose-500/60' : 'border-white/10'"
                                 placeholder="যেমন: shop.example.com"
+                                @blur="validateWebsiteOnBlur"
+                                @input="markWebsiteDirty"
                             >
-                            <p class="mt-1.5 text-xs text-slate-500">লাইভ ডোমেইন দিন — DNS যাচাই করা হবে।</p>
+                            <p v-if="websiteFieldError" class="mt-1.5 text-xs text-rose-400">{{ websiteFieldError }}</p>
+                            <p v-else-if="websiteChecking" class="mt-1.5 text-xs text-sky-400">DNS যাচাই করা হচ্ছে…</p>
+                            <p v-else class="mt-1.5 text-xs text-slate-500">শুধু লাইভ স্টোর ডোমেইন দিন — DNS A রেকর্ড যাচাই করা হবে।</p>
                         </div>
                         <div>
                             <label for="dl-phone" class="text-sm font-semibold text-white">মোবাইল নম্বর</label>
@@ -190,10 +364,13 @@ const resetFlow = () => {
                                 required
                                 inputmode="numeric"
                                 autocomplete="tel"
-                                class="mt-2 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none ring-amber-400/40 placeholder:text-slate-500 focus:ring-2"
+                                class="mt-2 w-full rounded-xl border bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none ring-amber-400/40 placeholder:text-slate-500 focus:ring-2"
+                                :class="phoneFieldError ? 'border-rose-500/60' : 'border-white/10'"
                                 placeholder="01XXXXXXXXX"
+                                @input="phoneFieldError = ''"
                             >
-                            <p class="mt-1.5 text-xs text-slate-500">বাংলাদেশি নম্বর — OTP এই নম্বরে যাবে।</p>
+                            <p v-if="phoneFieldError" class="mt-1.5 text-xs text-rose-400">{{ phoneFieldError }}</p>
+                            <p v-else class="mt-1.5 text-xs text-slate-500">বাংলাদেশি নম্বর — OTP এই নম্বরে যাবে।</p>
                         </div>
 
                         <p v-if="error" class="text-sm text-rose-400">{{ error }}</p>
@@ -202,7 +379,7 @@ const resetFlow = () => {
                         <button
                             type="submit"
                             class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-amber-400 disabled:opacity-60 sm:w-auto"
-                            :disabled="loading || resendAfter > 0"
+                            :disabled="loading || websiteChecking || resendAfter > 0"
                         >
                             {{ loading ? 'পাঠানো হচ্ছে…' : (resendAfter > 0 ? `অপেক্ষা ${resendAfter}s` : 'OTP পাঠান') }}
                         </button>
