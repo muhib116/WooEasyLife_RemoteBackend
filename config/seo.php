@@ -5,8 +5,8 @@ return [
 
     'default_og_image' => '/images/seo/og-default.png',
 
-    'og_image_width' => 1536,
-    'og_image_height' => 1024,
+    'og_image_width' => 1024,
+    'og_image_height' => 535,
 
     'html_lang' => 'bn-BD',
 
