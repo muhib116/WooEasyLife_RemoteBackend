@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\App\LegalController;
+use App\Http\Controllers\App\MarketingSeoController;
 use App\Http\Controllers\App\PublicSubscriptionController;
 use App\Http\Controllers\App\PricingController;
+use App\Http\Controllers\App\RobotsController;
+use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -59,6 +62,9 @@ Route::get('/storage/{path}', [PublicStorageController::class, 'show'])
     ->where('path', '.*')
     ->name('public-storage.show');
 
+Route::get('/robots.txt', RobotsController::class)->name('robots');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
 Route::get('/', function () {
     $landingSettings = app(\App\Services\LandingSettingsService::class);
     $landing = app(\App\Services\LandingPageService::class)->payload(request());
@@ -73,6 +79,8 @@ Route::get('/', function () {
         request()->session()->forget(\App\Services\PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY);
     }
 
+    $seo = app(\App\Services\SeoMetaService::class)->forPage('home');
+
     return Inertia::render('Welcome3', array_merge($landing, [
         'canLogin' => Route::has('merchant.login'),
         'canRegister' => Route::has('register'),
@@ -85,8 +93,18 @@ Route::get('/', function () {
         ),
         'whatsappDisplayPhone' => $landing['whatsappDisplayPhone'] ?? $whatsapp,
         'pendingSubscriptionInquiry' => $pendingInquiry,
-    ]));
+        'seo' => $seo,
+    ]))->withViewData(['seo' => $seo]);
 });
+
+Route::get('/bd-fraud-checker', [MarketingSeoController::class, 'bdFraudChecker'])
+    ->name('seo.bd-fraud-checker');
+Route::get('/fake-order-protection', [MarketingSeoController::class, 'fakeOrderProtection'])
+    ->name('seo.fake-order-protection');
+Route::get('/courier-auto-entry', [MarketingSeoController::class, 'courierAutoEntry'])
+    ->name('seo.courier-auto-entry');
+Route::get('/fraudbd-alternative', [MarketingSeoController::class, 'fraudBdAlternative'])
+    ->name('seo.fraudbd-alternative');
 
 Route::prefix('public/download-gate')->name('landing.download-gate.')->group(function () {
     Route::post('/send-otp', [\App\Http\Controllers\PublicDownloadGateController::class, 'sendOtp'])

@@ -10,6 +10,7 @@ use App\Services\LandingSettingsService;
 use App\Services\MerchantPortalContext;
 use App\Services\PublicSubscriptionService;
 use App\Services\RbacService;
+use App\Services\SeoMetaService;
 use App\Services\WebsiteAggregatorService;
 use App\Support\WhatsappLink;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class PricingController extends Controller
         WebsiteAggregatorService $websiteAggregator,
         RbacService $rbac,
         PublicSubscriptionService $subscriptionService,
+        SeoMetaService $seoMeta,
     ) {
         $user = $request->user();
         $domains = [];
@@ -49,6 +51,8 @@ class PricingController extends Controller
             $request->session()->forget(PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY);
         }
 
+        $seo = $seoMeta->forPage('pricing');
+
         return Inertia::render('Pricing/Index', array_merge($payload, [
             'canLogin' => Route::has('merchant.login'),
             'domains' => $domains,
@@ -62,7 +66,8 @@ class PricingController extends Controller
             ),
             'whatsappDisplayPhone' => $payload['whatsappDisplayPhone'] ?? null,
             'pendingSubscriptionInquiry' => $pendingInquiry,
-        ]));
+            'seo' => $seo,
+        ]))->withViewData(['seo' => $seo]);
     }
 
     /**

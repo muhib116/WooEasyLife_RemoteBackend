@@ -30,7 +30,7 @@ const pricingNavHref = computed(() =>
 const navLinks = computed(() => [
     { label: 'হোম', href: '/', key: 'home', anchor: false },
     { label: 'ফিচার', href: '/#features', key: 'features', anchor: true },
-    { label: 'ফ্রড চেক', href: '/#fraud-check', key: 'fraud-check', anchor: true },
+    { label: 'ফ্রড চেক', href: route('seo.bd-fraud-checker'), key: 'fraud-check', anchor: false },
     { label: 'প্রাইসিং', href: pricingNavHref.value, key: 'pricing', anchor: props.activeNav === 'home' },
     { label: 'অ্যাপ', href: '/#download-app', key: 'app', anchor: true },
     { label: 'ডাউনলোড', href: '/#downloads', key: 'downloads', anchor: true },
@@ -40,7 +40,10 @@ const navLinks = computed(() => [
 const footerProductLinks = [
     { label: 'প্রাইসিং', href: route('pricing') },
     { label: 'ফিচার', href: '/#features' },
-    { label: 'ফ্রি ফ্রড চেক', href: '/#fraud-check' },
+    { label: 'ফ্রি ফ্রড চেক', href: route('seo.bd-fraud-checker') },
+    { label: 'ফেক অর্ডার প্রোটেকশন', href: route('seo.fake-order-protection') },
+    { label: 'কুরিয়ার অটো এন্ট্রি', href: route('seo.courier-auto-entry') },
+    { label: 'FraudBD Alternative', href: route('seo.fraudbd-alternative') },
     { label: 'মোবাইল অ্যাপ', href: '/#download-app' },
     { label: 'ডাউনলোড', href: '/#downloads' },
     { label: 'কিভাবে কাজ করে', href: '/#how-it-works' },

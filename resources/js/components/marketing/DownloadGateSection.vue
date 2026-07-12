@@ -461,7 +461,7 @@ const resetFlow = () => {
                             >
                                 <img
                                     src="/images/woo-easy-life/apk-download-badge.webp"
-                                    alt=""
+                                    alt="WooEasyLife Android APK ডাউনলোড"
                                     class="h-14 w-14 shrink-0"
                                     width="256"
                                     height="256"
@@ -480,7 +480,7 @@ const resetFlow = () => {
                             >
                                 <img
                                     src="/images/woo-easy-life/plugin-download-badge.webp"
-                                    alt=""
+                                    alt="WooEasyLife WooCommerce প্লাগইন ডাউনলোড"
                                     class="h-14 w-14 shrink-0"
                                     width="256"
                                     height="249"

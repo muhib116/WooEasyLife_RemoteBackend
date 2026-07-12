@@ -1,7 +1,8 @@
 <script setup>
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
+import SeoHead from '@/components/marketing/SeoHead.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import LandingHeroSection from '@/components/marketing/LandingHeroSection.vue';
 import CourierTrustStrip from '@/components/marketing/CourierTrustStrip.vue';
@@ -53,6 +54,7 @@ const props = defineProps({
     whatsappDisplayPhone: { type: String, default: null },
     pluginDownloadUrl: { type: String, default: null },
     pendingSubscriptionInquiry: { type: Object, default: null },
+    seo: { type: Object, default: null },
 });
 
 const openFaq = ref(null);
@@ -117,56 +119,69 @@ const pricingHook = computed(() => {
     return `${featured.title ?? 'প্ল্যান'} ${featured.price_label}/মাস — এক দিনের রিটার্ন লস থেকেই সাশ্রয়`;
 });
 
-const faqs = computed(() => [
-    {
-        q: 'কাদের জন্য WooEasyLife?',
-        a: 'বাংলাদেশে WooCommerce ওয়েবসাইট দিয়ে অনলাইন ব্যবসা চালানোদের জন্য — যারা ফেক অর্ডার কমাতে, কুরিয়ার সহজ করতে ও সময় বাঁচাতে চান।',
-    },
-    {
-        q: 'ফ্রি ট্রায়াল কীভাবে পাব?',
-        a: trialPlan.value
-            ? `${trialPlan.value.title} — ${trialPlan.value.duration_label}। কোনো কার্ড লাগবে না। প্রাইসিং পেজ থেকে শুরু করুন।`
-            : 'প্রাইসিং পেজ দেখুন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।',
-    },
-    {
-        q: 'ফ্রি ফ্রড চেক কীভাবে কাজ করে?',
-        a: `এই পেজেই অ্যাকাউন্ট ছাড়া প্রতিদিন ${props.fraudCheck?.daily_free_limit ?? 5}টি ফ্রি চেক করতে পারবেন। নম্বর দিলে কুরিয়ার ডেলিভারি রেকর্ড দেখা যায় — অর্ডার পাঠানোর আগেই বুঝে নিন কাস্টমার বিশ্বস্ত না ঝুঁকিপূর্ণ।`,
-    },
-    {
-        q: 'হারানো অর্ডার কীভাবে ফেরাব?',
-        a: 'কাস্টমার কার্টে প্রোডাক্ট রেখে বা অর্ডার শেষ না করলে সেটি আলাদা লিস্টে জমা হয়। কল বা ফ্রড চেক করে এক ক্লিকে অর্ডার বানিয়ে বিক্রি ফিরিয়ে আনতে পারবেন।',
-    },
-    {
-        q: 'একাধিক ওয়েবসাইট চালানো যাবে?',
-        a: 'হ্যাঁ। প্ল্যান অনুযায়ী ২টি, ৩টি বা আনলিমিটেড ওয়েবসাইট — সব এক ড্যাশবোর্ড ও মোবাইল অ্যাপে।',
-    },
-    {
-        q: 'স্টাফের কাজ কীভাবে দেখব?',
-        a: 'স্টাফ যোগ করুন, অর্ডার অ্যাসাইন করুন। অ্যাপ দিয়ে কল করলে কতক্ষণ কথা হয়েছিল সেভ হয় — ক্যানসেল হলে কারণ বোঝা সহজ।',
-    },
-    {
-        q: 'পার্সেল স্টিকার প্রিন্ট করা যায়?',
-        a: 'হ্যাঁ। নাম-ঠিকানা-ফোন সহ স্টিকার ও ইনভয়েস এক ক্লিকে প্রিন্ট — প্যাকিং দ্রুত, ভুল কমে।',
-    },
-    {
-        q: 'কোন কুরিয়ার কাজ করে?',
-        a: 'Pathao, Steadfast, RedX সহ একাধিক কুরিয়ার — এক জায়গা থেকে এন্ট্রি ও আপডেট।',
-    },
-    {
-        q: 'ফেক অর্ডার কি Facebook অ্যাড নষ্ট করে?',
-        a: 'হ্যাঁ। সাধারণ সেটআপে ফেক/ক্যানসেল অর্ডারও «বিক্রি» হিসেবে গোনা হয়, তাই Facebook ভুল মানুষের কাছে অ্যাড দেখায়। WooEasyLife শুধু কনফার্মড অর্ডারকেই বিক্রি ধরে — অ্যাড বাজেট বাঁচে।',
-    },
-    {
-        q: 'সমস্যায় পড়লে সাহায্য পাব কীভাবে?',
-        a: 'প্রতিটি ফিচার পেজে ভিডিও গাইড আছে। আটকে গেলে হোয়াটসঅ্যাপে সরাসরি সাহায্য পাবেন।',
-    },
-    {
-        q: 'পেমেন্ট কীভাবে করব?',
-        a: paymentMethodLabels.value
-            ? `${paymentMethodLabels.value} — পেমেন্ট জমা দিলে দ্রুত চালু হয়ে যায়।`
-            : 'প্রাইসিং পেজ থেকে প্ল্যান বেছে নিন। পেমেন্ট নম্বর সেট থাকলে সেখানেই দেখাবে; নইলে WhatsApp সাপোর্টে যোগাযোগ করুন।',
-    },
-]);
+const faqs = computed(() => {
+    const seoFaqs = (props.seo?.faqs || []).map((item) => ({ q: item.q, a: item.a }));
+    const base = [
+        {
+            q: 'কাদের জন্য WooEasyLife?',
+            a: 'বাংলাদেশে WooCommerce ওয়েবসাইট দিয়ে অনলাইন ব্যবসা চালানোদের জন্য — যারা ফেক অর্ডার কমাতে, কুরিয়ার সহজ করতে ও সময় বাঁচাতে চান।',
+        },
+        {
+            q: 'ফ্রি ট্রায়াল কীভাবে পাব?',
+            a: trialPlan.value
+                ? `${trialPlan.value.title} — ${trialPlan.value.duration_label}। কোনো কার্ড লাগবে না। প্রাইসিং পেজ থেকে শুরু করুন।`
+                : 'প্রাইসিং পেজ দেখুন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।',
+        },
+        {
+            q: 'ফ্রি ফ্রড চেক কীভাবে কাজ করে?',
+            a: `এই পেজেই অ্যাকাউন্ট ছাড়া প্রতিদিন ${props.fraudCheck?.daily_free_limit ?? 5}টি ফ্রি চেক করতে পারবেন। নম্বর দিলে কুরিয়ার ডেলিভারি রেকর্ড দেখা যায় — অর্ডার পাঠানোর আগেই বুঝে নিন কাস্টমার বিশ্বস্ত না ঝুঁকিপূর্ণ। বিস্তারিত টুল পেজ: /bd-fraud-checker`,
+        },
+        {
+            q: 'হারানো অর্ডার কীভাবে ফেরাব?',
+            a: 'কাস্টমার কার্টে প্রোডাক্ট রেখে বা অর্ডার শেষ না করলে সেটি আলাদা লিস্টে জমা হয়। কল বা ফ্রড চেক করে এক ক্লিকে অর্ডার বানিয়ে বিক্রি ফিরিয়ে আনতে পারবেন।',
+        },
+        {
+            q: 'একাধিক ওয়েবসাইট চালানো যাবে?',
+            a: 'হ্যাঁ। প্ল্যান অনুযায়ী ২টি, ৩টি বা আনলিমিটেড ওয়েবসাইট — সব এক ড্যাশবোর্ড ও মোবাইল অ্যাপে।',
+        },
+        {
+            q: 'স্টাফের কাজ কীভাবে দেখব?',
+            a: 'স্টাফ যোগ করুন, অর্ডার অ্যাসাইন করুন। অ্যাপ দিয়ে কল করলে কতক্ষণ কথা হয়েছিল সেভ হয় — ক্যানসেল হলে কারণ বোঝা সহজ।',
+        },
+        {
+            q: 'পার্সেল স্টিকার প্রিন্ট করা যায়?',
+            a: 'হ্যাঁ। নাম-ঠিকানা-ফোন সহ স্টিকার ও ইনভয়েস এক ক্লিকে প্রিন্ট — প্যাকিং দ্রুত, ভুল কমে।',
+        },
+        {
+            q: 'কোন কুরিয়ার কাজ করে?',
+            a: 'Pathao, Steadfast, RedX সহ একাধিক কুরিয়ার — এক জায়গা থেকে এন্ট্রি ও আপডেট।',
+        },
+        {
+            q: 'ফেক অর্ডার কি Facebook অ্যাড নষ্ট করে?',
+            a: 'হ্যাঁ। সাধারণ সেটআপে ফেক/ক্যানসেল অর্ডারও «বিক্রি» হিসেবে গোনা হয়, তাই Facebook ভুল মানুষের কাছে অ্যাড দেখায়। WooEasyLife শুধু কনফার্মড অর্ডারকেই বিক্রি ধরে — অ্যাড বাজেট বাঁচে।',
+        },
+        {
+            q: 'সমস্যায় পড়লে সাহায্য পাব কীভাবে?',
+            a: 'প্রতিটি ফিচার পেজে ভিডিও গাইড আছে। আটকে গেলে হোয়াটসঅ্যাপে সরাসরি সাহায্য পাবেন।',
+        },
+        {
+            q: 'পেমেন্ট কীভাবে করব?',
+            a: paymentMethodLabels.value
+                ? `${paymentMethodLabels.value} — পেমেন্ট জমা দিলে দ্রুত চালু হয়ে যায়।`
+                : 'প্রাইসিং পেজ থেকে প্ল্যান বেছে নিন। পেমেন্ট নম্বর সেট থাকলে সেখানেই দেখাবে; নইলে WhatsApp সাপোর্টে যোগাযোগ করুন।',
+        },
+    ];
+
+    const seen = new Set(seoFaqs.map((f) => f.q));
+    const merged = [...seoFaqs];
+    for (const item of base) {
+        if (!seen.has(item.q)) {
+            merged.push(item);
+        }
+    }
+
+    return merged;
+});
 
 const toggleFaq = (i) => {
     openFaq.value = openFaq.value === i ? null : i;
@@ -174,7 +189,7 @@ const toggleFaq = (i) => {
 </script>
 
 <template>
-    <Head title="WooEasyLife — ফেক অর্ডার আটকান, কুরিয়ার সহজ করুন, লাভ বাড়ান" />
+    <SeoHead :seo="seo" title="WooEasyLife — ফেক অর্ডার আটকান, কুরিয়ার সহজ করুন, লাভ বাড়ান" />
 
     <MarketingLayout
         :can-login="canLogin"
@@ -199,17 +214,49 @@ const toggleFaq = (i) => {
             <div class="mx-auto max-w-3xl">
                 <div class="mb-6 text-center sm:mb-8">
                     <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                        ফ্রি টুল — এখনই চেষ্টা করুন
+                        ফ্রি BD Fraud Checker · ফ্রড চেকার
                     </span>
                     <h2 class="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                        শুধু ফোন নম্বর দিন — কাস্টমারের কুরিয়ার হিস্টোরি দেখুন।
+                        ফ্রড চেকার — শুধু ফোন নম্বর দিন, কুরিয়ার হিস্টোরি দেখুন।
                     </h2>
                     <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-                        অ্যাকাউন্ট ছাড়াই Courier History দেখুন। তারপর অর্ডার কনফার্ম করুন।
+                        অ্যাকাউন্ট ছাড়াই Courier History দেখুন।
+                        <Link :href="route('seo.bd-fraud-checker')" class="text-amber-400 hover:text-amber-300">বিস্তারিত টুল পেজ →</Link>
                     </p>
                 </div>
                 <LandingFraudCheck :fraud-check="fraudCheck" />
             </div>
+        </ScrollReveal>
+
+        <!-- 2b. SEO intent links (one job: discovery) -->
+        <ScrollReveal as="section" class="px-4 pb-10 lg:px-8">
+            <div class="mx-auto grid max-w-6xl gap-4 sm:grid-cols-3">
+                <Link
+                    :href="route('seo.bd-fraud-checker')"
+                    class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 transition hover:border-emerald-400/40"
+                >
+                    <h2 class="text-base font-bold text-white">BD Fraud Checker</h2>
+                    <p class="mt-1 text-sm text-slate-400">ফ্রি ফ্রড চেকার · কুরিয়ার হিস্টোরি</p>
+                </Link>
+                <Link
+                    :href="route('seo.fake-order-protection')"
+                    class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 transition hover:border-amber-400/40"
+                >
+                    <h2 class="text-base font-bold text-white">ফেক অর্ডার প্রোটেকশন</h2>
+                    <p class="mt-1 text-sm text-slate-400">OTP · ব্লক · রিটার্ন লস কমান</p>
+                </Link>
+                <Link
+                    :href="route('seo.courier-auto-entry')"
+                    class="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-5 transition hover:border-sky-400/40"
+                >
+                    <h2 class="text-base font-bold text-white">কুরিয়ার অটো এন্ট্রি</h2>
+                    <p class="mt-1 text-sm text-slate-400">Pathao · Steadfast · RedX</p>
+                </Link>
+            </div>
+            <p class="mx-auto mt-4 max-w-6xl text-center text-sm text-slate-500">
+                টুল-শুধু চেকারের বিকল্প?
+                <Link :href="route('seo.fraudbd-alternative')" class="text-amber-400 hover:text-amber-300">FraudBD Alternative দেখুন</Link>
+            </p>
         </ScrollReveal>
 
         <!-- 3. Courier trust + performance proof -->

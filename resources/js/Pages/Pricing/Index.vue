@@ -1,7 +1,8 @@
 <script setup>
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, ref, watch } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
+import SeoHead from '@/components/marketing/SeoHead.vue';
 import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
 import SubscriptionWizard from '@/components/marketing/SubscriptionWizard.vue';
 import PendingSubscriptionBanner from '@/components/marketing/PendingSubscriptionBanner.vue';
@@ -22,6 +23,7 @@ const props = defineProps({
     whatsappSupportUrl: { type: String, default: null },
     whatsappDisplayPhone: { type: String, default: null },
     pendingSubscriptionInquiry: { type: Object, default: null },
+    seo: { type: Object, default: null },
 });
 
 const page = usePage();
@@ -101,7 +103,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="প্রাইসিং — WooEasyLife" />
+    <SeoHead :seo="seo" title="প্রাইসিং — WooEasyLife" />
 
     <MarketingLayout :can-login="canLogin" :whatsapp-url="whatsappUrl" active-nav="pricing" variant="dark">
         <section class="border-b border-white/10 py-14 sm:py-16">

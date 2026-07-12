@@ -34,8 +34,23 @@ function hideInitialLoader() {
     window.setTimeout(() => loader.remove(), 300);
 }
 
+function markAppReady() {
+    document.documentElement.classList.add('app-ready');
+    hideInitialLoader();
+}
+
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => {
+        if (!title) {
+            return appName;
+        }
+
+        if (title.includes('WooEasyLife') || title.includes(appName)) {
+            return title;
+        }
+
+        return `${title} - ${appName}`;
+    },
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
         const navigating = ref(false);
@@ -46,18 +61,18 @@ createInertiaApp({
 
         router.on('finish', () => {
             navigating.value = false;
-            hideInitialLoader();
+            markAppReady();
         });
 
         router.on('error', () => {
             navigating.value = false;
-            hideInitialLoader();
+            markAppReady();
         });
 
         const app = createApp({
             setup() {
                 onMounted(() => {
-                    hideInitialLoader();
+                    markAppReady();
                 });
 
                 return () => [
