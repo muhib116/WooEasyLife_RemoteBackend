@@ -10,11 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🚚 Get latest code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
       - name: Use Node.js 20.11.0
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '20.11.0'
+          cache: npm
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -22,18 +24,38 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, bcmath
 
-      - name: 🔨 Build Project
+      - name: 🔨 Build frontend (Vite)
         run: |
-          npm install
+          npm ci
           npm run build
+          test -f public/build/manifest.json
+          echo "Vite manifest entries: $(php -r 'echo count(json_decode(file_get_contents("public/build/manifest.json"), true));')"
+          ls public/build/assets | wc -l
 
       - name: Installing Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
       - name: 📂 Sync files
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.APP_FTP_SERVER }}
           port: 21
           username: ${{ secrets.APP_FTP_USERNAME }}
           password: ${{ secrets.APP_FTP_PASSWORD }}
+          # public/build is gitignored but created above — FTP sync uploads the working tree.
+          log-level: standard
+
+      - name: 🧹 Clear Laravel caches on server
+        continue-on-error: true
+        env:
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          if [ -z "${DEPLOY_SECRET}" ] || [ -z "${APP_URL}" ]; then
+            echo "Skipping cache clear — set DEPLOY_SECRET and APP_URL repo secrets to enable."
+            exit 0
+          fi
+          curl -fsS -X POST "${APP_URL%/}/deploy" \
+            -H "X-Deploy-Secret: ${DEPLOY_SECRET}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json"
