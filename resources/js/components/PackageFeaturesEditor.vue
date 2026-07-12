@@ -74,32 +74,6 @@
                 </div>
             </div>
         </section>
-
-        <div
-            v-if="showWebsiteConnect && features.app_connect"
-            class="space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700"
-        >
-            <div>
-                <label
-                    for="adjust_total_website_connect"
-                    class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
-                >
-                    Total Website Connect
-                </label>
-                <Select
-                    id="adjust_total_website_connect"
-                    v-model="websiteConnectLimit"
-                    :options="websiteConnectOptions"
-                    option-label="label"
-                    option-value="value"
-                    placeholder="Select website connect limit"
-                    class="w-full"
-                />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    How many stores this plan can connect when App Connect is enabled.
-                </p>
-            </div>
-        </div>
     </div>
 </template>
 
@@ -107,27 +81,21 @@
 import {
     POWER_FULL_FEATURE_DEFINITIONS,
     setAllFeatures,
-    WEBSITE_CONNECT_OPTIONS,
 } from "@/data/packageCatalogDraft";
-import type { PackageFeatures, WebsiteConnectLimit } from "@/types/packageCatalog";
-import { watch } from "vue";
+import type { PackageFeatures } from "@/types/packageCatalog";
 
 withDefaults(
     defineProps<{
         embedded?: boolean;
-        showWebsiteConnect?: boolean;
     }>(),
     {
         embedded: false,
-        showWebsiteConnect: false,
     },
 );
 
 const features = defineModel<PackageFeatures>("features", { required: true });
-const websiteConnectLimit = defineModel<WebsiteConnectLimit>("websiteConnectLimit");
 
 const powerFeatureDefinitions = POWER_FULL_FEATURE_DEFINITIONS;
-const websiteConnectOptions = WEBSITE_CONNECT_OPTIONS;
 
 function setAllPowerFeatures(enabled: boolean) {
     features.value = setAllFeatures(
@@ -136,17 +104,4 @@ function setAllPowerFeatures(enabled: boolean) {
         POWER_FULL_FEATURE_DEFINITIONS.map((item) => item.key),
     );
 }
-
-watch(
-    () => features.value.app_connect,
-    (enabled) => {
-        if (!websiteConnectLimit.value) {
-            return;
-        }
-
-        if (!enabled) {
-            websiteConnectLimit.value = 1;
-        }
-    },
-);
 </script>

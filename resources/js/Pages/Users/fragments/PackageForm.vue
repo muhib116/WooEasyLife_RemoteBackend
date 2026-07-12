@@ -116,9 +116,7 @@
                 >
                     <PackageFeaturesEditor
                         v-model:features="form.features"
-                        v-model:website-connect-limit="form.total_website_connect"
                         embedded
-                        show-website-connect
                     />
                     <p
                         v-if="form.errors.features"

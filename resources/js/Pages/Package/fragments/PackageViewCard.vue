@@ -92,7 +92,7 @@
                             App Connect
                         </p>
                         <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {{ websiteConnectLabel(pkg.total_website_connect, pkg.app_connect) }}
+                            {{ pkg.app_connect ? "Included" : "Not included" }}
                         </p>
                     </div>
 
@@ -211,7 +211,6 @@ import {
     enabledPowerFeatureLabels,
     isCatalogPackage,
     packageDurationLabel,
-    websiteConnectLabel,
 } from "@/data/packageCatalogDraft";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import { computed } from "vue";

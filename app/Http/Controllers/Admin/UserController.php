@@ -522,8 +522,9 @@ class UserController extends Controller
                 $request->input('features'),
             );
             $updateData['app_connect'] = $appConnect;
+            $unlimitedWebsite = (bool) ($updateData['features']['unlimited_website_connectivity'] ?? false);
             $updateData['total_website_connect'] = $appConnect
-                ? ($request->input('total_website_connect') ?: null)
+                ? ($unlimitedWebsite ? null : ($request->input('total_website_connect') ?: null))
                 : null;
         }
 

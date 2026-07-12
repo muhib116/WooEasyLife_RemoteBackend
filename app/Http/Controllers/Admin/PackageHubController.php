@@ -38,6 +38,10 @@ class PackageHubController extends Controller
         $validated = $this->validateCatalogPayload($request);
         $features = PackageCatalogFeatures::normalize($validated['features'] ?? []);
 
+        $features = PackageCatalogFeatures::normalize($validated['features'] ?? []);
+        $appConnect = $request->boolean('app_connect');
+        $unlimitedWebsite = (bool) ($features['unlimited_website_connectivity'] ?? false);
+
         PackageHub::create([
             'title' => $validated['package_name'],
             'description' => $validated['description'] ?? null,
@@ -48,9 +52,9 @@ class PackageHubController extends Controller
                 : null,
             'order_rate_token' => $validated['order_rate_token'],
             'package_price' => $validated['package_price'],
-            'app_connect' => $request->boolean('app_connect'),
-            'total_website_connect' => $request->boolean('app_connect')
-                ? ($validated['total_website_connect'] ?? null)
+            'app_connect' => $appConnect,
+            'total_website_connect' => $appConnect
+                ? ($unlimitedWebsite ? null : ($validated['total_website_connect'] ?? null))
                 : null,
             'features' => $features,
             'is_active' => $request->boolean('is_active'),
@@ -72,6 +76,8 @@ class PackageHubController extends Controller
 
         $validated = $this->validateCatalogPayload($request);
         $features = PackageCatalogFeatures::normalize($validated['features'] ?? []);
+        $appConnect = $request->boolean('app_connect');
+        $unlimitedWebsite = (bool) ($features['unlimited_website_connectivity'] ?? false);
 
         $package->update([
             'title' => $validated['package_name'],
@@ -82,9 +88,9 @@ class PackageHubController extends Controller
                 : null,
             'order_rate_token' => $validated['order_rate_token'],
             'package_price' => $validated['package_price'],
-            'app_connect' => $request->boolean('app_connect'),
-            'total_website_connect' => $request->boolean('app_connect')
-                ? ($validated['total_website_connect'] ?? null)
+            'app_connect' => $appConnect,
+            'total_website_connect' => $appConnect
+                ? ($unlimitedWebsite ? null : ($validated['total_website_connect'] ?? null))
                 : null,
             'features' => $features,
             'is_active' => $request->boolean('is_active'),

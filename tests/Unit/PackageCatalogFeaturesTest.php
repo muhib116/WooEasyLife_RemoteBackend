@@ -169,4 +169,28 @@ class PackageCatalogFeaturesTest extends TestCase
         $this->assertArrayNotHasKey('app_store_limit', $normalized);
         $this->assertNotContains('app_store_limit', PackageCatalogFeatures::powerKeys());
     }
+
+    public function test_power_keys_include_unlimited_connectivity_features(): void
+    {
+        $keys = PackageCatalogFeatures::powerKeys();
+
+        $this->assertContains('unlimited_website_connectivity', $keys);
+        $this->assertContains('unlimited_app_connectivity', $keys);
+        $this->assertSame(
+            'অ্যাপে আনলিমিটেড ওয়েবসাইট কানেক্টিভিটি',
+            PackageCatalogFeatures::powerLabelsBn()['unlimited_website_connectivity'],
+        );
+        $this->assertSame(
+            'Unlimited app connectivity with website',
+            PackageCatalogFeatures::powerLabelsEn()['unlimited_app_connectivity'],
+        );
+
+        $normalized = PackageCatalogFeatures::normalize([
+            'unlimited_website_connectivity' => true,
+            'unlimited_app_connectivity' => false,
+        ]);
+
+        $this->assertTrue($normalized['unlimited_website_connectivity']);
+        $this->assertFalse($normalized['unlimited_app_connectivity']);
+    }
 }

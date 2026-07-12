@@ -239,32 +239,6 @@
                     </span>
                 </label>
             </div>
-
-            <div
-                v-if="draft.features.app_connect"
-                class="space-y-4 border-t border-primary-200/80 pt-4 dark:border-primary-500/20"
-            >
-                <div>
-                    <label
-                        for="total_website_connect"
-                        class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200"
-                    >
-                        Total Website Connect
-                    </label>
-                    <Select
-                        id="total_website_connect"
-                        v-model="draft.total_website_connect"
-                        :options="websiteConnectOptions"
-                        option-label="label"
-                        option-value="value"
-                        placeholder="Select website connect limit"
-                        class="w-full"
-                    />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        How many stores this plan can connect when App Connect is enabled.
-                    </p>
-                </div>
-            </div>
         </section>
 
         <div
@@ -311,7 +285,6 @@ import {
     POWER_FULL_FEATURE_DEFINITIONS,
     setAllFeatures,
     syncDraftAppFields,
-    WEBSITE_CONNECT_OPTIONS,
 } from "@/data/packageCatalogDraft";
 import { Classic as ClassicEditor } from "@/plugins/form/editor";
 import type { PackageCatalogDraft } from "@/types/packageCatalog";
@@ -343,7 +316,6 @@ const errors = reactive({
 const isFreeTrial = computed(() => draft.package_duration === "free_trial");
 
 const durationOptions = PACKAGE_DURATION_OPTIONS;
-const websiteConnectOptions = WEBSITE_CONNECT_OPTIONS;
 const powerFeatureDefinitions = POWER_FULL_FEATURE_DEFINITIONS;
 
 watch(

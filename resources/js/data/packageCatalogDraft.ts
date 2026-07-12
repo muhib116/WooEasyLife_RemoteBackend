@@ -67,6 +67,21 @@ export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
         "notification_sound_management",
         "centralized_notifications",
     ],
+    unlimited_website_connectivity: [
+        "multistore_order_notifications",
+        "cross_store_order_detection",
+        "common_dashboard",
+        "centralized_notifications",
+    ],
+    unlimited_app_connectivity: [
+        "one_click_app_connect",
+        "multistore_order_notifications",
+        "cross_store_order_detection",
+        "common_dashboard",
+        "courier_movement_notification",
+        "notification_sound_management",
+        "centralized_notifications",
+    ],
     courier_automation: [
         "three_courier_partner_integration",
         "courier_entry_automation",
@@ -105,6 +120,14 @@ export const POWER_FULL_FEATURE_DEFINITIONS: {
     { key: "call_and_status_log", label: "কল ও স্ট্যাটাস লগ" },
     { key: "ai_intelligence", label: "এআই ইন্টেলিজেন্স" },
     { key: "app_connect", label: "অ্যাপ কানেক্ট" },
+    {
+        key: "unlimited_website_connectivity",
+        label: "অ্যাপে আনলিমিটেড ওয়েবসাইট কানেক্টিভিটি",
+    },
+    {
+        key: "unlimited_app_connectivity",
+        label: "ওয়েবসাইটের সাথে আনলিমিটেড অ্যাপ কানেক্টিভিটি",
+    },
     { key: "courier_automation", label: "কুরিয়ার অটোমেশন" },
     { key: "custom_status_management", label: "কাস্টম স্ট্যাটাস ম্যানেজমেন্ট" },
     { key: "customer_blacklist", label: "কাস্টমার ব্ল্যাকলিস্ট" },
@@ -152,8 +175,13 @@ export function buildDefaultPackageDraft(): PackageCatalogDraft {
 function resolveWebsiteConnectLimit(
     value: WebsiteConnectLimit,
     appConnect: boolean,
+    unlimitedWebsiteConnectivity = false,
 ): number | null {
     if (!appConnect) {
+        return null;
+    }
+
+    if (unlimitedWebsiteConnectivity) {
         return null;
     }
 
@@ -227,6 +255,11 @@ export function syncDraftAppFields(draft: PackageCatalogDraft): void {
 
     if (!draft.app_connect) {
         draft.total_website_connect = 1;
+        return;
+    }
+
+    if (draft.features.unlimited_website_connectivity) {
+        draft.total_website_connect = "unlimited";
     }
 }
 
@@ -235,6 +268,11 @@ export function applyFeatureDrivenAppFields(draft: PackageCatalogDraft): void {
 
     if (!draft.app_connect) {
         draft.total_website_connect = 1;
+        return;
+    }
+
+    if (draft.features.unlimited_website_connectivity) {
+        draft.total_website_connect = "unlimited";
     }
 }
 
@@ -268,6 +306,7 @@ export function buildPackagePayload(
         total_website_connect: resolveWebsiteConnectLimit(
             draft.total_website_connect,
             draft.app_connect,
+            Boolean(features.unlimited_website_connectivity),
         ),
         features,
         meta: {
@@ -357,6 +396,8 @@ export function buildAdjustSubscriptionPayload<
 
     if (!form.app_connect) {
         form.total_website_connect = 1;
+    } else if (form.features.unlimited_website_connectivity) {
+        form.total_website_connect = "unlimited";
     }
 
     const features = collapseToPowerFeatures(form.features);
@@ -367,6 +408,7 @@ export function buildAdjustSubscriptionPayload<
         total_website_connect: resolveWebsiteConnectLimit(
             form.total_website_connect,
             form.app_connect,
+            Boolean(features.unlimited_website_connectivity),
         ) as unknown as WebsiteConnectLimit,
         features,
     };
