@@ -19,7 +19,7 @@ const props = defineProps({
     paymentMethods: { type: Array, default: () => [] },
     subscriptionWizard: { type: Object, default: () => ({}) },
     whatsappSupportUrl: { type: String, default: null },
-    whatsappDisplayPhone: { type: String, default: '01770989591' },
+    whatsappDisplayPhone: { type: String, default: null },
     canLogin: { type: Boolean, default: false },
     pendingInquiry: { type: Object, default: null },
 });
@@ -28,6 +28,34 @@ const emit = defineEmits(['update:visible', 'submitted']);
 
 const page = usePage();
 const toast = useToast();
+
+const resolvedPaymentMethods = computed(() => {
+    const fromProp = Array.isArray(props.paymentMethods) ? props.paymentMethods : [];
+    if (fromProp.length) {
+        return fromProp.filter((method) => method?.payment_partner && method?.account);
+    }
+
+    const fromPage = page.props.subscriptionPaymentMethods;
+    if (!Array.isArray(fromPage)) {
+        return [];
+    }
+
+    return fromPage.filter((method) => method?.payment_partner && method?.account);
+});
+
+const resolvedWhatsappDisplayPhone = computed(() => {
+    return props.whatsappDisplayPhone
+        || page.props.marketing?.admin_whatsapp
+        || null;
+});
+
+const resolvedWhatsappSupportUrl = computed(() => {
+    return props.whatsappSupportUrl
+        || page.props.marketing?.whatsapp_contact_url
+        || page.props.marketing?.whatsapp_url
+        || null;
+});
+
 const currentStep = ref(0);
 const submittedSummary = ref(null);
 const domainFieldError = ref(null);
@@ -91,18 +119,12 @@ const form = useForm({
     address: '',
     order_limit: 100,
     total_amount: null,
-    transaction_method: 'Bkash',
+    transaction_method: '',
     transaction_id: '',
     account_number: '',
     transaction_charge: 0,
     note: '',
 });
-
-const gatewayMethods = [
-    { label: 'bKash', value: 'Bkash' },
-    { label: 'Rocket', value: 'Rocket' },
-    { label: 'Nagad', value: 'Nagad' },
-];
 
 const partnerToGatewayValue = (partner) => {
     const normalized = String(partner ?? '').trim().toLowerCase();
@@ -119,10 +141,43 @@ const partnerToGatewayValue = (partner) => {
         return 'Nagad';
     }
 
-    return gatewayMethods.find((method) => method.label.toLowerCase() === normalized)?.value
-        ?? form.transaction_method
-        ?? 'Bkash';
+    return String(partner ?? '').trim() || form.transaction_method || '';
 };
+
+const gatewayMethods = computed(() => {
+    const methods = resolvedPaymentMethods.value;
+
+    if (!methods.length) {
+        return [];
+    }
+
+    return methods.map((method) => {
+        const partner = String(method.payment_partner ?? '').trim();
+        const value = partnerToGatewayValue(partner);
+
+        return {
+            label: partner || value,
+            value,
+            account: method.account,
+        };
+    });
+});
+
+watch(
+    gatewayMethods,
+    (methods) => {
+        if (!methods.length) {
+            form.transaction_method = '';
+            return;
+        }
+
+        const allowed = methods.map((method) => method.value);
+        if (!allowed.includes(form.transaction_method)) {
+            form.transaction_method = methods[0].value;
+        }
+    },
+    { immediate: true },
+);
 
 const selectGatewayMethod = (value) => {
     form.transaction_method = value;
@@ -515,12 +570,21 @@ const runServerValidation = async () => {
     domainChecking.value = true;
 
     try {
-        const { data } = await axios.post(route('pricing.subscribe.validate'), {
-            website_url: domainResult.domain || form.website_url,
-            email: form.email,
-            contact_number: form.contact_number,
-            whatsapp_number: form.whatsapp_number,
-        });
+        const { data } = await axios.post(
+            route('pricing.subscribe.validate'),
+            {
+                website_url: domainResult.domain || form.website_url,
+                email: form.email,
+                contact_number: form.contact_number,
+                whatsapp_number: form.whatsapp_number,
+            },
+            {
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            },
+        );
 
         if (serial !== serverValidateSerial) {
             return;
@@ -548,8 +612,15 @@ const runServerValidation = async () => {
         if (data.errors?.whatsapp_number && touched.value.whatsapp_number) {
             whatsappFieldError.value = data.errors.whatsapp_number;
         }
-    } catch {
-        // Keep local validation; ignore transient network errors for UX.
+    } catch (error) {
+        if (serial !== serverValidateSerial) {
+            return;
+        }
+
+        if (error?.response?.status === 429) {
+            domainFieldError.value = 'একটু পর আবার চেষ্টা করুন।';
+        }
+        // Keep local validation; ignore other transient network errors for UX.
     } finally {
         if (serial === serverValidateSerial) {
             domainChecking.value = false;
@@ -561,7 +632,6 @@ const onDomainInput = () => {
     markTouched('website_url');
     clearServerFieldError('website_url');
     scheduleLocalValidation();
-    scheduleServerValidation();
 };
 
 const onDomainBlur = () => {
@@ -585,7 +655,6 @@ const onEmailInput = () => {
     markTouched('email');
     clearServerFieldError('email');
     scheduleLocalValidation();
-    scheduleServerValidation();
 };
 
 const onEmailBlur = () => {
@@ -602,7 +671,6 @@ const onMobileInput = () => {
     markTouched('contact_number');
     clearServerFieldError('contact_number');
     scheduleLocalValidation();
-    scheduleServerValidation();
 };
 
 const onMobileBlur = () => {
@@ -615,7 +683,6 @@ const onWhatsappInput = () => {
     markTouched('whatsapp_number');
     clearServerFieldError('whatsapp_number');
     scheduleLocalValidation();
-    scheduleServerValidation();
 };
 
 const onWhatsappBlur = () => {
@@ -657,14 +724,19 @@ const onSenderNumberBlur = () => {
     validateSenderLocal(true);
 };
 
-const paymentFieldsValid = computed(() => Boolean(
-    form.transaction_method
-    && form.transaction_id?.trim()
-    && form.transaction_id.trim().length >= 4
-    && isValidBdMobile(form.account_number)
-    && !senderNumberFieldError.value
-    && !transactionIdFieldError.value,
-));
+const paymentFieldsValid = computed(() => {
+    const allowed = gatewayMethods.value.map((method) => method.value);
+
+    return Boolean(
+        form.transaction_method
+        && allowed.includes(form.transaction_method)
+        && form.transaction_id?.trim()
+        && form.transaction_id.trim().length >= 4
+        && isValidBdMobile(form.account_number)
+        && !senderNumberFieldError.value
+        && !transactionIdFieldError.value,
+    );
+});
 
 const canGoNext = computed(() => {
     if (currentStep.value === 0) {
@@ -673,6 +745,10 @@ const canGoNext = computed(() => {
 
     if (currentStep.value === 1) {
         return contactFieldsValid.value;
+    }
+
+    if (currentStep.value === 2 && !isFreeTrial.value) {
+        return resolvedPaymentMethods.value.length > 0;
     }
 
     if (currentStep.value === 3 && !isFreeTrial.value) {
@@ -747,14 +823,23 @@ const contactValidationMessage = () => {
 };
 
 const paymentValidationMessage = () => {
+    if (!resolvedPaymentMethods.value.length) {
+        return {
+            summary: 'পেমেন্ট উপলব্ধ নেই',
+            detail: 'পেমেন্ট নম্বর এখনো সেট করা হয়নি। WhatsApp সাপোর্টে যোগাযোগ করুন।',
+            missing: ['পেমেন্ট পদ্ধতি'],
+        };
+    }
+
     touched.value.transaction_id = true;
     touched.value.account_number = true;
     validateTransactionIdLocal(true);
     validateSenderLocal(true);
 
     const missing = [];
+    const allowed = gatewayMethods.value.map((method) => method.value);
 
-    if (!form.transaction_method) {
+    if (!form.transaction_method || !allowed.includes(form.transaction_method)) {
         missing.push('পেমেন্ট পদ্ধতি');
     }
     if (transactionIdFieldError.value || !form.transaction_id?.trim()) {
@@ -784,21 +869,21 @@ const currentValidationMessage = () => {
         return contactValidationMessage();
     }
 
+    if (currentStep.value === 2 && !isFreeTrial.value) {
+        if (!resolvedPaymentMethods.value.length) {
+            return paymentValidationMessage();
+        }
+
+        return null;
+    }
+
     if (currentStep.value === 3 && !isFreeTrial.value) {
         return paymentValidationMessage();
     }
 
-    if (currentStep.value === 0 && !props.plan) {
-        return {
-            summary: 'প্ল্যান নির্বাচন প্রয়োজন',
-            detail: 'সাবস্ক্রিপশন চালিয়ে যেতে একটি প্ল্যান বেছে নিন।',
-            missing: [],
-        };
-    }
-
     return {
-        summary: 'তথ্য যাচাই প্রয়োজন',
-        detail: 'অনুগ্রহ করে সব চিহ্নিত ফিল্ড পূরণ করুন।',
+        summary: 'প্রয়োজনীয় তথ্য অসম্পূর্ণ',
+        detail: 'অনুগ্রহ করে চিহ্নিত ফিল্ডগুলো পূরণ করুন।',
         missing: [],
     };
 };
@@ -828,6 +913,15 @@ const prevStep = () => {
 };
 
 const submitInquiry = () => {
+    if (!isFreeTrial.value && !resolvedPaymentMethods.value.length) {
+        showWizardToast({
+            severity: 'warn',
+            summary: 'পেমেন্ট উপলব্ধ নেই',
+            detail: 'পেমেন্ট নম্বর এখনো সেট করা হয়নি। WhatsApp সাপোর্টে যোগাযোগ করুন।',
+        });
+        return;
+    }
+
     if (!canGoNext.value) {
         showValidationToast(currentValidationMessage());
         return;
@@ -982,9 +1076,9 @@ onUnmounted(() => {
                         প্ল্যান: {{ submittedSummary.plan_title }}
                     </p>
                     <WhatsAppSupportBar
-                        v-if="whatsappSupportUrl"
-                        :url="whatsappSupportUrl"
-                        :phone="whatsappDisplayPhone"
+                        v-if="resolvedWhatsappSupportUrl"
+                        :url="resolvedWhatsappSupportUrl"
+                        :phone="resolvedWhatsappDisplayPhone"
                     />
                     <button
                         type="button"
@@ -997,9 +1091,9 @@ onUnmounted(() => {
 
                 <div v-else class="space-y-4 sm:space-y-5">
                     <WhatsAppSupportBar
-                        v-if="whatsappSupportUrl"
-                        :url="whatsappSupportUrl"
-                        :phone="whatsappDisplayPhone"
+                        v-if="resolvedWhatsappSupportUrl"
+                        :url="resolvedWhatsappSupportUrl"
+                        :phone="resolvedWhatsappDisplayPhone"
                     />
                     <p class="text-center text-xs text-slate-500">{{ copy.supportHint }}</p>
 
@@ -1172,14 +1266,21 @@ onUnmounted(() => {
                                     </p>
                                 </div>
                                 <p class="max-w-[14rem] text-right text-[11px] leading-snug text-slate-400 sm:text-xs">
-                                    bKash / Rocket / Nagad-এ Send Money করুন, তারপর পরবর্তী ধাপে যান।
+                                    উপলব্ধ পেমেন্ট পদ্ধতিতে Send Money করুন, তারপর পরবর্তী ধাপে যান।
                                 </p>
                             </div>
                         </div>
                         <SubscriptionPaymentGuideBn
-                            :methods="paymentMethods"
+                            v-if="resolvedPaymentMethods.length"
+                            :methods="resolvedPaymentMethods"
                             @select="onPaymentGuideSelect"
                         />
+                        <p
+                            v-else
+                            class="rounded-xl border border-amber-400/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-100/90"
+                        >
+                            পেমেন্ট নম্বর এখনো সেট করা হয়নি। সাহায্যের জন্য WhatsApp সাপোর্টে যোগাযোগ করুন।
+                        </p>
                     </div>
 
                     <!-- Step 4: Payment details -->

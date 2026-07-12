@@ -1,22 +1,28 @@
 <?php
 
 return [
-    'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE', '8801770989591'),
+    'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE'),
 
     'whatsapp_default_message' => env(
         'LANDING_WHATSAPP_DEFAULT_MESSAGE',
         'সালাম, আমি WooEasyLife সাবস্ক্রিপশন নিতে চাই।',
     ),
 
-    'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE', '8801770989591')),
+    'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE')),
 
     'admin_email' => env('LANDING_ADMIN_EMAIL', env('MAIL_FROM_ADDRESS')),
 
-    'bkash_number' => env('LANDING_BKASH_NUMBER', env('SUBSCRIPTION_PAYMENT_BKASH', '01770989591')),
+    'bkash_number' => env('LANDING_BKASH_NUMBER', env('SUBSCRIPTION_PAYMENT_BKASH')),
 
-    'rocket_number' => env('LANDING_ROCKET_NUMBER', env('SUBSCRIPTION_PAYMENT_ROCKET', '01770989591')),
+    'rocket_number' => env('LANDING_ROCKET_NUMBER', env('SUBSCRIPTION_PAYMENT_ROCKET')),
 
-    'nagad_number' => env('LANDING_NAGAD_NUMBER', '01770989591'),
+    'nagad_number' => env('LANDING_NAGAD_NUMBER', env('SUBSCRIPTION_PAYMENT_NAGAD')),
+
+    'app_download_url' => env('WOOEASYLIFE_ANDROID_DOWNLOAD_URL'),
+
+    'play_store_url' => env('WOOEASYLIFE_PLAY_STORE_URL'),
+
+    'plugin_download_url' => env('WOOEASYLIFE_PLUGIN_DOWNLOAD_URL'),
 
     'subscription_wizard' => [
         'title' => 'সাবস্ক্রিপশন কিনুন',
@@ -28,7 +34,7 @@ return [
             'confirm' => 'তথ্য জমা দিন',
             'done' => 'সম্পন্ন',
         ],
-        'free_trial_hint' => 'ফ্রি ট্রায়াল শুরু করতে লগইন করুন অথবা WhatsApp-এ যোগাযোগ করুন।',
+        'free_trial_hint' => 'ফ্রি ট্রায়াল শুরু করতে ফর্ম পূরণ করুন — কোনো পেমেন্ট লাগবে না।',
         'success_title' => 'আপনার অনুরোধ জমা হয়েছে!',
         'success_message' => 'আমাদের টিম ২৪ ঘণ্টার মধ্যে যাচাই করে আপনার প্ল্যান সক্রিয় করবে। WhatsApp-এ আপডেট পেতে পারেন।',
     ],
@@ -51,7 +57,8 @@ return [
     'trust_badges' => [
         ['icon' => 'check', 'label' => '১৪ দিন ফ্রি ট্রায়াল'],
         ['icon' => 'clock', 'label' => 'হোয়াটসঅ্যাপ সাপোর্ট'],
-        ['icon' => 'lock', 'label' => 'bKash · Nagad · Rocket'],
+        // Payment label is filled dynamically from Landing Settings.
+        ['icon' => 'lock', 'label' => 'payment_methods'],
     ],
 
     'feature_highlight_order' => [
@@ -83,7 +90,7 @@ return [
 
     'hero_trust_badges' => [
         '১৪ দিন ফ্রি ট্রায়াল',
-        'bKash · Rocket',
+        'payment_methods',
         'হোয়াটসঅ্যাপ সাপোর্ট',
     ],
 

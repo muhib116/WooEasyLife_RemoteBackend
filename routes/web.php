@@ -81,7 +81,7 @@ Route::get('/', function () {
         'subscriptionPaymentMethods' => app(\App\Services\SubscriptionPaymentConfigService::class)->forApi(),
         'whatsappSupportUrl' => \App\Support\WhatsappLink::url(
             $whatsapp,
-            'সালাম, WooEasyLife সাবস্ক্রিপশন নিতে সাহায্য চাই।',
+            config('landing.whatsapp_default_message'),
         ),
         'whatsappDisplayPhone' => $landing['whatsappDisplayPhone'] ?? $whatsapp,
         'pendingSubscriptionInquiry' => $pendingInquiry,
@@ -111,7 +111,7 @@ Route::prefix('public/fraud-check')->name('landing.fraud-check.')->group(functio
 
 Route::get('/pricing', PricingController::class)->name('pricing');
 Route::post('/pricing/subscribe/validate', [PublicSubscriptionController::class, 'validateFields'])
-    ->middleware('throttle:30,1')
+    ->middleware('throttle:120,1')
     ->name('pricing.subscribe.validate');
 Route::post('/pricing/subscribe', [PublicSubscriptionController::class, 'store'])
     ->middleware('throttle:10,1')

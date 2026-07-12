@@ -13,7 +13,7 @@
         </span>
         <span class="min-w-0 text-left">
             <span class="block font-semibold text-emerald-300">{{ label }}</span>
-            <span class="block text-emerald-100/90">{{ phone }}</span>
+            <span v-if="phone" class="block text-emerald-100/90">{{ phone }}</span>
         </span>
     </a>
 </template>
@@ -21,7 +21,7 @@
 <script setup>
 defineProps({
     url: { type: String, required: true },
-    phone: { type: String, default: '01770989591' },
+    phone: { type: String, default: null },
     label: { type: String, default: 'WhatsApp সাপোর্ট — সরাসরি সাহায্য' },
 });
 </script>

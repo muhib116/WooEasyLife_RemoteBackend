@@ -10,7 +10,6 @@ use App\Services\LandingSettingsService;
 use App\Services\MerchantPortalContext;
 use App\Services\PublicSubscriptionService;
 use App\Services\RbacService;
-use App\Services\SubscriptionPaymentConfigService;
 use App\Services\WebsiteAggregatorService;
 use App\Support\WhatsappLink;
 use Illuminate\Http\Request;
@@ -55,13 +54,13 @@ class PricingController extends Controller
             'domains' => $domains,
             'canPurchase' => $canPurchase,
             'preselectedPlanId' => $request->integer('plan') ?: null,
-            'paymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
+            'paymentMethods' => $payload['subscriptionPaymentMethods'] ?? [],
             'subscriptionWizard' => config('landing.subscription_wizard', []),
             'whatsappSupportUrl' => WhatsappLink::url(
                 $whatsapp,
-                'সালাম, WooEasyLife সাবস্ক্রিপশন নিতে সাহায্য চাই।',
+                config('landing.whatsapp_default_message'),
             ),
-            'whatsappDisplayPhone' => $payload['whatsappDisplayPhone'] ?? $whatsapp,
+            'whatsappDisplayPhone' => $payload['whatsappDisplayPhone'] ?? null,
             'pendingSubscriptionInquiry' => $pendingInquiry,
         ]));
     }

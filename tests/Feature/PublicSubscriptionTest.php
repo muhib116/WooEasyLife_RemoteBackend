@@ -6,16 +6,32 @@ use App\Models\PackageHub;
 use App\Models\SubscriptionInquiry;
 use App\Models\User;
 use App\Models\Website;
+use App\Mail\SubscriptionInquiryAdminMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PublicSubscriptionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'landing.admin_email' => 'admin@example.com',
+            'landing.bkash_number' => '01770989591',
+            'landing.rocket_number' => '01770989591',
+            'landing.nagad_number' => '01770989591',
+        ]);
+    }
+
     public function test_guest_can_submit_pricing_subscription_inquiry(): void
     {
+        Mail::fake();
+
         $plan = PackageHub::create([
             'title' => 'Starter – 1 Month',
             'per_order_rate' => 0,
@@ -51,6 +67,68 @@ class PublicSubscriptionTest extends TestCase
         ]);
 
         $this->assertSame(1, SubscriptionInquiry::count());
+
+        Mail::assertSent(SubscriptionInquiryAdminMail::class, function (SubscriptionInquiryAdminMail $mail) {
+            return $mail->hasTo('admin@example.com')
+                && $mail->inquiry->domain === 'myshop.com'
+                && $mail->inquiry->email === 'karim@example.com';
+        });
+    }
+
+    public function test_paid_submit_is_rejected_when_no_payment_methods_configured(): void
+    {
+        config([
+            'landing.bkash_number' => null,
+            'landing.rocket_number' => null,
+            'landing.nagad_number' => null,
+        ]);
+
+        $plan = $this->createPaidPlan();
+
+        $response = $this->from('/pricing')->post(route('pricing.subscribe'), [
+            'package_hub_id' => $plan->id,
+            'website_url' => 'nopay.com',
+            'customer_name' => 'Karim',
+            'email' => 'nopay@example.com',
+            'contact_number' => '01711111111',
+            'whatsapp_number' => '01711111111',
+            'address' => 'Dhaka',
+            'transaction_method' => 'Bkash',
+            'transaction_id' => 'TXN999',
+            'account_number' => '01711111111',
+        ]);
+
+        $response->assertRedirect('/pricing');
+        $response->assertSessionHasErrors('transaction_method');
+        $this->assertSame(0, SubscriptionInquiry::count());
+    }
+
+    public function test_paid_submit_rejects_unconfigured_transaction_method(): void
+    {
+        config([
+            'landing.bkash_number' => '01770989591',
+            'landing.rocket_number' => null,
+            'landing.nagad_number' => null,
+        ]);
+
+        $plan = $this->createPaidPlan();
+
+        $response = $this->from('/pricing')->post(route('pricing.subscribe'), [
+            'package_hub_id' => $plan->id,
+            'website_url' => 'onlybkash.com',
+            'customer_name' => 'Karim',
+            'email' => 'onlybkash@example.com',
+            'contact_number' => '01711111111',
+            'whatsapp_number' => '01711111111',
+            'address' => 'Dhaka',
+            'transaction_method' => 'Nagad',
+            'transaction_id' => 'TXN888',
+            'account_number' => '01711111111',
+        ]);
+
+        $response->assertRedirect('/pricing');
+        $response->assertSessionHasErrors('transaction_method');
+        $this->assertSame(0, SubscriptionInquiry::count());
     }
 
     public function test_guest_cannot_subscribe_domain_owned_by_merchant(): void

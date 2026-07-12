@@ -48,4 +48,19 @@ class SubscriptionPaymentConfigServiceTest extends TestCase
 
         $this->assertSame([], app(SubscriptionPaymentConfigService::class)->methods());
     }
+
+    public function test_allowed_transaction_methods_map_partners(): void
+    {
+        config([
+            'landing.bkash_number' => '01711111111',
+            'landing.rocket_number' => '01722222222',
+            'landing.nagad_number' => null,
+        ]);
+
+        $service = app(SubscriptionPaymentConfigService::class);
+
+        $this->assertSame(['Bkash', 'Rocket'], $service->allowedTransactionMethods());
+        $this->assertSame('bKash · Rocket', $service->partnerLabels());
+        $this->assertTrue($service->hasConfiguredMethods());
+    }
 }

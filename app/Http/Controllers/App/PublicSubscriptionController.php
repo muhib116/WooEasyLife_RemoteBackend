@@ -7,7 +7,10 @@ use App\Models\PackageHub;
 use App\Services\MerchantPortalContext;
 use App\Services\PublicSubscriptionService;
 use App\Services\RbacService;
+use App\Services\SubscriptionPaymentConfigService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PublicSubscriptionController extends Controller
 {
@@ -30,13 +33,27 @@ class PublicSubscriptionController extends Controller
         PublicSubscriptionService $subscriptionService,
         MerchantPortalContext $portalContext,
         RbacService $rbac,
+        SubscriptionPaymentConfigService $paymentConfig,
     ) {
         $packageHub = PackageHub::query()
             ->where('id', $request->integer('package_hub_id'))
             ->where('is_active', true)
             ->first();
 
-        $isFreeTrial = $packageHub?->package_duration === 'free_trial';
+        if (! $packageHub) {
+            throw ValidationException::withMessages([
+                'package_hub_id' => 'নির্বাচিত প্যাকেজটি এখন উপলব্ধ নেই।',
+            ]);
+        }
+
+        $isFreeTrial = $packageHub->package_duration === 'free_trial';
+        $allowedMethods = $paymentConfig->allowedTransactionMethods();
+
+        if (! $isFreeTrial && $allowedMethods === []) {
+            throw ValidationException::withMessages([
+                'transaction_method' => 'পেমেন্ট পদ্ধতি এখন উপলব্ধ নেই। অনুগ্রহ করে WhatsApp সাপোর্টে যোগাযোগ করুন।',
+            ]);
+        }
 
         $validated = $request->validate([
             'package_hub_id' => 'required|integer',
@@ -49,7 +66,9 @@ class PublicSubscriptionController extends Controller
             'order_limit' => 'nullable|integer|min:1',
             'total_amount' => 'nullable|numeric|min:0',
             'transaction_charge' => 'nullable|numeric|min:0',
-            'transaction_method' => ($isFreeTrial ? 'nullable' : 'required').'|string|max:50',
+            'transaction_method' => $isFreeTrial
+                ? 'nullable|string|max:50'
+                : ['required', 'string', 'max:50', Rule::in($allowedMethods)],
             'transaction_id' => ($isFreeTrial ? 'nullable' : 'required').'|string|max:100',
             'account_number' => $isFreeTrial
                 ? 'nullable|string|max:50'
@@ -67,6 +86,7 @@ class PublicSubscriptionController extends Controller
             'whatsapp_number.regex' => 'সঠিক বাংলাদেশি WhatsApp নম্বর লিখুন (যেমন: 017XXXXXXXX)।',
             'address.required' => 'ঠিকানা লিখুন।',
             'transaction_method.required' => 'পেমেন্ট পদ্ধতি বেছে নিন।',
+            'transaction_method.in' => 'সঠিক পেমেন্ট পদ্ধতি বেছে নিন।',
             'transaction_id.required' => 'Transaction ID লিখুন।',
             'account_number.required' => 'যে নম্বর থেকে পাঠিয়েছেন সেটি লিখুন।',
             'account_number.regex' => 'সঠিক বাংলাদেশি পাঠানোর নম্বর লিখুন (যেমন: 017XXXXXXXX)।',
@@ -88,7 +108,7 @@ class PublicSubscriptionController extends Controller
 
         try {
             $result = $subscriptionService->submit($user, $validated, $canUsePortalPayment);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return back()->withErrors($e->errors());
         }
 

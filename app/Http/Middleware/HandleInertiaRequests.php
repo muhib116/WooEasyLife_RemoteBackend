@@ -38,6 +38,8 @@ class HandleInertiaRequests extends Middleware
         $rbac = app(RbacService::class);
         $portal = app(MerchantPortalContext::class);
         $landingSettings = app(LandingSettingsService::class);
+        $paymentConfig = app(SubscriptionPaymentConfigService::class);
+        $partnerLabels = $paymentConfig->partnerLabels();
 
         $accessArea = match (true) {
             $user?->role === 'admin' => 'admin',
@@ -73,7 +75,7 @@ class HandleInertiaRequests extends Middleware
                 'license_token' => session('license_token'),
                 'subscription_submitted' => session('subscription_submitted'),
             ],
-            'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
+            'subscriptionPaymentMethods' => $paymentConfig->forApi(),
             'marketing' => [
                 'helpline' => $landingSettings->adminPhone(),
                 'admin_email' => $landingSettings->adminEmail(),
@@ -81,7 +83,21 @@ class HandleInertiaRequests extends Middleware
                 'location' => config('landing.location'),
                 'footer_tagline' => config('landing.footer_tagline'),
                 'footer_tagline_en' => config('landing.footer_tagline_en'),
-                'trust_badges' => config('landing.trust_badges', []),
+                'trust_badges' => collect(config('landing.trust_badges', []))
+                    ->map(function (array $badge) use ($partnerLabels) {
+                        if (($badge['label'] ?? null) !== 'payment_methods') {
+                            return $badge;
+                        }
+
+                        if ($partnerLabels === '') {
+                            return null;
+                        }
+
+                        return [...$badge, 'label' => $partnerLabels];
+                    })
+                    ->filter()
+                    ->values()
+                    ->all(),
                 'announcement' => config('landing.announcement', []),
                 'whatsapp_url' => WhatsappLink::url($landingSettings->adminWhatsapp()),
                 'whatsapp_contact_url' => WhatsappLink::url(

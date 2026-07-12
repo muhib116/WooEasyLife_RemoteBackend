@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import LandingHeroSection from '@/components/marketing/LandingHeroSection.vue';
@@ -50,7 +50,7 @@ const props = defineProps({
     subscriptionWizard: { type: Object, default: () => ({}) },
     subscriptionPaymentMethods: { type: Array, default: () => [] },
     whatsappSupportUrl: { type: String, default: null },
-    whatsappDisplayPhone: { type: String, default: '01770989591' },
+    whatsappDisplayPhone: { type: String, default: null },
     pluginDownloadUrl: { type: String, default: null },
     pendingSubscriptionInquiry: { type: Object, default: null },
 });
@@ -58,8 +58,20 @@ const props = defineProps({
 const openFaq = ref(null);
 const showWizard = ref(false);
 const selectedPlan = ref(null);
+const page = usePage();
 
 const hasPendingInquiry = computed(() => Boolean(props.pendingSubscriptionInquiry?.id));
+
+const paymentMethodLabels = computed(() => {
+    if (props.paymentMethods?.length) {
+        return props.paymentMethods.join(' · ');
+    }
+
+    return (props.subscriptionPaymentMethods || [])
+        .map((method) => method.payment_partner)
+        .filter(Boolean)
+        .join(' · ');
+});
 
 const openPurchase = (plan) => {
     if (!plan || hasPendingInquiry.value) {
@@ -69,6 +81,15 @@ const openPurchase = (plan) => {
     selectedPlan.value = plan;
     showWizard.value = true;
 };
+
+watch(
+    () => page.props.flash?.subscription_submitted,
+    (payload) => {
+        if (payload) {
+            showWizard.value = true;
+        }
+    },
+);
 
 const trialPlan = computed(() =>
     props.plans.find((p) => p.package_duration === 'free_trial') ?? null,
@@ -83,7 +104,6 @@ const previewPlans = computed(() => {
 
 const primaryCtaUrlValue = computed(() => primaryCtaUrl());
 const primaryCtaLabelValue = computed(() => primaryCtaLabel());
-const page = usePage();
 const merchantLoginLink = computed(() => merchantLoginHref(page.props.auth));
 const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth));
 
@@ -142,7 +162,9 @@ const faqs = computed(() => [
     },
     {
         q: 'পেমেন্ট কীভাবে করব?',
-        a: 'bKash, Nagad, Rocket বা ব্যাংক — পেমেন্ট জমা দিলে দ্রুত চালু হয়ে যায়।',
+        a: paymentMethodLabels.value
+            ? `${paymentMethodLabels.value} — পেমেন্ট জমা দিলে দ্রুত চালু হয়ে যায়।`
+            : 'প্রাইসিং পেজ থেকে প্ল্যান বেছে নিন। পেমেন্ট নম্বর সেট থাকলে সেখানেই দেখাবে; নইলে WhatsApp সাপোর্টে যোগাযোগ করুন।',
     },
 ]);
 

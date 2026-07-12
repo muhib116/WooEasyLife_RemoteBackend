@@ -36,7 +36,7 @@ return [
     'methods' => [
         [
             'payment_partner' => 'bKash',
-            'account' => env('SUBSCRIPTION_PAYMENT_BKASH', '01770989591'),
+            'account' => env('SUBSCRIPTION_PAYMENT_BKASH'),
             'note' => 'bKash "Send Money" ফি সাবস্ক্রিপশনের পরিমাণের সাথে যোগ হবে।',
             'steps' => [
                 'bKash অ্যাপ খুলুন অথবা *247# ডায়াল করুন।',
@@ -49,7 +49,7 @@ return [
         ],
         [
             'payment_partner' => 'Rocket',
-            'account' => env('SUBSCRIPTION_PAYMENT_ROCKET', '01770989591'),
+            'account' => env('SUBSCRIPTION_PAYMENT_ROCKET'),
             'note' => 'Rocket "Send Money" ফি সাবস্ক্রিপশনের পরিমাণের সাথে যোগ হবে।',
             'steps' => [
                 'Rocket অ্যাপ খুলুন অথবা *322# ডায়াল করুন।',
@@ -62,7 +62,7 @@ return [
         ],
         [
             'payment_partner' => 'Nagad',
-            'account' => env('LANDING_NAGAD_NUMBER', env('SUBSCRIPTION_PAYMENT_NAGAD', '01770989591')),
+            'account' => env('LANDING_NAGAD_NUMBER', env('SUBSCRIPTION_PAYMENT_NAGAD')),
             'note' => 'Nagad "Send Money" ফি সাবস্ক্রিপশনের পরিমাণের সাথে যোগ হবে।',
             'steps' => [
                 'Nagad অ্যাপ খুলুন অথবা *167# ডায়াল করুন।',

@@ -9,7 +9,7 @@
             </p>
         </div>
 
-        <div class="space-y-4 p-4">
+        <div v-if="methods.length" class="space-y-4 p-4">
             <div
                 v-for="method in methods"
                 :key="method.paymentPartner"
@@ -42,6 +42,9 @@
                 </ol>
             </div>
         </div>
+        <p v-else class="p-4 text-sm text-gray-500 dark:text-gray-400">
+            Payment account numbers are not configured yet. Set them in Admin → Landing Settings.
+        </p>
     </section>
 </template>
 

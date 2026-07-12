@@ -1,4 +1,3 @@
-import { subscriptionPaymentMethods as defaultMethods } from "@/data/subscriptionPaymentMethods";
 import { usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 
@@ -9,6 +8,9 @@ export type SubscriptionPaymentMethod = {
     steps?: string[];
 };
 
+/**
+ * Payment instructions from Admin → Landing Settings (via shared Inertia props).
+ */
 export function useSubscriptionPaymentMethods() {
     const page = usePage();
 
@@ -17,15 +19,17 @@ export function useSubscriptionPaymentMethods() {
             | SubscriptionPaymentMethod[]
             | undefined;
 
-        if (Array.isArray(fromServer) && fromServer.length) {
-            return fromServer.map((method) => ({
+        if (!Array.isArray(fromServer)) {
+            return [];
+        }
+
+        return fromServer
+            .filter((method) => method?.payment_partner && method?.account)
+            .map((method) => ({
                 paymentPartner: method.payment_partner,
                 account: method.account,
                 note: method.note ?? "",
                 steps: method.steps ?? [],
             }));
-        }
-
-        return defaultMethods;
     });
 }

@@ -16,6 +16,7 @@ class LandingPageService
         protected PackagePlanResolver $planResolver,
         protected PublicFraudCheckService $publicFraudCheckService,
         protected LandingSettingsService $landingSettings,
+        protected SubscriptionPaymentConfigService $paymentConfig,
     ) {
     }
 
@@ -38,6 +39,7 @@ class LandingPageService
             : ($planPayloads[0] ?? null);
 
         $whatsappPhone = $this->landingSettings->adminWhatsapp();
+        $paymentMethods = $this->paymentConfig->forApi();
 
         return [
             'plans' => $this->planResolver->mapPlansForDisplay($plans),
@@ -56,7 +58,19 @@ class LandingPageService
                 ? $this->buildConversionFeatures($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'heroBullets' => config('landing.hero_bullets', []),
-            'heroTrustBadges' => config('landing.hero_trust_badges', []),
+            'heroTrustBadges' => collect(config('landing.hero_trust_badges', []))
+                ->map(function ($badge) use ($paymentMethods) {
+                    if ($badge !== 'payment_methods') {
+                        return $badge;
+                    }
+
+                    $labels = collect($paymentMethods)->pluck('payment_partner')->filter()->implode(' · ');
+
+                    return $labels !== '' ? $labels : null;
+                })
+                ->filter()
+                ->values()
+                ->all(),
             'hero' => config('landing.hero', []),
             'integrations' => config('landing.integrations', []),
             'roiScenarios' => config('landing.roi_scenarios', []),
@@ -72,7 +86,12 @@ class LandingPageService
             'stats' => config('landing.stats', []),
             'courierPerformance' => config('landing.courier_performance', []),
             'lossComparison' => config('landing.loss_comparison', []),
-            'paymentMethods' => config('landing.payment_methods', []),
+            'paymentMethods' => collect($paymentMethods)
+                ->pluck('payment_partner')
+                ->filter()
+                ->values()
+                ->all(),
+            'subscriptionPaymentMethods' => $paymentMethods,
             'enterpriseCta' => config('landing.enterprise_cta', []),
             'whatsappUrl' => WhatsappLink::url($whatsappPhone),
             'whatsappContactUrl' => WhatsappLink::url(

@@ -51,4 +51,47 @@ class SubscriptionPaymentConfigService
             ->values()
             ->all();
     }
+
+    /**
+     * Display labels for configured partners (e.g. "bKash · Rocket").
+     */
+    public function partnerLabels(): string
+    {
+        return collect($this->methods())
+            ->pluck('payment_partner')
+            ->filter()
+            ->implode(' · ');
+    }
+
+    /**
+     * Accepted transaction_method values for store validation (Bkash / Rocket / Nagad).
+     *
+     * @return array<int, string>
+     */
+    public function allowedTransactionMethods(): array
+    {
+        return collect($this->methods())
+            ->map(fn (array $method) => $this->toTransactionMethod($method['payment_partner'] ?? ''))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function toTransactionMethod(?string $partner): ?string
+    {
+        $normalized = strtolower(trim((string) $partner));
+
+        return match ($normalized) {
+            'bkash' => 'Bkash',
+            'rocket' => 'Rocket',
+            'nagad' => 'Nagad',
+            default => $partner !== null && trim($partner) !== '' ? trim($partner) : null,
+        };
+    }
+
+    public function hasConfiguredMethods(): bool
+    {
+        return $this->methods() !== [];
+    }
 }

@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Mail\SubscriptionInquiryAdminMail;
 use App\Models\PackageHub;
 use App\Models\SubscriptionInquiry;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class PublicSubscriptionService
@@ -17,6 +20,7 @@ class PublicSubscriptionService
         protected PackagePaymentService $packagePaymentService,
         protected PackagePlanResolver $planResolver,
         protected DomainAvailabilityService $domainAvailability,
+        protected LandingSettingsService $landingSettings,
     ) {
     }
 
@@ -67,7 +71,7 @@ class PublicSubscriptionService
 
         $note = $this->buildStructuredNote($data, $domain);
 
-        return DB::transaction(function () use (
+        $result = DB::transaction(function () use (
             $user,
             $data,
             $domain,
@@ -121,6 +125,34 @@ class PublicSubscriptionService
                 'payment_request_id' => $paymentRequestId,
             ];
         });
+
+        $this->notifyAdmin($result['inquiry']);
+
+        return $result;
+    }
+
+    protected function notifyAdmin(SubscriptionInquiry $inquiry): void
+    {
+        $adminEmail = $this->landingSettings->adminEmail();
+
+        if (! filled($adminEmail)) {
+            Log::warning('Subscription inquiry admin email skipped: no admin email configured.', [
+                'inquiry_id' => $inquiry->id,
+            ]);
+
+            return;
+        }
+
+        try {
+            Mail::to($adminEmail)->send(new SubscriptionInquiryAdminMail($inquiry));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send subscription inquiry admin email.', [
+                'inquiry_id' => $inquiry->id,
+                'admin_email' => $adminEmail,
+                'error' => $e->getMessage(),
+            ]);
+            report($e);
+        }
     }
 
     /**

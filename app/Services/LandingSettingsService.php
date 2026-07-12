@@ -34,8 +34,8 @@ class LandingSettingsService
             'app_download_url' => $this->appDownloadUrl(),
             'play_store_url' => $this->playStoreUrl(),
             'plugin_download_url' => $this->pluginDownloadUrl(),
-            'app_download_url_source' => $this->source(self::APP_DOWNLOAD_URL_KEY, 'WOOEASYLIFE_ANDROID_DOWNLOAD_URL'),
-            'play_store_url_source' => $this->source(self::PLAY_STORE_URL_KEY, 'WOOEASYLIFE_PLAY_STORE_URL'),
+            'app_download_url_source' => $this->sourceWithConfig(self::APP_DOWNLOAD_URL_KEY, 'landing.app_download_url'),
+            'play_store_url_source' => $this->sourceWithConfig(self::PLAY_STORE_URL_KEY, 'landing.play_store_url'),
             'plugin_download_url_source' => $this->pluginSource(),
             'bkash_number' => $this->bkashNumber(),
             'rocket_number' => $this->rocketNumber(),
@@ -54,17 +54,17 @@ class LandingSettingsService
 
     public function appDownloadUrl(): ?string
     {
-        return $this->resolve(self::APP_DOWNLOAD_URL_KEY, env('WOOEASYLIFE_ANDROID_DOWNLOAD_URL'));
+        return $this->resolve(self::APP_DOWNLOAD_URL_KEY, config('landing.app_download_url'));
     }
 
     public function playStoreUrl(): ?string
     {
-        return $this->resolve(self::PLAY_STORE_URL_KEY, env('WOOEASYLIFE_PLAY_STORE_URL'));
+        return $this->resolve(self::PLAY_STORE_URL_KEY, config('landing.play_store_url'));
     }
 
     public function pluginDownloadUrl(): ?string
     {
-        $custom = $this->resolve(self::PLUGIN_DOWNLOAD_URL_KEY, env('WOOEASYLIFE_PLUGIN_DOWNLOAD_URL'));
+        $custom = $this->resolve(self::PLUGIN_DOWNLOAD_URL_KEY, config('landing.plugin_download_url'));
 
         if ($custom !== null) {
             return $custom;
@@ -145,7 +145,7 @@ class LandingSettingsService
             return 'database';
         }
 
-        $env = env('WOOEASYLIFE_PLUGIN_DOWNLOAD_URL');
+        $env = config('landing.plugin_download_url');
 
         if (is_string($env) && trim($env) !== '') {
             return 'env';
