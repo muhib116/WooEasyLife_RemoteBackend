@@ -186,8 +186,35 @@ return [
     'app_showcase' => [
         'headline' => 'পুরো ব্যবসা এখন আপনার পকেটে',
         'subheadline' => 'নতুন অর্ডার এলেই ফোনে নোটিফিকেশন। হারিয়ে যাওয়া অর্ডারও এক জায়গায়। বাইরে থাকলেও একটাও মিস হবে না।',
-        'screenshot' => '/images/woo-easy-life/app-left-sidebar.png',
-        'screenshot_alt' => 'WooEasyLife মোবাইল অ্যাপ — অর্ডার ও ড্যাশবোর্ড',
+        'screenshot' => '/images/woo-easy-life/hub.jpg',
+        'screenshot_alt' => 'WooEasyLife মোবাইল অ্যাপ — হোম স্ক্রিন',
+        'screenshots' => [
+            [
+                'src' => '/images/woo-easy-life/hub.jpg',
+                'alt' => 'WooEasyLife অ্যাপ হোম — Dashboard, Orders, Missing, Fraud',
+                'label' => 'হোম',
+            ],
+            [
+                'src' => '/images/woo-easy-life/dashboard.jpg',
+                'alt' => 'WooEasyLife ড্যাশবোর্ড — অর্ডার ও COD সারাংশ',
+                'label' => 'ড্যাশবোর্ড',
+            ],
+            [
+                'src' => '/images/woo-easy-life/orders.jpg',
+                'alt' => 'WooEasyLife অর্ডার লিস্ট — Abandoned order ও কল বাটন',
+                'label' => 'অর্ডার',
+            ],
+            [
+                'src' => '/images/woo-easy-life/common-dashboard.jpg',
+                'alt' => 'WooEasyLife Common Dashboard — একাধিক স্টোর এক নজরে',
+                'label' => 'মাল্টি-স্টোর',
+            ],
+            [
+                'src' => '/images/woo-easy-life/menu-nav.jpg',
+                'alt' => 'WooEasyLife মেনু — Missing Orders ও New অর্ডার ব্যাজ',
+                'label' => 'মেনু',
+            ],
+        ],
         'benefits' => [
             'সব ওয়েবসাইটের অর্ডার সংখ্যা এক নজরে',
             'হারিয়ে যাওয়া অর্ডার খুঁজে বিক্রি ফেরান',

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
     appShowcase: { type: Object, default: () => ({}) },
@@ -7,20 +7,137 @@ const props = defineProps({
     playStoreUrl: { type: String, default: null },
 });
 
-const screenshotSrc = computed(
-    () => props.appShowcase.screenshot ?? '/images/woo-easy-life/app-left-sidebar.png',
+const ROTATE_MS = 3500;
+
+const activeIndex = ref(0);
+const mainLoading = ref(true);
+const loadedSrcs = ref(new Set());
+const paused = ref(false);
+
+let timer = null;
+
+const screenshots = computed(() => {
+    const list = props.appShowcase?.screenshots;
+
+    if (Array.isArray(list) && list.length) {
+        return list;
+    }
+
+    const fallback = props.appShowcase?.screenshot ?? '/images/woo-easy-life/hub.jpg';
+
+    return [
+        {
+            src: fallback,
+            alt: props.appShowcase?.screenshot_alt ?? 'WooEasyLife মোবাইল অ্যাপ',
+            label: 'অ্যাপ',
+        },
+    ];
+});
+
+const activeShot = computed(() => screenshots.value[activeIndex.value] ?? screenshots.value[0]);
+
+const markLoaded = (src) => {
+    const next = new Set(loadedSrcs.value);
+    next.add(src);
+    loadedSrcs.value = next;
+};
+
+const isThumbLoaded = (src) => loadedSrcs.value.has(src);
+
+const onMainLoad = () => {
+    markLoaded(activeShot.value.src);
+    mainLoading.value = false;
+};
+
+const onMainError = () => {
+    mainLoading.value = false;
+};
+
+const goTo = (index) => {
+    const total = screenshots.value.length;
+
+    if (total < 2) {
+        return;
+    }
+
+    const next = ((index % total) + total) % total;
+
+    if (next === activeIndex.value) {
+        return;
+    }
+
+    activeIndex.value = next;
+    const src = screenshots.value[next]?.src;
+    mainLoading.value = !(src && loadedSrcs.value.has(src));
+};
+
+const selectShot = (index) => {
+    goTo(index);
+    restartTimer();
+};
+
+const nextShot = () => {
+    goTo(activeIndex.value + 1);
+};
+
+const clearTimer = () => {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+};
+
+const startTimer = () => {
+    clearTimer();
+
+    if (screenshots.value.length < 2 || paused.value) {
+        return;
+    }
+
+    timer = setInterval(nextShot, ROTATE_MS);
+};
+
+const restartTimer = () => {
+    startTimer();
+};
+
+watch(
+    () => activeShot.value?.src,
+    (src) => {
+        if (!src) {
+            return;
+        }
+
+        if (loadedSrcs.value.has(src)) {
+            mainLoading.value = false;
+        }
+    },
 );
 
-const screenshotAlt = computed(
-    () => props.appShowcase.screenshot_alt ?? 'WooEasyLife mobile app screenshot',
+watch(
+    () => screenshots.value.length,
+    () => restartTimer(),
 );
+
+onMounted(() => startTimer());
+onUnmounted(() => clearTimer());
+
+const onPointerEnter = () => {
+    paused.value = true;
+    clearTimer();
+};
+
+const onPointerLeave = () => {
+    paused.value = false;
+    startTimer();
+};
 </script>
 
 <template>
     <section id="download-app" class="scroll-mt-24 border-t border-white/10 py-14 sm:py-20">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
-            <div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
-                <div class="order-2 lg:order-1">
+            <div class="grid items-center gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-12">
+                <div class="order-2 min-w-0 lg:order-1">
                     <span class="inline-flex rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-300">
                         মোবাইল অ্যাপ
                     </span>
@@ -65,7 +182,7 @@ const screenshotAlt = computed(
                         <a
                             v-if="appDownloadUrl"
                             :href="appDownloadUrl"
-                            class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-amber-400"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-amber-400"
                             download
                         >
                             APK ডাউনলোড
@@ -75,25 +192,89 @@ const screenshotAlt = computed(
                             :href="playStoreUrl"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                         >
                             Google Play
                         </a>
                     </div>
                 </div>
 
-                <div class="order-1 flex justify-center lg:order-2">
-                    <div class="relative w-full max-w-[260px] sm:max-w-[280px]">
-                        <div class="absolute -inset-4 rounded-[2.5rem] bg-sky-600/20 blur-2xl" />
-                        <div class="relative overflow-hidden rounded-[2rem] border-[6px] border-slate-800 bg-slate-900 shadow-2xl shadow-sky-900/30 ring-1 ring-white/10">
-                            <div class="pointer-events-none absolute left-1/2 top-0 z-10 h-5 w-24 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
+                <div
+                    class="order-1 min-w-0 lg:order-2"
+                    @pointerenter="onPointerEnter"
+                    @pointerleave="onPointerLeave"
+                >
+                    <div class="mx-auto w-full max-w-[260px] sm:max-w-[300px]">
+                        <div class="relative aspect-[9/19.5] w-full overflow-hidden bg-slate-900">
+                            <div
+                                v-show="mainLoading"
+                                class="absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3 bg-slate-900"
+                                aria-busy="true"
+                                aria-label="ছবি লোড হচ্ছে"
+                            >
+                                <div class="h-9 w-9 animate-spin rounded-full border-2 border-sky-400/30 border-t-sky-400" />
+                                <div class="w-[70%] space-y-2 px-4">
+                                    <div class="h-2 animate-pulse rounded bg-white/10" />
+                                    <div class="h-2 w-4/5 animate-pulse rounded bg-white/10" />
+                                    <div class="h-2 w-3/5 animate-pulse rounded bg-white/10" />
+                                </div>
+                            </div>
+
                             <img
-                                :src="screenshotSrc"
-                                :alt="screenshotAlt"
-                                class="block w-full object-cover object-top"
+                                :key="activeShot.src"
+                                :src="activeShot.src"
+                                :alt="activeShot.alt"
+                                class="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300"
+                                :class="mainLoading ? 'opacity-0' : 'opacity-100'"
                                 loading="lazy"
                                 decoding="async"
+                                fetchpriority="low"
+                                @load="onMainLoad"
+                                @error="onMainError"
                             >
+                        </div>
+
+                        <p
+                            v-if="activeShot.label"
+                            class="mt-2.5 text-center text-xs font-semibold text-slate-400 sm:mt-3"
+                        >
+                            {{ activeShot.label }}
+                        </p>
+
+                        <div
+                            v-if="screenshots.length > 1"
+                            class="mt-3 grid grid-cols-5 gap-1.5 sm:mt-4 sm:gap-2"
+                            role="tablist"
+                            aria-label="অ্যাপ স্ক্রিনশট"
+                        >
+                            <button
+                                v-for="(shot, index) in screenshots"
+                                :key="shot.src"
+                                type="button"
+                                class="relative min-h-11 overflow-hidden border-2 transition active:scale-95 sm:min-h-0"
+                                :class="activeIndex === index
+                                    ? 'border-amber-400 shadow-md shadow-amber-900/30'
+                                    : 'border-white/10 opacity-70 hover:opacity-100'"
+                                :aria-pressed="activeIndex === index"
+                                :aria-label="shot.label || `Screenshot ${index + 1}`"
+                                @click="selectShot(index)"
+                            >
+                                <div class="relative aspect-[9/16] w-full bg-slate-800">
+                                    <div
+                                        v-show="!isThumbLoaded(shot.src)"
+                                        class="absolute inset-0 animate-pulse bg-white/10"
+                                    />
+                                    <img
+                                        :src="shot.src"
+                                        :alt="shot.alt"
+                                        class="absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-200"
+                                        :class="isThumbLoaded(shot.src) ? 'opacity-100' : 'opacity-0'"
+                                        loading="lazy"
+                                        decoding="async"
+                                        @load="markLoaded(shot.src)"
+                                    >
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
