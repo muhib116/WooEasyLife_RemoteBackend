@@ -200,8 +200,8 @@ class BlogPostController extends Controller
             $publishedAt = null;
         }
 
-        if ($status === 'published' && empty($publishedAt)) {
-            $publishedAt = now();
+        if ($status === 'published') {
+            $publishedAt = $publishedAt ?: now();
         }
 
         if ($status === 'draft') {

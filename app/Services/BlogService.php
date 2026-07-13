@@ -6,8 +6,9 @@ use App\Models\BlogPost;
 use App\Support\BlogHtmlSanitizer;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class BlogService
 {
@@ -152,16 +153,22 @@ class BlogService
      */
     private function scanDatabasePosts(): Collection
     {
-        if (! Schema::hasTable('blog_posts')) {
+        try {
+            return BlogPost::query()
+                ->published()
+                ->orderByDesc('published_at')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (BlogPost $post) => $this->normalizeDatabasePost($post))
+                ->values();
+        } catch (Throwable $e) {
+            // Missing table / migration lag must not 500 the public blog.
+            Log::warning('BlogService: CMS posts unavailable', [
+                'message' => $e->getMessage(),
+            ]);
+
             return collect();
         }
-
-        return BlogPost::query()
-            ->published()
-            ->orderByDesc('published_at')
-            ->get()
-            ->map(fn (BlogPost $post) => $this->normalizeDatabasePost($post))
-            ->values();
     }
 
     /**
@@ -191,8 +198,12 @@ class BlogService
             'title' => $post->title,
             'description' => $post->seoDescription(),
             'meta_title' => $post->meta_title,
-            'date' => optional($post->published_at)->toDateString() ?? '',
-            'date_published' => optional($post->published_at)?->toAtomString(),
+            'date' => optional($post->published_at)->toDateString()
+                ?? optional($post->updated_at)->toDateString()
+                ?? optional($post->created_at)->toDateString()
+                ?? '',
+            'date_published' => optional($post->published_at)?->toAtomString()
+                ?? optional($post->created_at)?->toAtomString(),
             'date_modified' => optional($post->updated_at)?->toAtomString(),
             'slug' => $post->slug,
             'locale' => $post->locale,

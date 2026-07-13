@@ -121,6 +121,10 @@ class AdminBlogPostTest extends TestCase
 
         $this->get('/blog/live-without-timestamp')->assertOk();
 
+        $this->get('/sitemap.xml')
+            ->assertOk()
+            ->assertSee('/blog/live-without-timestamp', false);
+
         $this->actingAs($admin)
             ->get(route('blogPosts.edit', $post))
             ->assertOk()
@@ -129,6 +133,25 @@ class AdminBlogPostTest extends TestCase
                 ->where('post.public_path', '/blog/live-without-timestamp')
                 ->where('post.public_url', fn ($url) => is_string($url) && str_contains($url, '/blog/live-without-timestamp'))
             );
+    }
+
+    public function test_future_published_at_still_public_when_status_published(): void
+    {
+        $admin = $this->adminUser();
+
+        BlogPost::create([
+            'title' => 'Future Timestamp Post',
+            'slug' => 'future-timestamp-post',
+            'locale' => 'bn',
+            'status' => 'published',
+            'published_at' => now()->addDay(),
+            'meta_description' => 'Status published wins over a future published_at for public visibility.',
+            'body_html' => '<p>Should be public</p>',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->get('/blog/future-timestamp-post')->assertOk();
     }
 
     public function test_markdown_posts_still_load(): void

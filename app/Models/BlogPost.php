@@ -59,26 +59,14 @@ class BlogPost extends Model
      */
     public function scopePublished(Builder $query): Builder
     {
-        return $query
-            ->where('status', 'published')
-            ->where(function (Builder $q) {
-                // Null published_at = treat as live (legacy / incomplete CMS rows).
-                $q->whereNull('published_at')
-                    ->orWhere('published_at', '<=', now());
-            });
+        // Status is the source of truth for public visibility.
+        // published_at is used for sorting/display (and optional scheduling later).
+        return $query->where('status', 'published');
     }
 
     public function isPublished(): bool
     {
-        if ($this->status !== 'published') {
-            return false;
-        }
-
-        if ($this->published_at === null) {
-            return true;
-        }
-
-        return $this->published_at->lte(now());
+        return $this->status === 'published';
     }
 
     public function publicPath(): string
