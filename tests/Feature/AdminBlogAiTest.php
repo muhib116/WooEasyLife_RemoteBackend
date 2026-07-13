@@ -117,6 +117,154 @@ class AdminBlogAiTest extends TestCase
         $this->assertGreaterThan(0, BlogAiSession::dailyCalls($admin->id));
     }
 
+    public function test_wizard_style_full_flow_runs_sync_when_queue_disabled(): void
+    {
+        config(['blog_ai.queue' => false]);
+
+        $admin = $this->adminUser();
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+            if (str_contains($request->url(), 'suggestqueries.google.com')) {
+                return Http::response(['ফেক অর্ডার', ['ফেক অর্ডার চেক']], 200);
+            }
+
+            if (str_contains($request->url(), 'images/generations')) {
+                if (! function_exists('imagecreatetruecolor')) {
+                    return Http::response(['error' => ['message' => 'skip']], 500);
+                }
+                $img = imagecreatetruecolor(32, 32);
+                ob_start();
+                imagepng($img);
+                $png = ob_get_clean();
+                imagedestroy($img);
+
+                return Http::response([
+                    'data' => [['b64_json' => base64_encode($png)]],
+                ], 200);
+            }
+
+            $system = (string) data_get($request->data(), 'messages.0.content', '');
+            if (str_contains($system, 'keyword candidates')) {
+                $payload = ['keywords' => ['ফেক অর্ডার', 'কুরিয়ার হিস্টোরি']];
+            } elseif (str_contains($system, 'keyword planning')) {
+                $payload = [
+                    'primary' => 'ফেক অর্ডার',
+                    'secondary' => ['কুরিয়ার হিস্টোরি'],
+                    'suggestions' => [],
+                ];
+            } elseif (str_contains($system, 'hook titles')) {
+                $payload = [
+                    'hooks' => [[
+                        'id' => 'h1',
+                        'title' => 'ফেক অর্ডার কমানোর উপায়',
+                        'focus_keyword' => 'ফেক অর্ডার',
+                        'angle' => 'howto',
+                        'why_it_ranks' => 'BD intent',
+                        'risk' => '',
+                    ]],
+                ];
+            } elseif (str_contains($system, 'SEO outline')) {
+                $payload = [
+                    'h1' => 'ফেক অর্ডার কমানোর উপায়',
+                    'focus_keyword' => 'ফেক অর্ডার',
+                    'slug_suggestion' => 'fake-order-guide',
+                    'sections' => [['heading' => 'কেন', 'bullets' => ['COD']]],
+                    'faqs' => [['q' => 'ফেক অর্ডার কী?', 'a_points' => ['নেয় না']]],
+                    'internal_links' => [
+                        ['path' => '/bd-fraud-checker', 'anchor' => 'ফ্রড চেকার', 'reason' => 'tool'],
+                        ['path' => '/', 'anchor' => 'WooEasyLife', 'reason' => 'home'],
+                    ],
+                    'cta' => 'শুরু করুন',
+                ];
+            } else {
+                $payload = [
+                    'title' => 'ফেক অর্ডার কমানোর উপায়',
+                    'slug' => 'fake-order-guide',
+                    'locale' => 'bn',
+                    'focus_keyword' => 'ফেক অর্ডার',
+                    'meta_title' => 'ফেক অর্ডার কমানোর উপায় | WooEasyLife',
+                    'meta_description' => 'বাংলাদেশের COD সেলারদের জন্য ফেক অর্ডার কমানোর ব্যবহারিক গাইড এবং কুরিয়ার হিস্টোরি।',
+                    'excerpt' => 'ফেক অর্ডার কমান',
+                    'author_name' => 'Muhibbullah Ansary',
+                    'robots' => 'index,follow',
+                    'body_html' => '<h2>কেন</h2><p>ফেক অর্ডার সমস্যা। <a href="/bd-fraud-checker">ফ্রড চেকার</a> এবং <a href="/">WooEasyLife</a>।</p>',
+                    'faqs' => [['q' => 'ফেক অর্ডার কী?', 'a' => 'নেয় না এমন অর্ডার।']],
+                    'seo_notes' => [],
+                ];
+            }
+
+            return Http::response([
+                'choices' => [[
+                    'message' => ['content' => json_encode($payload, JSON_UNESCAPED_UNICODE)],
+                ]],
+                'usage' => ['prompt_tokens' => 8, 'completion_tokens' => 12, 'total_tokens' => 20],
+            ], 200);
+        });
+
+        $this->actingAs($admin)
+            ->getJson(route('blogAi.options'))
+            ->assertOk()
+            ->assertJsonPath('queue', false);
+
+        $this->actingAs($admin)
+            ->postJson(route('blogAi.suggestKeywords'), [
+                'cluster' => 'fake_order',
+                'seed_topic' => 'ফেক অর্ডার',
+            ])
+            ->assertOk()
+            ->assertJsonPath('keywords.0', 'ফেক অর্ডার');
+
+        $created = $this->actingAs($admin)->postJson(route('blogAi.store'), [
+            'cluster' => 'fake_order',
+            'seed_topic' => 'ফেক অর্ডার',
+            'keywords_text' => "ফেক অর্ডার\nকুরিয়ার হিস্টোরি",
+        ])->assertCreated();
+
+        $sessionId = $created->json('session.id');
+
+        $this->actingAs($admin)
+            ->postJson(route('blogAi.research', $sessionId), [
+                'keywords_text' => "ফেক অর্ডার\nকুরিয়ার হিস্টোরি",
+            ])
+            ->assertOk()
+            ->assertJsonPath('queued', false)
+            ->assertJsonPath('session.status', 'keywords_ready');
+
+        $this->actingAs($admin)
+            ->postJson(route('blogAi.hooks', $sessionId))
+            ->assertOk()
+            ->assertJsonPath('queued', false)
+            ->assertJsonPath('session.status', 'hooks_ready');
+
+        $this->actingAs($admin)
+            ->postJson(route('blogAi.outline', $sessionId), [
+                'selected_hook_ids' => ['h1'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('queued', false)
+            ->assertJsonPath('session.status', 'outline_ready');
+
+        $this->actingAs($admin)
+            ->postJson(route('blogAi.draft', $sessionId))
+            ->assertOk()
+            ->assertJsonPath('queued', false)
+            ->assertJsonPath('session.status', 'draft_ready')
+            ->assertJsonPath('session.draft.faqs.0.q', 'ফেক অর্ডার কী?');
+
+        if (function_exists('imagewebp') && function_exists('imagecreatetruecolor')) {
+            $this->actingAs($admin)
+                ->postJson(route('blogAi.image', $sessionId))
+                ->assertOk()
+                ->assertJsonPath('queued', false)
+                ->assertJsonPath('session.status', 'image_ready');
+        }
+
+        $this->actingAs($admin)
+            ->getJson(route('blogAi.show', $sessionId))
+            ->assertOk()
+            ->assertJsonPath('session.busy', false);
+    }
+
     public function test_research_hooks_outline_draft_flow(): void
     {
         $admin = $this->adminUser();

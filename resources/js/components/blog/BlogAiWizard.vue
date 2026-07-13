@@ -447,7 +447,7 @@ const readyStatusForStep = {
 
 const pollUntilReady = async (sessionId, readyStatus) => {
     busyHint.value = queueEnabled.value
-        ? 'AI is working in the background…'
+        ? 'AI is working in the background (queue worker must be running)…'
         : 'AI is generating…';
 
     const generation = pollGeneration;
@@ -469,7 +469,20 @@ const pollUntilReady = async (sessionId, readyStatus) => {
             throw new Error(data.session.last_error || 'AI step failed.');
         }
     }
-    throw new Error('Timed out waiting for AI. Keep the queue worker running and try again.');
+
+    // Best-effort unlock so the wizard is usable again.
+    try {
+        const { data } = await axios.post(route('blogAi.recover', sessionId));
+        session.value = data.session;
+    } catch {
+        // ignore
+    }
+
+    throw new Error(
+        queueEnabled.value
+            ? 'Timed out waiting for AI. Run `php artisan queue:work` (or set BLOG_AI_QUEUE=false), unlock, and retry.'
+            : 'Timed out waiting for AI. Unlock the session and try again.',
+    );
 };
 
 const runQueuedOrSync = async (requestPromise, readyStatus) => {

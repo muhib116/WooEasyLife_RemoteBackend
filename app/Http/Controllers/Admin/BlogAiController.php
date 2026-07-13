@@ -344,7 +344,16 @@ class BlogAiController extends Controller
             return false;
         }
 
-        return (bool) config('blog_ai.queue', true);
+        if (! config('blog_ai.queue', false)) {
+            return false;
+        }
+
+        // sync driver already runs inline; use dispatchSync path for clearer errors.
+        if (config('queue.default') === 'sync') {
+            return false;
+        }
+
+        return true;
     }
 
     private function ensureEnabled(): void

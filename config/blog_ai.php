@@ -9,10 +9,11 @@ return [
     'enabled' => (bool) env('BLOG_AI_ENABLED', true),
 
     /*
-    | When true, long OpenAI steps run on the queue (research/hooks/outline/draft).
-    | Keep queue worker running. Unit tests force sync.
+    | When true, long OpenAI steps run on the queue (research/hooks/outline/draft/image).
+    | Keep a queue worker running. Default false so local works without `queue:work`.
+    | Set BLOG_AI_QUEUE=true in production with Supervisor/Forge workers.
     */
-    'queue' => (bool) env('BLOG_AI_QUEUE', true),
+    'queue' => filter_var(env('BLOG_AI_QUEUE', false), FILTER_VALIDATE_BOOLEAN),
 
     'market' => 'Bangladesh',
 
