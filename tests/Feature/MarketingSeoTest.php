@@ -18,7 +18,7 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('name="description"', false);
         $response->assertSee('rel="canonical"', false);
         $response->assertSee('application/ld+json', false);
-        $response->assertSee('BD Fraud Checker', false);
+        $response->assertSee('Courier Fraud Checker', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Welcome3')
             ->has('seo')
@@ -44,7 +44,7 @@ class MarketingSeoTest extends TestCase
         $response = $this->get('/bd-fraud-checker');
 
         $response->assertOk();
-        $response->assertSee('BD Fraud Checker', false);
+        $response->assertSee('Courier Fraud Checker BD', false);
         $response->assertSee('name="description"', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/BdFraudChecker')
@@ -119,10 +119,29 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('noindex', false);
     }
 
+    public function test_competitor_keyword_intent_pages(): void
+    {
+        foreach ([
+            '/ki-vabe-fake-order-atkabo',
+            '/fake-customer-check',
+            '/bd-courier-ratio-checker',
+            '/fake-order-check',
+            '/courier-checker',
+        ] as $path) {
+            $this->get($path)->assertOk();
+        }
+
+        $home = $this->get('/');
+        $home->assertOk();
+        $home->assertSee('Courier Fraud Checker BD', false);
+        $home->assertSee('কিভাবে ফেক অর্ডার আটকাবো', false);
+    }
+
     public function test_blog_and_courier_intent_pages(): void
     {
         $this->get('/blog')->assertOk();
         $this->get('/blog/fake-order-komano')->assertOk();
+        $this->get('/blog/ki-vabe-fake-order-atkabo')->assertOk();
         $this->get('/pathao-fraud-check')->assertOk();
         $this->get('/steadfast-fraud-check')->assertOk();
         $this->get('/redx-fraud-check')->assertOk();
@@ -155,6 +174,11 @@ class MarketingSeoTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
         $response->assertSee('/bd-fraud-checker', false);
+        $response->assertSee('/ki-vabe-fake-order-atkabo', false);
+        $response->assertSee('/fake-customer-check', false);
+        $response->assertSee('/bd-courier-ratio-checker', false);
+        $response->assertSee('/fake-order-check', false);
+        $response->assertSee('/courier-checker', false);
         $response->assertSee('/fake-order-protection', false);
         $response->assertSee('/courier-auto-entry', false);
         $response->assertSee('/fraudbd-alternative', false);

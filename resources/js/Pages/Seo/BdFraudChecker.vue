@@ -41,11 +41,11 @@ const toggleFaq = (i) => {
                 </div>
                 <p class="text-sm font-semibold tracking-[0.18em] text-amber-300/90">WooEasyLife</p>
                 <h1 class="mt-3 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-                    BD Fraud Checker — ফ্রি ফ্রড চেকার বাংলাদেশ
+                    Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
-                    WooEasyLife একটি বাংলাদেশি WooCommerce প্ল্যাটফর্ম যার বিল্ট-ইন BD fraud checker দিয়ে
-                    Pathao, Steadfast ও RedX কুরিয়ার হিস্টোরি যাচাই করে COD অর্ডার কনফার্মের আগেই ফেক অর্ডারের ঝুঁকি কমান।
+                    মোবাইল নম্বর দিয়ে Pathao, Steadfast ও RedX কুরিয়ার হিস্টোরি, সাকসেস রেট ও রিটার্ন রেকর্ড যাচাই করুন।
+                    অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন — ই-কমার্স ও Facebook পেজ সেলারদের জন্য।
                 </p>
             </div>
         </section>

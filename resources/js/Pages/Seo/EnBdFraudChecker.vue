@@ -27,10 +27,10 @@ const ctaLabel = computed(() => primaryCtaLabel());
             <div class="mx-auto max-w-3xl">
                 <SeoBreadcrumbs :items="seo?.breadcrumbs || []" />
                 <h1 class="mt-2 text-3xl font-extrabold text-white sm:text-4xl">
-                    BD Fraud Checker — free courier history check
+                    Free Courier Fraud Checker BD — delivery history by phone
                 </h1>
                 <p class="mt-4 text-slate-300">
-                    Enter a phone number to review Pathao, Steadfast, and RedX history before confirming COD orders.
+                    Enter a phone number to review Pathao, Steadfast, and RedX history and success rate before confirming COD orders.
                 </p>
             </div>
         </section>

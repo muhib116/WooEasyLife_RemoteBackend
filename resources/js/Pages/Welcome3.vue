@@ -216,14 +216,16 @@ const toggleFaq = (i) => {
             <div class="mx-auto max-w-3xl">
                 <div class="mb-6 text-center sm:mb-8">
                     <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                        ফ্রি BD Fraud Checker · ফ্রড চেকার
+                        Free Courier Fraud Checker BD · ফ্রড চেকার
                     </span>
                     <h2 class="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                        ফ্রড চেকার — শুধু ফোন নম্বর দিন, কুরিয়ার হিস্টোরি দেখুন।
+                        মোবাইল নম্বর দিয়ে ফ্রড চেকার — হিস্টোরি ও সাকসেস রেট দেখুন
                     </h2>
                     <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-                        অ্যাকাউন্ট ছাড়াই Courier History দেখুন।
-                        <Link :href="route('seo.bd-fraud-checker')" class="text-amber-400 hover:text-amber-300">বিস্তারিত টুল পেজ →</Link>
+                        Fake order check · Fake customer check · BD Courier ratio —
+                        <Link :href="route('seo.bd-fraud-checker')" class="text-amber-400 hover:text-amber-300">বিস্তারিত টুল →</Link>
+                        ·
+                        <Link :href="route('seo.ki-vabe-fake-order-atkabo')" class="text-amber-400 hover:text-amber-300">কিভাবে আটকাবো?</Link>
                     </p>
                 </div>
                 <LandingFraudCheck :fraud-check="fraudCheck" />

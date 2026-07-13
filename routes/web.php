@@ -117,6 +117,22 @@ Route::get('/redx-fraud-check', [MarketingSeoController::class, 'courierIntent']
     ->defaults('courier', 'redx')
     ->name('seo.redx-fraud-check');
 
+Route::get('/ki-vabe-fake-order-atkabo', [MarketingSeoController::class, 'keywordIntent'])
+    ->defaults('seoKey', 'ki_vabe_fake_order_atkabo')
+    ->name('seo.ki-vabe-fake-order-atkabo');
+Route::get('/fake-customer-check', [MarketingSeoController::class, 'keywordIntent'])
+    ->defaults('seoKey', 'fake_customer_check')
+    ->name('seo.fake-customer-check');
+Route::get('/bd-courier-ratio-checker', [MarketingSeoController::class, 'keywordIntent'])
+    ->defaults('seoKey', 'bd_courier_ratio_checker')
+    ->name('seo.bd-courier-ratio-checker');
+Route::get('/fake-order-check', [MarketingSeoController::class, 'keywordIntent'])
+    ->defaults('seoKey', 'fake_order_check')
+    ->name('seo.fake-order-check');
+Route::get('/courier-checker', [MarketingSeoController::class, 'keywordIntent'])
+    ->defaults('seoKey', 'courier_checker')
+    ->name('seo.courier-checker');
+
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{slug}', [BlogController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')

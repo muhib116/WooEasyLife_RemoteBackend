@@ -39,10 +39,12 @@ const navLinks = computed(() => [
 
 const footerProductLinks = [
     { label: 'প্রাইসিং', href: route('pricing') },
-    { label: 'ফিচার', href: '/#features' },
     { label: 'ফ্রি ফ্রড চেক', href: route('seo.bd-fraud-checker') },
+    { label: 'কিভাবে ফেক অর্ডার আটকাবো', href: route('seo.ki-vabe-fake-order-atkabo') },
+    { label: 'Fake Customer Check', href: route('seo.fake-customer-check') },
+    { label: 'BD Courier Ratio', href: route('seo.bd-courier-ratio-checker') },
+    { label: 'Courier Checker', href: route('seo.courier-checker') },
     { label: 'Pathao Fraud Check', href: route('seo.pathao-fraud-check') },
-    { label: 'Steadfast Fraud Check', href: route('seo.steadfast-fraud-check') },
     { label: 'ফেক অর্ডার প্রোটেকশন', href: route('seo.fake-order-protection') },
     { label: 'কুরিয়ার অটো এন্ট্রি', href: route('seo.courier-auto-entry') },
     { label: 'ব্লগ', href: route('blog.index') },
@@ -50,7 +52,6 @@ const footerProductLinks = [
     { label: 'English', href: route('seo.en.home') },
     { label: 'মোবাইল অ্যাপ', href: '/#download-app' },
     { label: 'ডাউনলোড', href: '/#downloads' },
-    { label: 'কিভাবে কাজ করে', href: '/#how-it-works' },
 ];
 
 const isDark = computed(() => props.variant === 'dark');

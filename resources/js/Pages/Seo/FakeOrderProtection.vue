@@ -33,11 +33,11 @@ const toggleFaq = (i) => {
                 </div>
                 <p class="text-sm font-semibold tracking-[0.18em] text-amber-300/90">WooEasyLife</p>
                 <h1 class="mt-3 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-                    ফেক অর্ডার বন্ধ — WooCommerce Fake Order Protection
+                    কিভাবে ফেক অর্ডার আটকাবো — Fake Order Protection
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
-                    COD ব্যবসায় ফেক অর্ডার মানে রিটার্ন চার্জ, প্যাকেজিং লস আর নষ্ট অ্যাড বাজেট।
-                    WooEasyLife মাল্টি-লেয়ার প্রোটেকশন দিয়ে অর্ডার পাঠানোর আগেই ঝুঁকি আটকায়।
+                    COD ও Facebook পেজ ব্যবসায় ফেক অর্ডার মানে রিটার্ন চার্জ ও নষ্ট অ্যাড বাজেট।
+                    ফ্রড চেক + OTP + ব্লক দিয়ে অর্ডার পাঠানোর আগেই ঝুঁকি আটকান।
                 </p>
             </div>
         </section>

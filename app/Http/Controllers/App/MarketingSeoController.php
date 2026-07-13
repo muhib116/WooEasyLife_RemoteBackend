@@ -118,6 +118,71 @@ class MarketingSeoController extends Controller
         ])->withViewData(['seo' => $seoMeta]);
     }
 
+    public function keywordIntent(
+        Request $request,
+        string $seoKey,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        $allowed = [
+            'ki_vabe_fake_order_atkabo',
+            'fake_customer_check',
+            'bd_courier_ratio_checker',
+            'fake_order_check',
+            'courier_checker',
+        ];
+
+        if (! in_array($seoKey, $allowed, true)) {
+            abort(404);
+        }
+
+        $payload = $landing->payload($request);
+        $whatsapp = $landingSettings->adminWhatsapp();
+        $seoMeta = $seo->forPage($seoKey);
+
+        $stepsByKey = [
+            'ki_vabe_fake_order_atkabo' => [
+                'মোবাইল নম্বর দিয়ে Courier Fraud Checker BD চালান — হিস্টোরি ও সাকসেস রেট দেখুন।',
+                'সাকসেস রেট খারাপ হলে কল করে যাচাই করুন; ভালো হলে কনফার্ম করুন।',
+                'চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট চালু রাখুন।',
+                'কনফার্ম হলেই কুরিয়ার অটো এন্ট্রি ব্যবহার করুন — সময় ও ভুল কমান।',
+            ],
+            'fake_customer_check' => [
+                'কাস্টমারের মোবাইল নম্বর দিন।',
+                'কুরিয়ার ডেলিভারি ও রিটার্ন হিস্টোরি দেখুন।',
+                'ঝুঁকি বেশি হলে অর্ডার আটকান বা আগে কল করুন।',
+            ],
+            'bd_courier_ratio_checker' => [
+                'ফোন নম্বর দিয়ে সার্চ করুন।',
+                'ডেলিভারি সাকসেস রেট / রেশিও দেখুন।',
+                'কোয়ালিটি খারাপ হলে পার্সেল পাঠাবেন না।',
+            ],
+            'fake_order_check' => [
+                'নম্বর দিয়ে ফেক অর্ডার ঝুঁকি চেক করুন।',
+                'হিস্টোরি খারাপ হলে কনফার্ম করবেন না।',
+                'পূর্ণ সুরক্ষায় OTP + ব্লক যোগ করুন।',
+            ],
+            'courier_checker' => [
+                'বাংলাদেশি মোবাইল নম্বর দিন।',
+                'Pathao / Steadfast / RedX হিস্টোরি দেখুন।',
+                'অর্ডার কনফার্মের আগে সিদ্ধান্ত নিন।',
+            ],
+        ];
+
+        return Inertia::render('Seo/KeywordIntent', [
+            'canLogin' => Route::has('merchant.login'),
+            'seo' => $seoMeta,
+            'fraudCheck' => $payload['fraudCheck'] ?? [],
+            'whatsappUrl' => $payload['whatsappUrl'] ?? null,
+            'faqs' => $seoMeta['faqs'] ?? [],
+            'showChecker' => true,
+            'steps' => $stepsByKey[$seoKey] ?? [],
+            'headline' => $seoMeta['prerender_h1'] ?? '',
+            'lead' => $seoMeta['prerender_lead'] ?? '',
+        ])->withViewData(['seo' => $seoMeta]);
+    }
+
     private function renderSeoPage(
         Request $request,
         LandingPageService $landing,
