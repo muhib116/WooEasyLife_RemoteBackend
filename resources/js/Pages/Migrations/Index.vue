@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <PageHeader
                 title="Database Migrations"
-                description="Run pending Laravel migrations and safely roll back recent batches from the admin panel"
+                description="Run pending migrations, allowlisted seeders, and safely roll back recent batches"
                 icon="PhStack"
                 icon-bg-class="bg-indigo-50 dark:bg-indigo-500/15"
                 icon-class="text-indigo-600 dark:text-indigo-400"
@@ -123,6 +123,46 @@
             </PageCard>
 
             <PageCard
+                title="Database seeders"
+                description="Safe allowlisted seeders only — never runs full demo/user seeders"
+            >
+                <div class="space-y-3">
+                    <div
+                        v-for="seeder in status.seeders"
+                        :key="seeder.key"
+                        class="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                {{ seeder.label }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                                {{ seeder.description }}
+                            </p>
+                            <p class="mt-1 font-mono text-[11px] text-slate-500">
+                                {{ seeder.key }}
+                            </p>
+                        </div>
+                        <Button
+                            label="Run seeder"
+                            icon="pi pi-database"
+                            size="small"
+                            class="!inline-flex shrink-0 whitespace-nowrap"
+                            :loading="seedingKey === seeder.key"
+                            :disabled="busy"
+                            @click="confirmSeed(seeder)"
+                        />
+                    </div>
+                    <div
+                        v-if="!status.seeders?.length"
+                        class="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-600"
+                    >
+                        No allowlisted seeders available.
+                    </div>
+                </div>
+            </PageCard>
+
+            <PageCard
                 title="Pending migrations"
                 :description="status.pending_count
                     ? `${status.pending_count} file${status.pending_count === 1 ? '' : 's'} not applied yet`
@@ -177,7 +217,7 @@
             <PageCard
                 v-if="lastOutput"
                 title="Last command output"
-                description="Artisan console output from the most recent migrate/rollback"
+                description="Artisan console output from the most recent migrate/rollback/seed"
             >
                 <pre
                     class="max-h-72 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-relaxed text-emerald-300"
@@ -207,7 +247,10 @@ type MigrationStatus = {
     pending: Array<{ name: string; file: string }>;
     ran: Array<{ name: string; batch: number | null }>;
     connection: string;
+    seeders: Array<{ key: string; label: string; description: string }>;
 };
+
+type SeederOption = MigrationStatus["seeders"][number];
 
 const props = defineProps<{
     initialStatus: MigrationStatus;
@@ -216,15 +259,21 @@ const props = defineProps<{
 const confirm = useConfirm();
 const toast = useToast();
 
-const status = reactive<MigrationStatus>({ ...props.initialStatus });
+const status = reactive<MigrationStatus>({
+    ...props.initialStatus,
+    seeders: props.initialStatus.seeders ?? [],
+});
 const loading = ref(false);
 const running = ref(false);
 const rollingBack = ref(false);
+const seedingKey = ref<string | null>(null);
 const pretend = ref(false);
 const rollbackSteps = ref(1);
 const lastOutput = ref("");
 
-const busy = computed(() => loading.value || running.value || rollingBack.value);
+const busy = computed(
+    () => loading.value || running.value || rollingBack.value || seedingKey.value !== null
+);
 
 const applyStatus = (next?: MigrationStatus) => {
     if (!next) {
@@ -238,6 +287,7 @@ const applyStatus = (next?: MigrationStatus) => {
     status.pending = next.pending;
     status.ran = next.ran;
     status.connection = next.connection;
+    status.seeders = next.seeders ?? [];
 };
 
 const loadStatus = async () => {
@@ -344,6 +394,46 @@ const confirmRollback = () => {
         rejectLabel: "Cancel",
         acceptClass: "p-button-danger",
         accept: () => runRollback(),
+    });
+};
+
+const runSeed = async (key: string) => {
+    seedingKey.value = key;
+
+    try {
+        const { data } = await axios.post(route("migrations.seed"), { seeder: key });
+        applyStatus(data?.status);
+        lastOutput.value = data?.output || "";
+        toast.add({
+            severity: data?.success ? "success" : "warn",
+            summary: "Seeder",
+            detail: data?.message || "Done.",
+            life: 5000,
+        });
+    } catch (error: any) {
+        const payload = error?.response?.data;
+        applyStatus(payload?.status);
+        lastOutput.value = payload?.output || payload?.message || "";
+        toast.add({
+            severity: "error",
+            summary: "Seeder failed",
+            detail: payload?.message || "Could not run seeder.",
+            life: 6000,
+        });
+    } finally {
+        seedingKey.value = null;
+    }
+};
+
+const confirmSeed = (seeder: SeederOption) => {
+    confirm.require({
+        header: `Run ${seeder.label}?`,
+        message: seeder.description,
+        icon: "pi pi-database",
+        acceptLabel: "Run seeder",
+        rejectLabel: "Cancel",
+        acceptClass: "p-button-warning",
+        accept: () => runSeed(seeder.key),
     });
 };
 </script>

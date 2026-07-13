@@ -38,7 +38,9 @@ it('shows migration status for platform admins', function () {
             'pending',
             'ran',
             'connection',
-        ]);
+            'seeders',
+        ])
+        ->assertJsonPath('seeders.0.key', 'BlogPostSeeder');
 });
 
 it('can dry-run migrations from the admin UI', function () {
@@ -48,4 +50,34 @@ it('can dry-run migrations from the admin UI', function () {
         ->postJson(route('migrations.run'), ['pretend' => true])
         ->assertOk()
         ->assertJsonPath('success', true);
+});
+
+it('rejects unknown seeders from the admin UI', function () {
+    $admin = createMigrationAdmin();
+
+    $this->actingAs($admin)
+        ->postJson(route('migrations.seed'), ['seeder' => 'DatabaseSeeder'])
+        ->assertUnprocessable();
+});
+
+it('seeds SEO blog posts from the admin UI and is idempotent', function () {
+    $admin = createMigrationAdmin();
+
+    $this->actingAs($admin)
+        ->postJson(route('migrations.seed'), ['seeder' => 'BlogPostSeeder'])
+        ->assertOk()
+        ->assertJsonPath('success', true);
+
+    expect(\App\Models\BlogPost::query()->count())->toBe(20);
+
+    $this->actingAs($admin)
+        ->postJson(route('migrations.seed'), ['seeder' => 'BlogPostSeeder'])
+        ->assertOk()
+        ->assertJsonPath('success', true);
+
+    expect(\App\Models\BlogPost::query()->count())->toBe(20);
+    expect(\App\Models\BlogPost::query()->where('status', 'published')->count())->toBe(20);
+
+    $slug = 'fake-order-loss-calculation-bangladesh';
+    $this->get(route('blog.show', $slug))->assertOk();
 });

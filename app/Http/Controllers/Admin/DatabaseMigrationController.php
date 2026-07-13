@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -15,6 +16,15 @@ use Throwable;
 
 class DatabaseMigrationController extends Controller
 {
+    /**
+     * Allowlisted seeders only — never expose full DatabaseSeeder / DemoDataSeeder.
+     *
+     * @var array<string, class-string>
+     */
+    private const ALLOWED_SEEDERS = [
+        'BlogPostSeeder' => \Database\Seeders\BlogPostSeeder::class,
+    ];
+
     public function index(): Response
     {
         return Inertia::render('Migrations/Index', [
@@ -136,6 +146,62 @@ class DatabaseMigrationController extends Controller
     }
 
     /**
+     * Run an allowlisted database seeder from the admin UI.
+     */
+    public function seed(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'seeder' => ['required', 'string', Rule::in(array_keys(self::ALLOWED_SEEDERS))],
+        ]);
+
+        $key = $validated['seeder'];
+        $class = self::ALLOWED_SEEDERS[$key];
+
+        Log::info('Database seeder started from admin UI.', [
+            'seeder' => $key,
+            'class' => $class,
+            'user_id' => $request->user()?->id,
+            'ip' => $request->ip(),
+        ]);
+
+        try {
+            $output = new BufferedOutput();
+            $exitCode = Artisan::call('db:seed', [
+                '--class' => $class,
+                '--force' => true,
+            ], $output);
+
+            Log::info('Database seeder finished from admin UI.', [
+                'seeder' => $key,
+                'exit_code' => $exitCode,
+                'user_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => $exitCode === 0,
+                'message' => $exitCode === 0
+                    ? "Seeder “{$key}” ran successfully."
+                    : "Seeder “{$key}” finished with errors.",
+                'output' => trim($output->fetch()),
+                'status' => $this->statusPayload(),
+            ], $exitCode === 0 ? 200 : 500);
+        } catch (Throwable $e) {
+            Log::error('Database seeder failed from admin UI.', [
+                'seeder' => $key,
+                'user_id' => $request->user()?->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Seeder failed: '.$e->getMessage(),
+                'output' => $e->getMessage(),
+                'status' => $this->statusPayload(),
+            ], 500);
+        }
+    }
+
+    /**
      * @return array{
      *     pending_count: int,
      *     ran_count: int,
@@ -143,7 +209,8 @@ class DatabaseMigrationController extends Controller
      *     repository_ready: bool,
      *     pending: list<array{name: string, file: string}>,
      *     ran: list<array{name: string, batch: int|null}>,
-     *     connection: string
+     *     connection: string,
+     *     seeders: list<array{key: string, label: string, description: string}>
      * }
      */
     private function statusPayload(): array
@@ -203,6 +270,13 @@ class DatabaseMigrationController extends Controller
             'pending' => $pending,
             'ran' => $ran,
             'connection' => $connection,
+            'seeders' => [
+                [
+                    'key' => 'BlogPostSeeder',
+                    'label' => 'Seed SEO blogs',
+                    'description' => 'Publishes 20 SEO blog posts (idempotent — safe to re-run). Does not touch users or demo data.',
+                ],
+            ],
         ];
     }
 }

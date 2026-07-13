@@ -252,6 +252,7 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/status', [DatabaseMigrationController::class, 'status'])->name('status');
         Route::post('/run', [DatabaseMigrationController::class, 'migrate'])->name('run');
         Route::post('/rollback', [DatabaseMigrationController::class, 'rollback'])->name('rollback');
+        Route::post('/seed', [DatabaseMigrationController::class, 'seed'])->name('seed');
     });
 
     Route::group(['as' => 'maintenance.', 'prefix' => 'maintenance', 'middleware' => 'permission:roles.manage'], function () {
