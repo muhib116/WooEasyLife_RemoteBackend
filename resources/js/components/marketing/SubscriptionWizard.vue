@@ -10,6 +10,17 @@ import SubscriptionPaymentGuideBn from '@/components/marketing/SubscriptionPayme
 import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
 import { isValidDomainHost, normalizeDomainInput, validateDomainInput } from '@/utils/domain';
 import { isValidBdMobile, isValidEmail, validateBdMobile, validateEmail } from '@/utils/contactValidation';
+import {
+    inquiryEventId,
+    planContentParams,
+    trackAddPaymentInfo,
+    trackInitiateCheckout,
+    trackLead,
+    trackOnce,
+    trackStartTrial,
+    trackSubscribe,
+    trackWizardStep,
+} from '@/utils/metaPixel';
 
 const props = defineProps({
     visible: { type: Boolean, default: false },
@@ -320,6 +331,9 @@ watch(
             resetWizard();
             seedContactDefaults();
             document.body.style.overflow = 'hidden';
+
+            trackInitiateCheckout(planContentParams(props.plan));
+            trackWizardStep('opened', props.plan);
         } else {
             toast.removeGroup(TOAST_GROUP);
             document.body.style.overflow = '';
@@ -330,11 +344,62 @@ watch(
 watch(
     () => page.props.flash?.subscription_submitted,
     (payload) => {
-        if (payload) {
-            submittedSummary.value = payload;
-            currentStep.value = activeSteps.value.length;
-            emit('submitted', payload);
+        if (!payload) {
+            return;
         }
+
+        submittedSummary.value = payload;
+        currentStep.value = activeSteps.value.length;
+        emit('submitted', payload);
+
+        const contentName = payload.plan_title || props.plan?.title || null;
+        const value = Number(payload.value ?? planContentParams(props.plan).value ?? 0);
+        const currency = payload.currency || 'BDT';
+        const orderId = payload.inquiry_id ?? null;
+        const eventID = inquiryEventId(orderId);
+        const contentIds = props.plan?.id != null ? [String(props.plan.id)] : undefined;
+        const isTrial = Boolean(payload.is_free_trial || isFreeTrial.value);
+        const conversionKey = eventID || `anon_${Date.now()}`;
+
+        // Solid conversion signals: only after successful server submit.
+        // Lead = qualified inquiry; StartTrial = free trial; Subscribe = paid pending review.
+        // Purchase is intentionally omitted until payment is confirmed.
+        trackOnce(`meta:lead:${conversionKey}`, () =>
+            trackLead({
+                ...planContentParams(props.plan),
+                content_name: contentName,
+                content_category: isTrial ? 'free_trial' : 'paid',
+                value,
+                currency,
+                order_id: orderId != null ? String(orderId) : undefined,
+            }, { eventID: eventID ? `${eventID}_lead` : undefined }),
+        );
+
+        if (isTrial) {
+            trackOnce(`meta:starttrial:${conversionKey}`, () =>
+                trackStartTrial({
+                    value,
+                    currency,
+                    content_name: contentName,
+                    content_ids: contentIds,
+                    order_id: orderId,
+                }, { eventID }),
+            );
+        } else {
+            trackOnce(`meta:subscribe:${conversionKey}`, () =>
+                trackSubscribe({
+                    value,
+                    currency,
+                    content_name: contentName,
+                    content_ids: contentIds,
+                    content_type: 'product',
+                    order_id: orderId != null ? String(orderId) : undefined,
+                    predicted_ltv: value,
+                }, { eventID }),
+            );
+        }
+
+        trackWizardStep(isTrial ? 'submitted_trial' : 'submitted_paid', props.plan);
     },
 );
 
@@ -902,7 +967,21 @@ const nextStep = async () => {
     }
 
     if (currentStep.value < activeSteps.value.length - 1) {
+        const leavingStep = activeSteps.value[currentStep.value]?.key;
         currentStep.value += 1;
+
+        if (leavingStep === 'contact') {
+            // Mid-funnel only — Lead fires after successful server submit.
+            trackWizardStep('contact_complete', props.plan);
+        }
+
+        if (leavingStep === 'payment') {
+            trackAddPaymentInfo({
+                ...planContentParams(props.plan),
+                payment_type: form.transaction_method || undefined,
+            });
+            trackWizardStep('payment_info', props.plan);
+        }
     }
 };
 

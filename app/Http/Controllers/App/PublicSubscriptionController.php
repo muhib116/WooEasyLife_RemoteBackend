@@ -121,6 +121,9 @@ class PublicSubscriptionController extends Controller
             'inquiry_id' => $result['inquiry']->id,
             'plan_title' => $result['inquiry']->packageHub?->title,
             'payment_request_id' => $result['payment_request_id'],
+            'is_free_trial' => $isFreeTrial,
+            'value' => $isFreeTrial ? 0 : (float) ($validated['total_amount'] ?? 0),
+            'currency' => 'BDT',
             'pending' => $subscriptionService->serializePending($result['inquiry']),
         ]);
     }

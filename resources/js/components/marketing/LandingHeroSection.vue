@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { trackCtaClick } from '@/utils/metaPixel';
 
 const props = defineProps({
     hero: { type: Object, default: () => ({}) },
@@ -17,6 +18,10 @@ const badgeLabel = computed(() => {
 
     return raw.replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim() || raw;
 });
+
+const onHeroCta = (location, href, label) => {
+    trackCtaClick({ location, href, label });
+};
 </script>
 
 <template>
@@ -63,12 +68,14 @@ const badgeLabel = computed(() => {
                     <Link
                         :href="primaryCtaUrl"
                         class="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3.5 text-sm font-bold text-black shadow-xl shadow-amber-900/40 transition hover:from-amber-400 hover:to-yellow-400 active:scale-[0.99] sm:min-h-[3.25rem] sm:w-auto sm:px-8"
+                        @click="onHeroCta('hero_primary', primaryCtaUrl, primaryCtaLabel)"
                     >
                         {{ primaryCtaLabel }}
                     </Link>
                     <Link
                         :href="route('pricing')"
                         class="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 active:scale-[0.99] sm:min-h-[3.25rem] sm:w-auto sm:px-8"
+                        @click="onHeroCta('hero_pricing', route('pricing'), 'প্যাকেজ ও মূল্য দেখুন')"
                     >
                         প্যাকেজ ও মূল্য দেখুন
                     </Link>
@@ -78,6 +85,7 @@ const badgeLabel = computed(() => {
                     v-if="fraudCheckEnabled"
                     href="#fraud-check"
                     class="landing-hero__item landing-hero__item--6 group mt-3 flex min-h-12 w-full items-center gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-3.5 py-3 text-left transition hover:border-amber-400/40 hover:bg-amber-500/15 sm:mt-4 sm:px-4"
+                    @click="onHeroCta('hero_fraud_anchor', '#fraud-check', 'ফ্রি ফ্রড চেক')"
                 >
                     <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-300 transition group-hover:border-amber-400/50">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

@@ -25,6 +25,8 @@ class LandingSettingsService
 
     public const ADMIN_PHONE_KEY = 'landing.admin_phone';
 
+    public const META_PIXEL_ID_KEY = 'landing.meta_pixel_id';
+
     /**
      * @return array<string, mixed>
      */
@@ -49,6 +51,8 @@ class LandingSettingsService
             'admin_whatsapp_source' => $this->sourceWithConfig(self::ADMIN_WHATSAPP_KEY, 'landing.whatsapp_phone'),
             'admin_email_source' => $this->sourceWithConfig(self::ADMIN_EMAIL_KEY, 'landing.admin_email'),
             'admin_phone_source' => $this->sourceWithConfig(self::ADMIN_PHONE_KEY, 'landing.helpline_phone'),
+            'meta_pixel_id' => $this->metaPixelId(),
+            'meta_pixel_id_source' => $this->sourceWithConfig(self::META_PIXEL_ID_KEY, 'landing.meta_pixel_id'),
         ];
     }
 
@@ -103,6 +107,22 @@ class LandingSettingsService
         return $this->resolve(self::ADMIN_PHONE_KEY, config('landing.helpline_phone'));
     }
 
+    public function metaPixelId(): ?string
+    {
+        return $this->resolve(self::META_PIXEL_ID_KEY, config('landing.meta_pixel_id'));
+    }
+
+    /**
+     * @return array{meta_pixel_id: string|null, meta_pixel_id_source: string}
+     */
+    public function marketingTracking(): array
+    {
+        return [
+            'meta_pixel_id' => $this->metaPixelId(),
+            'meta_pixel_id_source' => $this->sourceWithConfig(self::META_PIXEL_ID_KEY, 'landing.meta_pixel_id'),
+        ];
+    }
+
     /**
      * @param  array<string, string|null>  $data
      */
@@ -127,6 +147,7 @@ class LandingSettingsService
             'admin_whatsapp' => self::ADMIN_WHATSAPP_KEY,
             'admin_email' => self::ADMIN_EMAIL_KEY,
             'admin_phone' => self::ADMIN_PHONE_KEY,
+            'meta_pixel_id' => self::META_PIXEL_ID_KEY,
         ] as $field => $key) {
             if (array_key_exists($field, $data)) {
                 $this->put($key, $this->normalizeText($data[$field] ?? null));

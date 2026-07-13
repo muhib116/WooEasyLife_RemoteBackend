@@ -23,6 +23,7 @@ import PlanFeatureList from '@/components/marketing/PlanFeatureList.vue';
 import SubscriptionWizard from '@/components/marketing/SubscriptionWizard.vue';
 import PendingSubscriptionBanner from '@/components/marketing/PendingSubscriptionBanner.vue';
 import { primaryCtaLabel, primaryCtaUrl, merchantLoginHref, merchantLoginLabel } from '@/utils/marketingCta';
+import { planContentParams, trackCtaClick, trackViewContent } from '@/utils/metaPixel';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -77,10 +78,17 @@ const paymentMethodLabels = computed(() => {
         .join(' · ');
 });
 
-const openPurchase = (plan) => {
+const openPurchase = (plan, location = 'pricing_card') => {
     if (!plan || hasPendingInquiry.value) {
         return;
     }
+
+    trackCtaClick({
+        location,
+        label: plan.title,
+        plan_id: plan.id,
+    });
+    trackViewContent(planContentParams(plan));
 
     selectedPlan.value = plan;
     showWizard.value = true;
@@ -383,7 +391,7 @@ const toggleFaq = (i) => {
                                     ? 'bg-amber-500 text-black hover:bg-amber-400'
                                     : 'border border-white/15 text-white hover:bg-white/10'"
                             :disabled="hasPendingInquiry"
-                            @click="openPurchase(plan)"
+                            @click="openPurchase(plan, 'landing_pricing_card')"
                         >
                             {{ hasPendingInquiry
                                 ? 'অনুরোধ প্রক্রিয়াধীন'
@@ -423,7 +431,7 @@ const toggleFaq = (i) => {
                         type="button"
                         class="mt-6 inline-flex rounded-xl bg-white px-8 py-3.5 text-sm font-bold text-amber-950 shadow-lg hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="hasPendingInquiry"
-                        @click="openPurchase(trialPlan)"
+                        @click="openPurchase(trialPlan, 'landing_trial_banner')"
                     >
                         {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : 'ফ্রি ট্রায়াল শুরু করুন' }}
                     </button>
@@ -519,7 +527,7 @@ const toggleFaq = (i) => {
                         type="button"
                         class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-8 py-3.5 text-sm font-bold text-black shadow-xl shadow-amber-900/50 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="hasPendingInquiry"
-                        @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0])"
+                        @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0], 'landing_final_cta')"
                     >
                         {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : primaryCtaLabelValue }}
                     </button>
@@ -534,7 +542,7 @@ const toggleFaq = (i) => {
                 type="button"
                 class="flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-60"
                 :disabled="hasPendingInquiry"
-                @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0])"
+                @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0], 'landing_sticky_cta')"
             >
                 {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : primaryCtaLabelValue }}
             </button>

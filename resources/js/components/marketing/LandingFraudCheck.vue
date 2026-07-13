@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import axios from 'axios';
+import { trackSearch } from '@/utils/metaPixel';
 
 const props = defineProps({
     fraudCheck: {
@@ -137,6 +138,11 @@ const handleSearch = async () => {
 
         result.value = data;
         meta.value = data.meta ?? meta.value;
+        trackSearch({
+            // Don't send raw phone numbers to Meta — only signal that a check happened.
+            search_string: 'fraud_phone_check',
+            content_category: 'fraud_check',
+        });
     } catch (error) {
         const response = error?.response;
 

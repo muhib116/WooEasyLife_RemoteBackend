@@ -1,7 +1,14 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { primaryCtaLabel, primaryCtaShortLabel, primaryCtaUrl, merchantLoginHref, merchantLoginLabel } from '@/utils/marketingCta';
+import {
+    attachScrollDepthTracking,
+    trackContact,
+    trackCtaClick,
+    trackOnce,
+    trackViewContent,
+} from '@/utils/metaPixel';
 import '../../css/marketing.css';
 
 const props = defineProps({
@@ -112,11 +119,42 @@ const closeMobile = () => {
     mobileOpen.value = false;
 };
 
+const onHeaderCtaClick = (location) => {
+    trackCtaClick({
+        location,
+        label: headerCtaLabel.value,
+        href: headerCtaUrl.value,
+    });
+};
+
+const onContactClick = (method) => {
+    trackContact({ method, content_name: method });
+};
+
+let detachScroll = () => {};
+
+onMounted(() => {
+    const path = page.url?.split('?')[0] || window.location.pathname;
+    const contentName = page.props.seo?.title
+        || (typeof document !== 'undefined' ? document.title : path);
+
+    trackOnce(`viewcontent:page:${path}`, () =>
+        trackViewContent({
+            content_name: contentName,
+            content_category: props.activeNav || 'marketing',
+            content_type: 'page',
+        }),
+    );
+
+    detachScroll = attachScrollDepthTracking(path);
+});
+
 watch(mobileOpen, (open) => {
     document.body.style.overflow = open ? 'hidden' : '';
 });
 
 onUnmounted(() => {
+    detachScroll();
     document.body.style.overflow = '';
 });
 </script>
@@ -195,6 +233,7 @@ onUnmounted(() => {
                     <Link
                         :href="headerCtaUrl"
                         class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-900/40 transition hover:from-amber-400 hover:to-yellow-400"
+                        @click="onHeaderCtaClick('header_cta')"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -208,6 +247,7 @@ onUnmounted(() => {
                     <Link
                         :href="headerCtaUrl"
                         class="inline-flex min-h-11 max-w-[8.5rem] items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-2.5 text-xs font-bold text-black shadow-md shadow-amber-900/30 sm:max-w-none sm:px-3.5 sm:text-sm"
+                        @click="onHeaderCtaClick('header_cta_mobile')"
                     >
                         <span class="truncate">{{ headerCtaShortLabel }}</span>
                     </Link>
@@ -287,7 +327,7 @@ onUnmounted(() => {
                     <Link
                         :href="headerCtaUrl"
                         class="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-3 text-center text-sm font-bold text-black shadow-lg shadow-amber-900/30"
-                        @click="closeMobile"
+                        @click="onHeaderCtaClick('header_cta_mobile_panel'); closeMobile()"
                     >
                         {{ headerCtaLabel }}
                     </Link>
@@ -369,6 +409,7 @@ onUnmounted(() => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="text-sm text-slate-400 transition hover:text-white"
+                                @click="onContactClick('whatsapp_footer')"
                             >
                                 কন্টাক্ট
                             </a>
@@ -396,6 +437,7 @@ onUnmounted(() => {
                                 <a
                                     :href="`tel:${marketing.helpline}`"
                                     class="text-slate-300 transition hover:text-white"
+                                    @click="onContactClick('phone')"
                                 >
                                     {{ helplineDisplay }}
                                 </a>
@@ -405,6 +447,7 @@ onUnmounted(() => {
                                 <a
                                     :href="`mailto:${marketing.admin_email}`"
                                     class="text-slate-300 transition hover:text-white"
+                                    @click="onContactClick('email')"
                                 >
                                     {{ marketing.admin_email }}
                                 </a>
@@ -435,6 +478,7 @@ onUnmounted(() => {
             class="fixed right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl shadow-emerald-900/50 transition hover:scale-105 hover:bg-emerald-400 md:bottom-6"
             :class="suppressMobileWhatsappFab ? 'bottom-6 hidden md:flex' : 'bottom-20 md:bottom-6'"
             aria-label="হোয়াটসঅ্যাপে যোগাযোগ"
+            @click="onContactClick('whatsapp_fab')"
         >
             <svg class="h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />

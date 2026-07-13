@@ -165,9 +165,33 @@
     </style>
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead
+
+    @if (! empty($metaPixelId) && empty($page['props']['auth']['user']))
+        <!-- Meta Pixel Code -->
+        <script>
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', @json($metaPixelId));
+            fbq('track', 'PageView');
+        </script>
+        <!-- End Meta Pixel Code -->
+    @endif
 </head>
 
 <body class="font-sans antialiased">
+    @if (! empty($metaPixelId) && empty($page['props']['auth']['user']))
+        <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id={{ urlencode($metaPixelId) }}&ev=PageView&noscript=1"
+            alt=""
+        /></noscript>
+    @endif
+
     @isset($seo)
         <section id="seo-prerender">
             <h1>{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</h1>

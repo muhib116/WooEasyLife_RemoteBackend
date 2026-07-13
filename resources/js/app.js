@@ -55,8 +55,26 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         const navigating = ref(false);
 
+        let metaPixelInitialPage = true;
+
         router.on('start', () => {
             navigating.value = true;
+        });
+
+        router.on('navigate', (event) => {
+            // SPA PageView after initial Blade boot; skip authenticated sessions.
+            if (metaPixelInitialPage) {
+                metaPixelInitialPage = false;
+                return;
+            }
+
+            if (event?.detail?.page?.props?.auth?.user) {
+                return;
+            }
+
+            if (typeof window.fbq === 'function') {
+                window.fbq('track', 'PageView');
+            }
         });
 
         router.on('finish', () => {

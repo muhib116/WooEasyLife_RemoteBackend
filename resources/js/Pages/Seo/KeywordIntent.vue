@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -66,9 +67,12 @@ const leadText = computed(() => props.lead || props.seo?.prerender_lead || '');
 
         <section class="border-t border-white/10 px-4 py-10 lg:px-8">
             <div class="mx-auto flex max-w-3xl flex-wrap gap-3">
-                <Link :href="ctaUrl" class="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black hover:bg-amber-400">
-                    {{ ctaLabel }}
-                </Link>
+                <MetaCtaLink
+                    :href="ctaUrl"
+                    :label="ctaLabel"
+                    location="seo_keyword_intent"
+                    link-class="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black hover:bg-amber-400"
+                />
                 <Link href="/bd-fraud-checker" class="rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10">
                     Courier Fraud Checker BD
                 </Link>

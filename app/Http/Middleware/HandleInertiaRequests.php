@@ -8,6 +8,7 @@ use App\Services\MerchantPortalContext;
 use App\Services\RbacService;
 use App\Services\SubscriptionPaymentConfigService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -40,6 +41,10 @@ class HandleInertiaRequests extends Middleware
         $landingSettings = app(LandingSettingsService::class);
         $paymentConfig = app(SubscriptionPaymentConfigService::class);
         $partnerLabels = $paymentConfig->partnerLabels();
+        $metaPixelId = $landingSettings->metaPixelId();
+
+        // Available to the root Blade template for first-paint Meta Pixel injection.
+        View::share('metaPixelId', $metaPixelId);
 
         $accessArea = match (true) {
             $user?->role === 'admin' => 'admin',
@@ -115,6 +120,7 @@ class HandleInertiaRequests extends Middleware
                     'rocket' => $landingSettings->rocketNumber(),
                     'nagad' => $landingSettings->nagadNumber(),
                 ],
+                'meta_pixel_id' => $metaPixelId,
             ],
         ];
     }

@@ -29,6 +29,8 @@ return [
 
     'plugin_download_url' => env('WOOEASYLIFE_PLUGIN_DOWNLOAD_URL'),
 
+    'meta_pixel_id' => env('LANDING_META_PIXEL_ID'),
+
     'subscription_wizard' => [
         'title' => 'সাবস্ক্রিপশন কিনুন',
         'support_hint' => 'কোনো ধাপ বুঝতে সমস্যা? WhatsApp-এ সরাসরি সাহায্য নিন।',

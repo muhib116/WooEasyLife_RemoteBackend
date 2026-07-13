@@ -320,6 +320,17 @@ const allSections: NavSection[] = [
         ],
     },
     {
+        label: "Marketing",
+        items: [
+            {
+                title: "Meta Pixel",
+                name: "marketingSettings.index",
+                icon: "PhMetaLogo",
+                permission: "billing.manage",
+            },
+        ],
+    },
+    {
         label: "Analytics",
         items: [
             {

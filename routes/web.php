@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\CustomerNoticeController;
 use App\Http\Controllers\Admin\LandingSettingsController;
+use App\Http\Controllers\Admin\MarketingSettingsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DatabaseMigrationController;
 use App\Http\Controllers\Admin\DeveloperController;
@@ -490,6 +491,15 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     ], function () {
         Route::get('/', [LandingSettingsController::class, 'index'])->name('index');
         Route::put('/', [LandingSettingsController::class, 'update'])->name('update');
+    });
+
+    Route::group([
+        'as' => 'marketingSettings.',
+        'prefix' => 'marketing-settings',
+        'middleware' => 'permission:billing.manage',
+    ], function () {
+        Route::get('/', [MarketingSettingsController::class, 'index'])->name('index');
+        Route::put('/', [MarketingSettingsController::class, 'update'])->name('update');
     });
 
     // Obfuscated path kept for bookmarks; auth + platform.admin are required.

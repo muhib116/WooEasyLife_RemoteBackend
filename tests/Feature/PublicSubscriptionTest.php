@@ -555,7 +555,11 @@ class PublicSubscriptionTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $response->assertSessionHas('subscription_submitted');
+        $response->assertSessionHas('subscription_submitted', function (array $payload) {
+            return ($payload['is_free_trial'] ?? false) === true
+                && ($payload['currency'] ?? null) === 'BDT'
+                && (float) ($payload['value'] ?? -1) === 0.0;
+        });
 
         $this->assertDatabaseHas('subscription_inquiries', [
             'package_hub_id' => $plan->id,

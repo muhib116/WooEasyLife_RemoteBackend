@@ -5,6 +5,7 @@ import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -89,12 +90,12 @@ const toggleFaq = (i) => {
                 >
                     ফ্রি ফ্রড চেক করুন
                 </Link>
-                <Link
+                <MetaCtaLink
                     :href="ctaUrl"
-                    class="inline-flex rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"
-                >
-                    {{ ctaLabel }}
-                </Link>
+                    :label="ctaLabel"
+                    location="seo_fraudbd_alternative"
+                    link-class="inline-flex rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"
+                />
             </div>
         </section>
 

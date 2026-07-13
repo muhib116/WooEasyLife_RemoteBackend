@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import axios from 'axios';
 import { validateDomainInput } from '@/utils/domain';
+import { trackDownloadUnlocked, trackLead } from '@/utils/metaPixel';
 
 const props = defineProps({
     appDownloadUrl: { type: String, default: null },
@@ -262,6 +263,16 @@ const verifyOtp = async () => {
         verifiedWebsite.value = data.website || verifiedWebsite.value;
         info.value = data.message || 'যাচাই সম্পন্ন।';
         step.value = 'ready';
+        trackLead({
+            content_name: 'download_gate',
+            content_category: 'download',
+            value: 0,
+            currency: 'BDT',
+        });
+        trackDownloadUnlocked({
+            content_name: 'plugin_or_app',
+            website: verifiedWebsite.value || undefined,
+        });
     } catch (e) {
         error.value = e?.response?.data?.message || 'OTP যাচাই হয়নি।';
     } finally {

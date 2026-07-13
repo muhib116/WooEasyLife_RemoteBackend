@@ -8,6 +8,7 @@ import SubscriptionWizard from '@/components/marketing/SubscriptionWizard.vue';
 import PendingSubscriptionBanner from '@/components/marketing/PendingSubscriptionBanner.vue';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import { planContentParams, trackCtaClick, trackOnce, trackViewContent } from '@/utils/metaPixel';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -66,10 +67,17 @@ const purchaseLabel = (plan) => {
     return 'এখনই সাবস্ক্রাইব করুন';
 };
 
-const openPurchase = (plan) => {
+const openPurchase = (plan, location = 'pricing_card') => {
     if (!plan || hasPendingInquiry.value) {
         return;
     }
+
+    trackCtaClick({
+        location,
+        label: plan.title,
+        plan_id: plan.id,
+    });
+    trackViewContent(planContentParams(plan));
 
     selectedPlan.value = plan;
     showWizard.value = true;
@@ -91,13 +99,29 @@ watch(
 );
 
 onMounted(() => {
+    trackOnce('viewcontent:pricing-catalog', () =>
+        trackViewContent({
+            content_name: 'Pricing plans',
+            content_category: 'pricing',
+            content_type: 'product_group',
+            contents: displayPlans.value.map((plan) => ({
+                id: String(plan.id),
+                quantity: 1,
+                item_price: planContentParams(plan).value,
+            })),
+            value: displayPlans.value.reduce((sum, plan) => sum + planContentParams(plan).value, 0),
+            currency: 'BDT',
+            num_items: displayPlans.value.length,
+        }),
+    );
+
     if (hasPendingInquiry.value || !props.preselectedPlanId) {
         return;
     }
 
     const plan = props.plans.find((item) => item.id === props.preselectedPlanId);
     if (plan) {
-        openPurchase(plan);
+        openPurchase(plan, 'pricing_preselected');
     }
 });
 </script>
@@ -175,7 +199,7 @@ onMounted(() => {
                                 ? 'bg-amber-500 text-black hover:bg-amber-400'
                                 : 'border border-white/15 text-white hover:bg-white/10'"
                             :disabled="hasPendingInquiry"
-                            @click="openPurchase(plan)"
+                            @click="openPurchase(plan, 'pricing_card')"
                         >
                             {{ purchaseLabel(plan) }}
                         </button>

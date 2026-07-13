@@ -1,10 +1,12 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
+import { trackCtaClick, trackOnce, trackViewContent } from '@/utils/metaPixel';
 
-defineProps({
+const props = defineProps({
     canLogin: { type: Boolean, default: false },
     seo: { type: Object, default: null },
     post: { type: Object, default: () => ({}) },
@@ -23,6 +25,17 @@ const formatDate = (value) => {
         return value;
     }
 };
+
+onMounted(() => {
+    const slug = props.post.slug || props.post.id || props.post.title || 'post';
+    trackOnce(`viewcontent:blog:${slug}`, () =>
+        trackViewContent({
+            content_name: props.post.title,
+            content_category: 'blog',
+            content_type: 'article',
+        }),
+    );
+});
 </script>
 
 <template>
@@ -57,6 +70,7 @@ const formatDate = (value) => {
                     <Link
                         href="/bd-fraud-checker"
                         class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
+                        @click="trackCtaClick({ location: 'blog_fraud_cta', href: '/bd-fraud-checker', label: 'ফ্রি ফ্রড চেক' })"
                     >
                         ফ্রি ফ্রড চেক
                     </Link>

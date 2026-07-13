@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -38,7 +39,7 @@ const ctaLabel = computed(() => primaryCtaLabel());
             <div class="mx-auto max-w-3xl">
                 <LandingFraudCheck :fraud-check="fraudCheck" />
                 <div class="mt-8 flex flex-wrap gap-3">
-                    <Link :href="ctaUrl" class="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black">{{ ctaLabel }}</Link>
+                    <MetaCtaLink :href="ctaUrl" :label="ctaLabel" location="seo_en_bd_fraud" link-class="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black" />
                     <Link href="/bd-fraud-checker" class="rounded-xl px-4 py-3 text-sm text-slate-400 hover:text-amber-300">বাংলা ভার্সন</Link>
                 </div>
             </div>

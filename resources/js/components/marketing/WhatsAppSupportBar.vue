@@ -4,6 +4,7 @@
         target="_blank"
         rel="noopener noreferrer"
         class="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm transition hover:bg-emerald-500/15"
+        @click="onClick"
     >
         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
             <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -19,9 +20,15 @@
 </template>
 
 <script setup>
+import { trackContact } from '@/utils/metaPixel';
+
 defineProps({
     url: { type: String, required: true },
     phone: { type: String, default: null },
     label: { type: String, default: 'WhatsApp সাপোর্ট — সরাসরি সাহায্য' },
 });
+
+const onClick = () => {
+    trackContact({ method: 'whatsapp_support', content_name: 'whatsapp_support' });
+};
 </script>

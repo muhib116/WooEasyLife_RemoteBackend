@@ -5,6 +5,7 @@ import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -67,12 +68,12 @@ const toggleFaq = (i) => {
             </div>
 
             <div class="mx-auto mt-10 flex max-w-3xl flex-wrap gap-3">
-                <Link
+                <MetaCtaLink
                     :href="ctaUrl"
-                    class="inline-flex rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black hover:bg-amber-400"
-                >
-                    {{ ctaLabel }}
-                </Link>
+                    :label="ctaLabel"
+                    location="seo_courier_auto_entry"
+                    link-class="inline-flex rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black hover:bg-amber-400"
+                />
                 <Link
                     :href="route('pricing')"
                     class="inline-flex rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"

@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 
 const props = defineProps({
     courierName: { type: String, required: true },
@@ -107,12 +108,12 @@ const toggleFaq = (i) => {
                     >
                         প্রাইসিং দেখুন
                     </Link>
-                    <Link
+                    <MetaCtaLink
                         :href="ctaUrl"
-                        class="inline-flex rounded-xl border border-amber-500/40 px-6 py-3 text-sm font-semibold text-amber-300 hover:bg-amber-500/10"
-                    >
-                        {{ ctaLabel }}
-                    </Link>
+                        :label="ctaLabel"
+                        location="seo_courier_intent"
+                        link-class="inline-flex rounded-xl border border-amber-500/40 px-6 py-3 text-sm font-semibold text-amber-300 hover:bg-amber-500/10"
+                    />
                 </div>
             </div>
         </section>
