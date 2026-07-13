@@ -119,6 +119,64 @@ const closeMobile = () => {
     mobileOpen.value = false;
 };
 
+const prefersReducedMotion = () =>
+    typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const smoothScrollToId = (hash, { updateUrl = true } = {}) => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    const id = String(hash || '').replace(/^#/, '');
+    if (!id) {
+        return false;
+    }
+
+    const el = document.getElementById(id);
+    if (!el) {
+        return false;
+    }
+
+    el.scrollIntoView({
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        block: 'start',
+    });
+
+    if (updateUrl) {
+        const next = `${window.location.pathname}${window.location.search}#${id}`;
+        window.history.replaceState(window.history.state, '', next);
+    }
+
+    return true;
+};
+
+const onAnchorNavClick = (event, href) => {
+    if (typeof window === 'undefined' || !href?.includes('#')) {
+        return;
+    }
+
+    let url;
+    try {
+        url = new URL(href, window.location.origin);
+    } catch {
+        return;
+    }
+
+    if (url.origin !== window.location.origin) {
+        return;
+    }
+
+    const onHome = window.location.pathname === '/' || window.location.pathname === '';
+    const targetIsHome = url.pathname === '/' || url.pathname === '';
+
+    if (onHome && targetIsHome && url.hash) {
+        event.preventDefault();
+        closeMobile();
+        smoothScrollToId(url.hash);
+    }
+};
+
 const onHeaderCtaClick = (location) => {
     trackCtaClick({
         location,
@@ -147,6 +205,14 @@ onMounted(() => {
     );
 
     detachScroll = attachScrollDepthTracking(path);
+
+    if (window.location.hash) {
+        window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
+                smoothScrollToId(window.location.hash, { updateUrl: false });
+            }, 80);
+        });
+    }
 });
 
 watch(mobileOpen, (open) => {
@@ -213,6 +279,7 @@ onUnmounted(() => {
                         :href="link.href"
                         class="text-sm font-medium"
                         :class="navLinkClass(link.key)"
+                        @click="link.anchor ? onAnchorNavClick($event, link.href) : undefined"
                     >
                         {{ link.label }}
                     </component>
@@ -304,7 +371,7 @@ onUnmounted(() => {
                                     ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
                                     : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                         ]"
-                        @click="closeMobile"
+                        @click="link.anchor ? onAnchorNavClick($event, link.href) : closeMobile()"
                     >
                         {{ link.label }}
                     </component>
@@ -380,6 +447,7 @@ onUnmounted(() => {
                                 :key="link.label"
                                 :href="link.href"
                                 class="text-sm text-slate-400 transition hover:text-white"
+                                @click="link.href.startsWith('/#') ? onAnchorNavClick($event, link.href) : undefined"
                             >
                                 {{ link.label }}
                             </component>

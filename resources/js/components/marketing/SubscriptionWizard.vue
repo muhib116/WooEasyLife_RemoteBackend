@@ -78,6 +78,8 @@ const addressFieldError = ref(null);
 const senderNumberFieldError = ref(null);
 const transactionIdFieldError = ref(null);
 const domainChecking = ref(false);
+/** Normalized hostname that passed live DNS A-record check (null = not verified). */
+const domainDnsVerifiedFor = ref(null);
 const touched = ref({
     website_url: false,
     customer_name: false,
@@ -217,6 +219,7 @@ const resetWizard = () => {
     senderNumberFieldError.value = null;
     transactionIdFieldError.value = null;
     domainChecking.value = false;
+    domainDnsVerifiedFor.value = null;
     touched.value = {
         website_url: false,
         customer_name: false,
@@ -416,6 +419,16 @@ const addressError = computed(() => addressFieldError.value || form.errors.addre
 const senderNumberError = computed(() => senderNumberFieldError.value || form.errors.account_number || null);
 const transactionIdError = computed(() => transactionIdFieldError.value || form.errors.transaction_id || null);
 
+const isDomainDnsVerified = computed(() => {
+    if (props.domains.length) {
+        return Boolean(form.website_url?.trim());
+    }
+
+    const domain = normalizeDomainInput(form.website_url);
+
+    return Boolean(domain && domainDnsVerifiedFor.value === domain);
+});
+
 const isDomainInputValid = computed(() => {
     if (props.domains.length) {
         return Boolean(form.website_url?.trim());
@@ -423,7 +436,13 @@ const isDomainInputValid = computed(() => {
 
     const domain = normalizeDomainInput(form.website_url);
 
-    return Boolean(domain && isValidDomainHost(domain) && !domainFieldError.value && !domainChecking.value);
+    return Boolean(
+        domain
+        && isValidDomainHost(domain)
+        && !domainFieldError.value
+        && !domainChecking.value
+        && domainDnsVerifiedFor.value === domain,
+    );
 });
 
 const contactFieldsValid = computed(() => Boolean(
@@ -623,14 +642,17 @@ const scheduleServerValidation = () => {
 
 const runServerValidation = async () => {
     if (props.domains.length) {
-        return;
+        domainDnsVerifiedFor.value = form.website_url?.trim() || null;
+        return true;
     }
 
     const domainResult = validateDomainInput(form.website_url);
     if (!domainResult.valid) {
-        return;
+        domainDnsVerifiedFor.value = null;
+        return false;
     }
 
+    const expectedDomain = domainResult.domain || normalizeDomainInput(form.website_url);
     const serial = ++serverValidateSerial;
     domainChecking.value = true;
 
@@ -638,7 +660,7 @@ const runServerValidation = async () => {
         const { data } = await axios.post(
             route('pricing.subscribe.validate'),
             {
-                website_url: domainResult.domain || form.website_url,
+                website_url: expectedDomain || form.website_url,
                 email: form.email,
                 contact_number: form.contact_number,
                 whatsapp_number: form.whatsapp_number,
@@ -652,20 +674,22 @@ const runServerValidation = async () => {
         );
 
         if (serial !== serverValidateSerial) {
-            return;
+            return false;
         }
 
+        const normalizedDomain = data.normalized?.website_url || expectedDomain;
         if (data.normalized?.website_url) {
             form.website_url = data.normalized.website_url;
         }
 
         if (data.errors?.website_url) {
             domainFieldError.value = data.errors.website_url;
-        } else if (!domainFieldError.value || domainFieldError.value.includes('নিবন্ধিত') || domainFieldError.value.includes('প্রক্রিয়াধীন')) {
-            // Clear only server-sourced domain errors when server says OK.
+            domainDnsVerifiedFor.value = null;
+        } else {
             if (!validateDomainInput(form.website_url).message) {
                 domainFieldError.value = null;
             }
+            domainDnsVerifiedFor.value = normalizedDomain;
         }
 
         if (data.errors?.email && touched.value.email) {
@@ -677,15 +701,22 @@ const runServerValidation = async () => {
         if (data.errors?.whatsapp_number && touched.value.whatsapp_number) {
             whatsappFieldError.value = data.errors.whatsapp_number;
         }
+
+        return domainDnsVerifiedFor.value === (normalizeDomainInput(form.website_url) || normalizedDomain);
     } catch (error) {
         if (serial !== serverValidateSerial) {
-            return;
+            return false;
         }
+
+        domainDnsVerifiedFor.value = null;
 
         if (error?.response?.status === 429) {
             domainFieldError.value = 'একটু পর আবার চেষ্টা করুন।';
+        } else {
+            domainFieldError.value = 'DNS যাচাই করা যায়নি। লাইভ ডোমেইন দিয়ে আবার চেষ্টা করুন — ছাড়া পরবর্তী ধাপে যেতে পারবেন না।';
         }
-        // Keep local validation; ignore other transient network errors for UX.
+
+        return false;
     } finally {
         if (serial === serverValidateSerial) {
             domainChecking.value = false;
@@ -696,7 +727,9 @@ const runServerValidation = async () => {
 const onDomainInput = () => {
     markTouched('website_url');
     clearServerFieldError('website_url');
+    domainDnsVerifiedFor.value = null;
     scheduleLocalValidation();
+    scheduleServerValidation();
 };
 
 const onDomainBlur = () => {
@@ -829,10 +862,11 @@ const contactValidationMessage = () => {
 
     runLocalContactValidation(true);
 
-    if (!props.domains.length && (domainFieldError.value || !isDomainInputValid.value)) {
+    if (!props.domains.length && (domainFieldError.value || !isDomainInputValid.value || !isDomainDnsVerified.value)) {
         return {
-            summary: 'ডোমেইন যাচাই প্রয়োজন',
-            detail: domainFieldError.value || 'সঠিক ডোমেইন নাম লিখুন।',
+            summary: 'লাইভ ডোমেইন যাচাই প্রয়োজন',
+            detail: domainFieldError.value
+                || 'DNS A রেকর্ড ছাড়া পরবর্তী ধাপে যেতে পারবেন না। লাইভ WooCommerce ডোমেইন দিন।',
             missing: ['ডোমেইন নাম/ওয়েবসাইটের নাম'],
         };
     }
@@ -959,6 +993,18 @@ const nextStep = async () => {
             .forEach((key) => { touched.value[key] = true; });
         runLocalContactValidation(true);
         await runServerValidation();
+
+        if (!props.domains.length && !isDomainDnsVerified.value) {
+            if (!domainFieldError.value) {
+                domainFieldError.value = 'DNS A রেকর্ড পাওয়া যায়নি। লাইভ ডোমেইন ছাড়া এগোতে পারবেন না।';
+            }
+            showValidationToast(currentValidationMessage());
+            document.getElementById('subscription-domain-input')?.scrollIntoView({
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                block: 'center',
+            });
+            return;
+        }
     }
 
     if (!canGoNext.value) {
@@ -991,7 +1037,7 @@ const prevStep = () => {
     }
 };
 
-const submitInquiry = () => {
+const submitInquiry = async () => {
     if (!isFreeTrial.value && !resolvedPaymentMethods.value.length) {
         showWizardToast({
             severity: 'warn',
@@ -999,6 +1045,20 @@ const submitInquiry = () => {
             detail: 'পেমেন্ট নম্বর এখনো সেট করা হয়নি। WhatsApp সাপোর্টে যোগাযোগ করুন।',
         });
         return;
+    }
+
+    if (!props.domains.length) {
+        await runServerValidation();
+
+        if (!isDomainDnsVerified.value) {
+            showValidationToast({
+                summary: 'লাইভ ডোমেইন যাচাই প্রয়োজন',
+                detail: domainFieldError.value
+                    || 'DNS A রেকর্ড ছাড়া অনুরোধ জমা দেওয়া যাবে না।',
+                missing: ['ডোমেইন নাম/ওয়েবসাইটের নাম'],
+            });
+            return;
+        }
     }
 
     if (!canGoNext.value) {
@@ -1249,6 +1309,7 @@ onUnmounted(() => {
                         <div v-else class="space-y-1">
                             <label class="text-sm font-medium text-slate-300">ডোমেইন নাম/ওয়েবসাইটের নাম *</label>
                             <input
+                                id="subscription-domain-input"
                                 v-model="form.website_url"
                                 type="text"
                                 placeholder="যেমন: myshop.com"
@@ -1257,8 +1318,18 @@ onUnmounted(() => {
                                 @input="onDomainInput"
                                 @blur="onDomainBlur"
                             >
-                            <p class="text-xs text-slate-500">
-                                {{ domainChecking ? 'DNS যাচাই করা হচ্ছে...' : 'লাইভ WooCommerce ডোমেইন দিন — DNS A রেকর্ড যাচাই করা হবে।' }}
+                            <p
+                                class="text-xs"
+                                :class="{
+                                    'text-amber-300': domainChecking,
+                                    'text-emerald-400': !domainChecking && isDomainDnsVerified,
+                                    'text-slate-500': !domainChecking && !isDomainDnsVerified && !websiteUrlError,
+                                    'text-red-400': !domainChecking && !!websiteUrlError,
+                                }"
+                            >
+                                <template v-if="domainChecking">DNS যাচাই করা হচ্ছে...</template>
+                                <template v-else-if="isDomainDnsVerified">✓ লাইভ ডোমেইন যাচাই হয়েছে (DNS A রেকর্ড পাওয়া গেছে)।</template>
+                                <template v-else>লাইভ WooCommerce ডোমেইন দিন — DNS A রেকর্ড ছাড়া পরবর্তী ধাপে যেতে পারবেন না।</template>
                             </p>
                             <small v-if="websiteUrlError" class="block text-red-400">{{ websiteUrlError }}</small>
                         </div>
@@ -1448,16 +1519,17 @@ onUnmounted(() => {
                 <button
                     v-if="currentStep < activeSteps.length - 1"
                     type="button"
-                    class="w-full rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black sm:w-auto sm:py-2.5"
+                    class="w-full rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2.5"
+                    :disabled="domainChecking || (currentStep === 1 && !canGoNext)"
                     @click="nextStep"
                 >
-                    পরবর্তী ধাপ
+                    {{ domainChecking && currentStep === 1 ? 'DNS যাচাই হচ্ছে...' : 'পরবর্তী ধাপ' }}
                 </button>
                 <button
                     v-else
                     type="button"
                     class="w-full rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black disabled:opacity-50 sm:w-auto sm:py-2.5"
-                    :disabled="form.processing"
+                    :disabled="form.processing || domainChecking || (!domains.length && !isDomainDnsVerified)"
                     @click="submitInquiry"
                 >
                     {{ form.processing ? 'জমা হচ্ছে...' : (isFreeTrial ? 'অনুরোধ জমা দিন' : 'পেমেন্ট তথ্য জমা দিন') }}

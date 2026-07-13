@@ -1,5 +1,11 @@
 /* WooEasyLife marketing — gold on black (logo-aligned) */
 
+/* Document scroll (anchors / nav) — .marketing-page itself is not the scroll container. */
+html:has(.marketing-page) {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+}
+
 .marketing-page {
     --marketing-bg: #0a0a0a;
     --marketing-surface: #111111;
@@ -8,12 +14,11 @@
     --marketing-gold-light: #ffd54f;
     --marketing-gold-dark: #e6a800;
     background-color: var(--marketing-bg);
-    scroll-behavior: smooth;
     scroll-padding-top: 5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .marketing-page {
+    html:has(.marketing-page) {
         scroll-behavior: auto;
     }
 }
