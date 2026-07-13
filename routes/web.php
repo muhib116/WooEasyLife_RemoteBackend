@@ -12,6 +12,7 @@ use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\CustomerNoticeController;
 use App\Http\Controllers\Admin\LandingSettingsController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -469,6 +470,16 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/', [CustomerNoticeController::class, 'store'])->name('store');
         Route::put('/{customerNotice}', [CustomerNoticeController::class, 'update'])->name('update');
         Route::delete('/{customerNotice}', [CustomerNoticeController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::group(['as' => 'blogPosts.', 'prefix' => 'blog-posts'], function () {
+        Route::get('/', [BlogPostController::class, 'index'])->name('index');
+        Route::get('/create', [BlogPostController::class, 'create'])->name('create');
+        Route::post('/', [BlogPostController::class, 'store'])->name('store');
+        Route::post('/upload-image', [BlogPostController::class, 'uploadImage'])->name('uploadImage');
+        Route::get('/{blogPost}/edit', [BlogPostController::class, 'edit'])->name('edit');
+        Route::put('/{blogPost}', [BlogPostController::class, 'update'])->name('update');
+        Route::delete('/{blogPost}', [BlogPostController::class, 'destroy'])->name('destroy');
     });
 
     Route::group([

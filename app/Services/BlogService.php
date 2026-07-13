@@ -2,18 +2,34 @@
 
 namespace App\Services;
 
+use App\Models\BlogPost;
+use App\Support\BlogHtmlSanitizer;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class BlogService
 {
     /**
-     * @return list<array{title: string, description: string, date: string, slug: string, locale: string, body: string, path: string}>
+     * @return list<array{
+     *     title: string,
+     *     description: string,
+     *     meta_title: string|null,
+     *     date: string,
+     *     slug: string,
+     *     locale: string,
+     *     body: string,
+     *     path: string|null,
+     *     source: string,
+     *     format: string,
+     *     og_image: string|null,
+     *     robots: string|null
+     * }>
      */
     public function all(?string $locale = null): array
     {
-        $posts = $this->scanPosts();
+        $posts = $this->mergedPosts();
 
         if ($locale !== null && $locale !== '') {
             $posts = $posts->filter(
@@ -28,11 +44,25 @@ class BlogService
     }
 
     /**
-     * @return array{title: string, description: string, date: string, slug: string, locale: string, body: string, path: string, html: string}|null
+     * @return array{
+     *     title: string,
+     *     description: string,
+     *     meta_title: string|null,
+     *     date: string,
+     *     slug: string,
+     *     locale: string,
+     *     body: string,
+     *     path: string|null,
+     *     source: string,
+     *     format: string,
+     *     og_image: string|null,
+     *     robots: string|null,
+     *     html: string
+     * }|null
      */
     public function find(string $slug): ?array
     {
-        $post = $this->scanPosts()->first(
+        $post = $this->mergedPosts()->first(
             fn (array $post) => ($post['slug'] ?? '') === $slug
         );
 
@@ -40,7 +70,7 @@ class BlogService
             return null;
         }
 
-        $post['html'] = $this->toHtml($post['body'] ?? '');
+        $post['html'] = $this->renderHtml($post);
 
         return $post;
     }
@@ -51,9 +81,145 @@ class BlogService
     }
 
     /**
-     * @return Collection<int, array{title: string, description: string, date: string, slug: string, locale: string, body: string, path: string}>
+     * @param  array<string, mixed>  $post
      */
-    private function scanPosts(): Collection
+    public function renderHtml(array $post): string
+    {
+        if (($post['format'] ?? 'markdown') === 'html') {
+            return BlogHtmlSanitizer::sanitize((string) ($post['body'] ?? ''));
+        }
+
+        return $this->toHtml((string) ($post['body'] ?? ''));
+    }
+
+    /**
+     * Slugs used by filesystem markdown posts (for CMS collision warnings).
+     *
+     * @return list<string>
+     */
+    public function markdownSlugs(): array
+    {
+        return $this->scanMarkdownPosts()
+            ->pluck('slug')
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * DB published posts win over markdown files when slugs collide.
+     *
+     * @return Collection<int, array{
+     *     title: string,
+     *     description: string,
+     *     meta_title: string|null,
+     *     date: string,
+     *     slug: string,
+     *     locale: string,
+     *     body: string,
+     *     path: string|null,
+     *     source: string,
+     *     format: string,
+     *     og_image: string|null,
+     *     robots: string|null
+     * }>
+     */
+    private function mergedPosts(): Collection
+    {
+        $database = $this->scanDatabasePosts()->keyBy('slug');
+        $markdown = $this->scanMarkdownPosts()
+            ->reject(fn (array $post) => $database->has($post['slug']))
+            ->keyBy('slug');
+
+        return $database->union($markdown)->values();
+    }
+
+    /**
+     * @return Collection<int, array{
+     *     title: string,
+     *     description: string,
+     *     meta_title: string|null,
+     *     date: string,
+     *     slug: string,
+     *     locale: string,
+     *     body: string,
+     *     path: string|null,
+     *     source: string,
+     *     format: string,
+     *     og_image: string|null,
+     *     robots: string|null
+     * }>
+     */
+    private function scanDatabasePosts(): Collection
+    {
+        if (! Schema::hasTable('blog_posts')) {
+            return collect();
+        }
+
+        return BlogPost::query()
+            ->published()
+            ->orderByDesc('published_at')
+            ->get()
+            ->map(fn (BlogPost $post) => $this->normalizeDatabasePost($post))
+            ->values();
+    }
+
+    /**
+     * @return array{
+     *     title: string,
+     *     description: string,
+     *     meta_title: string|null,
+     *     date: string,
+     *     slug: string,
+     *     locale: string,
+     *     body: string,
+     *     path: string|null,
+     *     source: string,
+     *     format: string,
+     *     og_image: string|null,
+     *     robots: string|null
+     * }
+     */
+    private function normalizeDatabasePost(BlogPost $post): array
+    {
+        $ogImage = $post->og_image;
+        if (is_string($ogImage) && $ogImage !== '' && ! Str::startsWith($ogImage, ['http://', 'https://', '/'])) {
+            $ogImage = asset('storage/'.$ogImage);
+        }
+
+        return [
+            'title' => $post->title,
+            'description' => $post->seoDescription(),
+            'meta_title' => $post->meta_title,
+            'date' => optional($post->published_at)->toDateString() ?? '',
+            'slug' => $post->slug,
+            'locale' => $post->locale,
+            'body' => $post->body_html,
+            'path' => null,
+            'source' => 'database',
+            'format' => 'html',
+            'og_image' => $ogImage,
+            'robots' => $post->robots,
+        ];
+    }
+
+    /**
+     * @return Collection<int, array{
+     *     title: string,
+     *     description: string,
+     *     meta_title: string|null,
+     *     date: string,
+     *     slug: string,
+     *     locale: string,
+     *     body: string,
+     *     path: string|null,
+     *     source: string,
+     *     format: string,
+     *     og_image: string|null,
+     *     robots: string|null
+     * }>
+     */
+    private function scanMarkdownPosts(): Collection
     {
         $dir = resource_path('content/blog');
 
@@ -69,7 +235,20 @@ class BlogService
     }
 
     /**
-     * @return array{title: string, description: string, date: string, slug: string, locale: string, body: string, path: string}|null
+     * @return array{
+     *     title: string,
+     *     description: string,
+     *     meta_title: string|null,
+     *     date: string,
+     *     slug: string,
+     *     locale: string,
+     *     body: string,
+     *     path: string|null,
+     *     source: string,
+     *     format: string,
+     *     og_image: string|null,
+     *     robots: string|null
+     * }|null
      */
     private function parseFile(string $path): ?array
     {
@@ -98,11 +277,16 @@ class BlogService
         return [
             'title' => (string) ($meta['title'] ?? $slug),
             'description' => (string) ($meta['description'] ?? ''),
+            'meta_title' => null,
             'date' => (string) ($meta['date'] ?? ''),
             'slug' => $slug,
             'locale' => $locale,
             'body' => $body,
             'path' => $path,
+            'source' => 'markdown',
+            'format' => 'markdown',
+            'og_image' => null,
+            'robots' => null,
         ];
     }
 

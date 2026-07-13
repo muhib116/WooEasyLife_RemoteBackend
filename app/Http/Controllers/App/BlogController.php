@@ -55,8 +55,13 @@ class BlogController extends Controller
             throw new NotFoundHttpException;
         }
 
-        $seoMeta = $seo->forPage('blog_index', [
-            'title' => $post['title'].' | WooEasyLife ব্লগ',
+        $seoTitle = trim((string) ($post['meta_title'] ?? ''));
+        if ($seoTitle === '') {
+            $seoTitle = $post['title'].' | WooEasyLife ব্লগ';
+        }
+
+        $seoOverrides = [
+            'title' => $seoTitle,
             'description' => $post['description'] !== ''
                 ? $post['description']
                 : $post['title'],
@@ -70,7 +75,17 @@ class BlogController extends Controller
                 ['name' => 'ব্লগ', 'path' => '/blog'],
                 ['name' => $post['title'], 'path' => '/blog/'.$post['slug']],
             ],
-        ]);
+        ];
+
+        if (! empty($post['og_image'])) {
+            $seoOverrides['og_image'] = $post['og_image'];
+        }
+
+        if (! empty($post['robots'])) {
+            $seoOverrides['robots'] = $post['robots'];
+        }
+
+        $seoMeta = $seo->forPage('blog_index', $seoOverrides);
 
         $whatsapp = $landingSettings->adminWhatsapp();
 

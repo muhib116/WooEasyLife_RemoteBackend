@@ -303,6 +303,12 @@ const allSections: NavSection[] = [
                         icon: "PhDeviceMobile",
                         permission: "billing.manage",
                     },
+                    {
+                        title: "Blog Posts",
+                        name: "blogPosts.index",
+                        icon: "PhNewspaper",
+                        permission: "billing.manage",
+                    },
                 ],
             },
             {
@@ -417,7 +423,8 @@ const expandedGroups = reactive<Record<string, boolean>>({
             || route().current("orders.*")
             || route().current("packagePayments.*")
             || route().current("customerNotices.*")
-            || route().current("landingSettings.*"),
+            || route().current("landingSettings.*")
+            || route().current("blogPosts.*"),
     ),
 });
 
