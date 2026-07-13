@@ -1,10 +1,11 @@
 <template>
-    <Ckeditor
-        v-model="modalValue"
-        :editor="ClassicEditor"
-        :config="editorConfig"
-        height="500px"
-    />
+    <div class="package-ckeditor">
+        <Ckeditor
+            v-model="modalValue"
+            :editor="ClassicEditor"
+            :config="editorConfig"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -97,12 +98,11 @@ const editorConfig: EditorConfig = {
             "|",
             "outdent",
             "indent",
-            "code",
         ],
         shouldNotGroupWhenFull: true,
     },
     menuBar: {
-        isVisible: true,
+        isVisible: false,
     },
     fontFamily: {
         options: [

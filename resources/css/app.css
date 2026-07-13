@@ -254,6 +254,17 @@
     .admin-confirm-dialog.p-confirmdialog,
     .p-confirmdialog {
         width: min(100vw - 2rem, 28rem) !important;
+        height: auto !important;
+        max-height: min(90vh, 28rem);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-header,
+    .p-confirmdialog .p-dialog-header,
+    .admin-confirm-dialog.p-confirmdialog .p-dialog-footer,
+    .p-confirmdialog .p-dialog-footer {
+        flex: 0 0 auto;
     }
 
     .dark .admin-dialog.p-dialog,
@@ -331,7 +342,11 @@
     .p-confirmdialog .p-dialog-content {
         align-items: flex-start;
         background: transparent;
-        padding: 0.75rem 1.5rem 0.25rem;
+        flex: 0 0 auto !important;
+        flex-grow: 0 !important;
+        min-height: 0 !important;
+        overflow: visible;
+        padding: 0.75rem 1.5rem 0.5rem;
     }
 
     .admin-confirm-dialog__content {
@@ -437,9 +452,12 @@
     .p-confirmdialog .p-dialog-footer {
         background: transparent;
         border-top: 1px solid rgb(241 245 249);
+        flex: 0 0 auto;
         gap: 0.625rem;
-        margin-top: 0.25rem;
-        padding: 1rem 1.5rem 1.25rem;
+        margin-top: 0;
+        /* Space above buttons (under divider) + below (modal edge) */
+        padding: 1rem 1.5rem 1.25rem !important;
+        align-items: center;
     }
 
     .dark .admin-dialog .p-dialog-footer,

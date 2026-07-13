@@ -212,7 +212,7 @@ const toggleFaq = (i) => {
         />
 
         <!-- 2. Free fraud check (try before buy) -->
-        <ScrollReveal as="section" id="fraud-check" class="scroll-mt-24 px-4 pb-10 lg:px-8">
+        <ScrollReveal as="section" id="fraud-check" class="scroll-mt-24 px-4 pb-10 pt-10 sm:pt-12 lg:px-8">
             <div class="mx-auto max-w-3xl">
                 <div class="mb-6 text-center sm:mb-8">
                     <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">

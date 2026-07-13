@@ -106,7 +106,7 @@
                                 <BlogClassic
                                     v-model="form.body_html"
                                     :upload-url="route('blogPosts.uploadImage')"
-                                    min-height="480px"
+                                    min-height="640px"
                                 />
                                 <small v-if="form.errors.body_html" class="mt-1 block text-rose-500">
                                     {{ form.errors.body_html }}

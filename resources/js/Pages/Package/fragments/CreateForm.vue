@@ -1,5 +1,5 @@
 <template>
-    <form class="space-y-6" @submit.prevent="onSubmit">
+    <form class="space-y-6 pt-3" @submit.prevent="onSubmit">
         <section
             class="space-y-4 rounded-xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-700 dark:bg-slate-900/40 sm:p-5"
         >
@@ -183,11 +183,11 @@
                         Features / Description
                     </label>
                     <div
-                        class="package-description-editor overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-slate-950/50"
+                        class="package-description-editor overflow-hidden rounded-xl border border-gray-200 dark:border-slate-600"
                     >
                         <ClassicEditor v-model="draft.description" />
                     </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                         Rich text for marketing copy or package feature highlights.
                     </p>
                 </div>
@@ -410,12 +410,35 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.package-description-editor :deep(.ck-editor__editable) {
-    min-height: 12rem;
+.package-description-editor :deep(.ck.ck-editor) {
+    width: 100%;
 }
 
-.package-description-editor :deep(.ck.ck-editor__main > .ck-editor__editable) {
-    max-height: 16rem;
+.package-description-editor :deep(.ck.ck-toolbar),
+.package-description-editor :deep(.ck.ck-editor__top .ck-sticky-panel .ck-toolbar) {
+    border: none;
+    border-bottom: 1px solid rgb(229 231 235);
+    border-radius: 0;
+}
+
+.package-description-editor :deep(.ck.ck-editor__main > .ck-editor__editable),
+.package-description-editor :deep(.ck-editor__editable_inline) {
+    min-height: 14rem;
+    max-height: 20rem;
     overflow-y: auto;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    padding: 0.85rem 1rem;
+    line-height: 1.55;
+}
+
+.package-description-editor :deep(.ck.ck-editor__main > .ck-editor__editable.ck-focused) {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.package-description-editor :deep(.ck-powered-by) {
+    display: none;
 }
 </style>

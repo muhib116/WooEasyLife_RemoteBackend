@@ -10,3 +10,138 @@
 .ck-content h4 {
 	@apply text-[18px];
 }
+
+/* Shared CKEditor dark theme — blog CMS + package form */
+html.dark .blog-ckeditor,
+html.dark .package-description-editor,
+html.dark .package-ckeditor {
+	--ck-color-base-background: rgb(15 23 42);
+	--ck-color-base-border: rgb(51 65 85);
+	--ck-color-base-foreground: rgb(226 232 240);
+	--ck-color-text: rgb(226 232 240);
+	--ck-color-shadow-drop: rgba(0, 0, 0, 0.35);
+	--ck-color-shadow-inner: rgba(0, 0, 0, 0.25);
+	--ck-color-button-default-background: transparent;
+	--ck-color-button-default-hover-background: rgb(30 41 59);
+	--ck-color-button-on-background: rgb(51 65 85);
+	--ck-color-button-on-hover-background: rgb(71 85 105);
+	--ck-color-button-on-color: rgb(251 191 36);
+	--ck-color-dropdown-panel-background: rgb(15 23 42);
+	--ck-color-dropdown-panel-border: rgb(51 65 85);
+	--ck-color-list-background: rgb(15 23 42);
+	--ck-color-list-button-hover-background: rgb(30 41 59);
+	--ck-color-list-button-on-background: rgb(51 65 85);
+	--ck-color-panel-background: rgb(15 23 42);
+	--ck-color-panel-border: rgb(51 65 85);
+	--ck-color-toolbar-background: rgb(15 23 42);
+	--ck-color-toolbar-border: rgb(51 65 85);
+	--ck-color-input-background: rgb(2 6 23);
+	--ck-color-input-border: rgb(51 65 85);
+	--ck-color-input-text: rgb(226 232 240);
+	--ck-color-labeled-field-label-background: rgb(15 23 42);
+	--ck-color-widget-hover-border: rgb(251 191 36);
+	--ck-color-focus-border: rgb(245 158 11);
+	--ck-focus-ring: 1px solid rgb(245 158 11);
+	--ck-inner-shadow: none;
+	--ck-border-radius: 0.75rem;
+}
+
+html.dark .blog-ckeditor .ck.ck-editor__top .ck-sticky-panel .ck-toolbar,
+html.dark .blog-ckeditor .ck.ck-menubar,
+html.dark .blog-ckeditor .ck.ck-toolbar,
+html.dark .blog-ckeditor .ck.ck-balloon-panel,
+html.dark .blog-ckeditor .ck.ck-dropdown__panel,
+html.dark .package-description-editor .ck.ck-editor__top .ck-sticky-panel .ck-toolbar,
+html.dark .package-description-editor .ck.ck-menubar,
+html.dark .package-description-editor .ck.ck-toolbar,
+html.dark .package-description-editor .ck.ck-balloon-panel,
+html.dark .package-description-editor .ck.ck-dropdown__panel,
+html.dark .package-ckeditor .ck.ck-editor__top .ck-sticky-panel .ck-toolbar,
+html.dark .package-ckeditor .ck.ck-menubar,
+html.dark .package-ckeditor .ck.ck-toolbar,
+html.dark .package-ckeditor .ck.ck-balloon-panel,
+html.dark .package-ckeditor .ck.ck-dropdown__panel {
+	background: rgb(15 23 42) !important;
+	border-color: rgb(51 65 85) !important;
+	color: rgb(226 232 240);
+}
+
+html.dark .blog-ckeditor .ck.ck-menubar .ck-menubar__menu__button,
+html.dark .blog-ckeditor .ck.ck-button,
+html.dark .blog-ckeditor .ck.ck-button .ck-button__label,
+html.dark .blog-ckeditor .ck.ck-icon,
+html.dark .blog-ckeditor .ck.ck-dropdown__button,
+html.dark .package-description-editor .ck.ck-menubar .ck-menubar__menu__button,
+html.dark .package-description-editor .ck.ck-button,
+html.dark .package-description-editor .ck.ck-button .ck-button__label,
+html.dark .package-description-editor .ck.ck-icon,
+html.dark .package-description-editor .ck.ck-dropdown__button,
+html.dark .package-ckeditor .ck.ck-menubar .ck-menubar__menu__button,
+html.dark .package-ckeditor .ck.ck-button,
+html.dark .package-ckeditor .ck.ck-button .ck-button__label,
+html.dark .package-ckeditor .ck.ck-icon,
+html.dark .package-ckeditor .ck.ck-dropdown__button {
+	color: rgb(203 213 225) !important;
+}
+
+html.dark .blog-ckeditor .ck.ck-button:not(.ck-disabled):hover,
+html.dark .blog-ckeditor .ck.ck-button.ck-on,
+html.dark .package-description-editor .ck.ck-button:not(.ck-disabled):hover,
+html.dark .package-description-editor .ck.ck-button.ck-on,
+html.dark .package-ckeditor .ck.ck-button:not(.ck-disabled):hover,
+html.dark .package-ckeditor .ck.ck-button.ck-on {
+	background: rgb(30 41 59) !important;
+}
+
+html.dark .blog-ckeditor .ck.ck-editor__main > .ck-editor__editable,
+html.dark .blog-ckeditor .ck-editor__editable_inline,
+html.dark .package-description-editor .ck.ck-editor__main > .ck-editor__editable,
+html.dark .package-description-editor .ck-editor__editable_inline,
+html.dark .package-ckeditor .ck.ck-editor__main > .ck-editor__editable,
+html.dark .package-ckeditor .ck-editor__editable_inline {
+	background: rgb(2 6 23) !important;
+	border-color: rgb(51 65 85) !important;
+	color: rgb(226 232 240) !important;
+	caret-color: rgb(251 191 36);
+}
+
+html.dark .blog-ckeditor .ck.ck-editor__main > .ck-editor__editable.ck-focused,
+html.dark .package-description-editor .ck.ck-editor__main > .ck-editor__editable.ck-focused,
+html.dark .package-ckeditor .ck.ck-editor__main > .ck-editor__editable.ck-focused {
+	border-color: rgb(245 158 11) !important;
+}
+
+html.dark .blog-ckeditor .ck-content a,
+html.dark .package-description-editor .ck-content a,
+html.dark .package-ckeditor .ck-content a {
+	color: rgb(251 191 36);
+}
+
+html.dark .blog-ckeditor .ck-content blockquote,
+html.dark .package-description-editor .ck-content blockquote,
+html.dark .package-ckeditor .ck-content blockquote {
+	border-left-color: rgb(71 85 105);
+	color: rgb(148 163 184);
+}
+
+html.dark .blog-ckeditor .ck-powered-by,
+html.dark .package-description-editor .ck-powered-by,
+html.dark .package-ckeditor .ck-powered-by {
+	opacity: 0.45;
+}
+
+html.dark .blog-ckeditor .ck.ck-list,
+html.dark .blog-ckeditor .ck.ck-list__item,
+html.dark .package-description-editor .ck.ck-list,
+html.dark .package-description-editor .ck.ck-list__item,
+html.dark .package-ckeditor .ck.ck-list,
+html.dark .package-ckeditor .ck.ck-list__item {
+	background: rgb(15 23 42);
+	color: rgb(226 232 240);
+}
+
+/* Package modal: tighter toolbar divider in dark mode */
+html.dark .package-description-editor .ck.ck-toolbar,
+html.dark .package-description-editor .ck.ck-editor__top .ck-sticky-panel .ck-toolbar {
+	border-bottom-color: rgb(51 65 85) !important;
+}

@@ -1,9 +1,11 @@
 <template>
-    <Ckeditor
-        v-model="modalValue"
-        :editor="ClassicEditor"
-        :config="editorConfig"
-    />
+    <div class="blog-ckeditor">
+        <Ckeditor
+            v-model="modalValue"
+            :editor="ClassicEditor"
+            :config="editorConfig"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -52,7 +54,7 @@ const props = withDefaults(
     }>(),
     {
         uploadUrl: null,
-        minHeight: "420px",
+        minHeight: "560px",
     },
 );
 
@@ -211,7 +213,28 @@ const editorConfig = computed<EditorConfig>(() => ({
 </script>
 
 <style scoped>
-:deep(.ck-editor__editable_inline) {
+.blog-ckeditor :deep(.ck.ck-editor) {
+    width: 100%;
+}
+
+.blog-ckeditor :deep(.ck.ck-editor__main > .ck-editor__editable),
+.blog-ckeditor :deep(.ck-editor__editable_inline) {
     min-height: v-bind(minHeight);
+    max-height: min(75vh, 900px);
+    overflow-y: auto;
+    line-height: 1.65;
+    padding: 1rem 1.15rem;
+}
+
+.blog-ckeditor :deep(.ck-content h2) {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 1rem 0 0.5rem;
+}
+
+.blog-ckeditor :deep(.ck-content h3) {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0.85rem 0 0.4rem;
 }
 </style>

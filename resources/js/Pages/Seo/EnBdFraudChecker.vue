@@ -34,7 +34,7 @@ const ctaLabel = computed(() => primaryCtaLabel());
                 </p>
             </div>
         </section>
-        <section class="px-4 pb-12 lg:px-8">
+        <section class="px-4 pb-12 pt-12 sm:pt-14 lg:px-8">
             <div class="mx-auto max-w-3xl">
                 <LandingFraudCheck :fraud-check="fraudCheck" />
                 <div class="mt-8 flex flex-wrap gap-3">

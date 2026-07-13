@@ -52,7 +52,7 @@ const leadText = computed(() => props.lead || props.seo?.prerender_lead || '');
             </div>
         </section>
 
-        <section v-if="showChecker" id="fraud-check" class="scroll-mt-24 px-4 pb-12 lg:px-8">
+        <section v-if="showChecker" id="fraud-check" class="scroll-mt-24 px-4 pb-12 pt-12 sm:pt-14 lg:px-8">
             <div class="mx-auto max-w-3xl">
                 <div class="mb-6 text-center">
                     <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
