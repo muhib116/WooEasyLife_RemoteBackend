@@ -62,13 +62,9 @@ createInertiaApp({
         });
 
         router.on('navigate', (event) => {
-            // SPA PageView after initial Blade boot; skip authenticated sessions.
+            // SPA PageView after initial Blade boot.
             if (metaPixelInitialPage) {
                 metaPixelInitialPage = false;
-                return;
-            }
-
-            if (event?.detail?.page?.props?.auth?.user) {
                 return;
             }
 

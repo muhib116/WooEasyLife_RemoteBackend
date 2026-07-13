@@ -80,7 +80,7 @@ it('injects meta pixel on the landing page for guests', function () {
         ->assertSee("fbq('track', 'PageView')", false);
 });
 
-it('does not inject meta pixel for authenticated admins', function () {
+it('also injects meta pixel for authenticated admins so testing works', function () {
     PlatformSetting::query()->updateOrCreate(
         ['key' => LandingSettingsService::META_PIXEL_ID_KEY],
         ['value' => '806373635894978'],
@@ -89,7 +89,8 @@ it('does not inject meta pixel for authenticated admins', function () {
     $admin = createMarketingAdmin();
 
     $this->actingAs($admin)
-        ->get(route('marketingSettings.index'))
+        ->get('/')
         ->assertOk()
-        ->assertDontSee('connect.facebook.net/en_US/fbevents.js', false);
+        ->assertSee('connect.facebook.net/en_US/fbevents.js', false)
+        ->assertSee('806373635894978', false);
 });

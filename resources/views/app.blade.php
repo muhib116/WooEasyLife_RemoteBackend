@@ -166,7 +166,7 @@
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead
 
-    @if (! empty($metaPixelId) && empty($page['props']['auth']['user']))
+    @if (! empty($metaPixelId))
         <!-- Meta Pixel Code -->
         <script>
             !function(f,b,e,v,n,t,s)
@@ -185,7 +185,7 @@
 </head>
 
 <body class="font-sans antialiased">
-    @if (! empty($metaPixelId) && empty($page['props']['auth']['user']))
+    @if (! empty($metaPixelId))
         <noscript><img height="1" width="1" style="display:none"
             src="https://www.facebook.com/tr?id={{ urlencode($metaPixelId) }}&ev=PageView&noscript=1"
             alt=""
