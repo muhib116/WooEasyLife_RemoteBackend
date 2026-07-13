@@ -483,6 +483,19 @@ const previewPath = computed(() => {
     return slug ? `/blog/${slug}` : '/blog/…';
 });
 
+const absolutePublicUrl = (path) => {
+    if (!path) {
+        return null;
+    }
+    if (/^https?:\/\//i.test(path)) {
+        return path;
+    }
+    if (typeof window !== 'undefined' && window.location?.origin) {
+        return `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
+    }
+    return path;
+};
+
 const viewPostUrl = computed(() => {
     if (form.status !== 'published') {
         return null;
@@ -491,7 +504,8 @@ const viewPostUrl = computed(() => {
     if (!slug || isPlaceholderSlug(slug) || !isSeoSlug(slug)) {
         return null;
     }
-    return form.public_path || previewPath.value;
+    // Prefer same-origin absolute URL so View always hits the public site (not a relative admin path).
+    return absolutePublicUrl(form.public_url || form.public_path || previewPath.value);
 });
 
 const viewPostLabel = computed(() => viewPostUrl.value || previewPath.value);

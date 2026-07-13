@@ -76,8 +76,17 @@ class BlogPost extends Model
 
     public function publicUrl(): string
     {
-        // Prefer named route so APP_URL / forceScheme stay consistent.
-        return route('blog.show', ['slug' => $this->slug], absolute: true);
+        // Admin "View post" should open the host the admin is on (avoids bad APP_URL → localhost).
+        $request = request();
+        if ($request && filled($request->getHost())) {
+            return $request->getSchemeAndHttpHost().$this->publicPath();
+        }
+
+        try {
+            return route('blog.show', ['slug' => $this->slug], absolute: true);
+        } catch (\Throwable) {
+            return url($this->publicPath());
+        }
     }
 
     public function seoTitle(): string
