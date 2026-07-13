@@ -75,7 +75,10 @@ class BlogService
     {
         $raw = File::get($path);
 
-        if (! preg_match('/\A---\s*\R(.*?)\R---\s*\R?(.*)\z/s', $raw, $matches)) {
+        // Use \n (not \R) and the /u flag. Without /u, PCRE's \R treats raw byte
+        // 0x85 as NEL and splits inside Bengali UTF-8 sequences (e.g. অ = E0 A6 85),
+        // which truncates titles and breaks Inertia's JSON page payload.
+        if (! preg_match('/\A---\s*\n(.*?)\n---\s*\n?(.*)\z/su', $raw, $matches)) {
             return null;
         }
 
@@ -110,7 +113,7 @@ class BlogService
     {
         $meta = [];
 
-        foreach (preg_split('/\R/', $yamlLike) ?: [] as $line) {
+        foreach (preg_split('/\n/u', $yamlLike) ?: [] as $line) {
             $line = trim($line);
             if ($line === '' || ! str_contains($line, ':')) {
                 continue;
