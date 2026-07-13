@@ -86,6 +86,7 @@ class BlogPostController extends Controller
                 'og_image_url' => $this->publicImageUrl($blogPost->og_image),
                 'robots' => $blogPost->robots,
                 'author_name' => $blogPost->author_name,
+                'faqs_json' => $blogPost->faqs_json ?? [],
                 'body_html' => $blogPost->body_html,
                 'published_at' => optional($blogPost->published_at)?->format('Y-m-d\TH:i'),
                 'public_url' => $blogPost->isPublished() ? $blogPost->publicUrl() : null,
@@ -155,6 +156,9 @@ class BlogPostController extends Controller
             'og_image' => ['nullable', 'string', 'max:2048'],
             'robots' => ['nullable', 'string', 'max:64'],
             'author_name' => ['nullable', 'string', 'max:120'],
+            'faqs_json' => ['nullable', 'array', 'max:8'],
+            'faqs_json.*.q' => ['required_with:faqs_json', 'string', 'max:200'],
+            'faqs_json.*.a' => ['required_with:faqs_json', 'string', 'max:500'],
             'body_html' => ['required', 'string', 'max:200000'],
             'published_at' => ['nullable', 'date'],
         ], [
@@ -207,9 +211,32 @@ class BlogPostController extends Controller
             'og_image' => $this->normalizeOgImage($validated['og_image'] ?? null),
             'robots' => $validated['robots'] ?? 'index,follow',
             'author_name' => $validated['author_name'] ?? null,
+            'faqs_json' => $this->normalizeFaqs($validated['faqs_json'] ?? null),
             'body_html' => BlogHtmlSanitizer::sanitize($validated['body_html']),
             'published_at' => $publishedAt,
         ];
+    }
+
+    /**
+     * @return list<array{q: string, a: string}>|null
+     */
+    private function normalizeFaqs(mixed $faqs): ?array
+    {
+        if (! is_array($faqs) || $faqs === []) {
+            return null;
+        }
+
+        $normalized = collect($faqs)
+            ->filter(fn ($row) => is_array($row) && filled($row['q'] ?? null) && filled($row['a'] ?? null))
+            ->map(fn (array $row) => [
+                'q' => \Illuminate\Support\Str::limit(trim((string) $row['q']), 200, ''),
+                'a' => \Illuminate\Support\Str::limit(trim((string) $row['a']), 500, ''),
+            ])
+            ->take(8)
+            ->values()
+            ->all();
+
+        return $normalized === [] ? null : $normalized;
     }
 
     /**

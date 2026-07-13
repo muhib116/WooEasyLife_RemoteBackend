@@ -31,6 +31,12 @@ return [
 
     'meta_pixel_id' => env('LANDING_META_PIXEL_ID'),
 
+    'openai_api_key' => env('OPENAI_API_KEY'),
+
+    'openai_blog_model' => env('OPENAI_BLOG_MODEL', 'gpt-4o-mini'),
+
+    'openai_image_model' => env('OPENAI_IMAGE_MODEL', 'gpt-image-1'),
+
     'subscription_wizard' => [
         'title' => 'সাবস্ক্রিপশন কিনুন',
         'support_hint' => 'কোনো ধাপ বুঝতে সমস্যা? WhatsApp-এ সরাসরি সাহায্য নিন।',

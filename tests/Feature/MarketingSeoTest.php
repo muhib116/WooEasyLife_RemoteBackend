@@ -140,7 +140,10 @@ class MarketingSeoTest extends TestCase
     public function test_blog_and_courier_intent_pages(): void
     {
         $this->get('/blog')->assertOk();
-        $this->get('/blog/fake-order-komano')->assertOk();
+        $post = $this->get('/blog/fake-order-komano');
+        $post->assertOk();
+        $post->assertSee('BlogPosting', false);
+        $post->assertSee('"@type":"Person"', false);
         $this->get('/blog/ki-vabe-fake-order-atkabo')->assertOk();
         $this->get('/pathao-fraud-check')->assertOk();
         $this->get('/steadfast-fraud-check')->assertOk();

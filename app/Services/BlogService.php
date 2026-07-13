@@ -192,14 +192,20 @@ class BlogService
             'description' => $post->seoDescription(),
             'meta_title' => $post->meta_title,
             'date' => optional($post->published_at)->toDateString() ?? '',
+            'date_published' => optional($post->published_at)?->toAtomString(),
+            'date_modified' => optional($post->updated_at)?->toAtomString(),
             'slug' => $post->slug,
             'locale' => $post->locale,
             'body' => $post->body_html,
+            'html' => $post->body_html,
             'path' => null,
             'source' => 'database',
             'format' => 'html',
             'og_image' => $ogImage,
             'robots' => $post->robots,
+            'author_name' => $post->author_name ?: config('blog_ai.author_name'),
+            'focus_keyword' => $post->focus_keyword,
+            'faqs' => is_array($post->faqs_json) ? $post->faqs_json : [],
         ];
     }
 

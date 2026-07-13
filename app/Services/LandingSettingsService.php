@@ -27,6 +27,34 @@ class LandingSettingsService
 
     public const META_PIXEL_ID_KEY = 'landing.meta_pixel_id';
 
+    public const OPENAI_API_KEY_KEY = 'landing.openai_api_key';
+
+    public const OPENAI_BLOG_MODEL_KEY = 'landing.openai_blog_model';
+
+    public const OPENAI_IMAGE_MODEL_KEY = 'landing.openai_image_model';
+
+    /**
+     * @var list<string>
+     */
+    public const BLOG_MODELS = [
+        'gpt-4o',
+        'gpt-4o-mini',
+        'gpt-4.1',
+        'gpt-4.1-mini',
+        'gpt-4.1-nano',
+        'o3-mini',
+        'o4-mini',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    public const IMAGE_MODELS = [
+        'gpt-image-1',
+        'dall-e-3',
+        'dall-e-2',
+    ];
+
     /**
      * @return array<string, mixed>
      */
@@ -53,6 +81,14 @@ class LandingSettingsService
             'admin_phone_source' => $this->sourceWithConfig(self::ADMIN_PHONE_KEY, 'landing.helpline_phone'),
             'meta_pixel_id' => $this->metaPixelId(),
             'meta_pixel_id_source' => $this->sourceWithConfig(self::META_PIXEL_ID_KEY, 'landing.meta_pixel_id'),
+            'openai_api_key' => $this->openaiApiKey(),
+            'openai_blog_model' => $this->openaiBlogModel(),
+            'openai_image_model' => $this->openaiImageModel(),
+            'openai_api_key_source' => $this->sourceWithConfig(self::OPENAI_API_KEY_KEY, 'landing.openai_api_key'),
+            'openai_blog_model_source' => $this->sourceWithConfig(self::OPENAI_BLOG_MODEL_KEY, 'landing.openai_blog_model'),
+            'openai_image_model_source' => $this->sourceWithConfig(self::OPENAI_IMAGE_MODEL_KEY, 'landing.openai_image_model'),
+            'blog_model_options' => self::BLOG_MODELS,
+            'image_model_options' => self::IMAGE_MODELS,
         ];
     }
 
@@ -112,6 +148,21 @@ class LandingSettingsService
         return $this->resolve(self::META_PIXEL_ID_KEY, config('landing.meta_pixel_id'));
     }
 
+    public function openaiApiKey(): ?string
+    {
+        return $this->resolve(self::OPENAI_API_KEY_KEY, config('landing.openai_api_key'));
+    }
+
+    public function openaiBlogModel(): ?string
+    {
+        return $this->resolve(self::OPENAI_BLOG_MODEL_KEY, config('landing.openai_blog_model'));
+    }
+
+    public function openaiImageModel(): ?string
+    {
+        return $this->resolve(self::OPENAI_IMAGE_MODEL_KEY, config('landing.openai_image_model'));
+    }
+
     /**
      * @return array{meta_pixel_id: string|null, meta_pixel_id_source: string}
      */
@@ -148,6 +199,9 @@ class LandingSettingsService
             'admin_email' => self::ADMIN_EMAIL_KEY,
             'admin_phone' => self::ADMIN_PHONE_KEY,
             'meta_pixel_id' => self::META_PIXEL_ID_KEY,
+            'openai_api_key' => self::OPENAI_API_KEY_KEY,
+            'openai_blog_model' => self::OPENAI_BLOG_MODEL_KEY,
+            'openai_image_model' => self::OPENAI_IMAGE_MODEL_KEY,
         ] as $field => $key) {
             if (array_key_exists($field, $data)) {
                 $this->put($key, $this->normalizeText($data[$field] ?? null));

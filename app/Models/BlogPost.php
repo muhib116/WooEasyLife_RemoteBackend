@@ -28,6 +28,7 @@ class BlogPost extends Model
         'og_image',
         'robots',
         'author_name',
+        'faqs_json',
         'body_html',
         'published_at',
         'created_by',
@@ -38,6 +39,7 @@ class BlogPost extends Model
     {
         return [
             'published_at' => 'datetime',
+            'faqs_json' => 'array',
         ];
     }
 

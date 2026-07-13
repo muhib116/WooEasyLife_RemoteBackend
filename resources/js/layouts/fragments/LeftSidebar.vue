@@ -297,19 +297,25 @@ const allSections: NavSection[] = [
                         icon: "PhMegaphone",
                         permission: "billing.manage",
                     },
-                    {
-                        title: "Landing Settings",
-                        name: "landingSettings.index",
-                        icon: "PhDeviceMobile",
-                        permission: "billing.manage",
-                    },
-                    {
-                        title: "Blog Posts",
-                        name: "blogPosts.index",
-                        icon: "PhNewspaper",
-                        permission: "billing.manage",
-                    },
                 ],
+            },
+            {
+                title: "Landing Settings",
+                name: "landingSettings.index",
+                icon: "PhDeviceMobile",
+                permission: "billing.manage",
+            },
+            {
+                title: "Media Library",
+                name: "mediaLibrary.index",
+                icon: "PhImages",
+                permission: "billing.manage",
+            },
+            {
+                title: "Blog Posts",
+                name: "blogPosts.index",
+                icon: "PhNewspaper",
+                permission: "billing.manage",
             },
             {
                 title: "Subscription Alerts",
@@ -433,9 +439,7 @@ const expandedGroups = reactive<Record<string, boolean>>({
         route().current("packages.*")
             || route().current("orders.*")
             || route().current("packagePayments.*")
-            || route().current("customerNotices.*")
-            || route().current("landingSettings.*")
-            || route().current("blogPosts.*"),
+            || route().current("customerNotices.*"),
     ),
 });
 

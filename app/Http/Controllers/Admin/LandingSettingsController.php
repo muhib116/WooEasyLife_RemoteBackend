@@ -32,6 +32,9 @@ class LandingSettingsController extends Controller
             'admin_whatsapp',
             'admin_email',
             'admin_phone',
+            'openai_api_key',
+            'openai_blog_model',
+            'openai_image_model',
         ];
 
         $merged = [];
@@ -54,6 +57,9 @@ class LandingSettingsController extends Controller
             'admin_whatsapp' => ['nullable', 'string', 'max:32'],
             'admin_email' => ['nullable', 'string', 'max:255', 'email'],
             'admin_phone' => ['nullable', 'string', 'max:32'],
+            'openai_api_key' => ['nullable', 'string', 'max:512'],
+            'openai_blog_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::BLOG_MODELS)],
+            'openai_image_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::IMAGE_MODELS)],
         ]);
 
         $this->landingSettings->update($validated);

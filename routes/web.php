@@ -13,9 +13,11 @@ use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\BlogPostController;
+use App\Http\Controllers\Admin\BlogAiController;
 use App\Http\Controllers\Admin\CustomerNoticeController;
 use App\Http\Controllers\Admin\LandingSettingsController;
 use App\Http\Controllers\Admin\MarketingSettingsController;
+use App\Http\Controllers\Admin\MediaLibraryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DatabaseMigrationController;
 use App\Http\Controllers\Admin\DeveloperController;
@@ -474,6 +476,19 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::delete('/{customerNotice}', [CustomerNoticeController::class, 'destroy'])->name('destroy');
     });
 
+    Route::group([
+        'as' => 'mediaLibrary.',
+        'prefix' => 'media-library',
+        'middleware' => 'permission:billing.manage',
+    ], function () {
+        Route::get('/', [MediaLibraryController::class, 'index'])->name('index');
+        Route::get('/list', [MediaLibraryController::class, 'list'])->name('list');
+        Route::post('/', [MediaLibraryController::class, 'store'])->name('store');
+        Route::post('/fetch-url', [MediaLibraryController::class, 'fetchUrl'])->name('fetchUrl');
+        Route::put('/{mediaItem}', [MediaLibraryController::class, 'update'])->name('update');
+        Route::delete('/{mediaItem}', [MediaLibraryController::class, 'destroy'])->name('destroy');
+    });
+
     Route::group(['as' => 'blogPosts.', 'prefix' => 'blog-posts'], function () {
         Route::get('/', [BlogPostController::class, 'index'])->name('index');
         Route::get('/create', [BlogPostController::class, 'create'])->name('create');
@@ -482,6 +497,23 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/{blogPost}/edit', [BlogPostController::class, 'edit'])->name('edit');
         Route::put('/{blogPost}', [BlogPostController::class, 'update'])->name('update');
         Route::delete('/{blogPost}', [BlogPostController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::group([
+        'as' => 'blogAi.',
+        'prefix' => 'blog-posts/ai',
+        'middleware' => ['permission:billing.manage', 'throttle:30,1'],
+    ], function () {
+        Route::get('/options', [BlogAiController::class, 'options'])->name('options');
+        Route::post('/suggest-keywords', [BlogAiController::class, 'suggestKeywords'])->name('suggestKeywords');
+        Route::post('/sessions', [BlogAiController::class, 'store'])->name('store');
+        Route::get('/sessions/{blogAiSession}', [BlogAiController::class, 'show'])->name('show');
+        Route::post('/sessions/{blogAiSession}/recover', [BlogAiController::class, 'recover'])->name('recover');
+        Route::post('/sessions/{blogAiSession}/research', [BlogAiController::class, 'research'])->name('research');
+        Route::post('/sessions/{blogAiSession}/hooks', [BlogAiController::class, 'hooks'])->name('hooks');
+        Route::post('/sessions/{blogAiSession}/outline', [BlogAiController::class, 'outline'])->name('outline');
+        Route::post('/sessions/{blogAiSession}/draft', [BlogAiController::class, 'draft'])->name('draft');
+        Route::post('/sessions/{blogAiSession}/image', [BlogAiController::class, 'image'])->name('image');
     });
 
     Route::group([

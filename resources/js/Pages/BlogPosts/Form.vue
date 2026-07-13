@@ -11,6 +11,13 @@
                 <template #actions>
                     <div class="flex flex-wrap gap-2">
                         <Button
+                            v-if="!isEdit && canUseBlogAi"
+                            label="AI Write"
+                            icon="pi pi-sparkles"
+                            size="small"
+                            @click="aiWizardOpen = true"
+                        />
+                        <Button
                             label="Back"
                             icon="pi pi-arrow-left"
                             severity="secondary"
@@ -103,6 +110,17 @@
                                 <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                                     Body <span class="text-rose-500">*</span>
                                 </label>
+                                <div class="mb-2">
+                                    <Button
+                                        type="button"
+                                        label="Insert from media library"
+                                        icon="pi pi-images"
+                                        size="small"
+                                        severity="secondary"
+                                        outlined
+                                        @click="openMediaPicker('body')"
+                                    />
+                                </div>
                                 <BlogClassic
                                     v-model="form.body_html"
                                     :upload-url="route('blogPosts.uploadImage')"
@@ -249,11 +267,21 @@
                                 <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                                     OG image URL / path
                                 </label>
-                                <InputText
-                                    v-model="form.og_image"
-                                    class="w-full"
-                                    placeholder="https://… or storage path"
-                                />
+                                <div class="flex flex-wrap gap-2">
+                                    <InputText
+                                        v-model="form.og_image"
+                                        class="min-w-[10rem] flex-1"
+                                        placeholder="https://… or storage path"
+                                    />
+                                    <Button
+                                        type="button"
+                                        label="Media"
+                                        icon="pi pi-images"
+                                        severity="secondary"
+                                        outlined
+                                        @click="openMediaPicker('og')"
+                                    />
+                                </div>
                                 <img
                                     v-if="ogPreview"
                                     :src="ogPreview"
@@ -306,16 +334,30 @@
                 </div>
             </form>
         </div>
+
+        <MediaPickerDialog
+            v-model:visible="mediaPickerOpen"
+            :title="mediaPickerMode === 'og' ? 'Choose OG image' : 'Insert media into body'"
+            @select="onMediaSelected"
+        />
+
+        <BlogAiWizard
+            v-model:visible="aiWizardOpen"
+            @apply="applyAiDraft"
+        />
     </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Pages/Users/fragments/PageHeader.vue';
 import PageCard from '@/Pages/Users/fragments/PageCard.vue';
+import MediaPickerDialog from '@/components/media/MediaPickerDialog.vue';
+import BlogAiWizard from '@/components/blog/BlogAiWizard.vue';
 import { BlogClassic } from '@/plugins/form/editor';
+import { usePermissions } from '@/composables/usePermissions';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
@@ -334,7 +376,62 @@ const props = defineProps({
     },
 });
 
+const { can } = usePermissions();
+const canUseBlogAi = computed(() => can('billing.manage'));
 const isEdit = computed(() => Boolean(props.post?.id));
+const mediaPickerOpen = ref(false);
+const mediaPickerMode = ref('og');
+const aiWizardOpen = ref(false);
+
+const openMediaPicker = (mode) => {
+    mediaPickerMode.value = mode;
+    mediaPickerOpen.value = true;
+};
+
+const escapeAttr = (value) =>
+    String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;');
+
+const onMediaSelected = (media) => {
+    if (!media?.url) {
+        return;
+    }
+
+    if (mediaPickerMode.value === 'og') {
+        form.og_image = media.url;
+        return;
+    }
+
+    const alt = escapeAttr(media.alt || media.title || '');
+    const html = `<p><img src="${escapeAttr(media.url)}" alt="${alt}"></p>`;
+    form.body_html = `${form.body_html || ''}${html}`;
+};
+
+const applyAiDraft = (draft) => {
+    if (!draft) {
+        return;
+    }
+
+    form.title = draft.title || form.title;
+    form.slug = draft.slug || form.slug;
+    form.locale = draft.locale || 'bn';
+    form.status = 'draft';
+    form.focus_keyword = draft.focus_keyword || form.focus_keyword;
+    form.meta_title = draft.meta_title || form.meta_title;
+    form.meta_description = draft.meta_description || form.meta_description;
+    form.excerpt = draft.excerpt || form.excerpt;
+    form.author_name = draft.author_name || form.author_name || 'Muhibbullah Ansary';
+    form.robots = draft.robots || 'index,follow';
+    form.body_html = draft.body_html || form.body_html;
+    if (draft.og_image) {
+        form.og_image = draft.og_image;
+    }
+    if (Array.isArray(draft.faqs)) {
+        form.faqs_json = draft.faqs;
+    }
+};
 
 const form = useForm({
     title: props.post?.title ?? '',
@@ -347,7 +444,8 @@ const form = useForm({
     focus_keyword: props.post?.focus_keyword ?? '',
     og_image: props.post?.og_image ?? '',
     robots: props.post?.robots ?? 'index,follow',
-    author_name: props.post?.author_name ?? 'WooEasyLife',
+    author_name: props.post?.author_name ?? 'Muhibbullah Ansary',
+    faqs_json: props.post?.faqs_json ?? [],
     body_html: props.post?.body_html ?? '',
     published_at: props.post?.published_at ?? '',
     public_url: props.post?.public_url ?? null,

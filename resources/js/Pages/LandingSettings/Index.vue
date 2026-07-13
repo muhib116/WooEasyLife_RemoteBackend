@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <PageHeader
                 title="Landing Settings"
-                description="Download links, payment numbers, and support contacts for the public landing page"
+                description="Download links, payment numbers, support contacts, and OpenAI settings for the public landing page"
                 icon="PhDeviceMobile"
                 icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
                 icon-class="text-sky-600 dark:text-sky-400"
@@ -37,38 +37,136 @@
 
             <PageCard :title="activeCard.title" :description="activeCard.description">
                 <form class="space-y-5" @submit.prevent="submit">
-                    <div
-                        v-for="field in activeFields"
-                        :key="field.key"
-                    >
-                        <label
-                            :for="field.key"
-                            class="text-sm font-semibold text-gray-800 dark:text-white/90"
-                        >
-                            {{ field.label }}
-                        </label>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            {{ field.hint }}
-                            <span
-                                v-if="sourceOf(field) !== 'none'"
-                                class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                    <template v-if="activeTab === 'ai'">
+                        <div>
+                            <label
+                                for="openai_api_key"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
                             >
-                                active: {{ sourceOf(field) }}
-                            </span>
-                        </p>
-                        <InputText
-                            :id="field.key"
-                            v-model="form[field.key]"
-                            class="mt-2 w-full"
-                            :placeholder="field.placeholder"
-                        />
-                        <p
-                            v-if="form.errors[field.key]"
-                            class="mt-1 text-xs text-rose-500"
+                                OpenAI API key
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Used for AI blog post writing and image generation. Leave blank to clear and fall back to .env.
+                                <span
+                                    v-if="settings.openai_api_key_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.openai_api_key_source }}
+                                </span>
+                            </p>
+                            <InputText
+                                id="openai_api_key"
+                                v-model="form.openai_api_key"
+                                type="password"
+                                class="mt-2 w-full"
+                                placeholder="sk-..."
+                                autocomplete="off"
+                            />
+                            <p
+                                v-if="form.errors.openai_api_key"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.openai_api_key }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="openai_blog_model"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Blog post model
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Chat model used to draft blog titles, body, and SEO fields.
+                                <span
+                                    v-if="settings.openai_blog_model_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.openai_blog_model_source }}
+                                </span>
+                            </p>
+                            <Select
+                                id="openai_blog_model"
+                                v-model="form.openai_blog_model"
+                                :options="blogModelOptions"
+                                class="mt-2 w-full"
+                                placeholder="Select a blog model"
+                            />
+                            <p
+                                v-if="form.errors.openai_blog_model"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.openai_blog_model }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="openai_image_model"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Image generation model
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Model used to generate featured / OG images for blog posts.
+                                <span
+                                    v-if="settings.openai_image_model_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.openai_image_model_source }}
+                                </span>
+                            </p>
+                            <Select
+                                id="openai_image_model"
+                                v-model="form.openai_image_model"
+                                :options="imageModelOptions"
+                                class="mt-2 w-full"
+                                placeholder="Select an image model"
+                            />
+                            <p
+                                v-if="form.errors.openai_image_model"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.openai_image_model }}
+                            </p>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div
+                            v-for="field in activeFields"
+                            :key="field.key"
                         >
-                            {{ form.errors[field.key] }}
-                        </p>
-                    </div>
+                            <label
+                                :for="field.key"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                {{ field.label }}
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {{ field.hint }}
+                                <span
+                                    v-if="sourceOf(field) !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ sourceOf(field) }}
+                                </span>
+                            </p>
+                            <InputText
+                                :id="field.key"
+                                v-model="form[field.key]"
+                                class="mt-2 w-full"
+                                :placeholder="field.placeholder"
+                            />
+                            <p
+                                v-if="form.errors[field.key]"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors[field.key] }}
+                            </p>
+                        </div>
+                    </template>
 
                     <div class="flex flex-wrap gap-2">
                         <Button
@@ -94,6 +192,7 @@ import type { IconName } from "@/types";
 import { useForm } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
+import Select from "primevue/select";
 import { computed, ref, watch } from "vue";
 
 type LandingSettings = {
@@ -115,6 +214,14 @@ type LandingSettings = {
     admin_whatsapp_source: string;
     admin_email_source: string;
     admin_phone_source: string;
+    openai_api_key: string | null;
+    openai_blog_model: string | null;
+    openai_image_model: string | null;
+    openai_api_key_source: string;
+    openai_blog_model_source: string;
+    openai_image_model_source: string;
+    blog_model_options: string[];
+    image_model_options: string[];
 };
 
 type FormFields = {
@@ -127,6 +234,9 @@ type FormFields = {
     admin_whatsapp: string;
     admin_email: string;
     admin_phone: string;
+    openai_api_key: string;
+    openai_blog_model: string;
+    openai_image_model: string;
 };
 
 type SettingsField = {
@@ -137,7 +247,7 @@ type SettingsField = {
     placeholder: string;
 };
 
-type TabValue = "downloads" | "payments" | "contact";
+type TabValue = "downloads" | "payments" | "contact" | "ai";
 
 const props = defineProps<{
     settings: LandingSettings;
@@ -147,6 +257,7 @@ const tabOptions: { label: string; value: TabValue; icon: IconName }[] = [
     { label: "Downloads", value: "downloads", icon: "PhDownloadSimple" },
     { label: "Payments", value: "payments", icon: "PhCreditCard" },
     { label: "Contact", value: "contact", icon: "PhPhone" },
+    { label: "AI", value: "ai", icon: "PhOpenAiLogo" },
 ];
 
 const activeTab = ref<TabValue>("downloads");
@@ -223,6 +334,9 @@ const contactFields: SettingsField[] = [
     },
 ];
 
+const blogModelOptions = props.settings.blog_model_options ?? [];
+const imageModelOptions = props.settings.image_model_options ?? [];
+
 const form = useForm({
     app_download_url: props.settings.app_download_url ?? "",
     play_store_url: props.settings.play_store_url ?? "",
@@ -236,6 +350,9 @@ const form = useForm({
     admin_whatsapp: props.settings.admin_whatsapp ?? "",
     admin_email: props.settings.admin_email ?? "",
     admin_phone: props.settings.admin_phone ?? "",
+    openai_api_key: props.settings.openai_api_key ?? "",
+    openai_blog_model: props.settings.openai_blog_model ?? "gpt-4o-mini",
+    openai_image_model: props.settings.openai_image_model ?? "gpt-image-1",
 });
 
 const activeFields = computed(() => {
@@ -265,6 +382,13 @@ const activeCard = computed(() => {
         };
     }
 
+    if (activeTab.value === "ai") {
+        return {
+            title: "OpenAI",
+            description: "API key and models for blog post generation, including featured image creation.",
+        };
+    }
+
     return {
         title: "Download links",
         description: "Saved values override defaults. Leave blank to clear the database value and fall back to env / auto plugin URL.",
@@ -284,6 +408,10 @@ const tabForError = (field: string): TabValue | null => {
 
     if (["admin_whatsapp", "admin_email", "admin_phone"].includes(field)) {
         return "contact";
+    }
+
+    if (["openai_api_key", "openai_blog_model", "openai_image_model"].includes(field)) {
+        return "ai";
     }
 
     return null;

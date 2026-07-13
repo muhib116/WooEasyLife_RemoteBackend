@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Str;
+
 class SeoMetaService
 {
     public function __construct(
@@ -54,7 +56,7 @@ class SeoMetaService
             'breadcrumbs' => $this->normalizeBreadcrumbs($breadcrumbs),
             'prerender_h1' => $prerenderH1,
             'prerender_lead' => $prerenderLead,
-            'json_ld' => $this->buildJsonLd($title, $description, $canonical, $faqs, $breadcrumbs, $ogImage),
+            'json_ld' => $this->buildJsonLd($title, $description, $canonical, $faqs, $breadcrumbs, $ogImage, $config),
         ];
     }
 
@@ -174,6 +176,7 @@ class SeoMetaService
         array $faqs,
         array $breadcrumbs,
         string $ogImage,
+        array $config = [],
     ): array {
         $org = config('seo.organization', []);
         $siteName = (string) config('seo.site_name', 'WooEasyLife');
@@ -230,6 +233,38 @@ class SeoMetaService
                 'image' => $ogImage,
             ],
         ];
+
+        if (($config['og_type'] ?? null) === 'article') {
+            $authorName = (string) ($config['author_name'] ?? config('blog_ai.author_name', 'Muhibbullah Ansary'));
+            $authorRole = (string) ($config['author_role'] ?? config('blog_ai.author_role', 'Developer of WooEasyLife'));
+            $personId = $this->absoluteUrl('/').'#person-'.Str::slug($authorName);
+
+            $graphs[] = [
+                '@type' => 'Person',
+                '@id' => $personId,
+                'name' => $authorName,
+                'jobTitle' => $authorRole,
+                'worksFor' => ['@id' => $this->absoluteUrl('/').'#organization'],
+            ];
+
+            $graphs[] = [
+                '@type' => 'BlogPosting',
+                '@id' => $canonical.'#article',
+                'headline' => $title,
+                'description' => $description,
+                'image' => [$ogImage],
+                'datePublished' => $config['date_published'] ?? null,
+                'dateModified' => $config['date_modified'] ?? ($config['date_published'] ?? null),
+                'author' => ['@id' => $personId],
+                'publisher' => ['@id' => $this->absoluteUrl('/').'#organization'],
+                'mainEntityOfPage' => ['@id' => $canonical.'#webpage'],
+                'inLanguage' => (string) ($config['html_lang'] ?? 'bn-BD'),
+            ];
+
+            if (filled($config['focus_keyword'] ?? null)) {
+                $graphs[array_key_last($graphs)]['keywords'] = $config['focus_keyword'];
+            }
+        }
 
         if (count($breadcrumbs) > 1) {
             $graphs[] = [
