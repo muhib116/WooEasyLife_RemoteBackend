@@ -37,7 +37,10 @@ class BlogPostController extends Controller
                 'focus_keyword' => $post->focus_keyword,
                 'published_at' => optional($post->published_at)?->toIso8601String(),
                 'updated_at' => optional($post->updated_at)?->toIso8601String(),
-                'public_url' => $post->isPublished() ? $post->publicUrl() : null,
+                'public_path' => filled($post->slug) ? $post->publicPath() : null,
+                'public_url' => ($post->status === 'published' && filled($post->slug))
+                    ? $post->publicUrl()
+                    : null,
             ]);
 
         return Inertia::render('BlogPosts/Index', [
@@ -89,7 +92,10 @@ class BlogPostController extends Controller
                 'faqs_json' => $blogPost->faqs_json ?? [],
                 'body_html' => $blogPost->body_html,
                 'published_at' => optional($blogPost->published_at)?->format('Y-m-d\TH:i'),
-                'public_url' => $blogPost->isPublished() ? $blogPost->publicUrl() : null,
+                'public_path' => filled($blogPost->slug) ? $blogPost->publicPath() : null,
+                'public_url' => ($blogPost->status === 'published' && filled($blogPost->slug))
+                    ? $blogPost->publicUrl()
+                    : null,
             ],
             'options' => $this->options(),
         ]);
@@ -190,6 +196,9 @@ class BlogPostController extends Controller
         }
 
         $publishedAt = $validated['published_at'] ?? null;
+        if ($publishedAt === '') {
+            $publishedAt = null;
+        }
 
         if ($status === 'published' && empty($publishedAt)) {
             $publishedAt = now();

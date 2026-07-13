@@ -103,6 +103,34 @@ class AdminBlogPostTest extends TestCase
         $this->get('/blog/secret-draft')->assertNotFound();
     }
 
+    public function test_published_post_without_published_at_is_public(): void
+    {
+        $admin = $this->adminUser();
+
+        $post = BlogPost::create([
+            'title' => 'Live Without Timestamp',
+            'slug' => 'live-without-timestamp',
+            'locale' => 'bn',
+            'status' => 'published',
+            'published_at' => null,
+            'meta_description' => 'Published CMS post missing published_at still loads publicly.',
+            'body_html' => '<p>Visible on /blog</p>',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->get('/blog/live-without-timestamp')->assertOk();
+
+        $this->actingAs($admin)
+            ->get(route('blogPosts.edit', $post))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('BlogPosts/Form')
+                ->where('post.public_path', '/blog/live-without-timestamp')
+                ->where('post.public_url', fn ($url) => is_string($url) && str_contains($url, '/blog/live-without-timestamp'))
+            );
+    }
+
     public function test_markdown_posts_still_load(): void
     {
         $this->get('/blog')->assertOk();

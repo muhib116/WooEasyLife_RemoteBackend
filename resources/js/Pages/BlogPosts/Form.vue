@@ -26,20 +26,43 @@
                             @click="router.visit(route('blogPosts.index'))"
                         />
                         <Button
-                            v-if="form.public_url"
-                            label="View live"
+                            v-if="viewPostUrl"
+                            label="View post"
                             icon="pi pi-external-link"
                             severity="secondary"
                             outlined
                             size="small"
                             as="a"
-                            :href="form.public_url"
+                            :href="viewPostUrl"
                             target="_blank"
                             rel="noopener"
                         />
                     </div>
                 </template>
             </PageHeader>
+
+            <div
+                v-if="form.slug"
+                class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+                <span class="font-semibold text-slate-700 dark:text-slate-200">View post:</span>
+                <a
+                    v-if="viewPostUrl"
+                    :href="viewPostUrl"
+                    target="_blank"
+                    rel="noopener"
+                    class="ml-2 break-all font-mono text-amber-700 underline underline-offset-2 hover:text-amber-600 dark:text-amber-400"
+                >
+                    {{ viewPostLabel }}
+                </a>
+                <span
+                    v-else
+                    class="ml-2 break-all font-mono text-slate-500 dark:text-slate-400"
+                >
+                    {{ previewPath }}
+                    <span class="ml-1 text-xs not-italic text-amber-600 dark:text-amber-400">(publish to make live)</span>
+                </span>
+            </div>
 
             <form class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]" @submit.prevent="submit">
                 <div class="space-y-5">
@@ -73,7 +96,7 @@
                                         @blur="normalizeSlugField"
                                     />
                                     <small class="mt-1 block text-gray-500">
-                                        Public URL: /blog/{{ form.slug || '…' }}
+                                        Public path: <span class="font-mono">{{ previewPath }}</span>
                                         — use Latin letters only (required to publish).
                                     </small>
                                     <small v-if="banglaNeedsSlug" class="mt-1 block text-amber-600 dark:text-amber-400">
@@ -449,7 +472,29 @@ const form = useForm({
     body_html: props.post?.body_html ?? '',
     published_at: props.post?.published_at ?? '',
     public_url: props.post?.public_url ?? null,
+    public_path: props.post?.public_path ?? null,
 });
+
+const isSeoSlug = (value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value || '');
+const isPlaceholderSlug = (value) => /^post-[a-z0-9]{6}$/i.test(value || '');
+
+const previewPath = computed(() => {
+    const slug = String(form.slug || '').trim();
+    return slug ? `/blog/${slug}` : '/blog/…';
+});
+
+const viewPostUrl = computed(() => {
+    if (form.status !== 'published') {
+        return null;
+    }
+    const slug = String(form.slug || '').trim();
+    if (!slug || isPlaceholderSlug(slug) || !isSeoSlug(slug)) {
+        return null;
+    }
+    return form.public_path || previewPath.value;
+});
+
+const viewPostLabel = computed(() => viewPostUrl.value || previewPath.value);
 
 const localeOptions = computed(() =>
     (props.options.locales || ['bn', 'en']).map((value) => ({
@@ -480,9 +525,6 @@ const serpUrl = computed(
 const serpDescription = computed(
     () => form.meta_description || form.excerpt || 'Meta description will appear here.',
 );
-
-const isSeoSlug = (value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value || '');
-const isPlaceholderSlug = (value) => /^post-[a-z0-9]{6}$/i.test(value || '');
 
 const banglaNeedsSlug = computed(() => {
     const titleHasLatin = /[a-z0-9]/i.test(form.title || '');
@@ -581,7 +623,7 @@ const submit = () => {
     }
 
     form.transform((data) => {
-        const { public_url, ...payload } = data;
+        const { public_url, public_path, ...payload } = data;
         return payload;
     });
 

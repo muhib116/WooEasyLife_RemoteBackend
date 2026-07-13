@@ -118,15 +118,15 @@
                                     @click="router.visit(route('blogPosts.edit', data.id))"
                                 />
                                 <Button
-                                    v-if="data.public_url"
+                                    v-if="data.public_url || data.public_path"
                                     icon="pi pi-external-link"
                                     severity="secondary"
                                     text
                                     rounded
                                     size="small"
-                                    v-tooltip.top="'View live'"
+                                    v-tooltip.top="'View post'"
                                     as="a"
-                                    :href="data.public_url"
+                                    :href="data.public_url || data.public_path"
                                     target="_blank"
                                     rel="noopener"
                                 />

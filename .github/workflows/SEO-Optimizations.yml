@@ -38,3 +38,18 @@ jobs:
           port: 21
           username: ${{ secrets.APP_FTP_USERNAME }}
           password: ${{ secrets.APP_FTP_PASSWORD }}
+
+      - name: 🧹 Migrate + clear Laravel caches on server
+        continue-on-error: true
+        env:
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          if [ -z "${DEPLOY_SECRET}" ] || [ -z "${APP_URL}" ]; then
+            echo "Skipping /deploy — set DEPLOY_SECRET and APP_URL repo secrets to enable migrations/cache clear."
+            exit 0
+          fi
+          curl -fsS -X POST "${APP_URL%/}/deploy" \
+            -H "X-Deploy-Secret: ${DEPLOY_SECRET}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json"

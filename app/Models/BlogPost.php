@@ -61,20 +61,35 @@ class BlogPost extends Model
     {
         return $query
             ->where('status', 'published')
-            ->whereNotNull('published_at')
-            ->where('published_at', '<=', now());
+            ->where(function (Builder $q) {
+                // Null published_at = treat as live (legacy / incomplete CMS rows).
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', now());
+            });
     }
 
     public function isPublished(): bool
     {
-        return $this->status === 'published'
-            && $this->published_at !== null
-            && $this->published_at->lte(now());
+        if ($this->status !== 'published') {
+            return false;
+        }
+
+        if ($this->published_at === null) {
+            return true;
+        }
+
+        return $this->published_at->lte(now());
+    }
+
+    public function publicPath(): string
+    {
+        return '/blog/'.$this->slug;
     }
 
     public function publicUrl(): string
     {
-        return url('/blog/'.$this->slug);
+        // Prefer named route so APP_URL / forceScheme stay consistent.
+        return route('blog.show', ['slug' => $this->slug], absolute: true);
     }
 
     public function seoTitle(): string
