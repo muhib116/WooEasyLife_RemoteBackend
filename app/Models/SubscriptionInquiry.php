@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SubscriptionInquiry extends Model
 {
+    /** Contact form captured; payment / final submit not finished. */
+    public const STATUS_DRAFT = 'draft';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_CONTACTED = 'contacted';
@@ -16,7 +19,7 @@ class SubscriptionInquiry extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
-    /** Statuses that block a new purchase request. */
+    /** Statuses that block a new purchase request (draft leads do not block). */
     public const OPEN_STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_CONTACTED,

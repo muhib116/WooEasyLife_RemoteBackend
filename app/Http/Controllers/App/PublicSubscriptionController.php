@@ -28,6 +28,52 @@ class PublicSubscriptionController extends Controller
         );
     }
 
+    /**
+     * Soft-capture a pricing lead after the contact form is filled,
+     * even when DNS / payment is incomplete.
+     */
+    public function saveLead(Request $request, PublicSubscriptionService $subscriptionService)
+    {
+        $validated = $request->validate([
+            'package_hub_id' => 'required|integer',
+            'website_url' => 'required|string|max:255',
+            'customer_name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'contact_number' => ['required', 'string', 'max:30', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+            'whatsapp_number' => ['required', 'string', 'max:30', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+            'address' => 'nullable|string|max:1000',
+            'order_limit' => 'nullable|integer|min:1',
+            'total_amount' => 'nullable|numeric|min:0',
+            'dns_verified' => 'nullable|boolean',
+        ], [
+            'package_hub_id.required' => 'প্ল্যান নির্বাচন করা হয়নি।',
+            'website_url.required' => 'ওয়েবসাইট URL বা ডোমেইন লিখুন।',
+            'customer_name.required' => 'আপনার নাম লিখুন।',
+            'email.required' => 'ইমেইল ঠিকানা লিখুন।',
+            'email.email' => 'সঠিক ইমেইল ঠিকানা লিখুন।',
+            'contact_number.required' => 'যোগাযোগের মোবাইল নম্বর লিখুন।',
+            'contact_number.regex' => 'সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন (যেমন: 017XXXXXXXX)।',
+            'whatsapp_number.required' => 'WhatsApp নম্বর লিখুন।',
+            'whatsapp_number.regex' => 'সঠিক বাংলাদেশি WhatsApp নম্বর লিখুন (যেমন: 017XXXXXXXX)।',
+        ]);
+
+        try {
+            $result = $subscriptionService->saveLead($request->user(), $validated);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'created' => $result['created'],
+            'inquiry_id' => $result['inquiry']->id,
+            'status' => $result['inquiry']->status,
+        ]);
+    }
+
     public function store(
         Request $request,
         PublicSubscriptionService $subscriptionService,

@@ -568,6 +568,103 @@ class PublicSubscriptionTest extends TestCase
         ]);
     }
 
+    public function test_contact_lead_is_saved_without_dns(): void
+    {
+        Mail::fake();
+        $this->mockDnsFail();
+
+        $plan = $this->createPaidPlan();
+
+        $response = $this->postJson(route('pricing.subscribe.lead'), [
+            'package_hub_id' => $plan->id,
+            'website_url' => 'https://leadshop.test',
+            'customer_name' => 'Lead Buyer',
+            'email' => 'lead@example.com',
+            'contact_number' => '01700000099',
+            'whatsapp_number' => '01700000099',
+            'address' => 'Dhaka',
+            'dns_verified' => false,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('created', true)
+            ->assertJsonPath('status', 'draft');
+
+        $this->assertDatabaseHas('subscription_inquiries', [
+            'email' => 'lead@example.com',
+            'domain' => 'leadshop.test',
+            'status' => 'draft',
+            'source' => 'landing_pricing_lead',
+        ]);
+
+        Mail::assertSent(SubscriptionInquiryAdminMail::class, function (SubscriptionInquiryAdminMail $mail) {
+            return $mail->inquiry->status === 'draft'
+                && $mail->hasTo('admin@example.com');
+        });
+    }
+
+    public function test_lead_upserts_same_contact_and_upgrades_on_submit(): void
+    {
+        Mail::fake();
+
+        $plan = $this->createPaidPlan();
+
+        $this->postJson(route('pricing.subscribe.lead'), [
+            'package_hub_id' => $plan->id,
+            'website_url' => 'https://leadshop.com',
+            'customer_name' => 'Lead Buyer',
+            'email' => 'lead@example.com',
+            'contact_number' => '01700000099',
+            'whatsapp_number' => '01700000099',
+            'dns_verified' => false,
+        ])->assertOk();
+
+        $this->assertSame(1, SubscriptionInquiry::count());
+
+        $this->postJson(route('pricing.subscribe.lead'), [
+            'package_hub_id' => $plan->id,
+            'website_url' => 'https://leadshop.com',
+            'customer_name' => 'Lead Buyer Updated',
+            'email' => 'lead@example.com',
+            'contact_number' => '01700000099',
+            'whatsapp_number' => '01700000099',
+            'address' => 'Chittagong',
+            'dns_verified' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('created', false);
+
+        $this->assertSame(1, SubscriptionInquiry::count());
+        $this->assertDatabaseHas('subscription_inquiries', [
+            'email' => 'lead@example.com',
+            'customer_name' => 'Lead Buyer Updated',
+            'address' => 'Chittagong',
+            'status' => 'draft',
+        ]);
+
+        $this->post(route('pricing.subscribe'), [
+            'package_hub_id' => $plan->id,
+            'website_url' => 'https://leadshop.com',
+            'customer_name' => 'Lead Buyer Updated',
+            'email' => 'lead@example.com',
+            'contact_number' => '01700000099',
+            'whatsapp_number' => '01700000099',
+            'address' => 'Chittagong',
+            'transaction_method' => 'Bkash',
+            'transaction_id' => 'TXNLEAD1',
+            'account_number' => '01700000099',
+        ])->assertRedirect();
+
+        $this->assertSame(1, SubscriptionInquiry::count());
+        $this->assertDatabaseHas('subscription_inquiries', [
+            'email' => 'lead@example.com',
+            'status' => 'pending',
+            'source' => 'landing_pricing',
+            'transaction_id' => 'TXNLEAD1',
+        ]);
+    }
+
     private function createPaidPlan(): PackageHub
     {
         return PackageHub::create([

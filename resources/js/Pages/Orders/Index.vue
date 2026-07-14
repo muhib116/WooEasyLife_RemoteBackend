@@ -145,13 +145,19 @@
                                     @click="router.visit(route('orders.show', data.id))"
                                 />
                                 <TableActionButton
-                                    v-if="data.status === 'pending'"
+                                    v-if="data.status === 'pending' || data.status === 'draft'"
                                     action="contact"
                                     tooltip="Mark contacted"
                                     @click="confirmStatusUpdate(data, 'contacted')"
                                 />
                                 <TableActionButton
-                                    v-if="data.status !== 'converted'"
+                                    v-if="data.status === 'draft'"
+                                    action="approve"
+                                    tooltip="Promote to pending"
+                                    @click="confirmStatusUpdate(data, 'pending')"
+                                />
+                                <TableActionButton
+                                    v-if="data.status !== 'converted' && data.status !== 'draft'"
                                     action="approve"
                                     tooltip="Convert to merchant"
                                     @click="openConvertDialog(data)"
@@ -508,6 +514,7 @@ defineOptions({
 const props = defineProps<{
     orders: any[];
     counts: {
+        draft: number;
         pending: number;
         contacted: number;
         converted: number;
@@ -558,6 +565,7 @@ const successNotifySummary = computed(() => {
     return `Merchant notified via ${parts.join(" + ")}.`;
 });
 const statCards = [
+    { label: "Leads", value: "draft", countKey: "draft", icon: "PhUserPlus", accentClass: "bg-violet-500" },
     { label: "Pending", value: "pending", countKey: "pending", icon: "PhHourglass", accentClass: "bg-amber-500" },
     { label: "Contacted", value: "contacted", countKey: "contacted", icon: "PhChatCircle", accentClass: "bg-sky-500" },
     { label: "Converted", value: "converted", countKey: "converted", icon: "PhCheckCircle", accentClass: "bg-emerald-500" },
@@ -565,6 +573,7 @@ const statCards = [
 ] as const;
 
 const statusOptions = [
+    { label: "Leads", value: "draft" },
     { label: "Pending", value: "pending" },
     { label: "Contacted", value: "contacted" },
     { label: "Converted", value: "converted" },
@@ -581,6 +590,10 @@ const emptyDescription = computed(() => {
         return "Landing subscription requests will appear here when customers submit the pricing wizard.";
     }
 
+    if (activeStatus.value === "draft") {
+        return "No incomplete pricing leads yet. Leads appear when someone fills the contact form before finishing payment.";
+    }
+
     return `No ${activeStatus.value} landing orders right now.`;
 });
 
@@ -589,6 +602,7 @@ const statusVariant = (status: string) => {
     if (status === "pending") return "warning";
     if (status === "contacted") return "info";
     if (status === "rejected") return "danger";
+    if (status === "draft") return "neutral";
     return "neutral";
 };
 
@@ -618,6 +632,11 @@ const applySearch = () => {
 };
 
 const statusConfirmCopy: Record<string, { header: string; message: string; acceptLabel: string; severity?: "danger" }> = {
+    pending: {
+        header: "Promote lead to pending?",
+        message: "Use this when the lead is ready for payment review (like a normal order).",
+        acceptLabel: "Promote to pending",
+    },
     contacted: {
         header: "Mark as contacted?",
         message: "Use this when you have reached the customer by phone or WhatsApp.",

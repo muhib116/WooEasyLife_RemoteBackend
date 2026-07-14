@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onUnmounted } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import Dialog from 'primevue/dialog';
@@ -232,6 +232,8 @@ const resetWizard = () => {
     };
     form.clearErrors();
     form.reset();
+    lastLeadFingerprint = null;
+    leadInquiryId.value = null;
     applyPlanToForm(props.plan);
 };
 
@@ -318,7 +320,7 @@ const showValidationToast = (payload) => {
 
 watch(
     () => [props.visible, props.plan?.id],
-    ([open]) => {
+    ([open], [wasOpen] = [false]) => {
         if (open) {
             if (props.pendingInquiry?.id) {
                 emit('update:visible', false);
@@ -338,6 +340,9 @@ watch(
             trackInitiateCheckout(planContentParams(props.plan));
             trackWizardStep('opened', props.plan);
         } else {
+            if (wasOpen) {
+                flushLeadSaveOnExit();
+            }
             toast.removeGroup(TOAST_GROUP);
             document.body.style.overflow = '';
         }
@@ -406,8 +411,6 @@ watch(
     },
 );
 
-const close = () => emit('update:visible', false);
-
 const currentStepLabel = computed(() => activeSteps.value[currentStep.value]?.label ?? '');
 
 const websiteUrlError = computed(() => domainFieldError.value || form.errors.website_url || null);
@@ -459,6 +462,154 @@ const contactFieldsValid = computed(() => Boolean(
     && !addressFieldError.value
     && !domainFieldError.value
 ));
+
+/** Contact identity is enough to capture a sales lead (DNS optional). */
+const leadFieldsReady = computed(() => {
+    const domain = normalizeDomainInput(form.website_url);
+
+    return Boolean(
+        form.package_hub_id
+        && domain
+        && isValidDomainHost(domain)
+        && form.customer_name?.trim()
+        && isValidEmail(form.email)
+        && isValidBdMobile(form.contact_number)
+        && isValidBdMobile(form.whatsapp_number)
+    );
+});
+
+let leadSaveTimer = null;
+let leadSaveSerial = 0;
+let lastLeadFingerprint = null;
+const leadInquiryId = ref(null);
+
+const leadFingerprint = () => [
+    form.package_hub_id,
+    normalizeDomainInput(form.website_url) || '',
+    form.customer_name?.trim() || '',
+    String(form.email || '').trim().toLowerCase(),
+    form.contact_number || '',
+    form.whatsapp_number || '',
+    form.address?.trim() || '',
+    isDomainDnsVerified.value ? '1' : '0',
+].join('|');
+
+const saveLeadDraft = async ({ force = false } = {}) => {
+    if (!leadFieldsReady.value || !props.plan?.id) {
+        return null;
+    }
+
+    applyPlanToForm(props.plan);
+
+    const fingerprint = leadFingerprint();
+    if (!force && fingerprint === lastLeadFingerprint) {
+        return leadInquiryId.value;
+    }
+
+    const serial = ++leadSaveSerial;
+
+    try {
+        const { data } = await axios.post(route('pricing.subscribe.lead'), {
+            package_hub_id: Number(form.package_hub_id || props.plan?.id),
+            website_url: form.website_url,
+            customer_name: form.customer_name,
+            email: form.email,
+            contact_number: form.contact_number,
+            whatsapp_number: form.whatsapp_number,
+            address: form.address || '',
+            order_limit: form.order_limit,
+            total_amount: form.total_amount,
+            dns_verified: isDomainDnsVerified.value,
+        });
+
+        if (serial !== leadSaveSerial) {
+            return null;
+        }
+
+        if (data?.ok) {
+            lastLeadFingerprint = fingerprint;
+            leadInquiryId.value = data.inquiry_id ?? leadInquiryId.value;
+            return data.inquiry_id;
+        }
+    } catch {
+        // Soft-save must never block the wizard.
+    }
+
+    return null;
+};
+
+const scheduleLeadSave = () => {
+    if (leadSaveTimer) {
+        clearTimeout(leadSaveTimer);
+    }
+
+    leadSaveTimer = setTimeout(() => {
+        void saveLeadDraft();
+    }, 1200);
+};
+
+/** Cancel debounce and persist immediately (modal close / tab hide). */
+const flushLeadSaveOnExit = () => {
+    if (leadSaveTimer) {
+        clearTimeout(leadSaveTimer);
+        leadSaveTimer = null;
+    }
+
+    if (!leadFieldsReady.value || submittedSummary.value) {
+        return;
+    }
+
+    // force:false — skip if this exact payload was already saved (avoids triple POST on close).
+    void saveLeadDraft({ force: false });
+};
+
+const close = () => {
+    flushLeadSaveOnExit();
+    emit('update:visible', false);
+};
+
+const onWizardVisibleUpdate = (value) => {
+    if (!value) {
+        flushLeadSaveOnExit();
+    }
+    emit('update:visible', value);
+};
+
+const onDocumentVisibilityChange = () => {
+    if (document.visibilityState === 'hidden' && props.visible) {
+        flushLeadSaveOnExit();
+    }
+};
+
+const onPageHide = () => {
+    if (props.visible) {
+        flushLeadSaveOnExit();
+    }
+};
+
+watch(leadFieldsReady, (ready) => {
+    if (ready && props.visible) {
+        scheduleLeadSave();
+    }
+});
+
+watch(
+    () => [
+        form.website_url,
+        form.customer_name,
+        form.email,
+        form.contact_number,
+        form.whatsapp_number,
+        form.address,
+        form.package_hub_id,
+        isDomainDnsVerified.value,
+    ],
+    () => {
+        if (leadFieldsReady.value && props.visible) {
+            scheduleLeadSave();
+        }
+    },
+);
 
 const markTouched = (field) => {
     touched.value[field] = true;
@@ -994,6 +1145,11 @@ const nextStep = async () => {
         runLocalContactValidation(true);
         await runServerValidation();
 
+        // Capture lead even when DNS blocks the next step.
+        if (leadFieldsReady.value) {
+            void saveLeadDraft({ force: true });
+        }
+
         if (!props.domains.length && !isDomainDnsVerified.value) {
             if (!domainFieldError.value) {
                 domainFieldError.value = 'DNS A রেকর্ড পাওয়া যায়নি। লাইভ ডোমেইন ছাড়া এগোতে পারবেন না।';
@@ -1017,7 +1173,7 @@ const nextStep = async () => {
         currentStep.value += 1;
 
         if (leavingStep === 'contact') {
-            // Mid-funnel only — Lead fires after successful server submit.
+            void saveLeadDraft({ force: true });
             trackWizardStep('contact_complete', props.plan);
         }
 
@@ -1132,12 +1288,23 @@ const stepProgressClass = (index) => {
     return 'bg-white/15';
 };
 
+onMounted(() => {
+    document.addEventListener('visibilitychange', onDocumentVisibilityChange);
+    window.addEventListener('pagehide', onPageHide);
+});
+
 onUnmounted(() => {
+    document.removeEventListener('visibilitychange', onDocumentVisibilityChange);
+    window.removeEventListener('pagehide', onPageHide);
+    flushLeadSaveOnExit();
     if (localValidateTimer) {
         clearTimeout(localValidateTimer);
     }
     if (serverValidateTimer) {
         clearTimeout(serverValidateTimer);
+    }
+    if (leadSaveTimer) {
+        clearTimeout(leadSaveTimer);
     }
     document.body.style.overflow = '';
 });
@@ -1199,7 +1366,7 @@ onUnmounted(() => {
         class="marketing-dialog"
         :style="{ width: 'min(100vw - 1rem, 44rem)' }"
         :header="copy.title"
-        @update:visible="(value) => emit('update:visible', value)"
+        @update:visible="onWizardVisibleUpdate"
     >
         <div class="subscription-wizard-body">
             <div class="subscription-wizard-scroll">

@@ -25,6 +25,103 @@ class PublicSubscriptionService
     }
 
     /**
+     * Soft-save contact-step lead without requiring DNS or payment.
+     * Drafts never block a later full purchase (not in OPEN_STATUSES).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{inquiry: SubscriptionInquiry, created: bool}
+     */
+    public function saveLead(?User $user, array $data): array
+    {
+        $domain = $this->domainNormalizer->normalize($data['website_url'] ?? $data['domain'] ?? null);
+        if (! $domain) {
+            throw ValidationException::withMessages([
+                'website_url' => 'সঠিক ওয়েবসাইট URL বা ডোমেইন লিখুন (যেমন: myshop.com)।',
+            ]);
+        }
+
+        $packageHub = PackageHub::query()
+            ->where('id', $data['package_hub_id'] ?? null)
+            ->where('is_active', true)
+            ->whereNotNull('package_duration')
+            ->first();
+
+        if (! $packageHub) {
+            throw ValidationException::withMessages([
+                'package_hub_id' => 'নির্বাচিত প্যাকেজটি এখন উপলব্ধ নেই।',
+            ]);
+        }
+
+        // If they already have an open purchase request, keep that — do not clone a draft.
+        $open = $this->findOpenDuplicate($user, $domain, $data);
+        if ($open) {
+            return [
+                'inquiry' => $open,
+                'created' => false,
+            ];
+        }
+
+        $dnsOk = array_key_exists('dns_verified', $data)
+            ? (bool) $data['dns_verified']
+            : $this->domainNormalizer->resolvesPublicly($domain);
+
+        $orderLimit = (int) ($data['order_limit'] ?? $packageHub->order_rate_token ?? 0);
+        $totalAmount = isset($data['total_amount'])
+            ? round((float) $data['total_amount'], 2)
+            : round((float) ($packageHub->package_price ?? 0), 2);
+
+        if ($this->planResolver->isCatalog($packageHub)) {
+            $orderLimit = max(1, (int) ($packageHub->order_rate_token ?? $orderLimit));
+            $totalAmount = round((float) ($packageHub->package_price ?? 0), 2);
+        }
+
+        $note = $this->buildStructuredNote($data, $domain);
+        if (! $dnsOk) {
+            $note .= "\nLead note: DNS A record not verified yet (captured before live domain check).";
+        }
+
+        $draft = $this->findDraftForContact($user, $data);
+
+        $payload = [
+            'user_id' => $user?->id ?? $draft?->user_id,
+            'package_hub_id' => $packageHub->id,
+            'domain' => $domain,
+            'customer_name' => $data['customer_name'] ?? null,
+            'email' => $data['email'],
+            'contact_number' => $this->normalizePhone($data['contact_number'] ?? null) ?? $data['contact_number'],
+            'whatsapp_number' => $this->normalizePhone($data['whatsapp_number'] ?? null) ?? $data['whatsapp_number'],
+            'address' => filled($data['address'] ?? null) ? $data['address'] : ($draft?->address ?: ''),
+            'order_limit' => $orderLimit,
+            'total_amount' => $totalAmount,
+            'transaction_charge' => 0,
+            'transaction_method' => null,
+            'transaction_id' => null,
+            'account_number' => null,
+            'note' => $note,
+            'status' => SubscriptionInquiry::STATUS_DRAFT,
+            'source' => 'landing_pricing_lead',
+        ];
+
+        if ($draft) {
+            $draft->fill($payload);
+            $draft->save();
+
+            return [
+                'inquiry' => $draft->fresh()->load('packageHub:id,title'),
+                'created' => false,
+            ];
+        }
+
+        $inquiry = SubscriptionInquiry::create($payload);
+        $this->notifyAdmin($inquiry->load('packageHub:id,title'));
+
+        return [
+            'inquiry' => $inquiry,
+            'created' => true,
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array{inquiry: SubscriptionInquiry, payment_request_id: int|null}
      */
@@ -70,6 +167,7 @@ class PublicSubscriptionService
         }
 
         $note = $this->buildStructuredNote($data, $domain);
+        $draft = $this->findDraftForContact($user, $data);
 
         $result = DB::transaction(function () use (
             $user,
@@ -80,6 +178,7 @@ class PublicSubscriptionService
             $totalAmount,
             $note,
             $canUsePortalPayment,
+            $draft,
         ) {
             $paymentRequestId = null;
 
@@ -99,8 +198,8 @@ class PublicSubscriptionService
                 $paymentRequestId = $paymentRequest->id;
             }
 
-            $inquiry = SubscriptionInquiry::create([
-                'user_id' => $user?->id,
+            $payload = [
+                'user_id' => $user?->id ?? $draft?->user_id,
                 'package_hub_id' => $packageHub->id,
                 'domain' => $domain,
                 'customer_name' => $data['customer_name'] ?? null,
@@ -118,7 +217,15 @@ class PublicSubscriptionService
                 'status' => SubscriptionInquiry::STATUS_PENDING,
                 'source' => 'landing_pricing',
                 'package_payment_request_id' => $paymentRequestId,
-            ]);
+            ];
+
+            if ($draft) {
+                $draft->fill($payload);
+                $draft->save();
+                $inquiry = $draft->fresh();
+            } else {
+                $inquiry = SubscriptionInquiry::create($payload);
+            }
 
             return [
                 'inquiry' => $inquiry->load('packageHub:id,title'),
@@ -343,6 +450,44 @@ class PublicSubscriptionService
 
             return count(array_intersect($phones, $storedPhones)) > 0;
         });
+    }
+
+    /**
+     * Latest unfinished lead for the same visitor (email / phone), any domain.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function findDraftForContact(?User $user, array $data): ?SubscriptionInquiry
+    {
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        $phones = array_values(array_unique(array_filter([
+            $this->normalizePhone($data['contact_number'] ?? null),
+            $this->normalizePhone($data['whatsapp_number'] ?? null),
+        ])));
+
+        if ($email === '' && $phones === [] && ! $user) {
+            return null;
+        }
+
+        return SubscriptionInquiry::query()
+            ->where('status', SubscriptionInquiry::STATUS_DRAFT)
+            ->where(function ($query) use ($email, $phones, $user) {
+                if ($email !== '') {
+                    $query->orWhereRaw('LOWER(email) = ?', [$email]);
+                }
+
+                foreach ($phones as $phone) {
+                    $query->orWhere('contact_number', $phone)
+                        ->orWhere('whatsapp_number', $phone);
+                }
+
+                if ($user) {
+                    $query->orWhere('user_id', $user->id);
+                }
+            })
+            ->with('packageHub:id,title')
+            ->latest('id')
+            ->first();
     }
 
     /**

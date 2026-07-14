@@ -23,9 +23,12 @@ class SubscriptionInquiryAdminMail extends Mailable
     {
         $plan = $this->inquiry->packageHub?->title ?: 'Unknown plan';
         $domain = $this->inquiry->domain ?: 'no-domain';
+        $isLead = $this->inquiry->status === SubscriptionInquiry::STATUS_DRAFT;
 
         return new Envelope(
-            subject: "New subscription request: {$plan} ({$domain})",
+            subject: $isLead
+                ? "New pricing lead (incomplete): {$plan} ({$domain})"
+                : "New subscription request: {$plan} ({$domain})",
         );
     }
 
@@ -36,7 +39,8 @@ class SubscriptionInquiryAdminMail extends Mailable
             with: [
                 'inquiry' => $this->inquiry,
                 'planTitle' => $this->inquiry->packageHub?->title,
-                'adminOrdersUrl' => url('/orders'),
+                'adminOrdersUrl' => url('/orders?status='.$this->inquiry->status),
+                'isLead' => $this->inquiry->status === SubscriptionInquiry::STATUS_DRAFT,
             ],
         );
     }

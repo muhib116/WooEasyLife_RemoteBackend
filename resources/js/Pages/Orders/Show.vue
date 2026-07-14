@@ -163,7 +163,7 @@
                     <PageCard title="Actions">
                         <div class="flex flex-col gap-2">
                             <Button
-                                v-if="order.status === 'pending'"
+                                v-if="order.status === 'pending' || order.status === 'draft'"
                                 label="Mark contacted"
                                 icon="pi pi-phone"
                                 severity="info"
@@ -171,7 +171,15 @@
                                 @click="updateStatus('contacted')"
                             />
                             <Button
-                                v-if="order.status !== 'converted' && order.status !== 'rejected'"
+                                v-if="order.status === 'draft'"
+                                label="Promote to pending"
+                                icon="pi pi-arrow-up"
+                                severity="warning"
+                                outlined
+                                @click="updateStatus('pending')"
+                            />
+                            <Button
+                                v-if="order.status !== 'converted' && order.status !== 'rejected' && order.status !== 'draft'"
                                 label="Convert to merchant"
                                 icon="pi pi-check"
                                 severity="success"
@@ -314,6 +322,7 @@ const statusVariant = (status: string) => {
     if (status === "pending") return "warning";
     if (status === "contacted") return "info";
     if (status === "rejected") return "danger";
+    if (status === "draft") return "neutral";
     return "neutral";
 };
 
@@ -324,16 +333,23 @@ const eventLabel = (type: string) => {
 };
 
 const updateStatus = (status: string) => {
+    const isReject = status === "rejected";
+    const isPromote = status === "pending";
     confirm.require({
-        header: status === "rejected" ? "Reject this order?" : "Mark as contacted?",
-        message:
-            status === "rejected"
-                ? "The inquiry will be marked rejected."
+        header: isReject
+            ? "Reject this order?"
+            : isPromote
+                ? "Promote lead to pending?"
+                : "Mark as contacted?",
+        message: isReject
+            ? "The inquiry will be marked rejected."
+            : isPromote
+                ? "Use this when the lead is ready for payment review."
                 : "Use this when you have reached the customer.",
         rejectProps: { label: "Cancel", severity: "secondary", outlined: true },
         acceptProps: {
-            label: status === "rejected" ? "Reject" : "Mark contacted",
-            severity: status === "rejected" ? "danger" : "success",
+            label: isReject ? "Reject" : isPromote ? "Promote" : "Mark contacted",
+            severity: isReject ? "danger" : isPromote ? "warning" : "success",
         },
         accept: () => {
             router.post(route("orders.updateStatus", { order: props.order.id }), { status });

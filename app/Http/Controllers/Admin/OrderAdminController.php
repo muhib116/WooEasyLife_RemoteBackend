@@ -47,6 +47,7 @@ class OrderAdminController extends Controller
             ->get();
 
         $counts = [
+            'draft' => SubscriptionInquiry::where('status', SubscriptionInquiry::STATUS_DRAFT)->count(),
             'pending' => SubscriptionInquiry::where('status', 'pending')->count(),
             'contacted' => SubscriptionInquiry::where('status', 'contacted')->count(),
             'converted' => SubscriptionInquiry::where('status', 'converted')->count(),
@@ -64,7 +65,7 @@ class OrderAdminController extends Controller
     public function updateStatus(Request $request, SubscriptionInquiry $order)
     {
         $validated = $request->validate([
-            'status' => 'required|in:pending,contacted,converted,rejected',
+            'status' => 'required|in:draft,pending,contacted,converted,rejected',
         ]);
 
         if ($validated['status'] === 'converted') {
@@ -72,6 +73,22 @@ class OrderAdminController extends Controller
                 'error',
                 'Use “Convert to merchant” to provision the account. Status-only convert is disabled.',
             );
+        }
+
+        // Draft leads become a pending order when sales starts payment follow-up,
+        // or contacted/rejected for CRM flow.
+        if (
+            $order->status === SubscriptionInquiry::STATUS_DRAFT
+            && $validated['status'] === SubscriptionInquiry::STATUS_PENDING
+        ) {
+            $order->update([
+                'status' => SubscriptionInquiry::STATUS_PENDING,
+                'source' => $order->source === 'landing_pricing_lead'
+                    ? 'landing_pricing'
+                    : $order->source,
+            ]);
+
+            return back()->with('success', 'Lead promoted to pending order.');
         }
 
         $order->update(['status' => $validated['status']]);

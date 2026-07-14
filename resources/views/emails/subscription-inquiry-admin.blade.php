@@ -1,7 +1,13 @@
 <x-mail::message>
+@if (!empty($isLead))
+# New pricing lead (incomplete)
+
+A customer filled the contact step but has not finished payment yet. Follow up while intent is fresh.
+@else
 # New subscription request
 
 A customer submitted a subscription purchase request from the pricing page.
+@endif
 
 **Inquiry #{{ $inquiry->id }}** · {{ $inquiry->created_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') }}
 
