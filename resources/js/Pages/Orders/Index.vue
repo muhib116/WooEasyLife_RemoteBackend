@@ -565,7 +565,7 @@ const successNotifySummary = computed(() => {
     return `Merchant notified via ${parts.join(" + ")}.`;
 });
 const statCards = [
-    { label: "Leads", value: "draft", countKey: "draft", icon: "PhUserPlus", accentClass: "bg-violet-500" },
+    { label: "Draft", value: "draft", countKey: "draft", icon: "PhUserPlus", accentClass: "bg-violet-500" },
     { label: "Pending", value: "pending", countKey: "pending", icon: "PhHourglass", accentClass: "bg-amber-500" },
     { label: "Contacted", value: "contacted", countKey: "contacted", icon: "PhChatCircle", accentClass: "bg-sky-500" },
     { label: "Converted", value: "converted", countKey: "converted", icon: "PhCheckCircle", accentClass: "bg-emerald-500" },
@@ -573,7 +573,7 @@ const statCards = [
 ] as const;
 
 const statusOptions = [
-    { label: "Leads", value: "draft" },
+    { label: "Draft", value: "draft" },
     { label: "Pending", value: "pending" },
     { label: "Contacted", value: "contacted" },
     { label: "Converted", value: "converted" },
@@ -591,7 +591,7 @@ const emptyDescription = computed(() => {
     }
 
     if (activeStatus.value === "draft") {
-        return "No incomplete pricing leads yet. Leads appear when someone fills the contact form before finishing payment.";
+        return "No draft orders yet. Drafts appear when someone fills the contact form before finishing payment.";
     }
 
     return `No ${activeStatus.value} landing orders right now.`;
