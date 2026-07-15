@@ -214,7 +214,7 @@ const GROUP_ORDER = ["meta", "cache", "blog", "subscriptions", "domains", "ops"]
 
 const GROUP_DESCRIPTIONS: Record<string, string> = {
     meta: "One-click batch runner for every included maintenance command.",
-    cache: "Framework caches, storage symlink, queue restart, and related housekeeping.",
+    cache: "Framework caches, storage symlink, queue restart, migrations, and related housekeeping.",
     blog: "SEO reports and AI learning jobs for the blog writer.",
     subscriptions: "Expiry, alert scan, and merchant notifications.",
     domains: "Domain audits, normalization, and website backfill.",

@@ -37,6 +37,14 @@ class SystemMaintenanceController extends Controller
             'is_batch' => true,
             'include_in_run_all' => false,
         ],
+        'migrate' => [
+            'label' => 'Run pending migrations',
+            'description' => 'php artisan migrate --force — apply pending DB schema (run this before blog learning)',
+            'commands' => [
+                ['migrate', ['--force' => true]],
+            ],
+            'group' => 'cache',
+        ],
         'all' => [
             'label' => 'Clear all caches',
             'description' => 'php artisan optimize:clear (cache, config, route, view, compiled)',
@@ -374,9 +382,6 @@ class SystemMaintenanceController extends Controller
                 continue;
             }
 
-            $output = new BufferedOutput;
-            $exitCode = Artisan::call($name, $params, $output);
-            $body = trim($output->fetch());
             $label = $params === []
                 ? $name
                 : $name.' '.collect($params)->map(function ($value, $key) {
@@ -386,9 +391,19 @@ class SystemMaintenanceController extends Controller
 
                     return $key.'='.$value;
                 })->implode(' ');
-            $lines[] = "[{$label}] ".($body !== '' ? $body : ($exitCode === 0 ? 'ok' : "failed (exit {$exitCode})"));
 
-            if ($exitCode !== 0) {
+            try {
+                $output = new BufferedOutput;
+                $exitCode = Artisan::call($name, $params, $output);
+                $body = trim($output->fetch());
+                $lines[] = "[{$label}] ".($body !== '' ? $body : ($exitCode === 0 ? 'ok' : "failed (exit {$exitCode})"));
+
+                if ($exitCode !== 0) {
+                    $failed = true;
+                    break;
+                }
+            } catch (Throwable $e) {
+                $lines[] = "[{$label}] exception: ".$e->getMessage();
                 $failed = true;
                 break;
             }
