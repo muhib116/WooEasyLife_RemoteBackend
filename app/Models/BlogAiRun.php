@@ -85,9 +85,15 @@ class BlogAiRun extends Model
 
     public function needsReview(): bool
     {
+        $flags = is_array($this->input_json) ? $this->input_json : [];
+
         return $this->status === 'completed_needs_review'
-            || ! empty(($this->input_json['soft_pass'] ?? false))
-            || ! empty(($this->input_json['image_auto_approved'] ?? false));
+            || ! empty($flags['soft_pass'])
+            || ! empty($flags['research_soft_pass'])
+            || ! empty($flags['hooks_soft_pass'])
+            || ! empty($flags['outline_soft_pass'])
+            || ! empty($flags['image_auto_approved'])
+            || ! empty($flags['image_skipped']);
     }
 
     /**

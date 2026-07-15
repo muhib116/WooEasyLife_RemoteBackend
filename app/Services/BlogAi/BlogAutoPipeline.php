@@ -57,12 +57,19 @@ class BlogAutoPipeline
 
             $this->assertNotCancelled($run);
             $this->runResearchLoop($session, $run, $scoreParts);
+            $this->touchSessionBusy($session);
+
             $this->assertNotCancelled($run);
             $this->runHooksLoop($session, $run, $scoreParts);
+            $this->touchSessionBusy($session);
+
             $this->assertNotCancelled($run);
             $this->runOutlineLoop($session, $run, $scoreParts);
+            $this->touchSessionBusy($session);
+
             $this->assertNotCancelled($run);
             $this->runDraftLoop($session, $run, $scoreParts);
+            $this->touchSessionBusy($session);
 
             if (config('blog_ai.image_enabled', true)) {
                 $this->assertNotCancelled($run);
@@ -185,6 +192,8 @@ class BlogAutoPipeline
         $this->beginStep($run, 'research', 'Researching BD keywords + cannibalization…');
         $max = $this->maxRevisions();
         $fix = null;
+        /** @var list<string> $avoidPrimaries */
+        $avoidPrimaries = [];
 
         for ($attempt = 0; $attempt <= $max; $attempt++) {
             $this->bumpRevision($run, 'research', $attempt);
@@ -194,14 +203,36 @@ class BlogAutoPipeline
             }
 
             if ($fix) {
-                $pasted = $this->reseedKeywordsAfterFix($session, $pasted, $fix);
+                $pasted = $this->reseedKeywordsAfterFix(
+                    $session,
+                    $pasted,
+                    $fix.' Avoid these primaries: '.implode(', ', $avoidPrimaries),
+                );
             }
 
             $research = $this->content->researchKeywords(
                 (string) ($session->seed_topic ?? ''),
                 (string) ($session->cluster ?? 'general'),
                 $pasted,
+                $avoidPrimaries,
             );
+
+            if (is_array($research['auto_pivot'] ?? null)) {
+                $run->appendLog([
+                    'step' => 'research',
+                    'event' => 'auto_pivot',
+                    'message' => 'Primary auto-switched to avoid cannibalization: '
+                        .($research['auto_pivot']['from'] ?? '?')
+                        .' → '
+                        .($research['auto_pivot']['to'] ?? '?'),
+                    'attempt' => $attempt,
+                ]);
+                $run->save();
+                $from = trim((string) ($research['auto_pivot']['from'] ?? ''));
+                if ($from !== '' && $from !== '(empty)') {
+                    $avoidPrimaries[] = $from;
+                }
+            }
 
             $session->keywords_json = [
                 'pasted' => $pasted,
@@ -210,6 +241,7 @@ class BlogAutoPipeline
                 'suggestions' => $research['suggestions'],
                 'live_suggestions' => $research['live_suggestions'] ?? [],
                 'cannibalization' => $research['cannibalization'],
+                'auto_pivot' => $research['auto_pivot'] ?? null,
             ];
             $session->addUsage($research['usage']);
             $session->status = 'keywords_ready';
@@ -228,8 +260,34 @@ class BlogAutoPipeline
                 return;
             }
 
+            $failedPrimary = trim((string) ($research['primary'] ?? ''));
+            if ($failedPrimary !== '') {
+                $avoidPrimaries[] = $failedPrimary;
+                $avoidPrimaries = array_values(array_unique($avoidPrimaries));
+            }
+
             $fix = $review['fix_instructions'] ?: 'Pick a stronger non-colliding BD long-tail primary keyword.';
             if ($attempt >= $max) {
+                // Keep moving with a differentiated primary rather than hard-failing the whole Auto run.
+                if (filled($research['primary'])) {
+                    $this->softPassStep(
+                        $run,
+                        $scoreParts,
+                        step: 'research',
+                        scoreKey: 'opportunity',
+                        review: $review,
+                        message: 'Research soft-passed after auto pivots — continue with differentiation. Primary: '.$research['primary'],
+                        flagKey: 'research_soft_pass',
+                    );
+                    $this->markStepPassed($run, 'research', array_merge($review, [
+                        'pass' => true,
+                        'decision' => 'advance',
+                        'notes' => 'Soft-pass: '.$fix,
+                    ]));
+
+                    return;
+                }
+
                 throw ValidationException::withMessages(['ai' => 'Keyword research failed review after revisions: '.$fix]);
             }
 
@@ -238,6 +296,7 @@ class BlogAutoPipeline
                 'event' => 'revising',
                 'message' => $fix,
                 'attempt' => $attempt + 1,
+                'avoided_primaries' => $avoidPrimaries,
             ]);
             $run->save();
         }
@@ -272,11 +331,22 @@ class BlogAutoPipeline
     {
         $this->beginStep($run, 'hooks', 'Generating hooks…');
         $max = $this->maxRevisions();
+        $fix = null;
+        /** @var list<string> $avoidTitles */
+        $avoidTitles = [];
 
         for ($attempt = 0; $attempt <= $max; $attempt++) {
             $this->bumpRevision($run, 'hooks', $attempt);
-            $this->content->generateHooks($session);
+            $this->content->generateHooks($session, $fix, $avoidTitles);
             $session->refresh();
+
+            $avoidTitles = array_values(array_unique(array_merge(
+                $avoidTitles,
+                collect($session->hooks_json ?? [])
+                    ->map(fn ($h) => is_array($h) ? trim((string) ($h['title'] ?? '')) : '')
+                    ->filter()
+                    ->all(),
+            )));
 
             $review = $this->reviewAndLog($session, $run, 'hooks');
             // Hooks contribute lightly into opportunity (selection quality).
@@ -287,34 +357,65 @@ class BlogAutoPipeline
                 throw ValidationException::withMessages(['ai' => $review['fix_instructions'] ?: 'Hooks aborted.']);
             }
             if ($review['pass']) {
-                $selected = $this->autoSelectHooks($session);
-                $session->selected_hook_ids = $selected;
-                $session->saveIfJobCurrent();
-                $run->appendLog([
-                    'step' => 'hooks',
-                    'event' => 'selected',
-                    'message' => 'Auto-selected hooks: '.implode(', ', $selected),
-                    'selected_hook_ids' => $selected,
-                ]);
-                $this->markStepPassed($run, 'hooks', $review);
+                $this->finishHooksStep($session, $run, $review);
 
                 return;
             }
 
+            $fix = $review['fix_instructions']
+                ?: 'Regenerate with clearer unique angles vs existing posts; mix pain/howto/checklist/comparison.';
+
             if ($attempt >= $max) {
+                $hooks = collect($session->hooks_json ?? [])->filter(fn ($h) => is_array($h) && filled($h['title'] ?? null));
+                if ($hooks->count() >= 3) {
+                    $this->softPassStep(
+                        $run,
+                        $scoreParts,
+                        step: 'hooks',
+                        scoreKey: 'opportunity',
+                        review: $review,
+                        message: 'Hooks soft-passed after differentiation retries — continue.',
+                        flagKey: 'hooks_soft_pass',
+                    );
+                    $this->finishHooksStep($session, $run, array_merge($review, [
+                        'pass' => true,
+                        'decision' => 'advance',
+                        'notes' => 'Soft-pass: '.$fix,
+                    ]));
+
+                    return;
+                }
+
                 throw ValidationException::withMessages([
-                    'ai' => 'Hooks failed review: '.($review['fix_instructions'] ?: 'weak hooks'),
+                    'ai' => 'Hooks failed review: '.$fix,
                 ]);
             }
 
             $run->appendLog([
                 'step' => 'hooks',
                 'event' => 'revising',
-                'message' => $review['fix_instructions'] ?: 'Regenerating hooks',
+                'message' => $fix,
                 'attempt' => $attempt + 1,
             ]);
             $run->save();
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $review
+     */
+    private function finishHooksStep(BlogAiSession $session, BlogAiRun $run, array $review): void
+    {
+        $selected = $this->autoSelectHooks($session);
+        $session->selected_hook_ids = $selected;
+        $session->saveIfJobCurrent();
+        $run->appendLog([
+            'step' => 'hooks',
+            'event' => 'selected',
+            'message' => 'Auto-selected hooks: '.implode(', ', $selected),
+            'selected_hook_ids' => $selected,
+        ]);
+        $this->markStepPassed($run, 'hooks', $review);
     }
 
     /**
@@ -369,6 +470,27 @@ class BlogAutoPipeline
 
             $fix = $review['fix_instructions'] ?: 'Expand outline with differentiation H2, 4+ sections, 3+ FAQs, 2+ internal links.';
             if ($attempt >= $max) {
+                $outline = is_array($session->outline_json) ? $session->outline_json : [];
+                $sections = $outline['sections'] ?? [];
+                if (is_array($sections) && count($sections) >= 3) {
+                    $this->softPassStep(
+                        $run,
+                        $scoreParts,
+                        step: 'outline',
+                        scoreKey: 'outline',
+                        review: $review,
+                        message: 'Outline soft-passed with usable sections — draft will deepen FAQs/links.',
+                        flagKey: 'outline_soft_pass',
+                    );
+                    $this->markStepPassed($run, 'outline', array_merge($review, [
+                        'pass' => true,
+                        'decision' => 'advance',
+                        'notes' => 'Soft-pass: '.$fix,
+                    ]));
+
+                    return;
+                }
+
                 throw ValidationException::withMessages(['ai' => 'Outline failed review: '.$fix]);
             }
 
@@ -420,23 +542,21 @@ class BlogAutoPipeline
             if ($attempt >= $max) {
                 // Soft complete for human editing — not a clean pass.
                 if (! empty($session->draft_json['title']) && ! empty($session->draft_json['body_html'])) {
-                    $cap = max(0, min(100, (int) config('blog_ai.auto.soft_pass_score_cap', 59)));
-                    $scoreParts['seo'] = min((int) ($scoreParts['seo'] ?? $cap), $cap);
-                    $scoreParts['content'] = min((int) ($review['score'] ?? $cap), $cap);
-                    $this->syncScore($run, $scoreParts);
-
-                    $flags = is_array($run->input_json) ? $run->input_json : [];
-                    $flags['soft_pass'] = true;
-                    $flags['soft_pass_failures'] = $review['failures'];
-                    $run->input_json = $flags;
-                    $run->appendLog([
-                        'step' => 'draft',
-                        'event' => 'soft_pass',
-                        'message' => 'Draft kept after max revisions — needs human SEO polish before publish. Score capped at '.$cap.'.',
-                        'failures' => $review['failures'],
-                        'score_cap' => $cap,
-                    ]);
-                    $run->save();
+                    $this->softPassStep(
+                        $run,
+                        $scoreParts,
+                        step: 'draft',
+                        scoreKey: 'content',
+                        review: $review,
+                        message: 'Draft kept after max revisions — needs human SEO polish before publish.',
+                        flagKey: 'soft_pass',
+                        extraScoreKeys: ['seo'],
+                    );
+                    $this->markStepPassed($run, 'draft', array_merge($review, [
+                        'pass' => true,
+                        'decision' => 'advance',
+                        'notes' => 'Soft-pass: '.$fix,
+                    ]));
 
                     return;
                 }
@@ -460,8 +580,30 @@ class BlogAutoPipeline
     private function runImageStep(BlogAiSession $session, BlogAiRun $run, array &$scoreParts): void
     {
         $this->beginStep($run, 'image', 'Generating + reviewing cover image…');
-        $this->imagePipeline->run($session);
-        $session->refresh();
+
+        try {
+            $this->imagePipeline->run($session);
+            $session->refresh();
+        } catch (Throwable $e) {
+            Log::warning('Blog AI auto image step failed — continuing without cover', [
+                'run_id' => $run->id,
+                'message' => $e->getMessage(),
+            ]);
+            $flags = is_array($run->input_json) ? $run->input_json : [];
+            $flags['image_skipped'] = true;
+            $flags['image_skip_reason'] = Str::limit($e->getMessage(), 300, '');
+            $run->input_json = $flags;
+            $scoreParts['image'] = 40;
+            $this->syncScore($run, $scoreParts);
+            $run->appendLog([
+                'step' => 'image',
+                'event' => 'skipped',
+                'message' => 'Cover generation failed; draft will still be created. Add an OG image before publish. ('.$e->getMessage().')',
+            ]);
+            $run->save();
+
+            return;
+        }
 
         $imageAutoApproved = false;
         if ($session->status === 'image_needs_fix' && config('blog_ai.auto.auto_approve_image_on_fail', true)) {
@@ -498,40 +640,59 @@ class BlogAutoPipeline
         $computed = $this->syncScore($run, $scoreParts);
 
         $flags = is_array($run->input_json) ? $run->input_json : [];
-        $softPass = ! empty($flags['soft_pass']);
+        $softPass = $this->hasAnySoftPass($flags);
         $imageAutoApproved = ! empty($flags['image_auto_approved']);
+        $imageSkipped = ! empty($flags['image_skipped']);
         $cap = max(0, min(100, (int) config('blog_ai.auto.soft_pass_score_cap', 59)));
 
-        if ($softPass) {
+        if ($softPass || $imageSkipped) {
             $computed['score'] = min($computed['score'], $cap);
             $run->live_score = $computed['score'];
             $run->score_breakdown = $computed['breakdown'];
         }
 
         $draft = is_array($session->draft_json) ? $session->draft_json : [];
+        if (empty($draft['title']) || empty($draft['body_html'])) {
+            throw ValidationException::withMessages([
+                'ai' => 'Auto pipeline finished without a usable draft body. Retry Auto Create.',
+            ]);
+        }
+
         $draft['ai_quality_score'] = $computed['score'];
         $draft['ai_quality_breakdown'] = $computed['breakdown'];
         $draft['ai_run_id'] = $run->id;
-        $draft['needs_review'] = $softPass || $imageAutoApproved;
+        $needsReview = $softPass || $imageAutoApproved || $imageSkipped;
+        $draft['needs_review'] = $needsReview;
         $session->draft_json = $draft;
 
         if (! in_array($session->status, ['image_ready', 'image_needs_fix', 'draft_ready'], true)) {
-            $session->status = config('blog_ai.image_enabled', true) ? 'image_ready' : 'draft_ready';
+            $session->status = ! empty($draft['og_image']) ? 'image_ready' : 'draft_ready';
         }
         $session->last_error = null;
         $session->saveIfJobCurrent();
 
         $postId = null;
         $createPost = (bool) data_get($run->input_json, 'create_post', config('blog_ai.auto.create_post', true));
-        if ($createPost && ! empty($draft['title']) && ! empty($draft['body_html'])) {
-            $post = $this->createDraftPost($session, $run, $draft, $computed);
-            $postId = $post->id;
-            $run->blog_post_id = $postId;
-            $post->ai_run_id = $run->id;
-            $post->save();
+        if ($createPost) {
+            try {
+                $post = $this->createDraftPost($session, $run, $draft, $computed);
+                $postId = $post->id;
+                $run->blog_post_id = $postId;
+                $post->ai_run_id = $run->id;
+                $post->save();
+            } catch (Throwable $e) {
+                Log::warning('Blog AI auto createDraftPost failed', [
+                    'run_id' => $run->id,
+                    'message' => $e->getMessage(),
+                ]);
+                $run->appendLog([
+                    'step' => 'finalize',
+                    'event' => 'post_create_failed',
+                    'message' => 'Draft is ready in the wizard, but CMS post create failed: '.$e->getMessage(),
+                ]);
+            }
         }
 
-        $needsReview = $softPass || $imageAutoApproved;
         $run->status = $needsReview ? 'completed_needs_review' : 'completed';
         $run->current_step = 'done';
         $run->progress_pct = 100;
@@ -540,18 +701,74 @@ class BlogAutoPipeline
         $run->appendLog([
             'step' => 'finalize',
             'event' => $needsReview ? 'completed_needs_review' : 'completed',
-            'message' => $this->finalizeMessage($postId, $computed['score'], $softPass, $imageAutoApproved),
+            'message' => $this->finalizeMessage($postId, $computed['score'], $flags),
             'blog_post_id' => $postId,
             'live_score' => $computed['score'],
             'soft_pass' => $softPass,
             'image_auto_approved' => $imageAutoApproved,
+            'image_skipped' => $imageSkipped,
         ]);
         $run->save();
 
         return $run->fresh();
     }
 
-    private function finalizeMessage(?int $postId, int $score, bool $softPass, bool $imageAutoApproved): string
+    /**
+     * @param  array<string, mixed>  $flags
+     */
+    private function hasAnySoftPass(array $flags): bool
+    {
+        foreach (['soft_pass', 'research_soft_pass', 'hooks_soft_pass', 'outline_soft_pass'] as $key) {
+            if (! empty($flags[$key])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, int|null>  $scoreParts
+     * @param  array<string, mixed>  $review
+     * @param  list<string>  $extraScoreKeys
+     */
+    private function softPassStep(
+        BlogAiRun $run,
+        array &$scoreParts,
+        string $step,
+        string $scoreKey,
+        array $review,
+        string $message,
+        string $flagKey,
+        array $extraScoreKeys = [],
+    ): void {
+        $cap = max(0, min(100, (int) config('blog_ai.auto.soft_pass_score_cap', 59)));
+        $scoreParts[$scoreKey] = min((int) ($scoreParts[$scoreKey] ?? $review['score'] ?? $cap), $cap);
+        foreach ($extraScoreKeys as $key) {
+            $scoreParts[$key] = min((int) ($scoreParts[$key] ?? $cap), $cap);
+        }
+        $this->syncScore($run, $scoreParts);
+
+        $flags = is_array($run->input_json) ? $run->input_json : [];
+        $flags[$flagKey] = true;
+        $flags[$flagKey.'_failures'] = $review['failures'] ?? [];
+        // Unified flag so finalize / UI always treat as needs-review.
+        $flags['soft_pass'] = true;
+        $run->input_json = $flags;
+        $run->appendLog([
+            'step' => $step,
+            'event' => 'soft_pass',
+            'message' => $message.' Score capped at '.$cap.'.',
+            'failures' => $review['failures'] ?? [],
+            'score_cap' => $cap,
+        ]);
+        $run->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $flags
+     */
+    private function finalizeMessage(?int $postId, int $score, array $flags): string
     {
         $parts = [];
         if ($postId) {
@@ -560,11 +777,14 @@ class BlogAutoPipeline
             $parts[] = 'Pipeline complete';
         }
         $parts[] = "AI score {$score}";
-        if ($softPass) {
-            $parts[] = 'SEO soft-pass — human polish required before publish';
+        if ($this->hasAnySoftPass($flags)) {
+            $parts[] = 'soft-pass — human polish required before publish';
         }
-        if ($imageAutoApproved) {
+        if (! empty($flags['image_auto_approved'])) {
             $parts[] = 'cover auto-approved after QA fail';
+        }
+        if (! empty($flags['image_skipped'])) {
+            $parts[] = 'cover skipped — add OG image before publish';
         }
 
         return implode('. ', $parts).'.';

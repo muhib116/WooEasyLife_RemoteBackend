@@ -772,6 +772,23 @@ class BlogAiController extends Controller
             }
         }
 
+        $staleMinutes = max(25, (int) config('blog_ai.auto.busy_stale_minutes', 25));
+        $anchor = $active->updated_at ?? $active->started_at;
+        if ($anchor && $anchor->lt(now()->subMinutes($staleMinutes))) {
+            $active->status = 'failed';
+            $active->last_error = 'Cleared stale auto run (no progress for '.$staleMinutes.' minutes).';
+            $active->finished_at = now();
+            $active->save();
+            if ($session && $session->isBusy()) {
+                $session->invalidateJobToken();
+                $session->status = 'failed';
+                $session->last_error = $active->last_error;
+                $session->save();
+            }
+
+            return;
+        }
+
         throw ValidationException::withMessages([
             'ai' => 'You already have an auto create running (#'.$active->id.'). Wait for it to finish or cancel it.',
         ]);

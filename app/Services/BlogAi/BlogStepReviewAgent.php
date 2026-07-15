@@ -47,7 +47,7 @@ class BlogStepReviewAgent
         try {
             $llm = $this->llmReview($step, $session, $context, $rule);
 
-            return $this->mergeRuleAndLlm($rule, $llm);
+            return $this->mergeRuleAndLlm($step, $rule, $llm);
         } catch (Throwable) {
             return $rule;
         }
@@ -55,13 +55,20 @@ class BlogStepReviewAgent
 
     /**
      * Rule always wins on fail. LLM may only tighten (fail a rule-pass) or enrich notes/fixes.
+     * Research is rule-authoritative once primary is non-colliding (Auto already pivots keywords).
      *
      * @param  array<string, mixed>  $rule
      * @param  array<string, mixed>  $llm
      * @return array<string, mixed>
      */
-    private function mergeRuleAndLlm(array $rule, array $llm): array
+    private function mergeRuleAndLlm(string $step, array $rule, array $llm): array
     {
+        // Soft LLM "abort" must not kill Auto when hard rules did not hard-abort.
+        if (($llm['decision'] ?? '') === 'abort' && ($rule['decision'] ?? '') !== 'abort') {
+            $llm['decision'] = 'revise';
+            $llm['pass'] = false;
+        }
+
         if (! $rule['pass']) {
             return [
                 'pass' => false,
@@ -78,8 +85,29 @@ class BlogStepReviewAgent
             ];
         }
 
-        // Rule passed: LLM may still fail/revise and block advance.
+        // Rule passed: LLM may still fail/revise and block advance — except planning steps
+        // where Auto already enforces hard rules and can differentiate in later writing.
         if (! $llm['pass'] || $llm['decision'] !== 'advance') {
+            if (in_array($step, ['research', 'hooks', 'outline'], true)) {
+                $noteBits = array_filter([
+                    $rule['notes'] ?? null,
+                    $llm['notes'] ?? null,
+                    $llm['fix_instructions'] ?? null,
+                ]);
+
+                return [
+                    'pass' => true,
+                    'score' => (int) round(((int) $rule['score'] + min(100, max(0, (int) $llm['score']))) / 2),
+                    'decision' => 'advance',
+                    'failures' => [],
+                    'fix_instructions' => null,
+                    'notes' => $noteBits !== []
+                        ? implode(' ', $noteBits)
+                        : ucfirst($step).' rules passed; keep differentiation in later steps.',
+                    'usage' => $llm['usage'],
+                ];
+            }
+
             return [
                 'pass' => false,
                 'score' => (int) $llm['score'],
@@ -217,8 +245,9 @@ class BlogStepReviewAgent
             $score = $this->scorer->scoreFromSeoQuality($quality);
             $failures = array_values(array_filter(array_map('strval', $quality['failures'] ?? [])));
             if (! empty($quality['focus_keyword_collision']) || ! empty($quality['slug_collision'])) {
-                $decision = 'abort';
-                $fix = 'Slug or focus keyword collision cannot be auto-fixed safely. Choose a different keyword angle.';
+                // Prefer revise so Auto can pivot keyword / slug; only hard-abort if still colliding after rewrite attempts.
+                $decision = 'revise';
+                $fix = 'Focus keyword or slug still collides with a published post. Use a distinct long-tail focus keyword and unique latin slug.';
             } elseif (empty($quality['ai_ready'])) {
                 $decision = 'revise';
                 $fix = 'Fix SEO failures: '.implode(', ', $failures ?: ['ai_ready']).'. Strengthen keyword placement, FAQs, internal links, and body depth.';

@@ -113,15 +113,24 @@ TXT;
      * Normalize pasted keywords + live BD Google Suggest + AI enrichment + cannibalization checks.
      *
      * @param  list<string>  $pasted
-     * @return array{primary: string|null, secondary: list<string>, suggestions: list<array<string, mixed>>, live_suggestions: list<string>, cannibalization: list<array<string, mixed>>, usage: array<string, int>}
+     * @param  list<string>  $avoidPrimaries  Primaries already tried / known collisions
+     * @return array{primary: string|null, secondary: list<string>, suggestions: list<array<string, mixed>>, live_suggestions: list<string>, cannibalization: list<array<string, mixed>>, auto_pivot: array{from: string, to: string}|null, usage: array<string, int>}
      */
-    public function researchKeywords(string $seedTopic, string $cluster, array $pasted): array
+    public function researchKeywords(string $seedTopic, string $cluster, array $pasted, array $avoidPrimaries = []): array
     {
         $pasted = collect($pasted)
             ->map(fn ($k) => trim((string) $k))
             ->filter()
             ->unique()
             ->take(20)
+            ->values()
+            ->all();
+
+        $avoidPrimaries = collect($avoidPrimaries)
+            ->map(fn ($k) => trim((string) $k))
+            ->filter()
+            ->unique()
+            ->take(30)
             ->values()
             ->all();
 
@@ -147,6 +156,7 @@ Return JSON only:
 Prefer Bangla or BD-English hybrid phrases sellers actually search.
 Do not invent US-centric keywords.
 Prioritize pasted keywords and live Google Suggest results from Bangladesh (gl=bd).
+If avoid_primary_keywords is non-empty, the primary MUST be a different long-tail angle that is not in that list and not an exact match of existing post focus keywords.
 TXT;
 
         $user = json_encode([
@@ -154,6 +164,7 @@ TXT;
             'cluster' => $cluster,
             'cluster_label' => config('blog_ai.clusters.'.$cluster),
             'pasted_keywords' => $pasted,
+            'avoid_primary_keywords' => $avoidPrimaries,
             'live_google_suggest_bd' => $liveSuggestions,
             'product_brief' => $this->briefBuilder->build(),
         ], JSON_UNESCAPED_UNICODE);
@@ -196,25 +207,121 @@ TXT;
             $secondary,
             $pasted,
             $liveSuggestions,
+            collect($suggestions)->pluck('keyword')->all(),
         )));
 
-        return [
+        $research = [
             'primary' => $primary,
             'secondary' => $secondary,
             'suggestions' => $suggestions,
             'live_suggestions' => $liveSuggestions,
             'cannibalization' => $this->findCannibalization($checkTerms),
+            'auto_pivot' => null,
             'usage' => $result['usage'],
         ];
+
+        return $this->preferNonCollidingPrimary($research, $avoidPrimaries);
     }
 
     /**
+     * If primary collides with an existing focus keyword, auto-pick the best safe alternative.
+     *
+     * @param  array<string, mixed>  $research
+     * @param  list<string>  $extraAvoid
+     * @return array<string, mixed>
+     */
+    public function preferNonCollidingPrimary(array $research, array $extraAvoid = []): array
+    {
+        $normalize = fn (?string $value): string => mb_strtolower(trim((string) $value));
+
+        $blocked = collect($extraAvoid)
+            ->map(fn ($k) => $normalize($k))
+            ->filter()
+            ->values();
+
+        foreach ($research['cannibalization'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $focus = $normalize($row['focus_keyword'] ?? '');
+            if ($focus !== '') {
+                $blocked->push($focus);
+            }
+        }
+
+        $blocked = $blocked->unique()->all();
+        $primary = trim((string) ($research['primary'] ?? ''));
+        $primaryNorm = $normalize($primary);
+
+        $collides = $primary === '' || ($primaryNorm !== '' && in_array($primaryNorm, $blocked, true));
+        if (! $collides) {
+            $research['auto_pivot'] = null;
+
+            return $research;
+        }
+
+        $candidates = collect($research['secondary'] ?? [])
+            ->merge(collect($research['suggestions'] ?? [])->pluck('keyword'))
+            ->merge($research['live_suggestions'] ?? [])
+            ->map(fn ($k) => trim((string) $k))
+            ->filter()
+            ->unique()
+            ->reject(fn ($k) => in_array($normalize($k), $blocked, true))
+            ->values();
+
+        $replacement = $candidates->first();
+        if (! $replacement) {
+            // Last resort: lengthen the colliding primary into a differentiation long-tail.
+            if ($primary !== '') {
+                $replacement = $primary.' কমানোর উপায় Bangladesh';
+                if (in_array($normalize($replacement), $blocked, true)) {
+                    $replacement = $primary.' WooEasyLife guide';
+                }
+            }
+        }
+
+        if (! $replacement || in_array($normalize($replacement), $blocked, true)) {
+            $research['auto_pivot'] = null;
+
+            return $research;
+        }
+
+        $from = $primary !== '' ? $primary : '(empty)';
+        $research['primary'] = $replacement;
+        $research['secondary'] = collect($research['secondary'] ?? [])
+            ->prepend($primary)
+            ->map(fn ($k) => trim((string) $k))
+            ->filter()
+            ->reject(fn ($k) => $normalize($k) === $normalize($replacement))
+            ->unique()
+            ->take(12)
+            ->values()
+            ->all();
+        $research['auto_pivot'] = [
+            'from' => $from,
+            'to' => $replacement,
+        ];
+
+        return $research;
+    }
+
+    /**
+     * @param  list<string>  $avoidTitles  Prior hook titles to avoid repeating
      * @return list<array<string, mixed>>
      */
-    public function generateHooks(BlogAiSession $session): array
+    public function generateHooks(BlogAiSession $session, ?string $fixInstructions = null, array $avoidTitles = []): array
     {
         $count = (int) config('blog_ai.hooks_count', 10);
         $keywords = $session->keywords_json ?? [];
+        $existingPosts = collect($keywords['cannibalization'] ?? [])
+            ->filter(fn ($row) => is_array($row))
+            ->map(fn (array $row) => [
+                'title' => $row['title'] ?? null,
+                'focus_keyword' => $row['focus_keyword'] ?? null,
+            ])
+            ->take(8)
+            ->values()
+            ->all();
 
         $system = $this->systemPrompt().<<<TXT
 
@@ -234,12 +341,17 @@ Return JSON:
   ]
 }
 Hooks must target BD COD / WooCommerce sellers. Mix angles. No clickbait lies.
+Each hook MUST use a different angle and a distinct title wording.
+If existing_posts or avoid_titles is present, differentiate: new angle, persona, tool angle, or long-tail — do not clone those titles.
 TXT;
 
         $user = json_encode([
             'seed_topic' => $session->seed_topic,
             'cluster' => $session->cluster,
             'keywords' => $keywords,
+            'existing_posts' => $existingPosts,
+            'avoid_titles' => array_values(array_filter($avoidTitles)),
+            'fix_instructions' => $fixInstructions,
             'product_brief' => $this->briefBuilder->build(),
         ], JSON_UNESCAPED_UNICODE);
 
@@ -551,17 +663,40 @@ TXT;
 
         $title = trim((string) ($draft['title'] ?? ''));
         $focusKeyword = trim((string) ($draft['focus_keyword'] ?? ''));
+        $autoKeywordPivot = null;
 
-        $quality = $this->seoQuality->analyze(
-            title: $title,
-            focusKeyword: $focusKeyword,
-            bodyHtml: $body,
-            metaDescription: $metaDescription,
-            faqs: $faqs,
-            secondaryKeywords: $secondary,
-            slug: $slug,
-            locale: 'bn',
-        );
+        // Never leave an exact published focus-keyword collision in the draft.
+        $suffixes = ['WooEasyLife BD', 'কমানোর উপায়', 'COD sellers guide', 'Bangladesh ২০২৬'];
+        for ($i = 0; $i < count($suffixes) + 1; $i++) {
+            $quality = $this->seoQuality->analyze(
+                title: $title,
+                focusKeyword: $focusKeyword,
+                bodyHtml: $body,
+                metaDescription: $metaDescription,
+                faqs: $faqs,
+                secondaryKeywords: $secondary,
+                slug: $slug,
+                locale: 'bn',
+            );
+
+            if (empty($quality['focus_keyword_collision'])) {
+                break;
+            }
+
+            $from = $focusKeyword;
+            $suffix = $suffixes[min($i, count($suffixes) - 1)];
+            $focusKeyword = trim($from === '' ? $suffix : $from.' '.$suffix);
+            $autoKeywordPivot = ['from' => $from, 'to' => $focusKeyword];
+            $slug = BlogPost::makeSlug(Str::slug($focusKeyword) ?: $slug);
+        }
+
+        $notes = is_array($draft['seo_notes'] ?? null) ? $draft['seo_notes'] : [];
+        if ($autoKeywordPivot) {
+            $notes[] = 'Auto-pivoted focus keyword to avoid published collision: '
+                .($autoKeywordPivot['from'] ?: '(empty)')
+                .' → '
+                .$autoKeywordPivot['to'];
+        }
 
         return [
             'title' => $title,
@@ -576,9 +711,10 @@ TXT;
             'robots' => 'index,follow',
             'body_html' => $body,
             'faqs' => $faqs,
-            'seo_notes' => is_array($draft['seo_notes'] ?? null) ? $draft['seo_notes'] : [],
+            'seo_notes' => $notes,
             'quality' => $quality,
             'cluster' => $cluster,
+            'auto_keyword_pivot' => $autoKeywordPivot,
         ];
     }
 
