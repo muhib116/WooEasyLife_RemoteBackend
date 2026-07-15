@@ -96,7 +96,7 @@ class BlogImagePipeline
                 return $image;
             }
 
-            $fixPrompt = $review['fix_prompt'] ?: 'Improve identity match to the author reference and fix Bangla typography.';
+            $fixPrompt = $review['fix_prompt'] ?: 'Improve identity match to the author reference (exact face). Keep Latin/English cover text only — no Bengali glyphs.';
             $session->image_json = $image;
             $session->saveIfJobCurrent();
         }

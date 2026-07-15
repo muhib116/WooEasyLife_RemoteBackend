@@ -49,8 +49,9 @@ class BlogImageReviewAgent
             'You are a strict QA reviewer for WooEasyLife blog marketing banners.',
             'Compare the GENERATED banner to the AUTHOR reference photo and the post context.',
             'Return JSON only.',
-            'Hard-fail consistency if the person is clearly a different face.',
-            'Hard-fail typography if Bangla/English text is garbled, illegible, or nonsense glyphs.',
+            'Hard-fail consistency if the person is clearly a different face (cousin/look-alike counts as fail).',
+            'Hard-fail typography if letters are melted, misspelled English, or if ANY Bengali/Indic script is present when latin_cover_text_only is true.',
+            'Prefer sharp Latin marketing copy over decorative Bangla (Bangla in AI pixels is usually broken).',
             'Score 0-100 overall quality for publish readiness.',
         ]);
 
@@ -59,9 +60,12 @@ class BlogImageReviewAgent
             'post_title' => $title,
             'focus_keyword' => $keyword,
             'cluster' => $session->cluster,
+            'latin_cover_text_only' => (bool) config('blog_ai.image.latin_cover_text_only', true),
             'requirements' => [
                 'same_person_as_author_reference' => true,
-                'full_marketing_banner_with_bangla_text' => true,
+                'photorealistic_identity_match' => true,
+                'latin_english_headline_readable' => true,
+                'no_bengali_script_on_image' => (bool) config('blog_ai.image.latin_cover_text_only', true),
                 'dark_premium_gold_brand_look' => true,
                 'person_preferably_on_right' => true,
             ],
@@ -73,7 +77,7 @@ class BlogImageReviewAgent
                 'brand' => ['ok' => 'boolean', 'notes' => 'string'],
                 'typography' => ['ok' => 'boolean', 'notes' => 'string'],
                 'issues' => ['string'],
-                'fix_prompt' => 'string or null — short regeneration guidance if not pass',
+                'fix_prompt' => 'string or null — short regeneration guidance if not pass (English only)',
             ],
         ], JSON_UNESCAPED_UNICODE);
 
@@ -114,10 +118,10 @@ class BlogImageReviewAgent
         if ($hardFail && $fixPrompt === null) {
             $parts = [];
             if (! $consistency['ok']) {
-                $parts[] = 'Match the author reference face exactly (hair, beard, glasses).';
+                $parts[] = 'Match Image-1 author face exactly (hair, beard density, thin glasses). Do not invent a look-alike.';
             }
             if (! $typography['ok']) {
-                $parts[] = 'Render clear readable Bangla headline matching the post title; avoid garbled text.';
+                $parts[] = 'Use clear Latin/English headline only — no Bengali script. Fix melted or misspelled letters.';
             }
             $fixPrompt = implode(' ', $parts);
         }

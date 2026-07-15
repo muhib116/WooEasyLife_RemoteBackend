@@ -92,19 +92,33 @@ return [
     /*
     | Cover banner generation (gpt-image edits + vision review gate).
     | author_reference is required for identity lock; style refs are optional.
+    |
+    | IMPORTANT: gpt-image models garbles Bangla (Indic shaping). Covers use
+    | Latin/English marketing lines only. Post title stays Bangla in the CMS.
     */
     'image' => [
         'author_reference' => resource_path('blog-ai/author-reference.png'),
+        /*
+        | Style refs help layout/lighting but often drift facial likeness.
+        | Default: author-only identity (best face match). Set true to blend styles.
+        */
+        'use_style_references' => filter_var(env('BLOG_AI_IMAGE_STYLE_REFS', false), FILTER_VALIDATE_BOOLEAN),
         'style_references' => [
             resource_path('blog-ai/style-reference-1.png'),
             resource_path('blog-ai/style-reference-2.png'),
             resource_path('blog-ai/style-reference-3.png'),
             resource_path('blog-ai/style-reference-4.png'),
         ],
+        'max_style_references' => (int) env('BLOG_AI_IMAGE_MAX_STYLE_REFS', 1),
         'max_generate_attempts' => (int) env('BLOG_AI_IMAGE_MAX_ATTEMPTS', 3),
-        'review_pass_score' => (int) env('BLOG_AI_IMAGE_REVIEW_SCORE', 70),
+        'review_pass_score' => (int) env('BLOG_AI_IMAGE_REVIEW_SCORE', 72),
         'size' => env('BLOG_AI_IMAGE_SIZE', '1536x1024'),
         'input_fidelity' => env('BLOG_AI_IMAGE_INPUT_FIDELITY', 'high'),
+        /*
+        | Prefer clear Latin marketing copy on the banner (AI typography).
+        | true = no Bengali script glyphs on generated covers.
+        */
+        'latin_cover_text_only' => filter_var(env('BLOG_AI_IMAGE_LATIN_TEXT_ONLY', true), FILTER_VALIDATE_BOOLEAN),
     ],
 
     /*

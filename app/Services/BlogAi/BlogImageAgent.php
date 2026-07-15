@@ -15,28 +15,28 @@ class BlogImageAgent
     /** @var list<array{outfit: string, posture: string, setting: string, layout: string}> */
     private const LAYOUTS = [
         [
-            'outfit' => 'light blue button-down shirt',
-            'posture' => 'sitting at desk, chin resting on clasped hands, looking at camera',
-            'setting' => 'dark premium home office with warm desk lamp bokeh',
-            'layout' => 'person on the right third, left side reserved for Bangla marketing headline and feature icons',
+            'outfit' => 'navy blazer over white open-collar shirt',
+            'posture' => 'sitting at desk, slight friendly smile toward camera, laptop and WEL mug on desk',
+            'setting' => 'dark premium home office with warm side light and soft bokeh',
+            'layout' => 'founder on the RIGHT half; LEFT ~40% dark clean panel for large Latin headline + feature chips',
         ],
         [
-            'outfit' => 'navy blazer over white open-collar shirt',
-            'posture' => 'relaxed in office chair holding a ceramic mug, slight smile off-camera',
-            'setting' => 'dim professional studio desk with plant and warm lamp',
-            'layout' => 'person on the right, left side dark space for brand text and feature chips',
+            'outfit' => 'light blue button-down shirt',
+            'posture' => 'sitting at desk, chin near clasped hands, looking at camera',
+            'setting' => 'dark premium office desk with warm lamp glow',
+            'layout' => 'person on the RIGHT third; LEFT reserved for bold Latin marketing headline and icon chips',
         ],
         [
             'outfit' => 'beige crewneck t-shirt',
-            'posture' => 'sitting behind a laptop on wooden desk, friendly confident smile',
-            'setting' => 'warm home office bookshelf bokeh',
-            'layout' => 'desk hero shot with laptop showing WEL logo; left side for marketing copy',
+            'posture' => 'sitting behind a laptop on wooden desk, confident smile',
+            'setting' => 'warm home office bookshelf soft bokeh',
+            'layout' => 'desk hero with laptop WEL logo; LEFT dark space for Latin headline text only',
         ],
         [
             'outfit' => 'light blue polo shirt',
-            'posture' => 'leaning slightly forward at desk typing on laptop',
-            'setting' => 'modern minimal desk, dark background',
-            'layout' => 'three-quarter angle from left; keep right side for founder, left for Bangla text',
+            'posture' => 'leaning slightly forward at desk beside laptop',
+            'setting' => 'modern minimal desk, dark charcoal background',
+            'layout' => 'three-quarter angle; RIGHT = founder face; LEFT = Latin headline panel',
         ],
     ];
 
@@ -45,7 +45,7 @@ class BlogImageAgent
         'fake_order' => ['Fraud Check', 'Courier History', 'Checkout OTP', 'Blacklist'],
         'fraud_checker' => ['Fraud Checker', 'Courier History', 'Success Rate', 'Smart Dashboard'],
         'checkout_protection' => ['Checkout OTP', 'Duplicate Block', 'Blacklist', 'Fraud Check'],
-        'courier' => ['Auto Courier', 'Pathao Steadfast RedX', 'Smart Dashboard', 'Save Time'],
+        'courier' => ['Auto Courier', 'Pathao / Steadfast / RedX', 'Smart Dashboard', 'Save Time'],
         'missing_order' => ['Missing Order', 'Recover Orders', 'Smart Dashboard', 'One-click Call'],
         'facebook_ads' => ['Pixel Protection', 'Confirm Purchase', 'Less Fake Events', 'More Profit'],
         'ai_orders' => ['Message to Order', 'Image to Order', 'Smart Dashboard', 'Save Time'],
@@ -54,6 +54,42 @@ class BlogImageAgent
         'team_calls' => ['Call Tracking', 'Staff Assign', 'One-click Call', 'Team Ops'],
         'operations' => ['Smart Dashboard', 'Auto Courier', 'Fraud Check', 'Save Time'],
         'general' => ['Fraud Check', 'Auto Courier', 'Missing Order', 'Smart Dashboard'],
+    ];
+
+    /** @var array<string, array{lines: list<string>, sub: string}> */
+    private const CLUSTER_COVER_COPY = [
+        'fake_order' => [
+            'lines' => ['Fake COD orders', 'eating your profit?', 'Stop them today'],
+            'sub' => 'Know the practical BD seller fix!',
+        ],
+        'fraud_checker' => [
+            'lines' => ['Courier history', 'before you ship?', 'Check smarter'],
+            'sub' => 'Pathao · Steadfast · RedX insights',
+        ],
+        'facebook_ads' => [
+            'lines' => ['Facebook Pixel', 'payment events', 'not firing?'],
+            'sub' => 'Know the fix for BD stores!',
+        ],
+        'checkout_protection' => [
+            'lines' => ['Checkout OTP', '& fake customers?', 'Block them'],
+            'sub' => 'Protect every COD order',
+        ],
+        'courier' => [
+            'lines' => ['Manual courier', 'entry wasting hours?', 'Automate it'],
+            'sub' => 'Pathao · Steadfast · RedX auto entry',
+        ],
+        'missing_order' => [
+            'lines' => ['Missing orders', 'costing sales?', 'Recover them'],
+            'sub' => 'Bring abandoned checkouts back',
+        ],
+        'ai_orders' => [
+            'lines' => ['Inbox to order', 'taking too long?', 'Use AI'],
+            'sub' => 'Message & screenshot → order',
+        ],
+        'general' => [
+            'lines' => ['WooCommerce ops', 'for BD sellers', 'One platform'],
+            'sub' => 'Fraud · Courier · Growth tools',
+        ],
     ];
 
     public function __construct(
@@ -85,7 +121,7 @@ class BlogImageAgent
         $authorPath = (string) config('blog_ai.image.author_reference', '');
         if ($authorPath === '' || ! is_file($authorPath)) {
             throw ValidationException::withMessages([
-                'ai' => 'Author reference image is missing. Place it at resources/blog-ai/author-reference.jpg.',
+                'ai' => 'Author reference image is missing. Place it at resources/blog-ai/author-reference.png.',
             ]);
         }
 
@@ -95,6 +131,7 @@ class BlogImageAgent
         $cluster = (string) ($session->cluster ?? 'general');
         $recipe = self::LAYOUTS[array_rand(self::LAYOUTS)];
         $features = self::CLUSTER_FEATURES[$cluster] ?? self::CLUSTER_FEATURES['general'];
+        $coverCopy = $this->coverCopy($cluster, $title, $keyword);
         $author = (string) config('blog_ai.author_name', 'Muhibbullah Ansary');
         $role = (string) config('blog_ai.author_role', 'Developer of WooEasyLife');
         $size = (string) config('blog_ai.image.size', '1536x1024');
@@ -105,15 +142,13 @@ class BlogImageAgent
             keyword: $keyword,
             recipe: $recipe,
             features: $features,
+            coverCopy: $coverCopy,
             author: $author,
             role: $role,
             fixPrompt: $fixPrompt,
         );
 
-        $paths = array_values(array_filter([
-            $authorPath,
-            ...array_map('strval', config('blog_ai.image.style_references', [])),
-        ], fn (string $path) => $path !== '' && is_file($path)));
+        $paths = $this->referencePaths($authorPath);
 
         $request = Http::withToken($apiKey)
             ->timeout(180)
@@ -141,7 +176,7 @@ class BlogImageAgent
         $media = $this->mediaLibrary->storeFromBinary($binary, $session->user_id, [
             'title' => Str::limit($title, 80, ''),
             'alt' => $keyword !== '' ? $keyword : $title,
-            'original_name' => 'blog-ai-'.Str::slug(Str::limit($title, 40, '')).'.png',
+            'original_name' => 'blog-ai-'.Str::slug(Str::limit($keyword !== '' ? $keyword : $title, 40, '') ?: 'cover').'.png',
         ]);
 
         return [
@@ -151,37 +186,104 @@ class BlogImageAgent
             'recipe' => $recipe,
             'prompt' => $prompt,
             'prompt_excerpt' => Str::limit($prompt, 280),
+            'cover_copy' => $coverCopy,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function referencePaths(string $authorPath): array
+    {
+        $paths = [$authorPath];
+
+        if (! config('blog_ai.image.use_style_references', false)) {
+            return $paths;
+        }
+
+        $max = max(0, (int) config('blog_ai.image.max_style_references', 1));
+        $style = collect(config('blog_ai.image.style_references', []))
+            ->map(fn ($p) => (string) $p)
+            ->filter(fn (string $path) => $path !== '' && is_file($path) && $path !== $authorPath)
+            ->take($max)
+            ->values()
+            ->all();
+
+        return array_values(array_filter([...$paths, ...$style]));
+    }
+
+    /**
+     * @return array{lines: list<string>, sub: string}
+     */
+    private function coverCopy(string $cluster, string $title, string $keyword): array
+    {
+        $fallback = self::CLUSTER_COVER_COPY[$cluster] ?? self::CLUSTER_COVER_COPY['general'];
+
+        // If keyword already Latin-ish, prefer it as a short hook line.
+        $kw = trim($keyword);
+        if ($kw !== '' && preg_match('/^[\x20-\x7E]+$/u', $kw) && mb_strlen($kw) <= 40) {
+            return [
+                'lines' => array_values(array_filter([
+                    $kw,
+                    $fallback['lines'][1] ?? 'for BD stores?',
+                    $fallback['lines'][2] ?? 'Fix it now',
+                ])),
+                'sub' => $fallback['sub'],
+            ];
+        }
+
+        return $fallback;
     }
 
     /**
      * @param  array{outfit: string, posture: string, setting: string, layout: string}  $recipe
      * @param  list<string>  $features
+     * @param  array{lines: list<string>, sub: string}  $coverCopy
      */
     private function buildPrompt(
         string $title,
         string $keyword,
         array $recipe,
         array $features,
+        array $coverCopy,
         string $author,
         string $role,
         ?string $fixPrompt,
     ): string {
         $featureLine = implode(', ', array_slice($features, 0, 4));
+        $headline = implode(' | ', $coverCopy['lines']);
+        $sub = $coverCopy['sub'];
+        $latinOnly = (bool) config('blog_ai.image.latin_cover_text_only', true);
+
         $lines = [
             'Create a FULL photorealistic marketing BANNER for WooEasyLife (Bangladesh WooCommerce SaaS).',
-            'Image 1 is the IDENTITY reference: keep the SAME person exactly (face, thick curly dark hair, full beard, thin rectangular/double-bridge glasses). Do not invent a different face.',
-            'Any additional images are STYLE references only for layout, lighting, desk props, and brand mood. IGNORE all Bangla/English text, headlines, and UI overlays on style references — do not copy their copy.',
-            "Render this Bangla headline exactly (or a tight paraphrase that keeps the same meaning): {$title}",
-            $keyword !== '' ? "Focus keyword to reinforce in subline/chips: {$keyword}" : '',
-            "Person: {$author}, {$role}. Outfit: {$recipe['outfit']}. Posture: {$recipe['posture']}. Setting: {$recipe['setting']}. Composition: {$recipe['layout']}.",
-            "Left side: bold Bangla marketing text + 3–4 feature chips with simple icons ({$featureLine}). Right side: the founder.",
-            'Brand look: dark premium background, gold/amber accents, WEL logo with upward gold arrow on laptop lid or mug. No watermarks. No other people.',
-            'Landscape banner suitable for a blog cover. High-end tech brand quality.',
+            'IDENTITY LOCK (critical): Image 1 is the ONLY face reference. Render THIS exact man — same bone structure, skin tone, thick curly dark hair, full beard density/shape, thin rectangular or double-bridge glasses, same age. Photorealistic likeness to Image 1, not a cousin or look-alike. Do not average faces from other images.',
+            'If extra images are provided they are STYLE only (lighting, desk props, dark/gold mood). IGNORE faces, Bangla text, English headlines, and UI overlays on style images — never copy their text.',
+            "Subject credit: {$author}, {$role}. Outfit: {$recipe['outfit']}. Posture: {$recipe['posture']}. Setting: {$recipe['setting']}. Composition: {$recipe['layout']}.",
+            "LEFT text panel — print EXACTLY this Latin headline (3 short lines): {$headline}",
+            "Under the headline, smaller white/gold subline: {$sub}",
+            "Feature chips with icons (Latin labels only): {$featureLine}",
+            'Brand look: dark premium charcoal background, gold/amber accents, WEL logo with upward gold arrow on laptop lid and/or mug. Thin elegant frame border OK. No watermarks. No other people. No QR codes.',
+            'Typography: sharp, professional, high-contrast, correctly spelled English/Latin characters. Large readable headline. No blurry or melted letters.',
+            'Landscape banner suitable for a blog OG/cover. High-end tech brand quality.',
+            'Blog topic context (for mood only, do NOT paint this as Bengali glyphs): '.Str::limit($title, 120, ''),
         ];
 
+        if ($latinOnly) {
+            $lines[] = 'HARD RULE: Do NOT render any Bengali/Bangla/Indic script characters anywhere. Latin alphabet + digits + ? ! only. Bangla titles live on the website, not inside this bitmap.';
+        }
+
+        if ($keyword !== '') {
+            $lines[] = 'SEO keyword context (may appear only if Latin): '.Str::limit($keyword, 80, '');
+        }
+
         if (filled($fixPrompt)) {
-            $lines[] = 'Revision notes from reviewer (must fix): '.$fixPrompt;
+            $fix = trim((string) $fixPrompt);
+            // Never let reviewer force broken Bangla back into pixels.
+            if ($latinOnly && preg_match('/[\x{0980}-\x{09FF}]/u', $fix)) {
+                $fix = 'Improve identity match to Image 1 (exact face/glasses/beard). Keep all on-image text as clear Latin/English only — no Bengali script.';
+            }
+            $lines[] = 'Revision notes from reviewer (must fix): '.$fix;
         }
 
         return implode("\n", array_values(array_filter($lines, fn ($l) => $l !== '')));
