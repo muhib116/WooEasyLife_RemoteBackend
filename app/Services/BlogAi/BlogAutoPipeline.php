@@ -113,6 +113,53 @@ class BlogAutoPipeline
         }
     }
 
+    /**
+     * When the queue worker is killed mid-image (or after retry_after), save the draft anyway.
+     */
+    public function finalizeInterrupted(BlogAiSession $session, BlogAiRun $run, ?string $reason = null): BlogAiRun
+    {
+        $run->refresh();
+        $session->refresh();
+
+        if ($run->isTerminal()) {
+            return $run;
+        }
+
+        $draft = is_array($session->draft_json) ? $session->draft_json : [];
+        if (empty($draft['title']) || empty($draft['body_html'])) {
+            throw ValidationException::withMessages([
+                'ai' => 'Cannot recover — no draft body yet. '.$reason,
+            ]);
+        }
+
+        $flags = is_array($run->input_json) ? $run->input_json : [];
+        $flags['image_skipped'] = true;
+        $flags['interrupted_recovery'] = true;
+        $flags['soft_pass'] = true;
+        if (filled($reason)) {
+            $flags['interrupt_reason'] = Str::limit($reason, 400, '');
+        }
+        $run->input_json = $flags;
+        $run->appendLog([
+            'step' => $run->current_step ?: 'image',
+            'event' => 'recovered',
+            'message' => 'Worker interrupted — keeping draft and skipping cover. '
+                .($reason ? Str::limit($reason, 180, '') : ''),
+        ]);
+        $run->save();
+
+        $breakdown = is_array($run->score_breakdown) ? $run->score_breakdown : [];
+        $scoreParts = [
+            'opportunity' => isset($breakdown['opportunity']) ? (int) $breakdown['opportunity'] : 70,
+            'outline' => isset($breakdown['outline']) ? (int) $breakdown['outline'] : 70,
+            'seo' => isset($breakdown['seo']) ? (int) $breakdown['seo'] : 55,
+            'content' => isset($breakdown['content']) ? (int) $breakdown['content'] : 55,
+            'image' => 40,
+        ];
+
+        return $this->finalize($session, $run, $scoreParts);
+    }
+
     private function resolveIntake(BlogAiSession $session, BlogAiRun $run): void
     {
         $learning = $this->learning->promptLearningBlock();
@@ -581,6 +628,10 @@ class BlogAutoPipeline
     {
         $this->beginStep($run, 'image', 'Generating + reviewing cover image…');
 
+        // Keep Auto cover attempts short so the job finishes inside QUEUE_RETRY_AFTER / worker lifetime.
+        $previousAttempts = config('blog_ai.image.max_generate_attempts');
+        config(['blog_ai.image.max_generate_attempts' => max(1, min(2, (int) config('blog_ai.auto.image_max_attempts', 1)))]);
+
         try {
             $this->imagePipeline->run($session);
             $session->refresh();
@@ -603,6 +654,8 @@ class BlogAutoPipeline
             $run->save();
 
             return;
+        } finally {
+            config(['blog_ai.image.max_generate_attempts' => $previousAttempts]);
         }
 
         $imageAutoApproved = false;
@@ -779,6 +832,9 @@ class BlogAutoPipeline
         $parts[] = "AI score {$score}";
         if ($this->hasAnySoftPass($flags)) {
             $parts[] = 'soft-pass — human polish required before publish';
+        }
+        if (! empty($flags['interrupted_recovery'])) {
+            $parts[] = 'recovered after worker interrupt — add cover before publish';
         }
         if (! empty($flags['image_auto_approved'])) {
             $parts[] = 'cover auto-approved after QA fail';

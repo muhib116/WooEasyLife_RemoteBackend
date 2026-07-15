@@ -385,4 +385,68 @@ class AdminBlogAiAutoTest extends TestCase
                 ->has('posts', 1)
                 ->where('posts.0.ai_quality_score', 84));
     }
+
+    public function test_auto_job_recovers_draft_after_max_attempts_failure(): void
+    {
+        $admin = $this->adminUser();
+
+        $session = BlogAiSession::query()->create([
+            'user_id' => $admin->id,
+            'status' => 'auto_running',
+            'locale' => 'bn',
+            'cluster' => 'fake_order',
+            'job_token' => 'recover-token',
+            'draft_json' => [
+                'title' => 'Recovered draft title',
+                'body_html' => '<h2>এক</h2><p>Recover body with <a href="/">link</a>.</p>',
+                'focus_keyword' => 'recover kw xyz',
+                'slug' => 'recovered-draft-title',
+                'locale' => 'bn',
+                'faqs' => [['q' => 'q', 'a' => 'a']],
+                'quality' => ['ai_ready' => false],
+            ],
+        ]);
+
+        $run = BlogAiRun::query()->create([
+            'blog_ai_session_id' => $session->id,
+            'user_id' => $admin->id,
+            'mode' => 'auto',
+            'status' => 'running',
+            'current_step' => 'image',
+            'progress_pct' => 80,
+            'live_score' => 55,
+            'score_breakdown' => [
+                'opportunity' => 70,
+                'outline' => 72,
+                'seo' => 50,
+                'content' => 55,
+                'image' => null,
+            ],
+            'step_log' => [],
+            'input_json' => ['create_post' => true, 'soft_pass' => true],
+        ]);
+
+        $job = new \App\Jobs\ProcessBlogAutoPipeline($run->id, 'recover-token');
+        $job->failed(new \Illuminate\Queue\MaxAttemptsExceededException(
+            'App\Jobs\ProcessBlogAutoPipeline has been attempted too many times.'
+        ));
+
+        $run->refresh();
+        $session->refresh();
+
+        $this->assertContains($run->status, ['completed', 'completed_needs_review']);
+        $this->assertNotNull($run->blog_post_id);
+        $this->assertTrue((bool) data_get($run->input_json, 'interrupted_recovery'));
+        $this->assertTrue((bool) data_get($run->input_json, 'image_skipped'));
+        $this->assertNotSame('failed', $session->status);
+        $this->assertNull($session->last_error);
+    }
+
+    public function test_queue_retry_after_exceeds_auto_job_timeout(): void
+    {
+        $retryAfter = (int) config('queue.connections.database.retry_after');
+        $timeout = (new \App\Jobs\ProcessBlogAutoPipeline(1))->timeout;
+
+        $this->assertGreaterThan($timeout, $retryAfter);
+    }
 }

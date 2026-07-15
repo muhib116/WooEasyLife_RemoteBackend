@@ -93,7 +93,8 @@ class BlogAiRun extends Model
             || ! empty($flags['hooks_soft_pass'])
             || ! empty($flags['outline_soft_pass'])
             || ! empty($flags['image_auto_approved'])
-            || ! empty($flags['image_skipped']);
+            || ! empty($flags['image_skipped'])
+            || ! empty($flags['interrupted_recovery']);
     }
 
     /**

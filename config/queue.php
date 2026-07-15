@@ -38,7 +38,12 @@ return [
             'driver' => 'database',
             'table' => 'jobs',
             'queue' => 'default',
-            'retry_after' => 90,
+            /*
+            | Must exceed the longest job timeout (ProcessBlogAutoPipeline = 900s).
+            | If retry_after is shorter, Laravel releases the job mid-run and you get
+            | "has been attempted too many times" on the next worker pick-up.
+            */
+            'retry_after' => (int) env('QUEUE_RETRY_AFTER', 1000),
             'after_commit' => false,
         ],
 
@@ -66,7 +71,7 @@ return [
             'driver' => 'redis',
             'connection' => 'default',
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => 90,
+            'retry_after' => (int) env('QUEUE_RETRY_AFTER', 1000),
             'block_for' => null,
             'after_commit' => false,
         ],

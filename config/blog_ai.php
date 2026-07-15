@@ -205,6 +205,7 @@ return [
         'soft_pass_score_cap' => (int) env('BLOG_AI_AUTO_SOFT_PASS_CAP', 59),
         'hooks_to_select' => (int) env('BLOG_AI_AUTO_HOOKS_SELECT', 1),
         'auto_approve_image_on_fail' => (bool) env('BLOG_AI_AUTO_APPROVE_IMAGE', true),
+        'image_max_attempts' => (int) env('BLOG_AI_AUTO_IMAGE_ATTEMPTS', 1),
         'busy_stale_minutes' => (int) env('BLOG_AI_AUTO_BUSY_STALE_MINUTES', 25),
         'use_llm_review' => (bool) env('BLOG_AI_AUTO_LLM_REVIEW', true),
         /*
