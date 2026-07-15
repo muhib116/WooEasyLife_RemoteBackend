@@ -4,7 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessBlogAiStep;
+use App\Jobs\ProcessBlogAutoPipeline;
+use App\Models\BlogAiRun;
 use App\Models\BlogAiSession;
+use App\Services\BlogAi\BlogContentAgent;
+use App\Services\BlogAi\BlogImagePipeline;
+use App\Services\BlogAi\BlogLearningService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -16,7 +21,7 @@ use Throwable;
 
 class BlogAiController extends Controller
 {
-    public function options(): JsonResponse
+    public function options(BlogLearningService $learning): JsonResponse
     {
         return response()->json([
             'enabled' => (bool) config('blog_ai.enabled', true),
@@ -28,6 +33,16 @@ class BlogAiController extends Controller
             'hooks_count' => (int) config('blog_ai.hooks_count', 10),
             'require_pasted_keywords' => (bool) config('blog_ai.require_pasted_keywords', true),
             'min_pasted_keywords' => (int) config('blog_ai.min_pasted_keywords', 1),
+            'learning' => $learning->promptLearningBlock(),
+            'auto' => [
+                'enabled' => (bool) config('blog_ai.auto.enabled', true),
+                'create_post' => (bool) config('blog_ai.auto.create_post', true),
+                'pass_score' => (int) config('blog_ai.auto.pass_score', 70),
+                'soft_pass_score_cap' => (int) config('blog_ai.auto.soft_pass_score_cap', 59),
+                'require_queue' => $this->autoRequiresQueue(),
+                'one_active_run_per_user' => (bool) config('blog_ai.auto.one_active_run_per_user', true),
+                'auto_approve_image_on_fail' => (bool) config('blog_ai.auto.auto_approve_image_on_fail', true),
+            ],
         ]);
     }
 
@@ -66,7 +81,7 @@ class BlogAiController extends Controller
     /**
      * Prefill keyword box from cluster + seed (Google Suggest BD + OpenAI). No session required.
      */
-    public function suggestKeywords(Request $request, \App\Services\BlogAi\BlogContentAgent $agent): JsonResponse
+    public function suggestKeywords(Request $request, BlogContentAgent $agent): JsonResponse
     {
         $this->ensureEnabled();
         $this->enforceDailyCaps($request);
@@ -166,6 +181,59 @@ class BlogAiController extends Controller
         return $this->beginStep($blogAiSession, 'generating_image', 'draft_ready', 'image', []);
     }
 
+    public function regenerateImage(Request $request, BlogAiSession $blogAiSession): JsonResponse
+    {
+        $this->ensureEnabled();
+        $this->authorizeSession($blogAiSession);
+        $this->enforceDailyCaps($request);
+
+        if (! config('blog_ai.image_enabled', true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Blog AI image generation is disabled.',
+            ]);
+        }
+
+        if (! is_array($blogAiSession->draft_json) || $blogAiSession->draft_json === []) {
+            throw ValidationException::withMessages([
+                'draft' => 'Generate a draft first.',
+            ]);
+        }
+
+        if (! in_array($blogAiSession->status, ['image_ready', 'image_needs_fix', 'draft_ready', 'failed'], true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Generate or finish the draft before regenerating an image.',
+            ]);
+        }
+
+        $resume = in_array($blogAiSession->status, ['image_ready', 'image_needs_fix'], true)
+            ? $blogAiSession->status
+            : 'draft_ready';
+
+        return $this->beginStep($blogAiSession, 'generating_image', $resume, 'image', []);
+    }
+
+    public function approveImage(Request $request, BlogAiSession $blogAiSession): JsonResponse
+    {
+        $this->ensureEnabled();
+        $this->authorizeSession($blogAiSession);
+
+        if ($blogAiSession->status !== 'image_needs_fix') {
+            throw ValidationException::withMessages([
+                'ai' => 'Only images marked as needing fix can be force-approved.',
+            ]);
+        }
+
+        try {
+            app(BlogImagePipeline::class)->approve($blogAiSession);
+        } catch (ValidationException $e) {
+            throw $e;
+        }
+
+        return response()->json([
+            'session' => $blogAiSession->fresh()->toAdminArray(),
+        ]);
+    }
+
     public function research(Request $request, BlogAiSession $blogAiSession): JsonResponse
     {
         $this->ensureEnabled();
@@ -206,7 +274,7 @@ class BlogAiController extends Controller
         $this->authorizeSession($blogAiSession);
         $this->enforceDailyCaps($request);
 
-        if (! in_array($blogAiSession->status, ['keywords_ready', 'hooks_ready', 'failed', 'outline_ready', 'draft_ready', 'image_ready'], true)
+        if (! in_array($blogAiSession->status, ['keywords_ready', 'hooks_ready', 'failed', 'outline_ready', 'draft_ready', 'image_ready', 'image_needs_fix'], true)
             && empty($blogAiSession->keywords_json['primary'] ?? null)
             && empty($blogAiSession->keywords_json['pasted'] ?? null)) {
             throw ValidationException::withMessages([
@@ -232,6 +300,194 @@ class BlogAiController extends Controller
 
         return $this->beginStep($blogAiSession, 'generating_outline', 'hooks_ready', 'outline', [
             'selected_hook_ids' => $validated['selected_hook_ids'],
+        ]);
+    }
+
+    /**
+     * One-click auto pipeline: research → review → … → draft (+ optional CMS draft post).
+     */
+    public function startAuto(Request $request): JsonResponse
+    {
+        $this->ensureEnabled();
+        if (! config('blog_ai.auto.enabled', true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Blog AI auto mode is disabled.',
+            ]);
+        }
+
+        $this->enforceDailyCaps($request, creatingSession: true);
+        $this->assertAutoQueueReady();
+        $this->assertNoActiveAutoRun((int) $request->user()->id);
+
+        $validated = $request->validate([
+            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'seed_topic' => ['nullable', 'string', 'max:255'],
+            'keywords_text' => ['nullable', 'string', 'max:2000'],
+            'create_post' => ['nullable', 'boolean'],
+        ]);
+
+        $pasted = $this->parseKeywordsText($validated['keywords_text'] ?? '');
+        // Auto mode may start with empty keywords (intake generates them). Manual store still requires paste.
+
+        $lock = Cache::lock('blog-ai-auto-start-'.$request->user()->id, 20);
+        if (! $lock->get()) {
+            throw ValidationException::withMessages([
+                'ai' => 'Another auto create is starting. Wait a moment.',
+            ]);
+        }
+
+        try {
+            $token = (string) Str::uuid();
+
+            $result = DB::transaction(function () use ($request, $validated, $pasted, $token) {
+                $session = BlogAiSession::query()->create([
+                    'user_id' => $request->user()->id,
+                    'status' => 'auto_running',
+                    'locale' => config('blog_ai.default_locale', 'bn'),
+                    'cluster' => $validated['cluster'] ?? null,
+                    'seed_topic' => $validated['seed_topic'] ?? null,
+                    'job_token' => $token,
+                    'keywords_json' => [
+                        'pasted' => $pasted,
+                        'primary' => $pasted[0] ?? null,
+                        'secondary' => array_slice($pasted, 1),
+                    ],
+                ]);
+
+                $createPost = array_key_exists('create_post', $validated)
+                    ? (bool) $validated['create_post']
+                    : (bool) config('blog_ai.auto.create_post', true);
+
+                $run = BlogAiRun::query()->create([
+                    'blog_ai_session_id' => $session->id,
+                    'user_id' => $request->user()->id,
+                    'mode' => 'auto',
+                    'status' => 'pending',
+                    'current_step' => 'queued',
+                    'progress_pct' => 0,
+                    'live_score' => 0,
+                    'step_log' => [[
+                        'at' => now()->toIso8601String(),
+                        'step' => 'queued',
+                        'event' => 'created',
+                        'message' => 'Auto run queued.',
+                    ]],
+                    'revision_counts' => [],
+                    'input_json' => [
+                        'cluster' => $validated['cluster'] ?? null,
+                        'seed_topic' => $validated['seed_topic'] ?? null,
+                        'keywords_pasted' => $pasted,
+                        'create_post' => $createPost,
+                    ],
+                ]);
+
+                return compact('session', 'run', 'createPost');
+            });
+
+            /** @var BlogAiSession $session */
+            $session = $result['session'];
+            /** @var BlogAiRun $run */
+            $run = $result['run'];
+
+            if ($this->shouldQueue()) {
+                ProcessBlogAutoPipeline::dispatch($run->id, $token);
+
+                return response()->json([
+                    'queued' => true,
+                    'run' => $run->fresh()->toAdminArray(),
+                    'session' => $session->fresh()->toAdminArray(),
+                ], 202);
+            }
+
+            try {
+                ProcessBlogAutoPipeline::dispatchSync($run->id, $token);
+            } catch (Throwable $e) {
+                $message = $e instanceof ValidationException
+                    ? (collect($e->errors())->flatten()->first() ?: $e->getMessage())
+                    : $e->getMessage();
+
+                throw ValidationException::withMessages([
+                    'ai' => is_string($message) && $message !== '' ? $message : 'Auto pipeline failed.',
+                ]);
+            }
+
+            $run = $run->fresh();
+            $session = $session->fresh();
+
+            if ($run->status === 'failed') {
+                throw ValidationException::withMessages([
+                    'ai' => $run->last_error ?: 'Auto pipeline failed.',
+                ]);
+            }
+
+            return response()->json([
+                'queued' => false,
+                'run' => $run->toAdminArray(),
+                'session' => $session->toAdminArray(),
+                'post_id' => $run->blog_post_id,
+            ]);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function showRun(Request $request, BlogAiRun $blogAiRun): JsonResponse
+    {
+        if ((int) $blogAiRun->user_id !== (int) $request->user()?->id) {
+            abort(403);
+        }
+
+        $session = $blogAiRun->session;
+        if ($session) {
+            $session->recoverIfStale();
+            if ($session->status === 'failed' && $blogAiRun->status === 'running') {
+                $blogAiRun->status = 'failed';
+                $blogAiRun->last_error = $session->last_error ?: 'Session failed.';
+                $blogAiRun->finished_at = now();
+                $blogAiRun->save();
+            }
+        }
+
+        return response()->json([
+            'run' => $blogAiRun->fresh()->toAdminArray(),
+            'session' => $session?->fresh()?->toAdminArray(),
+        ]);
+    }
+
+    public function cancelRun(Request $request, BlogAiRun $blogAiRun): JsonResponse
+    {
+        if ((int) $blogAiRun->user_id !== (int) $request->user()?->id) {
+            abort(403);
+        }
+
+        if ($blogAiRun->isTerminal()) {
+            return response()->json([
+                'run' => $blogAiRun->toAdminArray(),
+                'session' => $blogAiRun->session?->toAdminArray(),
+            ]);
+        }
+
+        $session = $blogAiRun->session;
+        if ($session) {
+            $session->invalidateJobToken();
+            $session->status = 'failed';
+            $session->last_error = 'Cancelled by admin.';
+            $session->save();
+        }
+
+        $blogAiRun->status = 'cancelled';
+        $blogAiRun->last_error = 'Cancelled by admin.';
+        $blogAiRun->finished_at = now();
+        $blogAiRun->appendLog([
+            'step' => $blogAiRun->current_step ?: 'pipeline',
+            'event' => 'cancelled',
+            'message' => 'Cancelled by admin.',
+        ]);
+        $blogAiRun->save();
+
+        return response()->json([
+            'run' => $blogAiRun->fresh()->toAdminArray(),
+            'session' => $session?->fresh()?->toAdminArray(),
         ]);
     }
 
@@ -455,5 +711,69 @@ class BlogAiController extends Controller
         }
 
         return $fallback;
+    }
+
+    private function autoRequiresQueue(): bool
+    {
+        $raw = config('blog_ai.auto.require_queue');
+        if ($raw === null || $raw === '') {
+            return app()->environment('production');
+        }
+
+        return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function assertAutoQueueReady(): void
+    {
+        if (! $this->autoRequiresQueue()) {
+            return;
+        }
+
+        if ($this->shouldQueue()) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'ai' => 'Auto create requires a queue worker in this environment. Set BLOG_AI_QUEUE=true and run `php artisan queue:work`, or set BLOG_AI_AUTO_REQUIRE_QUEUE=false for local sync only.',
+        ]);
+    }
+
+    private function assertNoActiveAutoRun(int $userId): void
+    {
+        if (! config('blog_ai.auto.one_active_run_per_user', true)) {
+            return;
+        }
+
+        $active = BlogAiRun::query()
+            ->where('user_id', $userId)
+            ->whereIn('status', BlogAiRun::ACTIVE_STATUSES)
+            ->latest('id')
+            ->first();
+
+        if (! $active) {
+            return;
+        }
+
+        // Auto-clear stale active runs when the session was unlocked / failed.
+        $session = $active->session;
+        if ($session) {
+            $session->recoverIfStale();
+            $session->refresh();
+            if (! $session->isBusy() && (
+                $session->status === 'failed'
+                || in_array($session->status, BlogAiSession::READY_STATUSES, true)
+            )) {
+                $active->status = $session->status === 'failed' ? 'failed' : 'cancelled';
+                $active->last_error = $active->last_error ?: 'Cleared stale auto run.';
+                $active->finished_at = now();
+                $active->save();
+
+                return;
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'ai' => 'You already have an auto create running (#'.$active->id.'). Wait for it to finish or cancel it.',
+        ]);
     }
 }

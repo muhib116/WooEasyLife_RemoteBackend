@@ -183,7 +183,7 @@ class AdminBlogPostTest extends TestCase
             'locale' => 'en',
             'status' => 'published',
             'meta_description' => 'Sanitized blog body for COD sellers in Bangladesh.',
-            'body_html' => '<p>Hello</p><script>alert(1)</script><p><a href="javascript:alert(1)">x</a></p>',
+            'body_html' => '<p>Hello</p><script>alert(1)</script><p><a href="/bd-fraud-checker">Fraud checker</a></p><p><a href="javascript:alert(1)">x</a></p>',
             'published_at' => now()->subMinute()->format('Y-m-d H:i:s'),
         ])->assertRedirect();
 
@@ -211,6 +211,47 @@ class AdminBlogPostTest extends TestCase
             'locale' => 'en',
             'status' => 'draft',
             'body_html' => str_repeat('a', 200001),
+        ])->assertSessionHasErrors('body_html');
+    }
+
+    public function test_publish_blocks_duplicate_focus_keyword(): void
+    {
+        $admin = $this->adminUser();
+
+        BlogPost::create([
+            'title' => 'First Post',
+            'slug' => 'first-focus-post',
+            'locale' => 'bn',
+            'status' => 'published',
+            'focus_keyword' => 'ফেক অর্ডার',
+            'body_html' => '<p><a href="/bd-fraud-checker">check</a></p>',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post(route('blogPosts.store'), [
+            'title' => 'Second Post',
+            'slug' => 'second-focus-post',
+            'locale' => 'bn',
+            'status' => 'published',
+            'focus_keyword' => 'ফেক অর্ডার',
+            'meta_description' => 'Duplicate focus keyword should be blocked on publish for same locale.',
+            'body_html' => '<h2>x</h2><p><a href="/">home</a></p>',
+        ])->assertSessionHasErrors('focus_keyword');
+    }
+
+    public function test_publish_requires_internal_link(): void
+    {
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)->post(route('blogPosts.store'), [
+            'title' => 'No Link Post',
+            'slug' => 'no-link-post',
+            'locale' => 'en',
+            'status' => 'published',
+            'meta_description' => 'Publishing without an internal link should fail validation.',
+            'body_html' => '<h2>Hello</h2><p>No internal URL here.</p>',
         ])->assertSessionHasErrors('body_html');
     }
 

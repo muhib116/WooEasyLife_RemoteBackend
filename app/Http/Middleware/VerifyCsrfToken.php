@@ -16,5 +16,6 @@ class VerifyCsrfToken extends Middleware
         'fraud-stream',
         'deploy',
         'deploy/setup',
+        'blog/analytics/event',
     ];
 }

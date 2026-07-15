@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
+use App\Models\BlogPostAnalytics;
+use App\Services\BlogAi\BlogLearningService;
+use App\Services\BlogSeoQuality;
 use App\Services\BlogService;
 use App\Support\BlogHtmlSanitizer;
 use Illuminate\Http\JsonResponse;
@@ -19,32 +22,51 @@ class BlogPostController extends Controller
 {
     public function __construct(
         private BlogService $blogService,
+        private BlogSeoQuality $blogSeoQuality,
     ) {}
 
     public function index(Request $request): Response
     {
+        $analyticsBySlug = BlogPostAnalytics::query()
+            ->get(['slug', 'views_28d', 'cta_clicks_28d', 'engagement_score', 'gsc_clicks_28d'])
+            ->keyBy('slug');
+
         $posts = BlogPost::query()
             ->orderByDesc('published_at')
             ->orderByDesc('id')
             ->get()
-            ->map(fn (BlogPost $post) => [
-                'id' => $post->id,
-                'title' => $post->title,
-                'slug' => $post->slug,
-                'locale' => $post->locale,
-                'status' => $post->status,
-                'excerpt' => $post->excerpt,
-                'focus_keyword' => $post->focus_keyword,
-                'published_at' => optional($post->published_at)?->toIso8601String(),
-                'updated_at' => optional($post->updated_at)?->toIso8601String(),
-                'public_path' => filled($post->slug) ? $post->publicPath() : null,
-                'public_url' => ($post->status === 'published' && filled($post->slug))
-                    ? $post->publicUrl()
-                    : null,
-            ]);
+            ->map(function (BlogPost $post) use ($analyticsBySlug) {
+                $stats = $analyticsBySlug->get($post->slug);
+
+                return [
+                    'id' => $post->id,
+                    'title' => $post->title,
+                    'slug' => $post->slug,
+                    'locale' => $post->locale,
+                    'cluster' => $post->cluster,
+                    'status' => $post->status,
+                    'excerpt' => $post->excerpt,
+                    'focus_keyword' => $post->focus_keyword,
+                    'ai_quality_score' => $post->ai_quality_score,
+                    'ai_quality_breakdown' => $post->ai_quality_breakdown,
+                    'published_at' => optional($post->published_at)?->toIso8601String(),
+                    'updated_at' => optional($post->updated_at)?->toIso8601String(),
+                    'public_path' => filled($post->slug) ? $post->publicPath() : null,
+                    'public_url' => ($post->status === 'published' && filled($post->slug))
+                        ? $post->publicUrl()
+                        : null,
+                    'analytics' => $stats ? [
+                        'views_28d' => $stats->views_28d,
+                        'cta_clicks_28d' => $stats->cta_clicks_28d,
+                        'gsc_clicks_28d' => $stats->gsc_clicks_28d,
+                        'engagement_score' => $stats->engagement_score,
+                    ] : null,
+                ];
+            });
 
         return Inertia::render('BlogPosts/Index', [
             'posts' => $posts,
+            'learning' => app(BlogLearningService::class)->adminDashboard(),
         ]);
     }
 
@@ -80,6 +102,7 @@ class BlogPostController extends Controller
                 'title' => $blogPost->title,
                 'slug' => $blogPost->slug,
                 'locale' => $blogPost->locale,
+                'cluster' => $blogPost->cluster,
                 'status' => $blogPost->status,
                 'excerpt' => $blogPost->excerpt,
                 'meta_title' => $blogPost->meta_title,
@@ -92,6 +115,9 @@ class BlogPostController extends Controller
                 'faqs_json' => $blogPost->faqs_json ?? [],
                 'body_html' => $blogPost->body_html,
                 'published_at' => optional($blogPost->published_at)?->format('Y-m-d\TH:i'),
+                'ai_quality_score' => $blogPost->ai_quality_score,
+                'ai_quality_breakdown' => $blogPost->ai_quality_breakdown,
+                'ai_run_id' => $blogPost->ai_run_id,
                 'public_path' => filled($blogPost->slug) ? $blogPost->publicPath() : null,
                 'public_url' => ($blogPost->status === 'published' && filled($blogPost->slug))
                     ? $blogPost->publicUrl()
@@ -143,6 +169,10 @@ class BlogPostController extends Controller
      */
     private function validated(Request $request, ?int $ignoreId = null): array
     {
+        if ($request->input('cluster') === '') {
+            $request->merge(['cluster' => null]);
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => [
@@ -154,6 +184,7 @@ class BlogPostController extends Controller
                 Rule::unique('blog_posts', 'slug')->ignore($ignoreId),
             ],
             'locale' => ['required', Rule::in(BlogPost::LOCALES)],
+            'cluster' => ['nullable', 'string', 'max:64', Rule::in(array_keys(config('blog_ai.clusters', [])))],
             'status' => ['required', Rule::in(BlogPost::STATUSES)],
             'excerpt' => ['nullable', 'string', 'max:500'],
             'meta_title' => ['nullable', 'string', 'max:70'],
@@ -167,6 +198,9 @@ class BlogPostController extends Controller
             'faqs_json.*.a' => ['required_with:faqs_json', 'string', 'max:500'],
             'body_html' => ['required', 'string', 'max:200000'],
             'published_at' => ['nullable', 'date'],
+            'ai_quality_score' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'ai_quality_breakdown' => ['nullable', 'array'],
+            'ai_run_id' => ['nullable', 'integer', 'exists:blog_ai_runs,id'],
         ], [
             'slug.required' => 'Add an English SEO slug before publishing (e.g. fake-order-atkabo).',
             'slug.regex' => 'Slug must be lowercase Latin letters, numbers, and hyphens only.',
@@ -208,22 +242,53 @@ class BlogPostController extends Controller
             $publishedAt = $publishedAt ?: null;
         }
 
-        return [
+        $bodyHtml = BlogHtmlSanitizer::sanitize($validated['body_html']);
+        $focusKeyword = $validated['focus_keyword'] ?? null;
+        $locale = $validated['locale'];
+
+        if ($status === 'published') {
+            $seoErrors = $this->blogSeoQuality->publishValidationErrors(
+                bodyHtml: $bodyHtml,
+                focusKeyword: is_string($focusKeyword) ? $focusKeyword : null,
+                slug: $slug,
+                locale: $locale,
+                ignorePostId: $ignoreId,
+            );
+
+            if ($seoErrors !== []) {
+                throw ValidationException::withMessages($seoErrors);
+            }
+        }
+
+        $data = [
             'title' => $validated['title'],
             'slug' => $slug,
-            'locale' => $validated['locale'],
+            'locale' => $locale,
+            'cluster' => $validated['cluster'] ?? null,
             'status' => $status,
             'excerpt' => $validated['excerpt'] ?? null,
             'meta_title' => $validated['meta_title'] ?? null,
             'meta_description' => $validated['meta_description'] ?? null,
-            'focus_keyword' => $validated['focus_keyword'] ?? null,
+            'focus_keyword' => $focusKeyword,
             'og_image' => $this->normalizeOgImage($validated['og_image'] ?? null),
             'robots' => $validated['robots'] ?? 'index,follow',
             'author_name' => $validated['author_name'] ?? null,
             'faqs_json' => $this->normalizeFaqs($validated['faqs_json'] ?? null),
-            'body_html' => BlogHtmlSanitizer::sanitize($validated['body_html']),
+            'body_html' => $bodyHtml,
             'published_at' => $publishedAt,
         ];
+
+        if ($request->exists('ai_quality_score')) {
+            $data['ai_quality_score'] = $validated['ai_quality_score'];
+        }
+        if ($request->exists('ai_quality_breakdown')) {
+            $data['ai_quality_breakdown'] = $validated['ai_quality_breakdown'] ?? null;
+        }
+        if ($request->exists('ai_run_id')) {
+            $data['ai_run_id'] = $validated['ai_run_id'] ?? null;
+        }
+
+        return $data;
     }
 
     /**
@@ -238,8 +303,8 @@ class BlogPostController extends Controller
         $normalized = collect($faqs)
             ->filter(fn ($row) => is_array($row) && filled($row['q'] ?? null) && filled($row['a'] ?? null))
             ->map(fn (array $row) => [
-                'q' => \Illuminate\Support\Str::limit(trim((string) $row['q']), 200, ''),
-                'a' => \Illuminate\Support\Str::limit(trim((string) $row['a']), 500, ''),
+                'q' => Str::limit(trim((string) $row['q']), 200, ''),
+                'a' => Str::limit(trim((string) $row['a']), 500, ''),
             ])
             ->take(8)
             ->values()
@@ -268,6 +333,7 @@ class BlogPostController extends Controller
                 'noindex,nofollow',
             ],
             'markdown_slugs' => $this->blogService->markdownSlugs(),
+            'clusters' => config('blog_ai.clusters', []),
         ];
     }
 

@@ -1,54 +1,63 @@
 <?php
 
 use App\Http\Controllers\Admin\ApiKeyController;
-use App\Http\Controllers\App\LegalController;
-use App\Http\Controllers\App\BlogController;
-use App\Http\Controllers\App\EnglishMarketingController;
-use App\Http\Controllers\App\MarketingSeoController;
-use App\Http\Controllers\App\PublicSubscriptionController;
-use App\Http\Controllers\App\PricingController;
-use App\Http\Controllers\App\RobotsController;
-use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\Admin\BackupController;
+use App\Http\Controllers\Admin\BlogAiController;
+use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
-use App\Http\Controllers\Admin\BlogPostController;
-use App\Http\Controllers\Admin\BlogAiController;
 use App\Http\Controllers\Admin\CustomerNoticeController;
-use App\Http\Controllers\Admin\LandingSettingsController;
-use App\Http\Controllers\Admin\MarketingSettingsController;
-use App\Http\Controllers\Admin\MediaLibraryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DatabaseMigrationController;
 use App\Http\Controllers\Admin\DeveloperController;
-use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\FollowUpController;
+use App\Http\Controllers\Admin\LandingSettingsController;
 use App\Http\Controllers\Admin\LogController;
+use App\Http\Controllers\Admin\MarketingSettingsController;
+use App\Http\Controllers\Admin\MediaLibraryController;
 use App\Http\Controllers\Admin\MerchantEmployeeController;
+use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderIntelligenceAdminController;
-use App\Http\Controllers\Admin\OrderAdminController;
-use App\Http\Controllers\Admin\PackagePaymentAdminController;
-use App\Http\Controllers\Admin\RoleAdminController;
-use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
 use App\Http\Controllers\Admin\PackageHubController;
+use App\Http\Controllers\Admin\PackagePaymentAdminController;
 use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\RoleAdminController;
 use App\Http\Controllers\Admin\SessionController;
+use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
+use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitorController;
 use App\Http\Controllers\Admin\WebhookActivityController;
 use App\Http\Controllers\Admin\WhitelistedDomainController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\Analysis\UseAnalysisController;
-use App\Http\Controllers\DeployController;
-use App\Http\Controllers\PublicStorageController;
+use App\Http\Controllers\App\BlogAnalyticsController;
+use App\Http\Controllers\App\BlogController;
+use App\Http\Controllers\App\EnglishMarketingController;
+use App\Http\Controllers\App\LegalController;
+use App\Http\Controllers\App\MarketingSeoController;
+use App\Http\Controllers\App\PricingController;
+use App\Http\Controllers\App\PublicSubscriptionController;
+use App\Http\Controllers\App\RobotsController;
+use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\CurlController;
+use App\Http\Controllers\DeployController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\FraudPartnerCredentialController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicDownloadGateController;
+use App\Http\Controllers\PublicFraudCheckController;
+use App\Http\Controllers\PublicStorageController;
 use App\Http\Controllers\SmsController;
+use App\Services\LandingPageService;
+use App\Services\LandingSettingsService;
+use App\Services\PublicSubscriptionService;
+use App\Services\SeoMetaService;
+use App\Services\SubscriptionPaymentConfigService;
+use App\Support\WhatsappLink;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -60,7 +69,7 @@ use Inertia\Inertia;
 | Here is where you can register web routes for your application. These
 | routes are loaded by the RouteServiceProvider within a group which
 | contains the "web" middleware group. Now create something great!
-| 
+|
 im_super=true
 */
 
@@ -72,28 +81,28 @@ Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::get('/', function () {
-    $landingSettings = app(\App\Services\LandingSettingsService::class);
-    $landing = app(\App\Services\LandingPageService::class)->payload(request());
+    $landingSettings = app(LandingSettingsService::class);
+    $landing = app(LandingPageService::class)->payload(request());
     $whatsapp = $landingSettings->adminWhatsapp();
-    $subscriptionService = app(\App\Services\PublicSubscriptionService::class);
+    $subscriptionService = app(PublicSubscriptionService::class);
     $pendingInquiry = $subscriptionService->resolvePendingForVisitor(
         request()->user(),
-        request()->session()->get(\App\Services\PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY),
+        request()->session()->get(PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY),
     );
 
     if (! $pendingInquiry) {
-        request()->session()->forget(\App\Services\PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY);
+        request()->session()->forget(PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY);
     }
 
-    $seo = app(\App\Services\SeoMetaService::class)->forPage('home');
+    $seo = app(SeoMetaService::class)->forPage('home');
 
     return Inertia::render('Welcome3', array_merge($landing, [
         'canLogin' => Route::has('merchant.login'),
         'canRegister' => Route::has('register'),
         'domains' => [],
         'subscriptionWizard' => config('landing.subscription_wizard', []),
-        'subscriptionPaymentMethods' => app(\App\Services\SubscriptionPaymentConfigService::class)->forApi(),
-        'whatsappSupportUrl' => \App\Support\WhatsappLink::url(
+        'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
+        'whatsappSupportUrl' => WhatsappLink::url(
             $whatsapp,
             config('landing.whatsapp_default_message'),
         ),
@@ -141,6 +150,9 @@ Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{slug}', [BlogController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')
     ->name('blog.show');
+Route::post('/blog/analytics/event', [BlogAnalyticsController::class, 'store'])
+    ->middleware('throttle:60,1')
+    ->name('blog.analytics.event');
 
 Route::prefix('en')->name('seo.en.')->group(function () {
     Route::get('/', [EnglishMarketingController::class, 'home'])->name('home');
@@ -150,25 +162,25 @@ Route::prefix('en')->name('seo.en.')->group(function () {
 });
 
 Route::prefix('public/download-gate')->name('landing.download-gate.')->group(function () {
-    Route::post('/send-otp', [\App\Http\Controllers\PublicDownloadGateController::class, 'sendOtp'])
+    Route::post('/send-otp', [PublicDownloadGateController::class, 'sendOtp'])
         ->middleware('throttle:8,1')
         ->name('send-otp');
-    Route::post('/verify-otp', [\App\Http\Controllers\PublicDownloadGateController::class, 'verifyOtp'])
+    Route::post('/verify-otp', [PublicDownloadGateController::class, 'verifyOtp'])
         ->middleware('throttle:20,1')
         ->name('verify-otp');
-    Route::post('/validate-website', [\App\Http\Controllers\PublicDownloadGateController::class, 'validateWebsite'])
+    Route::post('/validate-website', [PublicDownloadGateController::class, 'validateWebsite'])
         ->middleware('throttle:30,1')
         ->name('validate-website');
-    Route::get('/download/{asset}', [\App\Http\Controllers\PublicDownloadGateController::class, 'download'])
+    Route::get('/download/{asset}', [PublicDownloadGateController::class, 'download'])
         ->where('asset', 'apk|plugin')
         ->middleware('throttle:30,1')
         ->name('download');
 });
 
 Route::prefix('public/fraud-check')->name('landing.fraud-check.')->group(function () {
-    Route::get('/stats', [\App\Http\Controllers\PublicFraudCheckController::class, 'stats'])
+    Route::get('/stats', [PublicFraudCheckController::class, 'stats'])
         ->name('stats');
-    Route::post('/', [\App\Http\Controllers\PublicFraudCheckController::class, 'check'])
+    Route::post('/', [PublicFraudCheckController::class, 'check'])
         ->middleware('throttle:30,1')
         ->name('check');
 });
@@ -197,7 +209,6 @@ Route::prefix('woodnutsbolts')->name('woodnutsbolts.')->group(function () {
     Route::get('/terms-of-service', [LegalController::class, 'woodnutsboltsTermsOfService'])
         ->name('terms-of-service');
 });
-
 
 Route::get('/curl', [CurlController::class, 'index']);
 
@@ -397,7 +408,6 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/reindex-search', [OrderIntelligenceAdminController::class, 'reindexSearch'])->name('reindexSearch');
     });
 
-
     Route::group(['as' => 'developer.', 'prefix' => 'developer'], function () {
         Route::get('/', [DeveloperController::class, 'index'])->name('index');
         Route::post('/proxy', [DeveloperController::class, 'proxy'])->name('proxy');
@@ -509,6 +519,9 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     ], function () {
         Route::get('/options', [BlogAiController::class, 'options'])->name('options');
         Route::post('/suggest-keywords', [BlogAiController::class, 'suggestKeywords'])->name('suggestKeywords');
+        Route::post('/auto', [BlogAiController::class, 'startAuto'])->name('auto');
+        Route::get('/runs/{blogAiRun}', [BlogAiController::class, 'showRun'])->name('runs.show');
+        Route::post('/runs/{blogAiRun}/cancel', [BlogAiController::class, 'cancelRun'])->name('runs.cancel');
         Route::post('/sessions', [BlogAiController::class, 'store'])->name('store');
         Route::get('/sessions/{blogAiSession}', [BlogAiController::class, 'show'])->name('show');
         Route::post('/sessions/{blogAiSession}/recover', [BlogAiController::class, 'recover'])->name('recover');
@@ -517,6 +530,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/sessions/{blogAiSession}/outline', [BlogAiController::class, 'outline'])->name('outline');
         Route::post('/sessions/{blogAiSession}/draft', [BlogAiController::class, 'draft'])->name('draft');
         Route::post('/sessions/{blogAiSession}/image', [BlogAiController::class, 'image'])->name('image');
+        Route::post('/sessions/{blogAiSession}/image/regenerate', [BlogAiController::class, 'regenerateImage'])->name('image.regenerate');
+        Route::post('/sessions/{blogAiSession}/image/approve', [BlogAiController::class, 'approveImage'])->name('image.approve');
     });
 
     Route::group([
@@ -558,8 +573,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     });
 });
 
-require __DIR__ . '/portal.php';
-require __DIR__ . '/auth.php';
+require __DIR__.'/portal.php';
+require __DIR__.'/auth.php';
 
 // Production deploy (no terminal): POST with X-Deploy-Secret header (secret must not appear in the URL)
 Route::post('/deploy', [DeployController::class, 'deploy'])->name('deploy');

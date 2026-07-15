@@ -9,10 +9,169 @@
     >
         <div class="space-y-4">
             <p class="text-sm text-slate-600 dark:text-slate-300">
-                Landing-page truth → BD keywords → hooks → outline → SEO draft → optional cover image.
-                Always applied as <strong>draft</strong> — you review before publish.
+                Landing-page truth → BD keywords → hooks → outline → SEO draft → marketing banner.
+                Output is always a <strong>draft</strong> for human review — strong SEO process, not a ranking guarantee.
             </p>
 
+            <div class="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition"
+                    :class="writerMode === 'auto'
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'"
+                    :disabled="loading || autoLoading"
+                    @click="setWriterMode('auto')"
+                >
+                    Auto (1-click)
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition"
+                    :class="writerMode === 'manual'
+                        ? 'bg-amber-500 text-black'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'"
+                    :disabled="loading || autoLoading"
+                    @click="setWriterMode('manual')"
+                >
+                    Manual steps
+                </button>
+            </div>
+
+            <!-- Auto mode -->
+            <div v-if="writerMode === 'auto'" class="space-y-4">
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Agents generate each step, review, then advance only on pass. Progress + live score update while running.
+                    Optional fields steer; leave blank to use learning + market suggest.
+                </p>
+
+                <div
+                    v-if="queueWarning"
+                    class="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100"
+                >
+                    {{ queueWarning }}
+                </div>
+
+                <div
+                    v-if="learningSummary"
+                    class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-100"
+                >
+                    <p class="font-semibold">Learning from live blog performance</p>
+                    <p class="mt-1">{{ learningSummary }}</p>
+                </div>
+
+                <div v-if="showAutoInputs" class="space-y-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cluster (optional)</label>
+                        <Select
+                            v-model="cluster"
+                            :options="clusterOptions"
+                            option-label="label"
+                            option-value="value"
+                            class="w-full"
+                            placeholder="Auto-pick from learning"
+                            show-clear
+                            :disabled="autoLoading"
+                        />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Seed topic (optional)</label>
+                        <InputText
+                            v-model="seedTopic"
+                            class="w-full"
+                            placeholder="Leave blank to use next learning idea"
+                            :disabled="autoLoading"
+                        />
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Keywords (optional)</label>
+                        <Textarea
+                            v-model="keywordsText"
+                            class="w-full"
+                            rows="3"
+                            placeholder="Optional — otherwise AI generates BD keywords"
+                            :disabled="autoLoading"
+                        />
+                    </div>
+                </div>
+
+                <div v-if="autoRun" class="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Progress</p>
+                            <p class="text-sm font-medium text-slate-800 dark:text-slate-100">
+                                {{ autoStepLabel }} · {{ autoRun.progress_pct ?? 0 }}%
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Live score</p>
+                            <p
+                                class="text-2xl font-bold tabular-nums"
+                                :class="scoreClass(autoRun.live_score)"
+                            >
+                                {{ autoRun.live_score ?? 0 }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div
+                            class="h-full rounded-full bg-amber-500 transition-all duration-500"
+                            :style="{ width: `${Math.min(100, autoRun.progress_pct || 0)}%` }"
+                        />
+                    </div>
+                    <div
+                        v-if="autoRun.score_breakdown"
+                        class="flex flex-wrap gap-2 text-[11px] text-slate-500"
+                    >
+                        <span
+                            v-for="(val, key) in autoRun.score_breakdown"
+                            :key="key"
+                            class="rounded bg-slate-100 px-2 py-0.5 dark:bg-slate-800"
+                        >
+                            {{ key }}: {{ val ?? '—' }}
+                        </span>
+                    </div>
+                    <div
+                        class="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-900/60"
+                    >
+                        <div
+                            v-for="(entry, idx) in (autoRun.step_log || []).slice().reverse().slice(0, 12)"
+                            :key="idx"
+                            class="text-slate-600 dark:text-slate-300"
+                        >
+                            <span class="font-medium text-slate-800 dark:text-slate-100">{{ entry.step }}</span>
+                            · {{ entry.event }} — {{ entry.message }}
+                        </div>
+                    </div>
+                    <p v-if="autoRun.last_error" class="text-sm text-rose-600 dark:text-rose-400">
+                        {{ autoRun.last_error }}
+                    </p>
+                    <p
+                        v-if="isAutoSuccess"
+                        class="text-sm"
+                        :class="autoRun.needs_review
+                            ? 'text-amber-700 dark:text-amber-300'
+                            : 'text-emerald-700 dark:text-emerald-400'"
+                    >
+                        <template v-if="autoRun.needs_review">
+                            Done — needs review (score {{ autoRun.live_score }}).
+                            <span v-if="autoRun.soft_pass"> SEO soft-pass.</span>
+                            <span v-if="autoRun.image_auto_approved"> Cover was auto-approved after QA fail.</span>
+                        </template>
+                        <template v-else>
+                            Ready
+                            <span v-if="autoRun.blog_post_id"> — draft post #{{ autoRun.blog_post_id }}</span>.
+                            Score {{ autoRun.live_score }}.
+                        </template>
+                    </p>
+                </div>
+
+                <p v-if="error" class="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">
+                    {{ error }}
+                </p>
+            </div>
+
+            <template v-else>
             <div class="flex flex-wrap gap-2 text-xs">
                 <span
                     v-for="(label, idx) in stepLabels"
@@ -52,6 +211,28 @@
 
             <!-- Step 0: topic -->
             <div v-if="step === 0" class="space-y-3">
+                <div
+                    v-if="learningSummary"
+                    class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-100"
+                >
+                    <p class="font-semibold">Learning from live blog performance</p>
+                    <p class="mt-1">{{ learningSummary }}</p>
+                    <p v-if="learningGaps.length" class="mt-1 text-emerald-800/80 dark:text-emerald-200/80">
+                        Coverage gaps: {{ learningGaps.join(', ') }}
+                    </p>
+                    <ul v-if="nextPostIdeas.length" class="mt-2 list-disc space-y-1 pl-4 text-emerald-900/90 dark:text-emerald-100/90">
+                        <li v-for="(idea, i) in nextPostIdeas" :key="i">
+                            <button
+                                type="button"
+                                class="text-left underline decoration-dotted underline-offset-2 hover:text-amber-700 dark:hover:text-amber-300"
+                                @click="applyIdea(idea)"
+                            >
+                                {{ idea.suggested_title || idea.seed_topic }}
+                            </button>
+                            <span class="opacity-70"> ({{ idea.cluster }})</span>
+                        </li>
+                    </ul>
+                </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cluster</label>
                     <Select
@@ -61,7 +242,14 @@
                         option-value="value"
                         class="w-full"
                         placeholder="Pick a topic cluster"
+                        @update:model-value="onClusterChange"
                     />
+                    <p
+                        v-if="clusterBiasWarning"
+                        class="mt-1 text-xs text-amber-700 dark:text-amber-300"
+                    >
+                        {{ clusterBiasWarning }}
+                    </p>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Seed topic (optional)</label>
@@ -222,14 +410,41 @@
                         Words: {{ session.draft.quality.word_count }}
                     </span>
                     <span :class="badgeClass(session.draft.quality.has_h2)">H2</span>
-                    <span :class="badgeClass(session.draft.quality.has_internal_link)">Internal links</span>
-                    <span :class="badgeClass(session.draft.quality.keyword_in_title)">KW in title</span>
+                    <span :class="badgeClass(session.draft.quality.internal_links_ok)">
+                        Links {{ session.draft.quality.internal_link_count || 0 }}
+                    </span>
+                    <span :class="badgeClass(session.draft.quality.keyword_in_title)">KW title</span>
+                    <span :class="badgeClass(session.draft.quality.keyword_in_first_paragraph)">KW 1st ¶</span>
+                    <span :class="badgeClass(session.draft.quality.keyword_in_meta)">KW meta</span>
                     <span :class="badgeClass(session.draft.quality.meta_description_ok)">Meta OK</span>
+                    <span :class="badgeClass(session.draft.quality.faq_count_ok)">
+                        FAQs {{ session.draft.quality.faq_count || 0 }}
+                    </span>
+                    <span :class="badgeClass(session.draft.quality.secondary_keyword_in_body)">Secondary KW</span>
+                    <span :class="badgeClass(session.draft.quality.has_content_image)">Content img</span>
+                    <span :class="badgeClass(!session.draft.quality.slug_collision)">Unique slug</span>
+                    <span :class="badgeClass(!session.draft.quality.focus_keyword_collision)">Unique KW</span>
+                    <span :class="badgeClass(session.draft.quality.ai_ready)">AI SEO ready</span>
                 </div>
+                <p
+                    v-if="session?.draft?.quality && !session.draft.quality.ai_ready"
+                    class="text-xs text-amber-700 dark:text-amber-400"
+                >
+                    Some SEO checks failed — you can still apply as draft and fix in the editor before publishing.
+                    <span v-if="session.draft.quality.failures?.length">
+                        ({{ session.draft.quality.failures.join(', ') }})
+                    </span>
+                </p>
                 <p class="text-xs text-slate-500">
                     Calls: {{ session?.usage?.ai_calls || 0 }}
                     · Tokens: {{ session?.usage?.total_tokens || 0 }}
                     · Est. ${{ Number(session?.usage?.estimated_usd || 0).toFixed(4) }}
+                </p>
+                <p
+                    v-if="session?.draft && !session?.draft?.og_image && !session?.image?.url"
+                    class="rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+                >
+                    No cover image yet. Prefer “Generate image”, or after “Skip image &amp; apply” add an OG image in the editor before publishing.
                 </p>
             </div>
 
@@ -246,14 +461,76 @@
                     >
                 </div>
                 <p v-else class="text-slate-500">No cover image yet. Generate one or apply the draft without it.</p>
+
+                <div
+                    v-if="session?.status === 'image_needs_fix'"
+                    class="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-900 dark:text-amber-100"
+                >
+                    <p class="font-semibold">AI review: needs fix</p>
+                    <p class="text-xs opacity-90">
+                        Score: {{ session?.image?.review?.score ?? '—' }}
+                        · Attempts: {{ session?.image?.attempts ?? '—' }}
+                        · Calls this step: {{ session?.image?.ai_calls_this_step ?? '—' }}
+                    </p>
+                    <ul
+                        v-if="session?.image?.review?.issues?.length"
+                        class="list-disc space-y-1 pl-4 text-xs"
+                    >
+                        <li v-for="(issue, idx) in session.image.review.issues" :key="idx">{{ issue }}</li>
+                    </ul>
+                    <p v-else-if="session?.last_error" class="text-xs">{{ session.last_error }}</p>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <Button
+                            label="Regenerate"
+                            icon="pi pi-refresh"
+                            size="small"
+                            severity="warning"
+                            :disabled="loading"
+                            @click="regenerateImage"
+                        />
+                        <Button
+                            label="Use anyway"
+                            icon="pi pi-check"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            :disabled="loading"
+                            @click="approveImage"
+                        />
+                    </div>
+                </div>
+
+                <p
+                    v-if="!session?.image?.url && !session?.draft?.og_image"
+                    class="rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+                >
+                    Skipping image is OK for a draft — remember to set OG / cover (+ body image) in the post form before you publish.
+                </p>
                 <p class="text-xs text-slate-500">
-                    Consistent founder look; outfit/posture varies. Bangla headline can be composited later.
+                    Full marketing banner with the same founder identity. AI reviews alignment + consistency before mark ready.
+                    Dense banners may crop awkwardly on Facebook OG shares.
                 </p>
                 <p class="text-xs text-slate-500">
                     Calls: {{ session?.usage?.ai_calls || 0 }}
                     · Est. ${{ Number(session?.usage?.estimated_usd || 0).toFixed(4) }}
+                    <span v-if="session?.image?.attempts"> · Banner attempts: {{ session.image.attempts }}</span>
                 </p>
+                <div
+                    v-if="session?.status === 'image_ready' && session?.image?.url"
+                    class="flex flex-wrap gap-2"
+                >
+                    <Button
+                        label="Regenerate banner"
+                        icon="pi pi-refresh"
+                        size="small"
+                        severity="secondary"
+                        outlined
+                        :disabled="loading"
+                        @click="regenerateImage"
+                    />
+                </div>
             </div>
+            </template>
         </div>
 
         <template #footer>
@@ -262,10 +539,38 @@
                     label="Close"
                     severity="secondary"
                     text
-                    :disabled="loading"
+                    :disabled="loading || autoLoading"
                     @click="visibleProxy = false"
                 />
                 <div class="flex flex-wrap gap-2">
+                    <template v-if="writerMode === 'auto'">
+                        <Button
+                            v-if="autoRunActive"
+                            label="Cancel"
+                            icon="pi pi-times"
+                            severity="danger"
+                            outlined
+                            :disabled="cancelling"
+                            :loading="cancelling"
+                            @click="cancelAuto"
+                        />
+                        <Button
+                            v-if="isAutoSuccess && session?.draft"
+                            :label="autoRun?.blog_post_id ? 'Open draft post' : 'Apply to form'"
+                            icon="pi pi-check"
+                            :disabled="autoLoading"
+                            @click="applyAutoDraft"
+                        />
+                        <Button
+                            v-if="!autoRunActive"
+                            :label="isAutoSuccess ? 'Create another' : 'Create with AI'"
+                            icon="pi pi-sparkles"
+                            :loading="autoLoading"
+                            :disabled="autoLoading || Boolean(queueBlocked)"
+                            @click="startAuto"
+                        />
+                    </template>
+                    <template v-else>
                     <Button
                         v-if="step > 0 && step < 5"
                         label="Back"
@@ -297,6 +602,7 @@
                         :disabled="!canPrimary"
                         @click="runPrimary"
                     />
+                    </template>
                 </div>
             </div>
         </template>
@@ -306,6 +612,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import axios from 'axios';
+import { router } from '@inertiajs/vue3';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
@@ -316,7 +623,7 @@ const props = defineProps({
     visible: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['update:visible', 'apply']);
+const emit = defineEmits(['update:visible', 'apply', 'post-created']);
 
 const visibleProxy = computed({
     get: () => props.visible,
@@ -336,7 +643,77 @@ const keywordsText = ref('');
 const selectedHookIds = ref([]);
 const queueEnabled = ref(true);
 const imageEnabled = ref(true);
+const autoEnabled = ref(true);
+const autoRequireQueue = ref(false);
+const autoApproveImage = ref(true);
+const writerMode = ref('auto');
+const autoLoading = ref(false);
+const cancelling = ref(false);
+const autoRun = ref(null);
+const learningSummary = ref('');
+const learningGaps = ref([]);
+const recommendedClusters = ref([]);
+const nextPostIdeas = ref([]);
+const clusterBiasWarning = ref('');
 let pollGeneration = 0;
+let autoPollGeneration = 0;
+
+const MODE_KEY = 'blog_ai_writer_mode';
+
+const showAutoInputs = computed(() => {
+    if (!autoRun.value) return true;
+    return !['pending', 'running'].includes(autoRun.value.status);
+});
+
+const autoRunActive = computed(() => ['pending', 'running'].includes(autoRun.value?.status));
+
+const isAutoSuccess = computed(() =>
+    ['completed', 'completed_needs_review'].includes(autoRun.value?.status),
+);
+
+const queueBlocked = computed(() => autoRequireQueue.value && !queueEnabled.value);
+
+const queueWarning = computed(() => {
+    if (queueBlocked.value) {
+        return 'Auto create is blocked until a queue worker is configured (BLOG_AI_QUEUE=true + php artisan queue:work). Manual steps still work sync.';
+    }
+    if (!queueEnabled.value) {
+        return 'Queue is off — auto runs sync in this request and may time out if image generation is on. Prefer BLOG_AI_QUEUE=true in production.';
+    }
+    return '';
+});
+
+const autoStepLabel = computed(() => {
+    const stepName = autoRun.value?.current_step || 'waiting';
+    const map = {
+        queued: 'Queued',
+        intake: 'Market + learning',
+        research: 'Keywords',
+        hooks: 'Hooks',
+        outline: 'Outline',
+        draft: 'Draft',
+        image: 'Image',
+        finalize: 'Finalize',
+        done: 'Done',
+    };
+    return map[stepName] || stepName;
+});
+
+const scoreClass = (score) => {
+    const n = Number(score || 0);
+    if (n >= 80) return 'text-emerald-600 dark:text-emerald-400';
+    if (n >= 60) return 'text-amber-600 dark:text-amber-400';
+    return 'text-rose-600 dark:text-rose-400';
+};
+
+const setWriterMode = (mode) => {
+    writerMode.value = mode;
+    try {
+        localStorage.setItem(MODE_KEY, mode);
+    } catch {
+        // ignore
+    }
+};
 
 const clusterOptions = ref([
     { value: 'fake_order', label: 'ফেক অর্ডার / COD fraud' },
@@ -358,7 +735,7 @@ const primaryLabel = computed(() => {
     if (step.value === 1) return 'Generate hooks';
     if (step.value === 2) return 'Build outline';
     if (step.value === 3) return 'Write full draft';
-    if (step.value === 4) return imageEnabled.value ? 'Generate cover image' : 'Apply to form';
+    if (step.value === 4) return imageEnabled.value ? 'Generate marketing banner' : 'Apply to form';
     return 'Apply to form';
 });
 
@@ -381,12 +758,16 @@ const stopPoll = () => {
 
 const reset = () => {
     stopPoll();
+    stopAutoPoll();
     step.value = 0;
     loading.value = false;
+    autoLoading.value = false;
+    cancelling.value = false;
     suggestingKeywords.value = false;
     busyHint.value = '';
     error.value = '';
     session.value = null;
+    autoRun.value = null;
     selectedHookIds.value = [];
 };
 
@@ -394,10 +775,157 @@ const onHide = () => {
     reset();
 };
 
+const applyAutoDraft = () => {
+    if (autoRun.value?.blog_post_id) {
+        openCreatedPost();
+        return;
+    }
+    if (!session.value?.draft) {
+        return;
+    }
+    emit('apply', session.value.draft);
+    visibleProxy.value = false;
+};
+
+const openCreatedPost = () => {
+    const id = autoRun.value?.blog_post_id;
+    if (!id) {
+        return;
+    }
+    emit('post-created', id);
+    visibleProxy.value = false;
+    router.visit(route('blogPosts.edit', id));
+};
+
+const stopAutoPoll = () => {
+    autoPollGeneration += 1;
+};
+
+const pollAutoRun = async (runId) => {
+    const gen = ++autoPollGeneration;
+    const maxTicks = 240;
+    for (let i = 0; i < maxTicks; i += 1) {
+        if (gen !== autoPollGeneration) {
+            return;
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+        if (gen !== autoPollGeneration) {
+            return;
+        }
+        try {
+            const { data } = await axios.get(route('blogAi.runs.show', runId));
+            autoRun.value = data.run;
+            if (data.session) {
+                session.value = data.session;
+            }
+            if (['completed', 'completed_needs_review', 'failed', 'cancelled'].includes(data.run?.status)) {
+                autoLoading.value = false;
+                if (data.run.status === 'failed' || data.run.status === 'cancelled') {
+                    error.value = data.run.last_error || 'Auto pipeline stopped.';
+                }
+                return;
+            }
+        } catch (e) {
+            autoLoading.value = false;
+            error.value = e?.response?.data?.message || e?.message || 'Failed to poll auto run.';
+            return;
+        }
+    }
+    autoLoading.value = false;
+    error.value = 'Auto pipeline timed out. Check queue workers or unlock and retry.';
+};
+
+const cancelAuto = async () => {
+    if (!autoRun.value?.id) {
+        return;
+    }
+    cancelling.value = true;
+    error.value = '';
+    try {
+        const { data } = await axios.post(route('blogAi.runs.cancel', autoRun.value.id));
+        autoRun.value = data.run;
+        if (data.session) {
+            session.value = data.session;
+        }
+        stopAutoPoll();
+        autoLoading.value = false;
+    } catch (e) {
+        error.value = e?.response?.data?.message || e?.message || 'Cancel failed.';
+    } finally {
+        cancelling.value = false;
+    }
+};
+
+const startAuto = async () => {
+    if (queueBlocked.value) {
+        error.value = queueWarning.value;
+        return;
+    }
+    error.value = '';
+    autoLoading.value = true;
+    autoRun.value = null;
+    stopAutoPoll();
+    try {
+        const { data } = await axios.post(route('blogAi.auto'), {
+            cluster: cluster.value || null,
+            seed_topic: seedTopic.value || null,
+            keywords_text: keywordsText.value || null,
+            create_post: true,
+        });
+        autoRun.value = data.run;
+        session.value = data.session;
+        if (data.queued) {
+            await pollAutoRun(data.run.id);
+        } else {
+            autoLoading.value = false;
+        }
+    } catch (e) {
+        autoLoading.value = false;
+        const msg = e?.response?.data?.errors?.ai?.[0]
+            || e?.response?.data?.message
+            || e?.message
+            || 'Auto create failed.';
+        error.value = msg;
+        if (e?.response?.data?.run) {
+            autoRun.value = e.response.data.run;
+        }
+    }
+};
+
 const applyDraft = () => {
     if (!session.value?.draft) {
         return;
     }
+
+    const q = session.value.draft.quality;
+    if (q && q.ai_ready === false) {
+        const ok = window.confirm(
+            'SEO quality checks are incomplete. Apply anyway as a draft? Fix issues before publishing.',
+        );
+        if (!ok) {
+            return;
+        }
+    }
+
+    if (q?.focus_keyword_collision || q?.slug_collision) {
+        const ok = window.confirm(
+            'Slug or focus keyword collides with an existing post. Apply anyway? Consider changing them before publish.',
+        );
+        if (!ok) {
+            return;
+        }
+    }
+
+    const hasCover = Boolean(session.value.image?.url || session.value.draft.og_image);
+    if (!hasCover) {
+        const ok = window.confirm(
+            'No cover/OG image on this draft. Apply anyway? Add an image in the editor before publishing.',
+        );
+        if (!ok) {
+            return;
+        }
+    }
+
     emit('apply', session.value.draft);
     visibleProxy.value = false;
 };
@@ -412,8 +940,66 @@ const loadOptions = async () => {
         if (typeof data.image_enabled === 'boolean') {
             imageEnabled.value = data.image_enabled;
         }
+        autoEnabled.value = data.auto?.enabled !== false;
+        autoRequireQueue.value = Boolean(data.auto?.require_queue);
+        autoApproveImage.value = data.auto?.auto_approve_image_on_fail !== false;
+        try {
+            const saved = localStorage.getItem(MODE_KEY);
+            if (saved === 'manual' || saved === 'auto') {
+                writerMode.value = saved;
+            }
+        } catch {
+            // ignore
+        }
+        if (!autoEnabled.value) {
+            writerMode.value = 'manual';
+        }
+        learningSummary.value = data.learning?.summary_bn
+            || (data.learning?.status === 'cold_start' ? data.learning?.note : '')
+            || '';
+        learningGaps.value = Array.isArray(data.learning?.coverage_gaps)
+            ? data.learning.coverage_gaps
+            : [];
+        recommendedClusters.value = Array.isArray(data.learning?.recommended_clusters)
+            ? data.learning.recommended_clusters
+            : [];
+        nextPostIdeas.value = Array.isArray(data.learning?.next_post_ideas)
+            ? data.learning.next_post_ideas.slice(0, 5)
+            : [];
+        const recommended = recommendedClusters.value;
+        if (Array.isArray(recommended) && recommended.length && !cluster.value) {
+            cluster.value = recommended[0];
+        }
+        onClusterChange(cluster.value);
     } catch {
         // keep defaults
+    }
+};
+
+const onClusterChange = (value) => {
+    const list = recommendedClusters.value || [];
+    if (!list.length || !value) {
+        clusterBiasWarning.value = '';
+        return;
+    }
+    if (!list.includes(value)) {
+        clusterBiasWarning.value = `“${value}” is outside current recommended clusters (${list.join(', ')}). Learning data suggests staying on recommended topics for better results.`;
+    } else {
+        clusterBiasWarning.value = '';
+    }
+};
+
+const applyIdea = (idea) => {
+    if (!idea) return;
+    if (idea.cluster) {
+        cluster.value = idea.cluster;
+        onClusterChange(idea.cluster);
+    }
+    if (idea.seed_topic) {
+        seedTopic.value = idea.seed_topic;
+    }
+    if (idea.suggested_title && !keywordsText.value.trim()) {
+        keywordsText.value = idea.seed_topic || idea.suggested_title;
     }
 };
 
@@ -427,7 +1013,10 @@ watch(
     },
 );
 
-onBeforeUnmount(() => stopPoll());
+onBeforeUnmount(() => {
+    stopPoll();
+    stopAutoPoll();
+});
 
 const apiError = (e) => e?.response?.data?.message
     || e?.response?.data?.errors?.ai?.[0]
@@ -442,7 +1031,14 @@ const readyStatusForStep = {
     hooks: 'hooks_ready',
     outline: 'outline_ready',
     draft: 'draft_ready',
-    image: 'image_ready',
+    image: ['image_ready', 'image_needs_fix'],
+};
+
+const statusMatchesReady = (status, readyStatus) => {
+    if (Array.isArray(readyStatus)) {
+        return readyStatus.includes(status);
+    }
+    return status === readyStatus;
 };
 
 const pollUntilReady = async (sessionId, readyStatus) => {
@@ -451,7 +1047,7 @@ const pollUntilReady = async (sessionId, readyStatus) => {
         : 'AI is generating…';
 
     const generation = pollGeneration;
-    const maxAttempts = 90;
+    const maxAttempts = 180;
     for (let i = 0; i < maxAttempts; i += 1) {
         await new Promise((r) => setTimeout(r, 2000));
         if (generation !== pollGeneration) {
@@ -462,7 +1058,7 @@ const pollUntilReady = async (sessionId, readyStatus) => {
             throw new Error('Cancelled');
         }
         session.value = data.session;
-        if (data.session.status === readyStatus) {
+        if (statusMatchesReady(data.session.status, readyStatus)) {
             return data.session;
         }
         if (data.session.status === 'failed') {
@@ -555,6 +1151,16 @@ const runPrimary = async () => {
     error.value = '';
     loading.value = true;
     try {
+        if (step.value === 0 && clusterBiasWarning.value) {
+            const ok = window.confirm(
+                `${clusterBiasWarning.value}\n\nContinue with this cluster anyway?`,
+            );
+            if (!ok) {
+                loading.value = false;
+                return;
+            }
+        }
+
         if (step.value === 0) {
             if (!keywordsText.value.trim()) {
                 error.value = 'Paste at least one BD keyword first.';
@@ -617,7 +1223,7 @@ const runPrimary = async () => {
                 applyDraft();
                 return;
             }
-            busyHint.value = 'Generating cover image…';
+            busyHint.value = 'Generating marketing banner + AI review…';
             session.value = await runQueuedOrSync(
                 axios.post(route('blogAi.image', session.value.id)),
                 readyStatusForStep.image,
@@ -637,6 +1243,46 @@ const runPrimary = async () => {
     } finally {
         loading.value = false;
         busyHint.value = '';
+    }
+};
+
+const regenerateImage = async () => {
+    if (!session.value?.id) {
+        return;
+    }
+    error.value = '';
+    loading.value = true;
+    busyHint.value = 'Regenerating marketing banner + AI review…';
+    try {
+        session.value = await runQueuedOrSync(
+            axios.post(route('blogAi.image.regenerate', session.value.id)),
+            readyStatusForStep.image,
+        );
+        step.value = 5;
+    } catch (e) {
+        if (e?.message === 'Cancelled') {
+            return;
+        }
+        error.value = apiError(e);
+    } finally {
+        loading.value = false;
+        busyHint.value = '';
+    }
+};
+
+const approveImage = async () => {
+    if (!session.value?.id) {
+        return;
+    }
+    error.value = '';
+    loading.value = true;
+    try {
+        const { data } = await axios.post(route('blogAi.image.approve', session.value.id));
+        session.value = data.session;
+    } catch (e) {
+        error.value = apiError(e);
+    } finally {
+        loading.value = false;
     }
 };
 </script>

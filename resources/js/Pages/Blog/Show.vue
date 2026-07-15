@@ -35,7 +35,74 @@ onMounted(() => {
             content_type: 'article',
         }),
     );
+
+    if (props.post.slug) {
+        trackBlogEvent('view');
+        setupScrollTracking();
+    }
 });
+
+const setupScrollTracking = () => {
+    let fired = false;
+    const onScroll = () => {
+        if (fired) return;
+        const doc = document.documentElement;
+        const scrollTop = window.scrollY || doc.scrollTop;
+        const height = doc.scrollHeight - doc.clientHeight;
+        if (height <= 0) return;
+        const pct = Math.round((scrollTop / height) * 100);
+        if (pct >= 50) {
+            fired = true;
+            trackBlogEvent('scroll_depth', { scroll_pct: 50 });
+            window.removeEventListener('scroll', onScroll);
+        }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+};
+
+const trackBlogEvent = (event, extra = {}) => {
+    if (!props.post?.slug) {
+        return;
+    }
+
+    let visitorId = '';
+    try {
+        visitorId = localStorage.getItem('wel_blog_vid') || '';
+        if (!/^[a-f0-9]{16,64}$/i.test(visitorId)) {
+            visitorId = [...crypto.getRandomValues(new Uint8Array(16))]
+                .map((b) => b.toString(16).padStart(2, '0'))
+                .join('');
+            localStorage.setItem('wel_blog_vid', visitorId);
+        }
+    } catch {
+        visitorId = '';
+    }
+
+    const payload = {
+        slug: props.post.slug,
+        event,
+        visitor_id: visitorId || undefined,
+        ...extra,
+    };
+
+    fetch('/blog/analytics/event', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
+        keepalive: true,
+    }).catch(() => {});
+};
+
+const onFraudCtaClick = () => {
+    trackCtaClick({ location: 'blog_fraud_cta', href: '/bd-fraud-checker', label: 'ফ্রি ফ্রড চেক' });
+    trackBlogEvent('cta_click', { cta_label: 'ফ্রি ফ্রড চেক' });
+};
 </script>
 
 <template>
@@ -70,7 +137,7 @@ onMounted(() => {
                     <Link
                         href="/bd-fraud-checker"
                         class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
-                        @click="trackCtaClick({ location: 'blog_fraud_cta', href: '/bd-fraud-checker', label: 'ফ্রি ফ্রড চেক' })"
+                        @click="onFraudCtaClick"
                     >
                         ফ্রি ফ্রড চেক
                     </Link>

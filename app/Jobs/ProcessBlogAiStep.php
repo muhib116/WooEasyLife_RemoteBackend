@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\BlogAiSession;
 use App\Services\BlogAi\BlogContentAgent;
-use App\Services\BlogAi\BlogImageAgent;
+use App\Services\BlogAi\BlogImagePipeline;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
-class ProcessBlogAiStep implements ShouldQueue, ShouldBeUnique
+class ProcessBlogAiStep implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -24,8 +24,8 @@ class ProcessBlogAiStep implements ShouldQueue, ShouldBeUnique
 
     public int $tries = 1;
 
-    /** Image + download can exceed 3 minutes. */
-    public int $timeout = 300;
+    /** Image edits + vision review retries can exceed 5 minutes. */
+    public int $timeout = 600;
 
     public int $uniqueFor = 600;
 
@@ -69,7 +69,7 @@ class ProcessBlogAiStep implements ShouldQueue, ShouldBeUnique
                     array_values($this->payload['selected_hook_ids'] ?? []),
                 ),
                 'draft' => $agent->generateDraft($session),
-                'image' => app(BlogImageAgent::class)->generate($session),
+                'image' => app(BlogImagePipeline::class)->run($session),
                 default => throw ValidationException::withMessages([
                     'ai' => 'Unknown AI step.',
                 ]),
@@ -80,7 +80,10 @@ class ProcessBlogAiStep implements ShouldQueue, ShouldBeUnique
                 return;
             }
 
-            $session->last_error = null;
+            // Keep QA notes when the banner needs human review.
+            if ($session->status !== 'image_needs_fix') {
+                $session->last_error = null;
+            }
             $session->resume_status = null;
             $session->saveIfJobCurrent();
         } catch (Throwable $e) {

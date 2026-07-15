@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\LandingSettingsService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
@@ -15,6 +16,7 @@ class BlogAiSession extends Model
         'generating_outline',
         'generating_draft',
         'generating_image',
+        'auto_running',
     ];
 
     public const READY_STATUSES = [
@@ -23,6 +25,7 @@ class BlogAiSession extends Model
         'outline_ready',
         'draft_ready',
         'image_ready',
+        'image_needs_fix',
     ];
 
     protected $fillable = [
@@ -84,6 +87,9 @@ class BlogAiSession extends Model
         }
 
         $minutes = max(3, (int) config('blog_ai.busy_stale_minutes', 5));
+        if ($this->status === 'auto_running') {
+            $minutes = max($minutes, (int) config('blog_ai.auto.busy_stale_minutes', 25));
+        }
         if ($this->updated_at && $this->updated_at->gt(now()->subMinutes($minutes))) {
             return false;
         }
@@ -186,12 +192,22 @@ class BlogAiSession extends Model
 
     public function estimatedCostUsd(): float
     {
-        $model = app(\App\Services\LandingSettingsService::class)->openaiBlogModel() ?: 'gpt-4o-mini';
+        $model = app(LandingSettingsService::class)->openaiBlogModel() ?: 'gpt-4o-mini';
         $rates = config('blog_ai.model_rates.'.$model, []);
         $promptRate = (float) ($rates['prompt'] ?? config('blog_ai.usd_per_1k_prompt_tokens', 0.00015));
         $completionRate = (float) ($rates['completion'] ?? config('blog_ai.usd_per_1k_completion_tokens', 0.0006));
         $imageFlat = (float) config('blog_ai.usd_per_image', 0.04);
-        $imageCalls = is_array($this->image_json) && ! empty($this->image_json['media_id']) ? 1 : 0;
+        $imageCalls = 0;
+        if (is_array($this->image_json)) {
+            $imageCalls = max(
+                1,
+                (int) ($this->image_json['attempts'] ?? 0),
+                ! empty($this->image_json['media_id']) ? 1 : 0,
+            );
+            if (empty($this->image_json['media_id'])) {
+                $imageCalls = 0;
+            }
+        }
 
         return round(
             (($this->prompt_tokens / 1000) * $promptRate)

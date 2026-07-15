@@ -9,12 +9,22 @@
                 icon-class="text-amber-600 dark:text-amber-400"
             >
                 <template #actions>
-                    <Button
-                        label="New Post"
-                        icon="pi pi-plus"
-                        size="small"
-                        @click="router.visit(route('blogPosts.create'))"
-                    />
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            label="New Post"
+                            icon="pi pi-plus"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            @click="router.visit(route('blogPosts.create'))"
+                        />
+                        <Button
+                            label="AI Auto Create"
+                            icon="pi pi-sparkles"
+                            size="small"
+                            @click="router.visit(route('blogPosts.create') + '?ai=1')"
+                        />
+                    </div>
                 </template>
             </PageHeader>
 
@@ -45,6 +55,37 @@
                     icon-class="text-sky-600 dark:text-sky-400"
                 />
             </div>
+
+            <PageCard
+                v-if="learning?.insight || (learning?.top_posts || []).length"
+                title="Content learning"
+                description="Day-by-day engagement + GSC feed the AI writer so future drafts get more precise."
+            >
+                <p v-if="learning?.insight?.summary_bn" class="text-sm text-gray-700 dark:text-gray-200">
+                    {{ learning.insight.summary_bn }}
+                </p>
+                <p v-else class="text-sm text-gray-500">
+                    No insight snapshot yet. Traffic on /blog will build one — or run
+                    <code class="text-xs">System Maintenance → Blog learning insights</code>
+                    (or <code class="text-xs">php artisan blog:build-learning-insights</code>).
+                </p>
+                <p v-if="learning?.insight?.generated_at" class="mt-2 text-xs text-gray-500">
+                    Last learning build: {{ formatDate(learning.insight.generated_at) }}
+                    · events 28d: {{ learning.insight.events_analyzed ?? 0 }}
+                </p>
+                <ul
+                    v-if="(learning?.insight?.payload?.recommended_clusters || []).length"
+                    class="mt-3 flex flex-wrap gap-2 text-xs"
+                >
+                    <li
+                        v-for="c in learning.insight.payload.recommended_clusters"
+                        :key="c"
+                        class="rounded-full bg-amber-500/15 px-2.5 py-1 font-medium text-amber-800 dark:text-amber-200"
+                    >
+                        {{ c }}
+                    </li>
+                </ul>
+            </PageCard>
 
             <PageCard
                 title="All posts"
@@ -96,6 +137,30 @@
                             <span class="text-xs text-gray-600 dark:text-gray-300">
                                 {{ data.focus_keyword || '—' }}
                             </span>
+                        </template>
+                    </Column>
+                    <Column header="AI score" style="min-width: 7rem">
+                        <template #body="{ data }">
+                            <span
+                                v-if="data.ai_quality_score != null"
+                                class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums"
+                                :class="aiScoreClass(data.ai_quality_score)"
+                            >
+                                {{ data.ai_quality_score }}
+                            </span>
+                            <span v-else class="text-xs text-gray-400">—</span>
+                        </template>
+                    </Column>
+                    <Column header="28d score" style="min-width: 8rem">
+                        <template #body="{ data }">
+                            <div class="text-xs text-gray-600 dark:text-gray-300">
+                                <div>{{ data.analytics?.engagement_score ?? '—' }}</div>
+                                <div class="text-[11px] text-gray-400">
+                                    v {{ data.analytics?.views_28d ?? 0 }}
+                                    · cta {{ data.analytics?.cta_clicks_28d ?? 0 }}
+                                    · gsc {{ data.analytics?.gsc_clicks_28d ?? 0 }}
+                                </div>
+                            </div>
                         </template>
                     </Column>
                     <Column header="Published" style="min-width: 9rem">
@@ -176,6 +241,7 @@ import Tag from 'primevue/tag';
 
 const props = defineProps({
     posts: { type: Array, default: () => [] },
+    learning: { type: Object, default: null },
 });
 
 const publishedCount = computed(
@@ -195,6 +261,13 @@ const formatDate = (value) => {
     } catch {
         return value;
     }
+};
+
+const aiScoreClass = (score) => {
+    const n = Number(score);
+    if (n >= 80) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (n >= 60) return 'bg-amber-500/15 text-amber-800 dark:text-amber-200';
+    return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
 };
 
 const confirmDelete = (post) => {

@@ -4,6 +4,7 @@ namespace App\Services\BlogAi;
 
 use App\Models\BlogAiSession;
 use App\Models\BlogPost;
+use App\Services\BlogSeoQuality;
 use App\Support\BlogHtmlSanitizer;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,7 @@ class BlogContentAgent
         private BlogProductBriefBuilder $briefBuilder,
         private InternalLinkCatalog $linkCatalog,
         private BdKeywordSuggestService $keywordSuggest,
+        private BlogSeoQuality $seoQuality,
     ) {}
 
     /**
@@ -281,7 +283,7 @@ TXT;
      * @param  list<string>  $selectedIds
      * @return array<string, mixed>
      */
-    public function generateOutline(BlogAiSession $session, array $selectedIds): array
+    public function generateOutline(BlogAiSession $session, array $selectedIds, ?string $fixInstructions = null): array
     {
         $hooks = collect($session->hooks_json ?? []);
         $selected = $hooks->whereIn('id', $selectedIds)->values();
@@ -307,6 +309,8 @@ Return JSON:
   "cta": "soft CTA sentence"
 }
 Use ONLY paths from the provided internal link catalog (2–4 links).
+Include 3–6 FAQ items under faqs (q + a_points).
+Include a differentiation section that beats generic competitor blogs (practical BD COD steps + WooEasyLife truth).
 TXT;
 
         $user = json_encode([
@@ -314,6 +318,8 @@ TXT;
             'keywords' => $session->keywords_json,
             'product_brief' => $this->briefBuilder->build(),
             'internal_link_catalog' => $this->linkCatalog->all(),
+            'fix_instructions' => $fixInstructions,
+            'previous_outline' => $fixInstructions ? ($session->outline_json ?? null) : null,
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([
@@ -337,7 +343,7 @@ TXT;
     /**
      * @return array<string, mixed>
      */
-    public function generateDraft(BlogAiSession $session): array
+    public function generateDraft(BlogAiSession $session, ?string $fixInstructions = null): array
     {
         if (! is_array($session->outline_json) || $session->outline_json === []) {
             throw ValidationException::withMessages([
@@ -369,12 +375,14 @@ Return JSON:
 }
 Requirements:
 - body_html roughly {$minWords}+ words of Bangla content
-- Include focus keyword in title, first paragraph, and one H2 naturally
+- Include focus keyword in title, FIRST <p> paragraph, meta_description, and one H2 naturally
+- Include at least 2 secondary keywords from keywords.secondary naturally in body (not stuffed)
 - Include at least 2 internal links using exact paths from link_plan (href="/path")
 - Include 3–6 FAQs matching the outline (q/a plain text)
 - One soft WooEasyLife CTA near the end — not spammy
 - No script tags, no invented product claims
-- slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$
+- slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$ and must be unique (avoid colliding with existing posts)
+- If fix_instructions are provided, obey them strictly while keeping product truth
 TXT;
 
         $user = json_encode([
@@ -382,6 +390,19 @@ TXT;
             'link_plan' => $session->link_plan_json,
             'keywords' => $session->keywords_json,
             'product_brief' => $this->briefBuilder->build(),
+            'fix_instructions' => $fixInstructions,
+            'previous_draft_quality' => $fixInstructions
+                ? ($session->draft_json['quality'] ?? null)
+                : null,
+            'existing_slug_collisions' => $this->seoQuality->findCollisions(
+                slug: is_string($session->outline_json['slug_suggestion'] ?? null)
+                    ? (string) $session->outline_json['slug_suggestion']
+                    : null,
+                focusKeyword: is_string($session->outline_json['focus_keyword'] ?? null)
+                    ? (string) $session->outline_json['focus_keyword']
+                    : null,
+                locale: 'bn',
+            ),
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([
@@ -390,7 +411,14 @@ TXT;
         ], 0.55);
 
         $draft = $this->openAi->decodeJsonObject($result['content']);
-        $draft = $this->normalizeDraft($draft, $author, $session->outline_json ?? []);
+        $draft = $this->normalizeDraft(
+            $draft,
+            $author,
+            $session->outline_json ?? [],
+            $session->link_plan_json ?? [],
+            $session->keywords_json ?? [],
+            $session->cluster,
+        );
 
         $session->draft_json = $draft;
         $session->addUsage($result['usage']);
@@ -402,7 +430,7 @@ TXT;
 
     private function systemPrompt(): string
     {
-        return 'You are an expert Bangladesh SEO content strategist for WooEasyLife, a WooCommerce operations platform for BD sellers (fraud checker, checkout OTP/block, auto courier, missing orders, Facebook pixel protection, AI message-to-order, packing/print, multistore app, team call tracking). Always obey the product brief. Never invent features or numbers.';
+        return 'You are an expert Bangladesh SEO content strategist for WooEasyLife, a WooCommerce operations platform for BD sellers (fraud checker, checkout OTP/block, auto courier, missing orders, Facebook pixel protection, AI message-to-order, packing/print, multistore app, team call tracking). Always obey the product brief. Never invent features or numbers. When performance_learning is present, prefer recommended clusters, winning title angles, and coverage gaps; avoid cloning underperforming topics.';
     }
 
     /**
@@ -437,7 +465,6 @@ TXT;
     }
 
     /**
-     * @param  mixed  $links
      * @return list<array{path: string, anchor: string, reason?: string}>
      */
     private function filterValidLinks(mixed $links): array
@@ -479,14 +506,25 @@ TXT;
     /**
      * @param  array<string, mixed>  $draft
      * @param  array<string, mixed>  $outline
+     * @param  list<array{path?: string, anchor?: string}>  $linkPlan
+     * @param  array<string, mixed>  $keywords
      * @return array<string, mixed>
      */
-    private function normalizeDraft(array $draft, string $author, array $outline = []): array
-    {
+    private function normalizeDraft(
+        array $draft,
+        string $author,
+        array $outline = [],
+        array $linkPlan = [],
+        array $keywords = [],
+        ?string $cluster = null,
+    ): array {
         $slug = Str::slug((string) ($draft['slug'] ?? ''));
         if ($slug === '' || ! preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
             $slug = Str::slug((string) ($draft['focus_keyword'] ?? 'woo-easylife-guide'));
         }
+
+        // Resolve slug collisions without failing the draft.
+        $slug = BlogPost::makeSlug($slug !== '' ? $slug : 'woo-easylife-guide');
 
         $body = BlogHtmlSanitizer::sanitize((string) ($draft['body_html'] ?? ''));
         if ($body === '') {
@@ -495,24 +533,52 @@ TXT;
             ]);
         }
 
+        $minLinks = (int) config('blog_ai.seo_quality.min_internal_links', config('blog_ai.internal_links_min', 2));
+        $body = BlogHtmlSanitizer::sanitize(
+            $this->seoQuality->ensureInternalLinks($body, $linkPlan, $minLinks)
+        );
+
         $metaTitle = Str::limit(trim((string) ($draft['meta_title'] ?? $draft['title'] ?? '')), 70, '');
         $metaDescription = Str::limit(trim((string) ($draft['meta_description'] ?? $draft['excerpt'] ?? '')), 160, '');
+        $faqs = $this->normalizeFaqs($draft['faqs'] ?? null, $outline['faqs'] ?? null);
+        $secondary = collect($keywords['secondary'] ?? [])
+            ->map(fn ($k) => trim((string) $k))
+            ->filter()
+            ->unique()
+            ->take(8)
+            ->values()
+            ->all();
+
+        $title = trim((string) ($draft['title'] ?? ''));
+        $focusKeyword = trim((string) ($draft['focus_keyword'] ?? ''));
+
+        $quality = $this->seoQuality->analyze(
+            title: $title,
+            focusKeyword: $focusKeyword,
+            bodyHtml: $body,
+            metaDescription: $metaDescription,
+            faqs: $faqs,
+            secondaryKeywords: $secondary,
+            slug: $slug,
+            locale: 'bn',
+        );
 
         return [
-            'title' => trim((string) ($draft['title'] ?? '')),
+            'title' => $title,
             'slug' => $slug,
             'locale' => 'bn',
             'status' => 'draft',
-            'focus_keyword' => trim((string) ($draft['focus_keyword'] ?? '')),
+            'focus_keyword' => $focusKeyword,
             'meta_title' => $metaTitle,
             'meta_description' => $metaDescription,
             'excerpt' => Str::limit(trim((string) ($draft['excerpt'] ?? '')), 500, ''),
             'author_name' => trim((string) ($draft['author_name'] ?? $author)) ?: $author,
             'robots' => 'index,follow',
             'body_html' => $body,
-            'faqs' => $this->normalizeFaqs($draft['faqs'] ?? null, $outline['faqs'] ?? null),
+            'faqs' => $faqs,
             'seo_notes' => is_array($draft['seo_notes'] ?? null) ? $draft['seo_notes'] : [],
-            'quality' => $this->qualityReport($draft['title'] ?? '', $draft['focus_keyword'] ?? '', $body, $metaDescription),
+            'quality' => $quality,
+            'cluster' => $cluster,
         ];
     }
 
@@ -546,26 +612,5 @@ TXT;
             ->take(8)
             ->values()
             ->all();
-    }
-
-    /**
-     * @return array<string, bool|int>
-     */
-    private function qualityReport(string $title, string $keyword, string $body, string $metaDescription): array
-    {
-        $plain = trim(preg_replace('/\s+/', ' ', strip_tags($body)) ?? '');
-        $words = $plain === '' ? 0 : count(preg_split('/\s+/u', $plain) ?: []);
-        $kw = mb_strtolower(trim($keyword));
-        $minWords = (int) config('blog_ai.min_body_words', 800);
-
-        return [
-            'word_count' => $words,
-            'word_count_ok' => $words >= $minWords,
-            'has_h2' => (bool) preg_match('/<h2[\s>]/i', $body),
-            'has_internal_link' => (bool) preg_match('/href=["\']\//i', $body),
-            'keyword_in_title' => $kw !== '' && str_contains(mb_strtolower($title), $kw),
-            'keyword_in_meta' => $kw !== '' && str_contains(mb_strtolower($metaDescription), $kw),
-            'meta_description_ok' => mb_strlen($metaDescription) >= 50 && mb_strlen($metaDescription) <= 160,
-        ];
     }
 }

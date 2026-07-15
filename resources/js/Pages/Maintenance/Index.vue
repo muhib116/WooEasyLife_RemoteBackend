@@ -3,12 +3,22 @@
         <div class="space-y-5">
             <PageHeader
                 title="System Maintenance"
-                description="Clear caches, rebuild optimized files, and manage the public storage symlink from a secured admin panel"
+                description="Run artisan maintenance commands from a secured admin panel — no SSH required."
                 icon="PhWrench"
                 icon-bg-class="bg-slate-100 dark:bg-slate-500/15"
                 icon-class="text-slate-700 dark:text-slate-300"
             >
                 <template #actions>
+                    <Button
+                        label="Run everything"
+                        icon="pi pi-play"
+                        size="small"
+                        severity="warning"
+                        class="!inline-flex shrink-0 whitespace-nowrap"
+                        :loading="runningAction === 'run_all'"
+                        :disabled="busy"
+                        @click="confirmRun('run_all')"
+                    />
                     <Button
                         label="Clear all caches"
                         icon="pi pi-trash"
@@ -60,12 +70,45 @@
             </div>
 
             <PageCard
-                title="Artisan actions"
-                description="These replace the old open /clear-* and /storage-link URLs. Admin login is required."
+                v-for="section in actionSections"
+                :key="section.group"
+                :title="section.title"
+                :description="section.description"
             >
+                <div
+                    v-if="section.group === 'blog' && status.blog_learning"
+                    class="mb-4 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
+                >
+                    <p class="font-semibold">Latest learning snapshot</p>
+                    <p class="mt-1">{{ status.blog_learning.summary_bn || 'Snapshot ready.' }}</p>
+                    <p class="mt-1 text-xs opacity-80">
+                        Built {{ formatDate(status.blog_learning.generated_at) }}
+                        · posts {{ status.blog_learning.posts_analyzed }}
+                        · events {{ status.blog_learning.events_analyzed }}
+                    </p>
+                    <ul
+                        v-if="(status.blog_learning.next_post_ideas || []).length"
+                        class="mt-2 list-disc space-y-1 pl-5 text-xs"
+                    >
+                        <li
+                            v-for="(idea, idx) in status.blog_learning.next_post_ideas"
+                            :key="idx"
+                        >
+                            <strong>{{ idea.suggested_title || idea.seed_topic }}</strong>
+                            <span class="opacity-80"> — {{ idea.cluster }} ({{ idea.reason }})</span>
+                        </li>
+                    </ul>
+                </div>
+                <p
+                    v-else-if="section.group === 'blog' && !status.blog_learning"
+                    class="mb-4 text-sm text-slate-500"
+                >
+                    No learning snapshot yet. Run <strong>Blog learning insights</strong> below.
+                </p>
+
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div
-                        v-for="action in status.actions"
+                        v-for="action in section.actions"
                         :key="action.key"
                         class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
                     >
@@ -76,12 +119,18 @@
                             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                 {{ action.description }}
                             </p>
+                            <p
+                                v-if="action.include_in_run_all === false && !action.is_batch"
+                                class="mt-1 text-[11px] text-amber-700 dark:text-amber-300"
+                            >
+                                Not included in “Run everything” (side effects / conflicts)
+                            </p>
                         </div>
                         <Button
-                            :label="action.key === 'storage_link' ? 'Create link' : 'Run'"
+                            :label="buttonLabel(action)"
                             size="small"
-                            :outlined="action.key !== 'all'"
-                            :severity="action.key === 'all' ? undefined : 'secondary'"
+                            :outlined="!action.is_batch && action.key !== 'all'"
+                            :severity="actionSeverity(action)"
                             class="!inline-flex shrink-0 whitespace-nowrap"
                             :loading="runningAction === action.key"
                             :disabled="busy"
@@ -130,13 +179,46 @@ import StatCard from "@/Pages/Users/fragments/StatCard.vue";
 
 defineOptions({ name: "SystemMaintenance" });
 
+type MaintenanceAction = {
+    key: string;
+    label: string;
+    description: string;
+    group?: string;
+    include_in_run_all?: boolean;
+    is_batch?: boolean;
+};
+
 type MaintenanceStatus = {
     storage_link_exists: boolean;
     storage_link_path: string;
     public_storage_path: string;
     app_env: string;
     app_debug: boolean;
-    actions: Array<{ key: string; label: string; description: string }>;
+    actions: MaintenanceAction[];
+    groups?: Record<string, string>;
+    blog_learning?: {
+        generated_at?: string | null;
+        summary_bn?: string | null;
+        posts_analyzed?: number;
+        events_analyzed?: number;
+        next_post_ideas?: Array<{
+            cluster?: string;
+            suggested_title?: string;
+            seed_topic?: string;
+            reason?: string;
+        }>;
+    } | null;
+};
+
+const GROUP_ORDER = ["meta", "cache", "blog", "subscriptions", "domains", "ops"];
+
+const GROUP_DESCRIPTIONS: Record<string, string> = {
+    meta: "One-click batch runner for every included maintenance command.",
+    cache: "Framework caches, storage symlink, queue restart, and related housekeeping.",
+    blog: "SEO reports and AI learning jobs for the blog writer.",
+    subscriptions: "Expiry, alert scan, and merchant notifications.",
+    domains: "Domain audits, normalization, and website backfill.",
+    ops: "Courier retries, search reindex, and integration refreshers.",
 };
 
 const props = defineProps<{
@@ -146,12 +228,63 @@ const props = defineProps<{
 const confirm = useConfirm();
 const toast = useToast();
 
-const status = reactive<MaintenanceStatus>({ ...props.initialStatus });
+const status = reactive<MaintenanceStatus>({
+    ...props.initialStatus,
+    groups: props.initialStatus.groups ?? {},
+    blog_learning: props.initialStatus.blog_learning ?? null,
+});
 const loading = ref(false);
 const runningAction = ref<string | null>(null);
 const lastOutput = ref("");
 
 const busy = computed(() => loading.value || runningAction.value !== null);
+
+const actionSections = computed(() => {
+    const groups = status.groups || {};
+    const byGroup = new Map<string, MaintenanceAction[]>();
+
+    for (const action of status.actions || []) {
+        const group = action.group || "cache";
+        if (!byGroup.has(group)) {
+            byGroup.set(group, []);
+        }
+        byGroup.get(group)!.push(action);
+    }
+
+    const ordered = [
+        ...GROUP_ORDER.filter((g) => byGroup.has(g)),
+        ...[...byGroup.keys()].filter((g) => !GROUP_ORDER.includes(g)),
+    ];
+
+    return ordered.map((group) => ({
+        group,
+        title: groups[group] || group,
+        description: GROUP_DESCRIPTIONS[group] || "Artisan maintenance commands",
+        actions: byGroup.get(group) || [],
+    }));
+});
+
+const formatDate = (value?: string | null) => {
+    if (!value) return "—";
+    try {
+        return new Date(value).toLocaleString();
+    } catch {
+        return value;
+    }
+};
+
+const buttonLabel = (action: MaintenanceAction) => {
+    if (action.key === "storage_link") return "Create link";
+    if (action.is_batch || action.key === "run_all") return "Run all";
+    if (action.key === "all") return "Clear";
+    return "Run";
+};
+
+const actionSeverity = (action: MaintenanceAction) => {
+    if (action.key === "run_all") return "warning";
+    if (action.key === "all") return undefined;
+    return "secondary";
+};
 
 const applyStatus = (next?: MaintenanceStatus) => {
     if (!next) {
@@ -164,6 +297,8 @@ const applyStatus = (next?: MaintenanceStatus) => {
     status.app_env = next.app_env;
     status.app_debug = next.app_debug;
     status.actions = next.actions;
+    status.groups = next.groups ?? {};
+    status.blog_learning = next.blog_learning ?? null;
 };
 
 const loadStatus = async () => {
@@ -187,7 +322,9 @@ const runAction = async (action: string) => {
     runningAction.value = action;
 
     try {
-        const { data } = await axios.post(route("maintenance.run"), { action });
+        const { data } = await axios.post(route("maintenance.run"), { action }, {
+            timeout: action === "run_all" ? 600000 : 120000,
+        });
         applyStatus(data?.status);
         lastOutput.value = data?.output || "";
         toast.add({
@@ -213,14 +350,16 @@ const runAction = async (action: string) => {
 
 const confirmRun = (action: string) => {
     const meta = status.actions.find((item) => item.key === action);
+    const isBatch = action === "run_all" || meta?.is_batch;
     confirm.require({
         header: meta?.label || "Run action?",
-        message: meta?.description
-            || "This will run Artisan commands on the live server.",
+        message: isBatch
+            ? (meta?.description || "This will run many Artisan commands on the live server. Continue?")
+            : (meta?.description || "This will run Artisan commands on the live server."),
         icon: "pi pi-exclamation-triangle",
-        acceptLabel: "Run now",
+        acceptLabel: isBatch ? "Run everything" : "Run now",
         rejectLabel: "Cancel",
-        acceptClass: action === "all" ? "p-button-warning" : "p-button-primary",
+        acceptClass: isBatch || action === "all" ? "p-button-warning" : "p-button-primary",
         accept: () => runAction(action),
     });
 };

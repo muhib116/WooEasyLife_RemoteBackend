@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\BlogAiSession;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -32,10 +34,48 @@ class AdminBlogAiTest extends TestCase
         config([
             'landing.openai_api_key' => 'sk-test-key',
             'landing.openai_blog_model' => 'gpt-4o-mini',
+            'landing.openai_image_model' => 'gpt-image-1',
             'blog_ai.enabled' => true,
             'blog_ai.queue' => false,
             'blog_ai.require_pasted_keywords' => true,
+            'blog_ai.image.max_generate_attempts' => 3,
+            'blog_ai.image.review_pass_score' => 70,
+            'blog_ai.image.author_reference' => resource_path('blog-ai/author-reference.png'),
+            'blog_ai.image.style_references' => [
+                resource_path('blog-ai/style-reference-1.png'),
+                resource_path('blog-ai/style-reference-2.png'),
+                resource_path('blog-ai/style-reference-3.png'),
+                resource_path('blog-ai/style-reference-4.png'),
+            ],
         ]);
+    }
+
+    private function fakePngBase64(): string
+    {
+        $img = imagecreatetruecolor(32, 32);
+        ob_start();
+        imagepng($img);
+        $png = ob_get_clean();
+        imagedestroy($img);
+
+        return base64_encode($png);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function reviewPayload(bool $pass, int $score = 85): array
+    {
+        return [
+            'pass' => $pass,
+            'score' => $score,
+            'alignment' => ['ok' => true, 'notes' => 'Aligned'],
+            'consistency' => ['ok' => $pass, 'notes' => $pass ? 'Same person' : 'Wrong face'],
+            'brand' => ['ok' => true, 'notes' => 'Brand OK'],
+            'typography' => ['ok' => $pass, 'notes' => $pass ? 'Readable' : 'Garbled'],
+            'issues' => $pass ? [] : ['face_mismatch'],
+            'fix_prompt' => $pass ? null : 'Match author reference face exactly.',
+        ];
     }
 
     public function test_guest_cannot_access_blog_ai(): void
@@ -84,7 +124,7 @@ class AdminBlogAiTest extends TestCase
     {
         $admin = $this->adminUser();
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), 'suggestqueries.google.com')) {
                 return Http::response(['ফেক অর্ডার', ['ফেক অর্ডার কমানো', 'ফেক অর্ডার চেক']], 200);
             }
@@ -123,28 +163,28 @@ class AdminBlogAiTest extends TestCase
 
         $admin = $this->adminUser();
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), 'suggestqueries.google.com')) {
                 return Http::response(['ফেক অর্ডার', ['ফেক অর্ডার চেক']], 200);
             }
 
-            if (str_contains($request->url(), 'images/generations')) {
+            if (str_contains($request->url(), 'images/edits') || str_contains($request->url(), 'images/generations')) {
                 if (! function_exists('imagecreatetruecolor')) {
                     return Http::response(['error' => ['message' => 'skip']], 500);
                 }
-                $img = imagecreatetruecolor(32, 32);
-                ob_start();
-                imagepng($img);
-                $png = ob_get_clean();
-                imagedestroy($img);
 
                 return Http::response([
-                    'data' => [['b64_json' => base64_encode($png)]],
+                    'data' => [['b64_json' => $this->fakePngBase64()]],
                 ], 200);
             }
 
             $system = (string) data_get($request->data(), 'messages.0.content', '');
-            if (str_contains($system, 'keyword candidates')) {
+            if (is_array(data_get($request->data(), 'messages.0.content'))) {
+                $system = 'banner QA';
+            }
+            if (str_contains($system, 'QA reviewer') || str_contains($system, 'banner QA')) {
+                $payload = $this->reviewPayload(true, 88);
+            } elseif (str_contains($system, 'keyword candidates')) {
                 $payload = ['keywords' => ['ফেক অর্ডার', 'কুরিয়ার হিস্টোরি']];
             } elseif (str_contains($system, 'keyword planning')) {
                 $payload = [
@@ -278,7 +318,7 @@ class AdminBlogAiTest extends TestCase
             'keywords_json' => ['pasted' => ['ফেক অর্ডার']],
         ]);
 
-        Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        Http::fake(function (Request $request) {
             if (str_contains($request->url(), 'suggestqueries.google.com')) {
                 return Http::response(['ফেক অর্ডার', ['ফেক অর্ডার চেক', 'ফেক অর্ডার কমানোর উপায়']], 200);
             }
@@ -426,7 +466,7 @@ class AdminBlogAiTest extends TestCase
         $admin = $this->adminUser();
         config(['blog_ai.daily_ai_calls_cap' => 1]);
 
-        \Illuminate\Support\Facades\Cache::put(
+        Cache::put(
             BlogAiSession::dailyCallsKey($admin->id),
             1,
             now()->addDay(),
@@ -503,12 +543,7 @@ class AdminBlogAiTest extends TestCase
         }
 
         $admin = $this->adminUser();
-
-        $img = imagecreatetruecolor(64, 64);
-        ob_start();
-        imagepng($img);
-        $png = ob_get_clean();
-        imagedestroy($img);
+        $pngB64 = $this->fakePngBase64();
 
         $session = BlogAiSession::query()->create([
             'user_id' => $admin->id,
@@ -523,11 +558,20 @@ class AdminBlogAiTest extends TestCase
             ],
         ]);
 
-        Http::fake([
-            'api.openai.com/v1/images/generations' => Http::response([
-                'data' => [['b64_json' => base64_encode($png)]],
-            ], 200),
-        ]);
+        Http::fake(function (Request $request) use ($pngB64) {
+            if (str_contains($request->url(), 'images/edits')) {
+                return Http::response([
+                    'data' => [['b64_json' => $pngB64]],
+                ], 200);
+            }
+
+            return Http::response([
+                'choices' => [[
+                    'message' => ['content' => json_encode($this->reviewPayload(true, 90), JSON_UNESCAPED_UNICODE)],
+                ]],
+                'usage' => ['prompt_tokens' => 20, 'completion_tokens' => 10, 'total_tokens' => 30],
+            ], 200);
+        });
 
         $this->actingAs($admin)
             ->postJson(route('blogAi.image', $session))
@@ -537,6 +581,61 @@ class AdminBlogAiTest extends TestCase
         $session->refresh();
         $this->assertNotEmpty($session->image_json['media_id'] ?? null);
         $this->assertNotEmpty($session->draft_json['og_image'] ?? null);
-        $this->assertSame(1, (int) $session->ai_calls);
+        $this->assertSame(2, (int) $session->ai_calls); // generate + review
+        $this->assertTrue((bool) ($session->image_json['review']['pass'] ?? false));
+    }
+
+    public function test_image_review_exhaustion_sets_needs_fix_and_approve_works(): void
+    {
+        if (! function_exists('imagewebp') || ! function_exists('imagecreatetruecolor')) {
+            $this->markTestSkipped('GD WebP required for image step.');
+        }
+
+        config(['blog_ai.image.max_generate_attempts' => 2]);
+
+        $admin = $this->adminUser();
+        $pngB64 = $this->fakePngBase64();
+
+        $session = BlogAiSession::query()->create([
+            'user_id' => $admin->id,
+            'status' => 'draft_ready',
+            'locale' => 'bn',
+            'cluster' => 'fake_order',
+            'draft_json' => [
+                'title' => 'ফেক অর্ডার গাইড',
+                'focus_keyword' => 'ফেক অর্ডার',
+                'slug' => 'fake-order-guide-2',
+                'body_html' => '<p>test</p>',
+            ],
+        ]);
+
+        Http::fake(function (Request $request) use ($pngB64) {
+            if (str_contains($request->url(), 'images/edits')) {
+                return Http::response([
+                    'data' => [['b64_json' => $pngB64]],
+                ], 200);
+            }
+
+            return Http::response([
+                'choices' => [[
+                    'message' => ['content' => json_encode($this->reviewPayload(false, 40), JSON_UNESCAPED_UNICODE)],
+                ]],
+                'usage' => ['prompt_tokens' => 12, 'completion_tokens' => 8, 'total_tokens' => 20],
+            ], 200);
+        });
+
+        $this->actingAs($admin)
+            ->postJson(route('blogAi.image', $session))
+            ->assertOk()
+            ->assertJsonPath('session.status', 'image_needs_fix');
+
+        $session->refresh();
+        $this->assertSame(2, (int) ($session->image_json['attempts'] ?? 0));
+        $this->assertSame(4, (int) $session->ai_calls); // 2 generate + 2 review
+
+        $this->actingAs($admin)
+            ->postJson(route('blogAi.image.approve', $session))
+            ->assertOk()
+            ->assertJsonPath('session.status', 'image_ready');
     }
 }

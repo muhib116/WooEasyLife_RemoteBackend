@@ -40,6 +40,28 @@ return [
     'internal_links_min' => 2,
 
     /*
+    | On-page SEO quality gates for AI drafts + soft publish checks.
+    | enforce_on_publish stays gentle so manual short posts still work.
+    */
+    'seo_quality' => [
+        'min_internal_links' => 2,
+        'min_faqs' => 3,
+        'enforce_on_publish' => [
+            'has_internal_link' => true,
+            'duplicate_focus_keyword' => true,
+            'duplicate_slug' => false, // DB unique rule already covers slug
+        ],
+        /*
+        | Soft warnings shown in the CMS (confirm dialogs / checklist) — do not block save.
+        */
+        'soft_warn_on_publish' => [
+            'keyword_in_title' => true,
+            'missing_og_image' => true,
+            'missing_content_image' => true,
+        ],
+    ],
+
+    /*
     | Rough USD estimate for usage display (gpt-4o-mini ballpark).
     */
     'usd_per_1k_prompt_tokens' => 0.00015,
@@ -63,9 +85,38 @@ return [
     */
     'usd_per_image' => (float) env('BLOG_AI_USD_PER_IMAGE', 0.04),
 
-    'busy_stale_minutes' => (int) env('BLOG_AI_BUSY_STALE_MINUTES', 5),
+    'busy_stale_minutes' => (int) env('BLOG_AI_BUSY_STALE_MINUTES', 12),
 
     'image_enabled' => (bool) env('BLOG_AI_IMAGE_ENABLED', true),
+
+    /*
+    | Cover banner generation (gpt-image edits + vision review gate).
+    | author_reference is required for identity lock; style refs are optional.
+    */
+    'image' => [
+        'author_reference' => resource_path('blog-ai/author-reference.png'),
+        'style_references' => [
+            resource_path('blog-ai/style-reference-1.png'),
+            resource_path('blog-ai/style-reference-2.png'),
+            resource_path('blog-ai/style-reference-3.png'),
+            resource_path('blog-ai/style-reference-4.png'),
+        ],
+        'max_generate_attempts' => (int) env('BLOG_AI_IMAGE_MAX_ATTEMPTS', 3),
+        'review_pass_score' => (int) env('BLOG_AI_IMAGE_REVIEW_SCORE', 70),
+        'size' => env('BLOG_AI_IMAGE_SIZE', '1536x1024'),
+        'input_fidelity' => env('BLOG_AI_IMAGE_INPUT_FIDELITY', 'high'),
+    ],
+
+    /*
+    | First-party blog analytics → learning insights for smarter drafting.
+    */
+    'analytics' => [
+        'enabled' => (bool) env('BLOG_ANALYTICS_ENABLED', true),
+        'learning_in_prompts' => (bool) env('BLOG_LEARNING_IN_PROMPTS', true),
+        'max_views_per_visitor_day' => (int) env('BLOG_ANALYTICS_MAX_VIEWS_PER_VISITOR_DAY', 40),
+        'max_cta_per_visitor_hour' => (int) env('BLOG_ANALYTICS_MAX_CTA_PER_VISITOR_HOUR', 20),
+        'spam_views_per_slug_day_cap' => (int) env('BLOG_ANALYTICS_SPAM_VIEWS_SLUG_DAY_CAP', 80),
+    ],
 
     'clusters' => [
         'fake_order' => 'ফেক অর্ডার / COD fraud',
@@ -138,5 +189,45 @@ return [
         'audience' => 'বাংলাদেশের WooCommerce / Facebook / COD সেলার',
         'tone' => 'বাস্তবসম্মত, সহজ বাংলা, সেলার-টক — কর্পোরেট US ব্লগ নয়',
         'founder' => 'Muhibbullah Ansary, Developer of WooEasyLife',
+    ],
+
+    /*
+    | One-click auto pipeline (orchestrator + per-step review). Manual wizard unchanged.
+    */
+    'auto' => [
+        'enabled' => (bool) env('BLOG_AI_AUTO_ENABLED', true),
+        'create_post' => (bool) env('BLOG_AI_AUTO_CREATE_POST', true),
+        'max_revisions_per_step' => (int) env('BLOG_AI_AUTO_MAX_REVISIONS', 2),
+        'pass_score' => (int) env('BLOG_AI_AUTO_PASS_SCORE', 70),
+        /*
+        | Soft-pass drafts (failed SEO after max revisions) never score above this.
+        */
+        'soft_pass_score_cap' => (int) env('BLOG_AI_AUTO_SOFT_PASS_CAP', 59),
+        'hooks_to_select' => (int) env('BLOG_AI_AUTO_HOOKS_SELECT', 1),
+        'auto_approve_image_on_fail' => (bool) env('BLOG_AI_AUTO_APPROVE_IMAGE', true),
+        'busy_stale_minutes' => (int) env('BLOG_AI_AUTO_BUSY_STALE_MINUTES', 25),
+        'use_llm_review' => (bool) env('BLOG_AI_AUTO_LLM_REVIEW', true),
+        /*
+        | null = require queue only in production. true/false force either way.
+        | Set BLOG_AI_AUTO_REQUIRE_QUEUE=false to allow sync locally/staging.
+        */
+        'require_queue' => env('BLOG_AI_AUTO_REQUIRE_QUEUE'),
+        'one_active_run_per_user' => (bool) env('BLOG_AI_AUTO_ONE_ACTIVE', true),
+        'weights' => [
+            'opportunity' => 15,
+            'outline' => 15,
+            'seo' => 30,
+            'content' => 25,
+            'image' => 15,
+        ],
+        'progress' => [
+            'intake' => 5,
+            'research' => 15,
+            'hooks' => 12,
+            'outline' => 15,
+            'draft' => 28,
+            'image' => 20,
+            'finalize' => 5,
+        ],
     ],
 ];

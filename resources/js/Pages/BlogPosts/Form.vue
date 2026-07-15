@@ -12,7 +12,7 @@
                     <div class="flex flex-wrap gap-2">
                         <Button
                             v-if="!isEdit && canUseBlogAi"
-                            label="AI Write"
+                            label="AI Auto Create"
                             icon="pi pi-sparkles"
                             size="small"
                             @click="aiWizardOpen = true"
@@ -336,6 +336,15 @@
                     </PageCard>
 
                     <PageCard title="SEO checklist" description="Quick quality checks">
+                        <div
+                            v-if="form.ai_quality_score != null"
+                            class="mb-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"
+                        >
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">AI readiness score</p>
+                            <p class="text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                                {{ form.ai_quality_score }}
+                            </p>
+                        </div>
                         <ul class="space-y-2 text-sm">
                             <li
                                 v-for="item in checklist"
@@ -372,7 +381,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Pages/Users/fragments/PageHeader.vue';
@@ -405,6 +414,15 @@ const isEdit = computed(() => Boolean(props.post?.id));
 const mediaPickerOpen = ref(false);
 const mediaPickerMode = ref('og');
 const aiWizardOpen = ref(false);
+
+onMounted(() => {
+    if (!isEdit.value && canUseBlogAi.value) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('ai') === '1') {
+            aiWizardOpen.value = true;
+        }
+    }
+});
 
 const openMediaPicker = (mode) => {
     mediaPickerMode.value = mode;
@@ -448,11 +466,23 @@ const applyAiDraft = (draft) => {
     form.author_name = draft.author_name || form.author_name || 'Muhibbullah Ansary';
     form.robots = draft.robots || 'index,follow';
     form.body_html = draft.body_html || form.body_html;
+    if (draft.cluster) {
+        form.cluster = draft.cluster;
+    }
     if (draft.og_image) {
         form.og_image = draft.og_image;
     }
     if (Array.isArray(draft.faqs)) {
         form.faqs_json = draft.faqs;
+    }
+    if (draft.ai_quality_score != null) {
+        form.ai_quality_score = draft.ai_quality_score;
+    }
+    if (draft.ai_quality_breakdown) {
+        form.ai_quality_breakdown = draft.ai_quality_breakdown;
+    }
+    if (draft.ai_run_id) {
+        form.ai_run_id = draft.ai_run_id;
     }
 };
 
@@ -460,6 +490,7 @@ const form = useForm({
     title: props.post?.title ?? '',
     slug: props.post?.slug ?? '',
     locale: props.post?.locale ?? 'bn',
+    cluster: props.post?.cluster ?? '',
     status: props.post?.status ?? 'draft',
     excerpt: props.post?.excerpt ?? '',
     meta_title: props.post?.meta_title ?? '',
@@ -471,6 +502,9 @@ const form = useForm({
     faqs_json: props.post?.faqs_json ?? [],
     body_html: props.post?.body_html ?? '',
     published_at: props.post?.published_at ?? '',
+    ai_quality_score: props.post?.ai_quality_score ?? null,
+    ai_quality_breakdown: props.post?.ai_quality_breakdown ?? null,
+    ai_run_id: props.post?.ai_run_id ?? null,
     public_url: props.post?.public_url ?? null,
     public_path: props.post?.public_path ?? null,
 });
@@ -603,17 +637,34 @@ const checklist = computed(() => {
     const title = (form.title || '').toLowerCase();
     const metaDesc = (form.meta_description || form.excerpt || '').toLowerCase();
     const hasH2 = /<h2[\s>]/i.test(form.body_html || '');
-    const hasInternalLink = /href=["']\//i.test(form.body_html || '');
+    const internalLinks = (form.body_html || '').match(/<a\b[^>]*\bhref=["']\/[^"']*["']/gi) || [];
+    const faqCount = Array.isArray(form.faqs_json)
+        ? form.faqs_json.filter((row) => row?.q && row?.a).length
+        : 0;
+    const firstParagraphMatch = (form.body_html || '').match(/<p\b[^>]*>(.*?)<\/p>/is);
+    const firstParagraph = firstParagraphMatch
+        ? stripHtml(firstParagraphMatch[1]).toLowerCase()
+        : bodyText.toLowerCase().slice(0, 400);
+    const hasContentImage = /<img[\s>]/i.test(form.body_html || '');
+    const contentImageAltOk = !hasContentImage
+        || /<img\b[^>]*\balt=["'][^"']+["']/i.test(form.body_html || '');
+    const hasOgImage = Boolean(String(form.og_image || '').trim() || ogPreview.value);
     const wordCount = bodyText ? bodyText.split(/\s+/).filter(Boolean).length : 0;
+    const keywordInTitle = keyword ? title.includes(keyword) : false;
 
     return [
         { label: 'Title present', ok: Boolean(form.title?.trim()) },
         { label: 'Focus keyword set', ok: Boolean(keyword) },
-        { label: 'Keyword in title', ok: keyword ? title.includes(keyword) : false },
+        { label: 'Keyword in title (soft warn on publish)', ok: keywordInTitle },
+        { label: 'Keyword in first paragraph', ok: keyword ? firstParagraph.includes(keyword) : false },
         { label: 'Meta description 50–160 chars', ok: metaDescLen.value >= 50 && metaDescLen.value <= 160 },
         { label: 'Keyword in meta description', ok: keyword ? metaDesc.includes(keyword) : false },
         { label: 'Body has H2 heading', ok: hasH2 },
-        { label: 'At least one internal link', ok: hasInternalLink },
+        { label: 'At least one internal link (required to publish)', ok: internalLinks.length >= 1 },
+        { label: '2+ internal links (AI target)', ok: internalLinks.length >= 2 },
+        { label: 'FAQs ≥ 3 (AI target)', ok: faqCount >= 3 },
+        { label: 'OG / cover image (add if you skipped AI image)', ok: hasOgImage },
+        { label: 'Content image with alt', ok: hasContentImage && contentImageAltOk },
         { label: 'Body ≥ 300 words', ok: wordCount >= 300 },
         { label: 'Readable English SEO slug', ok: isSeoSlug(form.slug) && !isPlaceholderSlug(form.slug) },
         { label: 'Slug does not shadow markdown', ok: !markdownConflict.value },
@@ -626,6 +677,35 @@ const submit = () => {
         if (!isSeoSlug(form.slug) || isPlaceholderSlug(form.slug)) {
             form.setError('slug', 'Add a readable English SEO slug before publishing (e.g. fake-order-atkabo).');
             return;
+        }
+
+        const hasInternalLink = /<a\b[^>]*\bhref=["']\/[^"']*["']/i.test(form.body_html || '');
+        if (!hasInternalLink) {
+            form.setError('body_html', 'Add at least one internal link (e.g. /bd-fraud-checker) before publishing.');
+            return;
+        }
+
+        const keyword = (form.focus_keyword || '').trim().toLowerCase();
+        const title = (form.title || '').toLowerCase();
+        if (keyword && !title.includes(keyword)) {
+            const ok = window.confirm(
+                `Focus keyword “${form.focus_keyword}” is not in the title. Publish anyway?`,
+            );
+            if (!ok) return;
+        }
+
+        const hasOg = Boolean(String(form.og_image || '').trim());
+        const hasContentImage = /<img[\s>]/i.test(form.body_html || '');
+        if (!hasOg) {
+            const ok = window.confirm(
+                'No OG / cover image set. Social previews will look weak. Publish anyway? (You can add one with Media or re-run AI Image.)',
+            );
+            if (!ok) return;
+        } else if (!hasContentImage) {
+            const ok = window.confirm(
+                'Cover/OG is set but the body has no content image. Add one later for engagement. Publish anyway?',
+            );
+            if (!ok) return;
         }
     }
 

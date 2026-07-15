@@ -20,6 +20,7 @@ class BlogPost extends Model
         'title',
         'slug',
         'locale',
+        'cluster',
         'status',
         'excerpt',
         'meta_title',
@@ -33,6 +34,9 @@ class BlogPost extends Model
         'published_at',
         'created_by',
         'updated_by',
+        'ai_quality_score',
+        'ai_quality_breakdown',
+        'ai_run_id',
     ];
 
     protected function casts(): array
@@ -40,6 +44,8 @@ class BlogPost extends Model
         return [
             'published_at' => 'datetime',
             'faqs_json' => 'array',
+            'ai_quality_breakdown' => 'array',
+            'ai_quality_score' => 'integer',
         ];
     }
 

@@ -23,8 +23,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('seo:weekly-report')
             ->weeklyOn(1, '09:00')
             ->timezone('Asia/Dhaka');
-            // ->dailyAt('00:30')
-            // ->timezone('Asia/Dhaka');
+        $schedule->command('blog:build-learning-insights')
+            ->dailyAt('02:15')
+            ->timezone('Asia/Dhaka');
+        // ->dailyAt('00:30')
+        // ->timezone('Asia/Dhaka');
     }
 
     /**

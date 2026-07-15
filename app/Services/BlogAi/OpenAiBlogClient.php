@@ -20,6 +20,26 @@ class OpenAiBlogClient
      */
     public function chatJson(array $messages, float $temperature = 0.7): array
     {
+        return $this->requestChat($messages, $temperature);
+    }
+
+    /**
+     * Multimodal chat with JSON object response (vision review).
+     *
+     * @param  list<array{role: string, content: mixed}>  $messages
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}}
+     */
+    public function chatJsonVision(array $messages, float $temperature = 0.2): array
+    {
+        return $this->requestChat($messages, $temperature);
+    }
+
+    /**
+     * @param  list<array{role: string, content: mixed}>  $messages
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}}
+     */
+    private function requestChat(array $messages, float $temperature): array
+    {
         $apiKey = $this->landingSettings->openaiApiKey();
         if (! filled($apiKey)) {
             throw ValidationException::withMessages([
@@ -74,5 +94,31 @@ class OpenAiBlogClient
         }
 
         return $decoded;
+    }
+
+    /**
+     * Build a data-URL for vision messages from a local file or remote URL binary.
+     */
+    public function imageDataUrlFromBinary(string $binary, string $mime = 'image/png'): string
+    {
+        return 'data:'.$mime.';base64,'.base64_encode($binary);
+    }
+
+    public function imageDataUrlFromPath(string $path): string
+    {
+        $binary = file_get_contents($path);
+        if ($binary === false || $binary === '') {
+            throw ValidationException::withMessages([
+                'ai' => 'Could not read image for vision review.',
+            ]);
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->buffer($binary) ?: 'image/jpeg';
+        if (! str_starts_with((string) $mime, 'image/')) {
+            $mime = 'image/jpeg';
+        }
+
+        return $this->imageDataUrlFromBinary($binary, (string) $mime);
     }
 }

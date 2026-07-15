@@ -1,0 +1,142 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Models\BlogPost;
+use App\Services\BlogSeoQuality;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class BlogSeoQualityTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_analyze_detects_core_signals(): void
+    {
+        $service = app(BlogSeoQuality::class);
+
+        $body = <<<'HTML'
+<figure><img src="/storage/cover.webp" alt="ফেক অর্ডার"></figure>
+<p>বাংলাদেশে ফেক অর্ডার COD ব্যবসার বড় লস।</p>
+<h2>কুরিয়ার হিস্টোরি</h2>
+<p>কাজের ধাপ এবং <a href="/bd-fraud-checker">ফ্রড চেকার</a> ও <a href="/">WooEasyLife</a>।</p>
+HTML;
+
+        $quality = $service->analyze(
+            title: 'ফেক অর্ডার কমানোর উপায়',
+            focusKeyword: 'ফেক অর্ডার',
+            bodyHtml: $body,
+            metaDescription: 'বাংলাদেশের COD সেলারদের জন্য ফেক অর্ডার কমানোর ব্যবহারিক গাইড এবং টিপস।',
+            faqs: [
+                ['q' => 'ফেক অর্ডার কী?', 'a' => 'নেয় না এমন অর্ডার।'],
+                ['q' => 'কীভাবে চেক করব?', 'a' => 'কুরিয়ার হিস্টোরি দেখুন।'],
+                ['q' => 'কোন টুল?', 'a' => 'WooEasyLife fraud checker।'],
+            ],
+            secondaryKeywords: ['কুরিয়ার হিস্টোরি'],
+            slug: 'fake-order-guide',
+        );
+
+        $this->assertTrue($quality['has_h2']);
+        $this->assertTrue($quality['internal_links_ok']);
+        $this->assertTrue($quality['keyword_in_title']);
+        $this->assertTrue($quality['keyword_in_first_paragraph']);
+        $this->assertTrue($quality['keyword_in_meta']);
+        $this->assertTrue($quality['faq_count_ok']);
+        $this->assertTrue($quality['has_content_image']);
+        $this->assertTrue($quality['content_image_alt_ok']);
+        $this->assertTrue($quality['secondary_keyword_in_body']);
+        $this->assertFalse($quality['slug_collision']);
+    }
+
+    public function test_ensure_internal_links_appends_missing(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $body = '<p>Hello world</p>';
+        $fixed = $service->ensureInternalLinks($body, [
+            ['path' => '/bd-fraud-checker', 'anchor' => 'Fraud'],
+            ['path' => '/', 'anchor' => 'Home'],
+        ], 2);
+
+        $this->assertSame(2, preg_match_all('/href=["\']\//', $fixed));
+        $this->assertStringContainsString('/bd-fraud-checker', $fixed);
+    }
+
+    public function test_inject_content_image_once(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $body = '<p>First</p><p>Second</p>';
+        $once = $service->injectContentImage($body, 'https://example.com/a.webp', 'alt text', 'Caption');
+        $twice = $service->injectContentImage($once, 'https://example.com/a.webp', 'alt text');
+
+        $this->assertSame(1, preg_match_all('/<img\b/i', $once));
+        $this->assertSame(1, preg_match_all('/<img\b/i', $twice));
+        $this->assertStringContainsString('alt="alt text"', $once);
+        $this->assertMatchesRegularExpression('/<\/p>\s*<figure>/i', $once);
+    }
+
+    public function test_inject_content_image_prepends_when_body_starts_with_heading(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $body = '<h2>Intro</h2><p>ফেক অর্ডার কমানোর উপায়।</p>';
+        $out = $service->injectContentImage($body, 'https://example.com/b.webp', 'ফেক অর্ডার');
+
+        $this->assertMatchesRegularExpression('/^\s*<figure>/i', $out);
+        $this->assertStringContainsString('<h2>Intro</h2>', $out);
+    }
+
+    public function test_latin_keyword_avoids_substring_false_positive(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $this->assertFalse($service->textContainsKeyword('courier checker tools', 'check'));
+        $this->assertTrue($service->textContainsKeyword('how to check fraud', 'check'));
+        $this->assertTrue($service->textContainsKeyword('ফেক অর্ডার কমান', 'ফেক অর্ডার'));
+    }
+
+    public function test_soft_warnings_for_publish(): void
+    {
+        $warnings = app(BlogSeoQuality::class)->softWarningsForPublish(
+            title: 'Generic seller tips',
+            bodyHtml: '<p>No image here</p><p><a href="/">x</a></p>',
+            focusKeyword: 'ফেক অর্ডার',
+            ogImage: null,
+        );
+
+        $this->assertNotEmpty($warnings);
+        $this->assertTrue(collect($warnings)->contains(fn ($w) => str_contains($w, 'title')));
+        $this->assertTrue(collect($warnings)->contains(fn ($w) => str_contains($w, 'OG')));
+    }
+
+    public function test_focus_keyword_collision_blocks_publish_validation(): void
+    {
+        BlogPost::create([
+            'title' => 'Existing',
+            'slug' => 'existing-post',
+            'locale' => 'bn',
+            'status' => 'published',
+            'focus_keyword' => 'ফেক অর্ডার',
+            'body_html' => '<p><a href="/">x</a></p>',
+            'published_at' => now(),
+        ]);
+
+        $errors = app(BlogSeoQuality::class)->publishValidationErrors(
+            bodyHtml: '<p>New <a href="/bd-fraud-checker">link</a></p>',
+            focusKeyword: 'ফেক অর্ডার',
+            slug: 'new-post',
+            locale: 'bn',
+        );
+
+        $this->assertArrayHasKey('focus_keyword', $errors);
+    }
+
+    public function test_publish_requires_internal_link(): void
+    {
+        $errors = app(BlogSeoQuality::class)->publishValidationErrors(
+            bodyHtml: '<p>No links here</p>',
+            focusKeyword: 'unique keyword xyz',
+            slug: 'unique-slug-xyz',
+            locale: 'bn',
+        );
+
+        $this->assertArrayHasKey('body_html', $errors);
+    }
+}

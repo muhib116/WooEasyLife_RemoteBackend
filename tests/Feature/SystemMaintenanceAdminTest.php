@@ -50,6 +50,60 @@ it('can clear application cache from the admin UI', function () {
         ->assertJsonPath('success', true);
 });
 
+it('can run blog learning insights from system maintenance', function () {
+    $admin = createMaintenanceAdmin();
+
+    $this->actingAs($admin)
+        ->postJson(route('maintenance.run'), ['action' => 'blog_learning_insights'])
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('message', fn ($m) => is_string($m) && str_contains(strtolower($m), 'blog'));
+
+    $this->assertDatabaseCount('blog_learning_insights', 1);
+});
+
+it('can run blog analytics rollup only from system maintenance', function () {
+    $admin = createMaintenanceAdmin();
+
+    $this->actingAs($admin)
+        ->postJson(route('maintenance.run'), ['action' => 'blog_analytics_rollup'])
+        ->assertOk()
+        ->assertJsonPath('success', true);
+});
+
+it('lists blog maintenance actions in status payload', function () {
+    $admin = createMaintenanceAdmin();
+
+    $this->actingAs($admin)
+        ->getJson(route('maintenance.status'))
+        ->assertOk()
+        ->assertJsonPath('actions', fn ($actions) => collect($actions)->contains(
+            fn ($a) => ($a['key'] ?? null) === 'blog_learning_insights'
+        ))
+        ->assertJsonPath('actions', fn ($actions) => collect($actions)->contains(
+            fn ($a) => ($a['key'] ?? null) === 'run_all'
+        ))
+        ->assertJsonPath('actions', fn ($actions) => collect($actions)->contains(
+            fn ($a) => ($a['key'] ?? null) === 'subscriptions_apply_expiry'
+        ))
+        ->assertJsonStructure(['groups']);
+});
+
+it('can run everything batch with included commands', function () {
+    $admin = createMaintenanceAdmin();
+
+    $response = $this->actingAs($admin)
+        ->postJson(route('maintenance.run'), ['action' => 'run_all']);
+
+    $response->assertOk()
+        ->assertJsonPath('message', fn ($m) => is_string($m) && str_contains(strtolower($m), 'everything'));
+
+    $output = (string) $response->json('output');
+    expect($output)->toContain('skipped (excluded from batch)')
+        ->and($output)->toContain('subscriptions_notify')
+        ->and($output)->toContain('Blog learning insights');
+});
+
 it('rejects unknown maintenance actions', function () {
     $admin = createMaintenanceAdmin();
 

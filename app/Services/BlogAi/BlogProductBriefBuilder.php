@@ -11,6 +11,7 @@ class BlogProductBriefBuilder
 {
     public function __construct(
         private LandingSettingsService $landingSettings,
+        private BlogLearningService $learningService,
     ) {}
 
     /**
@@ -33,7 +34,7 @@ class BlogProductBriefBuilder
 
         $featureOrder = config('landing.feature_highlight_order', []);
 
-        return [
+        $brief = [
             'market' => config('blog_ai.market'),
             'product' => config('blog_ai.persona.product'),
             'audience' => config('blog_ai.persona.audience'),
@@ -62,8 +63,15 @@ class BlogProductBriefBuilder
                 'Target Bangladesh WooCommerce / COD sellers only.',
                 'Write primarily in Bangla (bn). Use a Latin SEO slug.',
                 'Soft-promote WooEasyLife; prioritize helpful education over hard sell.',
+                'Obey performance_learning guidance when choosing topic angle and hooks.',
             ],
         ];
+
+        if (config('blog_ai.analytics.learning_in_prompts', true)) {
+            $brief['performance_learning'] = $this->learningService->promptLearningBlock();
+        }
+
+        return $brief;
     }
 
     public function toPromptBlock(): string
