@@ -17,6 +17,7 @@ class BlogContentAgent
         private InternalLinkCatalog $linkCatalog,
         private BdKeywordSuggestService $keywordSuggest,
         private BlogSeoQuality $seoQuality,
+        private BlogLandingContextService $landingContext,
     ) {}
 
     /**
@@ -54,6 +55,7 @@ Rules:
 - Include 1–2 short head terms and several long-tail phrases
 - Ground keywords in live Google Suggest (gl=bd) when provided; do not invent US-centric terms
 - Stay inside WooEasyLife product truth (fraud, courier, missing orders, pixel, AI order, packing, multistore, team)
+- Prefer phrases aligned with cluster_landing angle_hint and page H1/lead
 - No brand spam lists; each keyword must be useful for an article
 TXT;
 
@@ -62,7 +64,8 @@ TXT;
             'cluster' => $cluster,
             'cluster_label' => $clusterLabel,
             'live_google_suggest_bd' => $liveSuggestions,
-            'product_brief' => $this->briefBuilder->build(),
+            'product_brief' => $this->briefBuilder->build($cluster),
+            'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([
@@ -156,6 +159,7 @@ Return JSON only:
 Prefer Bangla or BD-English hybrid phrases sellers actually search.
 Do not invent US-centric keywords.
 Prioritize pasted keywords and live Google Suggest results from Bangladesh (gl=bd).
+Align primary intent with cluster_landing (same problem the landing page solves).
 If avoid_primary_keywords is non-empty, the primary MUST be a different long-tail angle that is not in that list and not an exact match of existing post focus keywords.
 TXT;
 
@@ -166,7 +170,8 @@ TXT;
             'pasted_keywords' => $pasted,
             'avoid_primary_keywords' => $avoidPrimaries,
             'live_google_suggest_bd' => $liveSuggestions,
-            'product_brief' => $this->briefBuilder->build(),
+            'product_brief' => $this->briefBuilder->build($cluster),
+            'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([
@@ -342,17 +347,20 @@ Return JSON:
 }
 Hooks must target BD COD / WooCommerce sellers. Mix angles. No clickbait lies.
 Each hook MUST use a different angle and a distinct title wording.
+Ground hooks in cluster_landing angle_hint / page lead — do not invent unrelated product pillars.
 If existing_posts or avoid_titles is present, differentiate: new angle, persona, tool angle, or long-tail — do not clone those titles.
 TXT;
 
+        $cluster = (string) ($session->cluster ?: 'general');
         $user = json_encode([
             'seed_topic' => $session->seed_topic,
-            'cluster' => $session->cluster,
+            'cluster' => $cluster,
             'keywords' => $keywords,
             'existing_posts' => $existingPosts,
             'avoid_titles' => array_values(array_filter($avoidTitles)),
             'fix_instructions' => $fixInstructions,
-            'product_brief' => $this->briefBuilder->build(),
+            'product_brief' => $this->briefBuilder->build($cluster),
+            'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([
@@ -421,14 +429,18 @@ Return JSON:
   "cta": "soft CTA sentence"
 }
 Use ONLY paths from the provided internal link catalog (2–4 links).
+MUST include cluster_landing.primary_path (or must_link_paths) as the first internal link.
+Echo page FAQs/angle_hint truth — do not invent features beyond product_brief + cluster_landing.
 Include 3–6 FAQ items under faqs (q + a_points).
 Include a differentiation section that beats generic competitor blogs (practical BD COD steps + WooEasyLife truth).
 TXT;
 
+        $cluster = (string) ($session->cluster ?: 'general');
         $user = json_encode([
             'selected_hooks' => $selected->all(),
             'keywords' => $session->keywords_json,
-            'product_brief' => $this->briefBuilder->build(),
+            'product_brief' => $this->briefBuilder->build($cluster),
+            'cluster_landing' => $this->landingContext->forCluster($cluster),
             'internal_link_catalog' => $this->linkCatalog->all(),
             'fix_instructions' => $fixInstructions,
             'previous_outline' => $fixInstructions ? ($session->outline_json ?? null) : null,
@@ -440,7 +452,7 @@ TXT;
         ], 0.5);
 
         $outline = $this->openAi->decodeJsonObject($result['content']);
-        $outline['internal_links'] = $this->filterValidLinks($outline['internal_links'] ?? []);
+        $outline['internal_links'] = $this->filterValidLinks($outline['internal_links'] ?? [], $cluster);
 
         $session->selected_hook_ids = $selectedIds;
         $session->outline_json = $outline;
@@ -490,18 +502,22 @@ Requirements:
 - Include focus keyword in title, FIRST <p> paragraph, meta_description, and one H2 naturally
 - Include at least 2 secondary keywords from keywords.secondary naturally in body (not stuffed)
 - Include at least 2 internal links using exact paths from link_plan (href="/path")
+- MUST include an href to cluster_landing.primary_path (landing page for this topic)
+- Body claims must stay inside product_brief + cluster_landing (page lead, FAQs, claims)
 - Include 3–6 FAQs matching the outline (q/a plain text)
-- One soft WooEasyLife CTA near the end — not spammy
+- One soft WooEasyLife CTA near the end pointing to primary_path — not spammy
 - No script tags, no invented product claims
 - slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$ and must be unique (avoid colliding with existing posts)
 - If fix_instructions are provided, obey them strictly while keeping product truth
 TXT;
 
+        $cluster = (string) ($session->cluster ?: 'general');
         $user = json_encode([
             'outline' => $session->outline_json,
             'link_plan' => $session->link_plan_json,
             'keywords' => $session->keywords_json,
-            'product_brief' => $this->briefBuilder->build(),
+            'product_brief' => $this->briefBuilder->build($cluster),
+            'cluster_landing' => $this->landingContext->forCluster($cluster),
             'fix_instructions' => $fixInstructions,
             'previous_draft_quality' => $fixInstructions
                 ? ($session->draft_json['quality'] ?? null)
@@ -542,7 +558,7 @@ TXT;
 
     private function systemPrompt(): string
     {
-        return 'You are an expert Bangladesh SEO content strategist for WooEasyLife, a WooCommerce operations platform for BD sellers (fraud checker, checkout OTP/block, auto courier, missing orders, Facebook pixel protection, AI message-to-order, packing/print, multistore app, team call tracking). Always obey the product brief. Never invent features or numbers. When performance_learning is present, prefer recommended clusters, winning title angles, and coverage gaps; avoid cloning underperforming topics.';
+        return 'You are an expert Bangladesh SEO content strategist for WooEasyLife, a WooCommerce operations platform for BD sellers (fraud checker, checkout OTP/block, auto courier, missing orders, Facebook pixel protection, AI message-to-order, packing/print, multistore app, team call tracking). Always obey the product brief and cluster_landing page context (H1, lead, FAQs, claims, primary_path). Never invent features or numbers. Soft CTA to the matching landing page. When performance_learning is present, prefer recommended clusters, winning title angles, and coverage gaps; avoid cloning underperforming topics.';
     }
 
     /**
@@ -579,10 +595,14 @@ TXT;
     /**
      * @return list<array{path: string, anchor: string, reason?: string}>
      */
-    private function filterValidLinks(mixed $links): array
+    private function filterValidLinks(mixed $links, ?string $cluster = null): array
     {
         $allowed = collect($this->linkCatalog->all())->pluck('path')->all();
         $min = (int) config('blog_ai.internal_links_min', 2);
+        $landing = filled($cluster) ? $this->landingContext->forCluster((string) $cluster) : null;
+        $mustPaths = is_array($landing['must_link_paths'] ?? null)
+            ? array_values(array_filter($landing['must_link_paths']))
+            : [];
 
         $filtered = collect(is_array($links) ? $links : [])
             ->filter(fn ($row) => is_array($row) && in_array($row['path'] ?? null, $allowed, true))
@@ -592,9 +612,25 @@ TXT;
                 'reason' => trim((string) ($row['reason'] ?? '')),
             ])
             ->unique('path')
-            ->take(4)
             ->values()
             ->all();
+
+        // Ensure cluster landing primary/must links are present and ordered first.
+        foreach (array_reverse($mustPaths) as $mustPath) {
+            if (! in_array($mustPath, $allowed, true)) {
+                continue;
+            }
+            $existing = collect($filtered)->first(fn ($l) => $l['path'] === $mustPath);
+            $filtered = collect($filtered)->reject(fn ($l) => $l['path'] === $mustPath)->values()->all();
+            $catalogItem = collect($this->linkCatalog->all())->firstWhere('path', $mustPath);
+            array_unshift($filtered, $existing ?: [
+                'path' => $mustPath,
+                'anchor' => $catalogItem['anchor_hints'][0] ?? ($catalogItem['title'] ?? $mustPath),
+                'reason' => 'required cluster landing page',
+            ]);
+        }
+
+        $filtered = array_slice($filtered, 0, 4);
 
         if (count($filtered) < $min) {
             foreach ($this->linkCatalog->all() as $item) {

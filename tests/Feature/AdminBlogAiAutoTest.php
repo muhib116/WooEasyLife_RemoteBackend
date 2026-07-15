@@ -112,15 +112,15 @@ class AdminBlogAiAutoTest extends TestCase
                         ['q' => 'শুরু কিভাবে?', 'a_points' => ['WooEasyLife']],
                     ],
                     'internal_links' => [
+                        ['path' => '/fake-order-protection', 'anchor' => 'ফেক অর্ডার প্রোটেকশন', 'reason' => 'landing'],
                         ['path' => '/bd-fraud-checker', 'anchor' => 'ফ্রড চেকার', 'reason' => 'tool'],
-                        ['path' => '/', 'anchor' => 'WooEasyLife', 'reason' => 'home'],
                     ],
                     'cta' => 'WooEasyLife দিয়ে শুরু করুন',
                 ];
             } else {
                 $body = '<h2>কেন ফেক অর্ডার হয়</h2>'
                     .'<p>ফেক অর্ডার বাংলাদেশের COD সেলারদের বড় সমস্যা। কুরিয়ার হিস্টোরি চেক এবং COD fraud Bangladesh প্যাটার্ন বুঝলে লোকসান কমে। '
-                    .'<a href="/bd-fraud-checker">ফ্রড চেকার</a> ও <a href="/">WooEasyLife</a> দিয়ে অপারেশন সহজ হয়। '
+                    .'<a href="/fake-order-protection">ফেক অর্ডার প্রোটেকশন</a> ও <a href="/bd-fraud-checker">ফ্রড চেকার</a> দিয়ে অপারেশন সহজ হয়। '
                     .str_repeat('বিস্তারিত ধাপ ও উদাহরণ সহ ব্যবহারিক গাইড। ', 40)
                     .'</p>'
                     .'<h2>কুরিয়ার হিস্টোরি কীভাবে দেখবেন</h2><p>অর্ডার নেওয়ার আগে নম্বর যাচাই করুন।</p>'

@@ -148,6 +148,174 @@ return [
     ],
 
     /*
+    | Map each content cluster → landing/SEO pages (config/seo.php keys + paths).
+    | Auto + manual prompts use this so posts stay aligned with live landing copy.
+    */
+    'cluster_landing' => [
+        'fake_order' => [
+            'primary_path' => '/fake-order-protection',
+            'seo_pages' => ['fake_order_protection', 'ki_vabe_fake_order_atkabo', 'fake_customer_check'],
+            'related_paths' => ['/bd-fraud-checker', '/ki-vabe-fake-order-atkabo', '/fake-customer-check', '/pricing'],
+            'must_link_paths' => ['/fake-order-protection'],
+            'claims' => [
+                'মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি চেক',
+                'চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট',
+                'মাল্টি-লেয়ার ফেক অর্ডার প্রোটেকশন — শুধু টুল নয়',
+            ],
+            'angle_hint' => 'কিভাবে ফেক অর্ডার আটকাবো — চেক → যাচাই → ব্লক প্র্যাকটিক্যাল গাইড',
+        ],
+        'fraud_checker' => [
+            'primary_path' => '/bd-fraud-checker',
+            'seo_pages' => ['bd_fraud_checker', 'pathao_fraud_check', 'steadfast_fraud_check', 'redx_fraud_check', 'bd_courier_ratio_checker'],
+            'related_paths' => ['/pathao-fraud-check', '/steadfast-fraud-check', '/redx-fraud-check', '/bd-courier-ratio-checker', '/fraudbd-alternative', '/pricing'],
+            'must_link_paths' => ['/bd-fraud-checker'],
+            'claims' => [
+                'ফোন নম্বর দিয়ে Pathao, Steadfast, RedX হিস্টোরি',
+                'অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক',
+                'সাকসেস রেট / রিটার্ন রেট দেখে অর্ডার কনফার্ম সিদ্ধান্ত',
+            ],
+            'angle_hint' => 'Courier Fraud Checker BD — অর্ডার কনফার্মের আগে নম্বর চেক',
+        ],
+        'checkout_protection' => [
+            'primary_path' => '/fake-order-protection',
+            'seo_pages' => ['fake_order_protection', 'fake_customer_check'],
+            'related_paths' => ['/bd-fraud-checker', '/ki-vabe-fake-order-atkabo', '/pricing'],
+            'must_link_paths' => ['/fake-order-protection'],
+            'claims' => [
+                'চেকআউট OTP দিয়ে ভুয়া নম্বর কমান',
+                'ডুপ্লিকেট অর্ডার ব্লক ও ব্ল্যাকলিস্ট',
+                'ফ্রড চেক + চেকআউট সুরক্ষা একসাথে',
+            ],
+            'angle_hint' => 'চেকআউট OTP ও ব্লক দিয়ে ফেক কাস্টমার আটকানো',
+        ],
+        'courier' => [
+            'primary_path' => '/courier-auto-entry',
+            'seo_pages' => ['courier_auto_entry'],
+            'related_paths' => ['/bd-fraud-checker', '/pricing'],
+            'must_link_paths' => ['/courier-auto-entry'],
+            'claims' => [
+                'Pathao, Steadfast, RedX অটো পার্সেল এন্ট্রি',
+                'ম্যানুয়াল কুরিয়ার প্যানেল কপি-পেস্ট কমান',
+                'অর্ডার কনফার্ম → কুরিয়ার এন্ট্রি স্বয়ংক্রিয়',
+            ],
+            'angle_hint' => 'কুরিয়ার অটো এন্ট্রি — COD অপারেশন দ্রুত',
+        ],
+        'missing_order' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home'],
+            'related_paths' => ['/pricing', '/bd-fraud-checker'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'মিসিং / অসম্পূর্ণ চেকআউট অর্ডার আলাদা করে দেখা',
+                'ওয়ান-ক্লিক মিসিং অর্ডার থেকে WooCommerce অর্ডার',
+                'হারানো বিক্রি রিকভারি — শুধু ফ্রড টুল নয়',
+            ],
+            'angle_hint' => 'হারানো অর্ডার রিকভারি — cart/checkout drop-off',
+        ],
+        'facebook_ads' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home'],
+            'related_paths' => ['/fake-order-protection', '/bd-fraud-checker', '/pricing'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'Facebook / COD অ্যাড স্পেন্ড ফেক অর্ডারে নষ্ট কমান',
+                'পিক্সেল ও Purchase ইভেন্ট সুরক্ষা (প্রোডাক্ট ফিচার অনুযায়ী)',
+                'ফ্রড চেক + চেকআউট সুরক্ষা দিয়ে অ্যাড ROI বাড়ান',
+            ],
+            'angle_hint' => 'Facebook Ads + COD — ফেক অর্ডার ও রিটার্ন লস কমানো',
+        ],
+        'ai_orders' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home'],
+            'related_paths' => ['/courier-auto-entry', '/pricing'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'মেসেজ / স্ক্রিনশট থেকে অর্ডার তৈরি (AI order workflow)',
+                'ম্যানুয়াল অর্ডার এন্ট্রি কমান',
+                'কুরিয়ার অটো এন্ট্রির সাথে অপারেশন একসাথে',
+            ],
+            'angle_hint' => 'মেসেজ/ইমেজ থেকে অর্ডার — AI অর্ডার ওয়ার্কফ্লো',
+        ],
+        'packing_print' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home'],
+            'related_paths' => ['/courier-auto-entry', '/pricing'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'ইনভয়েস ও কুরিয়ার স্টিকার প্রিন্ট',
+                'প্যাকিং স্লিপ দিয়ে অপারেশন দ্রুত',
+                'কুরিয়ার অটো এন্ট্রির সাথে মিলিয়ে ওয়ার্কফ্লো',
+            ],
+            'angle_hint' => 'প্যাকিং / ইনভয়েস / স্টিকার প্রিন্ট',
+        ],
+        'multistore_app' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home'],
+            'related_paths' => ['/pricing'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'এক ড্যাশবোর্ডে একাধিক স্টোর',
+                'মোবাইল অ্যাপে অর্ডার অ্যালার্ট',
+                'মাল্টিস্টোর অর্ডার মিস না করা',
+            ],
+            'angle_hint' => 'মাল্টিস্টোর ড্যাশবোর্ড ও মোবাইল অ্যাপ',
+        ],
+        'team_calls' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home'],
+            'related_paths' => ['/pricing'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'কাস্টমার কল হিস্ট্রি / কল ট্র্যাকিং',
+                'স্টাফ ম্যানেজমেন্ট ও দায়িত্ব ভাগ',
+                'টিম অপারেশন + অর্ডার স্ট্যাটাস এক জায়গায়',
+            ],
+            'angle_hint' => 'টিম কল ট্র্যাকিং ও স্টাফ অপারেশন',
+        ],
+        'operations' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home', 'pricing'],
+            'related_paths' => ['/bd-fraud-checker', '/courier-auto-entry', '/pricing'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'ফ্রড চেক + ফেক অর্ডার প্রোটেকশন + কুরিয়ার অটো এন্ট্রি এক প্ল্যাটফর্ম',
+                '১৪ দিন ফ্রি ট্রায়াল',
+                'বাংলাদেশ COD / WooCommerce সেলারদের জন্য অপারেশন টুল',
+            ],
+            'angle_hint' => 'সম্পূর্ণ WooCommerce অপারেশন — টুল-শুধু নয়',
+        ],
+        'general' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home', 'pricing'],
+            'related_paths' => ['/bd-fraud-checker', '/fake-order-protection', '/courier-auto-entry', '/pricing'],
+            'must_link_paths' => ['/'],
+            'claims' => [
+                'BD fraud checker, fake order protection, courier auto-entry',
+                '১৪ দিন ফ্রি ট্রায়াল',
+                'বাংলাদেশ WooCommerce / Facebook / COD সেলার',
+            ],
+            'angle_hint' => 'সাধারণ BD WooCommerce গাইড — WooEasyLife ল্যান্ডিং সত্য মেনে',
+        ],
+    ],
+
+    /*
+    | Keyword/seed needles for automatic cluster detection (case-insensitive contains).
+    */
+    'cluster_detect_needles' => [
+        'fake_order' => ['ফেক অর্ডার', 'fake order', 'fake-order', 'পার্সেল রিটার্ন', 'রিটার্ন লস', 'cod fraud', 'অর্ডার আটকা'],
+        'fraud_checker' => ['ফ্রড চেকার', 'fraud checker', 'কুরিয়ার হিস্টোরি', 'courier history', 'pathao fraud', 'steadfast fraud', 'redx fraud', 'সাকসেস রেট', 'courier ratio', 'fraudbd'],
+        'checkout_protection' => ['চেকআউট ওটিপি', 'checkout otp', 'otp', 'ডুপ্লিকেট অর্ডার', 'ব্ল্যাকলিস্ট', 'duplicate order', 'fake customer block'],
+        'courier' => ['কুরিয়ার অটো', 'courier auto', 'অটো এন্ট্রি', 'auto entry', 'steadfast', 'pathao entry', 'redx entry', 'পার্সেল এন্ট্রি'],
+        'missing_order' => ['হারানো অর্ডার', 'missing order', 'মিসিং অর্ডার', 'abandoned checkout', 'অসম্পূর্ণ অর্ডার'],
+        'facebook_ads' => ['facebook ads', 'ফেসবুক অ্যাড', 'facebook pixel', 'পিক্সেল', 'meta ads', 'purchase event'],
+        'ai_orders' => ['ai order', 'মেসেজ থেকে অর্ডার', 'screenshot থেকে অর্ডার', 'image to order', 'মেসেজ অর্ডার'],
+        'packing_print' => ['ইনভয়েস', 'invoice', 'packing', 'স্টিকার প্রিন্ট', 'packing slip', 'প্রিন্ট'],
+        'multistore_app' => ['মাল্টিস্টোর', 'multistore', 'মোবাইল অ্যাপ', 'mobile app', 'এক ড্যাশবোর্ড'],
+        'team_calls' => ['কল হিস্ট্রি', 'call tracking', 'স্টাফ', 'team call', 'customer call'],
+        'operations' => ['অপারেশন', 'ড্যাশবোর্ড', 'order management', 'অর্ডার ম্যানেজমেন্ট', 'cod সেলার টুল'],
+    ],
+
+    /*
     | Seed queries for Google Suggest (gl=bd) when generating keywords per cluster.
     */
     'cluster_seed_queries' => [
@@ -187,14 +355,49 @@ return [
             'anchor_hints' => ['ফেক অর্ডার প্রোটেকশন', 'চেকআউট ওটিপি'],
         ],
         [
+            'path' => '/ki-vabe-fake-order-atkabo',
+            'title' => 'কিভাবে ফেক অর্ডার আটকাবো',
+            'anchor_hints' => ['কিভাবে ফেক অর্ডার আটকাবো', 'ফেক অর্ডার গাইড'],
+        ],
+        [
+            'path' => '/fake-customer-check',
+            'title' => 'Fake Customer Check',
+            'anchor_hints' => ['ফেক কাস্টমার চেক', 'fake customer check'],
+        ],
+        [
+            'path' => '/bd-courier-ratio-checker',
+            'title' => 'BD Courier Ratio Checker',
+            'anchor_hints' => ['কুরিয়ার রেশিও চেক', 'সাকসেস রেট চেক'],
+        ],
+        [
             'path' => '/courier-auto-entry',
             'title' => 'Courier Auto Entry',
             'anchor_hints' => ['কুরিয়ার অটো এন্ট্রি', 'Pathao Steadfast RedX'],
         ],
         [
+            'path' => '/pathao-fraud-check',
+            'title' => 'Pathao Fraud Check',
+            'anchor_hints' => ['Pathao fraud check', 'Pathao হিস্টোরি'],
+        ],
+        [
+            'path' => '/steadfast-fraud-check',
+            'title' => 'Steadfast Fraud Check',
+            'anchor_hints' => ['Steadfast fraud check', 'Steadfast হিস্টোরি'],
+        ],
+        [
+            'path' => '/redx-fraud-check',
+            'title' => 'RedX Fraud Check',
+            'anchor_hints' => ['RedX fraud check', 'RedX হিস্টোরি'],
+        ],
+        [
+            'path' => '/fraudbd-alternative',
+            'title' => 'FraudBD Alternative',
+            'anchor_hints' => ['FraudBD বিকল্প', 'fraud checker alternative'],
+        ],
+        [
             'path' => '/pricing',
             'title' => 'প্রাইসিং',
-            'anchor_hints' => ['WooEasyLife প্রাইসিং', 'প্যাকেজ'],
+            'anchor_hints' => ['WooEasyLife প্রাইসিং', 'প্যাকেজ', 'ফ্রি ট্রায়াল'],
         ],
     ],
 

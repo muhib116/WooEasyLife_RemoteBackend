@@ -17,6 +17,7 @@ class BlogStepReviewAgent
         private BlogProductBriefBuilder $briefBuilder,
         private BlogSeoQuality $seoQuality,
         private BlogReadinessScorer $scorer,
+        private BlogLandingContextService $landingContext,
     ) {}
 
     /**
@@ -224,6 +225,19 @@ class BlogStepReviewAgent
                 $decision = 'revise';
                 $fix = trim(($fix ? $fix.' ' : '').'Plan at least 2 internal links from the catalog.');
             }
+            $mustPath = $this->clusterMustLinkPath($session);
+            if ($mustPath !== null && is_array($links)) {
+                $hasMust = collect($links)->contains(
+                    fn ($row) => is_array($row) && ($row['path'] ?? null) === $mustPath
+                );
+                if (! $hasMust) {
+                    $failures[] = 'missing_cluster_landing_link';
+                    $score = min($score, 55);
+                    $decision = 'revise';
+                    $fix = trim(($fix ? $fix.' ' : '')
+                        .'Include the cluster landing path '.$mustPath.' in internal_links (first link).');
+                }
+            }
         } elseif ($step === 'draft') {
             $draft = $session->draft_json ?? [];
             $quality = is_array($draft['quality'] ?? null) ? $draft['quality'] : [];
@@ -244,13 +258,20 @@ class BlogStepReviewAgent
 
             $score = $this->scorer->scoreFromSeoQuality($quality);
             $failures = array_values(array_filter(array_map('strval', $quality['failures'] ?? [])));
-            if (! empty($quality['focus_keyword_collision']) || ! empty($quality['slug_collision'])) {
+            $mustPath = $this->clusterMustLinkPath($session);
+            $bodyHtml = (string) ($draft['body_html'] ?? '');
+            if ($mustPath !== null && ! $this->bodyHasInternalPath($bodyHtml, $mustPath)) {
+                $failures[] = 'missing_cluster_landing_link';
+                $score = min($score, 55);
+                $decision = 'revise';
+                $fix = 'Add an internal link href="'.$mustPath.'" to the matching landing page. Stay on cluster_landing claims.';
+            } elseif (! empty($quality['focus_keyword_collision']) || ! empty($quality['slug_collision'])) {
                 // Prefer revise so Auto can pivot keyword / slug; only hard-abort if still colliding after rewrite attempts.
                 $decision = 'revise';
                 $fix = 'Focus keyword or slug still collides with a published post. Use a distinct long-tail focus keyword and unique latin slug.';
             } elseif (empty($quality['ai_ready'])) {
                 $decision = 'revise';
-                $fix = 'Fix SEO failures: '.implode(', ', $failures ?: ['ai_ready']).'. Strengthen keyword placement, FAQs, internal links, and body depth.';
+                $fix = 'Fix SEO failures: '.implode(', ', $failures ?: ['ai_ready']).'. Strengthen keyword placement, FAQs, internal links, and body depth. Stay on landing-page product truth.';
             } else {
                 $decision = 'advance';
                 $score = max($score, 80);
@@ -273,7 +294,17 @@ class BlogStepReviewAgent
             && $failures === [];
 
         if ($step === 'draft') {
-            if (! empty($session->draft_json['quality']['ai_ready'])) {
+            $hardDraftFails = array_intersect($failures, [
+                'missing_cluster_landing_link',
+                'focus_keyword_collision',
+                'slug_collision',
+            ]);
+            if ($hardDraftFails !== []) {
+                $pass = false;
+                if ($decision === 'advance') {
+                    $decision = 'revise';
+                }
+            } elseif (! empty($session->draft_json['quality']['ai_ready'])) {
                 $pass = true;
                 $decision = 'advance';
                 $failures = [];
@@ -335,11 +366,14 @@ Return JSON only:
 Rules:
 - Compete for strong BD SEO process quality (intent clarity, differentiation, practical seller value, E-E-A-T)
 - Never invent WooEasyLife features; never claim guaranteed rankings
-- revise when content is thin, generic, cannibalizing, or missing differentiation
+- Content must stay on-brief with cluster_landing (matching landing page H1/lead/claims)
+- Outline/draft must link the cluster primary_path
+- revise when content is thin, generic, cannibalizing, off-landing, or missing differentiation
 - abort only for hard collisions or off-brand claims you cannot fix by rewrite
 - Prefer revise with concrete fix_instructions over abort
 TXT;
 
+        $cluster = (string) ($session->cluster ?: 'general');
         $payload = [
             'step' => $step,
             'rule_baseline' => [
@@ -369,7 +403,8 @@ TXT;
                 'status' => $session->status,
             ],
             'context' => $context,
-            'product_brief' => $this->briefBuilder->build(),
+            'product_brief' => $this->briefBuilder->build($cluster),
+            'cluster_landing' => $this->landingContext->forCluster($cluster),
             'pass_score' => $passScore,
         ];
 
@@ -412,5 +447,29 @@ TXT;
                 : null,
             'usage' => $result['usage'],
         ];
+    }
+
+    private function clusterMustLinkPath(BlogAiSession $session): ?string
+    {
+        $cluster = trim((string) ($session->cluster ?: ''));
+        if ($cluster === '') {
+            return null;
+        }
+
+        $path = $this->landingContext->forCluster($cluster)['primary_path'] ?? null;
+
+        return is_string($path) && $path !== '' ? $path : null;
+    }
+
+    private function bodyHasInternalPath(string $bodyHtml, string $path): bool
+    {
+        $path = trim($path);
+        if ($path === '') {
+            return false;
+        }
+
+        $escaped = preg_quote($path, '/');
+
+        return (bool) preg_match('/href=["\']'.$escaped.'["\']/i', $bodyHtml);
     }
 }

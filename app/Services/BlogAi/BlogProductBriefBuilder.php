@@ -12,12 +12,13 @@ class BlogProductBriefBuilder
     public function __construct(
         private LandingSettingsService $landingSettings,
         private BlogLearningService $learningService,
+        private BlogLandingContextService $landingContext,
     ) {}
 
     /**
      * @return array<string, mixed>
      */
-    public function build(): array
+    public function build(?string $cluster = null): array
     {
         $hero = config('landing.hero', []);
         $bullets = config('landing.hero_bullets', []);
@@ -64,8 +65,19 @@ class BlogProductBriefBuilder
                 'Write primarily in Bangla (bn). Use a Latin SEO slug.',
                 'Soft-promote WooEasyLife; prioritize helpful education over hard sell.',
                 'Obey performance_learning guidance when choosing topic angle and hooks.',
+                'Stay aligned with cluster_landing page truth (H1, lead, FAQs, claims). Do not contradict landing SEO copy.',
+                'Include a soft CTA to the cluster primary_path (and /pricing when natural).',
             ],
         ];
+
+        if (filled($cluster)) {
+            $landing = $this->landingContext->forCluster((string) $cluster);
+            $brief['cluster'] = (string) $cluster;
+            $brief['cluster_label'] = config('blog_ai.clusters.'.$cluster, $cluster);
+            $brief['cluster_landing'] = $landing;
+        } else {
+            $brief['landing_page_catalog'] = $this->landingContext->catalog();
+        }
 
         if (config('blog_ai.analytics.learning_in_prompts', true)) {
             $brief['performance_learning'] = $this->learningService->promptLearningBlock();
@@ -74,8 +86,8 @@ class BlogProductBriefBuilder
         return $brief;
     }
 
-    public function toPromptBlock(): string
+    public function toPromptBlock(?string $cluster = null): string
     {
-        return json_encode($this->build(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '{}';
+        return json_encode($this->build($cluster), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '{}';
     }
 }

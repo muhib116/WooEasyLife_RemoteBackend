@@ -22,6 +22,7 @@ class BlogAutoPipeline
         private BlogStepReviewAgent $reviewer,
         private BlogReadinessScorer $scorer,
         private BlogLearningService $learning,
+        private BlogLandingContextService $landingContext,
     ) {}
 
     public function run(BlogAiRun $run): BlogAiRun
@@ -166,27 +167,27 @@ class BlogAutoPipeline
         $input = is_array($run->input_json) ? $run->input_json : [];
 
         $clusterInput = trim((string) ($input['cluster'] ?? ''));
-        $cluster = trim((string) ($session->cluster ?: $clusterInput));
+        $explicitCluster = trim((string) ($session->cluster ?: $clusterInput));
         $seed = trim((string) ($session->seed_topic ?: ($input['seed_topic'] ?? '')));
         $pasted = $session->keywords_json['pasted'] ?? [];
         if (! is_array($pasted)) {
             $pasted = [];
         }
 
-        // Only auto-pick cluster when admin left it blank — respect explicit "general".
-        if ($cluster === '') {
-            $ideas = $learning['next_post_ideas'] ?? [];
-            $recommended = $learning['recommended_clusters'] ?? ['fake_order', 'fraud_checker', 'courier'];
-            if (is_array($ideas) && $ideas !== [] && is_array($ideas[0] ?? null)) {
-                $idea = $ideas[0];
-                $cluster = (string) ($idea['cluster'] ?? ($recommended[0] ?? 'fake_order'));
-                if ($seed === '') {
-                    $seed = (string) ($idea['seed_topic'] ?? $idea['suggested_title'] ?? '');
-                }
-            } else {
-                $cluster = (string) ($recommended[0] ?? 'fake_order');
-            }
-        } elseif ($seed === '') {
+        $resolved = $this->landingContext->resolveCluster(
+            $explicitCluster !== '' ? $explicitCluster : null,
+            $seed,
+            array_map(fn ($k) => (string) $k, $pasted),
+            is_array($learning) ? $learning : [],
+        );
+
+        $cluster = (string) ($resolved['cluster'] ?? 'fake_order');
+        if ($seed === '' && filled($resolved['seed_topic'] ?? null)) {
+            $seed = trim((string) $resolved['seed_topic']);
+        }
+
+        // Fill seed from learning idea matching locked cluster when still empty.
+        if ($seed === '') {
             $ideas = $learning['next_post_ideas'] ?? [];
             if (is_array($ideas)) {
                 foreach ($ideas as $idea) {
@@ -201,8 +202,13 @@ class BlogAutoPipeline
             }
         }
 
+        // Prefer landing angle as seed when Auto still has no topic.
+        if ($seed === '') {
+            $seed = (string) ($resolved['landing']['angle_hint'] ?? config('blog_ai.clusters.'.$cluster, $cluster));
+        }
+
         if ($pasted === []) {
-            $suggested = $this->content->suggestSeedKeywords($seed, $cluster !== '' ? $cluster : 'general');
+            $suggested = $this->content->suggestSeedKeywords($seed, $cluster);
             $session->addUsage($suggested['usage']);
             $pasted = $suggested['keywords'];
             $run->appendLog([
@@ -213,7 +219,25 @@ class BlogAutoPipeline
             ]);
         }
 
-        $session->cluster = $cluster !== '' ? $cluster : 'general';
+        // Refine from keywords only when admin left cluster blank (Auto mode).
+        // Explicit picks (including "general") stay locked; still refresh landing payload.
+        if ($explicitCluster === '') {
+            $refined = $this->landingContext->resolveCluster(
+                null,
+                $seed,
+                array_map(fn ($k) => (string) $k, $pasted),
+                is_array($learning) ? $learning : [],
+            );
+            $cluster = (string) ($refined['cluster'] ?? $cluster);
+            $landing = is_array($refined['landing'] ?? null) ? $refined['landing'] : ($resolved['landing'] ?? []);
+        } else {
+            $refined = $resolved;
+            $landing = is_array($resolved['landing'] ?? null)
+                ? $resolved['landing']
+                : $this->landingContext->forCluster($cluster);
+        }
+
+        $session->cluster = $cluster;
         $session->seed_topic = $seed !== '' ? $seed : $session->seed_topic;
         $session->keywords_json = [
             'pasted' => $pasted,
@@ -222,10 +246,21 @@ class BlogAutoPipeline
         ];
         $session->saveIfJobCurrent();
 
+        $input['cluster'] = $cluster;
+        $input['cluster_source'] = (string) ($refined['source'] ?? $resolved['source'] ?? 'auto');
+        $input['cluster_detected'] = (string) ($refined['detected'] ?? $resolved['detected'] ?? 'general');
+        $input['cluster_primary_path'] = $landing['primary_path'] ?? null;
+        $run->input_json = $input;
+
         $run->appendLog([
             'step' => 'intake',
             'event' => 'resolved',
-            'message' => 'Topic locked: '.$session->cluster.($session->seed_topic ? ' — '.$session->seed_topic : ''),
+            'message' => 'Topic locked: '.$session->cluster
+                .($session->seed_topic ? ' — '.$session->seed_topic : '')
+                .(isset($landing['primary_path']) ? ' → '.$landing['primary_path'] : ''),
+            'cluster_source' => $input['cluster_source'],
+            'cluster_detected' => $input['cluster_detected'],
+            'primary_path' => $landing['primary_path'] ?? null,
             'learning_status' => $learning['status'] ?? null,
         ]);
         $run->save();
