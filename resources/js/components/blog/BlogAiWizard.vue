@@ -147,6 +147,12 @@
                         {{ autoRun.last_error }}
                     </p>
                     <p
+                        v-if="queueWaitHint"
+                        class="rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+                    >
+                        {{ queueWaitHint }}
+                    </p>
+                    <p
                         v-if="isAutoSuccess"
                         class="text-sm"
                         :class="autoRun.needs_review
@@ -156,7 +162,11 @@
                         <template v-if="autoRun.needs_review">
                             Done — needs review (score {{ autoRun.live_score }}).
                             <span v-if="autoRun.soft_pass"> SEO soft-pass.</span>
+                            <span v-if="autoRun.soft_pass_steps?.length"> Steps: {{ autoRun.soft_pass_steps.join(', ') }}.</span>
                             <span v-if="autoRun.image_auto_approved"> Cover was auto-approved after QA fail.</span>
+                            <span v-if="autoRun.image_skipped"> Cover skipped.</span>
+                            <span v-if="autoRun.interrupted_recovery"> Recovered after queue interrupt.</span>
+                            Polish in the editor before publishing.
                         </template>
                         <template v-else>
                             Ready
@@ -637,7 +647,7 @@ const suggestingKeywords = ref(false);
 const busyHint = ref('');
 const error = ref('');
 const session = ref(null);
-const cluster = ref('fake_order');
+const cluster = ref(null);
 const seedTopic = ref('');
 const keywordsText = ref('');
 const selectedHookIds = ref([]);
@@ -650,6 +660,7 @@ const writerMode = ref('auto');
 const autoLoading = ref(false);
 const cancelling = ref(false);
 const autoRun = ref(null);
+const queueWaitHint = ref('');
 const learningSummary = ref('');
 const learningGaps = ref([]);
 const recommendedClusters = ref([]);
@@ -768,7 +779,74 @@ const reset = () => {
     error.value = '';
     session.value = null;
     autoRun.value = null;
+    queueWaitHint.value = '';
     selectedHookIds.value = [];
+};
+
+const isTransientPollError = (e) => {
+    if (! e) {
+        return false;
+    }
+    if (e?.response?.status === 429) {
+        return true;
+    }
+    if (e.code === 'ECONNABORTED' || e.code === 'ERR_NETWORK' || e.code === 'ETIMEDOUT') {
+        return true;
+    }
+    const msg = String(e.message || '').toLowerCase();
+    return msg.includes('timeout')
+        || msg.includes('network error')
+        || msg.includes('err_timed_out')
+        || msg.includes('failed to fetch')
+        || msg.includes('429');
+};
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const hydrateAutoRun = async (runId) => {
+    const { data } = await axios.get(route('blogAi.runs.show', runId), {
+        timeout: 45000,
+    });
+    autoRun.value = data.run;
+    if (data.session) {
+        session.value = data.session;
+    }
+    if (data.queue_hint) {
+        queueWaitHint.value = data.queue_hint;
+    }
+    return data;
+};
+
+const resumeActiveRun = async (runId) => {
+    if (! runId) {
+        return false;
+    }
+    error.value = '';
+    try {
+        const data = await hydrateAutoRun(runId);
+        const status = data.run?.status;
+        if (['pending', 'running'].includes(status)) {
+            autoLoading.value = true;
+            queueWaitHint.value = queueWaitHint.value
+                || 'Resumed active Auto run — waiting for progress…';
+            await pollAutoRun(runId);
+            return true;
+        }
+        if (['completed', 'completed_needs_review'].includes(status)) {
+            autoLoading.value = false;
+            queueWaitHint.value = '';
+            return true;
+        }
+        autoLoading.value = false;
+        if (status === 'failed' || status === 'cancelled') {
+            error.value = data.run?.last_error || 'Previous Auto run stopped.';
+        }
+        return true;
+    } catch (e) {
+        autoLoading.value = false;
+        error.value = e?.response?.data?.message || e?.message || 'Could not resume Auto run.';
+        return false;
+    }
 };
 
 const onHide = () => {
@@ -803,36 +881,110 @@ const stopAutoPoll = () => {
 
 const pollAutoRun = async (runId) => {
     const gen = ++autoPollGeneration;
-    const maxTicks = 240;
-    for (let i = 0; i < maxTicks; i += 1) {
+    // Worker timeout is 900s; allow queue wait + OpenAI. Wall-clock ~28 minutes.
+    const deadline = Date.now() + 28 * 60 * 1000;
+    let consecutiveFailures = 0;
+    let stuckQueuedTicks = 0;
+    let stillQueued = true;
+
+    while (Date.now() < deadline) {
         if (gen !== autoPollGeneration) {
             return;
         }
-        await new Promise((r) => setTimeout(r, 2000));
+        // Slower while waiting for cron; snappier once the job is running.
+        await sleep(stillQueued ? 4000 : 2500);
         if (gen !== autoPollGeneration) {
             return;
         }
         try {
-            const { data } = await axios.get(route('blogAi.runs.show', runId));
+            const { data } = await axios.get(route('blogAi.runs.show', runId), {
+                timeout: 45000,
+            });
+            consecutiveFailures = 0;
             autoRun.value = data.run;
             if (data.session) {
                 session.value = data.session;
             }
-            if (['completed', 'completed_needs_review', 'failed', 'cancelled'].includes(data.run?.status)) {
+
+            const status = data.run?.status;
+            const step = data.run?.current_step;
+            stillQueued = status === 'pending'
+                && (step === 'queued' || ! step || (data.run?.progress_pct ?? 0) === 0);
+
+            if (stillQueued) {
+                stuckQueuedTicks += 1;
+                if (stuckQueuedTicks >= 8) {
+                    queueWaitHint.value = data.queue_hint
+                        || 'Still queued — waiting for the server queue worker (cPanel cron: php artisan queue:work database --stop-when-empty --max-jobs=1 --timeout=900). Confirm QUEUE_CONNECTION=database and BLOG_AI_QUEUE=true.';
+                }
+            } else {
+                stuckQueuedTicks = 0;
+                queueWaitHint.value = data.queue_hint || '';
+            }
+
+            if (['completed', 'completed_needs_review', 'failed', 'cancelled'].includes(status)) {
                 autoLoading.value = false;
-                if (data.run.status === 'failed' || data.run.status === 'cancelled') {
+                queueWaitHint.value = '';
+                if (status === 'failed' || status === 'cancelled') {
                     error.value = data.run.last_error || 'Auto pipeline stopped.';
                 }
                 return;
             }
         } catch (e) {
+            consecutiveFailures += 1;
+            if (isTransientPollError(e) && consecutiveFailures < 12) {
+                const backoff = e?.response?.status === 429
+                    ? Math.min(15000, 3000 * consecutiveFailures)
+                    : 2000;
+                queueWaitHint.value = e?.response?.status === 429
+                    ? 'Rate limited — backing off and retrying…'
+                    : 'Connection blip while polling — retrying…';
+                await sleep(backoff);
+                continue;
+            }
             autoLoading.value = false;
             error.value = e?.response?.data?.message || e?.message || 'Failed to poll auto run.';
             return;
         }
     }
     autoLoading.value = false;
-    error.value = 'Auto pipeline timed out. Check queue workers or unlock and retry.';
+    // Soft timeout: keep last known run so Cancel/Open still work if the worker finishes late.
+    if (['pending', 'running'].includes(autoRun.value?.status)) {
+        queueWaitHint.value = 'Still running past the browser wait window. Leave this dialog open and use Cancel if needed, or reopen later — progress will resume.';
+        error.value = '';
+        // Keep polling lightly in background for another window.
+        const softGen = gen;
+        for (let i = 0; i < 60; i += 1) {
+            if (softGen !== autoPollGeneration) {
+                return;
+            }
+            await sleep(10000);
+            if (softGen !== autoPollGeneration) {
+                return;
+            }
+            try {
+                const { data } = await axios.get(route('blogAi.runs.show', runId), { timeout: 45000 });
+                autoRun.value = data.run;
+                if (data.session) {
+                    session.value = data.session;
+                }
+                if (['completed', 'completed_needs_review', 'failed', 'cancelled'].includes(data.run?.status)) {
+                    autoLoading.value = false;
+                    queueWaitHint.value = '';
+                    if (data.run.status === 'failed' || data.run.status === 'cancelled') {
+                        error.value = data.run.last_error || 'Auto pipeline stopped.';
+                    }
+                    return;
+                }
+            } catch {
+                // ignore soft-window blips
+            }
+        }
+        autoLoading.value = false;
+        error.value = 'Auto pipeline is taking very long. Check cPanel queue:work cron, then reopen this dialog to resume.';
+        return;
+    }
+    error.value = 'Auto pipeline timed out. Check that cPanel cron is running queue:work, then retry.';
 };
 
 const cancelAuto = async () => {
@@ -862,6 +1014,7 @@ const startAuto = async () => {
         return;
     }
     error.value = '';
+    queueWaitHint.value = '';
     autoLoading.value = true;
     autoRun.value = null;
     stopAutoPoll();
@@ -871,16 +1024,43 @@ const startAuto = async () => {
             seed_topic: seedTopic.value || null,
             keywords_text: keywordsText.value || null,
             create_post: true,
+        }, {
+            timeout: 60000,
         });
         autoRun.value = data.run;
         session.value = data.session;
         if (data.queued) {
+            queueWaitHint.value = 'Queued — waiting for the queue worker to start this job…';
             await pollAutoRun(data.run.id);
         } else {
             autoLoading.value = false;
         }
     } catch (e) {
         autoLoading.value = false;
+        const activeFromError = Number(
+            e?.response?.data?.errors?.active_run_id?.[0]
+            || e?.response?.data?.active_run_id
+            || 0,
+        );
+        if (activeFromError) {
+            queueWaitHint.value = 'An Auto run is already active — resuming…';
+            await resumeActiveRun(activeFromError);
+            return;
+        }
+        // Create may have succeeded even if the HTTP response timed out — resume polling.
+        if (isTransientPollError(e)) {
+            try {
+                const { data: opt } = await axios.get(route('blogAi.options'), { timeout: 20000 });
+                const activeId = opt?.auto?.active_run_id;
+                if (activeId) {
+                    queueWaitHint.value = 'Reconnected to active Auto run after a timeout…';
+                    await resumeActiveRun(activeId);
+                    return;
+                }
+            } catch {
+                // fall through
+            }
+        }
         const msg = e?.response?.data?.errors?.ai?.[0]
             || e?.response?.data?.message
             || e?.message
@@ -932,7 +1112,7 @@ const applyDraft = () => {
 
 const loadOptions = async () => {
     try {
-        const { data } = await axios.get(route('blogAi.options'));
+        const { data } = await axios.get(route('blogAi.options'), { timeout: 30000 });
         if (data.clusters) {
             clusterOptions.value = Object.entries(data.clusters).map(([value, label]) => ({ value, label }));
         }
@@ -966,11 +1146,12 @@ const loadOptions = async () => {
         nextPostIdeas.value = Array.isArray(data.learning?.next_post_ideas)
             ? data.learning.next_post_ideas.slice(0, 5)
             : [];
-        const recommended = recommendedClusters.value;
-        if (Array.isArray(recommended) && recommended.length && !cluster.value) {
-            cluster.value = recommended[0];
-        }
         onClusterChange(cluster.value);
+
+        const activeId = data.auto?.active_run_id;
+        if (activeId && writerMode.value === 'auto') {
+            await resumeActiveRun(activeId);
+        }
     } catch {
         // keep defaults
     }
@@ -1047,22 +1228,37 @@ const pollUntilReady = async (sessionId, readyStatus) => {
         : 'AI is generating…';
 
     const generation = pollGeneration;
-    const maxAttempts = 180;
-    for (let i = 0; i < maxAttempts; i += 1) {
-        await new Promise((r) => setTimeout(r, 2000));
+    const deadline = Date.now() + 20 * 60 * 1000;
+    let failures = 0;
+    while (Date.now() < deadline) {
+        await sleep(2500);
         if (generation !== pollGeneration) {
             throw new Error('Cancelled');
         }
-        const { data } = await axios.get(route('blogAi.show', sessionId));
-        if (generation !== pollGeneration) {
-            throw new Error('Cancelled');
-        }
-        session.value = data.session;
-        if (statusMatchesReady(data.session.status, readyStatus)) {
-            return data.session;
-        }
-        if (data.session.status === 'failed') {
-            throw new Error(data.session.last_error || 'AI step failed.');
+        try {
+            const { data } = await axios.get(route('blogAi.show', sessionId), { timeout: 45000 });
+            failures = 0;
+            if (generation !== pollGeneration) {
+                throw new Error('Cancelled');
+            }
+            session.value = data.session;
+            if (statusMatchesReady(data.session.status, readyStatus)) {
+                return data.session;
+            }
+            if (data.session.status === 'failed') {
+                throw new Error(data.session.last_error || 'AI step failed.');
+            }
+        } catch (e) {
+            if (e?.message === 'Cancelled') {
+                throw e;
+            }
+            failures += 1;
+            if (isTransientPollError(e) && failures < 10) {
+                busyHint.value = 'Connection blip — retrying AI status…';
+                await sleep(e?.response?.status === 429 ? 5000 : 2000);
+                continue;
+            }
+            throw new Error(apiError(e));
         }
     }
 

@@ -244,7 +244,7 @@ class AdminBlogAiAutoTest extends TestCase
             'job_token' => 'tok',
         ]);
 
-        BlogAiRun::query()->create([
+        $run = BlogAiRun::query()->create([
             'blog_ai_session_id' => $session->id,
             'user_id' => $admin->id,
             'mode' => 'auto',
@@ -260,7 +260,34 @@ class AdminBlogAiAutoTest extends TestCase
                 'keywords_text' => "ফেক অর্ডার\nকুরিয়ার",
             ])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['ai']);
+            ->assertJsonValidationErrors(['ai', 'active_run_id'])
+            ->assertJsonPath('errors.active_run_id.0', (string) $run->id);
+    }
+
+    public function test_options_exposes_active_run_id(): void
+    {
+        $admin = $this->adminUser();
+        $session = BlogAiSession::query()->create([
+            'user_id' => $admin->id,
+            'status' => 'auto_running',
+            'locale' => 'bn',
+            'cluster' => 'fake_order',
+            'job_token' => 'active-token',
+        ]);
+        $run = BlogAiRun::query()->create([
+            'blog_ai_session_id' => $session->id,
+            'user_id' => $admin->id,
+            'mode' => 'auto',
+            'status' => 'pending',
+            'current_step' => 'queued',
+            'progress_pct' => 0,
+            'live_score' => 0,
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson(route('blogAi.options'))
+            ->assertOk()
+            ->assertJsonPath('auto.active_run_id', $run->id);
     }
 
     public function test_cancel_auto_run(): void

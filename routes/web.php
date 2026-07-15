@@ -515,23 +515,33 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     Route::group([
         'as' => 'blogAi.',
         'prefix' => 'blog-posts/ai',
-        'middleware' => ['permission:billing.manage', 'throttle:30,1'],
+        'middleware' => ['permission:billing.manage'],
     ], function () {
-        Route::get('/options', [BlogAiController::class, 'options'])->name('options');
-        Route::post('/suggest-keywords', [BlogAiController::class, 'suggestKeywords'])->name('suggestKeywords');
-        Route::post('/auto', [BlogAiController::class, 'startAuto'])->name('auto');
-        Route::get('/runs/{blogAiRun}', [BlogAiController::class, 'showRun'])->name('runs.show');
-        Route::post('/runs/{blogAiRun}/cancel', [BlogAiController::class, 'cancelRun'])->name('runs.cancel');
-        Route::post('/sessions', [BlogAiController::class, 'store'])->name('store');
-        Route::get('/sessions/{blogAiSession}', [BlogAiController::class, 'show'])->name('show');
-        Route::post('/sessions/{blogAiSession}/recover', [BlogAiController::class, 'recover'])->name('recover');
-        Route::post('/sessions/{blogAiSession}/research', [BlogAiController::class, 'research'])->name('research');
-        Route::post('/sessions/{blogAiSession}/hooks', [BlogAiController::class, 'hooks'])->name('hooks');
-        Route::post('/sessions/{blogAiSession}/outline', [BlogAiController::class, 'outline'])->name('outline');
-        Route::post('/sessions/{blogAiSession}/draft', [BlogAiController::class, 'draft'])->name('draft');
-        Route::post('/sessions/{blogAiSession}/image', [BlogAiController::class, 'image'])->name('image');
-        Route::post('/sessions/{blogAiSession}/image/regenerate', [BlogAiController::class, 'regenerateImage'])->name('image.regenerate');
-        Route::post('/sessions/{blogAiSession}/image/approve', [BlogAiController::class, 'approveImage'])->name('image.approve');
+        // Poll + options need higher limits (2–4s polling during ~15–25 min Auto jobs).
+        Route::get('/options', [BlogAiController::class, 'options'])
+            ->middleware('throttle:60,1')
+            ->name('options');
+        Route::get('/runs/{blogAiRun}', [BlogAiController::class, 'showRun'])
+            ->middleware('throttle:180,1')
+            ->name('runs.show');
+        Route::get('/sessions/{blogAiSession}', [BlogAiController::class, 'show'])
+            ->middleware('throttle:120,1')
+            ->name('show');
+
+        Route::middleware('throttle:30,1')->group(function () {
+            Route::post('/suggest-keywords', [BlogAiController::class, 'suggestKeywords'])->name('suggestKeywords');
+            Route::post('/auto', [BlogAiController::class, 'startAuto'])->name('auto');
+            Route::post('/runs/{blogAiRun}/cancel', [BlogAiController::class, 'cancelRun'])->name('runs.cancel');
+            Route::post('/sessions', [BlogAiController::class, 'store'])->name('store');
+            Route::post('/sessions/{blogAiSession}/recover', [BlogAiController::class, 'recover'])->name('recover');
+            Route::post('/sessions/{blogAiSession}/research', [BlogAiController::class, 'research'])->name('research');
+            Route::post('/sessions/{blogAiSession}/hooks', [BlogAiController::class, 'hooks'])->name('hooks');
+            Route::post('/sessions/{blogAiSession}/outline', [BlogAiController::class, 'outline'])->name('outline');
+            Route::post('/sessions/{blogAiSession}/draft', [BlogAiController::class, 'draft'])->name('draft');
+            Route::post('/sessions/{blogAiSession}/image', [BlogAiController::class, 'image'])->name('image');
+            Route::post('/sessions/{blogAiSession}/image/regenerate', [BlogAiController::class, 'regenerateImage'])->name('image.regenerate');
+            Route::post('/sessions/{blogAiSession}/image/approve', [BlogAiController::class, 'approveImage'])->name('image.approve');
+        });
     });
 
     Route::group([

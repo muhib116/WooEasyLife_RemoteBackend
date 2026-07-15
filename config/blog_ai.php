@@ -424,6 +424,10 @@ return [
         'auto_approve_image_on_fail' => (bool) env('BLOG_AI_AUTO_APPROVE_IMAGE', true),
         'image_max_attempts' => (int) env('BLOG_AI_AUTO_IMAGE_ATTEMPTS', 1),
         'busy_stale_minutes' => (int) env('BLOG_AI_AUTO_BUSY_STALE_MINUTES', 25),
+        /*
+        | Pending (never started by worker) runs auto-clear sooner than in-progress ones.
+        */
+        'pending_stale_minutes' => (int) env('BLOG_AI_AUTO_PENDING_STALE_MINUTES', 10),
         'use_llm_review' => (bool) env('BLOG_AI_AUTO_LLM_REVIEW', true),
         /*
         | null = require queue only in production. true/false force either way.

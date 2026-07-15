@@ -21,8 +21,17 @@ use Throwable;
 
 class BlogAiController extends Controller
 {
-    public function options(BlogLearningService $learning): JsonResponse
+    public function options(Request $request, BlogLearningService $learning): JsonResponse
     {
+        $activeRunId = null;
+        if ($request->user()) {
+            $activeRunId = BlogAiRun::query()
+                ->where('user_id', $request->user()->id)
+                ->whereIn('status', BlogAiRun::ACTIVE_STATUSES)
+                ->orderByDesc('id')
+                ->value('id');
+        }
+
         return response()->json([
             'enabled' => (bool) config('blog_ai.enabled', true),
             'queue' => $this->shouldQueue(),
@@ -42,6 +51,7 @@ class BlogAiController extends Controller
                 'require_queue' => $this->autoRequiresQueue(),
                 'one_active_run_per_user' => (bool) config('blog_ai.auto.one_active_run_per_user', true),
                 'auto_approve_image_on_fail' => (bool) config('blog_ai.auto.auto_approve_image_on_fail', true),
+                'active_run_id' => $activeRunId ? (int) $activeRunId : null,
             ],
         ]);
     }
@@ -389,6 +399,10 @@ class BlogAiController extends Controller
             /** @var BlogAiRun $run */
             $run = $result['run'];
 
+            if ($request->hasSession()) {
+                $request->session()->save();
+            }
+
             if ($this->shouldQueue()) {
                 ProcessBlogAutoPipeline::dispatch($run->id, $token);
 
@@ -437,6 +451,14 @@ class BlogAiController extends Controller
             abort(403);
         }
 
+        // Release session lock early so frequent polls don't pile up behind each other.
+        if ($request->hasSession()) {
+            $request->session()->save();
+        }
+        if (function_exists('session_write_close') && session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $session = $blogAiRun->session;
         if ($session) {
             $session->recoverIfStale();
@@ -448,9 +470,33 @@ class BlogAiController extends Controller
             }
         }
 
+        $run = $blogAiRun->fresh();
+        $queueHint = null;
+        if ($run && $run->status === 'pending') {
+            $ageSeconds = $run->created_at ? $run->created_at->diffInSeconds(now()) : 0;
+            if ($ageSeconds >= 45) {
+                $pendingJobs = null;
+                try {
+                    if (config('queue.default') === 'database') {
+                        $pendingJobs = (int) DB::table(config('queue.connections.database.table', 'jobs'))->count();
+                    }
+                } catch (Throwable) {
+                    $pendingJobs = null;
+                }
+
+                $queueHint = 'Still queued after '.$ageSeconds.'s. '
+                    .'Ensure cPanel cron runs: php artisan queue:work database --stop-when-empty --max-jobs=1 --timeout=900 '
+                    .'and .env has QUEUE_CONNECTION=database, BLOG_AI_QUEUE=true, QUEUE_RETRY_AFTER=1000.';
+                if ($pendingJobs !== null) {
+                    $queueHint .= ' Jobs in queue table: '.$pendingJobs.'.';
+                }
+            }
+        }
+
         return response()->json([
-            'run' => $blogAiRun->fresh()->toAdminArray(),
+            'run' => $run->toAdminArray(),
             'session' => $session?->fresh()?->toAdminArray(),
+            'queue_hint' => $queueHint,
         ]);
     }
 
@@ -484,6 +530,8 @@ class BlogAiController extends Controller
             'message' => 'Cancelled by admin.',
         ]);
         $blogAiRun->save();
+
+        $this->purgeQueuedAutoJobs((int) $blogAiRun->id);
 
         return response()->json([
             'run' => $blogAiRun->fresh()->toAdminArray(),
@@ -767,9 +815,31 @@ class BlogAiController extends Controller
                 $active->last_error = $active->last_error ?: 'Cleared stale auto run.';
                 $active->finished_at = now();
                 $active->save();
+                $this->purgeQueuedAutoJobs((int) $active->id);
 
                 return;
             }
+        }
+
+        // Pending (never started) clears sooner than in-progress running jobs.
+        $pendingStale = max(5, (int) config('blog_ai.auto.pending_stale_minutes', 10));
+        if ($active->status === 'pending'
+            && $active->created_at
+            && $active->created_at->lt(now()->subMinutes($pendingStale))
+        ) {
+            $active->status = 'failed';
+            $active->last_error = 'Cleared stale queued auto run (worker did not start within '.$pendingStale.' minutes). Check cPanel queue cron.';
+            $active->finished_at = now();
+            $active->save();
+            $this->purgeQueuedAutoJobs((int) $active->id);
+            if ($session && $session->isBusy()) {
+                $session->invalidateJobToken();
+                $session->status = 'failed';
+                $session->last_error = $active->last_error;
+                $session->save();
+            }
+
+            return;
         }
 
         $staleMinutes = max(25, (int) config('blog_ai.auto.busy_stale_minutes', 25));
@@ -779,6 +849,7 @@ class BlogAiController extends Controller
             $active->last_error = 'Cleared stale auto run (no progress for '.$staleMinutes.' minutes).';
             $active->finished_at = now();
             $active->save();
+            $this->purgeQueuedAutoJobs((int) $active->id);
             if ($session && $session->isBusy()) {
                 $session->invalidateJobToken();
                 $session->status = 'failed';
@@ -790,7 +861,32 @@ class BlogAiController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'ai' => 'You already have an auto create running (#'.$active->id.'). Wait for it to finish or cancel it.',
+            'ai' => 'You already have an auto create running (#'.$active->id.'). Resume it from the dialog or cancel it first.',
+            'active_run_id' => [(string) $active->id],
         ]);
+    }
+
+    /**
+     * Remove pending database-queue rows for a cancelled/stale Auto run so cron cannot revive them.
+     */
+    private function purgeQueuedAutoJobs(int $runId): void
+    {
+        if ($runId < 1 || config('queue.default') !== 'database') {
+            return;
+        }
+
+        try {
+            $table = config('queue.connections.database.table', 'jobs');
+            DB::table($table)
+                ->where('payload', 'like', '%ProcessBlogAutoPipeline%')
+                ->where(function ($q) use ($runId) {
+                    $q->where('payload', 'like', '%s:5:"runId";i:'.$runId.';%')
+                        ->orWhere('payload', 'like', '%"runId":'.$runId.'%')
+                        ->orWhere('payload', 'like', '%"runId";i:'.$runId.';%');
+                })
+                ->delete();
+        } catch (Throwable $e) {
+            // Best-effort on shared hosting — cancel still marks the run terminal.
+        }
     }
 }
