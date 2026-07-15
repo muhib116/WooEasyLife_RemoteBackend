@@ -72,12 +72,16 @@ class BlogAutoPipeline
             $this->runDraftLoop($session, $run, $scoreParts);
             $this->touchSessionBusy($session);
 
-            if (config('blog_ai.image_enabled', true)) {
+            if ($this->shouldGenerateAutoImage()) {
                 $this->assertNotCancelled($run);
                 $this->runImageStep($session, $run, $scoreParts);
             } else {
-                $scoreParts['image'] = 70;
-                $this->syncScore($run, $scoreParts);
+                $this->skipImageStep(
+                    $run,
+                    $scoreParts,
+                    'Auto cover generation is disabled (BLOG_AI_AUTO_IMAGE=false).',
+                    intentional: true,
+                );
             }
 
             $this->assertNotCancelled($run);
@@ -654,6 +658,43 @@ class BlogAutoPipeline
             ]);
             $run->save();
         }
+    }
+
+    private function shouldGenerateAutoImage(): bool
+    {
+        return (bool) config('blog_ai.image_enabled', true)
+            && (bool) config('blog_ai.auto.generate_image', false);
+    }
+
+    /**
+     * @param  array<string, int|null>  $scoreParts
+     */
+    private function skipImageStep(
+        BlogAiRun $run,
+        array &$scoreParts,
+        string $reason,
+        bool $intentional = false,
+    ): void {
+        $flags = is_array($run->input_json) ? $run->input_json : [];
+        if ($intentional) {
+            // Config off is expected — do not force needs_review / soft-pass score cap.
+            $flags['image_disabled'] = true;
+            unset($flags['image_skipped']);
+        } else {
+            $flags['image_skipped'] = true;
+        }
+        $flags['image_skip_reason'] = Str::limit($reason, 300, '');
+        $run->input_json = $flags;
+        $scoreParts['image'] = $intentional ? 75 : 40;
+        $this->syncScore($run, $scoreParts);
+        $run->current_step = 'image';
+        $run->progress_pct = max((int) $run->progress_pct, $this->progressThrough('image'));
+        $run->appendLog([
+            'step' => 'image',
+            'event' => 'skipped',
+            'message' => $reason.' Draft will still be created — add an OG/cover image before publish.',
+        ]);
+        $run->save();
     }
 
     /**

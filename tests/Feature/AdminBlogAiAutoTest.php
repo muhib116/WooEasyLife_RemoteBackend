@@ -165,7 +165,8 @@ class AdminBlogAiAutoTest extends TestCase
             ->assertJsonPath('auto.enabled', true)
             ->assertJsonPath('auto.create_post', true)
             ->assertJsonPath('auto.soft_pass_score_cap', 59)
-            ->assertJsonStructure(['auto' => ['require_queue', 'one_active_run_per_user']]);
+            ->assertJsonPath('auto.generate_image', false)
+            ->assertJsonStructure(['auto' => ['require_queue', 'one_active_run_per_user', 'generate_image']]);
     }
 
     public function test_auto_pipeline_creates_draft_post_with_score(): void

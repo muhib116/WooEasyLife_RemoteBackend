@@ -50,6 +50,7 @@ class BlogAiController extends Controller
                 'soft_pass_score_cap' => (int) config('blog_ai.auto.soft_pass_score_cap', 59),
                 'require_queue' => $this->autoRequiresQueue(),
                 'one_active_run_per_user' => (bool) config('blog_ai.auto.one_active_run_per_user', true),
+                'generate_image' => (bool) config('blog_ai.auto.generate_image', false),
                 'auto_approve_image_on_fail' => (bool) config('blog_ai.auto.auto_approve_image_on_fail', true),
                 'active_run_id' => $activeRunId ? (int) $activeRunId : null,
             ],

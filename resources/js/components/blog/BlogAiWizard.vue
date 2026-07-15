@@ -43,6 +43,7 @@
                 <p class="text-xs text-slate-500 dark:text-slate-400">
                     Agents generate each step, review, then advance only on pass. Progress + live score update while running.
                     Optional fields steer; leave blank to use learning + market suggest.
+                    <span v-if="!autoGenerateImage"> Auto skips cover images — add OG/cover in the editor before publish.</span>
                 </p>
 
                 <div
@@ -1122,6 +1123,7 @@ const loadOptions = async () => {
         }
         autoEnabled.value = data.auto?.enabled !== false;
         autoRequireQueue.value = Boolean(data.auto?.require_queue);
+        autoGenerateImage.value = Boolean(data.auto?.generate_image);
         autoApproveImage.value = data.auto?.auto_approve_image_on_fail !== false;
         try {
             const saved = localStorage.getItem(MODE_KEY);

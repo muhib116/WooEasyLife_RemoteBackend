@@ -131,6 +131,7 @@ class BlogAiRun extends Model
             'soft_pass' => (bool) ($this->input_json['soft_pass'] ?? false),
             'image_auto_approved' => (bool) ($this->input_json['image_auto_approved'] ?? false),
             'image_skipped' => (bool) ($this->input_json['image_skipped'] ?? false),
+            'image_disabled' => (bool) ($this->input_json['image_disabled'] ?? false),
             'interrupted_recovery' => (bool) ($this->input_json['interrupted_recovery'] ?? false),
             'soft_pass_steps' => array_values(array_filter([
                 ! empty($this->input_json['research_soft_pass']) ? 'research' : null,
