@@ -28,7 +28,9 @@ class SeoMetaService
         $description = (string) ($config['description'] ?? '');
         $canonicalPath = (string) ($config['canonical_path'] ?? '/');
         $canonical = $this->absoluteUrl($canonicalPath);
-        $ogImage = $this->absoluteUrl((string) ($config['og_image'] ?? config('seo.default_og_image', '/images/seo/og-default.png')));
+        $ogImagePath = (string) ($config['og_image'] ?? config('seo.default_og_image', '/images/seo/og-default.jpg'));
+        $ogImage = $this->absoluteUrl($ogImagePath);
+        $ogImage = $this->withOgImageCacheBust($ogImage, $ogImagePath);
         $faqs = $config['faqs'] ?? [];
         $breadcrumbs = $config['breadcrumbs'] ?? [];
         $prerenderH1 = (string) ($config['prerender_h1'] ?? $title);
@@ -48,6 +50,12 @@ class SeoMetaService
             'og_image' => $ogImage,
             'og_image_width' => (int) config('seo.og_image_width', 1200),
             'og_image_height' => (int) config('seo.og_image_height', 630),
+            'og_image_type' => str_ends_with(strtolower(parse_url($ogImagePath, PHP_URL_PATH) ?: $ogImagePath), '.webp')
+                ? 'image/webp'
+                : 'image/jpeg',
+            'facebook_app_id' => filled(config('seo.facebook_app_id'))
+                ? (string) config('seo.facebook_app_id')
+                : null,
             'og_type' => $config['og_type'] ?? 'website',
             'robots' => $config['robots'] ?? 'index,follow',
             'html_lang' => $htmlLang,
@@ -117,6 +125,26 @@ class SeoMetaService
         }
 
         return $base.$path;
+    }
+
+    /**
+     * Bust social scrapers' cache when the asset file changes on disk.
+     */
+    private function withOgImageCacheBust(string $absoluteUrl, string $relativePath): string
+    {
+        if (str_starts_with($relativePath, 'http://') || str_starts_with($relativePath, 'https://')) {
+            return $absoluteUrl;
+        }
+
+        $file = public_path(ltrim($relativePath, '/'));
+        if (! is_file($file)) {
+            return $absoluteUrl;
+        }
+
+        $version = (string) filemtime($file);
+        $separator = str_contains($absoluteUrl, '?') ? '&' : '?';
+
+        return $absoluteUrl.$separator.'v='.$version;
     }
 
     /**

@@ -3,10 +3,18 @@
 return [
     'site_name' => 'WooEasyLife',
 
+    // Prefer JPG for Facebook / LinkedIn scrapers (webp is less consistent).
     'default_og_image' => '/images/seo/og-default.jpg',
 
     'og_image_width' => 1200,
     'og_image_height' => 630,
+
+    /*
+    | Optional. Meta Developer App → Settings → Basic → App ID.
+    | Clears Facebook Sharing Debugger "missing fb:app_id" warning.
+    | Falls back to FACEBOOK_CLIENT_ID if you already use Facebook Login.
+    */
+    'facebook_app_id' => env('SEO_FB_APP_ID', env('FACEBOOK_CLIENT_ID')),
 
     'html_lang' => 'bn-BD',
 

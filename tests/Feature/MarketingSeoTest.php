@@ -166,8 +166,19 @@ class MarketingSeoTest extends TestCase
         $response = $this->get('/');
         $response->assertOk();
         $response->assertSee('/images/seo/og-default.jpg', false);
+        $response->assertSee('og:image:width', false);
         $this->assertFileExists(public_path('images/seo/og-default.jpg'));
         $this->assertFileExists(public_path('images/seo/og-default.webp'));
+    }
+
+    public function test_fb_app_id_meta_when_configured(): void
+    {
+        config(['seo.facebook_app_id' => '1234567890']);
+
+        $response = $this->get('/');
+        $response->assertOk();
+        $response->assertSee('property="fb:app_id"', false);
+        $response->assertSee('content="1234567890"', false);
     }
 
     public function test_sitemap_lists_marketing_urls(): void

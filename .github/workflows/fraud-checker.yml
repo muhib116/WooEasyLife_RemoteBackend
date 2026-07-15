@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🚚 Get latest code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Use Node.js 20.11.0
-        uses: actions/setup-node@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v5
         with:
-          node-version: '20.11.0'
+          node-version: '22'
           cache: npm
 
       - name: Setup PHP
@@ -36,7 +36,7 @@ jobs:
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
       - name: 📂 Sync files
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.APP_FTP_SERVER }}
           port: 21

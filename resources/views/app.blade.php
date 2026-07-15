@@ -36,10 +36,14 @@
         <meta property="og:type" content="{{ $seo['og_type'] ?? 'website' }}">
         <meta property="og:locale" content="{{ str_replace('-', '_', $seo['html_lang'] ?? 'bn_BD') }}">
         <meta property="og:site_name" content="{{ config('seo.site_name', 'WooEasyLife') }}">
+        @if (! empty($seo['facebook_app_id']))
+            <meta property="fb:app_id" content="{{ $seo['facebook_app_id'] }}">
+        @endif
         @if (! empty($seo['og_image']))
             <meta property="og:image" content="{{ $seo['og_image'] }}">
             <meta property="og:image:width" content="{{ $seo['og_image_width'] ?? 1200 }}">
             <meta property="og:image:height" content="{{ $seo['og_image_height'] ?? 630 }}">
+            <meta property="og:image:type" content="{{ $seo['og_image_type'] ?? 'image/jpeg' }}">
             <meta name="twitter:image" content="{{ $seo['og_image'] }}">
             <link rel="preload" as="image" href="{{ $seo['og_image'] }}" fetchpriority="high">
         @endif
