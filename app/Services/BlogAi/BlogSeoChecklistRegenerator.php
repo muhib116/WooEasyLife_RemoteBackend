@@ -158,6 +158,7 @@ class BlogSeoChecklistRegenerator
         ));
 
         if ($aiTargets !== []) {
+            $originalBody = $body;
             $ai = $this->callModel(
                 title: $title,
                 metaTitle: $metaTitle,
@@ -177,8 +178,25 @@ class BlogSeoChecklistRegenerator
             $metaTitle = trim((string) ($ai['meta_title'] ?? $metaTitle)) ?: $title;
             $meta = trim((string) ($ai['meta_description'] ?? $meta));
             $excerpt = trim((string) ($ai['excerpt'] ?? $excerpt)) ?: $meta;
-            $body = (string) ($ai['body_html'] ?? $body);
             $faqs = is_array($ai['faqs'] ?? null) ? $ai['faqs'] : $faqs;
+
+            $aiBody = trim((string) ($ai['body_html'] ?? ''));
+            $bodyTruncatedForPrompt = ! empty($ai['body_was_truncated']);
+            $keepOriginalBody = $bodyTruncatedForPrompt
+                || $aiBody === ''
+                || (
+                    mb_strlen($originalBody) > 2000
+                    && mb_strlen($aiBody) < (int) (mb_strlen($originalBody) * 0.7)
+                );
+
+            if ($keepOriginalBody) {
+                $body = $originalBody;
+                $notes[] = $bodyTruncatedForPrompt
+                    ? 'Long body preserved (prompt truncated) — applied meta/FAQs/SEO blocks only.'
+                    : 'AI body rewrite looked incomplete — kept original body and applied SEO blocks only.';
+            } else {
+                $body = $aiBody;
+            }
 
             $body = $this->seoQuality->ensureSeoContentBlocks(
                 $body,
@@ -320,7 +338,9 @@ class BlogSeoChecklistRegenerator
     ): array {
         $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
         $minWords = (int) config('blog_ai.min_body_words', 800);
-        $bodyForPrompt = Str::limit($bodyHtml, 14000, "\n<!-- truncated -->");
+        $promptLimit = 14000;
+        $bodyWasTruncated = mb_strlen($bodyHtml) > $promptLimit;
+        $bodyForPrompt = Str::limit($bodyHtml, $promptLimit, "\n<!-- truncated -->");
 
         $system = <<<'TXT'
 You are a Bangladesh SEO editor for WooEasyLife blog posts.
@@ -346,6 +366,7 @@ Rules:
 - Internal links must use paths from allowed_internal_links only (href="/...").
 - Keep valid HTML fragments (p, h2, h3, ul, ol, li, a, section, strong, em, figure, img).
 - Do not remove existing good sections unless required for SEO.
+- If body_html_truncated is true: leave body_html empty (or omit it). Only return title/meta/excerpt/faqs/quick_answer/ai_search_summary. The server will keep the full original body.
 TXT;
 
         $user = json_encode([
@@ -355,6 +376,7 @@ TXT;
             'cluster' => $cluster,
             'min_faqs' => $minFaqs,
             'min_body_words' => $minWords,
+            'body_html_truncated' => $bodyWasTruncated,
             'allowed_internal_links' => $linkPlan,
             'gsc_keyword_seeds' => $this->learning->gscKeywordSeeds(6),
             'current' => [
@@ -374,6 +396,7 @@ TXT;
 
         $data = $this->openAi->decodeJsonObject($result['content']);
         $data['usage'] = $result['usage'];
+        $data['body_was_truncated'] = $bodyWasTruncated;
 
         return $data;
     }

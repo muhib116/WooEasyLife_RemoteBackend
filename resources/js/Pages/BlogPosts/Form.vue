@@ -980,6 +980,9 @@ const submit = () => {
 
     form.transform((data) => {
         const { public_url, public_path, ...payload } = data;
+        payload.faqs_json = Array.isArray(payload.faqs_json)
+            ? payload.faqs_json.filter((row) => row?.q?.trim() && row?.a?.trim())
+            : [];
         return payload;
     });
 
