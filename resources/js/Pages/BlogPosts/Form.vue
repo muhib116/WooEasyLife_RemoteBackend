@@ -876,16 +876,20 @@ const regenerateSeoChecklist = async () => {
 
         const fixed = Array.isArray(data.fixed_checks) ? data.fixed_checks.length : 0;
         const notes = Array.isArray(data.notes) ? data.notes.filter(Boolean) : [];
+        const remaining = Array.isArray(data.remaining_failures) ? data.remaining_failures.filter(Boolean) : [];
         seoRegenNote.value = notes[0]
             || (fixed > 0
                 ? `Updated ${fixed} SEO check(s). Review the draft, then save.`
                 : 'Regenerate finished. Review checklist and save.');
+        if (remaining.length) {
+            seoRegenNote.value += ` Still open: ${remaining.slice(0, 5).join(', ')}${remaining.length > 5 ? '…' : ''}.`;
+        }
 
         toast.add({
-            severity: fixed > 0 || (data.ai_quality_score ?? 0) > 0 ? 'success' : 'info',
+            severity: remaining.length ? 'warn' : (fixed > 0 || (data.ai_quality_score ?? 0) > 0 ? 'success' : 'info'),
             summary: 'SEO regenerate',
             detail: seoRegenNote.value,
-            life: 6000,
+            life: 7000,
             group: 'br',
         });
     } catch (error) {

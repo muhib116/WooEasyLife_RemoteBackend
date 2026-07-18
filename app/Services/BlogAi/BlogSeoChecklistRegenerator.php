@@ -216,16 +216,34 @@ class BlogSeoChecklistRegenerator
             $notes[] = 'Fixed with deterministic SEO helpers (links/blocks).';
         }
 
-        // Always finish with deterministic keyword + depth fixes (works even when AI body is skipped).
+        // Finish with targeted deterministic fixes only when those gates still fail.
+        $probe = $this->seoQuality->analyze(
+            $title,
+            $focus,
+            $body,
+            $meta,
+            $faqs,
+            $secondary,
+            $slug !== '' ? $slug : null,
+            $ignoreId,
+            $locale,
+        );
         $beforeDepth = $body;
-        $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
-        $body = $this->seoQuality->ensureMinBodyWords($body, $focus);
+        if (empty($probe['keyword_in_first_paragraph'])) {
+            $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
+        }
+        if (empty($probe['word_count_ok'])) {
+            $body = $this->seoQuality->ensureMinBodyWords($body, $focus);
+        }
         if ($body !== $beforeDepth) {
-            $notes[] = 'Applied deterministic first-paragraph keyword + minimum word-count expansion.';
+            $notes[] = 'Applied deterministic first-paragraph keyword and/or minimum word-count expansion.';
         }
         $body = BlogHtmlSanitizer::sanitize($body);
 
         $faqs = $this->normalizeFaqs($faqs);
+        $meta = $this->clampMetaDescription($meta);
+        $excerpt = $this->clampExcerpt($excerpt !== '' ? $excerpt : $meta);
+        $metaTitle = Str::limit($metaTitle !== '' ? $metaTitle : $title, 70, '');
 
         $after = $this->seoQuality->analyze(
             $title,
@@ -261,6 +279,12 @@ class BlogSeoChecklistRegenerator
             $notes[] = 'OG/cover image still missing — upload one in the form (AI regenerate cannot invent media files).';
         }
 
+        $remaining = array_values($after['failures'] ?? []);
+        if ($remaining !== []) {
+            $notes[] = 'Still open after regenerate: '.implode(', ', array_slice($remaining, 0, 8))
+                .(count($remaining) > 8 ? '…' : '').'.';
+        }
+
         return [
             'title' => $title,
             'meta_title' => $metaTitle !== '' ? $metaTitle : $title,
@@ -273,7 +297,7 @@ class BlogSeoChecklistRegenerator
             'ai_quality_breakdown' => $score['breakdown'],
             'quality' => $after,
             'fixed_checks' => array_values(array_unique($fixed)),
-            'remaining_failures' => array_values($after['failures'] ?? []),
+            'remaining_failures' => $remaining,
             'notes' => $notes,
             'usage' => $usage,
         ];
@@ -421,11 +445,32 @@ TXT;
         return collect($faqs)
             ->filter(fn ($row) => is_array($row))
             ->map(fn (array $row) => [
-                'q' => trim((string) ($row['q'] ?? '')),
-                'a' => trim((string) ($row['a'] ?? '')),
+                'q' => Str::limit(trim((string) ($row['q'] ?? '')), 200, ''),
+                'a' => Str::limit(trim((string) ($row['a'] ?? '')), 1000, ''),
             ])
             ->filter(fn (array $row) => $row['q'] !== '' && $row['a'] !== '')
+            ->take(12)
             ->values()
             ->all();
+    }
+
+    private function clampMetaDescription(string $meta): string
+    {
+        $meta = trim($meta);
+        if ($meta === '') {
+            return $meta;
+        }
+
+        return Str::limit($meta, 160, '');
+    }
+
+    private function clampExcerpt(string $excerpt): string
+    {
+        $excerpt = trim($excerpt);
+        if ($excerpt === '') {
+            return $excerpt;
+        }
+
+        return Str::limit($excerpt, 500, '');
     }
 }

@@ -212,8 +212,15 @@ HTML;
         $fixed = $service->ensureKeywordInFirstParagraph($body, 'ফ্রড চেকার');
         $this->assertTrue($service->textContainsKeyword($service->firstParagraphText($fixed), 'ফ্রড চেকার'));
 
+        // Content paragraph before SEO blocks must still get the keyword in the *first content* paragraph.
+        $beforeSeo = '<p>আগে থেকেই কনটেন্ট আছে।</p>'
+            .'<section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>উত্তর।</p></section>'
+            .'<p>পরে আরও লেখা।</p>';
+        $fixedBefore = $service->ensureKeywordInFirstParagraph($beforeSeo, 'ফ্রড চেকার');
+        $this->assertTrue($service->textContainsKeyword($service->firstParagraphText($fixedBefore), 'ফ্রড চেকার'));
+        $this->assertStringContainsString('ফ্রড চেকার', $fixedBefore);
+
         $expanded = $service->ensureMinBodyWords('<p>ফ্রড চেকার ছোট লেখা।</p>', 'ফ্রড চেকার', 80);
-        $plain = $service->plainText($expanded);
-        $this->assertGreaterThanOrEqual(80, count(preg_split('/\s+/u', $plain) ?: []));
+        $this->assertGreaterThanOrEqual(80, $service->bodyWordCount($expanded));
     }
 }

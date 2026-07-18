@@ -197,7 +197,8 @@ class BlogSeoQuality
     }
 
     /**
-     * Hard publish gates — published posts must satisfy full SEO checklist.
+     * Soft + hard publish gates for CMS.
+     * By default only duplicate focus keyword hard-blocks; checklist gaps are soft-warned in the UI.
      *
      * @param  list<array{q?: string, a?: string}>  $faqs
      * @return array<string, string> field => message
@@ -497,7 +498,31 @@ class BlogSeoQuality
         }
 
         $sentence = e($kw).' নিয়ে এই গাইডে বাংলাদেশি সেলারদের ব্যবহারিক ধাপ আলোচনা করা হয়েছে। ';
+        $done = false;
 
+        // Rewrite the first <p> that is not inside Quick Answer / AI Summary.
+        $updated = preg_replace_callback(
+            '/<section\b[^>]*class=["\'][^"\']*(?:seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>|<p\b[^>]*>.*?<\/p>/iu',
+            function (array $m) use (&$done, $sentence): string {
+                if ($done) {
+                    return $m[0];
+                }
+                if (preg_match('/seo-(?:quick-answer|ai-summary)/i', $m[0])) {
+                    return $m[0];
+                }
+                $done = true;
+                $inner = trim(html_entity_decode(strip_tags($m[0])));
+
+                return '<p>'.$sentence.($inner !== '' ? e($inner) : '').'</p>';
+            },
+            $bodyHtml,
+        );
+
+        if (is_string($updated) && $done) {
+            return $updated;
+        }
+
+        // No content <p> found — insert after SEO blocks, else prepend.
         if (preg_match(
             '/((?:<section\b[^>]*class=["\'][^"\']*(?:seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>\s*)+)/iu',
             $bodyHtml,
@@ -509,51 +534,50 @@ class BlogSeoQuality
             return substr($bodyHtml, 0, $end).'<p>'.$sentence.'</p>'."\n".substr($bodyHtml, $end);
         }
 
-        if (preg_match('/<p\b[^>]*>.*?<\/p>/is', $bodyHtml, $m, PREG_OFFSET_CAPTURE)) {
-            $old = $m[0][0];
-            $inner = trim(html_entity_decode(strip_tags($old)));
-            $new = '<p>'.$sentence.e($inner).'</p>';
-
-            return substr($bodyHtml, 0, $m[0][1]).$new.substr($bodyHtml, $m[0][1] + strlen($old));
-        }
-
         return '<p>'.$sentence.'</p>'."\n".$bodyHtml;
     }
 
     /**
-     * Expand body until min word count with on-topic Bangla paragraphs (deterministic).
+     * Expand body until min word count with varied on-topic Bangla paragraphs.
      */
     public function ensureMinBodyWords(string $bodyHtml, string $focusKeyword, ?int $minWords = null): string
     {
         $min = $minWords ?? (int) config('blog_ai.min_body_words', 800);
         $kw = trim($focusKeyword) !== '' ? trim($focusKeyword) : 'WooEasyLife';
         $body = $bodyHtml;
-
-        $wordCount = function (string $html): int {
-            $plain = $this->plainText($html);
-
-            return $plain === '' ? 0 : count(preg_split('/\s+/u', $plain) ?: []);
-        };
+        $current = $this->bodyWordCount($body);
+        if ($current >= $min) {
+            return $body;
+        }
 
         $templates = [
-            "{$kw} ব্যবহার করে অর্ডার কনফার্মের আগে কাস্টমার হিস্টোরি যাচাই করলে রিটার্ন লস কমে এবং ক্যাশফ্লো স্থিতিশীল থাকে। ",
-            "বাংলাদেশের COD সেলারদের জন্য {$kw} একটি প্র্যাকটিক্যাল ধাপ — নম্বর দিয়ে রেটিং দেখে ঝুঁকি বোঝা যায়। ",
-            "প্রতিদিনের অর্ডারে {$kw} চালু রাখলে ফেক অর্ডার আটকানো সহজ হয় এবং কুরিয়ার খরচ বাঁচে। ",
-            "টিমকে {$kw} ওয়ার্কফ্লো শেখালে কনফার্মেশন কোয়ালিটি বাড়ে এবং সাপোর্ট টিকেট কমে। ",
-            "Pathao, Steadfast বা RedX অর্ডারেও {$kw} দিয়ে আগে চেক করলে ডেলিভারি সাকসেস রেট উন্নত হয়। ",
+            "{$kw} ব্যবহার করে অর্ডার কনফার্মের আগে কাস্টমার হিস্টোরি যাচাই করলে রিটার্ন লস কমে এবং ক্যাশফ্লো স্থিতিশীল থাকে।",
+            "বাংলাদেশের COD সেলারদের জন্য {$kw} একটি প্র্যাকটিক্যাল ধাপ — নম্বর দিয়ে রেটিং দেখে ঝুঁকি বোঝা যায়।",
+            "প্রতিদিনের অর্ডারে {$kw} চালু রাখলে ফেক অর্ডার আটকানো সহজ হয় এবং কুরিয়ার খরচ বাঁচে।",
+            "টিমকে {$kw} ওয়ার্কফ্লো শেখালে কনফার্মেশন কোয়ালিটি বাড়ে এবং সাপোর্ট টিকেট কমে।",
+            "Pathao, Steadfast বা RedX অর্ডারেও {$kw} দিয়ে আগে চেক করলে ডেলিভারি সাকসেস রেট উন্নত হয়।",
+            "চেকআউটের আগে {$kw} রেজাল্ট সেভ করে রাখলে পরে ডিসপিউট হ্যান্ডেল করা সহজ হয়।",
+            "নতুন স্টাফ অনবোর্ডে {$kw} স্ট্যান্ডার্ড অপারেটিং প্রসিডিউর দিলে মিস-কনফার্ম কমে।",
+            "হাই-রিস্ক নম্বারে {$kw} রেটিং খারাপ হলে অগ্রিম পেমেন্ট বা বাতিল নীতি প্রয়োগ করা যায়।",
         ];
 
         $guard = 0;
-        while ($wordCount($body) < $min && $guard < 40) {
-            $chunk = '';
-            foreach ($templates as $line) {
-                $chunk .= $line;
-            }
-            $body = rtrim($body)."\n<p>".e(trim($chunk)).'</p>';
+        $n = count($templates);
+        while ($this->bodyWordCount($body) < $min && $guard < 24) {
+            $line = $templates[$guard % $n];
+            $suffix = $guard >= $n ? ' (ধাপ '.($guard + 1).')' : '';
+            $body = rtrim($body)."\n<p>".e($line.$suffix).'</p>';
             $guard++;
         }
 
         return $body;
+    }
+
+    public function bodyWordCount(string $html): int
+    {
+        $plain = $this->plainText($html);
+
+        return $plain === '' ? 0 : count(preg_split('/\s+/u', $plain) ?: []);
     }
 
     public function hasQuickAnswer(string $html): bool
