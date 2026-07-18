@@ -144,6 +144,10 @@ class MarketingSeoTest extends TestCase
         $post->assertOk();
         $post->assertSee('BlogPosting', false);
         $post->assertSee('"@type":"Person"', false);
+        $post->assertSee('hreflang="bn-BD"', false);
+        $post->assertSee('/blog/fake-order-komano', false);
+        // Individual posts must not advertise the blog index EN alternate.
+        $this->assertStringNotContainsString('hreflang="en"', $post->getContent());
         $this->get('/blog/ki-vabe-fake-order-atkabo')->assertOk();
         $this->get('/pathao-fraud-check')->assertOk();
         $this->get('/steadfast-fraud-check')->assertOk();

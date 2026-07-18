@@ -1080,27 +1080,23 @@ const applyDraft = () => {
 
     const q = session.value.draft.quality;
     if (q && q.ai_ready === false) {
-        const ok = window.confirm(
-            'SEO quality checks are incomplete. Apply anyway as a draft? Fix issues before publishing.',
+        window.alert(
+            'SEO quality checks are incomplete. Fix with Regenerate / edit before applying, or apply only after the draft is AI SEO ready. Publishing is blocked until the full checklist passes.',
         );
-        if (!ok) {
-            return;
-        }
+        return;
     }
 
     if (q?.focus_keyword_collision || q?.slug_collision) {
-        const ok = window.confirm(
-            'Slug or focus keyword collides with an existing post. Apply anyway? Consider changing them before publish.',
+        window.alert(
+            'Slug or focus keyword collides with an existing post. Change them before applying.',
         );
-        if (!ok) {
-            return;
-        }
+        return;
     }
 
     const hasCover = Boolean(session.value.image?.url || session.value.draft.og_image);
     if (!hasCover) {
         const ok = window.confirm(
-            'No cover/OG image on this draft. Apply anyway? Add an image in the editor before publishing.',
+            'No cover/OG image on this draft. You can apply as draft, but publishing requires OG or a content image. Continue?',
         );
         if (!ok) {
             return;

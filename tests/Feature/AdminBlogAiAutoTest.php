@@ -229,6 +229,7 @@ class AdminBlogAiAutoTest extends TestCase
             'blog_ai.min_body_words' => 5000,
             'blog_ai.auto.max_revisions_per_step' => 0,
             'blog_ai.auto.soft_pass_score_cap' => 59,
+            'blog_ai.auto.allow_draft_soft_pass' => true,
         ]);
 
         $admin = $this->adminUser();

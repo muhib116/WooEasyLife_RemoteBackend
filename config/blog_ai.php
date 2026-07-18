@@ -40,8 +40,8 @@ return [
     'internal_links_min' => 2,
 
     /*
-    | On-page SEO quality gates for AI drafts + soft publish checks.
-    | enforce_on_publish stays gentle so manual short posts still work.
+    | On-page SEO quality gates for AI drafts + hard publish enforcement.
+    | Published posts must pass the same RankMath-style checklist as AI drafts.
     */
     'seo_quality' => [
         'min_internal_links' => 2,
@@ -54,13 +54,19 @@ return [
         'require_ai_search_summary' => true,
         'require_h3' => true,
         'require_lists' => true,
+        /*
+        | Hard publish gates. ai_ready = full draft SEO checklist must pass.
+        */
         'enforce_on_publish' => [
-            'has_internal_link' => true,
+            'ai_ready' => true,
+            'focus_keyword_required' => true,
+            'has_og_or_content_image' => true,
             'duplicate_focus_keyword' => true,
             'duplicate_slug' => false, // DB unique rule already covers slug
         ],
         /*
-        | Soft warnings shown in the CMS (confirm dialogs / checklist) — do not block save.
+        | Soft tips retained for drafts / incomplete saves (not used to block publish
+        | when enforce_on_publish.ai_ready is on).
         */
         'soft_warn_on_publish' => [
             'keyword_in_title' => true,
@@ -426,7 +432,9 @@ return [
         'pass_score' => (int) env('BLOG_AI_AUTO_PASS_SCORE', 70),
         /*
         | Soft-pass drafts (failed SEO after max revisions) never score above this.
+        | When allow_draft_soft_pass is false, Auto Create fails instead of soft-passing.
         */
+        'allow_draft_soft_pass' => filter_var(env('BLOG_AI_AUTO_ALLOW_DRAFT_SOFT_PASS', false), FILTER_VALIDATE_BOOLEAN),
         'soft_pass_score_cap' => (int) env('BLOG_AI_AUTO_SOFT_PASS_CAP', 59),
         'hooks_to_select' => (int) env('BLOG_AI_AUTO_HOOKS_SELECT', 1),
         /*

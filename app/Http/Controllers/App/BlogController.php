@@ -60,12 +60,21 @@ class BlogController extends Controller
             $seoTitle = $post['title'].' | WooEasyLife ব্লগ';
         }
 
+        $postPath = '/blog/'.$post['slug'];
+        $htmlLang = (($post['locale'] ?? 'bn') === 'en') ? 'en' : 'bn-BD';
+
         $seoOverrides = [
             'title' => $seoTitle,
             'description' => $post['description'] !== ''
                 ? $post['description']
                 : $post['title'],
-            'canonical_path' => '/blog/'.$post['slug'],
+            'canonical_path' => $postPath,
+            'html_lang' => $htmlLang,
+            // Posts have no language-alternate URLs yet — do not inherit blog_index /en/blog.
+            'hreflang_paths' => [
+                $htmlLang => $postPath,
+                'x-default' => $postPath,
+            ],
             'prerender_h1' => $post['title'],
             'prerender_lead' => $post['description'],
             'og_type' => 'article',
@@ -78,7 +87,7 @@ class BlogController extends Controller
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'ব্লগ', 'path' => '/blog'],
-                ['name' => $post['title'], 'path' => '/blog/'.$post['slug']],
+                ['name' => $post['title'], 'path' => $postPath],
             ],
         ];
 

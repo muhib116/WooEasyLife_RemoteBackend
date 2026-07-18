@@ -12,6 +12,17 @@ const description = computed(() => props.seo?.description || '');
 const canonical = computed(() => props.seo?.canonical || '');
 const ogImage = computed(() => props.seo?.og_image || '');
 const robots = computed(() => props.seo?.robots || 'index,follow');
+const hreflang = computed(() => (Array.isArray(props.seo?.hreflang) ? props.seo.hreflang : []));
+const jsonLd = computed(() => {
+    if (!props.seo?.json_ld) {
+        return '';
+    }
+    try {
+        return JSON.stringify(props.seo.json_ld);
+    } catch {
+        return '';
+    }
+});
 </script>
 
 <template>
@@ -19,6 +30,14 @@ const robots = computed(() => props.seo?.robots || 'index,follow');
         <meta v-if="description" head-key="description" name="description" :content="description" />
         <meta v-if="robots" head-key="robots" name="robots" :content="robots" />
         <link v-if="canonical" head-key="canonical" rel="canonical" :href="canonical" />
+        <link
+            v-for="(alt, index) in hreflang"
+            :key="`hreflang-${alt.hreflang || index}`"
+            :head-key="`hreflang-${alt.hreflang || index}`"
+            rel="alternate"
+            :hreflang="alt.hreflang"
+            :href="alt.url"
+        />
         <meta v-if="pageTitle" head-key="og:title" property="og:title" :content="pageTitle" />
         <meta v-if="description" head-key="og:description" property="og:description" :content="description" />
         <meta v-if="canonical" head-key="og:url" property="og:url" :content="canonical" />
@@ -41,5 +60,12 @@ const robots = computed(() => props.seo?.robots || 'index,follow');
         <meta v-if="pageTitle" head-key="twitter:title" name="twitter:title" :content="pageTitle" />
         <meta v-if="description" head-key="twitter:description" name="twitter:description" :content="description" />
         <meta v-if="ogImage" head-key="twitter:image" name="twitter:image" :content="ogImage" />
+        <component
+            :is="'script'"
+            v-if="jsonLd"
+            head-key="json-ld"
+            type="application/ld+json"
+            v-text="jsonLd"
+        />
     </Head>
 </template>

@@ -128,6 +128,51 @@ class BlogAiController extends Controller
         ]);
     }
 
+    public function regenerateSeoChecklist(Request $request, \App\Services\BlogAi\BlogSeoChecklistRegenerator $regenerator): JsonResponse
+    {
+        $this->ensureEnabled();
+        $this->enforceDailyCaps($request);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'focus_keyword' => ['required', 'string', 'max:190'],
+            'body_html' => ['required', 'string', 'max:200000'],
+            'slug' => ['nullable', 'string', 'max:190'],
+            'meta_title' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string', 'max:500'],
+            'excerpt' => ['nullable', 'string', 'max:1000'],
+            'faqs_json' => ['nullable', 'array', 'max:20'],
+            'faqs_json.*.q' => ['nullable', 'string', 'max:500'],
+            'faqs_json.*.a' => ['nullable', 'string', 'max:2000'],
+            'secondary_keywords' => ['nullable', 'array', 'max:20'],
+            'secondary_keywords.*' => ['nullable', 'string', 'max:190'],
+            'og_image' => ['nullable', 'string', 'max:500'],
+            'locale' => ['nullable', 'string', 'max:10'],
+            'cluster' => ['nullable', 'string', 'max:80'],
+            'ignore_post_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        try {
+            $result = $regenerator->regenerate($validated);
+        } catch (Throwable $e) {
+            $message = $e instanceof ValidationException
+                ? (collect($e->errors())->flatten()->first() ?: $e->getMessage())
+                : $e->getMessage();
+
+            throw ValidationException::withMessages([
+                'ai' => is_string($message) && $message !== '' ? $message : 'SEO regenerate failed.',
+            ]);
+        }
+
+        $tokens = (int) ($result['usage']['total_tokens'] ?? 0);
+        // Only count against the daily AI cap when OpenAI was actually called.
+        if ($tokens > 0 || ! empty($result['usage'])) {
+            BlogAiSession::recordUserDailyUsage((int) $request->user()->id, 1, $tokens);
+        }
+
+        return response()->json($result);
+    }
+
     public function show(BlogAiSession $blogAiSession): JsonResponse
     {
         $this->authorizeSession($blogAiSession);

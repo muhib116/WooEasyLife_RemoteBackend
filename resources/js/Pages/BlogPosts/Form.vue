@@ -224,6 +224,61 @@
                             </div>
                         </div>
                     </PageCard>
+
+                    <PageCard
+                        title="FAQs"
+                        :description="`Required for publish (≥ ${seoMinFaqs}). Powers FAQPage schema.`"
+                    >
+                        <div class="space-y-3">
+                            <div
+                                v-for="(faq, index) in form.faqs_json"
+                                :key="`faq-${index}`"
+                                class="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+                            >
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        FAQ {{ index + 1 }}
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        icon="pi pi-trash"
+                                        severity="danger"
+                                        text
+                                        rounded
+                                        size="small"
+                                        :disabled="form.processing"
+                                        @click="removeFaq(index)"
+                                    />
+                                </div>
+                                <InputText
+                                    v-model="faq.q"
+                                    class="w-full"
+                                    maxlength="200"
+                                    placeholder="Question"
+                                />
+                                <Textarea
+                                    v-model="faq.a"
+                                    class="w-full"
+                                    rows="2"
+                                    maxlength="1000"
+                                    placeholder="Answer"
+                                />
+                            </div>
+                            <Button
+                                type="button"
+                                label="Add FAQ"
+                                icon="pi pi-plus"
+                                size="small"
+                                severity="secondary"
+                                outlined
+                                :disabled="form.processing || form.faqs_json.length >= 12"
+                                @click="addFaq"
+                            />
+                            <small v-if="form.errors.faqs_json" class="block text-rose-500">
+                                {{ form.errors.faqs_json }}
+                            </small>
+                        </div>
+                    </PageCard>
                 </div>
 
                 <div class="space-y-5">
@@ -335,7 +390,26 @@
                         </div>
                     </PageCard>
 
-                    <PageCard title="SEO checklist" description="Quick quality checks">
+                    <PageCard
+                        title="SEO checklist"
+                        description="Quick quality checks"
+                    >
+                        <template #actions>
+                            <Button
+                                v-if="canUseBlogAi"
+                                type="button"
+                                label="Regenerate"
+                                icon="pi pi-refresh"
+                                size="small"
+                                severity="help"
+                                outlined
+                                class="!inline-flex whitespace-nowrap"
+                                :loading="seoRegenLoading"
+                                :disabled="seoRegenLoading || form.processing || !canRegenerateSeo"
+                                :title="canRegenerateSeo ? 'Fix unchecked SEO items with AI' : 'Need title, focus keyword, and body first'"
+                                @click="regenerateSeoChecklist"
+                            />
+                        </template>
                         <div
                             v-if="form.ai_quality_score != null"
                             class="mb-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"
@@ -345,6 +419,12 @@
                                 {{ form.ai_quality_score }}
                             </p>
                         </div>
+                        <p
+                            v-if="seoRegenNote"
+                            class="mb-3 rounded-lg border border-sky-200/80 bg-sky-50/80 px-3 py-2 text-xs text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100"
+                        >
+                            {{ seoRegenNote }}
+                        </p>
                         <ul class="space-y-2 text-sm">
                             <li
                                 v-for="item in checklist"
@@ -359,6 +439,10 @@
                                 />
                                 <span :class="item.ok ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'">
                                     {{ item.label }}
+                                    <span
+                                        v-if="item.required"
+                                        class="ml-1 text-[10px] font-semibold uppercase tracking-wide text-rose-500"
+                                    >required</span>
                                 </span>
                             </li>
                         </ul>
@@ -383,6 +467,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
+import axios from 'axios';
+import { useToast } from 'primevue/usetoast';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Pages/Users/fragments/PageHeader.vue';
 import PageCard from '@/Pages/Users/fragments/PageCard.vue';
@@ -409,11 +495,14 @@ const props = defineProps({
 });
 
 const { can } = usePermissions();
+const toast = useToast();
 const canUseBlogAi = computed(() => can('billing.manage'));
 const isEdit = computed(() => Boolean(props.post?.id));
 const mediaPickerOpen = ref(false);
 const mediaPickerMode = ref('og');
 const aiWizardOpen = ref(false);
+const seoRegenLoading = ref(false);
+const seoRegenNote = ref('');
 
 onMounted(() => {
     if (!isEdit.value && canUseBlogAi.value) {
@@ -631,6 +720,40 @@ const stripHtml = (html) =>
         .replace(/\s+/g, ' ')
         .trim();
 
+const seoMinWords = computed(() => Number(props.options?.seo?.min_body_words || 800));
+const seoMinFaqs = computed(() => Number(props.options?.seo?.min_faqs || 5));
+const seoMinLinks = computed(() => Number(props.options?.seo?.min_internal_links || 2));
+
+const firstBodyParagraphText = (html) => {
+    const source = String(html || '');
+    const afterQuick = source.match(/seo-quick-answer[\s\S]*?<\/section>\s*<p\b[^>]*>(.*?)<\/p>/is);
+    if (afterQuick?.[1]) {
+        return stripHtml(afterQuick[1]).toLowerCase();
+    }
+    const firstP = source.match(/<p\b[^>]*>(.*?)<\/p>/is);
+    if (firstP?.[1]) {
+        return stripHtml(firstP[1]).toLowerCase();
+    }
+    return stripHtml(source).toLowerCase().slice(0, 400);
+};
+
+const addFaq = () => {
+    if (!Array.isArray(form.faqs_json)) {
+        form.faqs_json = [];
+    }
+    if (form.faqs_json.length >= 12) {
+        return;
+    }
+    form.faqs_json.push({ q: '', a: '' });
+};
+
+const removeFaq = (index) => {
+    if (!Array.isArray(form.faqs_json)) {
+        return;
+    }
+    form.faqs_json.splice(index, 1);
+};
+
 const checklist = computed(() => {
     const bodyText = stripHtml(form.body_html);
     const keyword = (form.focus_keyword || '').trim().toLowerCase();
@@ -641,10 +764,7 @@ const checklist = computed(() => {
     const faqCount = Array.isArray(form.faqs_json)
         ? form.faqs_json.filter((row) => row?.q && row?.a).length
         : 0;
-    const firstParagraphMatch = (form.body_html || '').match(/<p\b[^>]*>(.*?)<\/p>/is);
-    const firstParagraph = firstParagraphMatch
-        ? stripHtml(firstParagraphMatch[1]).toLowerCase()
-        : bodyText.toLowerCase().slice(0, 400);
+    const firstParagraph = firstBodyParagraphText(form.body_html);
     const hasContentImage = /<img[\s>]/i.test(form.body_html || '');
     const contentImageAltOk = !hasContentImage
         || /<img\b[^>]*\balt=["'][^"']+["']/i.test(form.body_html || '');
@@ -664,32 +784,109 @@ const checklist = computed(() => {
         || /<h2\b[^>]*>[^<]*(AI Search Summary|AI Summary|এআই সারাংশ)[^<]*<\/h2>/iu.test(form.body_html || '');
     const wordCount = bodyText ? bodyText.split(/\s+/).filter(Boolean).length : 0;
     const keywordInTitle = keyword ? title.includes(keyword) : false;
-    const minFaqs = 5;
-    const minWordsAi = 800;
+    const metaLen = metaDescLen.value;
+    const ogOrImage = hasOgImage || (hasContentImage && contentImageAltOk);
 
     return [
-        { label: 'Title present', ok: Boolean(form.title?.trim()) },
-        { label: 'Focus keyword set', ok: Boolean(keyword) },
-        { label: 'Keyword in title (soft warn on publish)', ok: keywordInTitle },
-        { label: 'Keyword in first paragraph', ok: keyword ? firstParagraph.includes(keyword) : false },
-        { label: 'Keyword in one H2', ok: keywordInH2 },
-        { label: 'Meta description 50–160 chars', ok: metaDescLen.value >= 50 && metaDescLen.value <= 160 },
-        { label: 'Keyword in meta description', ok: keyword ? metaDesc.includes(keyword) : false },
-        { label: 'Body has H2 heading', ok: hasH2 },
-        { label: 'Body has H3 heading', ok: hasH3 },
-        { label: 'Has bullet or numbered list', ok: hasLists },
-        { label: 'Featured snippet (দ্রুত উত্তর)', ok: hasQuickAnswer },
-        { label: 'AI Search Summary (এআই সারাংশ)', ok: hasAiSummary },
-        { label: 'At least one internal link (required to publish)', ok: internalLinks.length >= 1 },
-        { label: '2+ internal links (AI target)', ok: internalLinks.length >= 2 },
-        { label: `FAQs ≥ ${minFaqs} (AI target)`, ok: faqCount >= minFaqs },
-        { label: 'OG / cover image (add if you skipped AI image)', ok: hasOgImage },
-        { label: 'Content image with alt', ok: hasContentImage && contentImageAltOk },
-        { label: `Body ≥ ${minWordsAi} words (AI target)`, ok: wordCount >= minWordsAi },
-        { label: 'Readable English SEO slug', ok: isSeoSlug(form.slug) && !isPlaceholderSlug(form.slug) },
-        { label: 'Slug does not shadow markdown', ok: !markdownConflict.value },
+        { label: 'Title present', ok: Boolean(form.title?.trim()), required: true },
+        { label: 'Focus keyword set', ok: Boolean(keyword), required: true },
+        { label: 'Keyword in title', ok: keywordInTitle, required: true },
+        { label: 'Keyword in first paragraph (after Quick Answer)', ok: keyword ? firstParagraph.includes(keyword) : false, required: true },
+        { label: 'Keyword in one H2', ok: keywordInH2, required: true },
+        { label: 'Meta description 50–160 chars', ok: metaLen >= 50 && metaLen <= 160, required: true },
+        { label: 'Keyword in meta description', ok: keyword ? metaDesc.includes(keyword) : false, required: true },
+        { label: 'Body has H2 heading', ok: hasH2, required: true },
+        { label: 'Body has H3 heading', ok: hasH3, required: true },
+        { label: 'Has bullet or numbered list', ok: hasLists, required: true },
+        { label: 'Featured snippet (দ্রুত উত্তর)', ok: hasQuickAnswer, required: true },
+        { label: 'AI Search Summary (এআই সারাংশ)', ok: hasAiSummary, required: true },
+        { label: `${seoMinLinks.value}+ internal links`, ok: internalLinks.length >= seoMinLinks.value, required: true },
+        { label: `FAQs ≥ ${seoMinFaqs.value}`, ok: faqCount >= seoMinFaqs.value, required: true },
+        { label: 'OG/cover or content image with alt', ok: ogOrImage, required: true },
+        { label: `Body ≥ ${seoMinWords.value} words`, ok: wordCount >= seoMinWords.value, required: true },
+        { label: 'Readable English SEO slug', ok: isSeoSlug(form.slug) && !isPlaceholderSlug(form.slug), required: true },
+        { label: 'Slug does not shadow markdown', ok: !markdownConflict.value, required: false },
     ];
 });
+
+const publishChecklistReady = computed(() =>
+    checklist.value.filter((item) => item.required).every((item) => item.ok),
+);
+const canRegenerateSeo = computed(() =>
+    Boolean(form.title?.trim())
+        && Boolean(form.focus_keyword?.trim())
+        && Boolean(stripHtml(form.body_html)),
+);
+
+const regenerateSeoChecklist = async () => {
+    if (!canUseBlogAi.value || !canRegenerateSeo.value || seoRegenLoading.value) {
+        return;
+    }
+
+    seoRegenLoading.value = true;
+    seoRegenNote.value = '';
+
+    try {
+        const { data } = await axios.post(
+            route('blogAi.regenerateSeoChecklist'),
+            {
+                title: form.title,
+                focus_keyword: form.focus_keyword,
+                body_html: form.body_html,
+                slug: form.slug,
+                meta_title: form.meta_title,
+                meta_description: form.meta_description,
+                excerpt: form.excerpt,
+                faqs_json: form.faqs_json,
+                secondary_keywords: [],
+                og_image: form.og_image || props.post?.og_image_url || null,
+                locale: form.locale,
+                cluster: form.cluster,
+                ignore_post_id: props.post?.id || null,
+            },
+            { timeout: 180000 },
+        );
+
+        if (data.title) form.title = data.title;
+        if (data.meta_title != null) form.meta_title = data.meta_title;
+        if (data.meta_description != null) form.meta_description = data.meta_description;
+        if (data.excerpt != null) form.excerpt = data.excerpt;
+        if (data.body_html != null) form.body_html = data.body_html;
+        if (Array.isArray(data.faqs_json)) form.faqs_json = data.faqs_json;
+        if (data.focus_keyword) form.focus_keyword = data.focus_keyword;
+        if (data.ai_quality_score != null) form.ai_quality_score = data.ai_quality_score;
+        if (data.ai_quality_breakdown != null) form.ai_quality_breakdown = data.ai_quality_breakdown;
+
+        const fixed = Array.isArray(data.fixed_checks) ? data.fixed_checks.length : 0;
+        const notes = Array.isArray(data.notes) ? data.notes.filter(Boolean) : [];
+        seoRegenNote.value = notes[0]
+            || (fixed > 0
+                ? `Updated ${fixed} SEO check(s). Review the draft, then save.`
+                : 'Regenerate finished. Review checklist and save.');
+
+        toast.add({
+            severity: fixed > 0 || (data.ai_quality_score ?? 0) > 0 ? 'success' : 'info',
+            summary: 'SEO regenerate',
+            detail: seoRegenNote.value,
+            life: 6000,
+            group: 'br',
+        });
+    } catch (error) {
+        const message = error?.response?.data?.message
+            || error?.response?.data?.errors?.ai?.[0]
+            || 'Could not regenerate SEO checklist items.';
+        seoRegenNote.value = message;
+        toast.add({
+            severity: 'error',
+            summary: 'SEO regenerate failed',
+            detail: message,
+            life: 7000,
+            group: 'br',
+        });
+    } finally {
+        seoRegenLoading.value = false;
+    }
+};
 
 const submit = () => {
     if (form.status === 'published') {
@@ -699,33 +896,21 @@ const submit = () => {
             return;
         }
 
-        const hasInternalLink = /<a\b[^>]*\bhref=["']\/[^"']*["']/i.test(form.body_html || '');
-        if (!hasInternalLink) {
-            form.setError('body_html', 'Add at least one internal link (e.g. /bd-fraud-checker) before publishing.');
+        if (!publishChecklistReady.value) {
+            const missing = checklist.value
+                .filter((item) => item.required && !item.ok)
+                .map((item) => item.label)
+                .slice(0, 5);
+            toast.add({
+                severity: 'warn',
+                summary: 'SEO checklist incomplete',
+                detail: missing.length
+                    ? `Fix before publishing: ${missing.join('; ')}`
+                    : 'Fix required SEO checklist items (or use Regenerate) before publishing.',
+                life: 8000,
+                group: 'br',
+            });
             return;
-        }
-
-        const keyword = (form.focus_keyword || '').trim().toLowerCase();
-        const title = (form.title || '').toLowerCase();
-        if (keyword && !title.includes(keyword)) {
-            const ok = window.confirm(
-                `Focus keyword “${form.focus_keyword}” is not in the title. Publish anyway?`,
-            );
-            if (!ok) return;
-        }
-
-        const hasOg = Boolean(String(form.og_image || '').trim());
-        const hasContentImage = /<img[\s>]/i.test(form.body_html || '');
-        if (!hasOg) {
-            const ok = window.confirm(
-                'No OG / cover image set. Social previews will look weak. Publish anyway? (You can add one with Media or re-run AI Image.)',
-            );
-            if (!ok) return;
-        } else if (!hasContentImage) {
-            const ok = window.confirm(
-                'Cover/OG is set but the body has no content image. Add one later for engagement. Publish anyway?',
-            );
-            if (!ok) return;
         }
     }
 

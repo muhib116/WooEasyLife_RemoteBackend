@@ -150,8 +150,10 @@ HTML;
         ]);
 
         $errors = app(BlogSeoQuality::class)->publishValidationErrors(
+            title: 'New guide',
             bodyHtml: '<p>New <a href="/bd-fraud-checker">link</a></p>',
             focusKeyword: 'ফেক অর্ডার',
+            metaDescription: 'Meta about the topic for sellers in Bangladesh with enough length.',
             slug: 'new-post',
             locale: 'bn',
         );
@@ -162,12 +164,37 @@ HTML;
     public function test_publish_requires_internal_link(): void
     {
         $errors = app(BlogSeoQuality::class)->publishValidationErrors(
-            bodyHtml: '<p>No links here</p>',
-            focusKeyword: 'unique keyword xyz',
-            slug: 'unique-slug-xyz',
-            locale: 'bn',
+            title: 'No Link Post about fraud',
+            bodyHtml: '<h2>Hello fraud</h2><p>No internal URL here about fraud topics for sellers.</p>',
+            focusKeyword: 'fraud',
+            metaDescription: 'Publishing without an internal link should fail validation for SEO.',
+            slug: 'no-link-post',
+            locale: 'en',
+            faqs: [
+                ['q' => 'Q1?', 'a' => 'A1'],
+                ['q' => 'Q2?', 'a' => 'A2'],
+                ['q' => 'Q3?', 'a' => 'A3'],
+                ['q' => 'Q4?', 'a' => 'A4'],
+                ['q' => 'Q5?', 'a' => 'A5'],
+            ],
+            ogImage: '/images/seo/og-default.jpg',
         );
 
         $this->assertArrayHasKey('body_html', $errors);
+    }
+
+    public function test_publish_requires_full_ai_ready_checklist(): void
+    {
+        $errors = app(BlogSeoQuality::class)->publishValidationErrors(
+            title: 'Short post',
+            bodyHtml: '<p><a href="/bd-fraud-checker">x</a></p>',
+            focusKeyword: 'ফেক অর্ডার',
+            metaDescription: 'short',
+            slug: 'short-post',
+            locale: 'bn',
+            ogImage: null,
+        );
+
+        $this->assertNotEmpty($errors);
     }
 }

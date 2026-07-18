@@ -626,8 +626,9 @@ class BlogAutoPipeline
 
             $fix = $review['fix_instructions'] ?: 'Rewrite to pass SEO gates: keyword placement, FAQs, internal links, depth.';
             if ($attempt >= $max) {
-                // Soft complete for human editing — not a clean pass.
-                if (! empty($session->draft_json['title']) && ! empty($session->draft_json['body_html'])) {
+                $allowSoftPass = (bool) config('blog_ai.auto.allow_draft_soft_pass', false);
+                // Soft complete for human editing — only when explicitly allowed.
+                if ($allowSoftPass && ! empty($session->draft_json['title']) && ! empty($session->draft_json['body_html'])) {
                     $this->softPassStep(
                         $run,
                         $scoreParts,
@@ -647,7 +648,7 @@ class BlogAutoPipeline
                     return;
                 }
 
-                throw ValidationException::withMessages(['ai' => 'Draft failed review: '.$fix]);
+                throw ValidationException::withMessages(['ai' => 'Draft failed SEO review: '.$fix]);
             }
 
             $run->appendLog([

@@ -28,6 +28,56 @@ class AdminBlogPostTest extends TestCase
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function seoCompletePayload(array $overrides = []): array
+    {
+        $keyword = (string) ($overrides['focus_keyword'] ?? 'cod fraud check');
+        $filler = str_repeat(
+            'Bangladesh COD sellers should verify courier history before confirming risky orders every day. ',
+            90,
+        );
+
+        $faqs = $overrides['faqs_json'] ?? [
+            ['q' => "What is {$keyword}?", 'a' => 'A seller workflow to reduce fake COD orders.'],
+            ['q' => 'When should I check?', 'a' => 'Before confirming every new order.'],
+            ['q' => 'Which couriers?', 'a' => 'Pathao, Steadfast, and RedX histories.'],
+            ['q' => 'Does it stop returns?', 'a' => 'It reduces high-risk confirmations.'],
+            ['q' => 'Is it free to start?', 'a' => 'Daily free checks are available.'],
+        ];
+
+        $body = $overrides['body_html'] ?? <<<HTML
+<section class="seo-quick-answer"><h2>Quick Answer</h2><p>Use {$keyword} before confirming COD parcels.</p></section>
+<section class="seo-ai-summary"><h2>AI Summary</h2><p>{$keyword} helps BD sellers cut fake orders and returns.</p></section>
+<p>Start with {$keyword} on every new order and review courier success rates carefully.</p>
+<h2>How {$keyword} works for sellers</h2>
+<h3>Steps</h3>
+<ul><li>Enter the number</li><li>Read success rate</li><li>Confirm only safe orders</li></ul>
+<p>See <a href="/bd-fraud-checker">fraud checker</a> and <a href="/fake-customer-check">fake customer check</a>.</p>
+<figure><img src="/images/seo/og-default.jpg" alt="{$keyword}"></figure>
+<p>{$filler}</p>
+HTML;
+
+        return array_merge([
+            'title' => "Guide to {$keyword}",
+            'slug' => 'cod-fraud-check-guide',
+            'locale' => 'en',
+            'status' => 'published',
+            'excerpt' => 'How COD sellers reduce fake orders with better checks.',
+            'meta_title' => "Guide to {$keyword} | WooEasyLife",
+            'meta_description' => "Practical {$keyword} steps for Bangladesh sellers to cut fake COD orders.",
+            'focus_keyword' => $keyword,
+            'og_image' => '/images/seo/og-default.jpg',
+            'robots' => 'index,follow',
+            'author_name' => 'WooEasyLife',
+            'faqs_json' => $faqs,
+            'body_html' => $body,
+            'published_at' => now()->subMinute()->format('Y-m-d H:i:s'),
+        ], $overrides);
+    }
+
     public function test_admin_can_view_blog_posts_index(): void
     {
         $admin = $this->adminUser();
@@ -45,20 +95,7 @@ class AdminBlogPostTest extends TestCase
     {
         $admin = $this->adminUser();
 
-        $response = $this->actingAs($admin)->post(route('blogPosts.store'), [
-            'title' => 'COD Fraud Check Guide',
-            'slug' => 'cod-fraud-check-guide',
-            'locale' => 'en',
-            'status' => 'published',
-            'excerpt' => 'How COD sellers reduce fake orders.',
-            'meta_title' => 'COD Fraud Check Guide | WooEasyLife',
-            'meta_description' => 'Practical COD fraud check steps for Bangladesh sellers.',
-            'focus_keyword' => 'cod fraud check',
-            'robots' => 'index,follow',
-            'author_name' => 'WooEasyLife',
-            'body_html' => '<h2>Start here</h2><p>Check courier history before confirm.</p><p><a href="/bd-fraud-checker">Fraud checker</a></p>',
-            'published_at' => now()->subMinute()->format('Y-m-d H:i:s'),
-        ]);
+        $response = $this->actingAs($admin)->post(route('blogPosts.store'), $this->seoCompletePayload());
 
         $response->assertRedirect();
         $this->assertDatabaseHas('blog_posts', [
@@ -72,7 +109,7 @@ class AdminBlogPostTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Blog/Show')
                 ->where('post.slug', 'cod-fraud-check-guide')
-                ->where('post.title', 'COD Fraud Check Guide')
+                ->where('post.title', 'Guide to cod fraud check')
             );
 
         $this->get('/en/blog')
@@ -178,15 +215,19 @@ class AdminBlogPostTest extends TestCase
     {
         $admin = $this->adminUser();
 
-        $this->actingAs($admin)->post(route('blogPosts.store'), [
-            'title' => 'Safe HTML Post',
+        $payload = $this->seoCompletePayload([
+            'title' => 'Safe HTML Post fraud check',
             'slug' => 'safe-html-post',
-            'locale' => 'en',
-            'status' => 'published',
-            'meta_description' => 'Sanitized blog body for COD sellers in Bangladesh.',
-            'body_html' => '<p>Hello</p><script>alert(1)</script><p><a href="/bd-fraud-checker">Fraud checker</a></p><p><a href="javascript:alert(1)">x</a></p>',
-            'published_at' => now()->subMinute()->format('Y-m-d H:i:s'),
-        ])->assertRedirect();
+            'focus_keyword' => 'fraud check',
+            'meta_description' => 'Sanitized blog body for COD sellers using fraud check workflows in Bangladesh.',
+        ]);
+        $payload['body_html'] = str_replace(
+            '<p>Start with fraud check on every new order and review courier success rates carefully.</p>',
+            '<p>Start with fraud check on every new order and review courier success rates carefully.</p><script>alert(1)</script><p><a href="javascript:alert(1)">x</a></p>',
+            $payload['body_html'],
+        );
+
+        $this->actingAs($admin)->post(route('blogPosts.store'), $payload)->assertRedirect();
 
         $post = BlogPost::query()->where('slug', 'safe-html-post')->first();
         $this->assertNotNull($post);
@@ -231,31 +272,31 @@ class AdminBlogPostTest extends TestCase
             'updated_by' => $admin->id,
         ]);
 
-        $this->actingAs($admin)->post(route('blogPosts.store'), [
-            'title' => 'Second Post',
+        $this->actingAs($admin)->post(route('blogPosts.store'), $this->seoCompletePayload([
+            'title' => 'Second Post ফেক অর্ডার',
             'slug' => 'second-focus-post',
             'locale' => 'bn',
-            'status' => 'published',
             'focus_keyword' => 'ফেক অর্ডার',
-            'meta_description' => 'Duplicate focus keyword should be blocked on publish for same locale.',
-            'body_html' => '<h2>x</h2><p><a href="/">home</a></p>',
-        ])->assertSessionHasErrors('focus_keyword');
+            'meta_description' => 'Duplicate focus keyword should be blocked on publish for same locale sellers.',
+        ]))->assertSessionHasErrors('focus_keyword');
     }
 
     public function test_publish_requires_internal_link(): void
     {
         $admin = $this->adminUser();
 
-        $this->actingAs($admin)->post(route('blogPosts.store'), [
-            'title' => 'No Link Post',
+        $this->actingAs($admin)->post(route('blogPosts.store'), $this->seoCompletePayload([
+            'title' => 'No Link Post fraud guide',
             'slug' => 'no-link-post',
-            'locale' => 'en',
-            'status' => 'published',
-            'meta_description' => 'Publishing without an internal link should fail validation.',
-            'body_html' => '<h2>Hello</h2><p>No internal URL here.</p>',
-        ])->assertSessionHasErrors('body_html');
+            'focus_keyword' => 'fraud guide',
+            'meta_description' => 'Publishing without an internal link should fail validation for SEO focus.',
+            'body_html' => '<section class="seo-quick-answer"><h2>Quick Answer</h2><p>fraud guide tips.</p></section>'
+                .'<section class="seo-ai-summary"><h2>AI Summary</h2><p>fraud guide helps.</p></section>'
+                .'<p>Start with fraud guide today for safer COD.</p>'
+                .'<h2>fraud guide steps</h2><h3>List</h3><ul><li>one</li></ul>'
+                .'<p>'.str_repeat('Safe COD confirmation habits for Bangladesh sellers every week. ', 90).'</p>',
+        ]))->assertSessionHasErrors('body_html');
     }
-
     public function test_admin_can_upload_blog_image(): void
     {
         Storage::fake('public');

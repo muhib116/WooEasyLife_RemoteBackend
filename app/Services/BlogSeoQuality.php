@@ -136,11 +136,6 @@ class BlogSeoQuality
             $aiRequired[] = 'has_lists';
         }
 
-        $publishRequiredKeys = config('blog_ai.seo_quality.enforce_on_publish', [
-            'has_internal_link' => true,
-            'duplicate_focus_keyword' => true,
-        ]);
-
         $failures = [];
         foreach ($aiRequired as $key) {
             if (! ($checks[$key] ?? false)) {
@@ -156,7 +151,11 @@ class BlogSeoQuality
 
         $aiReady = $failures === [];
 
-        $publishReady = true;
+        $publishRequiredKeys = config('blog_ai.seo_quality.enforce_on_publish', []);
+        $publishReady = $aiReady;
+        if (! empty($publishRequiredKeys['ai_ready']) && ! $aiReady) {
+            $publishReady = false;
+        }
         if (! empty($publishRequiredKeys['has_internal_link']) && ! $checks['has_internal_link']) {
             $publishReady = false;
         }
@@ -198,34 +197,65 @@ class BlogSeoQuality
     }
 
     /**
-     * Soft publish gates — keeps manual short posts working unless clearly broken.
+     * Hard publish gates — published posts must satisfy full SEO checklist.
      *
+     * @param  list<array{q?: string, a?: string}>  $faqs
      * @return array<string, string> field => message
      */
     public function publishValidationErrors(
+        string $title,
         string $bodyHtml,
         ?string $focusKeyword,
+        ?string $metaDescription,
         ?string $slug,
         string $locale,
         ?int $ignorePostId = null,
+        array $faqs = [],
+        ?string $ogImage = null,
     ): array {
         $gates = config('blog_ai.seo_quality.enforce_on_publish', []);
         $errors = [];
+        $kw = trim((string) ($focusKeyword ?? ''));
+        $meta = trim((string) ($metaDescription ?? ''));
+
+        if (! empty($gates['focus_keyword_required']) && $kw === '') {
+            $errors['focus_keyword'] = 'Set a focus keyword before publishing.';
+        }
 
         $quality = $this->analyze(
-            title: '',
-            focusKeyword: (string) ($focusKeyword ?? ''),
+            title: $title,
+            focusKeyword: $kw,
             bodyHtml: $bodyHtml,
-            metaDescription: '',
-            faqs: [],
+            metaDescription: $meta,
+            faqs: $faqs,
             secondaryKeywords: [],
             slug: $slug,
             ignorePostId: $ignorePostId,
             locale: $locale,
         );
 
-        if (! empty($gates['has_internal_link']) && ! $quality['has_internal_link']) {
-            $errors['body_html'] = 'Add at least one internal link (e.g. /bd-fraud-checker) before publishing.';
+        if (! empty($gates['ai_ready']) && empty($quality['ai_ready'])) {
+            foreach ($quality['failures'] as $failure) {
+                [$field, $message] = $this->publishFailureMessage($failure);
+                $errors[$field] = $errors[$field] ?? $message;
+            }
+        }
+
+        // Legacy single-gate keys (still honored if ai_ready is off).
+        if (empty($gates['ai_ready'])) {
+            if (! empty($gates['has_internal_link']) && ! $quality['has_internal_link']) {
+                $errors['body_html'] = 'Add at least one internal link (e.g. /bd-fraud-checker) before publishing.';
+            }
+        }
+
+        if (! empty($gates['has_og_or_content_image'])) {
+            $hasOg = filled(trim((string) $ogImage));
+            if (! $hasOg && empty($quality['has_content_image'])) {
+                $errors['og_image'] = 'Add an OG/cover image or a content image in the body before publishing.';
+            } elseif (! empty($quality['has_content_image']) && empty($quality['content_image_alt_ok'])) {
+                $errors['body_html'] = ($errors['body_html'] ?? null)
+                    ?: 'Content images need non-empty alt text before publishing.';
+            }
         }
 
         if (! empty($gates['duplicate_focus_keyword']) && $quality['focus_keyword_collision']) {
@@ -242,7 +272,37 @@ class BlogSeoQuality
     }
 
     /**
-     * Non-blocking SEO tips for the CMS publish flow.
+     * @return array{0: string, 1: string}
+     */
+    private function publishFailureMessage(string $failure): array
+    {
+        $minWords = (int) config('blog_ai.min_body_words', 800);
+        $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
+        $minLinks = (int) config('blog_ai.seo_quality.min_internal_links', 2);
+
+        return match ($failure) {
+            'word_count_ok' => ['body_html', "Body needs at least {$minWords} words before publishing."],
+            'has_h2' => ['body_html', 'Add at least one H2 heading before publishing.'],
+            'has_h3' => ['body_html', 'Add at least one H3 heading before publishing.'],
+            'has_lists' => ['body_html', 'Add a bullet or numbered list before publishing.'],
+            'has_internal_link', 'internal_links_ok' => ['body_html', "Add at least {$minLinks} internal links (href=\"/...\") before publishing."],
+            'keyword_in_title' => ['title', 'Include the focus keyword in the title before publishing.'],
+            'keyword_in_meta' => ['meta_description', 'Include the focus keyword in the meta description before publishing.'],
+            'keyword_in_first_paragraph' => ['body_html', 'Include the focus keyword in the first body paragraph (after Quick Answer) before publishing.'],
+            'keyword_in_h2' => ['body_html', 'Include the focus keyword in at least one H2 before publishing.'],
+            'meta_description_ok' => ['meta_description', 'Meta description must be 50–160 characters before publishing.'],
+            'faq_count_ok' => ['faqs_json', "Add at least {$minFaqs} FAQs (question + answer) before publishing."],
+            'has_quick_answer' => ['body_html', 'Add a Quick Answer / দ্রুত উত্তর section before publishing.'],
+            'has_ai_search_summary' => ['body_html', 'Add an AI Search Summary / এআই সারাংশ section before publishing.'],
+            'secondary_keyword_in_body' => ['body_html', 'Include at least one secondary keyword in the body before publishing.'],
+            'slug_collision' => ['slug', 'Slug collides with another post. Choose a unique English SEO slug.'],
+            'focus_keyword_collision' => ['focus_keyword', 'Focus keyword is already used by another published post.'],
+            default => ['body_html', 'SEO checklist incomplete: '.$failure.'. Use Regenerate or fix manually before publishing.'],
+        };
+    }
+
+    /**
+     * Non-blocking SEO tips for the CMS draft flow.
      *
      * @return list<string>
      */

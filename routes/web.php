@@ -539,6 +539,9 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
 
         Route::middleware('throttle:30,1')->group(function () {
             Route::post('/suggest-keywords', [BlogAiController::class, 'suggestKeywords'])->name('suggestKeywords');
+            Route::post('/regenerate-seo-checklist', [BlogAiController::class, 'regenerateSeoChecklist'])
+                ->middleware('throttle:10,1')
+                ->name('regenerateSeoChecklist');
             Route::post('/auto', [BlogAiController::class, 'startAuto'])->name('auto');
             Route::post('/runs/{blogAiRun}/cancel', [BlogAiController::class, 'cancelRun'])->name('runs.cancel');
             Route::post('/sessions', [BlogAiController::class, 'store'])->name('store');

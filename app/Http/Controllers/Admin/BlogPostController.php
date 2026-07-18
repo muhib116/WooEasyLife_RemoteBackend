@@ -242,13 +242,18 @@ class BlogPostController extends Controller
             'excerpt' => ['nullable', 'string', 'max:500'],
             'meta_title' => ['nullable', 'string', 'max:70'],
             'meta_description' => ['nullable', 'string', 'max:160'],
-            'focus_keyword' => ['nullable', 'string', 'max:120'],
+            'focus_keyword' => [
+                Rule::requiredIf(fn () => $request->input('status') === 'published'),
+                'nullable',
+                'string',
+                'max:120',
+            ],
             'og_image' => ['nullable', 'string', 'max:2048'],
             'robots' => ['nullable', 'string', 'max:64'],
             'author_name' => ['nullable', 'string', 'max:120'],
-            'faqs_json' => ['nullable', 'array', 'max:8'],
+            'faqs_json' => ['nullable', 'array', 'max:12'],
             'faqs_json.*.q' => ['required_with:faqs_json', 'string', 'max:200'],
-            'faqs_json.*.a' => ['required_with:faqs_json', 'string', 'max:500'],
+            'faqs_json.*.a' => ['required_with:faqs_json', 'string', 'max:1000'],
             'body_html' => ['required', 'string', 'max:200000'],
             'published_at' => ['nullable', 'date'],
             'ai_quality_score' => ['nullable', 'integer', 'min:0', 'max:100'],
@@ -257,6 +262,7 @@ class BlogPostController extends Controller
         ], [
             'slug.required' => 'Add an English SEO slug before publishing (e.g. fake-order-atkabo).',
             'slug.regex' => 'Slug must be lowercase Latin letters, numbers, and hyphens only.',
+            'focus_keyword.required' => 'Set a focus keyword before publishing.',
             'body_html.max' => 'Body is too large (max ~200KB). Shorten the content or compress images.',
         ]);
 
@@ -301,11 +307,15 @@ class BlogPostController extends Controller
 
         if ($status === 'published') {
             $seoErrors = $this->blogSeoQuality->publishValidationErrors(
+                title: (string) $validated['title'],
                 bodyHtml: $bodyHtml,
                 focusKeyword: is_string($focusKeyword) ? $focusKeyword : null,
+                metaDescription: (string) ($validated['meta_description'] ?? $validated['excerpt'] ?? ''),
                 slug: $slug,
                 locale: $locale,
                 ignorePostId: $ignoreId,
+                faqs: is_array($validated['faqs_json'] ?? null) ? $validated['faqs_json'] : [],
+                ogImage: isset($validated['og_image']) ? (string) $validated['og_image'] : null,
             );
 
             if ($seoErrors !== []) {
@@ -357,9 +367,9 @@ class BlogPostController extends Controller
             ->filter(fn ($row) => is_array($row) && filled($row['q'] ?? null) && filled($row['a'] ?? null))
             ->map(fn (array $row) => [
                 'q' => Str::limit(trim((string) $row['q']), 200, ''),
-                'a' => Str::limit(trim((string) $row['a']), 500, ''),
+                'a' => Str::limit(trim((string) $row['a']), 1000, ''),
             ])
-            ->take(8)
+            ->take(12)
             ->values()
             ->all();
 
@@ -387,6 +397,11 @@ class BlogPostController extends Controller
             ],
             'markdown_slugs' => $this->blogService->markdownSlugs(),
             'clusters' => config('blog_ai.clusters', []),
+            'seo' => [
+                'min_body_words' => (int) config('blog_ai.min_body_words', 800),
+                'min_faqs' => (int) config('blog_ai.seo_quality.min_faqs', 5),
+                'min_internal_links' => (int) config('blog_ai.seo_quality.min_internal_links', 2),
+            ],
         ];
     }
 
