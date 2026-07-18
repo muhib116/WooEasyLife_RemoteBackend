@@ -40,8 +40,8 @@ return [
     'internal_links_min' => 2,
 
     /*
-    | On-page SEO quality gates for AI drafts + hard publish enforcement.
-    | Published posts must pass the same RankMath-style checklist as AI drafts.
+    | On-page SEO quality gates for AI drafts + soft publish warnings.
+    | Publish stays gentle: duplicate focus keyword is the only hard SEO block.
     */
     'seo_quality' => [
         'min_internal_links' => 2,
@@ -55,23 +55,26 @@ return [
         'require_h3' => true,
         'require_lists' => true,
         /*
-        | Hard publish gates. ai_ready = full draft SEO checklist must pass.
+        | Hard publish gates only — everything else is soft-warned in the CMS.
         */
         'enforce_on_publish' => [
-            'ai_ready' => true,
-            'focus_keyword_required' => true,
-            'has_og_or_content_image' => true,
+            'ai_ready' => false,
+            'focus_keyword_required' => false,
+            'has_og_or_content_image' => false,
+            'has_internal_link' => false,
             'duplicate_focus_keyword' => true,
             'duplicate_slug' => false, // DB unique rule already covers slug
         ],
         /*
-        | Soft tips retained for drafts / incomplete saves (not used to block publish
-        | when enforce_on_publish.ai_ready is on).
+        | Soft warnings shown in the CMS (confirm dialogs / checklist) — do not block save.
         */
         'soft_warn_on_publish' => [
             'keyword_in_title' => true,
+            'keyword_in_first_paragraph' => true,
+            'word_count_ok' => true,
             'missing_og_image' => true,
             'missing_content_image' => true,
+            'ai_ready' => true,
         ],
     ],
 

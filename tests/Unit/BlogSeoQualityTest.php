@@ -163,11 +163,12 @@ HTML;
 
     public function test_publish_requires_internal_link(): void
     {
+        // Soft publish mode: missing internal links warn but do not hard-block.
         $errors = app(BlogSeoQuality::class)->publishValidationErrors(
             title: 'No Link Post about fraud',
             bodyHtml: '<h2>Hello fraud</h2><p>No internal URL here about fraud topics for sellers.</p>',
             focusKeyword: 'fraud',
-            metaDescription: 'Publishing without an internal link should fail validation for SEO.',
+            metaDescription: 'Publishing without an internal link should not hard-fail in soft mode.',
             slug: 'no-link-post',
             locale: 'en',
             faqs: [
@@ -180,11 +181,12 @@ HTML;
             ogImage: '/images/seo/og-default.jpg',
         );
 
-        $this->assertArrayHasKey('body_html', $errors);
+        $this->assertArrayNotHasKey('body_html', $errors);
     }
 
     public function test_publish_requires_full_ai_ready_checklist(): void
     {
+        // Soft publish: incomplete SEO checklist does not hard-block.
         $errors = app(BlogSeoQuality::class)->publishValidationErrors(
             title: 'Short post',
             bodyHtml: '<p><a href="/bd-fraud-checker">x</a></p>',
@@ -195,6 +197,23 @@ HTML;
             ogImage: null,
         );
 
-        $this->assertNotEmpty($errors);
+        $this->assertSame([], $errors);
+    }
+
+    public function test_first_paragraph_skips_seo_blocks_and_deterministic_fixes(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $body = '<section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>সাধারণ উত্তর।</p></section>'
+            .'<section class="seo-ai-summary"><h2>এআই সারাংশ</h2><p>সারাংশ টেক্সট।</p></section>'
+            .'<p>বাংলাদেশে COD ব্যবসা কঠিন।</p>';
+
+        $this->assertFalse($service->textContainsKeyword($service->firstParagraphText($body), 'ফ্রড চেকার'));
+
+        $fixed = $service->ensureKeywordInFirstParagraph($body, 'ফ্রড চেকার');
+        $this->assertTrue($service->textContainsKeyword($service->firstParagraphText($fixed), 'ফ্রড চেকার'));
+
+        $expanded = $service->ensureMinBodyWords('<p>ফ্রড চেকার ছোট লেখা।</p>', 'ফ্রড চেকার', 80);
+        $plain = $service->plainText($expanded);
+        $this->assertGreaterThanOrEqual(80, count(preg_split('/\s+/u', $plain) ?: []));
     }
 }

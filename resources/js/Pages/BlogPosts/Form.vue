@@ -443,6 +443,10 @@
                                         v-if="item.required"
                                         class="ml-1 text-[10px] font-semibold uppercase tracking-wide text-rose-500"
                                     >required</span>
+                                    <span
+                                        v-else-if="item.soft && !item.ok"
+                                        class="ml-1 text-[10px] font-semibold uppercase tracking-wide text-amber-600"
+                                    >warn</span>
                                 </span>
                             </li>
                         </ul>
@@ -725,11 +729,8 @@ const seoMinFaqs = computed(() => Number(props.options?.seo?.min_faqs || 5));
 const seoMinLinks = computed(() => Number(props.options?.seo?.min_internal_links || 2));
 
 const firstBodyParagraphText = (html) => {
-    const source = String(html || '');
-    const afterQuick = source.match(/seo-quick-answer[\s\S]*?<\/section>\s*<p\b[^>]*>(.*?)<\/p>/is);
-    if (afterQuick?.[1]) {
-        return stripHtml(afterQuick[1]).toLowerCase();
-    }
+    const source = String(html || '')
+        .replace(/<section\b[^>]*class=["'][^"']*(seo-quick-answer|seo-ai-summary)[^"']*["'][\s\S]*?<\/section>/giu, ' ');
     const firstP = source.match(/<p\b[^>]*>(.*?)<\/p>/is);
     if (firstP?.[1]) {
         return stripHtml(firstP[1]).toLowerCase();
@@ -789,28 +790,31 @@ const checklist = computed(() => {
 
     return [
         { label: 'Title present', ok: Boolean(form.title?.trim()), required: true },
-        { label: 'Focus keyword set', ok: Boolean(keyword), required: true },
-        { label: 'Keyword in title', ok: keywordInTitle, required: true },
-        { label: 'Keyword in first paragraph (after Quick Answer)', ok: keyword ? firstParagraph.includes(keyword) : false, required: true },
-        { label: 'Keyword in one H2', ok: keywordInH2, required: true },
-        { label: 'Meta description 50–160 chars', ok: metaLen >= 50 && metaLen <= 160, required: true },
-        { label: 'Keyword in meta description', ok: keyword ? metaDesc.includes(keyword) : false, required: true },
-        { label: 'Body has H2 heading', ok: hasH2, required: true },
-        { label: 'Body has H3 heading', ok: hasH3, required: true },
-        { label: 'Has bullet or numbered list', ok: hasLists, required: true },
-        { label: 'Featured snippet (দ্রুত উত্তর)', ok: hasQuickAnswer, required: true },
-        { label: 'AI Search Summary (এআই সারাংশ)', ok: hasAiSummary, required: true },
-        { label: `${seoMinLinks.value}+ internal links`, ok: internalLinks.length >= seoMinLinks.value, required: true },
-        { label: `FAQs ≥ ${seoMinFaqs.value}`, ok: faqCount >= seoMinFaqs.value, required: true },
-        { label: 'OG/cover or content image with alt', ok: ogOrImage, required: true },
-        { label: `Body ≥ ${seoMinWords.value} words`, ok: wordCount >= seoMinWords.value, required: true },
+        { label: 'Focus keyword set', ok: Boolean(keyword), soft: true },
+        { label: 'Keyword in title', ok: keywordInTitle, soft: true },
+        { label: 'Keyword in first paragraph (after Quick Answer)', ok: keyword ? firstParagraph.includes(keyword) : false, soft: true },
+        { label: 'Keyword in one H2', ok: keywordInH2, soft: true },
+        { label: 'Meta description 50–160 chars', ok: metaLen >= 50 && metaLen <= 160, soft: true },
+        { label: 'Keyword in meta description', ok: keyword ? metaDesc.includes(keyword) : false, soft: true },
+        { label: 'Body has H2 heading', ok: hasH2, soft: true },
+        { label: 'Body has H3 heading', ok: hasH3, soft: true },
+        { label: 'Has bullet or numbered list', ok: hasLists, soft: true },
+        { label: 'Featured snippet (দ্রুত উত্তর)', ok: hasQuickAnswer, soft: true },
+        { label: 'AI Search Summary (এআই সারাংশ)', ok: hasAiSummary, soft: true },
+        { label: `${seoMinLinks.value}+ internal links`, ok: internalLinks.length >= seoMinLinks.value, soft: true },
+        { label: `FAQs ≥ ${seoMinFaqs.value}`, ok: faqCount >= seoMinFaqs.value, soft: true },
+        { label: 'OG/cover or content image with alt', ok: ogOrImage, soft: true },
+        { label: `Body ≥ ${seoMinWords.value} words`, ok: wordCount >= seoMinWords.value, soft: true },
         { label: 'Readable English SEO slug', ok: isSeoSlug(form.slug) && !isPlaceholderSlug(form.slug), required: true },
-        { label: 'Slug does not shadow markdown', ok: !markdownConflict.value, required: false },
+        { label: 'Slug does not shadow markdown', ok: !markdownConflict.value, soft: true },
     ];
 });
 
 const publishChecklistReady = computed(() =>
     checklist.value.filter((item) => item.required).every((item) => item.ok),
+);
+const softChecklistGaps = computed(() =>
+    checklist.value.filter((item) => item.soft && !item.ok).map((item) => item.label),
 );
 const canRegenerateSeo = computed(() =>
     Boolean(form.title?.trim())
@@ -954,20 +958,24 @@ const submit = () => {
         }
 
         if (!publishChecklistReady.value) {
-            const missing = checklist.value
-                .filter((item) => item.required && !item.ok)
-                .map((item) => item.label)
-                .slice(0, 5);
             toast.add({
                 severity: 'warn',
-                summary: 'SEO checklist incomplete',
-                detail: missing.length
-                    ? `Fix before publishing: ${missing.join('; ')}`
-                    : 'Fix required SEO checklist items (or use Regenerate) before publishing.',
-                life: 8000,
+                summary: 'Missing required fields',
+                detail: 'Title and a readable English SEO slug are required to publish.',
+                life: 6000,
                 group: 'br',
             });
             return;
+        }
+
+        if (softChecklistGaps.value.length) {
+            const preview = softChecklistGaps.value.slice(0, 4).join('; ');
+            const ok = window.confirm(
+                `SEO checklist still has soft warnings (${softChecklistGaps.value.length}): ${preview}`
+                + (softChecklistGaps.value.length > 4 ? '…' : '')
+                + '\n\nPublish anyway? You can still Regenerate later.',
+            );
+            if (!ok) return;
         }
     }
 

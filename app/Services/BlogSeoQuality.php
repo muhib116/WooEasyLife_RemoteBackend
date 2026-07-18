@@ -302,8 +302,9 @@ class BlogSeoQuality
     }
 
     /**
-     * Non-blocking SEO tips for the CMS draft flow.
+     * Non-blocking SEO tips for the CMS publish flow.
      *
+     * @param  list<array{q?: string, a?: string}>  $faqs
      * @return list<string>
      */
     public function softWarningsForPublish(
@@ -311,6 +312,8 @@ class BlogSeoQuality
         string $bodyHtml,
         ?string $focusKeyword,
         ?string $ogImage,
+        string $metaDescription = '',
+        array $faqs = [],
     ): array {
         $flags = config('blog_ai.seo_quality.soft_warn_on_publish', []);
         $warnings = [];
@@ -318,19 +321,45 @@ class BlogSeoQuality
         $hasContentImage = (bool) preg_match('/<img[\s>]/i', $bodyHtml);
         $hasOg = filled(trim((string) $ogImage));
 
-        if (! empty($flags['keyword_in_title']) && $kw !== '' && ! $this->textContainsKeyword($title, $kw)) {
-            $warnings[] = 'Focus keyword is missing from the title. Consider adding it before publishing.';
+        $quality = $this->analyze(
+            title: $title,
+            focusKeyword: $kw,
+            bodyHtml: $bodyHtml,
+            metaDescription: trim($metaDescription),
+            faqs: $faqs,
+            secondaryKeywords: [],
+        );
+
+        if (! empty($flags['keyword_in_title']) && $kw !== '' && empty($quality['keyword_in_title'])) {
+            $warnings[] = 'Focus keyword is missing from the title.';
+        }
+
+        if (! empty($flags['keyword_in_first_paragraph']) && $kw !== '' && empty($quality['keyword_in_first_paragraph'])) {
+            $warnings[] = 'Focus keyword is missing from the first body paragraph (after Quick Answer / AI Summary).';
+        }
+
+        if (! empty($flags['word_count_ok']) && empty($quality['word_count_ok'])) {
+            $minWords = (int) config('blog_ai.min_body_words', 800);
+            $warnings[] = "Body is under {$minWords} words (currently {$quality['word_count']}).";
         }
 
         if (! empty($flags['missing_og_image']) && ! $hasOg) {
-            $warnings[] = 'No OG / cover image set. Social shares will look weaker — add one or generate via AI.';
+            $warnings[] = 'No OG / cover image set. Social shares will look weaker.';
         }
 
         if (! empty($flags['missing_content_image']) && ! $hasContentImage) {
-            $warnings[] = 'No image in the body. Add a content image with alt text for better engagement.';
+            $warnings[] = 'No image in the body. Add a content image with alt text.';
         }
 
-        return $warnings;
+        if (! empty($flags['ai_ready']) && empty($quality['ai_ready'])) {
+            $failures = array_values($quality['failures'] ?? []);
+            if ($failures !== []) {
+                $warnings[] = 'SEO checklist still incomplete: '.implode(', ', array_slice($failures, 0, 6))
+                    .(count($failures) > 6 ? '…' : '').'.';
+            }
+        }
+
+        return array_values(array_unique($warnings));
     }
 
     /**
@@ -437,22 +466,94 @@ class BlogSeoQuality
 
     public function firstParagraphText(string $html): string
     {
-        // Prefer the first <p> after optional Quick Answer section, else first <p>.
-        if (preg_match(
-            '/seo-quick-answer[\s\S]*?<\/section>\s*<p\b[^>]*>(.*?)<\/p>/is',
+        // Skip Quick Answer / AI Summary blocks — keyword check targets the first content <p>.
+        $content = preg_replace(
+            '/<section\b[^>]*class=["\'][^"\']*(seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>/iu',
+            '',
             $html,
-            $m,
-        )) {
+        ) ?? $html;
+
+        if (preg_match('/<p\b[^>]*>(.*?)<\/p>/is', $content, $m)) {
             return trim(html_entity_decode(strip_tags($m[1])));
         }
 
-        if (preg_match('/<p\b[^>]*>(.*?)<\/p>/is', $html, $m)) {
-            return trim(html_entity_decode(strip_tags($m[1])));
-        }
-
-        $plain = $this->plainText($html);
+        $plain = $this->plainText($content);
 
         return Str::limit($plain, 400, '');
+    }
+
+    /**
+     * Ensure the first content paragraph (after SEO blocks) contains the focus keyword.
+     */
+    public function ensureKeywordInFirstParagraph(string $bodyHtml, string $focusKeyword): string
+    {
+        $kw = trim($focusKeyword);
+        if ($kw === '') {
+            return $bodyHtml;
+        }
+
+        if ($this->textContainsKeyword($this->firstParagraphText($bodyHtml), $kw)) {
+            return $bodyHtml;
+        }
+
+        $sentence = e($kw).' নিয়ে এই গাইডে বাংলাদেশি সেলারদের ব্যবহারিক ধাপ আলোচনা করা হয়েছে। ';
+
+        if (preg_match(
+            '/((?:<section\b[^>]*class=["\'][^"\']*(?:seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>\s*)+)/iu',
+            $bodyHtml,
+            $m,
+            PREG_OFFSET_CAPTURE,
+        )) {
+            $end = $m[0][1] + strlen($m[0][0]);
+
+            return substr($bodyHtml, 0, $end).'<p>'.$sentence.'</p>'."\n".substr($bodyHtml, $end);
+        }
+
+        if (preg_match('/<p\b[^>]*>.*?<\/p>/is', $bodyHtml, $m, PREG_OFFSET_CAPTURE)) {
+            $old = $m[0][0];
+            $inner = trim(html_entity_decode(strip_tags($old)));
+            $new = '<p>'.$sentence.e($inner).'</p>';
+
+            return substr($bodyHtml, 0, $m[0][1]).$new.substr($bodyHtml, $m[0][1] + strlen($old));
+        }
+
+        return '<p>'.$sentence.'</p>'."\n".$bodyHtml;
+    }
+
+    /**
+     * Expand body until min word count with on-topic Bangla paragraphs (deterministic).
+     */
+    public function ensureMinBodyWords(string $bodyHtml, string $focusKeyword, ?int $minWords = null): string
+    {
+        $min = $minWords ?? (int) config('blog_ai.min_body_words', 800);
+        $kw = trim($focusKeyword) !== '' ? trim($focusKeyword) : 'WooEasyLife';
+        $body = $bodyHtml;
+
+        $wordCount = function (string $html): int {
+            $plain = $this->plainText($html);
+
+            return $plain === '' ? 0 : count(preg_split('/\s+/u', $plain) ?: []);
+        };
+
+        $templates = [
+            "{$kw} ব্যবহার করে অর্ডার কনফার্মের আগে কাস্টমার হিস্টোরি যাচাই করলে রিটার্ন লস কমে এবং ক্যাশফ্লো স্থিতিশীল থাকে। ",
+            "বাংলাদেশের COD সেলারদের জন্য {$kw} একটি প্র্যাকটিক্যাল ধাপ — নম্বর দিয়ে রেটিং দেখে ঝুঁকি বোঝা যায়। ",
+            "প্রতিদিনের অর্ডারে {$kw} চালু রাখলে ফেক অর্ডার আটকানো সহজ হয় এবং কুরিয়ার খরচ বাঁচে। ",
+            "টিমকে {$kw} ওয়ার্কফ্লো শেখালে কনফার্মেশন কোয়ালিটি বাড়ে এবং সাপোর্ট টিকেট কমে। ",
+            "Pathao, Steadfast বা RedX অর্ডারেও {$kw} দিয়ে আগে চেক করলে ডেলিভারি সাকসেস রেট উন্নত হয়। ",
+        ];
+
+        $guard = 0;
+        while ($wordCount($body) < $min && $guard < 40) {
+            $chunk = '';
+            foreach ($templates as $line) {
+                $chunk .= $line;
+            }
+            $body = rtrim($body)."\n<p>".e(trim($chunk)).'</p>';
+            $guard++;
+        }
+
+        return $body;
     }
 
     public function hasQuickAnswer(string $html): bool

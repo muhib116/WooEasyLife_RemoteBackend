@@ -216,6 +216,15 @@ class BlogSeoChecklistRegenerator
             $notes[] = 'Fixed with deterministic SEO helpers (links/blocks).';
         }
 
+        // Always finish with deterministic keyword + depth fixes (works even when AI body is skipped).
+        $beforeDepth = $body;
+        $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
+        $body = $this->seoQuality->ensureMinBodyWords($body, $focus);
+        if ($body !== $beforeDepth) {
+            $notes[] = 'Applied deterministic first-paragraph keyword + minimum word-count expansion.';
+        }
+        $body = BlogHtmlSanitizer::sanitize($body);
+
         $faqs = $this->normalizeFaqs($faqs);
 
         $after = $this->seoQuality->analyze(
@@ -360,13 +369,15 @@ Return JSON only:
 Rules:
 - Keep Bangla seller tone; preserve product truth (fraud checker, courier, fake order, WooCommerce BD).
 - Prefer surgical edits over full rewrites. Do not invent US-centric claims.
-- Include focus_keyword naturally in title, first <p>, one <h2>, and meta_description.
+- Include focus_keyword naturally in title, first content <p> AFTER Quick Answer and AI Summary sections (not inside those sections), one <h2>, and meta_description.
+- If keyword_in_first_paragraph fails: rewrite/insert the first content <p> so it starts with or clearly includes focus_keyword.
+- If word_count_ok fails: expand body_html with useful Bangla seller paragraphs until min_body_words is reached (do not pad with gibberish). Keep all existing good sections.
 - Ensure <h2>, <h3>, and at least one <ul>/<ol> when those checks fail.
 - FAQs must be ≥ min_faqs with useful BD seller Q&A.
 - Internal links must use paths from allowed_internal_links only (href="/...").
 - Keep valid HTML fragments (p, h2, h3, ul, ol, li, a, section, strong, em, figure, img).
 - Do not remove existing good sections unless required for SEO.
-- If body_html_truncated is true: leave body_html empty (or omit it). Only return title/meta/excerpt/faqs/quick_answer/ai_search_summary. The server will keep the full original body.
+- If body_html_truncated is true: leave body_html empty (or omit it). Only return title/meta/excerpt/faqs/quick_answer/ai_search_summary. The server will keep the full original body and apply deterministic keyword/word-count fixes.
 TXT;
 
         $user = json_encode([

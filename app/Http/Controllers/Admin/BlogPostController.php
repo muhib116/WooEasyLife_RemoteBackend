@@ -242,12 +242,7 @@ class BlogPostController extends Controller
             'excerpt' => ['nullable', 'string', 'max:500'],
             'meta_title' => ['nullable', 'string', 'max:70'],
             'meta_description' => ['nullable', 'string', 'max:160'],
-            'focus_keyword' => [
-                Rule::requiredIf(fn () => $request->input('status') === 'published'),
-                'nullable',
-                'string',
-                'max:120',
-            ],
+            'focus_keyword' => ['nullable', 'string', 'max:120'],
             'og_image' => ['nullable', 'string', 'max:2048'],
             'robots' => ['nullable', 'string', 'max:64'],
             'author_name' => ['nullable', 'string', 'max:120'],
@@ -262,7 +257,6 @@ class BlogPostController extends Controller
         ], [
             'slug.required' => 'Add an English SEO slug before publishing (e.g. fake-order-atkabo).',
             'slug.regex' => 'Slug must be lowercase Latin letters, numbers, and hyphens only.',
-            'focus_keyword.required' => 'Set a focus keyword before publishing.',
             'body_html.max' => 'Body is too large (max ~200KB). Shorten the content or compress images.',
         ]);
 

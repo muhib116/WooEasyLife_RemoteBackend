@@ -285,17 +285,22 @@ HTML;
     {
         $admin = $this->adminUser();
 
-        $this->actingAs($admin)->post(route('blogPosts.store'), $this->seoCompletePayload([
+        // Soft publish: missing internal links no longer hard-block.
+        $this->actingAs($admin)->post(route('blogPosts.store'), [
             'title' => 'No Link Post fraud guide',
             'slug' => 'no-link-post',
+            'locale' => 'en',
+            'status' => 'published',
             'focus_keyword' => 'fraud guide',
-            'meta_description' => 'Publishing without an internal link should fail validation for SEO focus.',
-            'body_html' => '<section class="seo-quick-answer"><h2>Quick Answer</h2><p>fraud guide tips.</p></section>'
-                .'<section class="seo-ai-summary"><h2>AI Summary</h2><p>fraud guide helps.</p></section>'
-                .'<p>Start with fraud guide today for safer COD.</p>'
-                .'<h2>fraud guide steps</h2><h3>List</h3><ul><li>one</li></ul>'
-                .'<p>'.str_repeat('Safe COD confirmation habits for Bangladesh sellers every week. ', 90).'</p>',
-        ]))->assertSessionHasErrors('body_html');
+            'meta_description' => 'Publishing without an internal link should succeed with soft SEO warnings.',
+            'body_html' => '<h2>fraud guide</h2><p>No internal URL here.</p>',
+            'published_at' => now()->subMinute()->format('Y-m-d H:i:s'),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('blog_posts', [
+            'slug' => 'no-link-post',
+            'status' => 'published',
+        ]);
     }
     public function test_admin_can_upload_blog_image(): void
     {
