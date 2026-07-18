@@ -50,7 +50,8 @@ class OpenAiBlogClient
         $model = $this->landingSettings->openaiBlogModel() ?: 'gpt-4o-mini';
 
         $response = Http::withToken($apiKey)
-            ->timeout(120)
+            ->timeout(150)
+            ->connectTimeout(20)
             ->acceptJson()
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $model,

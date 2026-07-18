@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -130,6 +131,11 @@ class BlogAiController extends Controller
 
     public function regenerateSeoChecklist(Request $request, \App\Services\BlogAi\BlogSeoChecklistRegenerator $regenerator): JsonResponse
     {
+        // Shared hosting often defaults to 30–60s; OpenAI SEO edits need more headroom.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+
         $this->ensureEnabled();
         $this->enforceDailyCaps($request);
 
@@ -146,19 +152,27 @@ class BlogAiController extends Controller
             'faqs_json.*.a' => ['nullable', 'string', 'max:2000'],
             'secondary_keywords' => ['nullable', 'array', 'max:20'],
             'secondary_keywords.*' => ['nullable', 'string', 'max:190'],
-            'og_image' => ['nullable', 'string', 'max:500'],
+            'og_image' => ['nullable', 'string', 'max:2048'],
             'locale' => ['nullable', 'string', 'max:10'],
             'cluster' => ['nullable', 'string', 'max:80'],
             'ignore_post_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
+        if (($validated['cluster'] ?? null) === '') {
+            $validated['cluster'] = null;
+        }
+
         try {
             $result = $regenerator->regenerate($validated);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Throwable $e) {
-            $message = $e instanceof ValidationException
-                ? (collect($e->errors())->flatten()->first() ?: $e->getMessage())
-                : $e->getMessage();
+            Log::warning('SEO checklist regenerate failed', [
+                'message' => $e->getMessage(),
+                'user_id' => $request->user()?->id,
+            ]);
 
+            $message = $e->getMessage();
             throw ValidationException::withMessages([
                 'ai' => is_string($message) && $message !== '' ? $message : 'SEO regenerate failed.',
             ]);

@@ -827,24 +827,37 @@ const regenerateSeoChecklist = async () => {
     seoRegenNote.value = '';
 
     try {
+        let url;
+        try {
+            url = route('blogAi.regenerateSeoChecklist');
+        } catch (routeError) {
+            throw new Error(
+                routeError?.message
+                || 'Regenerate route missing — hard-refresh the page after deploy (Ziggy routes outdated).',
+            );
+        }
+
         const { data } = await axios.post(
-            route('blogAi.regenerateSeoChecklist'),
+            url,
             {
                 title: form.title,
                 focus_keyword: form.focus_keyword,
                 body_html: form.body_html,
-                slug: form.slug,
-                meta_title: form.meta_title,
-                meta_description: form.meta_description,
-                excerpt: form.excerpt,
-                faqs_json: form.faqs_json,
+                slug: form.slug || null,
+                meta_title: form.meta_title || null,
+                meta_description: form.meta_description || null,
+                excerpt: form.excerpt || null,
+                faqs_json: Array.isArray(form.faqs_json) ? form.faqs_json : [],
                 secondary_keywords: [],
                 og_image: form.og_image || props.post?.og_image_url || null,
-                locale: form.locale,
-                cluster: form.cluster,
+                locale: form.locale || 'bn',
+                cluster: form.cluster || null,
                 ignore_post_id: props.post?.id || null,
             },
-            { timeout: 180000 },
+            {
+                timeout: 180000,
+                headers: { Accept: 'application/json' },
+            },
         );
 
         if (data.title) form.title = data.title;
@@ -872,20 +885,64 @@ const regenerateSeoChecklist = async () => {
             group: 'br',
         });
     } catch (error) {
-        const message = error?.response?.data?.message
-            || error?.response?.data?.errors?.ai?.[0]
-            || 'Could not regenerate SEO checklist items.';
+        const message = seoRegenErrorMessage(error);
         seoRegenNote.value = message;
         toast.add({
             severity: 'error',
             summary: 'SEO regenerate failed',
             detail: message,
-            life: 7000,
+            life: 9000,
             group: 'br',
         });
     } finally {
         seoRegenLoading.value = false;
     }
+};
+
+const seoRegenErrorMessage = (error) => {
+    const data = error?.response?.data;
+    const status = error?.response?.status;
+    const fieldError = data?.errors?.ai?.[0]
+        || Object.values(data?.errors || {})?.flat?.()?.[0]
+        || Object.values(data?.errors || {})?.[0]?.[0];
+
+    if (fieldError) {
+        return String(fieldError);
+    }
+
+    if (typeof data?.message === 'string' && data.message.trim() && data.message !== 'The given data was invalid.') {
+        return data.message;
+    }
+
+    if (error?.code === 'ECONNABORTED' || /timeout/i.test(String(error?.message || ''))) {
+        return 'Regenerate timed out waiting for OpenAI. Try again, or shorten the body first.';
+    }
+
+    if (status === 419) {
+        return 'Session expired — refresh the page and try again.';
+    }
+
+    if (status === 404) {
+        return 'Regenerate endpoint not found on server — deploy may be incomplete. Hard-refresh after deploy.';
+    }
+
+    if (status === 403) {
+        return 'Permission denied — billing.manage is required for Blog AI regenerate.';
+    }
+
+    if (status >= 500) {
+        return 'Server error during regenerate (often PHP timeout or missing OpenAI key). Check Landing Settings → OpenAI, then retry.';
+    }
+
+    if (typeof error?.message === 'string' && error.message.trim()) {
+        return error.message;
+    }
+
+    if (typeof data?.message === 'string' && data.message.trim()) {
+        return data.message;
+    }
+
+    return 'Could not regenerate SEO checklist items.';
 };
 
 const submit = () => {
