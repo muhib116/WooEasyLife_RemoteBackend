@@ -905,7 +905,7 @@ class BlogAutoPipeline
         $draft['seo_notes'] = array_values(array_unique($notes));
 
         $session->draft_json = $draft;
-        $session->save();
+        $session->saveIfJobCurrent();
     }
 
     /**

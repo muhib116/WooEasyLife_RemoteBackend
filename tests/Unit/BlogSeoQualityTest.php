@@ -222,5 +222,8 @@ HTML;
 
         $expanded = $service->ensureMinBodyWords('<p>ফ্রড চেকার ছোট লেখা।</p>', 'ফ্রড চেকার', 80);
         $this->assertGreaterThanOrEqual(80, $service->bodyWordCount($expanded));
+
+        $full = $service->ensureMinBodyWords('<p>ফ্রড চেকার সংক্ষিপ্ত খসড়া।</p>', 'ফ্রড চেকার', 800);
+        $this->assertGreaterThanOrEqual(800, $service->bodyWordCount($full));
     }
 }

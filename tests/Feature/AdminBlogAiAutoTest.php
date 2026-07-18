@@ -226,7 +226,8 @@ class AdminBlogAiAutoTest extends TestCase
     public function test_soft_pass_caps_score_and_marks_needs_review(): void
     {
         config([
-            'blog_ai.min_body_words' => 5000,
+            // Unfixable via deterministic polish (expander cannot invent 20 FAQs).
+            'blog_ai.seo_quality.min_faqs' => 20,
             'blog_ai.auto.max_revisions_per_step' => 0,
             'blog_ai.auto.soft_pass_score_cap' => 59,
             'blog_ai.auto.allow_draft_soft_pass' => true,

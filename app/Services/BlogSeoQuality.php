@@ -563,7 +563,10 @@ class BlogSeoQuality
 
         $guard = 0;
         $n = count($templates);
-        while ($this->bodyWordCount($body) < $min && $guard < 24) {
+        // ~12–18 words per template line; size the loop so thin drafts can still hit min_body_words.
+        $approxWordsPerPad = 14;
+        $maxPads = max(24, (int) ceil(($min - $current) / $approxWordsPerPad) + 8);
+        while ($this->bodyWordCount($body) < $min && $guard < $maxPads) {
             $line = $templates[$guard % $n];
             $suffix = $guard >= $n ? ' (ধাপ '.($guard + 1).')' : '';
             $body = rtrim($body)."\n<p>".e($line.$suffix).'</p>';
