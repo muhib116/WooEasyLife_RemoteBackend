@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BlogLearningInsight;
+use App\Services\BlogAi\BlogLearningService;
+use App\Services\Seo\GoogleSearchConsoleClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -135,6 +137,15 @@ class SystemMaintenanceController extends Controller
             'description' => 'php artisan seo:weekly-report',
             'commands' => ['seo:weekly-report'],
             'group' => 'blog',
+        ],
+        'seo_gsc_status' => [
+            'label' => 'GSC status / probe',
+            'description' => 'php artisan seo:gsc-status --probe — check Google Search Console OAuth + fetch sample queries',
+            'commands' => [
+                ['seo:gsc-status', ['--probe' => true]],
+            ],
+            'group' => 'blog',
+            'include_in_run_all' => false,
         ],
 
         'subscriptions_apply_expiry' => [
@@ -494,6 +505,40 @@ class SystemMaintenanceController extends Controller
             $learning = null;
         }
 
+        $rankOpportunities = [
+            'configured' => false,
+            'table_ready' => false,
+            'refreshed_at' => null,
+            'summary' => [],
+            'items' => [],
+        ];
+        try {
+            $rankOpportunities = app(BlogLearningService::class)
+                ->rankOpportunitiesForAdmin(30);
+        } catch (Throwable) {
+            // Keep empty payload — maintenance page must not break if learning service fails.
+        }
+
+        $gscStatus = [
+            'site_url' => null,
+            'has_site_url' => false,
+            'has_client_id' => false,
+            'has_client_secret' => false,
+            'has_refresh_token' => false,
+            'has_static_access_token' => false,
+            'auth_mode' => 'missing',
+            'ready' => false,
+            'can_connect' => false,
+            'connect_url' => null,
+            'disconnect_url' => null,
+            'refresh_token_source' => null,
+        ];
+        try {
+            $gscStatus = app(GoogleSearchConsoleClient::class)->configurationStatus();
+        } catch (Throwable) {
+            // ignore
+        }
+
         return [
             'storage_link_exists' => is_link($link) || File::exists($link),
             'storage_link_path' => $link,
@@ -503,6 +548,8 @@ class SystemMaintenanceController extends Controller
             'actions' => $actions,
             'groups' => $groups,
             'blog_learning' => $learning,
+            'rank_opportunities' => $rankOpportunities,
+            'gsc_status' => $gscStatus,
         ];
     }
 }

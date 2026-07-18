@@ -19,8 +19,19 @@ return [
     'html_lang' => 'bn-BD',
 
     'gsc' => [
-        'site_url' => env('SEO_GSC_SITE_URL'), // e.g. https://app.wpsalehub.com/
+        // Property URL as verified in Search Console, e.g. https://wooeasylife.com/
+        'site_url' => env('SEO_GSC_SITE_URL'),
+        /*
+        | OAuth (preferred): reuse Google Cloud OAuth client + a refresh token
+        | with scope https://www.googleapis.com/auth/webmasters.readonly
+        */
+        'client_id' => env('SEO_GSC_CLIENT_ID', env('GOOGLE_CLIENT_ID')),
+        'client_secret' => env('SEO_GSC_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET')),
+        'refresh_token' => env('SEO_GSC_REFRESH_TOKEN', env('GOOGLE_GSC_REFRESH_TOKEN')),
+        // Legacy fallback: short-lived access token (avoid in production).
         'access_token' => env('SEO_GSC_ACCESS_TOKEN'),
+        // One-click admin connect callback (must match Google Cloud OAuth redirect URI).
+        'oauth_redirect' => env('SEO_GSC_REDIRECT_URI'),
     ],
 
     'organization' => [

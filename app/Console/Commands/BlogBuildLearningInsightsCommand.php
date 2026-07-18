@@ -33,11 +33,22 @@ class BlogBuildLearningInsightsCommand extends Command
                 $this->info("Rolled up {$rollup['slugs']} slugs ({$rollup['events']} event-linked counts).");
                 $gsc = $learning->syncGscPageMetrics();
                 if (! empty($gsc['skipped'])) {
-                    $this->line('GSC page sync skipped (no SEO_GSC_* credentials).');
+                    $this->line('GSC page sync skipped (set SEO_GSC_SITE_URL + OAuth / token).');
                 } elseif (! empty($gsc['error'])) {
                     $this->warn('GSC sync error: '.$gsc['error']);
                 } else {
                     $this->info('GSC pages synced: '.($gsc['synced'] ?? 0));
+                }
+
+                $gscQueries = $learning->syncGscQueryMetrics();
+                if (! empty($gscQueries['skipped']) && ($gscQueries['error'] ?? null) === 'missing_table') {
+                    $this->warn('GSC query sync skipped (run migrations for blog_gsc_query_metrics).');
+                } elseif (! empty($gscQueries['skipped'])) {
+                    $this->line('GSC query sync skipped (set SEO_GSC_SITE_URL + OAuth / token).');
+                } elseif (! empty($gscQueries['error'])) {
+                    $this->warn('GSC query sync error: '.$gscQueries['error']);
+                } else {
+                    $this->info('GSC query×page rows synced: '.($gscQueries['synced'] ?? 0));
                 }
 
                 return self::SUCCESS;

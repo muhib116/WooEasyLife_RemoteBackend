@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -272,5 +273,171 @@ class AdminBlogPostTest extends TestCase
     public function test_guest_cannot_access_blog_cms(): void
     {
         $this->get(route('blogPosts.index'))->assertRedirect();
+    }
+
+    public function test_admin_can_share_published_post_to_facebook_page(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/photos' => Http::response([
+                'id' => 'photo-1',
+                'post_id' => '111_222',
+            ], 200),
+        ]);
+
+        config([
+            'app.url' => 'http://localhost:8000',
+            'services.facebook.page_id' => '111',
+            'services.facebook.page_access_token' => 'test-page-token',
+            'services.facebook.graph_version' => 'v21.0',
+            'services.facebook.share_base_url' => 'https://wooeasylife.com',
+            'seo.default_og_image' => '/images/seo/og-default.jpg',
+        ]);
+
+        $admin = $this->adminUser();
+        $post = BlogPost::create([
+            'title' => 'ফেক অর্ডার কমানোর উপায়',
+            'slug' => 'fake-order-komanor-upay',
+            'locale' => 'bn',
+            'status' => 'published',
+            'excerpt' => 'COD সেলারদের জন্য প্র্যাকটিক্যাল গাইড।',
+            'body_html' => '<p><a href="/bd-fraud-checker">Fraud checker</a></p>',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('blogPosts.shareFacebook', $post), [
+                'message' => "টেস্ট ক্যাপশন\n\n👉 বিস্তারিত পড়ুন 👇",
+            ])
+            ->assertRedirect(route('blogPosts.index'))
+            ->assertSessionHas('success');
+
+        $post->refresh();
+        $this->assertSame('111_222', $post->facebook_post_id);
+        $this->assertNotNull($post->facebook_shared_at);
+
+        $recorded = Http::recorded();
+        $this->assertGreaterThan(0, $recorded->count());
+        $request = $recorded[0][0];
+        $this->assertStringContainsString('/111/photos', $request->url());
+        $this->assertTrue($request->isMultipart());
+
+        $caption = '';
+        foreach ($request->data() as $part) {
+            if (($part['name'] ?? null) === 'caption') {
+                $caption = (string) ($part['contents'] ?? '');
+                break;
+            }
+        }
+        $this->assertStringContainsString('টেস্ট ক্যাপশন', $caption);
+        $this->assertStringContainsString('https://wooeasylife.com/blog/fake-order-komanor-upay', $caption);
+    }
+
+    public function test_facebook_share_on_localhost_skips_invalid_link_param(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/feed' => Http::response(['id' => '111_333'], 200),
+        ]);
+
+        // No local default image available in this isolated assertion path —
+        // force feed mode by pointing default OG at a missing file.
+        config([
+            'app.url' => 'http://localhost:8000',
+            'services.facebook.page_id' => '111',
+            'services.facebook.page_access_token' => 'test-page-token',
+            'services.facebook.graph_version' => 'v21.0',
+            'services.facebook.share_base_url' => null,
+            'seo.default_og_image' => '/images/seo/does-not-exist.jpg',
+        ]);
+
+        $admin = $this->adminUser();
+        $post = BlogPost::create([
+            'title' => 'Local Share',
+            'slug' => 'local-share',
+            'locale' => 'en',
+            'status' => 'published',
+            'body_html' => '<p><a href="/bd-fraud-checker">Link</a></p>',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('blogPosts.shareFacebook', $post), [
+                'message' => 'Hello local',
+            ])
+            ->assertRedirect(route('blogPosts.index'))
+            ->assertSessionHas('success');
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+
+            return str_contains($request->url(), '/feed')
+                && str_contains((string) ($data['message'] ?? ''), 'Hello local')
+                && str_contains((string) ($data['message'] ?? ''), 'http://localhost:8000/blog/local-share')
+                && ! array_key_exists('link', $data);
+        });
+    }
+
+    public function test_facebook_share_blocked_when_already_shared_without_force(): void
+    {
+        Http::fake();
+
+        config([
+            'services.facebook.page_id' => '111',
+            'services.facebook.page_access_token' => 'test-page-token',
+        ]);
+
+        $admin = $this->adminUser();
+        $post = BlogPost::create([
+            'title' => 'Already Shared',
+            'slug' => 'already-shared',
+            'locale' => 'en',
+            'status' => 'published',
+            'body_html' => '<p><a href="/bd-fraud-checker">Link</a></p>',
+            'published_at' => now(),
+            'facebook_post_id' => '111_999',
+            'facebook_shared_at' => now()->subDay(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('blogPosts.shareFacebook', $post), [
+                'message' => 'Again',
+            ])
+            ->assertRedirect(route('blogPosts.index'))
+            ->assertSessionHas('error');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_facebook_share_requires_published_post(): void
+    {
+        Http::fake();
+
+        config([
+            'services.facebook.page_id' => '111',
+            'services.facebook.page_access_token' => 'test-page-token',
+        ]);
+
+        $admin = $this->adminUser();
+        $post = BlogPost::create([
+            'title' => 'Draft Only',
+            'slug' => 'draft-only',
+            'locale' => 'bn',
+            'status' => 'draft',
+            'body_html' => '<p>Draft</p>',
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('blogPosts.shareFacebook', $post))
+            ->assertRedirect(route('blogPosts.index'))
+            ->assertSessionHas('error');
+
+        Http::assertNothingSent();
     }
 }

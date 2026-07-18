@@ -207,16 +207,17 @@ class BlogStepReviewAgent
                 $failures[] = 'thin_outline';
                 $score = 45;
                 $decision = 'revise';
-                $fix = 'Expand outline to at least 4 H2 sections with practical BD seller bullets, a comparison or checklist section, and 3+ FAQs.';
+                $fix = 'Expand outline to at least 4 H2 sections with practical BD seller bullets, H3 children on 2+ sections, a comparison or checklist section, and 5+ FAQs.';
             } else {
                 $score = 75 + min(15, count($sections) * 2);
             }
             $faqs = $outline['faqs'] ?? [];
-            if (! is_array($faqs) || count($faqs) < 3) {
+            $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
+            if (! is_array($faqs) || count($faqs) < $minFaqs) {
                 $failures[] = 'few_faqs';
                 $score = min($score, 62);
                 $decision = 'revise';
-                $fix = trim(($fix ? $fix.' ' : '').'Add at least 3 FAQs with a_points.');
+                $fix = trim(($fix ? $fix.' ' : '')."Add at least {$minFaqs} FAQs with a_points.");
             }
             $links = $outline['internal_links'] ?? $session->link_plan_json ?? [];
             if (! is_array($links) || count($links) < 2) {

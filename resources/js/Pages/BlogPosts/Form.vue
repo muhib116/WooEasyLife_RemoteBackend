@@ -649,23 +649,43 @@ const checklist = computed(() => {
     const contentImageAltOk = !hasContentImage
         || /<img\b[^>]*\balt=["'][^"']+["']/i.test(form.body_html || '');
     const hasOgImage = Boolean(String(form.og_image || '').trim() || ogPreview.value);
+    const hasH3 = /<h3[\s>]/i.test(form.body_html || '');
+    const hasLists = /<(ul|ol)[\s>]/i.test(form.body_html || '');
+    const keywordInH2 = (() => {
+        if (!keyword) return false;
+        const matches = form.body_html?.match(/<h2\b[^>]*>(.*?)<\/h2>/gis) || [];
+        return matches.some((h) => stripHtml(h).toLowerCase().includes(keyword));
+    })();
+    const hasQuickAnswer =
+        /seo-quick-answer/i.test(form.body_html || '')
+        || /<h2\b[^>]*>[^<]*(Quick Answer|দ্রুত উত্তর)[^<]*<\/h2>/iu.test(form.body_html || '');
+    const hasAiSummary =
+        /seo-ai-summary/i.test(form.body_html || '')
+        || /<h2\b[^>]*>[^<]*(AI Search Summary|AI Summary|এআই সারাংশ)[^<]*<\/h2>/iu.test(form.body_html || '');
     const wordCount = bodyText ? bodyText.split(/\s+/).filter(Boolean).length : 0;
     const keywordInTitle = keyword ? title.includes(keyword) : false;
+    const minFaqs = 5;
+    const minWordsAi = 800;
 
     return [
         { label: 'Title present', ok: Boolean(form.title?.trim()) },
         { label: 'Focus keyword set', ok: Boolean(keyword) },
         { label: 'Keyword in title (soft warn on publish)', ok: keywordInTitle },
         { label: 'Keyword in first paragraph', ok: keyword ? firstParagraph.includes(keyword) : false },
+        { label: 'Keyword in one H2', ok: keywordInH2 },
         { label: 'Meta description 50–160 chars', ok: metaDescLen.value >= 50 && metaDescLen.value <= 160 },
         { label: 'Keyword in meta description', ok: keyword ? metaDesc.includes(keyword) : false },
         { label: 'Body has H2 heading', ok: hasH2 },
+        { label: 'Body has H3 heading', ok: hasH3 },
+        { label: 'Has bullet or numbered list', ok: hasLists },
+        { label: 'Featured snippet (দ্রুত উত্তর)', ok: hasQuickAnswer },
+        { label: 'AI Search Summary (এআই সারাংশ)', ok: hasAiSummary },
         { label: 'At least one internal link (required to publish)', ok: internalLinks.length >= 1 },
         { label: '2+ internal links (AI target)', ok: internalLinks.length >= 2 },
-        { label: 'FAQs ≥ 3 (AI target)', ok: faqCount >= 3 },
+        { label: `FAQs ≥ ${minFaqs} (AI target)`, ok: faqCount >= minFaqs },
         { label: 'OG / cover image (add if you skipped AI image)', ok: hasOgImage },
         { label: 'Content image with alt', ok: hasContentImage && contentImageAltOk },
-        { label: 'Body ≥ 300 words', ok: wordCount >= 300 },
+        { label: `Body ≥ ${minWordsAi} words (AI target)`, ok: wordCount >= minWordsAi },
         { label: 'Readable English SEO slug', ok: isSeoSlug(form.slug) && !isPlaceholderSlug(form.slug) },
         { label: 'Slug does not shadow markdown', ok: !markdownConflict.value },
     ];

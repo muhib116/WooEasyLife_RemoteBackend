@@ -17,15 +17,20 @@ class BlogSeoQuality
      *     word_count: int,
      *     word_count_ok: bool,
      *     has_h2: bool,
+     *     has_h3: bool,
+     *     has_lists: bool,
      *     has_internal_link: bool,
      *     internal_link_count: int,
      *     internal_links_ok: bool,
      *     keyword_in_title: bool,
      *     keyword_in_meta: bool,
      *     keyword_in_first_paragraph: bool,
+     *     keyword_in_h2: bool,
      *     meta_description_ok: bool,
      *     faq_count: int,
      *     faq_count_ok: bool,
+     *     has_quick_answer: bool,
+     *     has_ai_search_summary: bool,
      *     has_content_image: bool,
      *     content_image_alt_ok: bool,
      *     secondary_keyword_in_body: bool,
@@ -50,7 +55,7 @@ class BlogSeoQuality
     ): array {
         $minWords = (int) config('blog_ai.min_body_words', 800);
         $minLinks = (int) config('blog_ai.seo_quality.min_internal_links', 2);
-        $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 3);
+        $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
 
         $plain = $this->plainText($bodyHtml);
         $words = $plain === '' ? 0 : count(preg_split('/\s+/u', $plain) ?: []);
@@ -84,13 +89,18 @@ class BlogSeoQuality
         $checks = [
             'word_count_ok' => $words >= $minWords,
             'has_h2' => (bool) preg_match('/<h2[\s>]/i', $bodyHtml),
+            'has_h3' => (bool) preg_match('/<h3[\s>]/i', $bodyHtml),
+            'has_lists' => (bool) preg_match('/<(ul|ol)[\s>]/i', $bodyHtml),
             'has_internal_link' => $linkCount >= 1,
             'internal_links_ok' => $linkCount >= $minLinks,
             'keyword_in_title' => $kw !== '' && $this->textContainsKeyword($title, $focusKeyword),
             'keyword_in_meta' => $kw !== '' && $this->textContainsKeyword($metaDescription, $focusKeyword),
             'keyword_in_first_paragraph' => $kw !== '' && $this->textContainsKeyword($firstParagraph, $focusKeyword),
+            'keyword_in_h2' => $kw !== '' && $this->keywordInHeading($bodyHtml, 'h2', $focusKeyword),
             'meta_description_ok' => mb_strlen($metaDescription) >= 50 && mb_strlen($metaDescription) <= 160,
             'faq_count_ok' => $faqCount >= $minFaqs,
+            'has_quick_answer' => $this->hasQuickAnswer($bodyHtml),
+            'has_ai_search_summary' => $this->hasAiSearchSummary($bodyHtml),
             'has_content_image' => $hasContentImage,
             'content_image_alt_ok' => $contentImageAltOk,
             'secondary_keyword_in_body' => $secondaryHit,
@@ -109,6 +119,22 @@ class BlogSeoQuality
             'faq_count_ok',
             'secondary_keyword_in_body',
         ];
+
+        if (config('blog_ai.seo_quality.require_keyword_in_h2', true)) {
+            $aiRequired[] = 'keyword_in_h2';
+        }
+        if (config('blog_ai.seo_quality.require_quick_answer', true)) {
+            $aiRequired[] = 'has_quick_answer';
+        }
+        if (config('blog_ai.seo_quality.require_ai_search_summary', true)) {
+            $aiRequired[] = 'has_ai_search_summary';
+        }
+        if (config('blog_ai.seo_quality.require_h3', true)) {
+            $aiRequired[] = 'has_h3';
+        }
+        if (config('blog_ai.seo_quality.require_lists', true)) {
+            $aiRequired[] = 'has_lists';
+        }
 
         $publishRequiredKeys = config('blog_ai.seo_quality.enforce_on_publish', [
             'has_internal_link' => true,
@@ -145,15 +171,20 @@ class BlogSeoQuality
             'word_count' => $words,
             'word_count_ok' => $checks['word_count_ok'],
             'has_h2' => $checks['has_h2'],
+            'has_h3' => $checks['has_h3'],
+            'has_lists' => $checks['has_lists'],
             'has_internal_link' => $checks['has_internal_link'],
             'internal_link_count' => $linkCount,
             'internal_links_ok' => $checks['internal_links_ok'],
             'keyword_in_title' => $checks['keyword_in_title'],
             'keyword_in_meta' => $checks['keyword_in_meta'],
             'keyword_in_first_paragraph' => $checks['keyword_in_first_paragraph'],
+            'keyword_in_h2' => $checks['keyword_in_h2'],
             'meta_description_ok' => $checks['meta_description_ok'],
             'faq_count' => $faqCount,
             'faq_count_ok' => $checks['faq_count_ok'],
+            'has_quick_answer' => $checks['has_quick_answer'],
+            'has_ai_search_summary' => $checks['has_ai_search_summary'],
             'has_content_image' => $checks['has_content_image'],
             'content_image_alt_ok' => $checks['content_image_alt_ok'],
             'secondary_keyword_in_body' => $checks['secondary_keyword_in_body'],
@@ -346,6 +377,15 @@ class BlogSeoQuality
 
     public function firstParagraphText(string $html): string
     {
+        // Prefer the first <p> after optional Quick Answer section, else first <p>.
+        if (preg_match(
+            '/seo-quick-answer[\s\S]*?<\/section>\s*<p\b[^>]*>(.*?)<\/p>/is',
+            $html,
+            $m,
+        )) {
+            return trim(html_entity_decode(strip_tags($m[1])));
+        }
+
         if (preg_match('/<p\b[^>]*>(.*?)<\/p>/is', $html, $m)) {
             return trim(html_entity_decode(strip_tags($m[1])));
         }
@@ -353,6 +393,83 @@ class BlogSeoQuality
         $plain = $this->plainText($html);
 
         return Str::limit($plain, 400, '');
+    }
+
+    public function hasQuickAnswer(string $html): bool
+    {
+        if (preg_match('/class=["\'][^"\']*seo-quick-answer/i', $html)) {
+            return true;
+        }
+
+        return (bool) preg_match('/<h2\b[^>]*>[^<]*(Quick Answer|দ্রুত উত্তর)[^<]*<\/h2>/iu', $html);
+    }
+
+    public function hasAiSearchSummary(string $html): bool
+    {
+        if (preg_match('/class=["\'][^"\']*seo-ai-summary/i', $html)) {
+            return true;
+        }
+
+        return (bool) preg_match(
+            '/<h2\b[^>]*>[^<]*(AI Search Summary|AI Summary|এআই সারাংশ)[^<]*<\/h2>/iu',
+            $html,
+        );
+    }
+
+    public function keywordInHeading(string $html, string $tag, string $keyword): bool
+    {
+        $tag = strtolower($tag);
+        if (! in_array($tag, ['h1', 'h2', 'h3'], true)) {
+            return false;
+        }
+
+        if (! preg_match_all('/<'.$tag.'\b[^>]*>(.*?)<\/'.$tag.'>/is', $html, $matches)) {
+            return false;
+        }
+
+        foreach ($matches[1] as $headingHtml) {
+            $text = trim(html_entity_decode(strip_tags((string) $headingHtml)));
+            if ($this->textContainsKeyword($text, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Ensure Featured Snippet + AI Search Summary blocks exist when the model returned text fields.
+     */
+    public function ensureSeoContentBlocks(
+        string $bodyHtml,
+        ?string $quickAnswer,
+        ?string $aiSearchSummary,
+    ): string {
+        $body = $bodyHtml;
+        $quick = trim((string) $quickAnswer);
+        $summary = trim((string) $aiSearchSummary);
+
+        if ($quick !== '' && ! $this->hasQuickAnswer($body)) {
+            $block = '<section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>'
+                .e(Str::limit($quick, 500, ''))
+                .'</p></section>';
+            $body = $block."\n".$body;
+        }
+
+        if ($summary !== '' && ! $this->hasAiSearchSummary($body)) {
+            $block = '<section class="seo-ai-summary"><h2>এআই সারাংশ</h2><p>'
+                .e(Str::limit($summary, 1200, ''))
+                .'</p></section>';
+            // Place before a trailing FAQ-looking h2 if present; else append.
+            if (preg_match('/<h2\b[^>]*>[^<]*(FAQ|প্রশ্ন|সচরাচর)[^<]*<\/h2>/iu', $body, $m, PREG_OFFSET_CAPTURE)) {
+                $pos = $m[0][1];
+                $body = substr($body, 0, $pos).$block."\n".substr($body, $pos);
+            } else {
+                $body = rtrim($body)."\n".$block;
+            }
+        }
+
+        return $body;
     }
 
     /**

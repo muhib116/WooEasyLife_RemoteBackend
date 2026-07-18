@@ -18,6 +18,8 @@ class BlogContentAgent
         private BdKeywordSuggestService $keywordSuggest,
         private BlogSeoQuality $seoQuality,
         private BlogLandingContextService $landingContext,
+        private BlogPromptLibrary $prompts,
+        private BlogLearningService $learning,
     ) {}
 
     /**
@@ -34,8 +36,12 @@ class BlogContentAgent
             $seedQueries = [];
         }
 
+        $gscSeeds = $this->learning->gscKeywordSeeds(10);
+        $gscQueries = collect($gscSeeds)->pluck('query')->filter()->values()->all();
+
         $suggestSeeds = array_values(array_filter(array_merge(
             $seedTopic !== '' ? [$seedTopic] : [],
+            $gscQueries,
             $seedQueries,
             [$clusterLabel],
         )));
@@ -54,6 +60,7 @@ Rules:
 - Prefer Bangla or BD-English hybrid phrases BD COD / WooCommerce sellers actually search
 - Include 1–2 short head terms and several long-tail phrases
 - Ground keywords in live Google Suggest (gl=bd) when provided; do not invent US-centric terms
+- Prefer gsc_rank_queries (real Search Console opportunities) when relevant to the cluster
 - Stay inside WooEasyLife product truth (fraud, courier, missing orders, pixel, AI order, packing, multistore, team)
 - Prefer phrases aligned with cluster_landing angle_hint and page H1/lead
 - No brand spam lists; each keyword must be useful for an article
@@ -64,6 +71,7 @@ TXT;
             'cluster' => $cluster,
             'cluster_label' => $clusterLabel,
             'live_google_suggest_bd' => $liveSuggestions,
+            'gsc_rank_queries' => $gscSeeds,
             'product_brief' => $this->briefBuilder->build($cluster),
             'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
@@ -90,24 +98,26 @@ TXT;
         if ($keywords === []) {
             $fallback = array_values(array_filter(array_merge(
                 $seedTopic !== '' ? [$seedTopic] : [],
+                array_slice($gscQueries, 0, 5),
                 array_slice($seedQueries, 0, 5),
             )));
             $keywords = $fallback !== [] ? $fallback : ['WooCommerce বাংলাদেশ'];
         }
 
-        // Merge a few live suggestions the model missed.
-        foreach ($liveSuggestions as $live) {
+        // Merge GSC opportunity queries the model missed, then live suggestions.
+        foreach (array_merge($gscQueries, $liveSuggestions) as $extra) {
             if (count($keywords) >= 12) {
                 break;
             }
-            if (! in_array($live, $keywords, true)) {
-                $keywords[] = $live;
+            if (! in_array($extra, $keywords, true)) {
+                $keywords[] = $extra;
             }
         }
 
         return [
             'keywords' => array_values(array_slice($keywords, 0, 12)),
             'live_suggestions' => $liveSuggestions,
+            'gsc_rank_queries' => $gscSeeds,
             'usage' => $result['usage'],
         ];
     }
@@ -144,6 +154,8 @@ TXT;
             ))),
         );
 
+        $gscSeeds = $this->learning->gscKeywordSeeds(10);
+
         $system = $this->systemPrompt().<<<'TXT'
 
 
@@ -158,7 +170,7 @@ Return JSON only:
 }
 Prefer Bangla or BD-English hybrid phrases sellers actually search.
 Do not invent US-centric keywords.
-Prioritize pasted keywords and live Google Suggest results from Bangladesh (gl=bd).
+Prioritize pasted keywords, gsc_rank_queries (Search Console opportunities), then live Google Suggest (gl=bd).
 Align primary intent with cluster_landing (same problem the landing page solves).
 If avoid_primary_keywords is non-empty, the primary MUST be a different long-tail angle that is not in that list and not an exact match of existing post focus keywords.
 TXT;
@@ -170,6 +182,7 @@ TXT;
             'pasted_keywords' => $pasted,
             'avoid_primary_keywords' => $avoidPrimaries,
             'live_google_suggest_bd' => $liveSuggestions,
+            'gsc_rank_queries' => $gscSeeds,
             'product_brief' => $this->briefBuilder->build($cluster),
             'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
@@ -413,9 +426,8 @@ TXT;
             ]);
         }
 
-        $system = $this->systemPrompt().<<<'TXT'
-
-
+        $outlinePrompt = $this->prompts->outline();
+        $system = $this->systemPrompt()."\n\n".($outlinePrompt !== '' ? $outlinePrompt : <<<'TXT'
 Create one SEO outline for a Bangla blog post using the selected hook(s).
 Prefer the first selected hook as H1; others may become H2 angles if complementary.
 Return JSON:
@@ -431,9 +443,9 @@ Return JSON:
 Use ONLY paths from the provided internal link catalog (2–4 links).
 MUST include cluster_landing.primary_path (or must_link_paths) as the first internal link.
 Echo page FAQs/angle_hint truth — do not invent features beyond product_brief + cluster_landing.
-Include 3–6 FAQ items under faqs (q + a_points).
+Include at least 5 FAQ items under faqs (q + a_points).
 Include a differentiation section that beats generic competitor blogs (practical BD COD steps + WooEasyLife truth).
-TXT;
+TXT);
 
         $cluster = (string) ($session->cluster ?: 'general');
         $user = json_encode([
@@ -444,12 +456,16 @@ TXT;
             'internal_link_catalog' => $this->linkCatalog->all(),
             'fix_instructions' => $fixInstructions,
             'previous_outline' => $fixInstructions ? ($session->outline_json ?? null) : null,
+            'seo_targets' => [
+                'min_faqs' => (int) config('blog_ai.seo_quality.min_faqs', 5),
+                'min_sections' => 4,
+            ],
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
-        ], 0.5);
+        ], 0.4);
 
         $outline = $this->openAi->decodeJsonObject($result['content']);
         $outline['internal_links'] = $this->filterValidLinks($outline['internal_links'] ?? [], $cluster);
@@ -477,39 +493,17 @@ TXT;
 
         $minWords = (int) config('blog_ai.min_body_words', 800);
         $author = config('blog_ai.author_name', 'Muhibbullah Ansary');
+        $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
 
-        $system = $this->systemPrompt().<<<TXT
-
-
+        $articlePrompt = $this->prompts->articleWriter((string) $author, $minWords);
+        $system = $this->systemPrompt()."\n\n".($articlePrompt !== '' ? $articlePrompt : <<<TXT
 Write a complete Bangladesh SEO blog post in Bangla based on the outline.
-Return JSON:
-{
-  "title": "...",
-  "slug": "latin-kebab-only",
-  "locale": "bn",
-  "focus_keyword": "...",
-  "meta_title": "<=70 chars",
-  "meta_description": "50-160 chars",
-  "excerpt": "...",
-  "author_name": "{$author}",
-  "robots": "index,follow",
-  "body_html": "<h2>...</h2><p>...</p> valid HTML only (h2,h3,p,ul,ol,li,a,strong,em,blockquote)",
-  "faqs": [{"q": "...", "a": "..."}],
-  "seo_notes": ["..."]
-}
-Requirements:
-- body_html roughly {$minWords}+ words of Bangla content
-- Include focus keyword in title, FIRST <p> paragraph, meta_description, and one H2 naturally
-- Include at least 2 secondary keywords from keywords.secondary naturally in body (not stuffed)
-- Include at least 2 internal links using exact paths from link_plan (href="/path")
-- MUST include an href to cluster_landing.primary_path (landing page for this topic)
-- Body claims must stay inside product_brief + cluster_landing (page lead, FAQs, claims)
-- Include 3–6 FAQs matching the outline (q/a plain text)
-- One soft WooEasyLife CTA near the end pointing to primary_path — not spammy
-- No script tags, no invented product claims
-- slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$ and must be unique (avoid colliding with existing posts)
-- If fix_instructions are provided, obey them strictly while keeping product truth
-TXT;
+Return JSON with title, slug, focus_keyword, meta_title, meta_description, excerpt,
+author_name "{$author}", quick_answer, ai_search_summary, body_html, faqs, seo_notes.
+Requirements: {$minWords}+ words; keyword in title, first <p>, meta, one H2;
+at least {$minFaqs} FAQs; Featured Snippet Quick Answer + AI Search Summary sections;
+2+ internal links including cluster_landing.primary_path; H2+H3; lists; soft CTA.
+TXT);
 
         $cluster = (string) ($session->cluster ?: 'general');
         $user = json_encode([
@@ -522,6 +516,13 @@ TXT;
             'previous_draft_quality' => $fixInstructions
                 ? ($session->draft_json['quality'] ?? null)
                 : null,
+            'seo_targets' => [
+                'min_words' => $minWords,
+                'min_faqs' => $minFaqs,
+                'require_keyword_in_h2' => (bool) config('blog_ai.seo_quality.require_keyword_in_h2', true),
+                'require_quick_answer' => (bool) config('blog_ai.seo_quality.require_quick_answer', true),
+                'require_ai_search_summary' => (bool) config('blog_ai.seo_quality.require_ai_search_summary', true),
+            ],
             'existing_slug_collisions' => $this->seoQuality->findCollisions(
                 slug: is_string($session->outline_json['slug_suggestion'] ?? null)
                     ? (string) $session->outline_json['slug_suggestion']
@@ -536,7 +537,7 @@ TXT;
         $result = $this->openAi->chatJson([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
-        ], 0.55);
+        ], 0.35);
 
         $draft = $this->openAi->decodeJsonObject($result['content']);
         $draft = $this->normalizeDraft(
@@ -558,7 +559,7 @@ TXT;
 
     private function systemPrompt(): string
     {
-        return 'You are an expert Bangladesh SEO content strategist for WooEasyLife, a WooCommerce operations platform for BD sellers (fraud checker, checkout OTP/block, auto courier, missing orders, Facebook pixel protection, AI message-to-order, packing/print, multistore app, team call tracking). Always obey the product brief and cluster_landing page context (H1, lead, FAQs, claims, primary_path). Never invent features or numbers. Soft CTA to the matching landing page. When performance_learning is present, prefer recommended clusters, winning title angles, and coverage gaps; avoid cloning underperforming topics.';
+        return $this->prompts->system();
     }
 
     /**
@@ -686,6 +687,28 @@ TXT;
             $this->seoQuality->ensureInternalLinks($body, $linkPlan, $minLinks)
         );
 
+        $body = BlogHtmlSanitizer::sanitize(
+            $this->seoQuality->ensureSeoContentBlocks(
+                $body,
+                is_string($draft['quick_answer'] ?? null) ? (string) $draft['quick_answer'] : null,
+                is_string($draft['ai_search_summary'] ?? null) ? (string) $draft['ai_search_summary'] : (
+                    is_array($outline['ai_search_summary_points'] ?? null)
+                        ? collect($outline['ai_search_summary_points'])->filter()->implode(' ')
+                        : null
+                ),
+            )
+        );
+
+        // Prefer outline quick_answer_points when model omitted quick_answer field.
+        if (! $this->seoQuality->hasQuickAnswer($body) && is_array($outline['quick_answer_points'] ?? null)) {
+            $fromOutline = collect($outline['quick_answer_points'])->map(fn ($p) => trim((string) $p))->filter()->implode(' ');
+            if ($fromOutline !== '') {
+                $body = BlogHtmlSanitizer::sanitize(
+                    $this->seoQuality->ensureSeoContentBlocks($body, $fromOutline, null)
+                );
+            }
+        }
+
         $metaTitle = Str::limit(trim((string) ($draft['meta_title'] ?? $draft['title'] ?? '')), 70, '');
         $metaDescription = Str::limit(trim((string) ($draft['meta_description'] ?? $draft['excerpt'] ?? '')), 160, '');
         $faqs = $this->normalizeFaqs($draft['faqs'] ?? null, $outline['faqs'] ?? null);
@@ -745,6 +768,8 @@ TXT;
             'excerpt' => Str::limit(trim((string) ($draft['excerpt'] ?? '')), 500, ''),
             'author_name' => trim((string) ($draft['author_name'] ?? $author)) ?: $author,
             'robots' => 'index,follow',
+            'quick_answer' => Str::limit(trim((string) ($draft['quick_answer'] ?? '')), 500, ''),
+            'ai_search_summary' => Str::limit(trim((string) ($draft['ai_search_summary'] ?? '')), 1200, ''),
             'body_html' => $body,
             'faqs' => $faqs,
             'seo_notes' => $notes,
@@ -781,7 +806,7 @@ TXT;
                 ];
             })
             ->filter(fn (array $row) => $row['q'] !== '' && $row['a'] !== '')
-            ->take(8)
+            ->take(10)
             ->values()
             ->all();
     }

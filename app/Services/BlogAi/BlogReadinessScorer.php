@@ -71,16 +71,21 @@ class BlogReadinessScorer
     public function scoreFromSeoQuality(array $quality): int
     {
         $checks = [
-            'word_count_ok' => 18,
-            'has_h2' => 8,
-            'internal_links_ok' => 14,
-            'keyword_in_title' => 12,
-            'keyword_in_first_paragraph' => 12,
-            'keyword_in_meta' => 8,
-            'meta_description_ok' => 8,
-            'faq_count_ok' => 10,
-            'secondary_keyword_in_body' => 5,
-            'has_content_image' => 5,
+            'word_count_ok' => 14,
+            'has_h2' => 6,
+            'has_h3' => 4,
+            'has_lists' => 4,
+            'internal_links_ok' => 10,
+            'keyword_in_title' => 10,
+            'keyword_in_first_paragraph' => 10,
+            'keyword_in_h2' => 8,
+            'keyword_in_meta' => 6,
+            'meta_description_ok' => 6,
+            'faq_count_ok' => 8,
+            'has_quick_answer' => 6,
+            'has_ai_search_summary' => 4,
+            'secondary_keyword_in_body' => 4,
+            'has_content_image' => 4,
         ];
 
         $score = 0;
@@ -95,7 +100,7 @@ class BlogReadinessScorer
         }
 
         if (! empty($quality['ai_ready'])) {
-            $score = max($score, 78);
+            $score = max($score, 88);
         }
 
         return max(0, min(100, $score));

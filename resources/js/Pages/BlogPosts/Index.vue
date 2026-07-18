@@ -11,6 +11,15 @@
                 <template #actions>
                     <div class="flex flex-wrap gap-2">
                         <Button
+                            v-if="canManageMaintenance"
+                            label="SEO & Learning"
+                            icon="pi pi-chart-line"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            @click="openSeoLearningDialog"
+                        />
+                        <Button
                             label="New Post"
                             icon="pi pi-plus"
                             size="small"
@@ -65,9 +74,18 @@
                     {{ learning.insight.summary_bn }}
                 </p>
                 <p v-else class="text-sm text-gray-500">
-                    No insight snapshot yet. Traffic on /blog will build one — or run
-                    <code class="text-xs">System Maintenance → Blog learning insights</code>
-                    (or <code class="text-xs">php artisan blog:build-learning-insights</code>).
+                    No insight snapshot yet. Traffic on /blog will build one
+                    <template v-if="canManageMaintenance">
+                        — or open
+                        <button
+                            type="button"
+                            class="font-medium text-sky-600 underline dark:text-sky-400"
+                            @click="openSeoLearningDialog"
+                        >
+                            SEO &amp; Learning
+                        </button>
+                        to run blog learning insights
+                    </template>.
                 </p>
                 <p v-if="learning?.insight?.generated_at" class="mt-2 text-xs text-gray-500">
                     Last learning build: {{ formatDate(learning.insight.generated_at) }}
@@ -85,6 +103,27 @@
                         {{ c }}
                     </li>
                 </ul>
+            </PageCard>
+
+            <PageCard
+                v-if="showRankOpportunitiesCard"
+                title="Google rank opportunities"
+                description="Query×page gaps from Search Console — fix CTR, striking distance, and cannibalization."
+            >
+                <RankOpportunitiesPanel :data="learning.rank_opportunities" />
+                <div
+                    v-if="canManageMaintenance"
+                    class="mt-3"
+                >
+                    <Button
+                        label="Open SEO & Learning"
+                        icon="pi pi-chart-line"
+                        size="small"
+                        severity="secondary"
+                        outlined
+                        @click="openSeoLearningDialog"
+                    />
+                </div>
             </PageCard>
 
             <PageCard
@@ -132,6 +171,17 @@
                             />
                         </template>
                     </Column>
+                    <Column header="Facebook" style="min-width: 7rem">
+                        <template #body="{ data }">
+                            <Tag
+                                v-if="data.facebook_post_id"
+                                value="Shared"
+                                severity="info"
+                                v-tooltip.top="formatDate(data.facebook_shared_at)"
+                            />
+                            <span v-else class="text-xs text-gray-400">—</span>
+                        </template>
+                    </Column>
                     <Column header="Keyword" style="min-width: 10rem">
                         <template #body="{ data }">
                             <span class="text-xs text-gray-600 dark:text-gray-300">
@@ -170,7 +220,7 @@
                             </span>
                         </template>
                     </Column>
-                    <Column header="Actions" headerStyle="width:10rem">
+                    <Column header="Actions" headerStyle="width:12rem">
                         <template #body="{ data }">
                             <div class="flex flex-wrap gap-1">
                                 <Button
@@ -192,6 +242,33 @@
                                     v-tooltip.top="'View post'"
                                     as="a"
                                     :href="data.public_url || data.public_path"
+                                    target="_blank"
+                                    rel="noopener"
+                                />
+                                <Button
+                                    v-if="facebookSharing.enabled && data.status === 'published'"
+                                    icon="pi pi-facebook"
+                                    :severity="data.facebook_post_id ? 'info' : 'help'"
+                                    text
+                                    rounded
+                                    size="small"
+                                    v-tooltip.top="
+                                        data.facebook_post_id
+                                            ? 'Share again to Facebook Page'
+                                            : 'Share to Facebook Page'
+                                    "
+                                    @click="openShareDialog(data)"
+                                />
+                                <Button
+                                    v-if="data.facebook_permalink"
+                                    icon="pi pi-eye"
+                                    severity="secondary"
+                                    text
+                                    rounded
+                                    size="small"
+                                    v-tooltip.top="'View Facebook post'"
+                                    as="a"
+                                    :href="data.facebook_permalink"
                                     target="_blank"
                                     rel="noopener"
                                 />
@@ -224,25 +301,140 @@
                 </div>
             </PageCard>
         </div>
+
+        <Dialog
+            v-model:visible="seoLearningDialogVisible"
+            modal
+            header="Blog SEO & learning"
+            :style="{ width: '40rem' }"
+            :breakpoints="{ '640px': '95vw' }"
+            @show="onSeoLearningDialogShow"
+        >
+            <p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+                SEO reports and AI learning jobs for the blog writer — same tools as System Maintenance.
+            </p>
+            <BlogSeoLearningPanel
+                v-if="seoLearningDialogVisible"
+                ref="seoLearningPanelRef"
+                @updated="onSeoLearningUpdated"
+            />
+            <template #footer>
+                <Button
+                    label="Close"
+                    severity="secondary"
+                    text
+                    @click="seoLearningDialogVisible = false"
+                />
+            </template>
+        </Dialog>
+
+        <Dialog
+            v-model:visible="shareDialogVisible"
+            modal
+            header="Share to Facebook Page"
+            :style="{ width: '32rem' }"
+            :breakpoints="{ '640px': '95vw' }"
+        >
+            <div v-if="sharePost" class="space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                    Posts the cover/OG image to your Facebook Page (uploaded directly), with the blog URL in the caption.
+                </p>
+                <div
+                    v-if="!facebookSharing.public_links"
+                    class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-100"
+                >
+                    APP_URL is local, so Facebook won’t scrape a link preview. Image + caption still post.
+                    For clickable production links, set
+                    <code class="text-[11px]">FACEBOOK_SHARE_BASE_URL</code>
+                    (e.g. https://wooeasylife.com).
+                </div>
+                <div v-if="sharePost.facebook_post_id" class="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+                    Already shared
+                    <span v-if="sharePost.facebook_shared_at">
+                        ({{ formatDate(sharePost.facebook_shared_at) }})</span
+                    >. Check “Post again” to publish another Page post.
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-200" for="fb-caption">
+                        Caption
+                    </label>
+                    <Textarea
+                        id="fb-caption"
+                        v-model="shareMessage"
+                        rows="6"
+                        class="w-full"
+                        autoResize
+                        maxlength="2000"
+                    />
+                </div>
+                <div
+                    v-if="sharePost.facebook_post_id"
+                    class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+                >
+                    <Checkbox v-model="shareForce" :binary="true" inputId="fb-force" />
+                    <label for="fb-force">Post again (create another Page post)</label>
+                </div>
+            </div>
+            <template #footer>
+                <Button
+                    label="Cancel"
+                    severity="secondary"
+                    text
+                    :disabled="shareSubmitting"
+                    @click="shareDialogVisible = false"
+                />
+                <Button
+                    label="Share to Page"
+                    icon="pi pi-facebook"
+                    :loading="shareSubmitting"
+                    :disabled="shareSubmitting || (!!sharePost?.facebook_post_id && !shareForce)"
+                    @click="submitShare"
+                />
+            </template>
+        </Dialog>
     </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Pages/Users/fragments/PageHeader.vue';
 import PageCard from '@/Pages/Users/fragments/PageCard.vue';
 import StatCard from '@/Pages/Users/fragments/StatCard.vue';
+import BlogSeoLearningPanel from '@/components/blog/BlogSeoLearningPanel.vue';
+import RankOpportunitiesPanel from '@/components/blog/RankOpportunitiesPanel.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
+import Dialog from 'primevue/dialog';
 import Tag from 'primevue/tag';
+import Textarea from 'primevue/textarea';
 
 const props = defineProps({
     posts: { type: Array, default: () => [] },
     learning: { type: Object, default: null },
+    facebook_sharing: { type: Object, default: () => ({ enabled: false }) },
 });
+
+const { can } = usePermissions();
+const canManageMaintenance = computed(() => can('roles.manage'));
+
+const showRankOpportunitiesCard = computed(() => {
+    const ops = props.learning?.rank_opportunities;
+    if (!ops) return false;
+    if (ops.configured === false) return true;
+    return (ops.items || []).length > 0 || Object.keys(ops.summary || {}).length > 0;
+});
+
+const facebookSharing = computed(() => ({
+    enabled: false,
+    public_links: false,
+    share_base_url: '',
+    ...(props.facebook_sharing || {}),
+}));
 
 const publishedCount = computed(
     () => props.posts.filter((p) => p.status === 'published').length,
@@ -253,6 +445,28 @@ const draftCount = computed(
 const enCount = computed(
     () => props.posts.filter((p) => p.locale === 'en').length,
 );
+
+const shareDialogVisible = ref(false);
+const sharePost = ref(null);
+const shareMessage = ref('');
+const shareForce = ref(false);
+const shareSubmitting = ref(false);
+
+const seoLearningDialogVisible = ref(false);
+const seoLearningPanelRef = ref(null);
+
+const openSeoLearningDialog = () => {
+    seoLearningDialogVisible.value = true;
+};
+
+const onSeoLearningDialogShow = async () => {
+    await nextTick();
+    seoLearningPanelRef.value?.loadStatus?.();
+};
+
+const onSeoLearningUpdated = () => {
+    router.reload({ only: ['learning'], preserveScroll: true });
+};
 
 const formatDate = (value) => {
     if (!value) return '—';
@@ -268,6 +482,54 @@ const aiScoreClass = (score) => {
     if (n >= 80) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
     if (n >= 60) return 'bg-amber-500/15 text-amber-800 dark:text-amber-200';
     return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
+};
+
+const shareUrlFor = (post) => {
+    const base = (facebookSharing.value.share_base_url || '').replace(/\/$/, '');
+    if (!base || !post?.slug) return `/blog/${post?.slug || ''}`;
+    return `${base}/blog/${post.slug}`;
+};
+
+const defaultCaption = (post) => {
+    const title = (post?.title || '').trim();
+    const excerpt = (post?.excerpt || '').trim();
+    const lines = [title];
+    if (excerpt) {
+        lines.push(excerpt.length > 180 ? `${excerpt.slice(0, 180)}…` : excerpt);
+    }
+    lines.push('👉 বিস্তারিত পড়ুন 👇');
+    lines.push(shareUrlFor(post));
+    return lines.filter(Boolean).join('\n\n');
+};
+
+const openShareDialog = (post) => {
+    sharePost.value = post;
+    shareMessage.value = defaultCaption(post);
+    shareForce.value = !post.facebook_post_id;
+    shareDialogVisible.value = true;
+};
+
+const submitShare = () => {
+    if (!sharePost.value) return;
+    if (sharePost.value.facebook_post_id && !shareForce.value) return;
+
+    shareSubmitting.value = true;
+    router.post(
+        route('blogPosts.shareFacebook', sharePost.value.id),
+        {
+            message: shareMessage.value,
+            force: !!shareForce.value,
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                shareSubmitting.value = false;
+            },
+            onSuccess: () => {
+                shareDialogVisible.value = false;
+            },
+        },
+    );
 };
 
 const confirmDelete = (post) => {

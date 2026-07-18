@@ -7,55 +7,60 @@ export function useInertiaFlashToasts(group = "br") {
     const page = usePage();
 
     let timeout: ReturnType<typeof setTimeout>;
+    let lastSignature = "";
 
     watch(
-        page,
-        () => {
+        () => ({
+            success: (page.props.flash as { success?: unknown } | undefined)?.success ?? null,
+            error: (page.props.flash as { error?: unknown } | undefined)?.error ?? null,
+            warning: (page.props.flash as { warning?: unknown } | undefined)?.warning ?? null,
+            errors: page.props.errors ?? {},
+        }),
+        (flash) => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
-                // @ts-ignore
-                if (page.props.flash?.success) {
+                const signature = JSON.stringify(flash);
+                if (signature === lastSignature) {
+                    return;
+                }
+                lastSignature = signature;
+
+                if (flash.success) {
                     const data: Record<string, unknown> = {
                         summary: "Success",
                         severity: "success",
-                        life: 3000,
+                        life: 7000,
                         group,
                     };
-                    // @ts-ignore
-                    if (typeof page.props.flash?.success == "object") {
-                        // @ts-ignore
-                        data.detail = page.props.flash?.success?.detail;
+                    if (typeof flash.success === "object" && flash.success !== null) {
+                        data.detail = (flash.success as { detail?: string }).detail;
                     } else {
-                        // @ts-ignore
-                        data.detail = page.props.flash?.success;
+                        data.detail = flash.success;
                     }
                     toast.add(data as never);
                 }
-                // @ts-ignore
-                if (page.props.flash?.error) {
+
+                if (flash.error) {
                     toast.add({
                         severity: "error",
                         summary: "Error",
-                        // @ts-ignore
-                        detail: page.props.flash?.error,
-                        life: 3000,
+                        detail: String(flash.error),
+                        life: 9000,
                         group,
                     });
                 }
-                // @ts-ignore
-                if (page.props.flash?.warning) {
+
+                if (flash.warning) {
                     toast.add({
                         severity: "warn",
                         summary: "Warning",
-                        // @ts-ignore
-                        detail: page.props.flash?.warning,
+                        detail: String(flash.warning),
                         life: 5000,
                         group,
                     });
                 }
-                // @ts-ignore
-                const validationErrors = page.props.errors ?? {};
-                const errorMessages = Object.values(validationErrors).filter(
+
+                const errorMessages = Object.values(flash.errors ?? {}).filter(
                     (message): message is string =>
                         typeof message === "string" && message.length > 0,
                 );
@@ -70,6 +75,6 @@ export function useInertiaFlashToasts(group = "br") {
                 }
             }, 100);
         },
-        { deep: true },
+        { deep: true, immediate: true },
     );
 }

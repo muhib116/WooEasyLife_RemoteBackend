@@ -3,12 +3,14 @@
 namespace App\Services\BlogAi;
 
 use App\Models\BlogContentEvent;
+use App\Models\BlogGscQueryMetric;
 use App\Models\BlogLearningInsight;
 use App\Models\BlogPost;
 use App\Models\BlogPostAnalytics;
+use App\Services\Seo\GoogleSearchConsoleClient;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -16,6 +18,10 @@ use Illuminate\Support\Str;
  */
 class BlogLearningService
 {
+    public function __construct(
+        private GoogleSearchConsoleClient $gsc,
+    ) {}
+
     /**
      * @return array{slugs: int, events: int}
      */
@@ -193,48 +199,75 @@ class BlogLearningService
 
     /**
      * Pull page-level GSC metrics when credentials exist.
+     *
+     * @return array{synced: int, skipped?: bool, error?: string, pages?: int, kept_existing?: bool}
      */
     public function syncGscPageMetrics(): array
     {
-        $siteUrl = config('seo.gsc.site_url');
-        $token = config('seo.gsc.access_token');
-
-        if (! filled($siteUrl) || ! filled($token)) {
+        if (! $this->gsc->configured()) {
             return ['synced' => 0, 'skipped' => true];
         }
 
-        $endpoint = 'https://www.googleapis.com/webmasters/v3/sites/'
-            .rawurlencode((string) $siteUrl)
-            .'/searchAnalytics/query';
+        $pageSize = 100;
+        $maxPages = 10; // up to 1,000 blog pages
+        $rawRows = [];
+        $pagesFetched = 0;
 
         try {
-            $response = Http::withToken((string) $token)
-                ->timeout(30)
-                ->post($endpoint, [
-                    'startDate' => now()->subDays(28)->toDateString(),
-                    'endDate' => now()->subDay()->toDateString(),
-                    'dimensions' => ['page'],
-                    'rowLimit' => 100,
-                    'dimensionFilterGroups' => [[
-                        'filters' => [[
-                            'dimension' => 'page',
-                            'operator' => 'contains',
-                            'expression' => '/blog/',
+            for ($page = 0; $page < $maxPages; $page++) {
+                try {
+                    $payload = $this->gsc->searchAnalytics([
+                        'startDate' => now()->subDays(28)->toDateString(),
+                        'endDate' => now()->subDay()->toDateString(),
+                        'dimensions' => ['page'],
+                        'rowLimit' => $pageSize,
+                        'startRow' => $page * $pageSize,
+                        'dimensionFilterGroups' => [[
+                            'filters' => [[
+                                'dimension' => 'page',
+                                'operator' => 'contains',
+                                'expression' => '/blog/',
+                            ]],
                         ]],
-                    ]],
-                ]);
+                    ]);
+                } catch (\Throwable $pageError) {
+                    if ($rawRows !== []) {
+                        Log::warning('Blog GSC page sync page failed; keeping partial updates.', [
+                            'page' => $page,
+                            'message' => $pageError->getMessage(),
+                            'rows_so_far' => count($rawRows),
+                        ]);
+
+                        break;
+                    }
+
+                    throw $pageError;
+                }
+
+                $pagesFetched++;
+                $batch = $payload['rows'] ?? [];
+                if (! is_array($batch) || $batch === []) {
+                    break;
+                }
+
+                foreach ($batch as $row) {
+                    if (is_array($row)) {
+                        $rawRows[] = $row;
+                    }
+                }
+
+                if (count($batch) < $pageSize) {
+                    break;
+                }
+            }
         } catch (\Throwable $e) {
             Log::warning('Blog GSC sync failed', ['message' => $e->getMessage()]);
 
-            return ['synced' => 0, 'error' => $e->getMessage()];
-        }
-
-        if (! $response->successful()) {
-            return ['synced' => 0, 'error' => 'HTTP '.$response->status()];
+            return ['synced' => 0, 'error' => $e->getMessage(), 'pages' => $pagesFetched];
         }
 
         $synced = 0;
-        foreach ($response->json('rows') ?? [] as $row) {
+        foreach ($rawRows as $row) {
             $page = (string) ($row['keys'][0] ?? '');
             $slug = $this->slugFromBlogUrl($page);
             if ($slug === null) {
@@ -252,13 +285,333 @@ class BlogLearningService
             $synced++;
         }
 
-        return ['synced' => $synced, 'skipped' => false];
+        return ['synced' => $synced, 'skipped' => false, 'pages' => $pagesFetched];
+    }
+
+    /**
+     * Pull query×page GSC rows, classify rank opportunities, and upsert metrics.
+     *
+     * Never wipes existing rows on empty/invalid API payloads — only replaces after
+     * a successful sync that produced at least one valid query×page pair.
+     *
+     * @return array{synced: int, skipped?: bool, error?: string, kept_existing?: bool, pages?: int}
+     */
+    public function syncGscQueryMetrics(): array
+    {
+        if (! Schema::hasTable('blog_gsc_query_metrics')) {
+            return ['synced' => 0, 'skipped' => true, 'error' => 'missing_table'];
+        }
+
+        if (! $this->gsc->configured()) {
+            return ['synced' => 0, 'skipped' => true];
+        }
+
+        $pageSize = 1000;
+        $maxPages = 5; // up to 5,000 query×page rows
+        $rawRows = [];
+        $pagesFetched = 0;
+
+        try {
+            for ($page = 0; $page < $maxPages; $page++) {
+                try {
+                    $payload = $this->gsc->searchAnalytics([
+                        'startDate' => now()->subDays(28)->toDateString(),
+                        'endDate' => now()->subDay()->toDateString(),
+                        'dimensions' => ['query', 'page'],
+                        'rowLimit' => $pageSize,
+                        'startRow' => $page * $pageSize,
+                        'dimensionFilterGroups' => [[
+                            'filters' => [[
+                                'dimension' => 'page',
+                                'operator' => 'contains',
+                                'expression' => '/blog/',
+                            ]],
+                        ]],
+                    ]);
+                } catch (\Throwable $pageError) {
+                    // Never replace the table with a truncated pagination snapshot.
+                    if ($rawRows !== []) {
+                        Log::warning('Blog GSC query sync page failed; keeping existing metrics.', [
+                            'page' => $page,
+                            'message' => $pageError->getMessage(),
+                            'rows_so_far' => count($rawRows),
+                        ]);
+
+                        return [
+                            'synced' => 0,
+                            'skipped' => false,
+                            'kept_existing' => true,
+                            'pages' => $pagesFetched,
+                            'error' => $pageError->getMessage(),
+                        ];
+                    }
+
+                    throw $pageError;
+                }
+
+                $pagesFetched++;
+                $batch = $payload['rows'] ?? [];
+                if (! is_array($batch) || $batch === []) {
+                    break;
+                }
+
+                foreach ($batch as $row) {
+                    $rawRows[] = $row;
+                }
+
+                if (count($batch) < $pageSize) {
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Blog GSC query sync failed', ['message' => $e->getMessage()]);
+
+            return [
+                'synced' => 0,
+                'error' => $e->getMessage(),
+                'kept_existing' => $rawRows !== [],
+            ];
+        }
+
+        if ($rawRows === []) {
+            // Empty GSC window / no blog traffic yet — do not wipe a good previous sync.
+            return [
+                'synced' => 0,
+                'skipped' => false,
+                'kept_existing' => true,
+                'pages' => $pagesFetched,
+            ];
+        }
+
+        $prepared = [];
+        $queryPages = [];
+
+        foreach ($rawRows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $keys = $row['keys'] ?? [];
+            $query = trim((string) ($keys[0] ?? ''));
+            $page = trim((string) ($keys[1] ?? ''));
+            if ($query === '' || $page === '') {
+                continue;
+            }
+
+            $clicks = (int) ($row['clicks'] ?? 0);
+            $impr = (int) ($row['impressions'] ?? 0);
+            $ctr = isset($row['ctr']) ? round((float) $row['ctr'], 4) : ($impr > 0 ? round($clicks / $impr, 4) : null);
+            $position = isset($row['position']) ? round((float) $row['position'], 2) : null;
+            $slug = $this->slugFromBlogUrl($page);
+
+            $prepared[] = [
+                'query' => mb_substr($query, 0, 500),
+                'page_url' => mb_substr($page, 0, 500),
+                'slug' => $slug,
+                'clicks_28d' => $clicks,
+                'impressions_28d' => $impr,
+                'ctr_28d' => $ctr,
+                'position_28d' => $position,
+            ];
+
+            $queryKey = mb_strtolower($query);
+            $queryPages[$queryKey] = $queryPages[$queryKey] ?? [];
+            $queryPages[$queryKey][$page] = ($queryPages[$queryKey][$page] ?? 0) + $impr;
+        }
+
+        if ($prepared === []) {
+            // API returned rows but none were usable — keep existing metrics.
+            return [
+                'synced' => 0,
+                'skipped' => false,
+                'kept_existing' => true,
+                'pages' => $pagesFetched,
+            ];
+        }
+
+        $now = now();
+        $synced = 0;
+
+        DB::transaction(function () use ($prepared, $queryPages, $now, &$synced) {
+            BlogGscQueryMetric::query()->delete();
+
+            foreach ($prepared as $item) {
+                $queryKey = mb_strtolower($item['query']);
+                $pagesForQuery = $queryPages[$queryKey] ?? [];
+                $isCannibalized = count($pagesForQuery) > 1;
+                $topPage = null;
+                if ($isCannibalized) {
+                    arsort($pagesForQuery);
+                    $topPage = array_key_first($pagesForQuery);
+                }
+
+                $classified = $this->classifyRankOpportunity(
+                    impressions: $item['impressions_28d'],
+                    clicks: $item['clicks_28d'],
+                    ctr: $item['ctr_28d'],
+                    position: $item['position_28d'],
+                    isCannibalizedSecondary: $isCannibalized && $topPage !== null && $item['page_url'] !== $topPage,
+                );
+
+                BlogGscQueryMetric::query()->create([
+                    'pair_hash' => hash('sha256', mb_strtolower($item['query']).'|'.$item['page_url']),
+                    ...$item,
+                    'bucket' => $classified['bucket'],
+                    'opportunity_score' => $classified['score'],
+                    'improvement_hint' => $classified['hint'],
+                    'metrics_refreshed_at' => $now,
+                ]);
+                $synced++;
+            }
+        });
+
+        return [
+            'synced' => $synced,
+            'skipped' => false,
+            'pages' => $pagesFetched,
+        ];
+    }
+
+    /**
+     * Rank / CTR opportunity list for admin UI (from last sync).
+     *
+     * @return array{
+     *     configured: bool,
+     *     table_ready: bool,
+     *     refreshed_at: string|null,
+     *     summary: array<string, int>,
+     *     items: list<array<string, mixed>>
+     * }
+     */
+    public function rankOpportunitiesForAdmin(int $limit = 40): array
+    {
+        $configured = $this->gsc->configured();
+        $tableReady = Schema::hasTable('blog_gsc_query_metrics');
+
+        if (! $tableReady) {
+            return [
+                'configured' => $configured,
+                'table_ready' => false,
+                'refreshed_at' => null,
+                'summary' => [],
+                'items' => [],
+            ];
+        }
+
+        $summary = BlogGscQueryMetric::query()
+            ->select('bucket', DB::raw('COUNT(*) as c'))
+            ->groupBy('bucket')
+            ->pluck('c', 'bucket')
+            ->map(fn ($c) => (int) $c)
+            ->all();
+
+        $refreshedAt = BlogGscQueryMetric::query()->max('metrics_refreshed_at');
+
+        $items = BlogGscQueryMetric::query()
+            ->whereIn('bucket', [
+                BlogGscQueryMetric::BUCKET_STRIKING,
+                BlogGscQueryMetric::BUCKET_FIX_CTR,
+                BlogGscQueryMetric::BUCKET_DEFEND,
+                BlogGscQueryMetric::BUCKET_BURIED,
+                BlogGscQueryMetric::BUCKET_CANNIBALIZED,
+            ])
+            ->orderByDesc('opportunity_score')
+            ->orderByDesc('impressions_28d')
+            ->limit($limit)
+            ->get()
+            ->map(fn (BlogGscQueryMetric $row) => [
+                'query' => $row->query,
+                'slug' => $row->slug,
+                'page_url' => $row->page_url,
+                'clicks_28d' => $row->clicks_28d,
+                'impressions_28d' => $row->impressions_28d,
+                'ctr_28d' => $row->ctr_28d,
+                'position_28d' => $row->position_28d,
+                'bucket' => $row->bucket,
+                'bucket_label' => $this->bucketLabel($row->bucket),
+                'opportunity_score' => $row->opportunity_score,
+                'improvement_hint' => $row->improvement_hint,
+            ])
+            ->all();
+
+        return [
+            'configured' => $configured,
+            'table_ready' => true,
+            'refreshed_at' => $refreshedAt
+                ? (string) \Illuminate\Support\Carbon::parse($refreshedAt)->toIso8601String()
+                : null,
+            'summary' => $summary,
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * @return array{bucket: string, score: float, hint: string}
+     */
+    public function classifyRankOpportunity(
+        int $impressions,
+        int $clicks,
+        ?float $ctr,
+        ?float $position,
+        bool $isCannibalizedSecondary = false,
+    ): array {
+        $ctrValue = $ctr ?? ($impressions > 0 ? $clicks / $impressions : 0.0);
+        $pos = $position ?? 100.0;
+        $expectedCtr = $this->expectedCtrForPosition($pos);
+        $ctrGap = max(0, $expectedCtr - $ctrValue);
+
+        if ($isCannibalizedSecondary && $impressions >= 10) {
+            return [
+                'bucket' => BlogGscQueryMetric::BUCKET_CANNIBALIZED,
+                'score' => round(($impressions * 0.4) + ($ctrGap * 80), 2),
+                'hint' => 'Same query ranks on multiple URLs — consolidate or differentiate this weaker page.',
+            ];
+        }
+
+        if ($impressions >= 30 && $pos <= 5 && $ctrGap >= 0.03) {
+            return [
+                'bucket' => BlogGscQueryMetric::BUCKET_DEFEND,
+                'score' => round(($impressions * 0.35) + ($ctrGap * 200) + ($clicks * 2), 2),
+                'hint' => 'Top ranking but CTR is below expected — tighten title/meta for this query.',
+            ];
+        }
+
+        if ($impressions >= 20 && $pos >= 8 && $pos <= 20) {
+            return [
+                'bucket' => BlogGscQueryMetric::BUCKET_STRIKING,
+                'score' => round(($impressions * 0.5) + ((21 - $pos) * 8) + ($ctrGap * 100), 2),
+                'hint' => 'Striking distance (pos 8–20) — add matching H2/FAQ, strengthen intro, and internal links.',
+            ];
+        }
+
+        if ($impressions >= 40 && $ctrGap >= 0.025 && $pos <= 15) {
+            return [
+                'bucket' => BlogGscQueryMetric::BUCKET_FIX_CTR,
+                'score' => round(($impressions * 0.45) + ($ctrGap * 250), 2),
+                'hint' => 'High impressions, weak CTR — rewrite title/description to match search intent.',
+            ];
+        }
+
+        if ($impressions >= 25 && $pos > 20) {
+            return [
+                'bucket' => BlogGscQueryMetric::BUCKET_BURIED,
+                'score' => round(($impressions * 0.25) + min(40, $pos), 2),
+                'hint' => 'Buried past page 2 — refresh content depth or consider a dedicated supporting post.',
+            ];
+        }
+
+        return [
+            'bucket' => BlogGscQueryMetric::BUCKET_OTHER,
+            'score' => round(($impressions * 0.05) + ($clicks * 0.5), 2),
+            'hint' => 'Monitor — not an urgent opportunity yet.',
+        ];
     }
 
     public function buildInsights(): BlogLearningInsight
     {
         $this->rollupAnalytics();
         $this->syncGscPageMetrics();
+        $this->syncGscQueryMetrics();
 
         $top = BlogPostAnalytics::query()
             ->orderByDesc('engagement_score')
@@ -298,6 +651,17 @@ class BlogLearningService
             ->values()
             ->all();
 
+        $gscKeywordSeeds = $this->gscKeywordSeeds(15);
+        $gscQueries = collect($gscKeywordSeeds)->pluck('query')->filter()->values()->all();
+        $winningKeywords = collect($gscQueries)
+            ->merge($winningKeywords)
+            ->map(fn ($k) => trim((string) $k))
+            ->filter()
+            ->unique()
+            ->take(16)
+            ->values()
+            ->all();
+
         $winningTitles = $top->take(8)->map(fn (BlogPostAnalytics $r) => [
             'title' => $r->title,
             'slug' => $r->slug,
@@ -331,7 +695,8 @@ class BlogLearningService
         arsort($ctaWinners);
 
         $coverageGaps = $this->coverageGaps();
-        $nextIdeas = $this->buildNextPostIdeas($recommendedClusters, $coverageGaps, $winningKeywords);
+        $nextIdeas = $this->buildNextPostIdeas($recommendedClusters, $coverageGaps, $winningKeywords, $gscKeywordSeeds);
+        $rankOpportunities = $this->rankOpportunitiesForAdmin(15);
 
         $payload = [
             'generated_at' => now()->toIso8601String(),
@@ -339,12 +704,19 @@ class BlogLearningService
             'recommended_clusters' => $recommendedClusters,
             'cluster_performance' => $clusterWins,
             'winning_keywords' => $winningKeywords,
+            'gsc_keyword_seeds' => array_slice($gscKeywordSeeds, 0, 12),
             'winning_titles' => $winningTitles,
             'underperforming_topics' => $underperformers,
             'cta_labels_that_convert' => array_slice($ctaWinners, 0, 8, true),
             'next_post_ideas' => $nextIdeas,
+            'rank_opportunities' => [
+                'summary' => $rankOpportunities['summary'],
+                'items' => array_slice($rankOpportunities['items'], 0, 10),
+                'refreshed_at' => $rankOpportunities['refreshed_at'],
+            ],
             'writing_guidance' => [
                 'Prefer clusters and angles from winning_titles / recommended_clusters / next_post_ideas.',
+                'Prioritize gsc_keyword_seeds / rank_opportunities (striking_distance, fix_ctr) in titles, H2, FAQ.',
                 'Do not cannibalize exact focus_keyword of top winners unless updating that topic.',
                 'Underperforming topics: change intent/angle; do not rewrite the same weak hook.',
                 'Include soft CTA patterns similar to cta_labels_that_convert when relevant.',
@@ -386,7 +758,9 @@ class BlogLearningService
                     ['fake_order', 'fraud_checker', 'courier'],
                     ['facebook_ads', 'ai_orders', 'checkout_protection'],
                     [],
+                    $this->gscKeywordSeeds(8),
                 ),
+                'gsc_keyword_seeds' => $this->gscKeywordSeeds(8),
                 'coverage_gaps' => ['facebook_ads', 'ai_orders', 'checkout_protection'],
             ];
         }
@@ -399,6 +773,7 @@ class BlogLearningService
             'summary_bn' => $insight->summary_bn,
             'recommended_clusters' => $payload['recommended_clusters'] ?? [],
             'winning_keywords' => array_slice($payload['winning_keywords'] ?? [], 0, 10),
+            'gsc_keyword_seeds' => array_slice($payload['gsc_keyword_seeds'] ?? $this->gscKeywordSeeds(8), 0, 10),
             'winning_title_patterns' => collect($payload['winning_titles'] ?? [])
                 ->take(6)
                 ->map(fn ($r) => [
@@ -415,6 +790,7 @@ class BlogLearningService
                 ->all(),
             'coverage_gaps' => $payload['coverage_gaps'] ?? [],
             'next_post_ideas' => array_slice($payload['next_post_ideas'] ?? [], 0, 5),
+            'rank_opportunities' => array_slice($payload['rank_opportunities']['items'] ?? [], 0, 5),
             'writing_guidance' => $payload['writing_guidance'] ?? [],
             'cta_labels_that_convert' => $payload['cta_labels_that_convert'] ?? [],
         ];
@@ -448,6 +824,7 @@ class BlogLearningService
                 'payload' => $insight->payload_json,
             ] : null,
             'top_posts' => $top,
+            'rank_opportunities' => $this->rankOpportunitiesForAdmin(25),
         ];
     }
 
@@ -497,15 +874,56 @@ class BlogLearningService
     }
 
     /**
+     * High-value GSC queries for keyword research + next-post ideas.
+     *
+     * @return list<array{query: string, bucket: string, impressions: int, clicks: int, position: float|null, slug: string|null, hint: string|null}>
+     */
+    public function gscKeywordSeeds(int $limit = 12): array
+    {
+        if (! Schema::hasTable('blog_gsc_query_metrics')) {
+            return [];
+        }
+
+        return BlogGscQueryMetric::query()
+            ->whereIn('bucket', [
+                BlogGscQueryMetric::BUCKET_STRIKING,
+                BlogGscQueryMetric::BUCKET_FIX_CTR,
+                BlogGscQueryMetric::BUCKET_DEFEND,
+                BlogGscQueryMetric::BUCKET_BURIED,
+            ])
+            ->orderByDesc('opportunity_score')
+            ->orderByDesc('impressions_28d')
+            ->limit(max(1, $limit))
+            ->get()
+            ->map(fn (BlogGscQueryMetric $row) => [
+                'query' => (string) $row->query,
+                'bucket' => (string) $row->bucket,
+                'impressions' => (int) $row->impressions_28d,
+                'clicks' => (int) $row->clicks_28d,
+                'position' => $row->position_28d !== null ? (float) $row->position_28d : null,
+                'slug' => $row->slug,
+                'hint' => $row->improvement_hint,
+            ])
+            ->filter(fn (array $row) => trim($row['query']) !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
      * Deterministic “what to write next” suggestions for admins + AI.
      *
      * @param  list<string>  $recommendedClusters
      * @param  list<string>  $coverageGaps
      * @param  list<string>  $winningKeywords
+     * @param  list<array{query?: string, bucket?: string, hint?: string|null, slug?: string|null}>  $gscSeeds
      * @return list<array{cluster: string, angle: string, seed_topic: string, suggested_title: string, reason: string}>
      */
-    private function buildNextPostIdeas(array $recommendedClusters, array $coverageGaps, array $winningKeywords): array
-    {
+    private function buildNextPostIdeas(
+        array $recommendedClusters,
+        array $coverageGaps,
+        array $winningKeywords,
+        array $gscSeeds = [],
+    ): array {
         $ideas = [];
         $existingFocus = BlogPost::query()
             ->whereNotNull('focus_keyword')
@@ -513,6 +931,44 @@ class BlogLearningService
             ->map(fn ($k) => mb_strtolower(trim((string) $k)))
             ->filter()
             ->all();
+
+        $seenSeeds = [];
+
+        foreach ($gscSeeds as $seedRow) {
+            if (count($ideas) >= 5) {
+                break;
+            }
+            $query = trim((string) ($seedRow['query'] ?? ''));
+            if ($query === '') {
+                continue;
+            }
+            $key = mb_strtolower($query);
+            if (isset($seenSeeds[$key])) {
+                continue;
+            }
+            $seenSeeds[$key] = true;
+
+            $bucket = (string) ($seedRow['bucket'] ?? 'gsc');
+            $cluster = $this->inferCluster($query, $query);
+            $title = match ($bucket) {
+                BlogGscQueryMetric::BUCKET_FIX_CTR => $query.' — ক্লিক বাড়ানোর টাইটেল ও মেটা',
+                BlogGscQueryMetric::BUCKET_DEFEND => $query.' — র‍্যাঙ্ক ধরে রাখার আপডেট',
+                BlogGscQueryMetric::BUCKET_BURIED => $query.' — নতুন লং-টেল গাইড',
+                default => $query.' — পজিশন ১–১০ এ তোলার গাইড',
+            };
+
+            if (in_array($key, $existingFocus, true)) {
+                $title = $query.' — কনটেন্ট রিফ্রেশ ও FAQ আপডেট';
+            }
+
+            $ideas[] = [
+                'cluster' => $cluster,
+                'angle' => 'gsc_'.$bucket,
+                'seed_topic' => $query,
+                'suggested_title' => $title,
+                'reason' => 'gsc_'.$bucket,
+            ];
+        }
 
         $angleCycle = ['howto', 'checklist', 'comparison', 'myth', 'roi'];
 
@@ -524,6 +980,12 @@ class BlogLearningService
             $seed = is_array($seeds) && $seeds !== []
                 ? (string) $seeds[0]
                 : (string) config('blog_ai.clusters.'.$cluster, $cluster);
+            $seedKey = mb_strtolower($seed);
+            if (isset($seenSeeds[$seedKey])) {
+                continue;
+            }
+            $seenSeeds[$seedKey] = true;
+
             $angle = $angleCycle[$i % count($angleCycle)];
             $title = match ($angle) {
                 'checklist' => $seed.' — ধাপে ধাপে চেকলিস্ট',
@@ -533,7 +995,7 @@ class BlogLearningService
                 default => 'কিভাবে '.$seed.' কাজে লাগাবেন',
             };
 
-            if (in_array(mb_strtolower($seed), $existingFocus, true)) {
+            if (in_array($seedKey, $existingFocus, true)) {
                 $title = $seed.' — নতুন আপডেট ও ব্যবহারিক টিপস';
             }
 
@@ -548,15 +1010,24 @@ class BlogLearningService
             ];
         }
 
-        // Fill remaining slots from winning keywords with a fresh angle.
         foreach ($winningKeywords as $kw) {
             if (count($ideas) >= 5) {
                 break;
             }
+            $kw = trim((string) $kw);
+            if ($kw === '') {
+                continue;
+            }
+            $kwKey = mb_strtolower($kw);
+            if (isset($seenSeeds[$kwKey])) {
+                continue;
+            }
+            $seenSeeds[$kwKey] = true;
+
             $ideas[] = [
                 'cluster' => $recommendedClusters[0] ?? 'general',
                 'angle' => 'howto',
-                'seed_topic' => (string) $kw,
+                'seed_topic' => $kw,
                 'suggested_title' => $kw.' — বাস্তব কেস ও করণীয়',
                 'reason' => 'winning_keyword_expansion',
             ];
@@ -581,6 +1052,34 @@ class BlogLearningService
             $gaps !== '' ? "কভারেজ গ্যাপ: {$gaps}." : 'কভারেজ গ্যাপ কম।',
             $next !== '' ? "পরের আইডিয়া: {$next}." : null,
         ])));
+    }
+
+    private function expectedCtrForPosition(float $position): float
+    {
+        return match (true) {
+            $position <= 1 => 0.28,
+            $position <= 2 => 0.15,
+            $position <= 3 => 0.11,
+            $position <= 4 => 0.08,
+            $position <= 5 => 0.06,
+            $position <= 7 => 0.04,
+            $position <= 10 => 0.025,
+            $position <= 15 => 0.015,
+            $position <= 20 => 0.01,
+            default => 0.005,
+        };
+    }
+
+    private function bucketLabel(string $bucket): string
+    {
+        return match ($bucket) {
+            BlogGscQueryMetric::BUCKET_STRIKING => 'Striking distance',
+            BlogGscQueryMetric::BUCKET_FIX_CTR => 'Fix CTR',
+            BlogGscQueryMetric::BUCKET_DEFEND => 'Defend winner',
+            BlogGscQueryMetric::BUCKET_BURIED => 'Buried',
+            BlogGscQueryMetric::BUCKET_CANNIBALIZED => 'Cannibalized',
+            default => 'Other',
+        };
     }
 
     private function slugFromBlogUrl(string $url): ?string

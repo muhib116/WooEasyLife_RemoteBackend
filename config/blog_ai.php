@@ -45,7 +45,15 @@ return [
     */
     'seo_quality' => [
         'min_internal_links' => 2,
-        'min_faqs' => 3,
+        'min_faqs' => 5,
+        /*
+        | Extra AI gates for RankMath-style completeness (draft + readiness score).
+        */
+        'require_keyword_in_h2' => true,
+        'require_quick_answer' => true,
+        'require_ai_search_summary' => true,
+        'require_h3' => true,
+        'require_lists' => true,
         'enforce_on_publish' => [
             'has_internal_link' => true,
             'duplicate_focus_keyword' => true,

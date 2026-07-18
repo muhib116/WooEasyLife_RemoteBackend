@@ -50,6 +50,16 @@ return [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
         'redirect' => env('FACEBOOK_REDIRECT_URI', env('APP_URL').'/marchent/auth/facebook/callback'),
+
+        /*
+        | Page Graph API (admin blog → Facebook Page share).
+        | Use a long-lived Page token from GET /me/accounts (not a User token).
+        */
+        'page_id' => env('FACEBOOK_PAGE_ID'),
+        'page_access_token' => env('FACEBOOK_PAGE_ACCESS_TOKEN'),
+        'graph_version' => env('FACEBOOK_GRAPH_VERSION', 'v21.0'),
+        // Optional public site URL used in Facebook captions/links (needed when APP_URL is localhost).
+        'share_base_url' => env('FACEBOOK_SHARE_BASE_URL'),
     ],
 
 ];

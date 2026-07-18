@@ -71,6 +71,23 @@ it('can run blog analytics rollup only from system maintenance', function () {
         ->assertJsonPath('success', true);
 });
 
+it('can run seo weekly report from system maintenance', function () {
+    Illuminate\Support\Facades\Http::fake([
+        '*' => Illuminate\Support\Facades\Http::response('ok', 200),
+    ]);
+
+    $admin = createMaintenanceAdmin();
+
+    $this->actingAs($admin)
+        ->postJson(route('maintenance.run'), ['action' => 'seo_weekly_report'])
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('message', fn ($m) => is_string($m) && str_contains(strtolower($m), 'seo'));
+
+    $report = storage_path('app/seo/weekly-report-'.now()->format('Y-m-d').'.md');
+    expect(file_exists($report))->toBeTrue();
+});
+
 it('lists blog maintenance actions in status payload', function () {
     $admin = createMaintenanceAdmin();
 
@@ -86,7 +103,29 @@ it('lists blog maintenance actions in status payload', function () {
         ->assertJsonPath('actions', fn ($actions) => collect($actions)->contains(
             fn ($a) => ($a['key'] ?? null) === 'subscriptions_apply_expiry'
         ))
-        ->assertJsonStructure(['groups']);
+        ->assertJsonStructure(['groups', 'gsc_status' => [
+            'ready',
+            'auth_mode',
+            'has_client_id',
+        ], 'rank_opportunities' => [
+            'configured',
+            'table_ready',
+            'summary',
+            'items',
+        ]]);
+});
+
+it('can run gsc status probe from system maintenance', function () {
+    $admin = createMaintenanceAdmin();
+
+    $response = $this->actingAs($admin)
+        ->postJson(route('maintenance.run'), ['action' => 'seo_gsc_status'])
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('message', fn ($m) => is_string($m) && str_contains(strtolower($m), 'gsc'));
+
+    $output = (string) $response->json('output');
+    expect($output)->toContain('ready');
 });
 
 it('can run everything batch with included commands', function () {

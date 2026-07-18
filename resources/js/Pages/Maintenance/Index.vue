@@ -106,6 +106,23 @@
                     No learning snapshot yet. Run <strong>Blog learning insights</strong> below.
                 </p>
 
+                <div
+                    v-if="section.group === 'blog'"
+                    class="mb-4 space-y-4"
+                >
+                    <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
+                        <GscStatusPanel
+                            :data="status.gsc_status"
+                            :probing="runningAction === 'seo_gsc_status'"
+                            :disabled="busy"
+                            @probe="confirmRun('seo_gsc_status')"
+                        />
+                    </div>
+                    <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
+                        <RankOpportunitiesPanel :data="status.rank_opportunities" />
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <div
                         v-for="action in section.actions"
@@ -176,6 +193,8 @@ import { useToast } from "primevue/usetoast";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
+import RankOpportunitiesPanel from "@/components/blog/RankOpportunitiesPanel.vue";
+import GscStatusPanel from "@/components/blog/GscStatusPanel.vue";
 
 defineOptions({ name: "SystemMaintenance" });
 
@@ -208,6 +227,27 @@ type MaintenanceStatus = {
             reason?: string;
         }>;
     } | null;
+    rank_opportunities?: {
+        configured?: boolean;
+        table_ready?: boolean;
+        refreshed_at?: string | null;
+        summary?: Record<string, number>;
+        items?: Array<Record<string, unknown>>;
+    } | null;
+    gsc_status?: {
+        site_url?: string | null;
+        has_site_url?: boolean;
+        has_client_id?: boolean;
+        has_client_secret?: boolean;
+        has_refresh_token?: boolean;
+        has_static_access_token?: boolean;
+        auth_mode?: string;
+        ready?: boolean;
+        can_connect?: boolean;
+        connect_url?: string | null;
+        disconnect_url?: string | null;
+        refresh_token_source?: string | null;
+    } | null;
 };
 
 const GROUP_ORDER = ["meta", "cache", "blog", "subscriptions", "domains", "ops"];
@@ -232,6 +272,8 @@ const status = reactive<MaintenanceStatus>({
     ...props.initialStatus,
     groups: props.initialStatus.groups ?? {},
     blog_learning: props.initialStatus.blog_learning ?? null,
+    rank_opportunities: props.initialStatus.rank_opportunities ?? null,
+    gsc_status: props.initialStatus.gsc_status ?? null,
 });
 const loading = ref(false);
 const runningAction = ref<string | null>(null);
@@ -299,6 +341,8 @@ const applyStatus = (next?: MaintenanceStatus) => {
     status.actions = next.actions;
     status.groups = next.groups ?? {};
     status.blog_learning = next.blog_learning ?? null;
+    status.rank_opportunities = next.rank_opportunities ?? null;
+    status.gsc_status = next.gsc_status ?? null;
 };
 
 const loadStatus = async () => {
@@ -312,6 +356,7 @@ const loadStatus = async () => {
             summary: "Could not load status",
             detail: error?.response?.data?.message || "Failed to load maintenance status.",
             life: 4000,
+            group: "br",
         });
     } finally {
         loading.value = false;
@@ -332,6 +377,7 @@ const runAction = async (action: string) => {
             summary: "Maintenance",
             detail: data?.message || "Done.",
             life: 5000,
+            group: "br",
         });
     } catch (error: any) {
         const payload = error?.response?.data;
@@ -342,6 +388,7 @@ const runAction = async (action: string) => {
             summary: "Action failed",
             detail: payload?.message || "Could not run maintenance action.",
             life: 6000,
+            group: "br",
         });
     } finally {
         runningAction.value = null;

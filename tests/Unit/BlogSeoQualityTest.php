@@ -15,11 +15,18 @@ class BlogSeoQualityTest extends TestCase
     {
         $service = app(BlogSeoQuality::class);
 
-        $body = <<<'HTML'
-<figure><img src="/storage/cover.webp" alt="ফেক অর্ডার"></figure>
+        $filler = str_repeat('ফেক অর্ডার কমাতে নিয়মিত কুরিয়ার হিস্টোরি ও কনফার্মেশন কল চালু রাখুন। ', 80);
+        $body = <<<HTML
+<section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>ফেক অর্ডার কমাতে কুরিয়ার হিস্টোরি চেক করুন।</p></section>
 <p>বাংলাদেশে ফেক অর্ডার COD ব্যবসার বড় লস।</p>
-<h2>কুরিয়ার হিস্টোরি</h2>
+<h2>ফেক অর্ডার কমানোর ধাপ</h2>
+<h3>কুরিয়ার হিস্টোরি</h3>
+<ul><li>নম্বর চেক</li></ul>
+<ol><li>কনফার্ম কল</li></ol>
 <p>কাজের ধাপ এবং <a href="/bd-fraud-checker">ফ্রড চেকার</a> ও <a href="/">WooEasyLife</a>।</p>
+<p>{$filler}</p>
+<section class="seo-ai-summary"><h2>এআই সারাংশ</h2><p>ফেক অর্ডার আটকাতে হিস্টোরি, OTP ও কুরিয়ার অটো এন্ট্রি একসাথে ব্যবহার করুন।</p></section>
+<figure><img src="/storage/cover.webp" alt="ফেক অর্ডার"></figure>
 HTML;
 
         $quality = $service->analyze(
@@ -31,21 +38,45 @@ HTML;
                 ['q' => 'ফেক অর্ডার কী?', 'a' => 'নেয় না এমন অর্ডার।'],
                 ['q' => 'কীভাবে চেক করব?', 'a' => 'কুরিয়ার হিস্টোরি দেখুন।'],
                 ['q' => 'কোন টুল?', 'a' => 'WooEasyLife fraud checker।'],
+                ['q' => 'OTP লাগে?', 'a' => 'চেকআউট OTP ফেক অর্ডার কমায়।'],
+                ['q' => 'কুরিয়ার অটো?', 'a' => 'কনফার্ম হলেই এন্ট্রি হয়।'],
             ],
             secondaryKeywords: ['কুরিয়ার হিস্টোরি'],
             slug: 'fake-order-guide',
         );
 
         $this->assertTrue($quality['has_h2']);
+        $this->assertTrue($quality['has_h3']);
+        $this->assertTrue($quality['has_lists']);
         $this->assertTrue($quality['internal_links_ok']);
         $this->assertTrue($quality['keyword_in_title']);
         $this->assertTrue($quality['keyword_in_first_paragraph']);
+        $this->assertTrue($quality['keyword_in_h2']);
         $this->assertTrue($quality['keyword_in_meta']);
         $this->assertTrue($quality['faq_count_ok']);
+        $this->assertTrue($quality['has_quick_answer']);
+        $this->assertTrue($quality['has_ai_search_summary']);
         $this->assertTrue($quality['has_content_image']);
         $this->assertTrue($quality['content_image_alt_ok']);
         $this->assertTrue($quality['secondary_keyword_in_body']);
         $this->assertFalse($quality['slug_collision']);
+        $this->assertTrue($quality['ai_ready']);
+    }
+
+    public function test_ensure_seo_content_blocks_injects_missing_sections(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $body = '<p>বাংলাদেশে ফেক অর্ডার সমস্যা।</p><h2>ফেক অর্ডার ধাপ</h2><p>বিস্তারিত।</p>';
+        $out = $service->ensureSeoContentBlocks(
+            $body,
+            'ফেক অর্ডার কমাতে প্রথমে হিস্টোরি চেক করুন।',
+            'এই গাইডে ফেক অর্ডার আটকানোর ব্যবহারিক ধাপ আছে।',
+        );
+
+        $this->assertTrue($service->hasQuickAnswer($out));
+        $this->assertTrue($service->hasAiSearchSummary($out));
+        $this->assertStringContainsString('seo-quick-answer', $out);
+        $this->assertStringContainsString('seo-ai-summary', $out);
     }
 
     public function test_ensure_internal_links_appends_missing(): void

@@ -21,6 +21,7 @@ class BlogHtmlSanitizer
         'a', 'img',
         'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col',
         'figure', 'figcaption',
+        'section',
         'div', 'span',
         'oembed',
     ];

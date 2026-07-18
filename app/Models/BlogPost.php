@@ -37,12 +37,15 @@ class BlogPost extends Model
         'ai_quality_score',
         'ai_quality_breakdown',
         'ai_run_id',
+        'facebook_post_id',
+        'facebook_shared_at',
     ];
 
     protected function casts(): array
     {
         return [
             'published_at' => 'datetime',
+            'facebook_shared_at' => 'datetime',
             'faqs_json' => 'array',
             'ai_quality_breakdown' => 'array',
             'ai_quality_score' => 'integer',

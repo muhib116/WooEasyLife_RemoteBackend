@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RoleAdminController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
+use App\Http\Controllers\Admin\GoogleSearchConsoleOAuthController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitorController;
@@ -276,6 +277,12 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/', [SystemMaintenanceController::class, 'index'])->name('index');
         Route::get('/status', [SystemMaintenanceController::class, 'status'])->name('status');
         Route::post('/run', [SystemMaintenanceController::class, 'run'])->name('run');
+        Route::get('/gsc/connect', [GoogleSearchConsoleOAuthController::class, 'connect'])
+            ->middleware('throttle:10,1')
+            ->name('gsc.connect');
+        Route::post('/gsc/disconnect', [GoogleSearchConsoleOAuthController::class, 'disconnect'])
+            ->middleware('throttle:10,1')
+            ->name('gsc.disconnect');
     });
 
     Route::group(['as' => 'webhooks.', 'prefix' => 'webhooks'], function () {
@@ -509,6 +516,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/upload-image', [BlogPostController::class, 'uploadImage'])->name('uploadImage');
         Route::get('/{blogPost}/edit', [BlogPostController::class, 'edit'])->name('edit');
         Route::put('/{blogPost}', [BlogPostController::class, 'update'])->name('update');
+        Route::post('/{blogPost}/share-facebook', [BlogPostController::class, 'shareToFacebook'])
+            ->name('shareFacebook');
         Route::delete('/{blogPost}', [BlogPostController::class, 'destroy'])->name('destroy');
     });
 
@@ -582,6 +591,11 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::delete('/credentials/{credential}', [FraudPartnerCredentialController::class, 'destroy'])->name('credentials.destroy');
     });
 });
+
+// GSC OAuth callback — outside auth so it survives session expiry during Google consent.
+Route::get('/maintenance/gsc/callback', [GoogleSearchConsoleOAuthController::class, 'callback'])
+    ->middleware('throttle:20,1')
+    ->name('maintenance.gsc.callback');
 
 require __DIR__.'/portal.php';
 require __DIR__.'/auth.php';

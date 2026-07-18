@@ -8,6 +8,7 @@ use App\Models\BlogPostAnalytics;
 use App\Services\BlogAi\BlogLearningService;
 use App\Services\BlogSeoQuality;
 use App\Services\BlogService;
+use App\Services\Facebook\FacebookPagePublisher;
 use App\Support\BlogHtmlSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,7 @@ class BlogPostController extends Controller
     public function __construct(
         private BlogService $blogService,
         private BlogSeoQuality $blogSeoQuality,
+        private FacebookPagePublisher $facebookPagePublisher,
     ) {}
 
     public function index(Request $request): Response
@@ -55,6 +57,11 @@ class BlogPostController extends Controller
                     'public_url' => ($post->status === 'published' && filled($post->slug))
                         ? $post->publicUrl()
                         : null,
+                    'facebook_post_id' => $post->facebook_post_id,
+                    'facebook_shared_at' => optional($post->facebook_shared_at)?->toIso8601String(),
+                    'facebook_permalink' => filled($post->facebook_post_id)
+                        ? $this->facebookPagePublisher->permalinkFor((string) $post->facebook_post_id)
+                        : null,
                     'analytics' => $stats ? [
                         'views_28d' => $stats->views_28d,
                         'cta_clicks_28d' => $stats->cta_clicks_28d,
@@ -67,6 +74,11 @@ class BlogPostController extends Controller
         return Inertia::render('BlogPosts/Index', [
             'posts' => $posts,
             'learning' => app(BlogLearningService::class)->adminDashboard(),
+            'facebook_sharing' => [
+                'enabled' => $this->facebookPagePublisher->configured(),
+                'public_links' => $this->facebookPagePublisher->isPublicShareUrl(),
+                'share_base_url' => $this->facebookPagePublisher->shareBaseUrl(),
+            ],
         ]);
     }
 
@@ -148,6 +160,47 @@ class BlogPostController extends Controller
         return redirect()
             ->route('blogPosts.index')
             ->with('success', 'Blog post deleted.');
+    }
+
+    public function shareToFacebook(Request $request, BlogPost $blogPost): RedirectResponse
+    {
+        $data = $request->validate([
+            'message' => ['nullable', 'string', 'max:2000'],
+            'force' => ['sometimes', 'boolean'],
+        ]);
+
+        if (! $blogPost->isPublished()) {
+            return redirect()
+                ->route('blogPosts.index')
+                ->with('error', 'Publish the post before sharing to Facebook.');
+        }
+
+        if (filled($blogPost->facebook_post_id) && empty($data['force'])) {
+            return redirect()
+                ->route('blogPosts.index')
+                ->with('error', 'Already shared to Facebook. Check “Post again” to share another time.');
+        }
+
+        try {
+            $result = $this->facebookPagePublisher->shareBlogPost(
+                $blogPost,
+                isset($data['message']) ? (string) $data['message'] : null,
+            );
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->route('blogPosts.index')
+                ->with('error', $e->getMessage());
+        }
+
+        $blogPost->update([
+            'facebook_post_id' => $result['post_id'],
+            'facebook_shared_at' => now(),
+        ]);
+
+        return redirect()
+            ->route('blogPosts.index')
+            ->with('success', 'Shared to Facebook Page.')
+            ->with('facebook_permalink', $result['permalink']);
     }
 
     public function uploadImage(Request $request): JsonResponse

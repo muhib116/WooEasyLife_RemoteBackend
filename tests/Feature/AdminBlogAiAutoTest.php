@@ -46,6 +46,12 @@ class AdminBlogAiAutoTest extends TestCase
             'blog_ai.auto.max_revisions_per_step' => 1,
             'blog_ai.seo_quality.min_faqs' => 1,
             'blog_ai.seo_quality.min_internal_links' => 2,
+            // Keep auto fixtures focused; production defaults enable these gates.
+            'blog_ai.seo_quality.require_keyword_in_h2' => false,
+            'blog_ai.seo_quality.require_quick_answer' => false,
+            'blog_ai.seo_quality.require_ai_search_summary' => false,
+            'blog_ai.seo_quality.require_h3' => false,
+            'blog_ai.seo_quality.require_lists' => false,
         ]);
     }
 
@@ -95,13 +101,13 @@ class AdminBlogAiAutoTest extends TestCase
                         ],
                     ],
                 ];
-            } elseif (str_contains($system, 'SEO outline')) {
+            } elseif (str_contains($system, 'SEO outline') || str_contains($system, 'Content Planner')) {
                 $payload = [
                     'h1' => 'ফেক অর্ডার কমানোর উপায়',
                     'focus_keyword' => 'ফেক অর্ডার',
                     'slug_suggestion' => 'fake-order-auto-guide',
                     'sections' => [
-                        ['heading' => 'কেন ফেক অর্ডার হয়', 'bullets' => ['COD', 'ঠিকানা ভুল']],
+                        ['heading' => 'কেন ফেক অর্ডার হয়', 'h3' => ['কারণ'], 'bullets' => ['COD', 'ঠিকানা ভুল']],
                         ['heading' => 'কুরিয়ার হিস্টোরি কীভাবে দেখবেন', 'bullets' => ['ফোন', 'ট্র্যাকিং']],
                         ['heading' => 'চেকলিস্ট', 'bullets' => ['OTP', 'ব্লক']],
                         ['heading' => 'WooEasyLife দিয়ে কীভাবে', 'bullets' => ['fraud checker']],
@@ -110,6 +116,8 @@ class AdminBlogAiAutoTest extends TestCase
                         ['q' => 'ফেক অর্ডার কী?', 'a_points' => ['নেয় না এমন অর্ডার']],
                         ['q' => 'হিস্টোরি কেন লাগে?', 'a_points' => ['ঝুঁকি দেখে']],
                         ['q' => 'শুরু কিভাবে?', 'a_points' => ['WooEasyLife']],
+                        ['q' => 'OTP লাগে?', 'a_points' => ['চেকআউট OTP']],
+                        ['q' => 'অটো এন্ট্রি?', 'a_points' => ['কুরিয়ার অটো']],
                     ],
                     'internal_links' => [
                         ['path' => '/fake-order-protection', 'anchor' => 'ফেক অর্ডার প্রোটেকশন', 'reason' => 'landing'],
@@ -118,13 +126,15 @@ class AdminBlogAiAutoTest extends TestCase
                     'cta' => 'WooEasyLife দিয়ে শুরু করুন',
                 ];
             } else {
-                $body = '<h2>কেন ফেক অর্ডার হয়</h2>'
+                $body = '<section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>ফেক অর্ডার কমাতে কুরিয়ার হিস্টোরি চেক করুন।</p></section>'
                     .'<p>ফেক অর্ডার বাংলাদেশের COD সেলারদের বড় সমস্যা। কুরিয়ার হিস্টোরি চেক এবং COD fraud Bangladesh প্যাটার্ন বুঝলে লোকসান কমে। '
                     .'<a href="/fake-order-protection">ফেক অর্ডার প্রোটেকশন</a> ও <a href="/bd-fraud-checker">ফ্রড চেকার</a> দিয়ে অপারেশন সহজ হয়। '
                     .str_repeat('বিস্তারিত ধাপ ও উদাহরণ সহ ব্যবহারিক গাইড। ', 40)
                     .'</p>'
-                    .'<h2>কুরিয়ার হিস্টোরি কীভাবে দেখবেন</h2><p>অর্ডার নেওয়ার আগে নম্বর যাচাই করুন।</p>'
-                    .'<h2>চেকলিস্ট</h2><p>OTP, ব্লক লিস্ট, এবং রিস্ক স্কোর দেখুন।</p>';
+                    .'<h2>ফেক অর্ডার কেন হয়</h2><h3>মূল কারণ</h3><ul><li>COD</li></ul><ol><li>চেক</li></ol>'
+                    .'<p>অর্ডার নেওয়ার আগে নম্বর যাচাই করুন।</p>'
+                    .'<h2>চেকলিস্ট</h2><p>OTP, ব্লক লিস্ট, এবং রিস্ক স্কোর দেখুন।</p>'
+                    .'<section class="seo-ai-summary"><h2>এআই সারাংশ</h2><p>ফেক অর্ডার আটকাতে হিস্টোরি ও OTP একসাথে ব্যবহার করুন।</p></section>';
 
                 $payload = [
                     'title' => 'ফেক অর্ডার কমানোর উপায়',
@@ -136,11 +146,15 @@ class AdminBlogAiAutoTest extends TestCase
                     'excerpt' => 'ফেক অর্ডার কমাতে ব্যবহারিক ধাপ।',
                     'author_name' => 'Muhibbullah Ansary',
                     'robots' => 'index,follow',
+                    'quick_answer' => 'ফেক অর্ডার কমাতে কুরিয়ার হিস্টোরি চেক করুন।',
+                    'ai_search_summary' => 'ফেক অর্ডার আটকাতে হিস্টোরি ও OTP একসাথে ব্যবহার করুন।',
                     'body_html' => $body,
                     'faqs' => [
                         ['q' => 'ফেক অর্ডার কী?', 'a' => 'নেয় না এমন অর্ডার।'],
                         ['q' => 'হিস্টোরি কেন লাগে?', 'a' => 'ঝুঁকি বোঝার জন্য।'],
                         ['q' => 'শুরু কিভাবে?', 'a' => 'WooEasyLife দিয়ে।'],
+                        ['q' => 'OTP লাগে?', 'a' => 'চেকআউট OTP ফেক অর্ডার কমায়।'],
+                        ['q' => 'অটো এন্ট্রি?', 'a' => 'কনফার্ম হলেই কুরিয়ারে যায়।'],
                     ],
                     'seo_notes' => [],
                 ];

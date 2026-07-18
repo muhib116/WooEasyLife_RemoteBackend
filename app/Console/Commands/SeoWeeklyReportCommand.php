@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\BlogService;
+use App\Services\Seo\GoogleSearchConsoleClient;
 use App\Services\SeoMetaService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -15,7 +16,7 @@ class SeoWeeklyReportCommand extends Command
 
     protected $description = 'Weekly SEO health check (sitemap URLs) and optional Google Search Console snapshot';
 
-    public function handle(SeoMetaService $seo, BlogService $blog): int
+    public function handle(SeoMetaService $seo, BlogService $blog, GoogleSearchConsoleClient $gsc): int
     {
         $lines = [];
         $lines[] = '# WooEasyLife weekly SEO report';
@@ -58,9 +59,8 @@ class SeoWeeklyReportCommand extends Command
         $lines[] = "Summary: {$ok} ok, {$fail} failed";
         $lines[] = '';
 
-        $gsc = $this->fetchGscSnapshot();
         $lines[] = '## Google Search Console';
-        $lines[] = $gsc;
+        $lines[] = $this->fetchGscSnapshot($gsc);
         $lines[] = '';
         $lines[] = '## Manual checklist';
         $lines[] = '- Review GSC → Performance → Queries (ফ্রড চেকার, BD fraud checker)';
@@ -78,44 +78,43 @@ class SeoWeeklyReportCommand extends Command
         return $fail > 0 ? self::FAILURE : self::SUCCESS;
     }
 
-    private function fetchGscSnapshot(): string
+    private function fetchGscSnapshot(GoogleSearchConsoleClient $gsc): string
     {
-        $siteUrl = config('seo.gsc.site_url');
-        $token = config('seo.gsc.access_token');
+        if (! $gsc->configured()) {
+            $status = $gsc->configurationStatus();
 
-        if (! filled($siteUrl) || ! filled($token)) {
-            return 'Skipped — set SEO_GSC_SITE_URL and SEO_GSC_ACCESS_TOKEN to pull query metrics automatically.';
+            return 'Skipped — configure Search Console OAuth: '
+                .'SEO_GSC_SITE_URL + GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + SEO_GSC_REFRESH_TOKEN '
+                .'(or legacy SEO_GSC_ACCESS_TOKEN). '
+                .'Status: site='.($status['has_site_url'] ? 'yes' : 'no')
+                .', client_id='.($status['has_client_id'] ? 'yes' : 'no')
+                .', refresh='.($status['has_refresh_token'] ? 'yes' : 'no')
+                .', static_token='.($status['has_static_access_token'] ? 'yes' : 'no').'.';
         }
 
-        $endpoint = 'https://www.googleapis.com/webmasters/v3/sites/'
-            .rawurlencode((string) $siteUrl)
-            .'/searchAnalytics/query';
-
         try {
-            $response = Http::withToken((string) $token)
-                ->timeout(20)
-                ->post($endpoint, [
-                    'startDate' => now()->subDays(28)->toDateString(),
-                    'endDate' => now()->subDay()->toDateString(),
-                    'dimensions' => ['query'],
-                    'rowLimit' => 15,
-                ]);
+            $payload = $gsc->searchAnalytics([
+                'startDate' => now()->subDays(28)->toDateString(),
+                'endDate' => now()->subDay()->toDateString(),
+                'dimensions' => ['query'],
+                'rowLimit' => 15,
+            ]);
 
-            if (! $response->successful()) {
-                return 'GSC API error HTTP '.$response->status().': '.$response->body();
-            }
-
-            $rows = $response->json('rows') ?? [];
+            $rows = $payload['rows'] ?? [];
             if ($rows === []) {
                 return 'GSC returned 0 query rows for the last 28 days.';
             }
 
-            $out = ["Top queries (28d):"];
+            $out = ['Top queries (28d):'];
             foreach ($rows as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
                 $q = $row['keys'][0] ?? '';
                 $clicks = $row['clicks'] ?? 0;
                 $impr = $row['impressions'] ?? 0;
-                $out[] = "- {$q} — clicks {$clicks}, impressions {$impr}";
+                $pos = isset($row['position']) ? round((float) $row['position'], 1) : '—';
+                $out[] = "- {$q} — clicks {$clicks}, impressions {$impr}, pos {$pos}";
             }
 
             return implode("\n", $out);
