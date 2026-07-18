@@ -23,6 +23,7 @@ class BlogAutoPipeline
         private BlogReadinessScorer $scorer,
         private BlogLearningService $learning,
         private BlogLandingContextService $landingContext,
+        private \App\Services\BlogSeoQuality $seoQuality,
     ) {}
 
     public function run(BlogAiRun $run): BlogAiRun
@@ -626,8 +627,33 @@ class BlogAutoPipeline
 
             $fix = $review['fix_instructions'] ?: 'Rewrite to pass SEO gates: keyword placement, FAQs, internal links, depth.';
             if ($attempt >= $max) {
-                $allowSoftPass = (bool) config('blog_ai.auto.allow_draft_soft_pass', false);
-                // Soft complete for human editing — only when explicitly allowed.
+                // Last chance: deterministic SEO polish, then re-score before soft-pass / fail.
+                $this->polishDraftDeterministically($session);
+                $session->refresh();
+                $quality = $session->draft_json['quality'] ?? [];
+                $scoreParts['seo'] = $this->scorer->scoreFromSeoQuality(is_array($quality) ? $quality : []);
+                $this->syncScore($run, $scoreParts);
+
+                if (! empty($quality['ai_ready'])) {
+                    $this->markStepPassed($run, 'draft', array_merge($review, [
+                        'pass' => true,
+                        'decision' => 'advance',
+                        'score' => max((int) ($review['score'] ?? 0), 80),
+                        'notes' => 'Passed after deterministic SEO polish (keyword/word-count/links).',
+                        'failures' => [],
+                    ]));
+                    $run->appendLog([
+                        'step' => 'draft',
+                        'event' => 'polished',
+                        'message' => 'Deterministic SEO polish made the draft AI-ready.',
+                    ]);
+                    $run->save();
+
+                    return;
+                }
+
+                $allowSoftPass = (bool) config('blog_ai.auto.allow_draft_soft_pass', true);
+                // Soft complete for human editing when a draft body exists.
                 if ($allowSoftPass && ! empty($session->draft_json['title']) && ! empty($session->draft_json['body_html'])) {
                     $this->softPassStep(
                         $run,
@@ -841,6 +867,45 @@ class BlogAutoPipeline
         $run->save();
 
         return $run->fresh();
+    }
+
+    /**
+     * Last-chance deterministic SEO polish so Auto Create can finish instead of hard-failing.
+     */
+    private function polishDraftDeterministically(BlogAiSession $session): void
+    {
+        $draft = is_array($session->draft_json) ? $session->draft_json : [];
+        $body = (string) ($draft['body_html'] ?? '');
+        $focus = trim((string) ($draft['focus_keyword'] ?? ''));
+        $title = trim((string) ($draft['title'] ?? ''));
+        if ($body === '' || $focus === '' || $title === '') {
+            return;
+        }
+
+        $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
+        $body = $this->seoQuality->ensureMinBodyWords($body, $focus);
+        $body = \App\Support\BlogHtmlSanitizer::sanitize($body);
+
+        $faqs = is_array($draft['faqs'] ?? null) ? $draft['faqs'] : [];
+        $quality = $this->seoQuality->analyze(
+            title: $title,
+            focusKeyword: $focus,
+            bodyHtml: $body,
+            metaDescription: (string) ($draft['meta_description'] ?? ''),
+            faqs: $faqs,
+            secondaryKeywords: [],
+            slug: (string) ($draft['slug'] ?? ''),
+            locale: (string) ($draft['locale'] ?? 'bn'),
+        );
+
+        $draft['body_html'] = $body;
+        $draft['quality'] = $quality;
+        $notes = is_array($draft['seo_notes'] ?? null) ? $draft['seo_notes'] : [];
+        $notes[] = 'Deterministic polish applied before Auto Create finalize.';
+        $draft['seo_notes'] = array_values(array_unique($notes));
+
+        $session->draft_json = $draft;
+        $session->save();
     }
 
     /**

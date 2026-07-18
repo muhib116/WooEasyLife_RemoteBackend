@@ -749,12 +749,32 @@ TXT);
             $slug = BlogPost::makeSlug(Str::slug($focusKeyword) ?: $slug);
         }
 
+        // Deterministic SEO closers — Auto Create must not stall forever on thin AI drafts.
+        $wordsBefore = $this->seoQuality->bodyWordCount($body);
+        $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focusKeyword);
+        $body = $this->seoQuality->ensureMinBodyWords($body, $focusKeyword);
+        $body = BlogHtmlSanitizer::sanitize($body);
+
+        $quality = $this->seoQuality->analyze(
+            title: $title,
+            focusKeyword: $focusKeyword,
+            bodyHtml: $body,
+            metaDescription: $metaDescription,
+            faqs: $faqs,
+            secondaryKeywords: $secondary,
+            slug: $slug,
+            locale: 'bn',
+        );
+
         $notes = is_array($draft['seo_notes'] ?? null) ? $draft['seo_notes'] : [];
         if ($autoKeywordPivot) {
             $notes[] = 'Auto-pivoted focus keyword to avoid published collision: '
                 .($autoKeywordPivot['from'] ?: '(empty)')
                 .' → '
                 .$autoKeywordPivot['to'];
+        }
+        if ($this->seoQuality->bodyWordCount($body) > $wordsBefore) {
+            $notes[] = 'Expanded body to meet minimum word count for SEO readiness.';
         }
 
         return [

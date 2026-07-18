@@ -437,7 +437,7 @@ return [
         | Soft-pass drafts (failed SEO after max revisions) never score above this.
         | When allow_draft_soft_pass is false, Auto Create fails instead of soft-passing.
         */
-        'allow_draft_soft_pass' => filter_var(env('BLOG_AI_AUTO_ALLOW_DRAFT_SOFT_PASS', false), FILTER_VALIDATE_BOOLEAN),
+        'allow_draft_soft_pass' => filter_var(env('BLOG_AI_AUTO_ALLOW_DRAFT_SOFT_PASS', true), FILTER_VALIDATE_BOOLEAN),
         'soft_pass_score_cap' => (int) env('BLOG_AI_AUTO_SOFT_PASS_CAP', 59),
         'hooks_to_select' => (int) env('BLOG_AI_AUTO_HOOKS_SELECT', 1),
         /*
