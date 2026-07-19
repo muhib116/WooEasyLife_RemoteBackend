@@ -441,7 +441,9 @@ Return JSON:
   "cta": "soft CTA sentence"
 }
 Use ONLY paths from the provided internal link catalog (2–4 links).
-MUST include cluster_landing.primary_path (or must_link_paths) as the first internal link.
+MUST include cluster_landing.primary_path (or must_link_paths) as the first internal link(s).
+Use keyword-rich anchors from seo_tools / catalog anchor_hints (e.g. “রিটার্ন লস ক্যালকুলেটর”, “ফ্রড চেকার”) — never “এখানে ক্লিক” / “এই লিংক”.
+Prefer ranking free tools: /bd-fraud-checker, /return-loss-calculator, /courier-charge-calculator, /ads-roas-calculator when relevant.
 Echo page FAQs/angle_hint truth — do not invent features beyond product_brief + cluster_landing.
 Include at least 5 FAQ items under faqs (q + a_points).
 Include a differentiation section that beats generic competitor blogs (practical BD COD steps + WooEasyLife truth).
@@ -502,7 +504,9 @@ Return JSON with title, slug, focus_keyword, meta_title, meta_description, excer
 author_name "{$author}", quick_answer, ai_search_summary, body_html, faqs, seo_notes.
 Requirements: {$minWords}+ words; keyword in title, first <p>, meta, one H2;
 at least {$minFaqs} FAQs; Featured Snippet Quick Answer + AI Search Summary sections;
-2+ internal links including cluster_landing.primary_path; H2+H3; lists; soft CTA.
+2+ internal links including ALL cluster_landing.must_link_paths with keyword-rich anchors;
+link free SEO tools when relevant (/bd-fraud-checker, /return-loss-calculator, /courier-charge-calculator, /ads-roas-calculator);
+H2+H3; lists; soft CTA to primary tool.
 TXT);
 
         $cluster = (string) ($session->cluster ?: 'general');
@@ -624,11 +628,46 @@ TXT);
             $existing = collect($filtered)->first(fn ($l) => $l['path'] === $mustPath);
             $filtered = collect($filtered)->reject(fn ($l) => $l['path'] === $mustPath)->values()->all();
             $catalogItem = collect($this->linkCatalog->all())->firstWhere('path', $mustPath);
-            array_unshift($filtered, $existing ?: [
+            $tool = collect(config('blog_ai.seo_tools', []))->firstWhere('path', $mustPath);
+            $keywordAnchor = (is_array($tool['keywords'] ?? null) && filled($tool['keywords'][0] ?? null))
+                ? (string) $tool['keywords'][0]
+                : null;
+            $fallbackAnchor = $keywordAnchor
+                ?? ($catalogItem['anchor_hints'][0] ?? null)
+                ?? ($catalogItem['title'] ?? $mustPath);
+            $existingAnchor = is_array($existing) ? trim((string) ($existing['anchor'] ?? '')) : '';
+            array_unshift($filtered, [
                 'path' => $mustPath,
-                'anchor' => $catalogItem['anchor_hints'][0] ?? ($catalogItem['title'] ?? $mustPath),
-                'reason' => 'required cluster landing page',
+                'anchor' => $existingAnchor !== '' ? $existingAnchor : (string) $fallbackAnchor,
+                'reason' => (is_array($existing) && ($existing['reason'] ?? '') !== '')
+                    ? (string) $existing['reason']
+                    : 'required cluster SEO tool / landing',
             ]);
+        }
+
+        // Prefer one extra related SEO tool when room remains.
+        $toolPaths = collect(config('blog_ai.seo_tools', []))
+            ->pluck('path')
+            ->filter()
+            ->all();
+        $related = is_array($landing['related_paths'] ?? null) ? $landing['related_paths'] : [];
+        foreach ($related as $relatedPath) {
+            if (count($filtered) >= 4) {
+                break;
+            }
+            if (! in_array($relatedPath, $allowed, true) || ! in_array($relatedPath, $toolPaths, true)) {
+                continue;
+            }
+            if (collect($filtered)->contains(fn ($l) => $l['path'] === $relatedPath)) {
+                continue;
+            }
+            $tool = collect(config('blog_ai.seo_tools', []))->firstWhere('path', $relatedPath);
+            $catalogItem = collect($this->linkCatalog->all())->firstWhere('path', $relatedPath);
+            $filtered[] = [
+                'path' => $relatedPath,
+                'anchor' => (string) (($tool['keywords'][0] ?? null) ?: ($catalogItem['anchor_hints'][0] ?? $relatedPath)),
+                'reason' => 'related SEO tool for topical ranking',
+            ];
         }
 
         $filtered = array_slice($filtered, 0, 4);

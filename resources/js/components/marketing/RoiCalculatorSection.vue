@@ -7,6 +7,11 @@ const props = defineProps({
     scenarios: { type: Array, default: () => [] },
     primaryCtaUrl: { type: String, default: '#' },
     primaryCtaLabel: { type: String, default: 'ফ্রি ট্রায়াল শুরু করুন' },
+    /** When false, hide badge/headline (use on dedicated SEO pages with their own H1). */
+    showIntro: { type: Boolean, default: true },
+    /** Optional link to the standalone calculator page (homepage section). */
+    dedicatedPageHref: { type: String, default: null },
+    dedicatedPageLabel: { type: String, default: 'আলাদা পেজে খুলুন' },
 });
 
 const inputs = computed(() => props.config?.inputs ?? {});
@@ -72,7 +77,7 @@ const titleClass = (accent) => {
 <template>
     <section id="roi" class="scroll-mt-24 border-y border-white/10 bg-[#111111] py-14 sm:py-20">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
-            <div class="text-center">
+            <div v-if="showIntro" class="text-center">
                 <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
                     {{ config.badge ?? 'ROI ক্যালকুলেটর' }}
                 </span>
@@ -82,9 +87,17 @@ const titleClass = (accent) => {
                 <p v-if="config.subtitle" class="mx-auto mt-3 max-w-2xl text-sm text-slate-400 sm:text-base">
                     {{ config.subtitle }}
                 </p>
+                <p v-if="dedicatedPageHref" class="mt-3">
+                    <Link
+                        :href="dedicatedPageHref"
+                        class="text-sm font-semibold text-amber-400 hover:text-amber-300"
+                    >
+                        {{ dedicatedPageLabel }} →
+                    </Link>
+                </p>
             </div>
 
-            <div class="mt-10 grid gap-5 lg:grid-cols-2 lg:gap-6">
+            <div class="mt-10 grid gap-5 lg:grid-cols-2 lg:gap-6" :class="{ 'mt-0': !showIntro }">
                 <!-- Controls -->
                 <div class="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
                     <div class="space-y-6">

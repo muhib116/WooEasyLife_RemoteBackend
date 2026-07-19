@@ -27,6 +27,9 @@
         <ul>
             <li><a href="/">হোম</a></li>
             <li><a href="/bd-fraud-checker">BD Fraud Checker / ফ্রড চেকার</a></li>
+            <li><a href="/return-loss-calculator">রিটার্ন লস ক্যালকুলেটর</a></li>
+            <li><a href="/courier-charge-calculator">কুরিয়ার চার্জ ক্যালকুলেটর</a></li>
+            <li><a href="/ads-roas-calculator">Ads ROAS ক্যালকুলেটর</a></li>
             <li><a href="/fake-order-protection">ফেক অর্ডার প্রোটেকশন</a></li>
             <li><a href="/courier-auto-entry">কুরিয়ার অটো এন্ট্রি</a></li>
             <li><a href="/pricing">প্রাইসিং ও সাবস্ক্রিপশন</a></li>

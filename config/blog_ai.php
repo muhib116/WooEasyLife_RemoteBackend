@@ -37,7 +37,7 @@ return [
 
     'hooks_count' => 10,
 
-    'internal_links_min' => 2,
+    'internal_links_min' => 3,
 
     /*
     | On-page SEO quality gates for AI drafts + soft publish warnings.
@@ -152,10 +152,12 @@ return [
     'clusters' => [
         'fake_order' => 'ফেক অর্ডার / COD fraud',
         'fraud_checker' => 'ফ্রড চেকার / Courier history',
+        'return_loss' => 'রিটার্ন লস ক্যালকুলেটর',
         'checkout_protection' => 'চেকআউট সুরক্ষা / OTP & block',
         'courier' => 'কুরিয়ার / অটো এন্ট্রি',
+        'courier_charge' => 'কুরিয়ার চার্জ ক্যালকুলেটর',
         'missing_order' => 'হারানো অর্ডার / Missing order',
-        'facebook_ads' => 'Facebook Ads / Pixel',
+        'facebook_ads' => 'Facebook Ads / Pixel / ROAS',
         'ai_orders' => 'AI অর্ডার / Message & image to order',
         'packing_print' => 'প্যাকিং / Invoice & sticker',
         'multistore_app' => 'মাল্টিস্টোর / Mobile app',
@@ -165,26 +167,69 @@ return [
     ],
 
     /*
+    | Free SEO tools to rank via blog internal links (high-intent keywords).
+    | Agents must prefer these paths with keyword-rich anchors.
+    */
+    'seo_tools' => [
+        [
+            'path' => '/bd-fraud-checker',
+            'title' => 'ফ্রি ফ্রড চেকার',
+            'priority' => 100,
+            'keywords' => ['ফ্রড চেকার', 'কুরিয়ার হিস্টোরি চেক', 'courier fraud checker bd', 'pathao steadfast redx চেক'],
+        ],
+        [
+            'path' => '/return-loss-calculator',
+            'title' => 'রিটার্ন লস ক্যালকুলেটর',
+            'priority' => 95,
+            'keywords' => ['রিটার্ন লস ক্যালকুলেটর', 'COD রিটার্ন লস', 'ফেক অর্ডার খরচ হিসাব', 'মাসিক রিটার্ন লস'],
+        ],
+        [
+            'path' => '/courier-charge-calculator',
+            'title' => 'কুরিয়ার চার্জ ক্যালকুলেটর',
+            'priority' => 90,
+            'keywords' => ['কুরিয়ার চার্জ ক্যালকুলেটর', 'Pathao চার্জ', 'Steadfast চার্জ', 'RedX ডেলিভারি চার্জ'],
+        ],
+        [
+            'path' => '/ads-roas-calculator',
+            'title' => 'Facebook Ads ROAS ক্যালকুলেটর',
+            'priority' => 90,
+            'keywords' => ['Facebook Ads ROAS', 'ফেক Purchase', 'পিক্সেল ROAS', 'অ্যাড বাজেট নষ্ট'],
+        ],
+        [
+            'path' => '/fake-order-protection',
+            'title' => 'ফেক অর্ডার প্রোটেকশন',
+            'priority' => 85,
+            'keywords' => ['ফেক অর্ডার প্রোটেকশন', 'কিভাবে ফেক অর্ডার আটকাবো', 'চেকআউট OTP'],
+        ],
+        [
+            'path' => '/courier-auto-entry',
+            'title' => 'কুরিয়ার অটো এন্ট্রি',
+            'priority' => 80,
+            'keywords' => ['কুরিয়ার অটো এন্ট্রি', 'Pathao Steadfast RedX অটো', 'পার্সেল অটো এন্ট্রি'],
+        ],
+    ],
+
+    /*
     | Map each content cluster → landing/SEO pages (config/seo.php keys + paths).
-    | Auto + manual prompts use this so posts stay aligned with live landing copy.
     */
     'cluster_landing' => [
         'fake_order' => [
             'primary_path' => '/fake-order-protection',
-            'seo_pages' => ['fake_order_protection', 'ki_vabe_fake_order_atkabo', 'fake_customer_check'],
-            'related_paths' => ['/bd-fraud-checker', '/ki-vabe-fake-order-atkabo', '/fake-customer-check', '/pricing'],
-            'must_link_paths' => ['/fake-order-protection'],
+            'seo_pages' => ['fake_order_protection', 'ki_vabe_fake_order_atkabo', 'fake_customer_check', 'return_loss_calculator'],
+            'related_paths' => ['/bd-fraud-checker', '/return-loss-calculator', '/ki-vabe-fake-order-atkabo', '/fake-customer-check', '/ads-roas-calculator', '/pricing'],
+            'must_link_paths' => ['/fake-order-protection', '/return-loss-calculator'],
             'claims' => [
                 'মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি চেক',
                 'চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট',
+                'রিটার্ন লস ক্যালকুলেটর দিয়ে মাসিক লস হিসাব',
                 'মাল্টি-লেয়ার ফেক অর্ডার প্রোটেকশন — শুধু টুল নয়',
             ],
-            'angle_hint' => 'কিভাবে ফেক অর্ডার আটকাবো — চেক → যাচাই → ব্লক প্র্যাকটিক্যাল গাইড',
+            'angle_hint' => 'কিভাবে ফেক অর্ডার আটকাবো — চেক → যাচাই → ব্লক + রিটার্ন লস হিসাব',
         ],
         'fraud_checker' => [
             'primary_path' => '/bd-fraud-checker',
             'seo_pages' => ['bd_fraud_checker', 'pathao_fraud_check', 'steadfast_fraud_check', 'redx_fraud_check', 'bd_courier_ratio_checker'],
-            'related_paths' => ['/pathao-fraud-check', '/steadfast-fraud-check', '/redx-fraud-check', '/bd-courier-ratio-checker', '/fraudbd-alternative', '/pricing'],
+            'related_paths' => ['/pathao-fraud-check', '/steadfast-fraud-check', '/redx-fraud-check', '/bd-courier-ratio-checker', '/fraudbd-alternative', '/return-loss-calculator', '/fake-order-protection', '/pricing'],
             'must_link_paths' => ['/bd-fraud-checker'],
             'claims' => [
                 'ফোন নম্বর দিয়ে Pathao, Steadfast, RedX হিস্টোরি',
@@ -193,11 +238,23 @@ return [
             ],
             'angle_hint' => 'Courier Fraud Checker BD — অর্ডার কনফার্মের আগে নম্বর চেক',
         ],
+        'return_loss' => [
+            'primary_path' => '/return-loss-calculator',
+            'seo_pages' => ['return_loss_calculator', 'fake_order_protection'],
+            'related_paths' => ['/bd-fraud-checker', '/fake-order-protection', '/ads-roas-calculator', '/pricing'],
+            'must_link_paths' => ['/return-loss-calculator', '/bd-fraud-checker'],
+            'claims' => [
+                'দৈনিক অর্ডার ও রিটার্ন রেট দিয়ে মাসিক লস হিসাব',
+                'ফেক অর্ডার আটকালে সাশ্রয় vs সাবস্ক্রিপশন খরচ',
+                'রিটার্ন লস কমাতে ফ্রড চেক + প্রোটেকশন',
+            ],
+            'angle_hint' => 'রিটার্ন লস ক্যালকুলেটর — COD সেলারের মাসিক খরচ ও সাশ্রয়',
+        ],
         'checkout_protection' => [
             'primary_path' => '/fake-order-protection',
             'seo_pages' => ['fake_order_protection', 'fake_customer_check'],
-            'related_paths' => ['/bd-fraud-checker', '/ki-vabe-fake-order-atkabo', '/pricing'],
-            'must_link_paths' => ['/fake-order-protection'],
+            'related_paths' => ['/bd-fraud-checker', '/ki-vabe-fake-order-atkabo', '/return-loss-calculator', '/pricing'],
+            'must_link_paths' => ['/fake-order-protection', '/bd-fraud-checker'],
             'claims' => [
                 'চেকআউট OTP দিয়ে ভুয়া নম্বর কমান',
                 'ডুপ্লিকেট অর্ডার ব্লক ও ব্ল্যাকলিস্ট',
@@ -207,21 +264,33 @@ return [
         ],
         'courier' => [
             'primary_path' => '/courier-auto-entry',
-            'seo_pages' => ['courier_auto_entry'],
-            'related_paths' => ['/bd-fraud-checker', '/pricing'],
-            'must_link_paths' => ['/courier-auto-entry'],
+            'seo_pages' => ['courier_auto_entry', 'courier_charge_calculator'],
+            'related_paths' => ['/courier-charge-calculator', '/bd-fraud-checker', '/return-loss-calculator', '/pricing'],
+            'must_link_paths' => ['/courier-auto-entry', '/courier-charge-calculator'],
             'claims' => [
                 'Pathao, Steadfast, RedX অটো পার্সেল এন্ট্রি',
-                'ম্যানুয়াল কুরিয়ার প্যানেল কপি-পেস্ট কমান',
+                'কুরিয়ার চার্জ ক্যালকুলেটর দিয়ে রেট তুলনা',
                 'অর্ডার কনফার্ম → কুরিয়ার এন্ট্রি স্বয়ংক্রিয়',
             ],
-            'angle_hint' => 'কুরিয়ার অটো এন্ট্রি — COD অপারেশন দ্রুত',
+            'angle_hint' => 'কুরিয়ার অটো এন্ট্রি + চার্জ হিসাব — COD অপারেশন দ্রুত',
+        ],
+        'courier_charge' => [
+            'primary_path' => '/courier-charge-calculator',
+            'seo_pages' => ['courier_charge_calculator', 'courier_auto_entry'],
+            'related_paths' => ['/courier-auto-entry', '/bd-fraud-checker', '/pricing'],
+            'must_link_paths' => ['/courier-charge-calculator', '/courier-auto-entry'],
+            'claims' => [
+                'Pathao · Steadfast · RedX আনুমানিক/লাইভ চার্জ তুলনা',
+                'ঢাকা / সাবআরবান / বাইরের জোন ও ওজন দিয়ে হিসাব',
+                'কনফার্ম হলে অটো এন্ট্রি — প্যানেলে বারবার চার্জ হিসাব নয়',
+            ],
+            'angle_hint' => 'কুরিয়ার চার্জ ক্যালকুলেটর — Pathao Steadfast RedX রেট তুলনা',
         ],
         'missing_order' => [
             'primary_path' => '/',
             'seo_pages' => ['home'],
-            'related_paths' => ['/pricing', '/bd-fraud-checker'],
-            'must_link_paths' => ['/'],
+            'related_paths' => ['/pricing', '/bd-fraud-checker', '/return-loss-calculator', '/ads-roas-calculator'],
+            'must_link_paths' => ['/', '/bd-fraud-checker'],
             'claims' => [
                 'মিসিং / অসম্পূর্ণ চেকআউট অর্ডার আলাদা করে দেখা',
                 'ওয়ান-ক্লিক মিসিং অর্ডার থেকে WooCommerce অর্ডার',
@@ -230,22 +299,22 @@ return [
             'angle_hint' => 'হারানো অর্ডার রিকভারি — cart/checkout drop-off',
         ],
         'facebook_ads' => [
-            'primary_path' => '/',
-            'seo_pages' => ['home'],
-            'related_paths' => ['/fake-order-protection', '/bd-fraud-checker', '/pricing'],
-            'must_link_paths' => ['/'],
+            'primary_path' => '/ads-roas-calculator',
+            'seo_pages' => ['ads_roas_calculator', 'fake_order_protection'],
+            'related_paths' => ['/fake-order-protection', '/bd-fraud-checker', '/return-loss-calculator', '/pricing'],
+            'must_link_paths' => ['/ads-roas-calculator', '/fake-order-protection'],
             'claims' => [
-                'Facebook / COD অ্যাড স্পেন্ড ফেক অর্ডারে নষ্ট কমান',
-                'পিক্সেল ও Purchase ইভেন্ট সুরক্ষা (প্রোডাক্ট ফিচার অনুযায়ী)',
+                'রিপোর্টেড vs আসল Facebook Ads ROAS হিসাব',
+                'ফেক Purchase বাদ দিয়ে পিক্সেল সুরক্ষা',
                 'ফ্রড চেক + চেকআউট সুরক্ষা দিয়ে অ্যাড ROI বাড়ান',
             ],
-            'angle_hint' => 'Facebook Ads + COD — ফেক অর্ডার ও রিটার্ন লস কমানো',
+            'angle_hint' => 'Facebook Ads ROAS ক্যালকুলেটর — ফেক Purchase ও অ্যাড বাজেট',
         ],
         'ai_orders' => [
             'primary_path' => '/',
             'seo_pages' => ['home'],
-            'related_paths' => ['/courier-auto-entry', '/pricing'],
-            'must_link_paths' => ['/'],
+            'related_paths' => ['/courier-auto-entry', '/courier-charge-calculator', '/pricing'],
+            'must_link_paths' => ['/', '/courier-auto-entry'],
             'claims' => [
                 'মেসেজ / স্ক্রিনশট থেকে অর্ডার তৈরি (AI order workflow)',
                 'ম্যানুয়াল অর্ডার এন্ট্রি কমান',
@@ -256,8 +325,8 @@ return [
         'packing_print' => [
             'primary_path' => '/',
             'seo_pages' => ['home'],
-            'related_paths' => ['/courier-auto-entry', '/pricing'],
-            'must_link_paths' => ['/'],
+            'related_paths' => ['/courier-auto-entry', '/courier-charge-calculator', '/pricing'],
+            'must_link_paths' => ['/', '/courier-auto-entry'],
             'claims' => [
                 'ইনভয়েস ও কুরিয়ার স্টিকার প্রিন্ট',
                 'প্যাকিং স্লিপ দিয়ে অপারেশন দ্রুত',
@@ -268,7 +337,7 @@ return [
         'multistore_app' => [
             'primary_path' => '/',
             'seo_pages' => ['home'],
-            'related_paths' => ['/pricing'],
+            'related_paths' => ['/pricing', '/bd-fraud-checker', '/courier-auto-entry'],
             'must_link_paths' => ['/'],
             'claims' => [
                 'এক ড্যাশবোর্ডে একাধিক স্টোর',
@@ -280,7 +349,7 @@ return [
         'team_calls' => [
             'primary_path' => '/',
             'seo_pages' => ['home'],
-            'related_paths' => ['/pricing'],
+            'related_paths' => ['/pricing', '/bd-fraud-checker'],
             'must_link_paths' => ['/'],
             'claims' => [
                 'কাস্টমার কল হিস্ট্রি / কল ট্র্যাকিং',
@@ -292,26 +361,26 @@ return [
         'operations' => [
             'primary_path' => '/',
             'seo_pages' => ['home', 'pricing'],
-            'related_paths' => ['/bd-fraud-checker', '/courier-auto-entry', '/pricing'],
-            'must_link_paths' => ['/'],
+            'related_paths' => ['/bd-fraud-checker', '/return-loss-calculator', '/courier-charge-calculator', '/ads-roas-calculator', '/courier-auto-entry', '/fake-order-protection', '/pricing'],
+            'must_link_paths' => ['/', '/bd-fraud-checker'],
             'claims' => [
                 'ফ্রড চেক + ফেক অর্ডার প্রোটেকশন + কুরিয়ার অটো এন্ট্রি এক প্ল্যাটফর্ম',
+                'ফ্রি SEO টুল: রিটার্ন লস · কুরিয়ার চার্জ · Ads ROAS ক্যালকুলেটর',
                 '১৪ দিন ফ্রি ট্রায়াল',
-                'বাংলাদেশ COD / WooCommerce সেলারদের জন্য অপারেশন টুল',
             ],
-            'angle_hint' => 'সম্পূর্ণ WooCommerce অপারেশন — টুল-শুধু নয়',
+            'angle_hint' => 'সম্পূর্ণ WooCommerce অপারেশন + ফ্রি টুলস — টুল-শুধু নয়',
         ],
         'general' => [
             'primary_path' => '/',
             'seo_pages' => ['home', 'pricing'],
-            'related_paths' => ['/bd-fraud-checker', '/fake-order-protection', '/courier-auto-entry', '/pricing'],
-            'must_link_paths' => ['/'],
+            'related_paths' => ['/bd-fraud-checker', '/return-loss-calculator', '/courier-charge-calculator', '/ads-roas-calculator', '/fake-order-protection', '/courier-auto-entry', '/pricing'],
+            'must_link_paths' => ['/', '/bd-fraud-checker'],
             'claims' => [
-                'BD fraud checker, fake order protection, courier auto-entry',
+                'BD fraud checker, return-loss & courier-charge calculators, Ads ROAS tool',
+                'ফেক অর্ডার প্রোটেকশন + কুরিয়ার অটো এন্ট্রি',
                 '১৪ দিন ফ্রি ট্রায়াল',
-                'বাংলাদেশ WooCommerce / Facebook / COD সেলার',
             ],
-            'angle_hint' => 'সাধারণ BD WooCommerce গাইড — WooEasyLife ল্যান্ডিং সত্য মেনে',
+            'angle_hint' => 'সাধারণ BD WooCommerce গাইড — ফ্রি টুল + WooEasyLife ল্যান্ডিং সত্য',
         ],
     ],
 
@@ -319,14 +388,16 @@ return [
     | Keyword/seed needles for automatic cluster detection (case-insensitive contains).
     */
     'cluster_detect_needles' => [
-        'fake_order' => ['ফেক অর্ডার', 'fake order', 'fake-order', 'পার্সেল রিটার্ন', 'রিটার্ন লস', 'cod fraud', 'অর্ডার আটকা'],
+        'return_loss' => ['রিটার্ন লস ক্যালকুলেটর', 'return loss calculator', 'মাসিক রিটার্ন লস', 'cod return loss', 'রিটার্ন লস হিসাব', 'ফেক অর্ডার খরচ', 'রিটার্ন লস'],
+        'courier_charge' => ['কুরিয়ার চার্জ ক্যালকুলেটর', 'courier charge calculator', 'pathao চার্জ', 'steadfast চার্জ', 'redx চার্জ', 'ডেলিভারি চার্জ হিসাব', 'কুরিয়ার রেট'],
+        'fake_order' => ['ফেক অর্ডার', 'fake order', 'fake-order', 'পার্সেল রিটার্ন', 'cod fraud', 'অর্ডার আটকা'],
         'fraud_checker' => ['ফ্রড চেকার', 'fraud checker', 'কুরিয়ার হিস্টোরি', 'courier history', 'pathao fraud', 'steadfast fraud', 'redx fraud', 'সাকসেস রেট', 'courier ratio', 'fraudbd'],
         'checkout_protection' => ['চেকআউট ওটিপি', 'checkout otp', 'otp', 'ডুপ্লিকেট অর্ডার', 'ব্ল্যাকলিস্ট', 'duplicate order', 'fake customer block'],
-        'courier' => ['কুরিয়ার অটো', 'courier auto', 'অটো এন্ট্রি', 'auto entry', 'steadfast', 'pathao entry', 'redx entry', 'পার্সেল এন্ট্রি'],
+        'courier' => ['কুরিয়ার অটো', 'courier auto', 'অটো এন্ট্রি', 'auto entry', 'pathao entry', 'redx entry', 'পার্সেল এন্ট্রি'],
         'missing_order' => ['হারানো অর্ডার', 'missing order', 'মিসিং অর্ডার', 'abandoned checkout', 'অসম্পূর্ণ অর্ডার'],
-        'facebook_ads' => ['facebook ads', 'ফেসবুক অ্যাড', 'facebook pixel', 'পিক্সেল', 'meta ads', 'purchase event'],
+        'facebook_ads' => ['facebook ads', 'ফেসবুক অ্যাড', 'facebook pixel', 'পিক্সেল', 'meta ads', 'purchase event', 'roas', 'ads roas', 'ফেক purchase'],
         'ai_orders' => ['ai order', 'মেসেজ থেকে অর্ডার', 'screenshot থেকে অর্ডার', 'image to order', 'মেসেজ অর্ডার'],
-        'packing_print' => ['ইনভয়েস', 'invoice', 'packing', 'স্টিকার প্রিন্ট', 'packing slip', 'প্রিন্ট'],
+        'packing_print' => ['ইনভয়েস', 'invoice', 'packing', 'স্টিকার প্রিন্ট', 'packing slip'],
         'multistore_app' => ['মাল্টিস্টোর', 'multistore', 'মোবাইল অ্যাপ', 'mobile app', 'এক ড্যাশবোর্ড'],
         'team_calls' => ['কল হিস্ট্রি', 'call tracking', 'স্টাফ', 'team call', 'customer call'],
         'operations' => ['অপারেশন', 'ড্যাশবোর্ড', 'order management', 'অর্ডার ম্যানেজমেন্ট', 'cod সেলার টুল'],
@@ -337,11 +408,13 @@ return [
     */
     'cluster_seed_queries' => [
         'fake_order' => ['ফেক অর্ডার', 'কিভাবে ফেক অর্ডার আটকাবো', 'COD fraud check'],
-        'fraud_checker' => ['কুরিয়ার হিস্টোরি চেক', 'ফ্রড চেকার', 'pathao fraud check'],
-        'checkout_protection' => ['চেকআউট ওটিপি', 'ডুপ্লিকেট অর্ডার ব্লক', 'fake customer block'],
+        'fraud_checker' => ['ফ্রড চেকার', 'কুরিয়ার হিস্টোরি চেক', 'pathao fraud check'],
+        'return_loss' => ['রিটার্ন লস', 'রিটার্ন লস ক্যালকুলেটর', 'COD রিটার্ন খরচ'],
+        'checkout_protection' => ['চেকআউট OTP', 'ডুপ্লিকেট অর্ডার ব্লক', 'fake customer block'],
         'courier' => ['কুরিয়ার অটো এন্ট্রি', 'pathao steadfast redx', 'WooCommerce courier'],
+        'courier_charge' => ['কুরিয়ার চার্জ', 'pathao ডেলিভারি চার্জ', 'steadfast প্রাইসিং'],
         'missing_order' => ['হারানো অর্ডার', 'missing order WooCommerce', 'abandoned checkout'],
-        'facebook_ads' => ['Facebook pixel purchase', 'পিক্সেল প্রোটেকশন', 'Facebook ads COD'],
+        'facebook_ads' => ['Facebook Ads ROAS', 'পিক্সেল প্রোটেকশন', 'ফেক purchase facebook'],
         'ai_orders' => ['মেসেজ থেকে অর্ডার', 'AI order WooCommerce', 'screenshot থেকে অর্ডার'],
         'packing_print' => ['ইনভয়েস প্রিন্ট', 'কুরিয়ার স্টিকার প্রিন্ট', 'packing slip'],
         'multistore_app' => ['মাল্টিস্টোর ড্যাশবোর্ড', 'WooCommerce mobile app', 'এক ড্যাশবোর্ডে সব স্টোর'],
@@ -355,6 +428,21 @@ return [
             'path' => '/',
             'title' => 'WooEasyLife হোম',
             'anchor_hints' => ['WooEasyLife', 'WooCommerce অপারেশন প্ল্যাটফর্ম'],
+        ],
+        [
+            'path' => '/return-loss-calculator',
+            'title' => 'রিটার্ন লস ক্যালকুলেটর',
+            'anchor_hints' => ['রিটার্ন লস ক্যালকুলেটর', 'COD রিটার্ন লস হিসাব', 'মাসিক রিটার্ন লস'],
+        ],
+        [
+            'path' => '/courier-charge-calculator',
+            'title' => 'কুরিয়ার চার্জ ক্যালকুলেটর',
+            'anchor_hints' => ['কুরিয়ার চার্জ ক্যালকুলেটর', 'Pathao Steadfast চার্জ', 'ডেলিভারি চার্জ হিসাব'],
+        ],
+        [
+            'path' => '/ads-roas-calculator',
+            'title' => 'Facebook Ads ROAS ক্যালকুলেটর',
+            'anchor_hints' => ['Facebook Ads ROAS ক্যালকুলেটর', 'ফেক Purchase ROAS', 'পিক্সেল ROAS'],
         ],
         [
             'path' => '/bd-fraud-checker',

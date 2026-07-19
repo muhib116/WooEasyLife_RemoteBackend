@@ -67,6 +67,9 @@ class BlogProductBriefBuilder
                 'Obey performance_learning guidance when choosing topic angle and hooks.',
                 'Stay aligned with cluster_landing page truth (H1, lead, FAQs, claims). Do not contradict landing SEO copy.',
                 'Include a soft CTA to the cluster primary_path (and /pricing when natural).',
+                'Rank SEO tools: every post MUST internally link cluster must_link_paths first, using high-intent keyword anchors from seo_tools (never generic “এখানে ক্লিক”).',
+                'When natural, also link 1 related free tool (return-loss / courier-charge / ads-roas / fraud checker) so tool pages gain topical authority.',
+                'Focus keyword should match search intent for the primary tool when the cluster is tool-led (fraud_checker, return_loss, courier_charge, facebook_ads).',
             ],
         ];
 
@@ -75,8 +78,10 @@ class BlogProductBriefBuilder
             $brief['cluster'] = (string) $cluster;
             $brief['cluster_label'] = config('blog_ai.clusters.'.$cluster, $cluster);
             $brief['cluster_landing'] = $landing;
+            $brief['seo_tools'] = $this->toolsForCluster((string) $cluster, $landing);
         } else {
             $brief['landing_page_catalog'] = $this->landingContext->catalog();
+            $brief['seo_tools'] = config('blog_ai.seo_tools', []);
         }
 
         if (config('blog_ai.analytics.learning_in_prompts', true)) {
@@ -89,5 +94,35 @@ class BlogProductBriefBuilder
     public function toPromptBlock(?string $cluster = null): string
     {
         return json_encode($this->build($cluster), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '{}';
+    }
+
+    /**
+     * @param  array<string, mixed>  $landing
+     * @return list<array<string, mixed>>
+     */
+    private function toolsForCluster(string $cluster, array $landing): array
+    {
+        $tools = collect(config('blog_ai.seo_tools', []))
+            ->filter(fn ($row) => is_array($row) && filled($row['path'] ?? null))
+            ->values();
+
+        $priorityPaths = array_values(array_filter([
+            ...(is_array($landing['must_link_paths'] ?? null) ? $landing['must_link_paths'] : []),
+            $landing['primary_path'] ?? null,
+            ...(is_array($landing['related_paths'] ?? null) ? $landing['related_paths'] : []),
+        ]));
+
+        return $tools
+            ->sortBy(function (array $tool) use ($priorityPaths) {
+                $path = (string) $tool['path'];
+                $idx = array_search($path, $priorityPaths, true);
+
+                return $idx === false
+                    ? 1000 - (int) ($tool['priority'] ?? 0)
+                    : $idx;
+            })
+            ->values()
+            ->take(6)
+            ->all();
     }
 }

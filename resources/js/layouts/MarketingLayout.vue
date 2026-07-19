@@ -34,19 +34,80 @@ const pricingNavHref = computed(() =>
     props.activeNav === 'home' ? '/#pricing' : route('pricing'),
 );
 
+/** Distinct public tools only (SEO keyword variants of the same checker are omitted). */
+const toolLinks = [
+    { label: 'রিটার্ন লস ক্যালকুলেটর', href: route('seo.return-loss-calculator') },
+    { label: 'কুরিয়ার চার্জ ক্যালকুলেটর', href: route('seo.courier-charge-calculator') },
+    { label: 'Ads ROAS ক্যালকুলেটর', href: route('seo.ads-roas-calculator') },
+    { label: 'ফ্রি ফ্রড চেকার', href: route('seo.bd-fraud-checker') },
+    { label: 'ফেক অর্ডার প্রোটেকশন', href: route('seo.fake-order-protection') },
+    { label: 'কুরিয়ার অটো এন্ট্রি', href: route('seo.courier-auto-entry') },
+];
+
+const toolsOpen = ref(false);
+const mobileToolsOpen = ref(false);
+const toolsMenuRef = ref(null);
+
+const currentPath = computed(() => {
+    const raw = page.url?.split('?')[0] || '';
+    return raw.endsWith('/') && raw.length > 1 ? raw.slice(0, -1) : raw;
+});
+
+const isToolsActive = computed(() => {
+    if (props.activeNav === 'tools' || props.activeNav === 'fraud-check') {
+        return true;
+    }
+
+    return toolLinks.some((link) => {
+        try {
+            const path = new URL(link.href, 'https://example.com').pathname;
+            return currentPath.value === path || currentPath.value === path.replace(/\/$/, '');
+        } catch {
+            return false;
+        }
+    });
+});
+
 const navLinks = computed(() => [
     { label: 'হোম', href: '/', key: 'home', anchor: false },
     { label: 'ফিচার', href: '/#features', key: 'features', anchor: true },
-    { label: 'ফ্রড চেক', href: route('seo.bd-fraud-checker'), key: 'fraud-check', anchor: false },
     { label: 'প্রাইসিং', href: pricingNavHref.value, key: 'pricing', anchor: props.activeNav === 'home' },
     { label: 'অ্যাপ', href: '/#download-app', key: 'app', anchor: true },
     { label: 'ডাউনলোড', href: '/#downloads', key: 'downloads', anchor: true },
     { label: 'FAQ', href: '/#faq', key: 'faq', anchor: true },
 ]);
 
+const closeToolsMenu = () => {
+    toolsOpen.value = false;
+};
+
+const toggleToolsMenu = () => {
+    toolsOpen.value = !toolsOpen.value;
+};
+
+const onDocumentClick = (event) => {
+    if (!toolsOpen.value || !toolsMenuRef.value) {
+        return;
+    }
+
+    if (!toolsMenuRef.value.contains(event.target)) {
+        closeToolsMenu();
+    }
+};
+
+const onDocumentKeydown = (event) => {
+    if (event.key === 'Escape') {
+        closeToolsMenu();
+        mobileToolsOpen.value = false;
+    }
+};
+
 const footerProductLinks = [
     { label: 'প্রাইসিং', href: route('pricing') },
     { label: 'ফ্রি ফ্রড চেক', href: route('seo.bd-fraud-checker') },
+    { label: 'রিটার্ন লস ক্যালকুলেটর', href: route('seo.return-loss-calculator') },
+    { label: 'কুরিয়ার চার্জ ক্যালকুলেটর', href: route('seo.courier-charge-calculator') },
+    { label: 'Ads ROAS ক্যালকুলেটর', href: route('seo.ads-roas-calculator') },
     { label: 'কিভাবে ফেক অর্ডার আটকাবো', href: route('seo.ki-vabe-fake-order-atkabo') },
     { label: 'Fake Customer Check', href: route('seo.fake-customer-check') },
     { label: 'BD Courier Ratio', href: route('seo.bd-courier-ratio-checker') },
@@ -117,6 +178,8 @@ const trustBadgeIcon = (icon) => {
 
 const closeMobile = () => {
     mobileOpen.value = false;
+    mobileToolsOpen.value = false;
+    closeToolsMenu();
 };
 
 const prefersReducedMotion = () =>
@@ -192,6 +255,9 @@ const onContactClick = (method) => {
 let detachScroll = () => {};
 
 onMounted(() => {
+    document.addEventListener('click', onDocumentClick);
+    document.addEventListener('keydown', onDocumentKeydown);
+
     const path = page.url?.split('?')[0] || window.location.pathname;
     const contentName = page.props.seo?.title
         || (typeof document !== 'undefined' ? document.title : path);
@@ -220,6 +286,8 @@ watch(mobileOpen, (open) => {
 });
 
 onUnmounted(() => {
+    document.removeEventListener('click', onDocumentClick);
+    document.removeEventListener('keydown', onDocumentKeydown);
     detachScroll();
     document.body.style.overflow = '';
 });
@@ -274,7 +342,67 @@ onUnmounted(() => {
                 <div class="hidden flex-1 items-center justify-center gap-1 lg:flex xl:gap-2">
                     <component
                         :is="link.anchor ? 'a' : Link"
-                        v-for="link in navLinks"
+                        v-for="link in navLinks.filter((l) => l.key === 'home' || l.key === 'features')"
+                        :key="link.key"
+                        :href="link.href"
+                        class="text-sm font-medium"
+                        :class="navLinkClass(link.key)"
+                        @click="link.anchor ? onAnchorNavClick($event, link.href) : undefined"
+                    >
+                        {{ link.label }}
+                    </component>
+
+                    <!-- Tools dropdown -->
+                    <div ref="toolsMenuRef" class="relative">
+                        <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-sm font-medium"
+                            :class="isToolsActive
+                                ? (isDark ? 'rounded-lg bg-white/10 px-3 py-1.5 text-amber-300' : 'rounded-lg bg-primary-50 px-3 py-1.5 text-primary-700')
+                                : (isDark ? 'px-1 py-1.5 text-slate-300 transition hover:text-white' : 'px-1 py-1.5 text-slate-600 transition hover:text-primary-600')"
+                            :aria-expanded="toolsOpen"
+                            aria-haspopup="true"
+                            @click.stop="toggleToolsMenu"
+                        >
+                            Tools
+                            <svg
+                                class="h-3.5 w-3.5 transition"
+                                :class="toolsOpen ? 'rotate-180' : ''"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div
+                            v-show="toolsOpen"
+                            class="absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2 overflow-hidden rounded-xl border shadow-2xl"
+                            :class="isDark ? 'border-white/10 bg-[#111111]' : 'border-slate-200 bg-white'"
+                            role="menu"
+                        >
+                            <div class="max-h-[min(24rem,70vh)] overflow-y-auto py-2">
+                                <Link
+                                    v-for="tool in toolLinks"
+                                    :key="tool.href"
+                                    :href="tool.href"
+                                    role="menuitem"
+                                    class="block px-4 py-2.5 text-sm transition"
+                                    :class="isDark
+                                        ? 'text-slate-200 hover:bg-white/10 hover:text-amber-300'
+                                        : 'text-slate-700 hover:bg-slate-50 hover:text-primary-700'"
+                                    @click="closeToolsMenu"
+                                >
+                                    {{ tool.label }}
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+
+                    <component
+                        :is="link.anchor ? 'a' : Link"
+                        v-for="link in navLinks.filter((l) => l.key !== 'home' && l.key !== 'features')"
                         :key="link.key"
                         :href="link.href"
                         class="text-sm font-medium"
@@ -375,6 +503,55 @@ onUnmounted(() => {
                     >
                         {{ link.label }}
                     </component>
+                </div>
+
+                <div
+                    class="mt-3 overflow-hidden rounded-xl border"
+                    :class="[
+                        isToolsActive
+                            ? (isDark ? 'border-amber-500/40' : 'border-primary-200')
+                            : (isDark ? 'border-white/10' : 'border-slate-200'),
+                    ]"
+                >
+                    <button
+                        type="button"
+                        class="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold"
+                        :class="isToolsActive
+                            ? (isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-primary-50 text-primary-700')
+                            : (isDark ? 'bg-white/5 text-slate-200' : 'bg-slate-50 text-slate-800')"
+                        :aria-expanded="mobileToolsOpen"
+                        @click="mobileToolsOpen = !mobileToolsOpen"
+                    >
+                        <span>Tools</span>
+                        <svg
+                            class="h-4 w-4 transition"
+                            :class="mobileToolsOpen ? 'rotate-180' : ''"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div
+                        v-show="mobileToolsOpen"
+                        class="max-h-64 space-y-1 overflow-y-auto border-t px-2 py-2"
+                        :class="isDark ? 'border-white/10 bg-[#0a0a0a]' : 'border-slate-200 bg-white'"
+                    >
+                        <Link
+                            v-for="tool in toolLinks"
+                            :key="tool.href"
+                            :href="tool.href"
+                            class="block rounded-lg px-3 py-2.5 text-sm transition"
+                            :class="isDark
+                                ? 'text-slate-300 hover:bg-white/10 hover:text-amber-300'
+                                : 'text-slate-700 hover:bg-slate-50 hover:text-primary-700'"
+                            @click="closeMobile"
+                        >
+                            {{ tool.label }}
+                        </Link>
+                    </div>
                 </div>
                 <div
                     class="mt-4 flex flex-col gap-2 border-t pt-4"

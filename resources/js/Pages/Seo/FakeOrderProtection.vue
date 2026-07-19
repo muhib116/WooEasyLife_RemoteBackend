@@ -68,7 +68,9 @@ const toggleFaq = (i) => {
                 <article class="rounded-2xl border border-white/10 bg-white/5 p-5">
                     <h2 class="text-lg font-bold text-white">রিটার্ন লস কমান</h2>
                     <p class="mt-2 text-sm text-slate-400">
-                        দিনে কয়েকটি ফেক অর্ডার আটকালেই মাসে হাজার হাজার টাকা রিটার্ন চার্জ বাঁচে।
+                        দিনে কয়েকটি ফেক অর্ডার আটকালেই মাসে হাজার হাজার টাকা রিটার্ন চার্জ বাঁচে —
+                        <Link href="/return-loss-calculator" class="text-amber-400 hover:text-amber-300">রিটার্ন লস ক্যালকুলেটর</Link>
+                        দিয়ে নিজেই হিসাব করুন।
                     </p>
                 </article>
             </div>

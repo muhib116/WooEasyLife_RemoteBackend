@@ -75,6 +75,8 @@ class LandingPageService
             'integrations' => config('landing.integrations', []),
             'roiScenarios' => config('landing.roi_scenarios', []),
             'roiCalculator' => config('landing.roi_calculator', []),
+            'courierChargeCalculator' => app(\App\Services\Marketing\CourierPublicRatesService::class)->calculatorConfig(),
+            'adsRoasCalculator' => config('landing.ads_roas_calculator', []),
             'howItWorks' => config('landing.how_it_works', []),
             'appShowcase' => config('landing.app_showcase', []),
             'featureShowcases' => $featuredPayload

@@ -188,6 +188,123 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Courier charge estimator (public SEO tool)
+    |--------------------------------------------------------------------------
+    | Approximate BD COD merchant rates for Pathao / Steadfast / RedX.
+    | Not live API quotes — keep the disclaimer visible on the page.
+    */
+    'courier_charge_calculator' => [
+        'badge' => 'কুরিয়ার চার্জ ক্যালকুলেটর',
+        'headline' => 'Pathao · Steadfast · RedX — ডেলিভারি চার্জ আনুমানিক হিসাব',
+        'subtitle' => 'জোন ও ওজন দিন — তিন কুরিয়ারের আনুমানিক চার্জ একসাথে দেখুন।',
+        'note' => '* আনুমানিক রেট টেবিল (উদাহরণ)। অফিসিয়াল চার্জ কুরিয়ার প্যানেল/কন্ট্রাক্ট অনুযায়ী ভিন্ন হতে পারে। COD ফি আলাদা যোগ করা হয়েছে।',
+        'subscription_note' => 'কনফার্ম হলেই কুরিয়ারে অটো এন্ট্রি — প্যানেলে হাতে চার্জ হিসাব করতে বসবেন না।',
+        'zones' => [
+            'dhaka' => 'ঢাকার ভিতর',
+            'suburb' => 'ঢাকার আশেপাশে / সাবআরবান',
+            'outside' => 'ঢাকার বাইরে',
+        ],
+        'inputs' => [
+            'weight_kg' => [
+                'label' => 'পার্সেল ওজন',
+                'default' => 1,
+                'min' => 0.5,
+                'max' => 10,
+                'step' => 0.5,
+                'suffix' => ' কেজি',
+            ],
+            'cod_amount' => [
+                'label' => 'COD অ্যামাউন্ট (ঐচ্ছিক)',
+                'default' => 1500,
+                'min' => 0,
+                'max' => 20000,
+                'step' => 100,
+                'prefix' => '৳',
+            ],
+        ],
+        'couriers' => [
+            'pathao' => [
+                'label' => 'Pathao',
+                'cod_percent' => 1.0,
+                'included_kg' => 1,
+                'zones' => [
+                    'dhaka' => ['base' => 70, 'per_kg_extra' => 15],
+                    'suburb' => ['base' => 100, 'per_kg_extra' => 20],
+                    'outside' => ['base' => 130, 'per_kg_extra' => 25],
+                ],
+            ],
+            'steadfast' => [
+                'label' => 'Steadfast',
+                'cod_percent' => 1.0,
+                'included_kg' => 1,
+                'zones' => [
+                    'dhaka' => ['base' => 70, 'per_kg_extra' => 15],
+                    'suburb' => ['base' => 100, 'per_kg_extra' => 18],
+                    'outside' => ['base' => 120, 'per_kg_extra' => 22],
+                ],
+            ],
+            'redx' => [
+                'label' => 'RedX',
+                'cod_percent' => 1.0,
+                'included_kg' => 1,
+                'zones' => [
+                    'dhaka' => ['base' => 65, 'per_kg_extra' => 15],
+                    'suburb' => ['base' => 95, 'per_kg_extra' => 18],
+                    'outside' => ['base' => 125, 'per_kg_extra' => 24],
+                ],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Facebook Ads ROAS calculator (fake-purchase aware)
+    |--------------------------------------------------------------------------
+    */
+    'ads_roas_calculator' => [
+        'badge' => 'Ads ROAS ক্যালকুলেটর',
+        'headline' => 'ফেক Purchase বাদ দিয়ে আসল Facebook Ads ROAS কত?',
+        'subtitle' => 'অ্যাড স্পেন্ড, Pixel Purchase ও ফেক/ক্যানসেল রেট দিন — রিপোর্টেড vs আসল ROAS দেখুন।',
+        'note' => '* আনুমানিক হিসাব। Pixel-এ যাওয়া Purchase ≠ কনফার্মড/ডেলিভার্ড অর্ডার। WooEasyLife পিক্সেল প্রোটেকশন শুধু কনফার্মড অর্ডার পাঠায়।',
+        'subscription_note' => 'পিক্সেল প্রোটেকশন চালু করলে ফেক Purchase Facebook-এ যায় না — অ্যাড অপটিমাইজেশন সঠিক থাকে।',
+        'inputs' => [
+            'ad_spend' => [
+                'label' => 'মাসিক Facebook Ads স্পেন্ড',
+                'default' => 50000,
+                'min' => 5000,
+                'max' => 500000,
+                'step' => 1000,
+                'prefix' => '৳',
+            ],
+            'pixel_purchases' => [
+                'label' => 'Pixel-এ Purchase ইভেন্ট (মাসিক)',
+                'default' => 200,
+                'min' => 10,
+                'max' => 2000,
+                'step' => 5,
+                'suffix' => 'টি',
+            ],
+            'fake_cancel_rate' => [
+                'label' => 'ফেক / ক্যানসেল / রিটার্ন রেট',
+                'default' => 30,
+                'min' => 0,
+                'max' => 80,
+                'step' => 1,
+                'suffix' => '%',
+            ],
+            'aov' => [
+                'label' => 'গড় অর্ডার ভ্যালু (AOV)',
+                'default' => 1200,
+                'min' => 300,
+                'max' => 5000,
+                'step' => 50,
+                'prefix' => '৳',
+            ],
+        ],
+    ],
+
     'how_it_works' => [
         [
             'step' => '০১',

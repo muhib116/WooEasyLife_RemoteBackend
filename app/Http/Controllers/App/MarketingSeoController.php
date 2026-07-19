@@ -48,6 +48,64 @@ class MarketingSeoController extends Controller
         );
     }
 
+    public function returnLossCalculator(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->renderCalculatorPage(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            'return_loss_calculator',
+            'Seo/ReturnLossCalculator',
+            [
+                'roiCalculator' => 'roiCalculator',
+                'roiScenarios' => 'roiScenarios',
+            ],
+        );
+    }
+
+    public function courierChargeCalculator(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->renderCalculatorPage(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            'courier_charge_calculator',
+            'Seo/CourierChargeCalculator',
+            [
+                'courierChargeCalculator' => 'courierChargeCalculator',
+            ],
+        );
+    }
+
+    public function adsRoasCalculator(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->renderCalculatorPage(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            'ads_roas_calculator',
+            'Seo/AdsRoasCalculator',
+            [
+                'adsRoasCalculator' => 'adsRoasCalculator',
+            ],
+        );
+    }
+
     public function courierAutoEntry(
         Request $request,
         LandingPageService $landing,
@@ -181,6 +239,37 @@ class MarketingSeoController extends Controller
             'headline' => $seoMeta['prerender_h1'] ?? '',
             'lead' => $seoMeta['prerender_lead'] ?? '',
         ])->withViewData(['seo' => $seoMeta]);
+    }
+
+    private function renderCalculatorPage(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+        string $seoPage,
+        string $component,
+        array $payloadKeys,
+    ): Response {
+        $payload = $landing->payload($request);
+        $whatsapp = $landingSettings->adminWhatsapp();
+        $seoMeta = $seo->forPage($seoPage);
+
+        $props = [
+            'canLogin' => Route::has('merchant.login'),
+            'seo' => $seoMeta,
+            'whatsappUrl' => $payload['whatsappUrl'] ?? null,
+            'whatsappContactUrl' => WhatsappLink::url(
+                $whatsapp,
+                config('landing.whatsapp_default_message'),
+            ),
+            'faqs' => $seoMeta['faqs'] ?? [],
+        ];
+
+        foreach ($payloadKeys as $prop => $payloadKey) {
+            $props[$prop] = $payload[$payloadKey] ?? [];
+        }
+
+        return Inertia::render($component, $props)->withViewData(['seo' => $seoMeta]);
     }
 
     private function renderSeoPage(

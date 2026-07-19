@@ -65,6 +65,54 @@ class MarketingSeoTest extends TestCase
         );
     }
 
+    public function test_return_loss_calculator_page_renders(): void
+    {
+        $response = $this->get('/return-loss-calculator');
+
+        $response->assertOk();
+        $response->assertSee('রিটার্ন লস', false);
+        $response->assertSee('name="description"', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/ReturnLossCalculator')
+            ->has('roiCalculator')
+            ->has('seo')
+            ->where('seo.canonical_path', '/return-loss-calculator')
+        );
+    }
+
+    public function test_courier_charge_calculator_page_renders(): void
+    {
+        $response = $this->get('/courier-charge-calculator');
+
+        $response->assertOk();
+        $response->assertSee('কুরিয়ার চার্জ', false);
+        $response->assertSee('BreadcrumbList', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/CourierChargeCalculator')
+            ->has('courierChargeCalculator.couriers.pathao')
+            ->has('courierChargeCalculator.zones.dhaka')
+            ->has('courierChargeCalculator.official_links')
+            ->has('seo.faqs')
+            ->where('seo.canonical_path', '/courier-charge-calculator')
+        );
+    }
+
+    public function test_ads_roas_calculator_page_renders(): void
+    {
+        $response = $this->get('/ads-roas-calculator');
+
+        $response->assertOk();
+        $response->assertSee('ROAS', false);
+        $response->assertSee('BreadcrumbList', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/AdsRoasCalculator')
+            ->has('adsRoasCalculator.inputs.ad_spend')
+            ->has('adsRoasCalculator.inputs.fake_cancel_rate')
+            ->has('seo.faqs')
+            ->where('seo.canonical_path', '/ads-roas-calculator')
+        );
+    }
+
     public function test_courier_auto_entry_page_renders(): void
     {
         $response = $this->get('/courier-auto-entry');
@@ -198,6 +246,9 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/fake-order-check', false);
         $response->assertSee('/courier-checker', false);
         $response->assertSee('/fake-order-protection', false);
+        $response->assertSee('/return-loss-calculator', false);
+        $response->assertSee('/courier-charge-calculator', false);
+        $response->assertSee('/ads-roas-calculator', false);
         $response->assertSee('/courier-auto-entry', false);
         $response->assertSee('/fraudbd-alternative', false);
         $response->assertSee('/pathao-fraud-check', false);

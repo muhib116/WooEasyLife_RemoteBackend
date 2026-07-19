@@ -297,6 +297,8 @@ const toggleFaq = (i) => {
                 :scenarios="roiScenarios"
                 :primary-cta-url="primaryCtaUrlValue"
                 :primary-cta-label="primaryCtaLabelValue"
+                :dedicated-page-href="route('seo.return-loss-calculator')"
+                dedicated-page-label="রিটার্ন লস ক্যালকুলেটর পেজ"
             />
         </ScrollReveal>
 

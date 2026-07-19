@@ -117,6 +117,12 @@ Route::get('/bd-fraud-checker', [MarketingSeoController::class, 'bdFraudChecker'
     ->name('seo.bd-fraud-checker');
 Route::get('/fake-order-protection', [MarketingSeoController::class, 'fakeOrderProtection'])
     ->name('seo.fake-order-protection');
+Route::get('/return-loss-calculator', [MarketingSeoController::class, 'returnLossCalculator'])
+    ->name('seo.return-loss-calculator');
+Route::get('/courier-charge-calculator', [MarketingSeoController::class, 'courierChargeCalculator'])
+    ->name('seo.courier-charge-calculator');
+Route::get('/ads-roas-calculator', [MarketingSeoController::class, 'adsRoasCalculator'])
+    ->name('seo.ads-roas-calculator');
 Route::get('/courier-auto-entry', [MarketingSeoController::class, 'courierAutoEntry'])
     ->name('seo.courier-auto-entry');
 Route::get('/fraudbd-alternative', [MarketingSeoController::class, 'fraudBdAlternative'])
