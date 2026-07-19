@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
+import { RANGE_SLIDER_CLASS, rangeTrackStyle } from '@/utils/rangeSlider';
 
 const props = defineProps({
     config: { type: Object, default: () => ({}) },
@@ -115,7 +116,8 @@ const titleClass = (accent) => {
                                 :min="slider.min"
                                 :max="slider.max"
                                 :step="slider.step"
-                                class="mt-3 h-3 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-amber-500 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-amber-400"
+                                :class="RANGE_SLIDER_CLASS"
+                                :style="rangeTrackStyle(model[slider.key], slider.min, slider.max)"
                             />
                             <div class="mt-1 flex justify-between text-[11px] text-slate-500">
                                 <span>{{ slider.prefix ?? '' }}{{ formatBnNumber(slider.min) }}{{ slider.suffix ?? '' }}</span>
