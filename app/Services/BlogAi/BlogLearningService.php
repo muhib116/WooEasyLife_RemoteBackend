@@ -222,13 +222,7 @@ class BlogLearningService
                         'dimensions' => ['page'],
                         'rowLimit' => $pageSize,
                         'startRow' => $page * $pageSize,
-                        'dimensionFilterGroups' => [[
-                            'filters' => [[
-                                'dimension' => 'page',
-                                'operator' => 'contains',
-                                'expression' => '/blog/',
-                            ]],
-                        ]],
+                        'dimensionFilterGroups' => $this->gscBlogFilterGroups(),
                     ]);
                 } catch (\Throwable $pageError) {
                     if ($rawRows !== []) {
@@ -320,13 +314,7 @@ class BlogLearningService
                         'dimensions' => ['query', 'page'],
                         'rowLimit' => $pageSize,
                         'startRow' => $page * $pageSize,
-                        'dimensionFilterGroups' => [[
-                            'filters' => [[
-                                'dimension' => 'page',
-                                'operator' => 'contains',
-                                'expression' => '/blog/',
-                            ]],
-                        ]],
+                        'dimensionFilterGroups' => $this->gscBlogFilterGroups(),
                     ]);
                 } catch (\Throwable $pageError) {
                     // Never replace the table with a truncated pagination snapshot.
@@ -731,7 +719,7 @@ class BlogLearningService
             ->where('created_at', '>=', now()->subDays(28))
             ->count();
 
-        return BlogLearningInsight::query()->create([
+        $insight = BlogLearningInsight::query()->create([
             'scope' => 'global',
             'payload_json' => $payload,
             'summary_bn' => $summary,
@@ -739,6 +727,14 @@ class BlogLearningService
             'events_analyzed' => $eventsAnalyzed,
             'generated_at' => now(),
         ]);
+
+        try {
+            app(BlogMemoryService::class)->absorbFromInsight($insight);
+        } catch (\Throwable) {
+            // Memory absorb is best-effort — never block the nightly learning job.
+        }
+
+        return $insight;
     }
 
     /**
@@ -750,7 +746,7 @@ class BlogLearningService
     {
         $insight = BlogLearningInsight::latestGlobal();
         if (! $insight) {
-            return [
+            $cold = [
                 'status' => 'cold_start',
                 'note' => 'No learning snapshot yet — use BD seller pain topics (fake order, fraud checker, courier). Run System Maintenance → Blog learning insights.',
                 'recommended_clusters' => ['fake_order', 'fraud_checker', 'courier'],
@@ -763,11 +759,17 @@ class BlogLearningService
                 'gsc_keyword_seeds' => $this->gscKeywordSeeds(8),
                 'coverage_gaps' => ['facebook_ads', 'ai_orders', 'checkout_protection'],
             ];
+            $competitor = $this->recentCompetitorPromptBlock();
+            if ($competitor !== null) {
+                $cold['competitor_intelligence'] = $competitor;
+            }
+
+            return $cold;
         }
 
         $payload = $insight->payload_json ?? [];
 
-        return [
+        $block = [
             'status' => 'ready',
             'generated_at' => optional($insight->generated_at)?->toIso8601String(),
             'summary_bn' => $insight->summary_bn,
@@ -794,6 +796,55 @@ class BlogLearningService
             'writing_guidance' => $payload['writing_guidance'] ?? [],
             'cta_labels_that_convert' => $payload['cta_labels_that_convert'] ?? [],
         ];
+
+        $competitor = $this->recentCompetitorPromptBlock();
+        if ($competitor !== null) {
+            $block['competitor_intelligence'] = $competitor;
+        }
+
+        return $block;
+    }
+
+    /**
+     * Latest competitor gap analysis for AI prompts (lazy resolve to avoid DI cycles).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function recentCompetitorPromptBlock(): ?array
+    {
+        if (! config('blog_ai.competitors.enabled', true)
+            || ! config('blog_ai.competitors.in_prompts', true)) {
+            return null;
+        }
+
+        if (! Schema::hasTable('blog_competitor_analyses')) {
+            return null;
+        }
+
+        // Only attach competitor intel when it matches a next-idea / GSC seed keyword.
+        /** @var BlogCompetitorAnalyzer $analyzer */
+        $analyzer = app(BlogCompetitorAnalyzer::class);
+        $insight = BlogLearningInsight::latestGlobal();
+        $payload = $insight && is_array($insight->payload_json) ? $insight->payload_json : [];
+
+        $keywords = [];
+        foreach (array_slice($payload['next_post_ideas'] ?? [], 0, 5) as $idea) {
+            if (is_array($idea)) {
+                $keywords[] = (string) ($idea['seed_topic'] ?? '');
+            }
+        }
+        foreach (array_slice($payload['gsc_keyword_seeds'] ?? [], 0, 8) as $seed) {
+            $keywords[] = is_array($seed) ? (string) ($seed['query'] ?? '') : (string) $seed;
+        }
+
+        foreach (array_filter($keywords) as $keyword) {
+            $block = $analyzer->promptBlockForKeyword($keyword);
+            if ($block !== null) {
+                return $block;
+            }
+        }
+
+        return null;
     }
 
     public function adminDashboard(): array
@@ -815,6 +866,18 @@ class BlogLearningService
             ])
             ->all();
 
+        $competitors = [];
+        $memories = [];
+        $memoryStats = ['active' => 0, 'total' => 0, 'by_type' => []];
+        if (config('blog_ai.competitors.enabled', true) && Schema::hasTable('blog_competitor_analyses')) {
+            $competitors = app(BlogCompetitorAnalyzer::class)->recentForAdmin(6);
+        }
+        if (config('blog_ai.memory.enabled', true) && Schema::hasTable('blog_ai_memories')) {
+            $memory = app(BlogMemoryService::class);
+            $memories = $memory->listForAdmin(null, 40);
+            $memoryStats = $memory->stats();
+        }
+
         return [
             'insight' => $insight ? [
                 'generated_at' => optional($insight->generated_at)?->toIso8601String(),
@@ -825,6 +888,11 @@ class BlogLearningService
             ] : null,
             'top_posts' => $top,
             'rank_opportunities' => $this->rankOpportunitiesForAdmin(25),
+            'competitors' => $competitors,
+            'memories' => $memories,
+            'memory_stats' => $memoryStats,
+            'intelligence' => app(BlogIntelligenceScorer::class)->score(),
+            'clusters' => config('blog_ai.clusters', []),
         ];
     }
 
@@ -854,6 +922,31 @@ class BlogLearningService
         }
 
         return 'general';
+    }
+
+    /**
+     * GSC filters for blog URLs (+ optional country). Empty country preserves live behavior.
+     *
+     * @return list<array{filters: list<array{dimension: string, operator: string, expression: string}>}>
+     */
+    private function gscBlogFilterGroups(): array
+    {
+        $filters = [[
+            'dimension' => 'page',
+            'operator' => 'contains',
+            'expression' => '/blog/',
+        ]];
+
+        $country = strtolower(trim((string) config('seo.gsc.country', '')));
+        if ($country !== '' && preg_match('/^[a-z]{3}$/', $country)) {
+            $filters[] = [
+                'dimension' => 'country',
+                'operator' => 'equals',
+                'expression' => $country,
+            ];
+        }
+
+        return [['filters' => $filters]];
     }
 
     /**
@@ -903,6 +996,7 @@ class BlogLearningService
                 'position' => $row->position_28d !== null ? (float) $row->position_28d : null,
                 'slug' => $row->slug,
                 'hint' => $row->improvement_hint,
+                'opportunity_score' => (float) ($row->opportunity_score ?? 0),
             ])
             ->filter(fn (array $row) => trim($row['query']) !== '')
             ->values()

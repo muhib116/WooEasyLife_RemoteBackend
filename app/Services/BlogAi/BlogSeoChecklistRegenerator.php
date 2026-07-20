@@ -171,6 +171,11 @@ class BlogSeoChecklistRegenerator
                 targets: $aiTargets,
                 cluster: $cluster,
                 linkPlan: $linkPlan,
+                extraContext: [
+                    'refresh_instructions' => $input['refresh_instructions'] ?? null,
+                    'competitor_intelligence' => $input['competitor_intelligence'] ?? null,
+                    'competitor_diff_checklist' => $input['competitor_diff_checklist'] ?? null,
+                ],
             );
             $usage = $ai['usage'];
 
@@ -368,6 +373,7 @@ class BlogSeoChecklistRegenerator
         array $targets,
         string $cluster,
         array $linkPlan,
+        array $extraContext = [],
     ): array {
         $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
         $minWords = (int) config('blog_ai.min_body_words', 800);
@@ -402,6 +408,7 @@ Rules:
 - Keep valid HTML fragments (p, h2, h3, ul, ol, li, a, section, strong, em, figure, img).
 - Do not remove existing good sections unless required for SEO.
 - If body_html_truncated is true: leave body_html empty (or omit it). Only return title/meta/excerpt/faqs/quick_answer/ai_search_summary. The server will keep the full original body and apply deterministic keyword/word-count fixes.
+- When refresh_instructions or competitor_diff_checklist is present, also improve CTR/title/meta and cover competitor gaps without changing the URL slug intent.
 TXT;
 
         $user = json_encode([
@@ -422,6 +429,9 @@ TXT;
                 'faqs' => $faqs,
                 'body_html' => $bodyForPrompt,
             ],
+            'refresh_instructions' => $extraContext['refresh_instructions'] ?? null,
+            'competitor_intelligence' => $extraContext['competitor_intelligence'] ?? null,
+            'competitor_diff_checklist' => $extraContext['competitor_diff_checklist'] ?? null,
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([

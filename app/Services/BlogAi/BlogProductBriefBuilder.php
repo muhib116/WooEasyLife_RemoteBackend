@@ -88,6 +88,11 @@ class BlogProductBriefBuilder
             $brief['performance_learning'] = $this->learningService->promptLearningBlock();
         }
 
+        if (config('blog_ai.memory.enabled', true) && config('blog_ai.memory.in_prompts', true)) {
+            $brief['standing_memory'] = app(BlogMemoryService::class)->promptBlock($cluster);
+            $brief['rules'][] = 'Obey standing_memory (prefer/avoid keywords, instructions, brand notes, lessons).';
+        }
+
         return $brief;
     }
 

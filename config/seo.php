@@ -32,6 +32,11 @@ return [
         'access_token' => env('SEO_GSC_ACCESS_TOKEN'),
         // One-click admin connect callback (must match Google Cloud OAuth redirect URI).
         'oauth_redirect' => env('SEO_GSC_REDIRECT_URI'),
+        /*
+        | Optional Search Analytics country filter (ISO 3166-1 alpha-3), e.g. bgd.
+        | Empty = no country filter (preserves existing live behavior).
+        */
+        'country' => env('SEO_GSC_COUNTRY'),
     ],
 
     'organization' => [

@@ -539,6 +539,15 @@ class SystemMaintenanceController extends Controller
             // ignore
         }
 
+        $intelligence = null;
+        $competitors = [];
+        try {
+            $intelligence = app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score();
+            $competitors = app(\App\Services\BlogAi\BlogCompetitorAnalyzer::class)->recentForAdmin(6);
+        } catch (Throwable) {
+            // ignore
+        }
+
         return [
             'storage_link_exists' => is_link($link) || File::exists($link),
             'storage_link_path' => $link,
@@ -550,6 +559,9 @@ class SystemMaintenanceController extends Controller
             'blog_learning' => $learning,
             'rank_opportunities' => $rankOpportunities,
             'gsc_status' => $gscStatus,
+            'intelligence' => $intelligence,
+            'competitors' => $competitors,
+            'clusters' => config('blog_ai.clusters', []),
         ];
     }
 }

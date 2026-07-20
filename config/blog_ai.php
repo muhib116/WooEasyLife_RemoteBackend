@@ -58,10 +58,14 @@ return [
         | Hard publish gates only — everything else is soft-warned in the CMS.
         */
         'enforce_on_publish' => [
-            'ai_ready' => false,
-            'focus_keyword_required' => false,
-            'has_og_or_content_image' => false,
-            'has_internal_link' => false,
+            /*
+            | Live-safe defaults: duplicate focus keyword stays hard-blocked.
+            | Opt into stricter publish with BLOG_SEO_ENFORCE_AI_READY=true (and related flags).
+            */
+            'ai_ready' => filter_var(env('BLOG_SEO_ENFORCE_AI_READY', false), FILTER_VALIDATE_BOOLEAN),
+            'focus_keyword_required' => filter_var(env('BLOG_SEO_ENFORCE_FOCUS_KEYWORD', false), FILTER_VALIDATE_BOOLEAN),
+            'has_og_or_content_image' => filter_var(env('BLOG_SEO_ENFORCE_OG_IMAGE', false), FILTER_VALIDATE_BOOLEAN),
+            'has_internal_link' => filter_var(env('BLOG_SEO_ENFORCE_INTERNAL_LINK', false), FILTER_VALIDATE_BOOLEAN),
             'duplicate_focus_keyword' => true,
             'duplicate_slug' => false, // DB unique rule already covers slug
         ],
@@ -147,6 +151,29 @@ return [
         'max_views_per_visitor_day' => (int) env('BLOG_ANALYTICS_MAX_VIEWS_PER_VISITOR_DAY', 40),
         'max_cta_per_visitor_hour' => (int) env('BLOG_ANALYTICS_MAX_CTA_PER_VISITOR_HOUR', 20),
         'spam_views_per_slug_day_cap' => (int) env('BLOG_ANALYTICS_SPAM_VIEWS_SLUG_DAY_CAP', 80),
+    ],
+
+    /*
+    | Competitor URL analyzer — fetch public pages + LLM gap analysis for drafting.
+    */
+    'competitors' => [
+        'enabled' => filter_var(env('BLOG_COMPETITOR_ANALYZER', true), FILTER_VALIDATE_BOOLEAN),
+        'in_prompts' => filter_var(env('BLOG_COMPETITOR_IN_PROMPTS', true), FILTER_VALIDATE_BOOLEAN),
+        'max_urls' => (int) env('BLOG_COMPETITOR_MAX_URLS', 5),
+        'max_age_days' => (int) env('BLOG_COMPETITOR_MAX_AGE_DAYS', 30),
+        'fetch_timeout' => (int) env('BLOG_COMPETITOR_FETCH_TIMEOUT', 12),
+        'max_html_bytes' => (int) env('BLOG_COMPETITOR_MAX_HTML_BYTES', 500000),
+    ],
+
+    /*
+    | Standing memory — keywords, topics, instructions that compound day by day.
+    */
+    'memory' => [
+        'enabled' => filter_var(env('BLOG_MEMORY_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'in_prompts' => filter_var(env('BLOG_MEMORY_IN_PROMPTS', true), FILTER_VALIDATE_BOOLEAN),
+        'auto_absorb_learning' => filter_var(env('BLOG_MEMORY_ABSORB_LEARNING', true), FILTER_VALIDATE_BOOLEAN),
+        'auto_absorb_competitor' => filter_var(env('BLOG_MEMORY_ABSORB_COMPETITOR', true), FILTER_VALIDATE_BOOLEAN),
+        'prompt_limit' => (int) env('BLOG_MEMORY_PROMPT_LIMIT', 40),
     ],
 
     'clusters' => [
@@ -547,6 +574,16 @@ return [
         */
         'require_queue' => env('BLOG_AI_AUTO_REQUIRE_QUEUE'),
         'one_active_run_per_user' => (bool) env('BLOG_AI_AUTO_ONE_ACTIVE', true),
+        /*
+        | One-click Smart Post: sync GSC/learning → pick best topic → full auto draft.
+        */
+        'smart_one_click' => filter_var(env('BLOG_AI_SMART_ONE_CLICK', true), FILTER_VALIDATE_BOOLEAN),
+        'smart_sync_learning' => filter_var(env('BLOG_AI_SMART_SYNC_LEARNING', true), FILTER_VALIDATE_BOOLEAN),
+        /*
+        | When true, Smart One-Click refuses soft-pass drafts (classic Auto unchanged).
+        | Keep false on live until you are ready for stricter Auto quality.
+        */
+        'smart_strict_draft' => filter_var(env('BLOG_AI_SMART_STRICT_DRAFT', false), FILTER_VALIDATE_BOOLEAN),
         'weights' => [
             'opportunity' => 15,
             'outline' => 15,
@@ -555,12 +592,13 @@ return [
             'image' => 15,
         ],
         'progress' => [
+            'sync' => 8,
             'intake' => 5,
-            'research' => 15,
-            'hooks' => 12,
-            'outline' => 15,
-            'draft' => 28,
-            'image' => 20,
+            'research' => 14,
+            'hooks' => 11,
+            'outline' => 14,
+            'draft' => 26,
+            'image' => 17,
             'finalize' => 5,
         ],
     ],

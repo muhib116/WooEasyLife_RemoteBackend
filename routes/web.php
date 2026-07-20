@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RoleAdminController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
+use App\Http\Controllers\Admin\TutorialController;
 use App\Http\Controllers\Admin\GoogleSearchConsoleOAuthController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
@@ -503,6 +504,20 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     });
 
     Route::group([
+        'as' => 'tutorials.',
+        'prefix' => 'tutorials',
+        'middleware' => 'permission:billing.manage',
+    ], function () {
+        Route::get('/', [TutorialController::class, 'index'])->name('index');
+        Route::post('/categories', [TutorialController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{tutorialCategory}', [TutorialController::class, 'updateCategory'])->name('categories.update');
+        Route::delete('/categories/{tutorialCategory}', [TutorialController::class, 'destroyCategory'])->name('categories.destroy');
+        Route::post('/videos', [TutorialController::class, 'storeVideo'])->name('videos.store');
+        Route::put('/videos/{tutorialVideo}', [TutorialController::class, 'updateVideo'])->name('videos.update');
+        Route::delete('/videos/{tutorialVideo}', [TutorialController::class, 'destroyVideo'])->name('videos.destroy');
+    });
+
+    Route::group([
         'as' => 'mediaLibrary.',
         'prefix' => 'media-library',
         'middleware' => 'permission:billing.manage',
@@ -536,6 +551,15 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/options', [BlogAiController::class, 'options'])
             ->middleware('throttle:60,1')
             ->name('options');
+        Route::get('/intelligence', [BlogAiController::class, 'intelligence'])
+            ->middleware('throttle:60,1')
+            ->name('intelligence');
+        Route::get('/competitors', [BlogAiController::class, 'competitorsIndex'])
+            ->middleware('throttle:60,1')
+            ->name('competitors.index');
+        Route::get('/memories', [BlogAiController::class, 'memoriesIndex'])
+            ->middleware('throttle:60,1')
+            ->name('memories.index');
         Route::get('/runs/{blogAiRun}', [BlogAiController::class, 'showRun'])
             ->middleware('throttle:180,1')
             ->name('runs.show');
@@ -544,11 +568,23 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
             ->name('show');
 
         Route::middleware('throttle:30,1')->group(function () {
+            Route::post('/competitors/analyze', [BlogAiController::class, 'analyzeCompetitors'])
+                ->middleware('throttle:10,1')
+                ->name('competitors.analyze');
+            Route::post('/memories', [BlogAiController::class, 'storeMemory'])->name('memories.store');
+            Route::put('/memories/{memoryId}', [BlogAiController::class, 'updateMemory'])->name('memories.update');
+            Route::delete('/memories/{memoryId}', [BlogAiController::class, 'destroyMemory'])->name('memories.destroy');
+            Route::post('/memories/absorb-learning', [BlogAiController::class, 'absorbMemoryNow'])
+                ->middleware('throttle:10,1')
+                ->name('memories.absorb');
             Route::post('/suggest-keywords', [BlogAiController::class, 'suggestKeywords'])->name('suggestKeywords');
             Route::post('/regenerate-seo-checklist', [BlogAiController::class, 'regenerateSeoChecklist'])
                 ->middleware('throttle:10,1')
                 ->name('regenerateSeoChecklist');
             Route::post('/auto', [BlogAiController::class, 'startAuto'])->name('auto');
+            Route::post('/smart-one-click', [BlogAiController::class, 'startSmartOneClick'])
+                ->middleware('throttle:5,1')
+                ->name('smartOneClick');
             Route::post('/runs/{blogAiRun}/cancel', [BlogAiController::class, 'cancelRun'])->name('runs.cancel');
             Route::post('/sessions', [BlogAiController::class, 'store'])->name('store');
             Route::post('/sessions/{blogAiSession}/recover', [BlogAiController::class, 'recover'])->name('recover');

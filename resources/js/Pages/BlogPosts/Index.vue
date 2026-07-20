@@ -28,9 +28,18 @@
                             @click="router.visit(route('blogPosts.create'))"
                         />
                         <Button
+                            v-if="canManageAi"
+                            label="Smart One-Click"
+                            icon="pi pi-bolt"
+                            size="small"
+                            @click="scrollToSmart"
+                        />
+                        <Button
                             label="AI Auto Create"
                             icon="pi pi-sparkles"
                             size="small"
+                            severity="secondary"
+                            outlined
                             @click="router.visit(route('blogPosts.create') + '?ai=1')"
                         />
                     </div>
@@ -63,6 +72,59 @@
                     icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
                     icon-class="text-sky-600 dark:text-sky-400"
                 />
+            </div>
+
+            <div id="blog-ai-intelligence">
+            <PageCard
+                title="Blog AI intelligence"
+                description="Live readiness of GSC, self-learning, analytics, and competitor analysis."
+            >
+                <div class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+                    <div class="space-y-4">
+                        <BlogIntelligenceRing :data="intelligence" />
+                        <div
+                            v-if="canManageAi"
+                            class="rounded-xl border border-amber-200/80 bg-amber-50/50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10"
+                        >
+                            <SmartOneClickPanel
+                                ref="smartOneClickRef"
+                                @intelligence="onIntelligenceUpdate"
+                                @updated="onCompetitorUpdated"
+                            />
+                        </div>
+                        <div
+                            v-if="canManageAi"
+                            class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
+                        >
+                            <BlogMemoryPanel
+                                :initial-items="learning?.memories || []"
+                                :initial-stats="learning?.memory_stats || {}"
+                                :clusters="clusterMap"
+                                @intelligence="onIntelligenceUpdate"
+                                @updated="onCompetitorUpdated"
+                            />
+                        </div>
+                    </div>
+                    <div
+                        v-if="canManageAi"
+                        class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
+                    >
+                        <CompetitorAnalyzerPanel
+                            :initial-items="learning?.competitors || []"
+                            :clusters="clusterMap"
+                            @intelligence="onIntelligenceUpdate"
+                            @updated="onCompetitorUpdated"
+                        />
+                    </div>
+                    <p
+                        v-else
+                        class="text-sm text-slate-500 dark:text-slate-400"
+                    >
+                        Competitor analyzer needs billing.manage permission.
+                        Open SEO &amp; Learning for GSC sync and learning insights.
+                    </p>
+                </div>
+            </PageCard>
             </div>
 
             <PageCard
@@ -110,7 +172,12 @@
                 title="Google rank opportunities"
                 description="Query×page gaps from Search Console — fix CTR, striking distance, and cannibalization."
             >
-                <RankOpportunitiesPanel :data="learning.rank_opportunities" />
+                <RankOpportunitiesPanel
+                    :data="learning.rank_opportunities"
+                    :can-draft="canManageAi"
+                    :draft-busy="smartDraftBusy"
+                    @draft-for-query="onDraftForQuery"
+                />
                 <div
                     v-if="canManageMaintenance"
                     class="mt-3"
@@ -306,7 +373,7 @@
             v-model:visible="seoLearningDialogVisible"
             modal
             header="Blog SEO & learning"
-            :style="{ width: '40rem' }"
+            :style="{ width: '48rem' }"
             :breakpoints="{ '640px': '95vw' }"
             @show="onSeoLearningDialogShow"
         >
@@ -396,7 +463,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Pages/Users/fragments/PageHeader.vue';
@@ -404,6 +471,10 @@ import PageCard from '@/Pages/Users/fragments/PageCard.vue';
 import StatCard from '@/Pages/Users/fragments/StatCard.vue';
 import BlogSeoLearningPanel from '@/components/blog/BlogSeoLearningPanel.vue';
 import RankOpportunitiesPanel from '@/components/blog/RankOpportunitiesPanel.vue';
+import BlogIntelligenceRing from '@/components/blog/BlogIntelligenceRing.vue';
+import CompetitorAnalyzerPanel from '@/components/blog/CompetitorAnalyzerPanel.vue';
+import SmartOneClickPanel from '@/components/blog/SmartOneClickPanel.vue';
+import BlogMemoryPanel from '@/components/blog/BlogMemoryPanel.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
@@ -421,6 +492,30 @@ const props = defineProps({
 
 const { can } = usePermissions();
 const canManageMaintenance = computed(() => can('roles.manage'));
+const canManageAi = computed(() => can('billing.manage'));
+
+const intelligence = ref(props.learning?.intelligence || null);
+
+watch(
+    () => props.learning?.intelligence,
+    (next) => {
+        if (next) intelligence.value = next;
+    },
+);
+
+const clusterMap = computed(() => props.learning?.clusters || {});
+
+const onIntelligenceUpdate = (next) => {
+    if (next) intelligence.value = next;
+};
+
+const onCompetitorUpdated = () => {
+    router.reload({ only: ['learning'], preserveScroll: true });
+};
+
+const scrollToSmart = () => {
+    document.getElementById('blog-ai-intelligence')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 const showRankOpportunitiesCard = computed(() => {
     const ops = props.learning?.rank_opportunities;
@@ -454,6 +549,18 @@ const shareSubmitting = ref(false);
 
 const seoLearningDialogVisible = ref(false);
 const seoLearningPanelRef = ref(null);
+const smartOneClickRef = ref(null);
+const smartDraftBusy = ref(false);
+
+const onDraftForQuery = async (item) => {
+    smartDraftBusy.value = true;
+    try {
+        document.getElementById('blog-ai-intelligence')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        await smartOneClickRef.value?.startForOpportunity?.(item);
+    } finally {
+        smartDraftBusy.value = false;
+    }
+};
 
 const openSeoLearningDialog = () => {
     seoLearningDialogVisible.value = true;

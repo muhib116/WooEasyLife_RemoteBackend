@@ -1,6 +1,13 @@
 <template>
     <div class="space-y-4">
         <div
+            v-if="intelligence"
+            class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
+        >
+            <BlogIntelligenceRing :data="intelligence" />
+        </div>
+
+        <div
             v-if="blogLearning"
             class="rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
         >
@@ -42,6 +49,14 @@
 
         <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
             <RankOpportunitiesPanel :data="rankOpportunities" />
+        </div>
+
+        <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
+            <CompetitorAnalyzerPanel
+                :initial-items="competitors"
+                :clusters="clusters"
+                @intelligence="(next) => { intelligence = next; }"
+            />
         </div>
 
         <div class="grid grid-cols-1 gap-3">
@@ -113,6 +128,8 @@ import { useToast } from 'primevue/usetoast';
 import Button from 'primevue/button';
 import RankOpportunitiesPanel from '@/components/blog/RankOpportunitiesPanel.vue';
 import GscStatusPanel from '@/components/blog/GscStatusPanel.vue';
+import BlogIntelligenceRing from '@/components/blog/BlogIntelligenceRing.vue';
+import CompetitorAnalyzerPanel from '@/components/blog/CompetitorAnalyzerPanel.vue';
 
 const emit = defineEmits(['updated']);
 
@@ -126,6 +143,9 @@ const actions = ref([]);
 const blogLearning = ref(null);
 const rankOpportunities = ref(null);
 const gscStatus = ref(null);
+const intelligence = ref(null);
+const competitors = ref([]);
+const clusters = ref({});
 
 const busy = computed(() => loading.value || runningAction.value !== null);
 
@@ -148,6 +168,11 @@ const applyStatus = (next) => {
     blogLearning.value = next.blog_learning ?? null;
     rankOpportunities.value = next.rank_opportunities ?? null;
     gscStatus.value = next.gsc_status ?? null;
+    intelligence.value = next.intelligence ?? intelligence.value;
+    competitors.value = next.competitors ?? competitors.value;
+    if (next.clusters) {
+        clusters.value = next.clusters;
+    }
 };
 
 const loadStatus = async () => {

@@ -306,6 +306,12 @@ const allSections: NavSection[] = [
                 permission: "billing.manage",
             },
             {
+                title: "Tutorials",
+                name: "tutorials.index",
+                icon: "PhYoutubeLogo",
+                permission: "billing.manage",
+            },
+            {
                 title: "Media Library",
                 name: "mediaLibrary.index",
                 icon: "PhImages",

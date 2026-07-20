@@ -180,7 +180,38 @@ class AdminBlogAiAutoTest extends TestCase
             ->assertJsonPath('auto.create_post', true)
             ->assertJsonPath('auto.soft_pass_score_cap', 59)
             ->assertJsonPath('auto.generate_image', false)
-            ->assertJsonStructure(['auto' => ['require_queue', 'one_active_run_per_user', 'generate_image']]);
+            ->assertJsonPath('auto.smart_one_click', true)
+            ->assertJsonStructure(['auto' => ['require_queue', 'one_active_run_per_user', 'generate_image', 'smart_one_click']]);
+    }
+
+    public function test_smart_one_click_syncs_picks_topic_and_creates_draft(): void
+    {
+        config([
+            'blog_ai.auto.smart_one_click' => true,
+            'blog_ai.auto.smart_sync_learning' => true,
+        ]);
+
+        $admin = $this->adminUser();
+        $this->fakeAutoHttp();
+
+        $response = $this->actingAs($admin)->postJson(route('blogAi.smartOneClick'), [
+            'sync_learning' => true,
+            'create_post' => true,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('queued', false)
+            ->assertJsonPath('mode', 'smart_one_click')
+            ->assertJsonPath('run.status', 'completed')
+            ->assertJsonPath('run.mode', 'smart_one_click');
+
+        $run = BlogAiRun::query()->find($response->json('run.id'));
+        $this->assertNotNull($run);
+        $events = collect($run->step_log)->pluck('event')->all();
+        $this->assertContains('topic_picked', $events);
+        $this->assertContains('completed', $events);
+        $this->assertNotNull($run->input_json['smart_pick']['seed_topic'] ?? null);
+        $this->assertNotNull($response->json('post_id'));
     }
 
     public function test_auto_pipeline_creates_draft_post_with_score(): void

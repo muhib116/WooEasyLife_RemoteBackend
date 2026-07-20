@@ -24,6 +24,9 @@ class BlogAutoPipeline
         private BlogLearningService $learning,
         private BlogLandingContextService $landingContext,
         private \App\Services\BlogSeoQuality $seoQuality,
+        private BlogSmartTopicPicker $topicPicker,
+        private BlogCompetitorAnalyzer $competitorAnalyzer,
+        private BlogSeoChecklistRegenerator $seoRegenerator,
     ) {}
 
     public function run(BlogAiRun $run): BlogAiRun
@@ -53,6 +56,22 @@ class BlogAutoPipeline
         ];
 
         try {
+            $this->assertNotCancelled($run);
+
+            $input = is_array($run->input_json) ? $run->input_json : [];
+            if (! empty($input['smart_one_click'])) {
+                $this->runSmartSyncAndPick($session, $run);
+                $this->touchSessionBusy($session);
+            }
+
+            $input = is_array($run->fresh()->input_json) ? $run->input_json : [];
+            if (($input['smart_pick']['action'] ?? $input['action'] ?? 'new') === 'refresh'
+                && (int) ($input['smart_pick']['target_post_id'] ?? $input['target_post_id'] ?? 0) > 0) {
+                $this->assertNotCancelled($run);
+
+                return $this->runRefreshExistingPost($session, $run, $scoreParts);
+            }
+
             $this->assertNotCancelled($run);
             $this->resolveIntake($session, $run);
             $this->touchSessionBusy($session);
@@ -652,7 +671,7 @@ class BlogAutoPipeline
                     return;
                 }
 
-                $allowSoftPass = (bool) config('blog_ai.auto.allow_draft_soft_pass', true);
+                $allowSoftPass = $this->allowsSoftPass($run);
                 // Soft complete for human editing when a draft body exists.
                 if ($allowSoftPass && ! empty($session->draft_json['title']) && ! empty($session->draft_json['body_html'])) {
                     $this->softPassStep(
@@ -1089,7 +1108,7 @@ class BlogAutoPipeline
     private function progressThrough(string $step): int
     {
         $weights = config('blog_ai.auto.progress', []);
-        $order = ['intake', 'research', 'hooks', 'outline', 'draft', 'image', 'finalize'];
+        $order = ['sync', 'intake', 'research', 'hooks', 'outline', 'draft', 'image', 'finalize'];
         $sum = 0;
         foreach ($order as $key) {
             $sum += (int) ($weights[$key] ?? 0);
@@ -1099,6 +1118,295 @@ class BlogAutoPipeline
         }
 
         return min(99, $sum);
+    }
+
+    /**
+     * One-click path: refresh GSC/learning, then lock the best next topic into the session.
+     */
+    private function runSmartSyncAndPick(BlogAiSession $session, BlogAiRun $run): void
+    {
+        $run->current_step = 'sync';
+        $run->progress_pct = $this->progressThrough('sync');
+        $run->appendLog([
+            'step' => 'sync',
+            'event' => 'started',
+            'message' => 'Smart one-click: syncing Search Console + learning insights…',
+        ]);
+        $run->save();
+
+        $syncLearning = (bool) ($run->input_json['sync_learning']
+            ?? config('blog_ai.auto.smart_sync_learning', true));
+
+        if ($syncLearning) {
+            try {
+                $built = $this->learning->buildInsights();
+                $run->appendLog([
+                    'step' => 'sync',
+                    'event' => 'learning_ready',
+                    'message' => 'Learning snapshot refreshed.',
+                    'posts_analyzed' => $built->posts_analyzed,
+                    'events_analyzed' => $built->events_analyzed,
+                ]);
+            } catch (Throwable $e) {
+                $run->appendLog([
+                    'step' => 'sync',
+                    'event' => 'learning_skipped',
+                    'message' => 'Learning sync failed — continuing with existing data: '
+                        .Str::limit($e->getMessage(), 160),
+                ]);
+            }
+            $run->save();
+        } else {
+            $run->appendLog([
+                'step' => 'sync',
+                'event' => 'learning_skipped',
+                'message' => 'Learning sync skipped by config.',
+            ]);
+            $run->save();
+        }
+
+        $pick = $this->pickSmartTopic($session, $run);
+        $session->cluster = $pick['cluster'];
+        $session->seed_topic = $pick['seed_topic'];
+        if (($session->keywords_json['pasted'] ?? []) === [] && filled($pick['keyword'])) {
+            $session->keywords_json = [
+                'pasted' => [$pick['keyword']],
+                'primary' => $pick['keyword'],
+                'secondary' => [],
+            ];
+        }
+        $session->saveIfJobCurrent();
+
+        $input = is_array($run->input_json) ? $run->input_json : [];
+        $input['cluster'] = $pick['cluster'];
+        $input['seed_topic'] = $pick['seed_topic'];
+        $input['action'] = $pick['action'];
+        $input['target_post_id'] = $pick['target_post_id'];
+        $input['target_slug'] = $pick['target_slug'];
+        $input['smart_pick'] = $pick;
+        $run->input_json = $input;
+        $run->appendLog([
+            'step' => 'sync',
+            'event' => 'topic_picked',
+            'message' => sprintf(
+                'Picked %s: %s (%s, score %s)',
+                $pick['action'],
+                $pick['seed_topic'],
+                $pick['reason'],
+                $pick['opportunity_score'] ?? 0,
+            ),
+            'cluster' => $pick['cluster'],
+            'action' => $pick['action'],
+            'competitor_ready' => $pick['competitor_ready'],
+            'target_slug' => $pick['target_slug'],
+        ]);
+        $run->save();
+
+        // Optional competitor URLs provided with one-click / draft-for-query.
+        $urlsText = trim((string) ($input['competitor_urls_text'] ?? ''));
+        if ($urlsText !== '' && config('blog_ai.competitors.enabled', true)) {
+            $urls = preg_split('/[\r\n,]+/', $urlsText) ?: [];
+            try {
+                $this->competitorAnalyzer->analyze(
+                    keyword: (string) $pick['keyword'],
+                    urls: array_values(array_filter(array_map('trim', $urls))),
+                    cluster: $pick['cluster'],
+                    userId: $run->user_id,
+                );
+                $run->appendLog([
+                    'step' => 'sync',
+                    'event' => 'competitors_analyzed',
+                    'message' => 'Competitor pages analyzed for '.$pick['keyword'],
+                ]);
+                $run->save();
+            } catch (Throwable $e) {
+                $run->appendLog([
+                    'step' => 'sync',
+                    'event' => 'competitors_skipped',
+                    'message' => 'Competitor analyze skipped: '.Str::limit($e->getMessage(), 160),
+                ]);
+                $run->save();
+            }
+        }
+    }
+
+    /**
+     * @return array{
+     *     cluster: string,
+     *     seed_topic: string,
+     *     keyword: string|null,
+     *     reason: string,
+     *     competitor_ready: bool,
+     *     action?: string,
+     *     target_slug?: string|null,
+     *     target_post_id?: int|null,
+     *     bucket?: string|null,
+     *     opportunity_score?: float
+     * }
+     */
+    private function pickSmartTopic(BlogAiSession $session, BlogAiRun $run): array
+    {
+        $learning = $this->learning->promptLearningBlock();
+        $input = is_array($run->input_json) ? $run->input_json : [];
+        $explicitCluster = trim((string) ($session->cluster ?: ($input['cluster'] ?? '')));
+        $explicitSeed = trim((string) ($session->seed_topic ?: ($input['seed_topic'] ?? '')));
+
+        return $this->topicPicker->pick(
+            $explicitCluster !== '' ? $explicitCluster : null,
+            $explicitSeed !== '' ? $explicitSeed : null,
+            is_array($learning) ? $learning : [],
+            $input,
+        );
+    }
+
+    private function allowsSoftPass(BlogAiRun $run): bool
+    {
+        if (! (bool) config('blog_ai.auto.allow_draft_soft_pass', true)) {
+            return false;
+        }
+
+        $input = is_array($run->input_json) ? $run->input_json : [];
+        if (! empty($input['strict_draft'])) {
+            return false;
+        }
+
+        // Smart one-click can opt into stricter drafts without changing classic Auto.
+        if (! empty($input['smart_one_click']) && config('blog_ai.auto.smart_strict_draft', false)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Phase 2: refresh an existing post (fix CTR / defend) without creating a duplicate URL.
+     *
+     * @param  array<string, int|null>  $scoreParts
+     */
+    private function runRefreshExistingPost(BlogAiSession $session, BlogAiRun $run, array &$scoreParts): BlogAiRun
+    {
+        $input = is_array($run->input_json) ? $run->input_json : [];
+        $pick = is_array($input['smart_pick'] ?? null) ? $input['smart_pick'] : [];
+        $postId = (int) ($pick['target_post_id'] ?? $input['target_post_id'] ?? 0);
+        $post = BlogPost::query()->find($postId);
+        if (! $post) {
+            return $this->failRun($run, 'Refresh target post #'.$postId.' not found.');
+        }
+
+        $run->current_step = 'draft';
+        $run->progress_pct = $this->progressThrough('draft');
+        $run->appendLog([
+            'step' => 'draft',
+            'event' => 'refresh_started',
+            'message' => 'Refreshing existing post /blog/'.$post->slug.' for better CTR/rank.',
+            'post_id' => $post->id,
+        ]);
+        $run->save();
+
+        $keyword = (string) ($pick['keyword'] ?? $session->seed_topic ?? $post->focus_keyword ?? '');
+        $competitor = $this->competitorAnalyzer->promptBlockForKeyword($keyword);
+        $bucket = (string) ($pick['bucket'] ?? '');
+        $fixHint = match ($bucket) {
+            'fix_ctr' => 'Improve title + meta CTR for the target query without changing slug. Strengthen H1/H2 and FAQ.',
+            'defend' => 'Defend current rank: refresh outdated sections, FAQs, and internal links. Keep slug.',
+            default => 'Refresh content to outrank competitors for the target query. Keep the same slug.',
+        };
+
+        try {
+            $result = $this->seoRegenerator->regenerate([
+                'title' => (string) $post->title,
+                'slug' => (string) $post->slug,
+                'focus_keyword' => $keyword !== '' ? $keyword : (string) $post->focus_keyword,
+                'meta_title' => (string) ($post->meta_title ?? $post->title),
+                'meta_description' => (string) ($post->meta_description ?? $post->excerpt ?? ''),
+                'excerpt' => (string) ($post->excerpt ?? ''),
+                'body_html' => (string) $post->body_html,
+                'faqs_json' => is_array($post->faqs_json) ? $post->faqs_json : [],
+                'og_image' => $post->og_image,
+                'locale' => (string) ($post->locale ?? 'bn'),
+                'cluster' => (string) ($session->cluster ?: $post->cluster),
+                'ignore_post_id' => (int) $post->id,
+                'refresh_instructions' => $fixHint,
+                'competitor_intelligence' => $competitor,
+                'competitor_diff_checklist' => is_array($competitor)
+                    ? ($competitor['diff_checklist'] ?? $competitor['must_cover_angles'] ?? [])
+                    : [],
+            ]);
+        } catch (Throwable $e) {
+            return $this->failRun($run, 'Refresh failed: '.$e->getMessage());
+        }
+
+        $session->addUsage($result['usage'] ?? []);
+        $session->draft_json = [
+            'title' => $result['title'],
+            'slug' => $post->slug,
+            'focus_keyword' => $result['focus_keyword'],
+            'meta_title' => $result['meta_title'],
+            'meta_description' => $result['meta_description'],
+            'excerpt' => $result['excerpt'],
+            'body_html' => $result['body_html'],
+            'faqs' => $result['faqs_json'],
+            'quality' => $result['quality'] ?? [],
+            'locale' => $post->locale,
+            'cluster' => $session->cluster ?: $post->cluster,
+            'og_image' => $post->og_image,
+            'author_name' => $post->author_name ?: config('blog_ai.author_name'),
+            'refresh_of_post_id' => $post->id,
+        ];
+        $session->status = 'draft_ready';
+        $session->saveIfJobCurrent();
+
+        $scoreParts['opportunity'] = 85;
+        $scoreParts['outline'] = 80;
+        $scoreParts['seo'] = $this->scorer->scoreFromSeoQuality(is_array($result['quality'] ?? null) ? $result['quality'] : []);
+        $scoreParts['content'] = max(70, (int) ($result['ai_quality_score'] ?? 70));
+        $scoreParts['image'] = filled($post->og_image) ? 70 : 40;
+        $computed = $this->syncScore($run, $scoreParts);
+
+        // Keep status=draft when refreshing a published post? Safer for live: save as draft only if was draft,
+        // otherwise update content but keep published status so live URL improves. User asked not to break live.
+        // Updating published content in place is the point of refresh — keep status.
+        $post->fill([
+            'title' => $result['title'],
+            'excerpt' => $result['excerpt'],
+            'meta_title' => $result['meta_title'],
+            'meta_description' => $result['meta_description'],
+            'focus_keyword' => $result['focus_keyword'],
+            'faqs_json' => $result['faqs_json'],
+            'body_html' => $result['body_html'],
+            'ai_quality_score' => $computed['score'],
+            'ai_quality_breakdown' => $computed['breakdown'],
+            'updated_by' => $run->user_id,
+        ]);
+        $post->save();
+
+        $run->blog_post_id = $post->id;
+        $run->current_step = 'finalize';
+        $run->progress_pct = 100;
+        $run->status = 'completed';
+        $run->finished_at = now();
+        $run->appendLog([
+            'step' => 'finalize',
+            'event' => 'completed',
+            'message' => 'Refreshed existing post #'.$post->id.' (/blog/'.$post->slug.'). Review before promoting changes.',
+            'action' => 'refresh',
+            'fixed_checks' => $result['fixed_checks'] ?? [],
+        ]);
+        $run->save();
+
+        $session->status = 'completed';
+        $session->saveIfJobCurrent();
+
+        return $run;
+    }
+
+    private function hasCompetitorFor(string $keyword): bool
+    {
+        if (! config('blog_ai.competitors.enabled', true)) {
+            return false;
+        }
+
+        return $this->competitorAnalyzer->promptBlockForKeyword($keyword) !== null;
     }
 
     /**

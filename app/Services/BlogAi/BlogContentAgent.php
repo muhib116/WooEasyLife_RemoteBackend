@@ -20,6 +20,7 @@ class BlogContentAgent
         private BlogLandingContextService $landingContext,
         private BlogPromptLibrary $prompts,
         private BlogLearningService $learning,
+        private BlogCompetitorAnalyzer $competitors,
     ) {}
 
     /**
@@ -362,6 +363,7 @@ Hooks must target BD COD / WooCommerce sellers. Mix angles. No clickbait lies.
 Each hook MUST use a different angle and a distinct title wording.
 Ground hooks in cluster_landing angle_hint / page lead — do not invent unrelated product pillars.
 If existing_posts or avoid_titles is present, differentiate: new angle, persona, tool angle, or long-tail — do not clone those titles.
+When competitor_intelligence is present, prefer title_angles / must_cover_angles that beat those competitors.
 TXT;
 
         $cluster = (string) ($session->cluster ?: 'general');
@@ -374,6 +376,7 @@ TXT;
             'fix_instructions' => $fixInstructions,
             'product_brief' => $this->briefBuilder->build($cluster),
             'cluster_landing' => $this->landingContext->forCluster($cluster),
+            'competitor_intelligence' => $this->competitorBlockForSession($session),
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->openAi->chatJson([
@@ -447,6 +450,7 @@ Prefer ranking free tools: /bd-fraud-checker, /return-loss-calculator, /courier-
 Echo page FAQs/angle_hint truth — do not invent features beyond product_brief + cluster_landing.
 Include at least 5 FAQ items under faqs (q + a_points).
 Include a differentiation section that beats generic competitor blogs (practical BD COD steps + WooEasyLife truth).
+When competitor_intelligence is present, cover content_gaps / must_cover_angles / faq_gaps explicitly.
 TXT);
 
         $cluster = (string) ($session->cluster ?: 'general');
@@ -458,6 +462,7 @@ TXT);
             'internal_link_catalog' => $this->linkCatalog->all(),
             'fix_instructions' => $fixInstructions,
             'previous_outline' => $fixInstructions ? ($session->outline_json ?? null) : null,
+            'competitor_intelligence' => $this->competitorBlockForSession($session),
             'seo_targets' => [
                 'min_faqs' => (int) config('blog_ai.seo_quality.min_faqs', 5),
                 'min_sections' => 4,
@@ -520,6 +525,7 @@ TXT);
             'previous_draft_quality' => $fixInstructions
                 ? ($session->draft_json['quality'] ?? null)
                 : null,
+            'competitor_intelligence' => $this->competitorBlockForSession($session),
             'seo_targets' => [
                 'min_words' => $minWords,
                 'min_faqs' => $minFaqs,
@@ -564,6 +570,38 @@ TXT);
     private function systemPrompt(): string
     {
         return $this->prompts->system();
+    }
+
+    /**
+     * Prefer keyword-matched competitor analysis, else the latest stored analysis.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function competitorBlockForSession(BlogAiSession $session): ?array
+    {
+        if (! config('blog_ai.competitors.enabled', true)
+            || ! config('blog_ai.competitors.in_prompts', true)) {
+            return null;
+        }
+
+        $candidates = array_filter([
+            $session->seed_topic,
+            data_get($session->outline_json, 'focus_keyword'),
+            data_get($session->keywords_json, 'primary'),
+            ...(is_array(data_get($session->keywords_json, 'pasted'))
+                ? data_get($session->keywords_json, 'pasted')
+                : []),
+        ]);
+
+        foreach ($candidates as $candidate) {
+            $block = $this->competitors->promptBlockForKeyword((string) $candidate);
+            if ($block !== null) {
+                return $block;
+            }
+        }
+
+        // Never inject an unrelated "latest" competitor analysis — wrong niche poisons drafts.
+        return null;
     }
 
     /**

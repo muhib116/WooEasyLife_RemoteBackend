@@ -44,6 +44,12 @@ class BlogAiController extends Controller
             'require_pasted_keywords' => (bool) config('blog_ai.require_pasted_keywords', true),
             'min_pasted_keywords' => (int) config('blog_ai.min_pasted_keywords', 1),
             'learning' => $learning->promptLearningBlock(),
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+            'competitors' => [
+                'enabled' => (bool) config('blog_ai.competitors.enabled', true),
+                'max_urls' => (int) config('blog_ai.competitors.max_urls', 5),
+                'recent' => app(\App\Services\BlogAi\BlogCompetitorAnalyzer::class)->recentForAdmin(5),
+            ],
             'auto' => [
                 'enabled' => (bool) config('blog_ai.auto.enabled', true),
                 'create_post' => (bool) config('blog_ai.auto.create_post', true),
@@ -53,8 +59,169 @@ class BlogAiController extends Controller
                 'one_active_run_per_user' => (bool) config('blog_ai.auto.one_active_run_per_user', true),
                 'generate_image' => (bool) config('blog_ai.auto.generate_image', false),
                 'auto_approve_image_on_fail' => (bool) config('blog_ai.auto.auto_approve_image_on_fail', true),
+                'smart_one_click' => (bool) config('blog_ai.auto.smart_one_click', true),
                 'active_run_id' => $activeRunId ? (int) $activeRunId : null,
             ],
+        ]);
+    }
+
+    public function intelligence(\App\Services\BlogAi\BlogIntelligenceScorer $scorer): JsonResponse
+    {
+        return response()->json($scorer->score());
+    }
+
+    public function competitorsIndex(\App\Services\BlogAi\BlogCompetitorAnalyzer $analyzer): JsonResponse
+    {
+        return response()->json([
+            'enabled' => (bool) config('blog_ai.competitors.enabled', true),
+            'max_urls' => (int) config('blog_ai.competitors.max_urls', 5),
+            'items' => $analyzer->recentForAdmin(12),
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+        ]);
+    }
+
+    public function analyzeCompetitors(Request $request, \App\Services\BlogAi\BlogCompetitorAnalyzer $analyzer): JsonResponse
+    {
+        $this->ensureEnabled();
+
+        if (! config('blog_ai.competitors.enabled', true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Competitor analyzer is disabled.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'keyword' => ['required', 'string', 'max:255'],
+            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'urls_text' => ['required', 'string', 'max:4000'],
+        ]);
+
+        $urls = preg_split('/[\r\n,]+/', $validated['urls_text']) ?: [];
+        $urls = array_values(array_filter(array_map('trim', $urls)));
+
+        $result = $analyzer->analyze(
+            keyword: $validated['keyword'],
+            urls: $urls,
+            cluster: $validated['cluster'] ?? null,
+            userId: $request->user()?->id,
+        );
+
+        /** @var \App\Models\BlogCompetitorAnalysis $analysis */
+        $analysis = $result['analysis'];
+
+        return response()->json([
+            'ok' => true,
+            'item' => $analyzer->toAdminRow($analysis),
+            'prompt_block' => $result['prompt_block'],
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+            'items' => $analyzer->recentForAdmin(12),
+        ]);
+    }
+
+    public function memoriesIndex(\App\Services\BlogAi\BlogMemoryService $memory): JsonResponse
+    {
+        return response()->json([
+            'enabled' => (bool) config('blog_ai.memory.enabled', true),
+            'types' => \App\Models\BlogAiMemory::TYPES,
+            'stats' => $memory->stats(),
+            'items' => $memory->listForAdmin(null, 100),
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+        ]);
+    }
+
+    public function storeMemory(Request $request, \App\Services\BlogAi\BlogMemoryService $memory): JsonResponse
+    {
+        if (! config('blog_ai.memory.enabled', true)) {
+            throw ValidationException::withMessages([
+                'memory' => 'Blog memory is disabled.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', Rule::in(\App\Models\BlogAiMemory::TYPES)],
+            'content' => ['required', 'string', 'max:500'],
+            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'priority' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $row = $memory->upsert([
+            ...$validated,
+            'source' => \App\Models\BlogAiMemory::SOURCE_MANUAL,
+        ], $request->user()?->id);
+
+        return response()->json([
+            'ok' => true,
+            'item' => $memory->toAdminRow($row),
+            'items' => $memory->listForAdmin(null, 100),
+            'stats' => $memory->stats(),
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+        ], 201);
+    }
+
+    public function updateMemory(
+        Request $request,
+        int $memoryId,
+        \App\Services\BlogAi\BlogMemoryService $memory,
+    ): JsonResponse {
+        $validated = $request->validate([
+            'is_active' => ['nullable', 'boolean'],
+            'priority' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'content' => ['nullable', 'string', 'max:500'],
+            'type' => ['nullable', 'string', Rule::in(\App\Models\BlogAiMemory::TYPES)],
+            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+        ]);
+
+        $row = \App\Models\BlogAiMemory::query()->findOrFail($memoryId);
+
+        if (array_key_exists('is_active', $validated)) {
+            $row->is_active = (bool) $validated['is_active'];
+        }
+        if (isset($validated['priority'])) {
+            $row->priority = (int) $validated['priority'];
+        }
+        if (isset($validated['content'])) {
+            $row->content = trim($validated['content']);
+            $row->normalized_key = \App\Models\BlogAiMemory::normalizeKey($row->content);
+        }
+        if (isset($validated['type'])) {
+            $row->type = $validated['type'];
+        }
+        if (array_key_exists('cluster', $validated)) {
+            $row->cluster = $validated['cluster'] ?: null;
+        }
+        $row->save();
+
+        return response()->json([
+            'ok' => true,
+            'item' => $memory->toAdminRow($row->fresh()),
+            'items' => $memory->listForAdmin(null, 100),
+            'stats' => $memory->stats(),
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+        ]);
+    }
+
+    public function destroyMemory(int $memoryId, \App\Services\BlogAi\BlogMemoryService $memory): JsonResponse
+    {
+        $memory->delete($memoryId);
+
+        return response()->json([
+            'ok' => true,
+            'items' => $memory->listForAdmin(null, 100),
+            'stats' => $memory->stats(),
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+        ]);
+    }
+
+    public function absorbMemoryNow(\App\Services\BlogAi\BlogMemoryService $memory): JsonResponse
+    {
+        $result = $memory->absorbFromInsight();
+
+        return response()->json([
+            'ok' => true,
+            'absorbed' => $result,
+            'items' => $memory->listForAdmin(null, 100),
+            'stats' => $memory->stats(),
+            'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
         ]);
     }
 
@@ -499,6 +666,153 @@ class BlogAiController extends Controller
                 'run' => $run->toAdminArray(),
                 'session' => $session->toAdminArray(),
                 'post_id' => $run->blog_post_id,
+            ]);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function startSmartOneClick(Request $request): JsonResponse
+    {
+        $this->ensureEnabled();
+        if (! config('blog_ai.auto.enabled', true) || ! config('blog_ai.auto.smart_one_click', true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Smart one-click is disabled.',
+            ]);
+        }
+
+        $this->enforceDailyCaps($request, creatingSession: true);
+        $this->assertAutoQueueReady();
+        $this->assertNoActiveAutoRun((int) $request->user()->id);
+
+        $validated = $request->validate([
+            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'seed_topic' => ['nullable', 'string', 'max:255'],
+            'sync_learning' => ['nullable', 'boolean'],
+            'create_post' => ['nullable', 'boolean'],
+            'competitor_urls_text' => ['nullable', 'string', 'max:4000'],
+            'action' => ['nullable', 'string', Rule::in(['new', 'refresh'])],
+            'target_slug' => ['nullable', 'string', 'max:190'],
+            'target_post_id' => ['nullable', 'integer', 'min:1'],
+            'bucket' => ['nullable', 'string', 'max:40'],
+            'opportunity_score' => ['nullable', 'numeric'],
+            'strict_draft' => ['nullable', 'boolean'],
+        ]);
+
+        $lock = Cache::lock('blog-ai-auto-start-'.$request->user()->id, 20);
+        if (! $lock->get()) {
+            throw ValidationException::withMessages([
+                'ai' => 'Another auto create is starting. Wait a moment.',
+            ]);
+        }
+
+        try {
+            $token = (string) Str::uuid();
+            $syncLearning = array_key_exists('sync_learning', $validated)
+                ? (bool) $validated['sync_learning']
+                : (bool) config('blog_ai.auto.smart_sync_learning', true);
+            $createPost = array_key_exists('create_post', $validated)
+                ? (bool) $validated['create_post']
+                : (bool) config('blog_ai.auto.create_post', true);
+
+            $result = DB::transaction(function () use ($request, $validated, $token, $syncLearning, $createPost) {
+                $session = BlogAiSession::query()->create([
+                    'user_id' => $request->user()->id,
+                    'status' => 'auto_running',
+                    'locale' => config('blog_ai.default_locale', 'bn'),
+                    'cluster' => $validated['cluster'] ?? null,
+                    'seed_topic' => $validated['seed_topic'] ?? null,
+                    'job_token' => $token,
+                    'keywords_json' => [
+                        'pasted' => [],
+                        'primary' => null,
+                        'secondary' => [],
+                    ],
+                ]);
+
+                $run = BlogAiRun::query()->create([
+                    'blog_ai_session_id' => $session->id,
+                    'user_id' => $request->user()->id,
+                    'mode' => 'smart_one_click',
+                    'status' => 'pending',
+                    'current_step' => 'queued',
+                    'progress_pct' => 0,
+                    'live_score' => 0,
+                    'step_log' => [[
+                        'at' => now()->toIso8601String(),
+                        'step' => 'queued',
+                        'event' => 'created',
+                        'message' => 'Smart one-click queued: sync learning → pick topic → write draft.',
+                    ]],
+                    'revision_counts' => [],
+                    'input_json' => [
+                        'smart_one_click' => true,
+                        'sync_learning' => $syncLearning,
+                        'cluster' => $validated['cluster'] ?? null,
+                        'seed_topic' => $validated['seed_topic'] ?? null,
+                        'create_post' => $createPost,
+                        'competitor_urls_text' => $validated['competitor_urls_text'] ?? null,
+                        'action' => $validated['action'] ?? null,
+                        'target_slug' => $validated['target_slug'] ?? null,
+                        'target_post_id' => $validated['target_post_id'] ?? null,
+                        'bucket' => $validated['bucket'] ?? null,
+                        'opportunity_score' => $validated['opportunity_score'] ?? null,
+                        'strict_draft' => (bool) ($validated['strict_draft'] ?? false),
+                    ],
+                ]);
+
+                return compact('session', 'run');
+            });
+
+            /** @var BlogAiSession $session */
+            $session = $result['session'];
+            /** @var BlogAiRun $run */
+            $run = $result['run'];
+
+            if ($request->hasSession()) {
+                $request->session()->save();
+            }
+
+            if ($this->shouldQueue()) {
+                ProcessBlogAutoPipeline::dispatch($run->id, $token);
+
+                return response()->json([
+                    'queued' => true,
+                    'mode' => 'smart_one_click',
+                    'run' => $run->fresh()->toAdminArray(),
+                    'session' => $session->fresh()->toAdminArray(),
+                    'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+                ], 202);
+            }
+
+            try {
+                ProcessBlogAutoPipeline::dispatchSync($run->id, $token);
+            } catch (Throwable $e) {
+                $message = $e instanceof ValidationException
+                    ? (collect($e->errors())->flatten()->first() ?: $e->getMessage())
+                    : $e->getMessage();
+
+                throw ValidationException::withMessages([
+                    'ai' => is_string($message) && $message !== '' ? $message : 'Smart one-click failed.',
+                ]);
+            }
+
+            $run = $run->fresh();
+            $session = $session->fresh();
+
+            if ($run->status === 'failed') {
+                throw ValidationException::withMessages([
+                    'ai' => $run->last_error ?: 'Smart one-click failed.',
+                ]);
+            }
+
+            return response()->json([
+                'queued' => false,
+                'mode' => 'smart_one_click',
+                'run' => $run->toAdminArray(),
+                'session' => $session->toAdminArray(),
+                'post_id' => $run->blog_post_id,
+                'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
             ]);
         } finally {
             $lock->release();

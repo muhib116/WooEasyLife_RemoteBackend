@@ -84,6 +84,21 @@
                 >
                     {{ item.improvement_hint }}
                 </p>
+                <div
+                    v-if="canDraft"
+                    class="mt-2"
+                >
+                    <Button
+                        :label="draftLabel(item)"
+                        icon="pi pi-bolt"
+                        size="small"
+                        severity="secondary"
+                        outlined
+                        class="!text-xs"
+                        :disabled="draftBusy"
+                        @click="$emit('draft-for-query', item)"
+                    />
+                </div>
             </li>
         </ul>
     </div>
@@ -91,10 +106,15 @@
 
 <script setup>
 import { computed } from 'vue';
+import Button from 'primevue/button';
 
 const props = defineProps({
     data: { type: Object, default: null },
+    canDraft: { type: Boolean, default: false },
+    draftBusy: { type: Boolean, default: false },
 });
+
+defineEmits(['draft-for-query']);
 
 const CHIP_META = {
     striking_distance: {
@@ -130,6 +150,13 @@ const summaryChips = computed(() => {
             count: Number(summary[key] || 0),
         }));
 });
+
+const draftLabel = (item) => {
+    if (item?.slug && ['fix_ctr', 'defend', 'cannibalized'].includes(item.bucket)) {
+        return 'Refresh this post';
+    }
+    return 'Draft for this query';
+};
 
 const formatDate = (value) => {
     if (!value) return '—';
