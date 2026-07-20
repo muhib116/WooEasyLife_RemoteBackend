@@ -4,6 +4,7 @@ namespace App\Services\BlogAi;
 
 use App\Models\BlogAiSession;
 use App\Services\BlogSeoQuality;
+use App\Services\LandingSettingsService;
 use App\Support\BlogHtmlSanitizer;
 use Illuminate\Validation\ValidationException;
 
@@ -13,6 +14,7 @@ class BlogImagePipeline
         private BlogImageAgent $imageAgent,
         private BlogImageReviewAgent $reviewAgent,
         private BlogSeoQuality $seoQuality,
+        private LandingSettingsService $landingSettings,
     ) {}
 
     /**
@@ -207,7 +209,7 @@ class BlogImagePipeline
     {
         $userId = (int) $session->user_id;
         $callsCap = (int) config('blog_ai.daily_ai_calls_cap', 80);
-        $tokenCap = (int) config('blog_ai.daily_token_cap', 400000);
+        $tokenCap = $this->landingSettings->blogAiDailyTokenCap();
         $calls = BlogAiSession::dailyCalls($userId);
         $tokens = BlogAiSession::dailyTokens($userId);
 

@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\PluginsController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RoleAdminController;
 use App\Http\Controllers\Admin\SessionController;
+use App\Http\Controllers\Admin\SidebarNavOrderController;
 use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
 use App\Http\Controllers\Admin\TutorialController;
 use App\Http\Controllers\Admin\GoogleSearchConsoleOAuthController;
@@ -487,6 +488,15 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/', [RoleAdminController::class, 'index'])->name('index');
         Route::post('/admins/{user_id}/assign', [RoleAdminController::class, 'assignAdminRole'])->name('assignAdmin');
         Route::post('/{role_id}/permissions', [RoleAdminController::class, 'syncPermissions'])->name('syncPermissions');
+    });
+
+    Route::group([
+        'as' => 'sidebarNavOrder.',
+        'prefix' => 'sidebar-nav-order',
+        'middleware' => ['permission:roles.manage', 'throttle:30,1'],
+    ], function () {
+        Route::get('/', [SidebarNavOrderController::class, 'show'])->name('show');
+        Route::put('/', [SidebarNavOrderController::class, 'update'])->name('update');
     });
 
     Route::group(['as' => 'whitelistedDomains.', 'prefix' => 'whitelisted-domains'], function () {

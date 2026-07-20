@@ -1,10 +1,10 @@
 <template>
-    <AuthenticatedLayout title="Landing Settings">
+    <AuthenticatedLayout title="Settings">
         <div class="space-y-5">
             <PageHeader
-                title="Landing Settings"
-                description="Download links, payment numbers, support contacts, and OpenAI settings for the public landing page"
-                icon="PhDeviceMobile"
+                title="Settings"
+                description="Download links, payment numbers, support contacts, and OpenAI settings"
+                icon="PhGearSix"
                 icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
                 icon-class="text-sky-600 dark:text-sky-400"
             />
@@ -131,6 +131,40 @@
                                 {{ form.errors.openai_image_model }}
                             </p>
                         </div>
+
+                        <div>
+                            <label
+                                for="blog_ai_daily_token_cap"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Daily AI token limit
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Max tokens per admin user per day for blog AI (writing + images). Leave blank to clear and fall back to .env / config default ({{ defaultTokenCap }}).
+                                <span
+                                    v-if="settings.blog_ai_daily_token_cap_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.blog_ai_daily_token_cap_source }}
+                                </span>
+                            </p>
+                            <InputText
+                                id="blog_ai_daily_token_cap"
+                                v-model="form.blog_ai_daily_token_cap"
+                                type="number"
+                                min="1000"
+                                max="10000000"
+                                step="1000"
+                                class="mt-2 w-full"
+                                :placeholder="String(defaultTokenCap)"
+                            />
+                            <p
+                                v-if="form.errors.blog_ai_daily_token_cap"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.blog_ai_daily_token_cap }}
+                            </p>
+                        </div>
                     </template>
 
                     <template v-else>
@@ -220,6 +254,8 @@ type LandingSettings = {
     openai_api_key_source: string;
     openai_blog_model_source: string;
     openai_image_model_source: string;
+    blog_ai_daily_token_cap: number;
+    blog_ai_daily_token_cap_source: string;
     blog_model_options: string[];
     image_model_options: string[];
 };
@@ -237,6 +273,7 @@ type FormFields = {
     openai_api_key: string;
     openai_blog_model: string;
     openai_image_model: string;
+    blog_ai_daily_token_cap: string;
 };
 
 type SettingsField = {
@@ -336,6 +373,7 @@ const contactFields: SettingsField[] = [
 
 const blogModelOptions = props.settings.blog_model_options ?? [];
 const imageModelOptions = props.settings.image_model_options ?? [];
+const defaultTokenCap = props.settings.blog_ai_daily_token_cap ?? 400000;
 
 const form = useForm({
     app_download_url: props.settings.app_download_url ?? "",
@@ -353,6 +391,8 @@ const form = useForm({
     openai_api_key: props.settings.openai_api_key ?? "",
     openai_blog_model: props.settings.openai_blog_model ?? "gpt-4o-mini",
     openai_image_model: props.settings.openai_image_model ?? "gpt-image-1",
+    // Always include the effective cap so saving other tabs does not clear a DB override.
+    blog_ai_daily_token_cap: String(props.settings.blog_ai_daily_token_cap ?? 400000),
 });
 
 const activeFields = computed(() => {
@@ -385,7 +425,7 @@ const activeCard = computed(() => {
     if (activeTab.value === "ai") {
         return {
             title: "OpenAI",
-            description: "API key and models for blog post generation, including featured image creation.",
+            description: "API key, models, and daily token limit for blog post generation.",
         };
     }
 
@@ -410,7 +450,7 @@ const tabForError = (field: string): TabValue | null => {
         return "contact";
     }
 
-    if (["openai_api_key", "openai_blog_model", "openai_image_model"].includes(field)) {
+    if (["openai_api_key", "openai_blog_model", "openai_image_model", "blog_ai_daily_token_cap"].includes(field)) {
         return "ai";
     }
 

@@ -45,6 +45,10 @@ class LandingSettingsController extends Controller
                 : null;
         }
 
+        $merged['blog_ai_daily_token_cap'] = $request->filled('blog_ai_daily_token_cap')
+            ? $request->integer('blog_ai_daily_token_cap')
+            : null;
+
         $request->merge($merged);
 
         $validated = $request->validate([
@@ -60,10 +64,11 @@ class LandingSettingsController extends Controller
             'openai_api_key' => ['nullable', 'string', 'max:512'],
             'openai_blog_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::BLOG_MODELS)],
             'openai_image_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::IMAGE_MODELS)],
+            'blog_ai_daily_token_cap' => ['nullable', 'integer', 'min:1000', 'max:10000000'],
         ]);
 
         $this->landingSettings->update($validated);
 
-        return back()->with('success', 'Landing settings saved.');
+        return back()->with('success', 'Settings saved.');
     }
 }

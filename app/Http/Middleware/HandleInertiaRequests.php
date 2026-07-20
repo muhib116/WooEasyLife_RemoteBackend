@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\WhatsappLink;
+use App\Services\AdminSidebarNavOrder;
 use App\Services\LandingSettingsService;
 use App\Services\MerchantPortalContext;
 use App\Services\RbacService;
@@ -42,6 +43,9 @@ class HandleInertiaRequests extends Middleware
         $paymentConfig = app(SubscriptionPaymentConfigService::class);
         $partnerLabels = $paymentConfig->partnerLabels();
         $metaPixelId = $landingSettings->metaPixelId();
+        $adminSidebarNavOrder = $user?->role === 'admin'
+            ? app(AdminSidebarNavOrder::class)->get()
+            : null;
 
         // Available to the root Blade template for first-paint Meta Pixel injection.
         View::share('metaPixelId', $metaPixelId);
@@ -72,6 +76,7 @@ class HandleInertiaRequests extends Middleware
                 'access_label' => $accessLabel,
                 'portal' => $user ? $portal->sharePayload($user) : null,
             ],
+            'admin_sidebar_nav_order' => $adminSidebarNavOrder,
             'flash' => [
                 'success' => session('success'),
                 'error' => session('error'),

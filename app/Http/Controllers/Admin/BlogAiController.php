@@ -10,6 +10,7 @@ use App\Models\BlogAiSession;
 use App\Services\BlogAi\BlogContentAgent;
 use App\Services\BlogAi\BlogImagePipeline;
 use App\Services\BlogAi\BlogLearningService;
+use App\Services\LandingSettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -1066,7 +1067,7 @@ class BlogAiController extends Controller
 
         $sessionCap = (int) config('blog_ai.daily_session_cap', 20);
         $callsCap = (int) config('blog_ai.daily_ai_calls_cap', 80);
-        $tokenCap = (int) config('blog_ai.daily_token_cap', 400000);
+        $tokenCap = app(LandingSettingsService::class)->blogAiDailyTokenCap();
 
         if ($creatingSession && $sessions >= $sessionCap) {
             throw ValidationException::withMessages([

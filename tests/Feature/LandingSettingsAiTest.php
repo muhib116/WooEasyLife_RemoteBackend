@@ -28,6 +28,8 @@ it('includes openai settings on the landing settings page', function () {
             ->has('settings.openai_api_key')
             ->has('settings.openai_blog_model')
             ->has('settings.openai_image_model')
+            ->has('settings.blog_ai_daily_token_cap')
+            ->has('settings.blog_ai_daily_token_cap_source')
             ->has('settings.blog_model_options')
             ->has('settings.image_model_options')
         );
@@ -49,6 +51,57 @@ it('saves openai api key and model selections', function () {
     expect($settings->openaiApiKey())->toBe('sk-test-landing-settings-key')
         ->and($settings->openaiBlogModel())->toBe('gpt-4o')
         ->and($settings->openaiImageModel())->toBe('dall-e-3');
+});
+
+it('saves blog ai daily token cap override', function () {
+    $admin = createLandingSettingsAdmin();
+
+    $this->actingAs($admin)
+        ->put(route('landingSettings.update'), [
+            'openai_blog_model' => 'gpt-4o-mini',
+            'openai_image_model' => 'gpt-image-1',
+            'blog_ai_daily_token_cap' => 850000,
+        ])
+        ->assertRedirect();
+
+    $settings = app(LandingSettingsService::class);
+
+    expect($settings->blogAiDailyTokenCap())->toBe(850000);
+});
+
+it('clears blog ai daily token cap when left blank and falls back to config', function () {
+    $admin = createLandingSettingsAdmin();
+    $settings = app(LandingSettingsService::class);
+
+    $settings->update([
+        'blog_ai_daily_token_cap' => 850000,
+    ]);
+
+    expect($settings->blogAiDailyTokenCap())->toBe(850000);
+
+    config(['blog_ai.daily_token_cap' => 400000]);
+
+    $this->actingAs($admin)
+        ->put(route('landingSettings.update'), [
+            'openai_blog_model' => 'gpt-4o-mini',
+            'openai_image_model' => 'gpt-image-1',
+            'blog_ai_daily_token_cap' => '',
+        ])
+        ->assertRedirect();
+
+    expect($settings->blogAiDailyTokenCap())->toBe(400000);
+});
+
+it('rejects invalid blog ai daily token cap', function () {
+    $admin = createLandingSettingsAdmin();
+
+    $this->actingAs($admin)
+        ->from(route('landingSettings.index'))
+        ->put(route('landingSettings.update'), [
+            'blog_ai_daily_token_cap' => 50,
+        ])
+        ->assertRedirect(route('landingSettings.index'))
+        ->assertSessionHasErrors(['blog_ai_daily_token_cap']);
 });
 
 it('rejects invalid openai model selections', function () {

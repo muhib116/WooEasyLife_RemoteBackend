@@ -33,6 +33,8 @@ class LandingSettingsService
 
     public const OPENAI_IMAGE_MODEL_KEY = 'landing.openai_image_model';
 
+    public const BLOG_AI_DAILY_TOKEN_CAP_KEY = 'landing.blog_ai_daily_token_cap';
+
     /**
      * @var list<string>
      */
@@ -87,6 +89,8 @@ class LandingSettingsService
             'openai_api_key_source' => $this->sourceWithConfig(self::OPENAI_API_KEY_KEY, 'landing.openai_api_key'),
             'openai_blog_model_source' => $this->sourceWithConfig(self::OPENAI_BLOG_MODEL_KEY, 'landing.openai_blog_model'),
             'openai_image_model_source' => $this->sourceWithConfig(self::OPENAI_IMAGE_MODEL_KEY, 'landing.openai_image_model'),
+            'blog_ai_daily_token_cap' => $this->blogAiDailyTokenCap(),
+            'blog_ai_daily_token_cap_source' => $this->sourceWithConfig(self::BLOG_AI_DAILY_TOKEN_CAP_KEY, 'blog_ai.daily_token_cap'),
             'blog_model_options' => self::BLOG_MODELS,
             'image_model_options' => self::IMAGE_MODELS,
         ];
@@ -164,6 +168,20 @@ class LandingSettingsService
     }
 
     /**
+     * Effective daily Blog AI token cap (DB override, else config/env default).
+     */
+    public function blogAiDailyTokenCap(): int
+    {
+        $stored = $this->getStored(self::BLOG_AI_DAILY_TOKEN_CAP_KEY);
+
+        if ($stored !== null && is_numeric($stored)) {
+            return max(1, (int) $stored);
+        }
+
+        return max(1, (int) config('blog_ai.daily_token_cap', 400000));
+    }
+
+    /**
      * @return array{meta_pixel_id: string|null, meta_pixel_id_source: string}
      */
     public function marketingTracking(): array
@@ -175,7 +193,7 @@ class LandingSettingsService
     }
 
     /**
-     * @param  array<string, string|null>  $data
+     * @param  array<string, string|int|null>  $data
      */
     public function update(array $data): void
     {
@@ -206,6 +224,10 @@ class LandingSettingsService
             if (array_key_exists($field, $data)) {
                 $this->put($key, $this->normalizeText($data[$field] ?? null));
             }
+        }
+
+        if (array_key_exists('blog_ai_daily_token_cap', $data)) {
+            $this->put(self::BLOG_AI_DAILY_TOKEN_CAP_KEY, $this->normalizePositiveInt($data['blog_ai_daily_token_cap'] ?? null));
         }
     }
 
@@ -303,6 +325,28 @@ class LandingSettingsService
         $value = trim($value);
 
         return $value !== '' ? $value : null;
+    }
+
+    private function normalizePositiveInt(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '' || ! is_numeric($value)) {
+                return null;
+            }
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $int = (int) $value;
+
+        return $int >= 1 ? (string) $int : null;
     }
 
     private function source(string $key, string $envKey): string
