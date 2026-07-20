@@ -484,6 +484,141 @@ class BlogSeoQuality
     }
 
     /**
+     * Ensure the title contains the focus keyword (prepend when missing).
+     */
+    public function ensureKeywordInTitle(string $title, string $focusKeyword): string
+    {
+        $kw = trim($focusKeyword);
+        $title = trim($title);
+        if ($kw === '' || $title === '') {
+            return $title;
+        }
+        if ($this->textContainsKeyword($title, $kw)) {
+            return $title;
+        }
+
+        return Str::limit($kw.' — '.$title, 120, '');
+    }
+
+    /**
+     * Ensure meta description contains the focus keyword and stays within 50–160 chars.
+     */
+    public function ensureKeywordInMeta(string $metaDescription, string $focusKeyword): string
+    {
+        $kw = trim($focusKeyword);
+        $meta = trim($metaDescription);
+        if ($kw === '') {
+            return $meta;
+        }
+
+        if ($meta === '') {
+            $meta = $kw.' নিয়ে বাংলাদেশি সেলারদের জন্য ব্যবহারিক গাইড — ধাপ, টিপস ও সতর্কতা।';
+        } elseif (! $this->textContainsKeyword($meta, $kw)) {
+            $meta = $kw.' — '.$meta;
+        }
+
+        if (mb_strlen($meta) > 160) {
+            $meta = Str::limit($meta, 157, '…');
+            // Keep keyword if truncate removed it (rare with prepend).
+            if (! $this->textContainsKeyword($meta, $kw)) {
+                $meta = Str::limit($kw.' — '.preg_replace('/^'.preg_quote($kw, '/').'\s*[—\-]\s*/u', '', $meta) ?? $meta, 157, '…');
+            }
+        }
+
+        if (mb_strlen($meta) < 50) {
+            $pad = ' বাংলাদেশে COD ও ইকমার্স সেলারদের জন্য স্পষ্ট ধাপ।';
+            $meta = Str::limit($meta.$pad, 160, '');
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Ensure at least one content H2 includes the focus keyword.
+     */
+    public function ensureKeywordInH2(string $bodyHtml, string $focusKeyword): string
+    {
+        $kw = trim($focusKeyword);
+        if ($kw === '' || $this->keywordInHeading($bodyHtml, 'h2', $kw)) {
+            return $bodyHtml;
+        }
+
+        $heading = e($kw).' কীভাবে কাজ করে';
+        $done = false;
+
+        $updated = preg_replace_callback(
+            '/<section\b[^>]*class=["\'][^"\']*(?:seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>|<h2\b[^>]*>.*?<\/h2>/iu',
+            function (array $m) use (&$done, $heading): string {
+                if ($done) {
+                    return $m[0];
+                }
+                if (preg_match('/seo-(?:quick-answer|ai-summary)/i', $m[0])) {
+                    return $m[0];
+                }
+                // Skip SEO block titles if matched as bare h2.
+                $text = trim(html_entity_decode(strip_tags($m[0])));
+                if (preg_match('/^(Quick Answer|দ্রুত উত্তর|AI Search Summary|AI Summary|এআই সারাংশ)$/iu', $text)) {
+                    return $m[0];
+                }
+                $done = true;
+
+                return '<h2>'.$heading.'</h2>';
+            },
+            $bodyHtml,
+        );
+
+        if (is_string($updated) && $done) {
+            return $updated;
+        }
+
+        $block = '<h2>'.$heading.'</h2>';
+        if (preg_match(
+            '/((?:<section\b[^>]*class=["\'][^"\']*(?:seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>\s*)+)/iu',
+            $bodyHtml,
+            $m,
+            PREG_OFFSET_CAPTURE,
+        )) {
+            $end = $m[0][1] + strlen($m[0][0]);
+
+            return substr($bodyHtml, 0, $end).$block."\n".substr($bodyHtml, $end);
+        }
+
+        return $block."\n".$bodyHtml;
+    }
+
+    /**
+     * Ensure at least one secondary keyword appears in the body plain text.
+     *
+     * @param  list<string>  $secondaryKeywords
+     */
+    public function ensureSecondaryKeywordsInBody(string $bodyHtml, array $secondaryKeywords): string
+    {
+        $plain = $this->plainText($bodyHtml);
+        foreach ($secondaryKeywords as $secondary) {
+            $s = trim((string) $secondary);
+            if ($s !== '' && $this->textContainsKeyword($plain, $s)) {
+                return $bodyHtml;
+            }
+        }
+
+        $first = '';
+        foreach ($secondaryKeywords as $secondary) {
+            $s = trim((string) $secondary);
+            if ($s !== '') {
+                $first = $s;
+                break;
+            }
+        }
+        if ($first === '') {
+            return $bodyHtml;
+        }
+
+        $sentence = e($first).' সম্পর্কিত টিপসও এই গাইডে আলোচনা করা হয়েছে।';
+
+        return rtrim($bodyHtml)."\n<p>".$sentence.'</p>';
+    }
+
+    /**
      * Ensure the first content paragraph (after SEO blocks) contains the focus keyword.
      */
     public function ensureKeywordInFirstParagraph(string $bodyHtml, string $focusKeyword): string

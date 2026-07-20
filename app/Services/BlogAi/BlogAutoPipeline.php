@@ -890,6 +890,7 @@ class BlogAutoPipeline
 
     /**
      * Last-chance deterministic SEO polish so Auto Create can finish instead of hard-failing.
+     * LLMs often omit Bangla focus keywords from title/meta/H2; force placement here.
      */
     private function polishDraftDeterministically(BlogAiSession $session): void
     {
@@ -901,7 +902,15 @@ class BlogAutoPipeline
             return;
         }
 
+        $secondary = is_array($session->keywords_json['secondary'] ?? null)
+            ? $session->keywords_json['secondary']
+            : (is_array($draft['secondary_keywords'] ?? null) ? $draft['secondary_keywords'] : []);
+
+        $title = $this->seoQuality->ensureKeywordInTitle($title, $focus);
+        $meta = $this->seoQuality->ensureKeywordInMeta((string) ($draft['meta_description'] ?? ''), $focus);
+        $body = $this->seoQuality->ensureKeywordInH2($body, $focus);
         $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
+        $body = $this->seoQuality->ensureSecondaryKeywordsInBody($body, $secondary);
         $body = $this->seoQuality->ensureMinBodyWords($body, $focus);
         $body = \App\Support\BlogHtmlSanitizer::sanitize($body);
 
@@ -910,13 +919,15 @@ class BlogAutoPipeline
             title: $title,
             focusKeyword: $focus,
             bodyHtml: $body,
-            metaDescription: (string) ($draft['meta_description'] ?? ''),
+            metaDescription: $meta,
             faqs: $faqs,
-            secondaryKeywords: [],
+            secondaryKeywords: $secondary,
             slug: (string) ($draft['slug'] ?? ''),
             locale: (string) ($draft['locale'] ?? 'bn'),
         );
 
+        $draft['title'] = $title;
+        $draft['meta_description'] = $meta;
         $draft['body_html'] = $body;
         $draft['quality'] = $quality;
         $notes = is_array($draft['seo_notes'] ?? null) ? $draft['seo_notes'] : [];

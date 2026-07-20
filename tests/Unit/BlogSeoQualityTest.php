@@ -226,4 +226,26 @@ HTML;
         $full = $service->ensureMinBodyWords('<p>ফ্রড চেকার সংক্ষিপ্ত খসড়া।</p>', 'ফ্রড চেকার', 800);
         $this->assertGreaterThanOrEqual(800, $service->bodyWordCount($full));
     }
+
+    public function test_deterministic_keyword_placement_for_bangla_focus(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $kw = 'রিটার্ন লস ক্যালকুলেটর';
+
+        $title = $service->ensureKeywordInTitle('বাংলাদেশে COD সেলারদের গাইড', $kw);
+        $this->assertTrue($service->textContainsKeyword($title, $kw));
+
+        $meta = $service->ensureKeywordInMeta('সেলারদের জন্য ব্যবহারিক টিপস ও সতর্কতা নিয়ে এই গাইড।', $kw);
+        $this->assertTrue($service->textContainsKeyword($meta, $kw));
+        $this->assertGreaterThanOrEqual(50, mb_strlen($meta));
+        $this->assertLessThanOrEqual(160, mb_strlen($meta));
+
+        $body = '<section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>উত্তর।</p></section>'
+            .'<h2>সাধারণ ধাপ</h2><p>কনটেন্ট এখানে।</p>';
+        $withH2 = $service->ensureKeywordInH2($body, $kw);
+        $this->assertTrue($service->keywordInHeading($withH2, 'h2', $kw));
+
+        $withSecondary = $service->ensureSecondaryKeywordsInBody('<p>মূল কনটেন্ট।</p>', ['রিটার্ন রেট', 'ক্যালকুলেটর']);
+        $this->assertTrue($service->textContainsKeyword($service->plainText($withSecondary), 'রিটার্ন রেট'));
+    }
 }
