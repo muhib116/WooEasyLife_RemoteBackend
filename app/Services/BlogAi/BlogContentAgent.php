@@ -173,6 +173,7 @@ Prefer Bangla or BD-English hybrid phrases sellers actually search.
 Do not invent US-centric keywords.
 Prioritize pasted keywords, gsc_rank_queries (Search Console opportunities), then live Google Suggest (gl=bd).
 Align primary intent with cluster_landing (same problem the landing page solves).
+Do NOT use the landing page bare head term as primary (e.g. avoid exact “ফ্রড চেকার” if that is the LP H1) — pick a long-tail informational angle.
 If avoid_primary_keywords is non-empty, the primary MUST be a different long-tail angle that is not in that list and not an exact match of existing post focus keywords.
 TXT;
 
@@ -239,7 +240,140 @@ TXT;
             'usage' => $result['usage'],
         ];
 
-        return $this->preferNonCollidingPrimary($research, $avoidPrimaries);
+        return $this->preferLandingSafePrimary(
+            $this->preferNonCollidingPrimary($research, $avoidPrimaries),
+            $cluster,
+        );
+    }
+
+    /**
+     * Pivot primaries that are bare head terms owned by money landing pages.
+     * Never fails — always returns a usable primary.
+     *
+     * @param  array<string, mixed>  $research
+     * @return array<string, mixed>
+     */
+    public function preferLandingSafePrimary(array $research, string $cluster): array
+    {
+        if (! config('blog_ai.lp_keyword_guard', true)) {
+            return $research;
+        }
+
+        $normalize = fn (?string $value): string => mb_strtolower(trim((string) $value));
+        $primary = trim((string) ($research['primary'] ?? ''));
+        if ($primary === '') {
+            return $research;
+        }
+
+        $blocked = $this->landingHeadTermsForCluster($cluster);
+        if ($blocked === []) {
+            return $research;
+        }
+
+        $primaryNorm = $normalize($primary);
+        $hitsHead = false;
+        foreach ($blocked as $term) {
+            $termNorm = $normalize($term);
+            if ($termNorm === '') {
+                continue;
+            }
+            // Exact match or primary is only a tiny head term (≤ term + 2 chars fluff).
+            if ($primaryNorm === $termNorm
+                || (str_starts_with($primaryNorm, $termNorm) && mb_strlen($primaryNorm) <= mb_strlen($termNorm) + 2)
+            ) {
+                $hitsHead = true;
+                break;
+            }
+        }
+
+        if (! $hitsHead) {
+            return $research;
+        }
+
+        $blockedNorm = array_map($normalize, $blocked);
+        $candidates = collect($research['secondary'] ?? [])
+            ->merge(collect($research['suggestions'] ?? [])->pluck('keyword'))
+            ->merge($research['live_suggestions'] ?? [])
+            ->map(fn ($k) => trim((string) $k))
+            ->filter()
+            ->unique()
+            ->reject(function ($k) use ($normalize, $blockedNorm) {
+                $n = $normalize($k);
+                foreach ($blockedNorm as $term) {
+                    if ($term === '') {
+                        continue;
+                    }
+                    if ($n === $term || (str_starts_with($n, $term) && mb_strlen($n) <= mb_strlen($term) + 2)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })
+            ->values();
+
+        $replacement = $candidates->first();
+        if (! $replacement) {
+            $replacement = $primary.' কমানোর ব্যবহারিক উপায় Bangladesh';
+        }
+
+        $prev = $research['auto_pivot'] ?? null;
+        $research['primary'] = $replacement;
+        $research['auto_pivot'] = [
+            'from' => is_array($prev) && filled($prev['from'] ?? null) ? (string) $prev['from'] : $primary,
+            'to' => $replacement,
+            'reason' => 'landing_head_term',
+        ];
+
+        return $research;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function landingHeadTermsForCluster(string $cluster): array
+    {
+        $landing = $this->landingContext->forCluster($cluster);
+        $terms = [];
+
+        foreach ($landing['pages'] ?? [] as $page) {
+            if (! is_array($page)) {
+                continue;
+            }
+            foreach (['h1', 'title'] as $key) {
+                $raw = trim((string) ($page[$key] ?? ''));
+                if ($raw === '') {
+                    continue;
+                }
+                // Take leading phrase before em dash / pipe / separator.
+                $piece = preg_split('/\s*[—|·•\-–]\s*/u', $raw, 2)[0] ?? $raw;
+                $piece = trim((string) $piece);
+                if ($piece !== '' && mb_strlen($piece) <= 48) {
+                    $terms[] = $piece;
+                }
+            }
+        }
+
+        // High-intent short heads for fraud/courier clusters (LP-owned).
+        $seoTools = config('blog_ai.seo_tools', []);
+        foreach ($seoTools as $tool) {
+            if (! is_array($tool)) {
+                continue;
+            }
+            $path = (string) ($tool['path'] ?? '');
+            $primaryPath = (string) ($landing['primary_path'] ?? '');
+            if ($primaryPath !== '' && $path === $primaryPath) {
+                foreach ($tool['keywords'] ?? [] as $kw) {
+                    $kw = trim((string) $kw);
+                    // Only short head-ish keywords (≤ 3 words / short Bangla phrases).
+                    if ($kw !== '' && str_word_count($kw) <= 3 && mb_strlen($kw) <= 40) {
+                        $terms[] = $kw;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($terms)));
     }
 
     /**
@@ -498,12 +632,21 @@ TXT);
             ]);
         }
 
-        $minWords = (int) config('blog_ai.min_body_words', 800);
+        $minWords = $this->seoQuality->minBodyWordsForType(
+            is_string(data_get($session->keywords_json, 'article_type'))
+                ? (string) data_get($session->keywords_json, 'article_type')
+                : (string) config('blog_ai.default_article_type', 'howto')
+        );
         $author = config('blog_ai.author_name', 'Muhibbullah Ansary');
         $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
+        $articleType = trim((string) data_get($session->keywords_json, 'article_type', config('blog_ai.default_article_type', 'howto')));
+        if (! in_array($articleType, BlogPost::ARTICLE_TYPES, true)) {
+            $articleType = 'howto';
+        }
 
         $articlePrompt = $this->prompts->articleWriter((string) $author, $minWords);
-        $system = $this->systemPrompt()."\n\n".($articlePrompt !== '' ? $articlePrompt : <<<TXT
+        $typeHint = $this->articleTypeHint($articleType);
+        $system = $this->systemPrompt()."\n\n".$typeHint."\n\n".($articlePrompt !== '' ? $articlePrompt : <<<TXT
 Write a complete Bangladesh SEO blog post in Bangla based on the outline.
 Return JSON with title, slug, focus_keyword, meta_title, meta_description, excerpt,
 author_name "{$author}", quick_answer, ai_search_summary, body_html, faqs, seo_notes.
@@ -529,6 +672,7 @@ TXT);
             'seo_targets' => [
                 'min_words' => $minWords,
                 'min_faqs' => $minFaqs,
+                'article_type' => $articleType,
                 'require_keyword_in_h2' => (bool) config('blog_ai.seo_quality.require_keyword_in_h2', true),
                 'require_quick_answer' => (bool) config('blog_ai.seo_quality.require_quick_answer', true),
                 'require_ai_search_summary' => (bool) config('blog_ai.seo_quality.require_ai_search_summary', true),
@@ -559,12 +703,38 @@ TXT);
             $session->cluster,
         );
 
+        $draft['article_type'] = $articleType;
         $session->draft_json = $draft;
         $session->addUsage($result['usage']);
         $session->status = 'draft_ready';
         $session->saveIfJobCurrent();
 
         return $draft;
+    }
+
+    private function articleTypeHint(string $articleType): string
+    {
+        return match ($articleType) {
+            'comparison' => <<<'TXT'
+## Article type: comparison
+Structure as WooEasyLife / modern ops vs Manual management, Excel, or multiple browser tabs.
+Use a comparison table. Never invent metrics — only product_brief claims. Soft CTA to primary_path.
+TXT,
+            'glossary' => <<<'TXT'
+## Article type: glossary
+Define one BD ecommerce / WooCommerce ops term clearly (what it is, why it matters for COD sellers, how to act).
+Shorter body is OK (meet glossary min words). Heavy FAQ. Link the related landing tool.
+TXT,
+            'case_study' => <<<'TXT'
+## Article type: case_study
+Narrative: merchant problem → workflow → result framing. Do NOT invent customer names, revenue, or % numbers.
+Use qualitative outcomes and product_brief truths only. Soft CTA.
+TXT,
+            default => <<<'TXT'
+## Article type: howto
+Step-by-step practical Bangla guide for BD COD / WooCommerce sellers. Aim 1400–2000 words.
+TXT,
+        };
     }
 
     private function systemPrompt(): string

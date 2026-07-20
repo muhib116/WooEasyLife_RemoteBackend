@@ -256,16 +256,24 @@
                             </span>
                         </template>
                     </Column>
-                    <Column header="AI score" style="min-width: 7rem">
+                    <Column header="AI score" style="min-width: 9rem">
                         <template #body="{ data }">
-                            <span
-                                v-if="data.ai_quality_score != null"
-                                class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums"
-                                :class="aiScoreClass(data.ai_quality_score)"
-                            >
-                                {{ data.ai_quality_score }}
-                            </span>
-                            <span v-else class="text-xs text-gray-400">—</span>
+                            <div class="flex flex-col gap-1">
+                                <span
+                                    v-if="data.ai_quality_score != null"
+                                    class="inline-flex w-fit items-center rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums"
+                                    :class="aiScoreClass(data.ai_quality_score)"
+                                >
+                                    {{ data.ai_quality_score }}
+                                </span>
+                                <span v-else class="text-xs text-gray-400">—</span>
+                                <Tag
+                                    v-if="data.needs_seo_fix || data.seo_soft_pass"
+                                    value="Needs SEO fix"
+                                    severity="warn"
+                                    class="!text-[10px]"
+                                />
+                            </div>
                         </template>
                     </Column>
                     <Column header="28d score" style="min-width: 8rem">

@@ -34,6 +34,7 @@ class BlogSeoChecklistRegenerator
      *     og_image?: string|null,
      *     locale?: string,
      *     cluster?: string|null,
+     *     article_type?: string|null,
      *     ignore_post_id?: int|null
      * }  $input
      * @return array{
@@ -46,6 +47,7 @@ class BlogSeoChecklistRegenerator
      *     focus_keyword: string,
      *     ai_quality_score: int,
      *     ai_quality_breakdown: array<string, mixed>,
+     *     seo_soft_pass: bool,
      *     quality: array<string, mixed>,
      *     fixed_checks: list<string>,
      *     remaining_failures: list<string>,
@@ -68,6 +70,7 @@ class BlogSeoChecklistRegenerator
         $slug = trim((string) ($input['slug'] ?? ''));
         $locale = trim((string) ($input['locale'] ?? 'bn')) ?: 'bn';
         $cluster = trim((string) ($input['cluster'] ?? ''));
+        $articleType = trim((string) ($input['article_type'] ?? 'howto')) ?: 'howto';
         $ignoreId = isset($input['ignore_post_id']) ? (int) $input['ignore_post_id'] : null;
         $ogImage = trim((string) ($input['og_image'] ?? ''));
 
@@ -87,6 +90,7 @@ class BlogSeoChecklistRegenerator
             $slug !== '' ? $slug : null,
             $ignoreId,
             $locale,
+            $articleType,
         );
 
         $targets = $this->failingTargets($before, $ogImage !== '');
@@ -98,6 +102,8 @@ class BlogSeoChecklistRegenerator
                 'content' => ! empty($before['ai_ready']) ? 92 : 70,
             ]);
 
+            $seoSoftPass = $this->syncSoftPassFlag($ignoreId, $before, []);
+
             return [
                 'title' => $title,
                 'meta_title' => $metaTitle !== '' ? $metaTitle : $title,
@@ -108,6 +114,7 @@ class BlogSeoChecklistRegenerator
                 'focus_keyword' => $focus,
                 'ai_quality_score' => $score['score'],
                 'ai_quality_breakdown' => $score['breakdown'],
+                'seo_soft_pass' => $seoSoftPass,
                 'quality' => $before,
                 'fixed_checks' => [],
                 'remaining_failures' => [],
@@ -148,6 +155,7 @@ class BlogSeoChecklistRegenerator
             $slug !== '' ? $slug : null,
             $ignoreId,
             $locale,
+            $articleType,
         );
         $targets = $this->failingTargets($mid, $ogImage !== '');
         // AI cannot invent media files — never spend tokens on image-only gaps.
@@ -232,13 +240,18 @@ class BlogSeoChecklistRegenerator
             $slug !== '' ? $slug : null,
             $ignoreId,
             $locale,
+            $articleType,
         );
         $beforeDepth = $body;
         if (empty($probe['keyword_in_first_paragraph'])) {
             $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
         }
         if (empty($probe['word_count_ok'])) {
-            $body = $this->seoQuality->ensureMinBodyWords($body, $focus);
+            $body = $this->seoQuality->ensureMinBodyWords(
+                $body,
+                $focus,
+                $this->seoQuality->minBodyWordsForType($articleType),
+            );
         }
         if ($body !== $beforeDepth) {
             $notes[] = 'Applied deterministic first-paragraph keyword and/or minimum word-count expansion.';
@@ -260,6 +273,7 @@ class BlogSeoChecklistRegenerator
             $slug !== '' ? $slug : null,
             $ignoreId,
             $locale,
+            $articleType,
         );
 
         $fixed = [];
@@ -290,6 +304,8 @@ class BlogSeoChecklistRegenerator
                 .(count($remaining) > 8 ? '…' : '').'.';
         }
 
+        $seoSoftPass = $this->syncSoftPassFlag($ignoreId, $after, $remaining);
+
         return [
             'title' => $title,
             'meta_title' => $metaTitle !== '' ? $metaTitle : $title,
@@ -300,12 +316,44 @@ class BlogSeoChecklistRegenerator
             'focus_keyword' => $focus,
             'ai_quality_score' => $score['score'],
             'ai_quality_breakdown' => $score['breakdown'],
+            'seo_soft_pass' => $seoSoftPass,
             'quality' => $after,
             'fixed_checks' => array_values(array_unique($fixed)),
             'remaining_failures' => $remaining,
             'notes' => $notes,
             'usage' => $usage,
         ];
+    }
+
+    /**
+     * Clear seo_soft_pass when checklist is effectively ready; otherwise keep true if it was set.
+     *
+     * @param  array<string, mixed>  $quality
+     * @param  list<string>  $remainingFailures
+     */
+    private function syncSoftPassFlag(?int $ignoreId, array $quality, array $remainingFailures): bool
+    {
+        $clear = ! empty($quality['ai_ready']) || $remainingFailures === [];
+
+        if (! $ignoreId) {
+            return ! $clear;
+        }
+
+        $post = \App\Models\BlogPost::query()->find($ignoreId);
+        if (! $post) {
+            return ! $clear;
+        }
+
+        if ($clear) {
+            if ($post->seo_soft_pass) {
+                $post->seo_soft_pass = false;
+                $post->save();
+            }
+
+            return false;
+        }
+
+        return (bool) $post->seo_soft_pass;
     }
 
     /**

@@ -46,11 +46,14 @@ class BlogPostController extends Controller
                     'slug' => $post->slug,
                     'locale' => $post->locale,
                     'cluster' => $post->cluster,
+                    'article_type' => $post->article_type ?: 'howto',
                     'status' => $post->status,
                     'excerpt' => $post->excerpt,
                     'focus_keyword' => $post->focus_keyword,
                     'ai_quality_score' => $post->ai_quality_score,
                     'ai_quality_breakdown' => $post->ai_quality_breakdown,
+                    'seo_soft_pass' => (bool) $post->seo_soft_pass,
+                    'needs_seo_fix' => $post->needsSeoFix(),
                     'published_at' => optional($post->published_at)?->toIso8601String(),
                     'updated_at' => optional($post->updated_at)?->toIso8601String(),
                     'public_path' => filled($post->slug) ? $post->publicPath() : null,
@@ -115,6 +118,7 @@ class BlogPostController extends Controller
                 'slug' => $blogPost->slug,
                 'locale' => $blogPost->locale,
                 'cluster' => $blogPost->cluster,
+                'article_type' => $blogPost->article_type ?: 'howto',
                 'status' => $blogPost->status,
                 'excerpt' => $blogPost->excerpt,
                 'meta_title' => $blogPost->meta_title,
@@ -130,6 +134,8 @@ class BlogPostController extends Controller
                 'ai_quality_score' => $blogPost->ai_quality_score,
                 'ai_quality_breakdown' => $blogPost->ai_quality_breakdown,
                 'ai_run_id' => $blogPost->ai_run_id,
+                'seo_soft_pass' => (bool) $blogPost->seo_soft_pass,
+                'needs_seo_fix' => $blogPost->needsSeoFix(),
                 'public_path' => filled($blogPost->slug) ? $blogPost->publicPath() : null,
                 'public_url' => ($blogPost->status === 'published' && filled($blogPost->slug))
                     ? $blogPost->publicUrl()
@@ -238,6 +244,7 @@ class BlogPostController extends Controller
             ],
             'locale' => ['required', Rule::in(BlogPost::LOCALES)],
             'cluster' => ['nullable', 'string', 'max:64', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'article_type' => ['nullable', 'string', 'max:32', Rule::in(BlogPost::ARTICLE_TYPES)],
             'status' => ['required', Rule::in(BlogPost::STATUSES)],
             'excerpt' => ['nullable', 'string', 'max:500'],
             'meta_title' => ['nullable', 'string', 'max:70'],
@@ -254,6 +261,7 @@ class BlogPostController extends Controller
             'ai_quality_score' => ['nullable', 'integer', 'min:0', 'max:100'],
             'ai_quality_breakdown' => ['nullable', 'array'],
             'ai_run_id' => ['nullable', 'integer', 'exists:blog_ai_runs,id'],
+            'seo_soft_pass' => ['sometimes', 'boolean'],
         ], [
             'slug.required' => 'Add an English SEO slug before publishing (e.g. fake-order-atkabo).',
             'slug.regex' => 'Slug must be lowercase Latin letters, numbers, and hyphens only.',
@@ -298,6 +306,18 @@ class BlogPostController extends Controller
         $bodyHtml = BlogHtmlSanitizer::sanitize($validated['body_html']);
         $focusKeyword = $validated['focus_keyword'] ?? null;
         $locale = $validated['locale'];
+        $articleType = trim((string) ($validated['article_type'] ?? '')) ?: 'howto';
+        if (! in_array($articleType, BlogPost::ARTICLE_TYPES, true)) {
+            $articleType = 'howto';
+        }
+
+        $existingSoftPass = false;
+        if ($ignoreId) {
+            $existingSoftPass = (bool) BlogPost::query()->whereKey($ignoreId)->value('seo_soft_pass');
+        }
+        if ($request->exists('seo_soft_pass')) {
+            $existingSoftPass = (bool) $validated['seo_soft_pass'];
+        }
 
         if ($status === 'published') {
             $seoErrors = $this->blogSeoQuality->publishValidationErrors(
@@ -310,6 +330,8 @@ class BlogPostController extends Controller
                 ignorePostId: $ignoreId,
                 faqs: is_array($validated['faqs_json'] ?? null) ? $validated['faqs_json'] : [],
                 ogImage: isset($validated['og_image']) ? (string) $validated['og_image'] : null,
+                seoSoftPass: $existingSoftPass,
+                articleType: $articleType,
             );
 
             if ($seoErrors !== []) {
@@ -322,6 +344,7 @@ class BlogPostController extends Controller
             'slug' => $slug,
             'locale' => $locale,
             'cluster' => $validated['cluster'] ?? null,
+            'article_type' => $articleType,
             'status' => $status,
             'excerpt' => $validated['excerpt'] ?? null,
             'meta_title' => $validated['meta_title'] ?? null,
@@ -335,6 +358,9 @@ class BlogPostController extends Controller
             'published_at' => $publishedAt,
         ];
 
+        if ($request->exists('seo_soft_pass')) {
+            $data['seo_soft_pass'] = (bool) $validated['seo_soft_pass'];
+        }
         if ($request->exists('ai_quality_score')) {
             $data['ai_quality_score'] = $validated['ai_quality_score'];
         }
@@ -391,10 +417,16 @@ class BlogPostController extends Controller
             ],
             'markdown_slugs' => $this->blogService->markdownSlugs(),
             'clusters' => config('blog_ai.clusters', []),
+            'article_types' => BlogPost::ARTICLE_TYPES,
             'seo' => [
-                'min_body_words' => (int) config('blog_ai.min_body_words', 800),
+                'min_body_words' => (int) config('blog_ai.min_body_words', 1200),
+                'glossary_min_body_words' => (int) config('blog_ai.glossary_min_body_words', 800),
                 'min_faqs' => (int) config('blog_ai.seo_quality.min_faqs', 5),
                 'min_internal_links' => (int) config('blog_ai.seo_quality.min_internal_links', 2),
+                'soft_pass_score_cap' => (int) config('blog_ai.auto.soft_pass_score_cap', 59),
+                'block_soft_pass_publish' => (bool) config('blog_ai.seo_quality.enforce_on_publish.block_soft_pass', true),
+                'enforce_focus_keyword' => (bool) config('blog_ai.seo_quality.enforce_on_publish.focus_keyword_required', true),
+                'enforce_internal_link' => (bool) config('blog_ai.seo_quality.enforce_on_publish.has_internal_link', false),
             ],
         ];
     }

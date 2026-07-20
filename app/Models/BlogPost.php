@@ -16,11 +16,14 @@ class BlogPost extends Model
 
     public const LOCALES = ['bn', 'en'];
 
+    public const ARTICLE_TYPES = ['howto', 'comparison', 'glossary', 'case_study'];
+
     protected $fillable = [
         'title',
         'slug',
         'locale',
         'cluster',
+        'article_type',
         'status',
         'excerpt',
         'meta_title',
@@ -37,6 +40,7 @@ class BlogPost extends Model
         'ai_quality_score',
         'ai_quality_breakdown',
         'ai_run_id',
+        'seo_soft_pass',
         'facebook_post_id',
         'facebook_shared_at',
     ];
@@ -49,7 +53,22 @@ class BlogPost extends Model
             'faqs_json' => 'array',
             'ai_quality_breakdown' => 'array',
             'ai_quality_score' => 'integer',
+            'seo_soft_pass' => 'boolean',
         ];
+    }
+
+    public function needsSeoFix(): bool
+    {
+        if ($this->seo_soft_pass) {
+            return true;
+        }
+
+        $cap = (int) config('blog_ai.auto.soft_pass_score_cap', 59);
+        if ($this->ai_quality_score !== null && (int) $this->ai_quality_score <= $cap) {
+            return true;
+        }
+
+        return false;
     }
 
     public function creator(): BelongsTo

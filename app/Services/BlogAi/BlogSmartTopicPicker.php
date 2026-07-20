@@ -116,12 +116,19 @@ class BlogSmartTopicPicker
 
         $best = null;
         $bestScore = -1.0;
+        $recentAngles = $this->recentAnglesByCluster();
 
         foreach ($candidates as $candidate) {
             $resolved = $this->finalizeCandidate($candidate, $learning, $explicitCluster !== '' ? $explicitCluster : null, scoreOnly: true);
             if ($resolved === null) {
                 continue;
             }
+
+            if ($this->isRecentDuplicateAngle($resolved, $recentAngles)) {
+                // Soft-skip near-duplicate angles from the last 30 days (same cluster).
+                continue;
+            }
+
             $score = (float) $resolved['opportunity_score'];
             if ($resolved['competitor_ready']) {
                 $score += 12;
@@ -136,6 +143,24 @@ class BlogSmartTopicPicker
                 $bestScore = $score;
                 $best = $resolved;
                 $best['opportunity_score'] = round($score, 2);
+            }
+        }
+
+        // If everything collided with recent angles, fall through without the filter.
+        if ($best === null) {
+            foreach ($candidates as $candidate) {
+                $resolved = $this->finalizeCandidate($candidate, $learning, $explicitCluster !== '' ? $explicitCluster : null, scoreOnly: true);
+                if ($resolved === null) {
+                    continue;
+                }
+                $score = (float) $resolved['opportunity_score'];
+                $score += $this->bucketBoost($resolved['bucket'] ?? null);
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $best = $resolved;
+                    $best['opportunity_score'] = round($score, 2);
+                    $best['reason'] = ($best['reason'] ?? 'scored').'_recent_fallback';
+                }
             }
         }
 
@@ -301,5 +326,78 @@ class BlogSmartTopicPicker
         $id = BlogPost::query()->where('slug', $slug)->value('id');
 
         return $id ? (int) $id : null;
+    }
+
+    /**
+     * @return array<string, list<string>> cluster => normalized seeds/titles/focus
+     */
+    private function recentAnglesByCluster(): array
+    {
+        if (! Schema::hasTable('blog_posts')) {
+            return [];
+        }
+
+        $rows = BlogPost::query()
+            ->where('created_at', '>=', now()->subDays(30))
+            ->get(['cluster', 'title', 'focus_keyword', 'slug']);
+
+        $out = [];
+        foreach ($rows as $row) {
+            $cluster = trim((string) ($row->cluster ?? '')) ?: 'general';
+            foreach ([$row->focus_keyword, $row->title, $row->slug] as $raw) {
+                $n = $this->normalizeAngle((string) $raw);
+                if ($n !== '') {
+                    $out[$cluster][] = $n;
+                }
+            }
+        }
+
+        foreach ($out as $cluster => $list) {
+            $out[$cluster] = array_values(array_unique($list));
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>  $resolved
+     * @param  array<string, list<string>>  $recentAngles
+     */
+    private function isRecentDuplicateAngle(array $resolved, array $recentAngles): bool
+    {
+        $cluster = trim((string) ($resolved['cluster'] ?? '')) ?: 'general';
+        $pool = $recentAngles[$cluster] ?? [];
+        if ($pool === []) {
+            return false;
+        }
+
+        $needles = array_filter([
+            $this->normalizeAngle((string) ($resolved['keyword'] ?? '')),
+            $this->normalizeAngle((string) ($resolved['seed_topic'] ?? '')),
+        ]);
+
+        foreach ($needles as $needle) {
+            foreach ($pool as $existing) {
+                if ($needle === $existing) {
+                    return true;
+                }
+                // Near-duplicate: one contains the other and both reasonably long.
+                if (mb_strlen($needle) >= 8 && mb_strlen($existing) >= 8
+                    && (str_contains($existing, $needle) || str_contains($needle, $existing))
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeAngle(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return $value;
     }
 }

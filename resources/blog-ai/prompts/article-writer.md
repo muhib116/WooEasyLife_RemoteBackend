@@ -25,7 +25,7 @@ Return JSON:
 
 ## Must-pass SEO checklist
 - Focus keyword in: title, FIRST <p>, meta_description, slug (latin equivalent ok), and **one H2**
-- body_html roughly {{min_words}}+ words of Bangla content
+- body_html roughly {{min_words}}+ words of Bangla content (aim 1400–2000 for howto/comparison/case_study; glossary may be shorter when instructed)
 - Include at least 2 secondary keywords from keywords.secondary naturally (not stuffed)
 - Keyword density ~1% — natural, no stuffing or repetition
 - At least 2 internal links using exact paths from link_plan (href="/path")

@@ -33,7 +33,31 @@ return [
 
     'min_pasted_keywords' => 1,
 
-    'min_body_words' => 800,
+    /*
+    | Soft publish length gate / AI draft target floor.
+    | Prompts aim slightly higher (1400–2000) so drafts clear this bar.
+    | Ops: after ~1 week of stable drafts, consider raising to 1400.
+    */
+    'min_body_words' => (int) env('BLOG_AI_MIN_BODY_WORDS', 1200),
+
+    /*
+    | Glossary article_type uses a lower floor so short definition posts are not forced long.
+    */
+    'glossary_min_body_words' => (int) env('BLOG_AI_GLOSSARY_MIN_BODY_WORDS', 800),
+
+    'article_types' => [
+        'howto',
+        'comparison',
+        'glossary',
+        'case_study',
+    ],
+
+    'default_article_type' => env('BLOG_AI_DEFAULT_ARTICLE_TYPE', 'howto'),
+
+    /*
+    | Pivot blog primaries that collide with money landing head terms (never fail research).
+    */
+    'lp_keyword_guard' => filter_var(env('BLOG_AI_LP_KEYWORD_GUARD', true), FILTER_VALIDATE_BOOLEAN),
 
     'hooks_count' => 10,
 
@@ -59,15 +83,20 @@ return [
         */
         'enforce_on_publish' => [
             /*
-            | Live-safe defaults: duplicate focus keyword stays hard-blocked.
-            | Opt into stricter publish with BLOG_SEO_ENFORCE_AI_READY=true (and related flags).
+            | Progressive publish gates (drafts never blocked).
+            | C1: focus keyword on (default). C2: enable INTERNAL_LINK after C1 is stable.
+            | Do not enable AI_READY or OG_IMAGE until Fix-checklist path is routine.
             */
             'ai_ready' => filter_var(env('BLOG_SEO_ENFORCE_AI_READY', false), FILTER_VALIDATE_BOOLEAN),
-            'focus_keyword_required' => filter_var(env('BLOG_SEO_ENFORCE_FOCUS_KEYWORD', false), FILTER_VALIDATE_BOOLEAN),
+            'focus_keyword_required' => filter_var(env('BLOG_SEO_ENFORCE_FOCUS_KEYWORD', true), FILTER_VALIDATE_BOOLEAN),
             'has_og_or_content_image' => filter_var(env('BLOG_SEO_ENFORCE_OG_IMAGE', false), FILTER_VALIDATE_BOOLEAN),
             'has_internal_link' => filter_var(env('BLOG_SEO_ENFORCE_INTERNAL_LINK', false), FILTER_VALIDATE_BOOLEAN),
             'duplicate_focus_keyword' => true,
             'duplicate_slug' => false, // DB unique rule already covers slug
+            /*
+            | Soft-pass Auto drafts cannot publish until Fix SEO checklist clears the flag.
+            */
+            'block_soft_pass' => filter_var(env('BLOG_SEO_BLOCK_SOFT_PASS_PUBLISH', true), FILTER_VALIDATE_BOOLEAN),
         ],
         /*
         | Soft warnings shown in the CMS (confirm dialogs / checklist) — do not block save.

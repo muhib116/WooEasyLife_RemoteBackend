@@ -52,8 +52,9 @@ class BlogSeoQuality
         ?string $slug = null,
         ?int $ignorePostId = null,
         string $locale = 'bn',
+        ?string $articleType = null,
     ): array {
-        $minWords = (int) config('blog_ai.min_body_words', 800);
+        $minWords = $this->minBodyWordsForType($articleType);
         $minLinks = (int) config('blog_ai.seo_quality.min_internal_links', 2);
         $minFaqs = (int) config('blog_ai.seo_quality.min_faqs', 5);
 
@@ -198,7 +199,7 @@ class BlogSeoQuality
 
     /**
      * Soft + hard publish gates for CMS.
-     * By default only duplicate focus keyword hard-blocks; checklist gaps are soft-warned in the UI.
+     * Drafts are never blocked — only status=published hits these gates.
      *
      * @param  list<array{q?: string, a?: string}>  $faqs
      * @return array<string, string> field => message
@@ -213,11 +214,17 @@ class BlogSeoQuality
         ?int $ignorePostId = null,
         array $faqs = [],
         ?string $ogImage = null,
+        bool $seoSoftPass = false,
+        ?string $articleType = null,
     ): array {
         $gates = config('blog_ai.seo_quality.enforce_on_publish', []);
         $errors = [];
         $kw = trim((string) ($focusKeyword ?? ''));
         $meta = trim((string) ($metaDescription ?? ''));
+
+        if (! empty($gates['block_soft_pass']) && $seoSoftPass) {
+            $errors['status'] = 'This draft soft-passed Auto SEO. Run “Fix SEO checklist” (Regenerate) until the Needs SEO fix badge clears, then publish.';
+        }
 
         if (! empty($gates['focus_keyword_required']) && $kw === '') {
             $errors['focus_keyword'] = 'Set a focus keyword before publishing.';
@@ -233,6 +240,7 @@ class BlogSeoQuality
             slug: $slug,
             ignorePostId: $ignorePostId,
             locale: $locale,
+            articleType: $articleType,
         );
 
         if (! empty($gates['ai_ready']) && empty($quality['ai_ready'])) {
@@ -340,7 +348,7 @@ class BlogSeoQuality
         }
 
         if (! empty($flags['word_count_ok']) && empty($quality['word_count_ok'])) {
-            $minWords = (int) config('blog_ai.min_body_words', 800);
+            $minWords = (int) config('blog_ai.min_body_words', 1200);
             $warnings[] = "Body is under {$minWords} words (currently {$quality['word_count']}).";
         }
 
@@ -677,7 +685,7 @@ class BlogSeoQuality
      */
     public function ensureMinBodyWords(string $bodyHtml, string $focusKeyword, ?int $minWords = null): string
     {
-        $min = $minWords ?? (int) config('blog_ai.min_body_words', 800);
+        $min = $minWords ?? (int) config('blog_ai.min_body_words', 1200);
         $kw = trim($focusKeyword) !== '' ? trim($focusKeyword) : 'WooEasyLife';
         $body = $bodyHtml;
         $current = $this->bodyWordCount($body);
@@ -847,5 +855,15 @@ class BlogSeoQuality
         }
 
         return $out;
+    }
+
+    public function minBodyWordsForType(?string $articleType): int
+    {
+        $type = trim((string) $articleType);
+        if ($type === 'glossary') {
+            return max(1, (int) config('blog_ai.glossary_min_body_words', 800));
+        }
+
+        return max(1, (int) config('blog_ai.min_body_words', 1200));
     }
 }

@@ -91,17 +91,20 @@ class BlogSeoChecklistRegenerateTest extends TestCase
             'blog_ai.enabled' => true,
             'landing.openai_api_key' => 'sk-test-key',
             'blog_ai.min_body_words' => 50,
+            'blog_ai.seo_quality.min_internal_links' => 2,
         ]);
 
         Http::fake();
 
         $admin = $this->adminUser();
 
+        $filler = str_repeat('ফ্রড চেকার দিয়ে প্রতিদিনের অর্ডার যাচাই করলে রিটার্ন লস কমে এবং ক্যাশফ্লো স্থিতিশীল থাকে। ', 8);
         $body = '<section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>ফ্রড চেকার দিয়ে অর্ডার কনফার্মের আগে কাস্টমার চেক করুন।</p></section>'
             .'<section class="seo-ai-summary"><h2>এআই সারাংশ</h2><p>ফ্রড চেকার BD সেলারদের রিটার্ন লস কমাতে সাহায্য করে এবং ফেক অর্ডার আটকায়।</p></section>'
             .'<p>ফ্রড চেকার দিয়ে অর্ডার কনফার্মের আগে কাস্টমার চেক করুন এবং রিটার্ন লস কমান। একাধিক নম্বর যাচাই করে রেটিং দেখুন।</p>'
             .'<h2>ফ্রড চেকার ব্যবহার</h2><h3>ধাপ</h3><ul><li>মোবাইল নম্বর দিন</li><li>রেট ও হিস্ট্রি দেখুন</li><li>ঝুঁকি বুঝে কনফার্ম করুন</li></ul>'
             .'<p>বাংলাদেশ কুরিয়ার সেলাররা প্রতিদিন ফেক অর্ডার ও COD রিটার্নে লস করেন। সঠিক চেকিং ওয়ার্কফ্লো ব্যবসা বাঁচায়।</p>'
+            .'<p>'.$filler.'</p>'
             .'<p><a href="/bd-fraud-checker">ফ্রড চেকার</a> · <a href="/fake-customer-check">চেক</a></p>';
 
         $faqs = [];

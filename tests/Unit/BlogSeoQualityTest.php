@@ -15,7 +15,7 @@ class BlogSeoQualityTest extends TestCase
     {
         $service = app(BlogSeoQuality::class);
 
-        $filler = str_repeat('ফেক অর্ডার কমাতে নিয়মিত কুরিয়ার হিস্টোরি ও কনফার্মেশন কল চালু রাখুন। ', 80);
+        $filler = str_repeat('ফেক অর্ডার কমাতে নিয়মিত কুরিয়ার হিস্টোরি ও কনফার্মেশন কল চালু রাখুন। ', 120);
         $body = <<<HTML
 <section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>ফেক অর্ডার কমাতে কুরিয়ার হিস্টোরি চেক করুন।</p></section>
 <p>বাংলাদেশে ফেক অর্ডার COD ব্যবসার বড় লস।</p>

@@ -76,6 +76,17 @@
                         />
                     </div>
                     <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Article type</label>
+                        <Select
+                            v-model="articleType"
+                            :options="articleTypeOptions"
+                            option-label="label"
+                            option-value="value"
+                            class="w-full"
+                            :disabled="autoLoading"
+                        />
+                    </div>
+                    <div>
                         <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Seed topic (optional)</label>
                         <InputText
                             v-model="seedTopic"
@@ -90,9 +101,12 @@
                             v-model="keywordsText"
                             class="w-full"
                             rows="3"
-                            placeholder="Optional — otherwise AI generates BD keywords"
+                            placeholder="Optional — better results if you paste 1 primary keyword"
                             :disabled="autoLoading"
                         />
+                        <p class="mt-1 text-xs text-slate-500">
+                            Better results if you paste 1 primary keyword (long-tail, not the landing-page head term).
+                        </p>
                     </div>
                 </div>
 
@@ -271,6 +285,16 @@
                     />
                 </div>
                 <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Article type</label>
+                    <Select
+                        v-model="articleType"
+                        :options="articleTypeOptions"
+                        option-label="label"
+                        option-value="value"
+                        class="w-full"
+                    />
+                </div>
+                <div>
                     <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
                         <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Keywords <span class="text-rose-500">*</span>
@@ -294,7 +318,14 @@
                     />
                     <small class="mt-1 block text-slate-500">
                         Paste BD keywords or generate from cluster + seed topic (Google Suggest BD + AI). Edit before research.
+                        Tip: paste at least 1 primary long-tail keyword (Generate still works if empty after AI suggest).
                     </small>
+                    <p
+                        v-if="!keywordsText.trim()"
+                        class="mt-1 text-xs text-amber-700 dark:text-amber-300"
+                    >
+                        Primary keyword empty — generate or paste one before research for better SEO targeting.
+                    </p>
                 </div>
             </div>
 
@@ -651,6 +682,7 @@ const session = ref(null);
 const cluster = ref(null);
 const seedTopic = ref('');
 const keywordsText = ref('');
+const articleType = ref('howto');
 const selectedHookIds = ref([]);
 const queueEnabled = ref(true);
 const imageEnabled = ref(true);
@@ -741,6 +773,13 @@ const clusterOptions = ref([
     { value: 'operations', label: 'অপারেশন / ড্যাশবোর্ড' },
     { value: 'general', label: 'সাধারণ WooCommerce BD' },
 ]);
+
+const articleTypeOptions = [
+    { value: 'howto', label: 'How-to guide' },
+    { value: 'comparison', label: 'Comparison' },
+    { value: 'glossary', label: 'Glossary' },
+    { value: 'case_study', label: 'Case study' },
+];
 
 const primaryLabel = computed(() => {
     if (step.value === 0) return 'Research keywords';
@@ -1024,6 +1063,7 @@ const startAuto = async () => {
             cluster: cluster.value || null,
             seed_topic: seedTopic.value || null,
             keywords_text: keywordsText.value || null,
+            article_type: articleType.value || 'howto',
             create_post: true,
         }, {
             timeout: 60000,
@@ -1364,6 +1404,7 @@ const runPrimary = async () => {
                 cluster: cluster.value,
                 seed_topic: seedTopic.value || null,
                 keywords_text: keywordsText.value,
+                article_type: articleType.value || 'howto',
             });
             session.value = created.data.session;
             busyHint.value = 'Researching keywords…';

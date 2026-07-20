@@ -13,7 +13,7 @@ Return JSON:
   "quick_answer_points": ["40-60 word featured-snippet answer points"],
   "ai_search_summary_points": ["100-150 word AI-overview style points"],
   "sections": [
-    {"heading": "H2 with practical angle...", "h3": ["H3..."], "bullets": ["..."], "word_target": 120}
+    {"heading": "H2 with practical angle...", "h3": ["H3..."], "bullets": ["..."], "word_target": 220}
   ],
   "faqs": [{"q": "...", "a_points": ["..."]}],
   "internal_links": [{"path": "/...", "anchor": "...", "reason": "..."}],
@@ -23,6 +23,7 @@ Return JSON:
 }
 
 ## Requirements
+- Target total body ~1400–2000 Bangla words across sections (sum of word_target ≈ that band).
 - Use ONLY paths from the provided internal link catalog (2–4 links).
 - MUST include cluster_landing.primary_path (or must_link_paths) as the first internal link.
 - Echo page FAQs/angle_hint truth — do not invent features beyond product_brief + cluster_landing.
@@ -33,3 +34,4 @@ Return JSON:
 - Plan one Featured Snippet “Quick Answer” (দ্রুত উত্তর) and one AI Search Summary block.
 - Suggest 1–2 trustworthy external references (gov/courier docs/Wikipedia-style) — no spam domains.
 - Include a differentiation / checklist / comparison angle where useful.
+- Honor article_type when provided (howto / comparison / glossary / case_study).

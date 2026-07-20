@@ -1036,6 +1036,7 @@ class BlogAutoPipeline
             'slug' => $slug,
             'locale' => (string) ($draft['locale'] ?? 'bn'),
             'cluster' => $session->cluster ?: ($draft['cluster'] ?? null),
+            'article_type' => $this->resolveArticleType($run, $session, $draft),
             'status' => 'draft',
             'excerpt' => $draft['excerpt'] ?? null,
             'meta_title' => $draft['meta_title'] ?? null,
@@ -1048,9 +1049,32 @@ class BlogAutoPipeline
             'body_html' => (string) $draft['body_html'],
             'ai_quality_score' => $computed['score'],
             'ai_quality_breakdown' => $computed['breakdown'],
+            'seo_soft_pass' => $this->hasAnySoftPass(is_array($run->input_json) ? $run->input_json : []),
             'created_by' => $run->user_id,
             'updated_by' => $run->user_id,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $draft
+     */
+    private function resolveArticleType(BlogAiRun $run, BlogAiSession $session, array $draft): string
+    {
+        $types = BlogPost::ARTICLE_TYPES;
+        $candidates = [
+            trim((string) ($draft['article_type'] ?? '')),
+            trim((string) data_get($run->input_json, 'article_type', '')),
+            trim((string) data_get($session->keywords_json, 'article_type', '')),
+            (string) config('blog_ai.default_article_type', 'howto'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $types, true)) {
+                return $candidate;
+            }
+        }
+
+        return 'howto';
     }
 
     /**

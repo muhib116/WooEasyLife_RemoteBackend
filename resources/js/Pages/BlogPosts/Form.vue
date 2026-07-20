@@ -64,6 +64,15 @@
                 </span>
             </div>
 
+            <div
+                v-if="needsSeoFixBadge"
+                class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+            >
+                <span class="font-semibold">Needs SEO fix</span>
+                — this draft soft-passed Auto SEO or scored at/below the soft-pass cap.
+                Run <strong>Regenerate</strong> on the checklist before publishing.
+            </div>
+
             <form class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]" @submit.prevent="submit">
                 <div class="space-y-5">
                     <PageCard title="Content" description="Title, slug, and rich body">
@@ -310,6 +319,21 @@
                             </div>
                             <div>
                                 <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                    Article type
+                                </label>
+                                <Select
+                                    v-model="form.article_type"
+                                    :options="articleTypeOptions"
+                                    option-label="label"
+                                    option-value="value"
+                                    class="w-full"
+                                />
+                                <small class="mt-1 block text-gray-500">
+                                    Glossary uses a lower word-count floor; howto aims 1400–2000 words.
+                                </small>
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                                     Published at
                                 </label>
                                 <InputText
@@ -410,6 +434,12 @@
                                 @click="regenerateSeoChecklist"
                             />
                         </template>
+                        <div
+                            v-if="needsSeoFixBadge"
+                            class="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-900 dark:text-amber-100"
+                        >
+                            Needs SEO fix
+                        </div>
                         <div
                             v-if="form.ai_quality_score != null"
                             class="mb-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"
@@ -562,6 +592,15 @@ const applyAiDraft = (draft) => {
     if (draft.cluster) {
         form.cluster = draft.cluster;
     }
+    if (draft.article_type) {
+        form.article_type = draft.article_type;
+    }
+    if (draft.seo_soft_pass != null) {
+        form.seo_soft_pass = Boolean(draft.seo_soft_pass);
+    } else if (draft.ai_quality_score != null) {
+        const cap = Number(props.options?.seo?.soft_pass_score_cap ?? 59);
+        form.seo_soft_pass = Number(draft.ai_quality_score) <= cap;
+    }
     if (draft.og_image) {
         form.og_image = draft.og_image;
     }
@@ -584,6 +623,7 @@ const form = useForm({
     slug: props.post?.slug ?? '',
     locale: props.post?.locale ?? 'bn',
     cluster: props.post?.cluster ?? '',
+    article_type: props.post?.article_type ?? 'howto',
     status: props.post?.status ?? 'draft',
     excerpt: props.post?.excerpt ?? '',
     meta_title: props.post?.meta_title ?? '',
@@ -598,6 +638,7 @@ const form = useForm({
     ai_quality_score: props.post?.ai_quality_score ?? null,
     ai_quality_breakdown: props.post?.ai_quality_breakdown ?? null,
     ai_run_id: props.post?.ai_run_id ?? null,
+    seo_soft_pass: props.post?.seo_soft_pass ?? false,
     public_url: props.post?.public_url ?? null,
     public_path: props.post?.public_path ?? null,
 });
@@ -724,7 +765,30 @@ const stripHtml = (html) =>
         .replace(/\s+/g, ' ')
         .trim();
 
-const seoMinWords = computed(() => Number(props.options?.seo?.min_body_words || 800));
+const seoMinWords = computed(() => {
+    if (form.article_type === 'glossary') {
+        return Number(props.options?.seo?.glossary_min_body_words || 800);
+    }
+    return Number(props.options?.seo?.min_body_words || 1200);
+});
+const softPassCap = computed(() => Number(props.options?.seo?.soft_pass_score_cap || 59));
+const needsSeoFixBadge = computed(() => {
+    if (form.seo_soft_pass) return true;
+    if (form.ai_quality_score != null && Number(form.ai_quality_score) <= softPassCap.value) {
+        return true;
+    }
+    return Boolean(props.post?.needs_seo_fix);
+});
+const articleTypeOptions = computed(() => {
+    const types = props.options?.article_types || ['howto', 'comparison', 'glossary', 'case_study'];
+    const labels = {
+        howto: 'How-to guide',
+        comparison: 'Comparison',
+        glossary: 'Glossary',
+        case_study: 'Case study',
+    };
+    return types.map((value) => ({ value, label: labels[value] || value }));
+});
 const seoMinFaqs = computed(() => Number(props.options?.seo?.min_faqs || 5));
 const seoMinLinks = computed(() => Number(props.options?.seo?.min_internal_links || 2));
 
@@ -856,6 +920,7 @@ const regenerateSeoChecklist = async () => {
                 og_image: form.og_image || props.post?.og_image_url || null,
                 locale: form.locale || 'bn',
                 cluster: form.cluster || null,
+                article_type: form.article_type || 'howto',
                 ignore_post_id: props.post?.id || null,
             },
             {
@@ -873,6 +938,9 @@ const regenerateSeoChecklist = async () => {
         if (data.focus_keyword) form.focus_keyword = data.focus_keyword;
         if (data.ai_quality_score != null) form.ai_quality_score = data.ai_quality_score;
         if (data.ai_quality_breakdown != null) form.ai_quality_breakdown = data.ai_quality_breakdown;
+        if (typeof data.seo_soft_pass === 'boolean') {
+            form.seo_soft_pass = data.seo_soft_pass;
+        }
 
         const fixed = Array.isArray(data.fixed_checks) ? data.fixed_checks.length : 0;
         const notes = Array.isArray(data.notes) ? data.notes.filter(Boolean) : [];
@@ -980,6 +1048,17 @@ const submit = () => {
                 + '\n\nPublish anyway? You can still Regenerate later.',
             );
             if (!ok) return;
+        }
+
+        if (form.seo_soft_pass && props.options?.seo?.block_soft_pass_publish !== false) {
+            toast.add({
+                severity: 'warn',
+                summary: 'Needs SEO fix',
+                detail: 'Run Regenerate on the SEO checklist to clear the soft-pass flag before publishing.',
+                life: 7000,
+                group: 'br',
+            });
+            return;
         }
     }
 

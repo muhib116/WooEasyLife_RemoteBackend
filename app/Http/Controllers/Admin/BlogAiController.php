@@ -39,6 +39,8 @@ class BlogAiController extends Controller
             'queue' => $this->shouldQueue(),
             'image_enabled' => (bool) config('blog_ai.image_enabled', true),
             'clusters' => config('blog_ai.clusters', []),
+            'article_types' => \App\Models\BlogPost::ARTICLE_TYPES,
+            'default_article_type' => config('blog_ai.default_article_type', 'howto'),
             'default_locale' => config('blog_ai.default_locale', 'bn'),
             'author_name' => config('blog_ai.author_name'),
             'hooks_count' => (int) config('blog_ai.hooks_count', 10),
@@ -235,10 +237,16 @@ class BlogAiController extends Controller
             'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
             'seed_topic' => ['nullable', 'string', 'max:255'],
             'keywords_text' => ['required', 'string', 'max:2000'],
+            'article_type' => ['nullable', 'string', Rule::in(\App\Models\BlogPost::ARTICLE_TYPES)],
         ]);
 
         $pasted = $this->parseKeywordsText($validated['keywords_text']);
         $this->assertPastedKeywords($pasted);
+
+        $articleType = trim((string) ($validated['article_type'] ?? '')) ?: (string) config('blog_ai.default_article_type', 'howto');
+        if (! in_array($articleType, \App\Models\BlogPost::ARTICLE_TYPES, true)) {
+            $articleType = 'howto';
+        }
 
         $session = BlogAiSession::query()->create([
             'user_id' => $request->user()->id,
@@ -250,6 +258,7 @@ class BlogAiController extends Controller
                 'pasted' => $pasted,
                 'primary' => $pasted[0] ?? null,
                 'secondary' => array_slice($pasted, 1),
+                'article_type' => $articleType,
             ],
         ]);
 
@@ -323,6 +332,7 @@ class BlogAiController extends Controller
             'og_image' => ['nullable', 'string', 'max:2048'],
             'locale' => ['nullable', 'string', 'max:10'],
             'cluster' => ['nullable', 'string', 'max:80'],
+            'article_type' => ['nullable', 'string', Rule::in(\App\Models\BlogPost::ARTICLE_TYPES)],
             'ignore_post_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -561,11 +571,16 @@ class BlogAiController extends Controller
             'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
             'seed_topic' => ['nullable', 'string', 'max:255'],
             'keywords_text' => ['nullable', 'string', 'max:2000'],
+            'article_type' => ['nullable', 'string', Rule::in(\App\Models\BlogPost::ARTICLE_TYPES)],
             'create_post' => ['nullable', 'boolean'],
         ]);
 
         $pasted = $this->parseKeywordsText($validated['keywords_text'] ?? '');
         // Auto mode may start with empty keywords (intake generates them). Manual store still requires paste.
+        $articleType = trim((string) ($validated['article_type'] ?? '')) ?: (string) config('blog_ai.default_article_type', 'howto');
+        if (! in_array($articleType, \App\Models\BlogPost::ARTICLE_TYPES, true)) {
+            $articleType = 'howto';
+        }
 
         $lock = Cache::lock('blog-ai-auto-start-'.$request->user()->id, 20);
         if (! $lock->get()) {
@@ -577,7 +592,7 @@ class BlogAiController extends Controller
         try {
             $token = (string) Str::uuid();
 
-            $result = DB::transaction(function () use ($request, $validated, $pasted, $token) {
+            $result = DB::transaction(function () use ($request, $validated, $pasted, $token, $articleType) {
                 $session = BlogAiSession::query()->create([
                     'user_id' => $request->user()->id,
                     'status' => 'auto_running',
@@ -589,6 +604,7 @@ class BlogAiController extends Controller
                         'pasted' => $pasted,
                         'primary' => $pasted[0] ?? null,
                         'secondary' => array_slice($pasted, 1),
+                        'article_type' => $articleType,
                     ],
                 ]);
 
@@ -615,6 +631,7 @@ class BlogAiController extends Controller
                         'cluster' => $validated['cluster'] ?? null,
                         'seed_topic' => $validated['seed_topic'] ?? null,
                         'keywords_pasted' => $pasted,
+                        'article_type' => $articleType,
                         'create_post' => $createPost,
                     ],
                 ]);
