@@ -161,6 +161,13 @@ return [
         'days_per_month' => 30,
         // Estimated share of returns WooEasyLife's fraud check + automation prevents.
         'reduction_percent' => 40,
+        'ui' => [
+            'current_loss' => 'বর্তমান মাসিক রিটার্ন লস',
+            'returns_line' => 'মাসে ~{returns}টি রিটার্ন × {cost}',
+            'savings' => 'WooEasyLife দিয়ে সম্ভাব্য মাসিক সাশ্রয়',
+            'rate_line' => 'রিটার্ন রেট {from}% → ~{to}% ({avoided}টি রিটার্ন আটকে)',
+            'more_savings' => 'আরও যেসব কাজে আপনার সময় ও খরচ কমবে',
+        ],
         'inputs' => [
             'daily_orders' => [
                 'label' => 'দৈনিক অর্ডার সংখ্যা',
@@ -189,6 +196,80 @@ return [
         ],
     ],
 
+    'roi_calculator_en' => [
+        'badge' => 'Calculate it yourself',
+        'headline' => 'How much can you save monthly by cutting return loss?',
+        'subtitle' => 'Enter daily orders and return rate — the numbers below update with your inputs.',
+        'note' => '* Educational estimate; your real numbers may differ. Assumes 30 days per month.',
+        'subscription_note' => 'Subscriptions start from about ৳999/month — often a fraction of the savings above.',
+        'days_per_month' => 30,
+        'reduction_percent' => 40,
+        'ui' => [
+            'current_loss' => 'Current monthly return loss',
+            'returns_line' => '~{returns} returns/month × {cost}',
+            'savings' => 'Estimated monthly savings with WooEasyLife',
+            'rate_line' => 'Return rate {from}% → ~{to}% ({avoided} returns blocked)',
+            'more_savings' => 'Other ways you save time and money',
+        ],
+        'inputs' => [
+            'daily_orders' => [
+                'label' => 'Daily order count',
+                'default' => 50,
+                'min' => 5,
+                'max' => 500,
+                'step' => 5,
+                'suffix' => '',
+            ],
+            'return_rate' => [
+                'label' => 'Current return / cancel rate',
+                'default' => 25,
+                'min' => 5,
+                'max' => 70,
+                'step' => 1,
+                'suffix' => '%',
+            ],
+            'cost_per_return' => [
+                'label' => 'Average cost per return',
+                'default' => 120,
+                'min' => 50,
+                'max' => 400,
+                'step' => 10,
+                'prefix' => '৳',
+            ],
+        ],
+    ],
+
+    'roi_scenarios_en' => [
+        [
+            'icon' => '💸',
+            'title' => 'Cut return loss',
+            'calculation' => 'About ৳150–300 per return · 10 fake orders/day ≈ ৳45,000+/month.',
+            'benefit' => 'Cutting fake orders in half can save roughly ৳22,500/month in return loss.',
+            'accent' => 'rose',
+        ],
+        [
+            'icon' => '⏱️',
+            'title' => 'Save ~2 hours a day',
+            'calculation' => 'Saving just 2 minutes per order across 50 orders ≈ 1 hour 40 minutes/day.',
+            'benefit' => 'Use that time to grow the business instead of rework.',
+            'accent' => 'amber',
+        ],
+        [
+            'icon' => '📱',
+            'title' => 'Recover cart abandoners',
+            'calculation' => 'Recovering just 5 orders/day ≈ ৳75,000+ extra monthly sales.',
+            'benefit' => 'No new ad cost — convert customers who already showed interest.',
+            'accent' => 'sky',
+        ],
+        [
+            'icon' => '📦',
+            'title' => 'Simpler packing',
+            'calculation' => 'Matching order IDs by hand used to waste time and cause mistakes.',
+            'benefit' => 'Printed stickers speed packing and reduce errors.',
+            'accent' => 'violet',
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Courier charge estimator (public SEO tool)
@@ -199,9 +280,9 @@ return [
     'courier_charge_calculator' => [
         'badge' => 'কুরিয়ার চার্জ ক্যালকুলেটর',
         'headline' => 'Pathao · Steadfast · RedX — ডেলিভারি চার্জ আনুমানিক হিসাব',
-        'subtitle' => 'জোন ও ওজন দিন — তিন কুরিয়ারের আনুমানিক চার্জ একসাথে দেখুন।',
-        'note' => '* আনুমানিক রেট টেবিল (উদাহরণ)। অফিসিয়াল চার্জ কুরিয়ার প্যানেল/কন্ট্রাক্ট অনুযায়ী ভিন্ন হতে পারে। COD ফি আলাদা যোগ করা হয়েছে।',
-        'subscription_note' => 'কনফার্ম হলেই কুরিয়ারে অটো এন্ট্রি — প্যানেলে হাতে চার্জ হিসাব করতে বসবেন না।',
+        'subtitle' => 'জোন ও ওজন দিন — তিন কুরিয়ারের আনুমানিক চার্জ একসাথে দেখুন। COD ফিসহ হিসাব।',
+        'note' => '* আনুমানিক রেট টেবিল (উদাহরণ)। Steadfast পাবলিক প্রাইসিং থেকে সিঙ্ক হতে পারে; Pathao/RedX আনুমানিক হতে পারে। অফিসিয়াল চার্জ কুরিয়ার প্যানেল/কন্ট্রাক্টে যাচাই করুন। COD ফি উদাহরণ হিসেবে যোগ করা হয়েছে।',
+        'subscription_note' => 'কনফার্ম হলেই Pathao/Steadfast/RedX অটো এন্ট্রি — প্যানেলে হাতে চার্জ হিসাব কমে। ফেক অর্ডার আটকাতে আগে ফ্রড চেক করুন।',
         'zones' => [
             'dhaka' => 'ঢাকার ভিতর',
             'suburb' => 'ঢাকার আশেপাশে / সাবআরবান',
@@ -259,6 +340,30 @@ return [
         ],
     ],
 
+    'courier_charge_calculator_en' => [
+        'badge' => 'Courier charge calculator',
+        'headline' => 'Pathao · Steadfast · RedX — estimate delivery charges',
+        'subtitle' => 'Enter zone and weight to compare estimates. Approximate rates show when live sync is off.',
+        'subtitle_live' => 'Steadfast rates update daily from the official pricing API. Pathao live sync runs when merchant API is configured.',
+        'note' => '* Steadfast: official public pricing (steadfast.com.bd/pricing). Pathao: no public rates without merchant login/API — daily samples when configured. RedX: estimate. Final charges follow your courier panel/contract. COD fee is a separate estimate (~1% example).',
+        'subscription_note' => 'On confirm, Pathao/Steadfast/RedX auto-entry reduces manual charge math. Check fraud risk before confirming.',
+        'zones' => [
+            'dhaka' => 'Inside Dhaka',
+            'suburb' => 'Dhaka suburb / nearby',
+            'outside' => 'Outside Dhaka',
+        ],
+        'inputs' => [
+            'weight_kg' => [
+                'label' => 'Parcel weight',
+                'suffix' => ' kg',
+            ],
+            'cod_amount' => [
+                'label' => 'COD amount (optional)',
+                'prefix' => '৳',
+            ],
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Facebook Ads ROAS calculator (fake-purchase aware)
@@ -267,9 +372,9 @@ return [
     'ads_roas_calculator' => [
         'badge' => 'Ads ROAS ক্যালকুলেটর',
         'headline' => 'ফেক Purchase বাদ দিয়ে আসল Facebook Ads ROAS কত?',
-        'subtitle' => 'অ্যাড স্পেন্ড, Pixel Purchase ও ফেক/ক্যানসেল রেট দিন — রিপোর্টেড vs আসল ROAS দেখুন।',
-        'note' => '* আনুমানিক হিসাব। Pixel-এ যাওয়া Purchase ≠ কনফার্মড/ডেলিভার্ড অর্ডার। WooEasyLife পিক্সেল প্রোটেকশন শুধু কনফার্মড অর্ডার পাঠায়।',
-        'subscription_note' => 'পিক্সেল প্রোটেকশন চালু করলে ফেক Purchase Facebook-এ যায় না — অ্যাড অপটিমাইজেশন সঠিক থাকে।',
+        'subtitle' => 'অ্যাড স্পেন্ড, Pixel Purchase ও ফেক/ক্যানসেল রেট দিন — রিপোর্টেড vs আসল ROAS দেখুন। COD সেলারদের জন্য শিক্ষামূলক হিসাব।',
+        'note' => '* আনুমানিক হিসাব। Pixel-এ যাওয়া Purchase ≠ কনফার্মড/ডেলিভার্ড অর্ডার। WooEasyLife পিক্সেল প্রোটেকশন শুধু কনফার্মড অর্ডার পাঠায়। Attribution ও ডেলিভারি রেট অনুযায়ী ফল ভিন্ন হতে পারে।',
+        'subscription_note' => 'পিক্সেল প্রোটেকশন চালু করলে ফেক Purchase Facebook-এ যায় না — অ্যাড অপটিমাইজেশন সঠিক থাকে। ফ্রড চেক ও ফেক অর্ডার প্রোটেকশন একসাথে চালান।',
         'inputs' => [
             'ad_spend' => [
                 'label' => 'মাসিক Facebook Ads স্পেন্ড',
@@ -297,6 +402,48 @@ return [
             ],
             'aov' => [
                 'label' => 'গড় অর্ডার ভ্যালু (AOV)',
+                'default' => 1200,
+                'min' => 300,
+                'max' => 5000,
+                'step' => 50,
+                'prefix' => '৳',
+            ],
+        ],
+    ],
+
+    'ads_roas_calculator_en' => [
+        'badge' => 'Ads ROAS calculator',
+        'headline' => 'What is your real Facebook Ads ROAS after removing fake purchases?',
+        'subtitle' => 'Enter ad spend, Pixel purchases, and fake/cancel rate — compare reported vs real ROAS. Educational math for COD sellers.',
+        'note' => '* Approximate estimate. Pixel Purchase ≠ confirmed/delivered order. WooEasyLife pixel protection sends only confirmed purchases. Results vary with attribution and delivery rate.',
+        'subscription_note' => 'With pixel protection, fake purchases do not reach Facebook — ad optimization stays cleaner. Pair it with fraud checks and fake-order protection.',
+        'inputs' => [
+            'ad_spend' => [
+                'label' => 'Monthly Facebook Ads spend',
+                'default' => 50000,
+                'min' => 5000,
+                'max' => 500000,
+                'step' => 1000,
+                'prefix' => '৳',
+            ],
+            'pixel_purchases' => [
+                'label' => 'Pixel Purchase events (monthly)',
+                'default' => 200,
+                'min' => 10,
+                'max' => 2000,
+                'step' => 5,
+                'suffix' => '',
+            ],
+            'fake_cancel_rate' => [
+                'label' => 'Fake / cancel / return rate',
+                'default' => 30,
+                'min' => 0,
+                'max' => 80,
+                'step' => 1,
+                'suffix' => '%',
+            ],
+            'aov' => [
+                'label' => 'Average order value (AOV)',
                 'default' => 1200,
                 'min' => 300,
                 'max' => 5000,

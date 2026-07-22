@@ -9,6 +9,7 @@ use App\Services\Courier\CourierAccountService;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\SteadfastParcelNotesService;
+use App\Services\Courier\SteadfastReturnRequestsService;
 use App\Services\Courier\SteadfastStatusBatchService;
 use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\MerchantPackageFeatureGate;
@@ -29,6 +30,7 @@ class SteadFastController extends Controller
         protected CourierAccountService $courierAccountService,
         protected SteadfastStatusBatchService $steadfastStatusBatchService,
         protected SteadfastParcelNotesService $parcelNotesService,
+        protected SteadfastReturnRequestsService $returnRequestsService,
         protected MerchantSteadfastFraudCredentialResolver $steadfastPortalCredentials,
         protected MerchantPackageFeatureGate $packageFeatureGate,
     ) {
@@ -458,6 +460,10 @@ class SteadFastController extends Controller
             'note' => 'nullable|string|max:500',
             'cus_address' => 'nullable|string|max:500',
             'cod_amount' => 'nullable|numeric|min:0|max:9999999',
+            'customer_name' => 'nullable|string|max:191',
+            'customer_phone' => 'nullable|string|max:32',
+            'recipient_name' => 'nullable|string|max:191',
+            'recipient_phone' => 'nullable|string|max:32',
         ]);
 
         if ($validator->fails()) {
@@ -467,9 +473,13 @@ class SteadFastController extends Controller
         $note = trim((string) $request->input('note', ''));
         $hasAddress = $request->exists('cus_address');
         $hasCod = $request->exists('cod_amount');
+        $customerName = trim((string) ($request->input('customer_name') ?? $request->input('recipient_name') ?? ''));
+        $customerPhone = trim((string) ($request->input('customer_phone') ?? $request->input('recipient_phone') ?? ''));
+        $hasCustomerName = $request->exists('customer_name') || $request->exists('recipient_name');
+        $hasCustomerPhone = $request->exists('customer_phone') || $request->exists('recipient_phone');
 
-        if ($note === '' && ! $hasAddress && ! $hasCod) {
-            return $this->errorResponse('Provide a note, address, or COD amount to update.', 422);
+        if ($note === '' && ! $hasAddress && ! $hasCod && ! $hasCustomerName && ! $hasCustomerPhone) {
+            return $this->errorResponse('Provide a note, address, COD amount, or customer details to update.', 422);
         }
 
         $credentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
@@ -486,6 +496,12 @@ class SteadFastController extends Controller
         }
         if ($hasCod) {
             $overrides['cod_amount'] = $request->input('cod_amount');
+        }
+        if ($hasCustomerName) {
+            $overrides['customer_name'] = $customerName;
+        }
+        if ($hasCustomerPhone) {
+            $overrides['customer_phone'] = $customerPhone;
         }
 
         try {
@@ -504,14 +520,154 @@ class SteadFastController extends Controller
         }
     }
 
-    private function denyUnlessParcelNoteHistoryEnabled(Request $request)
+    public function createReturnRequest(Request $request)
     {
-        if ($this->packageFeatureGate->hasFromRequest($request, 'parcel_note_history')) {
+        if ($denied = $this->denyUnlessCourierAutomationEnabled($request)) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'consignment_id' => ['required', 'string', 'regex:/^\d{4,20}$/'],
+            'reason' => ['required', 'string', 'min:10', 'max:1000'],
+            'tracking_code' => ['nullable', 'string', 'max:64'],
+            'invoice' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
+        }
+
+        $config = $this->getConfig();
+        if (! $config) {
+            return $this->errorResponse('The SteadFast settings are not configured properly.', 422);
+        }
+
+        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+
+        try {
+            $data = $this->returnRequestsService->create(
+                (string) $request->input('consignment_id'),
+                (string) $request->input('reason'),
+                [
+                    'api_key' => (string) $config->api_key,
+                    'secret_key' => (string) $config->secret_key,
+                ],
+                $portalCredentials,
+                $request->input('tracking_code'),
+                $request->input('invoice')
+            );
+
+            return $this->successResponse($data, 'Return request created');
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast return request create failed', $th->getMessage());
+
+            return $this->errorResponse($th->getMessage() ?: 'Unable to create Steadfast return request.');
+        }
+    }
+
+    public function listReturnRequests(Request $request)
+    {
+        if ($denied = $this->denyUnlessCourierAutomationEnabled($request)) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => ['nullable', 'string', 'max:32'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
+        }
+
+        $config = $this->getConfig();
+        if (! $config) {
+            return $this->errorResponse('The SteadFast settings are not configured properly.', 422);
+        }
+
+        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+
+        try {
+            $data = $this->returnRequestsService->list(
+                [
+                    'api_key' => (string) $config->api_key,
+                    'secret_key' => (string) $config->secret_key,
+                ],
+                $portalCredentials,
+                $request->input('status'),
+                $request->input('date')
+            );
+
+            return $this->successResponse($data);
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast return request list failed', $th->getMessage());
+
+            return $this->errorResponse($th->getMessage() ?: 'Unable to list Steadfast return requests.');
+        }
+    }
+
+    public function updateReturnRequestStatus(Request $request)
+    {
+        if ($denied = $this->denyUnlessCourierAutomationEnabled($request)) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'action' => ['required', 'string', 'in:confirm_cancel,request_resend'],
+            'consignment_id' => ['required', 'string', 'regex:/^\d{4,20}$/'],
+            'id' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
+        }
+
+        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        if ($portalCredentials === null) {
+            return $this->errorResponse(
+                'Steadfast portal username/password are not configured. Add them in Config → Courier → Steadfast to confirm cancel or ask to resend.',
+                422
+            );
+        }
+
+        try {
+            $data = $this->returnRequestsService->updateStatus(
+                (string) $request->input('action'),
+                $portalCredentials,
+                (string) $request->input('consignment_id'),
+                $request->input('id')
+            );
+
+            return $this->successResponse($data, 'Return request status updated');
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast return request status update failed', $th->getMessage());
+
+            return $this->errorResponse($th->getMessage() ?: 'Unable to update Steadfast return request status.');
+        }
+    }
+
+    private function denyUnlessCourierAutomationEnabled(Request $request)
+    {
+        if ($this->packageFeatureGate->hasFromRequest($request, 'courier_automation')) {
             return null;
         }
 
         return $this->errorResponse(
-            'Parcel note history is not included in your current plan.',
+            'Courier automation is not included in your current plan.',
+            403
+        );
+    }
+
+    private function denyUnlessParcelNoteHistoryEnabled(Request $request)
+    {
+        if ($this->packageFeatureGate->hasFromRequest($request, 'parcel_note_history')
+            || $this->packageFeatureGate->hasFromRequest($request, 'courier_automation')
+        ) {
+            return null;
+        }
+
+        return $this->errorResponse(
+            'Parcel notes or courier automation is not included in your current plan.',
             403
         );
     }

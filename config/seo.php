@@ -132,7 +132,7 @@ return [
             'description' => 'Free Courier Fraud Checker BD। মোবাইল নম্বর দিয়ে Pathao, Steadfast, RedX ডেলিভারি হিস্টোরি ও সাকসেস রেট চেক করুন — ফেক অর্ডার ও পার্সেল রিটার্ন কমান। অ্যাকাউন্ট ছাড়াই ফ্রি সার্চ।',
             'canonical_path' => '/bd-fraud-checker',
             'prerender_h1' => 'Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার',
-            'prerender_lead' => 'কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি, ডেলিভারি সাকসেস রেট ও রিটার্ন রেকর্ড তাৎক্ষণিক দেখুন। অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন।',
+            'prerender_lead' => 'কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি, ডেলিভারি সাকসেস রেট ও রিটার্ন রেকর্ড তাৎক্ষণিক দেখুন। অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন — Pathao, Steadfast, RedX।',
             'hreflang_paths' => [
                 'bn-BD' => '/bd-fraud-checker',
                 'en' => '/en/bd-fraud-checker',
@@ -157,17 +157,38 @@ return [
                 ],
                 [
                     'q' => 'শুধু চেক করলেই কি যথেষ্ট?',
-                    'a' => 'চেক শুরু। পূর্ণ সুরক্ষায় চেকআউট OTP, ফেক অর্ডার ব্লক ও কুরিয়ার অটো এন্ট্রি লাগে — WooEasyLife এক প্ল্যাটফর্মে সব দেয়।',
+                    'a' => 'চেক শুরু। পূর্ণ সুরক্ষায় চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক ও কুরিয়ার অটো এন্ট্রি লাগে — WooEasyLife এক প্ল্যাটফর্মে সব দেয়। বিস্তারিত: /fake-order-protection',
+                ],
+                [
+                    'q' => 'সাকসেস রেট কম হলে কী করব?',
+                    'a' => 'ফোন-কনফার্ম করুন, ঠিকানা যাচাই করুন, বা অগ্রিম ছাড়া শিপ করবেন না। বারবার খারাপ প্যাটার্ন হলে ব্ল্যাকলিস্টে রাখুন।',
+                ],
+                [
+                    'q' => 'এটি কি FraudBD Alternative?',
+                    'a' => 'ফ্রি কুরিয়ার হিস্টোরি চেক পাবেন, সাথে WooCommerce প্রোটেকশন ও কুরিয়ার অটো এন্ট্রি। তুলনা: /fraudbd-alternative',
+                ],
+                [
+                    'q' => 'রিটার্ন লস কমাতে আর কী দেখব?',
+                    'a' => '/return-loss-calculator দিয়ে মাসিক লস হিসাব করুন এবং /ads-roas-calculator দিয়ে ফেক Purchase বাদ করে আসল ROAS দেখুন।',
+                ],
+                [
+                    'q' => 'ইংরেজি পেজ আছে কি?',
+                    'a' => 'হ্যাঁ — /en/bd-fraud-checker। বাংলা গাইড: /ki-vabe-fake-order-atkabo',
                 ],
             ],
         ],
 
         'fake_order_protection' => [
-            'title' => 'কিভাবে ফেক অর্ডার আটকাবো — Fake Order Check & Protection | WooEasyLife',
-            'description' => 'কিভাবে ফেক অর্ডার আটকাবো? মোবাইল নম্বর দিয়ে fake customer check, কুরিয়ার হিস্টোরি, OTP ও ব্ল্যাকলিস্ট দিয়ে পার্সেল রিটার্ন কমান। WooCommerce ও Facebook পেজ সেলারদের জন্য।',
+            'title' => 'কিভাবে ফেক অর্ডার আটকাবো — Fake Order Protection | WooEasyLife',
+            'description' => 'কিভাবে ফেক অর্ডার আটকাবো? কুরিয়ার হিস্টোরি চেক, চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে COD পার্সেল রিটার্ন কমান — WooCommerce ও Facebook পেজ সেলারদের জন্য।',
             'canonical_path' => '/fake-order-protection',
             'prerender_h1' => 'কিভাবে ফেক অর্ডার আটকাবো — Fake Order Protection',
-            'prerender_lead' => 'ফ্রড চেক + OTP + ব্লক — মাল্টি-লেয়ার প্রোটেকশনে ফেক অর্ডার ও রিটার্ন লস কমান।',
+            'prerender_lead' => 'ফ্রড চেক + OTP + ডুপ্লিকেট ব্লক + ব্ল্যাকলিস্ট — মাল্টি-লেয়ার প্রোটেকশনে ফেক অর্ডার ও রিটার্ন লস কমান। WooCommerce ও Facebook পেজ COD সেলারদের জন্য।',
+            'hreflang_paths' => [
+                'bn-BD' => '/fake-order-protection',
+                'en' => '/en/fake-order-protection',
+                'x-default' => '/fake-order-protection',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'ফেক অর্ডার প্রোটেকশন', 'path' => '/fake-order-protection'],
@@ -175,7 +196,7 @@ return [
             'faqs' => [
                 [
                     'q' => 'ফেক অর্ডার কেন হয়?',
-                    'a' => 'COD ও Facebook পেজ ব্যবসায় অনেকে ভুল নম্বর বা মজার অর্ডার দেয়। পার্সেল পাঠালে রিটার্ন চার্জ বিক্রেতার ঘাড়ে পড়ে।',
+                    'a' => 'COD ও Facebook পেজ ব্যবসায় অনেকে ভুল নম্বর বা মজার অর্ডার দেয়। পার্সেল পাঠালে রিটার্ন চার্জ, প্যাকেজিং ও সময় বিক্রেতার ঘাড়ে পড়ে।',
                 ],
                 [
                     'q' => 'কিভাবে ফেক অর্ডার আটকাবো?',
@@ -185,15 +206,48 @@ return [
                     'q' => 'WooEasyLife কীভাবে ফেক অর্ডার আটকায়?',
                     'a' => 'কুরিয়ার হিস্টোরি, চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক, ফোন/ইমেইল/ডিভাইস ব্লক ও দৈনিক অর্ডার সীমা — একসাথে মাল্টি-লেয়ার প্রোটেকশন।',
                 ],
+                [
+                    'q' => 'শুধু ফ্রড চেক করলেই কি যথেষ্ট?',
+                    'a' => 'চেক শুরু। বারবার ফেক প্যাটার্ন আটকাতে OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট লাগে। ফ্রি চেক: /bd-fraud-checker',
+                ],
+                [
+                    'q' => 'চেকআউট OTP কী করে?',
+                    'a' => 'চেকআউটে ফোন নম্বরে OTP পাঠিয়ে যাচাই করে — ভুয়া/ভুল নম্বরে অর্ডার আগেই আটকে।',
+                ],
+                [
+                    'q' => 'ডুপ্লিকেট অর্ডার ব্লক কেন দরকার?',
+                    'a' => 'একই কাস্টমার/নম্বর থেকে বারবার অর্ডার এলে অতিরিক্ত পার্সেল ও রিটার্ন বাড়ে। ডুপ্লিকেট ভ্যালিডেশন সেগুলো আটকায়।',
+                ],
+                [
+                    'q' => 'রিটার্ন লস কত বাঁচতে পারে?',
+                    'a' => 'দিনে কয়েকটি ফেক অর্ডার আটকালেই মাসে হাজার হাজার টাকা বাঁচে। আনুমানিক হিসাব: /return-loss-calculator',
+                ],
+                [
+                    'q' => 'ফেক অর্ডার কি Ads ROAS নষ্ট করে?',
+                    'a' => 'হ্যাঁ — Pixel-এ ফেক Purchase গেলে রিপোর্টেড ROAS ফোলে। আসল ROAS দেখতে /ads-roas-calculator ব্যবহার করুন।',
+                ],
+                [
+                    'q' => 'কীভাবে শুরু করব?',
+                    'a' => 'প্রথমে /bd-fraud-checker-এ ফ্রি চেক করুন, তারপর /pricing থেকে ট্রায়াল নিয়ে OTP ও ব্লক চালু করুন।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে কি?',
+                    'a' => 'হ্যাঁ — /en/fake-order-protection। বাংলা পেজ: /fake-order-protection।',
+                ],
             ],
         ],
 
         'return_loss_calculator' => [
             'title' => 'রিটার্ন লস ক্যালকুলেটর — মাসে কত টাকা বাঁচবে | WooEasyLife',
-            'description' => 'ফ্রি রিটার্ন লস ক্যালকুলেটর। দৈনিক অর্ডার ও রিটার্ন রেট দিয়ে মাসিক COD রিটার্ন লস ও WooEasyLife দিয়ে সম্ভাব্য সাশ্রয় হিসাব করুন — বাংলাদেশি WooCommerce মার্চেন্টদের জন্য।',
+            'description' => 'ফ্রি রিটার্ন লস ক্যালকুলেটর। দৈনিক অর্ডার, রিটার্ন/ক্যানসেল রেট ও প্রতি রিটার্নের খরচ দিয়ে মাসিক COD রিটার্ন লস ও সম্ভাব্য সাশ্রয় হিসাব করুন — WooCommerce ও Facebook পেজ সেলারদের জন্য।',
             'canonical_path' => '/return-loss-calculator',
             'prerender_h1' => 'রিটার্ন লস কমিয়ে মাসে কত টাকা বাঁচাতে পারবেন?',
-            'prerender_lead' => 'দৈনিক অর্ডার, রিটার্ন/ক্যানসেল রেট ও প্রতি রিটার্নে গড় খরচ দিন — মাসিক লস ও সম্ভাব্য সাশ্রয় তাৎক্ষণিক দেখুন।',
+            'prerender_lead' => 'দৈনিক অর্ডার, রিটার্ন/ক্যানসেল রেট ও প্রতি রিটার্নে গড় খরচ দিন — মাসিক লস ও সম্ভাব্য সাশ্রয় তাৎক্ষণিক দেখুন। বাংলাদেশি COD সেলারদের জন্য ফ্রি শিক্ষামূলক টুল।',
+            'hreflang_paths' => [
+                'bn-BD' => '/return-loss-calculator',
+                'en' => '/en/return-loss-calculator',
+                'x-default' => '/return-loss-calculator',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'রিটার্ন লস ক্যালকুলেটর', 'path' => '/return-loss-calculator'],
@@ -205,7 +259,11 @@ return [
                 ],
                 [
                     'q' => 'প্রতি রিটার্নে গড় খরচে কী কী ধরব?',
-                    'a' => 'সাধারণত কুরিয়ার রিটার্ন চার্জ, প্যাকেজিং ও সময়ের আনুমানিক খরচ যোগ করুন। অনেক COD স্টোরে এটি প্রায় ৳৮০০–১,৫০০ পর্যন্ত হতে পারে — আপনার স্টোর অনুযায়ী স্লাইডার মিলিয়ে নিন।',
+                    'a' => 'সাধারণত কুরিয়ার রিটার্ন চার্জ, প্যাকেজিং ও সময়ের আনুমানিক খরচ যোগ করুন। অনেক COD স্টোরে এটি প্রায় ৳১৫০–৩০০ বা তার বেশি হতে পারে — আপনার স্টোর অনুযায়ী স্লাইডার মিলিয়ে নিন।',
+                ],
+                [
+                    'q' => 'হিসাব কীভাবে কাজ করে?',
+                    'a' => 'মাসিক অর্ডার ≈ দৈনিক অর্ডার × ৩০। মাসিক রিটার্ন ≈ মাসিক অর্ডার × রিটার্ন রেট। মাসিক লস ≈ মাসিক রিটার্ন × প্রতি রিটার্নের খরচ।',
                 ],
                 [
                     'q' => 'WooEasyLife কীভাবে রিটার্ন লস কমায়?',
@@ -213,11 +271,19 @@ return [
                 ],
                 [
                     'q' => 'হিসাব কি আনুমানিক?',
-                    'a' => 'হ্যাঁ — উদাহরণভিত্তিক অনুমান। আসল সাশ্রয় আপনার স্টোরের অর্ডার কোয়ালিটি, কুরিয়ার রেট ও কতটা প্রোটেকশন চালু আছে তার ওপর নির্ভর করে।',
+                    'a' => 'হ্যাঁ — শিক্ষামূলক অনুমান। আসল সাশ্রয় আপনার স্টোরের অর্ডার কোয়ালিটি, কুরিয়ার রেট ও কতটা প্রোটেকশন চালু আছে তার ওপর নির্ভর করে।',
                 ],
                 [
                     'q' => 'ফ্রি ফ্রড চেক কোথায় করব?',
-                    'a' => '/bd-fraud-checker পেজে মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি চেক করুন। পূর্ণ প্রোটেকশনের জন্য WooEasyLife সাবস্ক্রিপশন নিন।',
+                    'a' => '/bd-fraud-checker পেজে মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি চেক করুন। পূর্ণ প্রোটেকশন: /fake-order-protection ও /pricing।',
+                ],
+                [
+                    'q' => 'রিটার্ন লস আর Ads ROAS-এর সম্পর্ক কী?',
+                    'a' => 'রিটার্ন অপারেশন লস দেখায়; ফেক Purchase অ্যাড ROAS ফুলায়। দুটোই দেখতে /ads-roas-calculator ব্যবহার করুন।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে কি?',
+                    'a' => 'হ্যাঁ — /en/return-loss-calculator। বাংলা পেজ: /return-loss-calculator।',
                 ],
             ],
         ],
@@ -227,7 +293,12 @@ return [
             'description' => 'ফ্রি কুরিয়ার চার্জ ক্যালকুলেটর। ঢাকা/সাবআরবান/বাইরের জোন ও ওজন দিয়ে Pathao, Steadfast, RedX আনুমানিক ডেলিভারি চার্জ তুলনা করুন — বাংলাদেশি COD মার্চেন্টদের জন্য।',
             'canonical_path' => '/courier-charge-calculator',
             'prerender_h1' => 'Pathao · Steadfast · RedX — ডেলিভারি চার্জ আনুমানিক হিসাব',
-            'prerender_lead' => 'জোন ও পার্সেল ওজন দিন — তিন কুরিয়ারের আনুমানিক চার্জ একসাথে তুলনা করুন। COD ফিসহ হিসাব।',
+            'prerender_lead' => 'জোন ও পার্সেল ওজন দিন — তিন কুরিয়ারের আনুমানিক চার্জ একসাথে তুলনা করুন। COD ফিসহ হিসাব। চূড়ান্ত চার্জ প্যানেলে যাচাই করুন।',
+            'hreflang_paths' => [
+                'bn-BD' => '/courier-charge-calculator',
+                'en' => '/en/courier-charge-calculator',
+                'x-default' => '/courier-charge-calculator',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'কুরিয়ার চার্জ ক্যালকুলেটর', 'path' => '/courier-charge-calculator'],
@@ -249,6 +320,26 @@ return [
                     'q' => 'WooEasyLife কীভাবে সাহায্য করে?',
                     'a' => 'অর্ডার কনফার্ম হলেই Pathao/Steadfast/RedX-এ অটো এন্ট্রি হয় — প্যানেলে বারবার চার্জ ও ঠিকানা টাইপ করতে হয় না। বিস্তারিত: /courier-auto-entry',
                 ],
+                [
+                    'q' => 'কোন জোন বেছে নেব?',
+                    'a' => 'ঢাকার ভিতর, সাবআরবান/আশেপাশে, বা ঢাকার বাইরে — ডেলিভারি ঠিকানা অনুযায়ী বেছে নিন। ভুল জোন দিলে চার্জ ভুল দেখাবে।',
+                ],
+                [
+                    'q' => 'সস্তা কুরিয়ারই কি বেস্ট?',
+                    'a' => 'সবসময় নয়। ফেক অর্ডার/রিটার্ন বেশি হলে সস্তা চার্জও লসে যায়। আগে /bd-fraud-checker দিয়ে চেক করুন এবং /return-loss-calculator দিয়ে রিটার্ন লস মাপুন।',
+                ],
+                [
+                    'q' => 'ওজন কীভাবে নেব?',
+                    'a' => 'প্যাকিংসহ আনুমানিক কেজি দিন। ওজন বাড়লে অতিরিক্ত কেজির চার্জ যোগ হয় — কম দেখালে পরে বিল বাড়তে পারে।',
+                ],
+                [
+                    'q' => 'অ্যাড খরচের সাথে কীভাবে মিলিয়ে দেখব?',
+                    'a' => 'ডেলিভারি চার্জ + রিটার্ন লস + অ্যাড স্পেন্ড একসাথে দেখুন। /ads-roas-calculator দিয়ে আসল ROAS এবং /return-loss-calculator দিয়ে মাসিক রিটার্ন লস হিসাব করুন।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে?',
+                    'a' => 'হ্যাঁ — /en/courier-charge-calculator। বাংলা পেজ: /courier-charge-calculator।',
+                ],
             ],
         ],
 
@@ -257,10 +348,15 @@ return [
             'description' => 'ফ্রি Facebook Ads ROAS ক্যালকুলেটর। অ্যাড স্পেন্ড, Pixel Purchase ও ফেক/ক্যানসেল রেট দিয়ে রিপোর্টেড vs আসল ROAS হিসাব করুন — পিক্সেল প্রোটেকশনের গুরুত্ব বুঝুন।',
             'canonical_path' => '/ads-roas-calculator',
             'prerender_h1' => 'ফেক Purchase বাদ দিয়ে আসল Facebook Ads ROAS কত?',
-            'prerender_lead' => 'Pixel-এ যাওয়া Purchase ≠ কনফার্মড অর্ডার। স্পেন্ড ও ফেক রেট দিয়ে আসল ROAS দেখুন।',
+            'prerender_lead' => 'Pixel-এ যাওয়া Purchase ≠ কনফার্মড অর্ডার। স্পেন্ড ও ফেক রেট দিয়ে আসল ROAS দেখুন — COD সেলারদের জন্য শিক্ষামূলক হিসাব।',
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'Ads ROAS ক্যালকুলেটর', 'path' => '/ads-roas-calculator'],
+            ],
+            'hreflang_paths' => [
+                'bn-BD' => '/ads-roas-calculator',
+                'en' => '/en/ads-roas-calculator',
+                'x-default' => '/ads-roas-calculator',
             ],
             'faqs' => [
                 [
@@ -274,6 +370,30 @@ return [
                 [
                     'q' => 'হিসাব কি আনুমানিক?',
                     'a' => 'হ্যাঁ — শিক্ষামূলক অনুমান। আপনার Attribution সেটিং ও ডেলিভারি রেট অনুযায়ী সংখ্যা ভিন্ন হতে পারে।',
+                ],
+                [
+                    'q' => 'কোন ইনপুট দিলে হিসাব সঠিক হবে?',
+                    'a' => 'মাসিক Ads স্পেন্ড, Pixel Purchase সংখ্যা, আনুমানিক ফেক/ক্যানসেল/রিটার্ন রেট এবং গড় অর্ডার ভ্যালু (AOV) দিন। স্লাইডার সরালেই রিপোর্টেড ও আসল ROAS আপডেট হয়।',
+                ],
+                [
+                    'q' => 'আসল ROAS বাড়াতে কী করব?',
+                    'a' => 'প্রথমে /bd-fraud-checker ও /fake-order-protection দিয়ে ফেক অর্ডার কমান, তারপর শুধু কনফার্মড Purchase Pixel-এ পাঠান। রিটার্ন লস দেখতে /return-loss-calculator ব্যবহার করুন।',
+                ],
+                [
+                    'q' => 'এই ক্যালকুলেটর কি Meta Ads Manager-এর বিকল্প?',
+                    'a' => 'না — এটি শিক্ষামূলক তুলনা টুল। ক্যাম্পেইন ম্যানেজমেন্ট Meta-তেই থাকবে; এখানে ফেক Purchase বাদ দিয়ে আসল লাভ বুঝবেন।',
+                ],
+                [
+                    'q' => 'কত ঘন ঘন ROAS হিসাব করব?',
+                    'a' => 'অন্তত সাপ্তাহিক। স্পেন্ড, Purchase ও রিটার্ন রেট বদলালে স্লাইডার আপডেট করে আসল ROAS দেখুন — মাসে একবারে স্কেল সিদ্ধান্ত ঝুঁকিপূর্ণ।',
+                ],
+                [
+                    'q' => 'AOV কীভাবে নেব?',
+                    'a' => 'একই মাসের মোট অর্ডার ভ্যালু ÷ অর্ডার সংখ্যা (বা Pixel Purchase)। প্রমোশন/ফ্রি গিফট থাকলে গড় আলাদা করে নিন, নাহলে ROAS ফুলে দেখাবে।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে কি?',
+                    'a' => 'হ্যাঁ — /en/ads-roas-calculator। বাংলা পেজ: /ads-roas-calculator।',
                 ],
             ],
         ],
@@ -382,10 +502,15 @@ return [
 
         'courier_auto_entry' => [
             'title' => 'কুরিয়ার অটো এন্ট্রি — Pathao Steadfast RedX WooCommerce | WooEasyLife',
-            'description' => 'অর্ডার কনফার্ম হলেই Pathao, Steadfast, RedX-এ কুরিয়ার অটো এন্ট্রি। WooCommerce COD সেলারদের সময় বাঁচান, স্ট্যাটাস সিঙ্ক ও SMS এক জায়গায়।',
+            'description' => 'WooCommerce কুরিয়ার অটো এন্ট্রি: অর্ডার কনফার্ম হলেই Pathao, Steadfast, RedX-এ পার্সেল এন্ট্রি। স্ট্যাটাস সিঙ্ক, SMS ও পার্সেল নোট হিস্ট্রি — COD সেলারদের দিনে ৩+ ঘণ্টা বাঁচান।',
             'canonical_path' => '/courier-auto-entry',
             'prerender_h1' => 'কুরিয়ার অটো এন্ট্রি — Pathao, Steadfast, RedX',
-            'prerender_lead' => 'অর্ডার কনফার্ম হলেই কুরিয়ার প্যানেলে অটো এন্ট্রি। ম্যানুয়াল টাইপ বাদ দিয়ে সময় বাঁচান।',
+            'prerender_lead' => 'অর্ডার কনফার্ম হলেই কুরিয়ার প্যানেলে অটো এন্ট্রি। ম্যানুয়াল কপি-পেস্ট বাদ দিয়ে দিনে ৩+ ঘণ্টা সময় বাঁচান — WooCommerce ও Facebook পেজ COD সেলারদের জন্য।',
+            'hreflang_paths' => [
+                'bn-BD' => '/courier-auto-entry',
+                'en' => '/en/courier-auto-entry',
+                'x-default' => '/courier-auto-entry',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'কুরিয়ার অটো এন্ট্রি', 'path' => '/courier-auto-entry'],
@@ -393,11 +518,11 @@ return [
             'faqs' => [
                 [
                     'q' => 'কুরিয়ার অটো এন্ট্রি কী?',
-                    'a' => 'অর্ডার কনফার্ম করার সাথে সাথে পার্সেল তথ্য কুরিয়ার প্যানেলে স্বয়ংক্রিয়ভাবে এন্ট্রি হয় — ম্যানুয়াল কপি-পেস্ট লাগে না।',
+                    'a' => 'অর্ডার কনফার্ম করার সাথে সাথে নাম, ফোন, ঠিকানা ও COD অ্যামাউন্ট Pathao, Steadfast বা RedX প্যানেলে স্বয়ংক্রিয়ভাবে এন্ট্রি হয় — ম্যানুয়াল কপি-পেস্ট লাগে না।',
                 ],
                 [
                     'q' => 'কোন কুরিয়ার সাপোর্ট করে?',
-                    'a' => 'Pathao, Steadfast, RedX সহ ইন্টিগ্রেটেড কুরিয়ার — এক ড্যাশবোর্ড থেকে এন্ট্রি ও স্ট্যাটাস আপডেট।',
+                    'a' => 'Pathao, Steadfast, RedX সহ ইন্টিগ্রেটেড কুরিয়ার — এক WooEasyLife ড্যাশবোর্ড থেকে এন্ট্রি, স্ট্যাটাস সিঙ্ক ও SMS।',
                 ],
                 [
                     'q' => 'পার্সেল নোট হিস্ট্রি কী?',
@@ -405,7 +530,31 @@ return [
                 ],
                 [
                     'q' => 'ফ্রড চেক করার পর কি অটো এন্ট্রি হয়?',
-                    'a' => 'আপনি কনফার্ম করলেই এন্ট্রি হয়। আগে ফ্রড চেক করে ঝুঁকি দেখে নিন, তারপর কনফার্ম — নিরাপদ ও দ্রুত ওয়ার্কফ্লো।',
+                    'a' => 'আপনি কনফার্ম করলেই এন্ট্রি হয়। আগে /bd-fraud-checker দিয়ে ঝুঁকি দেখে নিন, তারপর কনফার্ম — নিরাপদ ও দ্রুত ওয়ার্কফ্লো।',
+                ],
+                [
+                    'q' => 'ম্যানুয়াল এন্ট্রিতে কত সময় নষ্ট হয়?',
+                    'a' => 'প্রতি অর্ডারে কয়েক মিনিট × দিনে কয়েক ডজন অর্ডার = ঘণ্টার পর ঘণ্টা। WooEasyLife অটো এন্ট্রিতে দিনে ৩+ ঘণ্টা স্টাফ সময় বাঁচানো সম্ভব।',
+                ],
+                [
+                    'q' => 'কুরিয়ার স্ট্যাটাস কীভাবে আপডেট হয়?',
+                    'a' => 'কুরিয়ার অটো স্ট্যাটাস সিঙ্ক WooCommerce অর্ডারে ডেলিভারি/রিটার্ন আপডেট নিয়ে আসে — আলাদা প্যানেলে বারবার চেক করতে হয় না।',
+                ],
+                [
+                    'q' => 'কাস্টমারকে SMS যায় কি?',
+                    'a' => 'হ্যাঁ — অর্ডার ও ডেলিভারি আপডেট SMS পাঠানো যায়, যাতে «পার্সেল কোথায়?» কল কমে এবং প্রফেশনাল ইম্প্রেশন তৈরি হয়।',
+                ],
+                [
+                    'q' => 'চার্জ আগে জানতে চাইলে কী করব?',
+                    'a' => '/courier-charge-calculator পেজে জোন ও ওজন দিয়ে Pathao, Steadfast, RedX আনুমানিক চার্জ তুলনা করুন।',
+                ],
+                [
+                    'q' => 'কীভাবে শুরু করব?',
+                    'a' => '/pricing থেকে ফ্রি ট্রায়াল বা সাবস্ক্রিপশন নিন, কুরিয়ার অ্যাকাউন্ট কানেক্ট করুন — তারপর কনফার্ম = অটো এন্ট্রি।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে কি?',
+                    'a' => 'হ্যাঁ — /en/courier-auto-entry। বাংলা পেজ: /courier-auto-entry।',
                 ],
             ],
         ],
@@ -416,6 +565,11 @@ return [
             'canonical_path' => '/fraudbd-alternative',
             'prerender_h1' => 'FraudBD Alternative — টুলের বদলে পূর্ণ WooCommerce প্ল্যাটফর্ম',
             'prerender_lead' => 'শুধু ফ্রড হিস্টোরি নয় — WooEasyLife-এ চেক, ব্লক, কুরিয়ার অটো এন্ট্রি ও অর্ডার রিকভারি এক প্ল্যাটফর্মে।',
+            'hreflang_paths' => [
+                'bn-BD' => '/fraudbd-alternative',
+                'en' => '/en/fraudbd-alternative',
+                'x-default' => '/fraudbd-alternative',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'FraudBD Alternative', 'path' => '/fraudbd-alternative'],
@@ -432,6 +586,26 @@ return [
                 [
                     'q' => 'কখন WooEasyLife বেছে নেবেন?',
                     'a' => 'যখন শুধু নম্বর চেক নয়, পুরো COD অপারেশন (প্রোটেকশন + কুরিয়ার + অ্যাপ) এক জায়গায় চান।',
+                ],
+                [
+                    'q' => 'চেকার টুল কি ফেলে দিতে হবে?',
+                    'a' => 'না — চাইলে রাখতে পারেন। কিন্তু চেকআউট OTP, অটো এন্ট্রি ও রিকভারি WooEasyLife-এ চালালে দৈনন্দিন কাজ এক জায়গায় সরে যায়।',
+                ],
+                [
+                    'q' => 'কুরিয়ার অটো এন্ট্রি কোনগুলো সাপোর্ট করে?',
+                    'a' => 'Pathao, Steadfast ও RedX — কনফার্ম হলে পার্সেল তথ্য অটো যায়। বিস্তারিত: /courier-auto-entry',
+                ],
+                [
+                    'q' => 'রিটার্ন লস কীভাবে মাপব?',
+                    'a' => '/return-loss-calculator দিয়ে মাসিক রিটার্ন খরচ হিসাব করুন। শুধু টুলের দাম নয় — রিটার্ন চার্জই বড় লস।',
+                ],
+                [
+                    'q' => 'কীভাবে শুরু করব?',
+                    'a' => 'প্রথমে /bd-fraud-checker-এ ফ্রি চেক টেস্ট করুন, তারপর /pricing থেকে ট্রায়াল নিন এবং WooCommerce + কুরিয়ার কানেক্ট করুন।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে?',
+                    'a' => 'হ্যাঁ — /en/fraudbd-alternative। বাংলা: /fraudbd-alternative।',
                 ],
             ],
         ],
@@ -556,6 +730,22 @@ return [
                     'q' => 'Is WooEasyLife only a checker tool?',
                     'a' => 'No. Besides fraud checks, you get checkout OTP, fake-order blocking, courier auto-entry, missing-order recovery, and a mobile app.',
                 ],
+                [
+                    'q' => 'How do free checks work?',
+                    'a' => 'Limited free daily searches work on this page without an account. Enter a mobile number to see supported courier history. Full protection needs a subscription — see /pricing.',
+                ],
+                [
+                    'q' => 'Which couriers are supported?',
+                    'a' => 'Pathao, Steadfast, RedX and other couriers supported inside WooEasyLife for history checks and auto-entry.',
+                ],
+                [
+                    'q' => 'How do I stop fake orders long term?',
+                    'a' => 'Check history first, then enable OTP, duplicate blocks, and blacklists. Guide: /en/fake-order-protection',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — the main home page at /',
+                ],
             ],
         ],
 
@@ -565,7 +755,7 @@ return [
             'canonical_path' => '/en/bd-fraud-checker',
             'html_lang' => 'en',
             'prerender_h1' => 'Free Courier Fraud Checker BD — delivery history by phone',
-            'prerender_lead' => 'Verify customer courier history and success rate before confirming COD orders. Built for Bangladesh WooCommerce & Facebook sellers.',
+            'prerender_lead' => 'Verify customer courier history and success rate before confirming COD orders. Pathao, Steadfast, RedX — built for Bangladesh WooCommerce & Facebook sellers.',
             'hreflang_paths' => [
                 'bn-BD' => '/bd-fraud-checker',
                 'en' => '/en/bd-fraud-checker',
@@ -583,6 +773,30 @@ return [
                 [
                     'q' => 'Which couriers are supported?',
                     'a' => 'Pathao, Steadfast, RedX and other couriers supported inside WooEasyLife.',
+                ],
+                [
+                    'q' => 'Is a checker enough by itself?',
+                    'a' => 'It is the first layer. Full protection needs checkout OTP, duplicate blocking, and blacklists — see /en/fake-order-protection. Courier auto-entry speeds confirmed orders.',
+                ],
+                [
+                    'q' => 'What if success rate is low?',
+                    'a' => 'Call to verify the address, request advance payment, or hold shipping. Repeat bad patterns belong on a blacklist.',
+                ],
+                [
+                    'q' => 'Is this a FraudBD alternative?',
+                    'a' => 'You get free courier history checks plus WooCommerce protection and courier automation. Compare at /fraudbd-alternative.',
+                ],
+                [
+                    'q' => 'How do I measure return and ad loss?',
+                    'a' => 'Use /en/return-loss-calculator for monthly COD return cost and /en/ads-roas-calculator for reported vs real ROAS after fake purchases.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /bd-fraud-checker. Step-by-step Bangla guide: /ki-vabe-fake-order-atkabo.',
+                ],
+                [
+                    'q' => 'Do I need an account for free checks?',
+                    'a' => 'No. Limited free daily searches work without signup. Subscribe via /pricing for full protection features.',
                 ],
             ],
         ],
@@ -604,6 +818,342 @@ return [
                 ['name' => 'Blog', 'path' => '/en/blog'],
             ],
             'faqs' => [],
+        ],
+
+        'en_fake_order_protection' => [
+            'title' => 'How to Stop Fake Orders — Fake Order Protection | WooEasyLife',
+            'description' => 'How to stop fake COD orders in Bangladesh: courier history checks, checkout OTP, duplicate blocks, and blacklists — for WooCommerce and Facebook page sellers.',
+            'canonical_path' => '/en/fake-order-protection',
+            'html_lang' => 'en',
+            'prerender_h1' => 'How to stop fake orders — Fake Order Protection',
+            'prerender_lead' => 'Fraud check + OTP + duplicate block + blacklist — multi-layer protection to cut fake COD orders and return loss. Built for Bangladesh WooCommerce and Facebook page sellers.',
+            'hreflang_paths' => [
+                'bn-BD' => '/fake-order-protection',
+                'en' => '/en/fake-order-protection',
+                'x-default' => '/fake-order-protection',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Fake Order Protection', 'path' => '/en/fake-order-protection'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'Why do fake orders happen?',
+                    'a' => 'On COD and Facebook page sales, people often use wrong numbers or place joke orders. Once a parcel ships, return fees, packaging, and time hit the seller.',
+                ],
+                [
+                    'q' => 'How do I stop fake orders?',
+                    'a' => 'Check courier history by mobile, enable checkout OTP, and keep duplicate blocks plus blacklists on. Bangla step guide: /ki-vabe-fake-order-atkabo',
+                ],
+                [
+                    'q' => 'How does WooEasyLife block fake orders?',
+                    'a' => 'Courier history checks, checkout OTP, duplicate order blocks, phone/email/device blocks, and daily order limits — multi-layer protection in one platform.',
+                ],
+                [
+                    'q' => 'Is a fraud check enough by itself?',
+                    'a' => 'It is the first layer. Stopping repeat patterns needs OTP, duplicate blocks, and blacklists. Free checks: /en/bd-fraud-checker',
+                ],
+                [
+                    'q' => 'What does checkout OTP do?',
+                    'a' => 'It verifies the phone number at checkout with an OTP — fake or wrong numbers get blocked earlier.',
+                ],
+                [
+                    'q' => 'Why block duplicate orders?',
+                    'a' => 'Repeat orders from the same customer/number create extra parcels and returns. Duplicate validation stops that pattern.',
+                ],
+                [
+                    'q' => 'How much return loss can I save?',
+                    'a' => 'Blocking a few fake orders per day can save thousands of taka monthly. Estimate with /return-loss-calculator',
+                ],
+                [
+                    'q' => 'Do fake orders hurt Ads ROAS?',
+                    'a' => 'Yes — fake Pixel purchases inflate reported ROAS. Compare reported vs real ROAS on /en/ads-roas-calculator.',
+                ],
+                [
+                    'q' => 'How do I get started?',
+                    'a' => 'Run a free check on /en/bd-fraud-checker, then start a trial on /pricing and turn on OTP and blocks.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /fake-order-protection. English page: /en/fake-order-protection.',
+                ],
+            ],
+        ],
+
+        'en_courier_auto_entry' => [
+            'title' => 'Courier Auto Entry — Pathao Steadfast RedX WooCommerce | WooEasyLife',
+            'description' => 'WooCommerce courier auto-entry: confirm an order and Pathao, Steadfast, or RedX parcels enter automatically. Status sync, SMS, and parcel note history — save 3+ hours/day for COD sellers.',
+            'canonical_path' => '/en/courier-auto-entry',
+            'html_lang' => 'en',
+            'prerender_h1' => 'Courier Auto Entry — Pathao, Steadfast, RedX',
+            'prerender_lead' => 'Confirm an order and the courier panel fills automatically. Skip manual copy-paste and save 3+ hours a day — built for Bangladesh WooCommerce and Facebook page COD sellers.',
+            'hreflang_paths' => [
+                'bn-BD' => '/courier-auto-entry',
+                'en' => '/en/courier-auto-entry',
+                'x-default' => '/courier-auto-entry',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Courier Auto Entry', 'path' => '/en/courier-auto-entry'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'What is courier auto-entry?',
+                    'a' => 'When you confirm an order, name, phone, address, and COD amount enter Pathao, Steadfast, or RedX automatically — no manual copy-paste.',
+                ],
+                [
+                    'q' => 'Which couriers are supported?',
+                    'a' => 'Integrated Pathao, Steadfast, and RedX — entry, status sync, and SMS from one WooEasyLife dashboard.',
+                ],
+                [
+                    'q' => 'What is parcel note history?',
+                    'a' => 'Steadfast parcel notes and history are visible in WooEasyLife, and merchant notes can be updated without logging into a separate courier panel.',
+                ],
+                [
+                    'q' => 'Does auto-entry run after a fraud check?',
+                    'a' => 'Entry runs when you confirm. Check risk first on /en/bd-fraud-checker, then confirm — a safer, faster workflow.',
+                ],
+                [
+                    'q' => 'How much time does manual entry waste?',
+                    'a' => 'A few minutes per order × dozens of daily orders = hours. WooEasyLife auto-entry can save 3+ staff hours per day.',
+                ],
+                [
+                    'q' => 'How does courier status update?',
+                    'a' => 'Auto status sync pulls delivery/return updates into the WooCommerce order — no repeated panel checks.',
+                ],
+                [
+                    'q' => 'Do customers get SMS?',
+                    'a' => 'Yes — order and delivery SMS can be sent so “where is my parcel?” calls drop and you look more professional.',
+                ],
+                [
+                    'q' => 'How do I compare charges first?',
+                    'a' => 'Use /courier-charge-calculator with zone and weight to compare Pathao, Steadfast, and RedX estimates.',
+                ],
+                [
+                    'q' => 'How do I get started?',
+                    'a' => 'Start a free trial or subscription on /pricing, connect courier accounts — then confirm = auto-entry.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /courier-auto-entry. English page: /en/courier-auto-entry.',
+                ],
+            ],
+        ],
+
+        'en_return_loss_calculator' => [
+            'title' => 'Return Loss Calculator — How Much Can You Save Monthly? | WooEasyLife',
+            'description' => 'Free COD return loss calculator. Enter daily orders, return/cancel rate, and cost per return to estimate monthly return loss and savings — for Bangladesh WooCommerce & Facebook sellers.',
+            'canonical_path' => '/en/return-loss-calculator',
+            'html_lang' => 'en',
+            'prerender_h1' => 'How much can you save monthly by cutting return loss?',
+            'prerender_lead' => 'Enter daily orders, return/cancel rate, and average cost per return — see monthly loss and estimated savings instantly. Free educational tool for Bangladesh COD sellers.',
+            'hreflang_paths' => [
+                'bn-BD' => '/return-loss-calculator',
+                'en' => '/en/return-loss-calculator',
+                'x-default' => '/return-loss-calculator',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Return Loss Calculator', 'path' => '/en/return-loss-calculator'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'What is the return loss calculator?',
+                    'a' => 'A free tool that estimates monthly COD return loss and potential savings from daily orders, return/cancel rate, and average cost per return.',
+                ],
+                [
+                    'q' => 'What should I include in cost per return?',
+                    'a' => 'Usually courier return fees, packaging, and estimated staff time. Many COD stores land around ৳150–300 or more — match the slider to your store.',
+                ],
+                [
+                    'q' => 'How does the math work?',
+                    'a' => 'Monthly orders ≈ daily orders × 30. Monthly returns ≈ monthly orders × return rate. Monthly loss ≈ monthly returns × cost per return.',
+                ],
+                [
+                    'q' => 'How does WooEasyLife reduce return loss?',
+                    'a' => 'Before confirmation it uses courier history/fraud checks, checkout OTP, duplicate blocks, and blacklists — fewer fake parcels means less return loss.',
+                ],
+                [
+                    'q' => 'Is this calculator exact?',
+                    'a' => 'No — it is an educational estimate. Real savings depend on order quality, courier rates, and how much protection you enable.',
+                ],
+                [
+                    'q' => 'Where do I run a free fraud check?',
+                    'a' => 'Use /en/bd-fraud-checker. Full protection: /en/fake-order-protection and /pricing.',
+                ],
+                [
+                    'q' => 'How does return loss relate to Ads ROAS?',
+                    'a' => 'Return loss is operations cost; fake purchases inflate reported ROAS. Compare both with /en/ads-roas-calculator.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /return-loss-calculator. English page: /en/return-loss-calculator.',
+                ],
+            ],
+        ],
+
+        'en_ads_roas_calculator' => [
+            'title' => 'Facebook Ads ROAS Calculator — Remove Fake Purchases | WooEasyLife',
+            'description' => 'Free Facebook Ads ROAS calculator. Compare reported vs real ROAS using ad spend, Pixel purchases, and fake/cancel rate — built for Bangladesh COD & WooCommerce sellers.',
+            'canonical_path' => '/en/ads-roas-calculator',
+            'html_lang' => 'en',
+            'prerender_h1' => 'What is your real Facebook Ads ROAS after removing fake purchases?',
+            'prerender_lead' => 'Pixel Purchase ≠ confirmed order. Use spend and fake/cancel rate to see real ROAS — an educational tool for COD sellers.',
+            'hreflang_paths' => [
+                'bn-BD' => '/ads-roas-calculator',
+                'en' => '/en/ads-roas-calculator',
+                'x-default' => '/ads-roas-calculator',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Ads ROAS Calculator', 'path' => '/en/ads-roas-calculator'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'What is the difference between reported ROAS and real ROAS?',
+                    'a' => 'Reported ROAS counts every Pixel Purchase. Real ROAS only counts confirmed/delivered orders after removing fake and cancelled purchases.',
+                ],
+                [
+                    'q' => 'Why are fake Pixel purchases a problem?',
+                    'a' => 'Facebook optimizes toward the wrong audience and wastes ad budget. WooEasyLife pixel protection helps send only confirmed purchases.',
+                ],
+                [
+                    'q' => 'Is this calculator exact?',
+                    'a' => 'No — it is an educational estimate. Attribution windows and delivery rates can change the numbers for your store.',
+                ],
+                [
+                    'q' => 'Which inputs should I use?',
+                    'a' => 'Monthly ad spend, Pixel Purchase count, estimated fake/cancel/return rate, and average order value (AOV). Moving the sliders updates reported vs real ROAS instantly.',
+                ],
+                [
+                    'q' => 'How do I improve real ROAS?',
+                    'a' => 'First reduce fake orders with /en/bd-fraud-checker and /fake-order-protection, then send only confirmed purchases to Pixel. Measure monthly return cost with /return-loss-calculator.',
+                ],
+                [
+                    'q' => 'Does this replace Meta Ads Manager?',
+                    'a' => 'No — it is a comparison tool. Campaign management stays in Meta; this page helps you judge real COD profit after fake purchases.',
+                ],
+                [
+                    'q' => 'How often should I recalculate ROAS?',
+                    'a' => 'At least weekly. Update spend, purchases, and return rate when they change — scaling once a month from reported ROAS alone is risky.',
+                ],
+                [
+                    'q' => 'How should I pick AOV?',
+                    'a' => 'Total order value ÷ order count for the same month (or Pixel Purchases). Adjust for promotions/free gifts or ROAS will look inflated.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /ads-roas-calculator. English page: /en/ads-roas-calculator.',
+                ],
+            ],
+        ],
+
+        'en_fraudbd_alternative' => [
+            'title' => 'FraudBD Alternative — WooEasyLife BD Fraud Checker + WooCommerce',
+            'description' => 'Looking for a FraudBD or checker-only alternative? WooEasyLife includes a free BD fraud checker plus fake-order protection, courier auto-entry, and a mobile app.',
+            'canonical_path' => '/en/fraudbd-alternative',
+            'html_lang' => 'en',
+            'prerender_h1' => 'FraudBD Alternative — a full WooCommerce platform, not just a tool',
+            'prerender_lead' => 'Not only fraud history — check, block, courier auto-entry, and order recovery in one platform.',
+            'hreflang_paths' => [
+                'bn-BD' => '/fraudbd-alternative',
+                'en' => '/en/fraudbd-alternative',
+                'x-default' => '/fraudbd-alternative',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'FraudBD Alternative', 'path' => '/en/fraudbd-alternative'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'What is the main difference between FraudBD and WooEasyLife?',
+                    'a' => 'FraudBD is mainly a courier fraud-check tool. WooEasyLife includes fraud checks plus WooCommerce fake-order protection, courier auto-entry, missing-order recovery, and a mobile app.',
+                ],
+                [
+                    'q' => 'Can I check for free?',
+                    'a' => 'Yes. Limited free daily checks work on /en/bd-fraud-checker without an account.',
+                ],
+                [
+                    'q' => 'When should I choose WooEasyLife?',
+                    'a' => 'When you want the full COD operation (protection + courier + app) in one place — not number checks alone.',
+                ],
+                [
+                    'q' => 'Do I have to drop my checker tool?',
+                    'a' => 'No — you can keep it. But once OTP, auto-entry, and recovery run in WooEasyLife, daily work usually moves there.',
+                ],
+                [
+                    'q' => 'Which couriers support auto-entry?',
+                    'a' => 'Pathao, Steadfast, and RedX — parcel data pushes on confirm. Details: /en/courier-auto-entry',
+                ],
+                [
+                    'q' => 'How do I measure return loss?',
+                    'a' => 'Use /return-loss-calculator for monthly return cost. Tool price is small next to return fees.',
+                ],
+                [
+                    'q' => 'How do I get started?',
+                    'a' => 'Test free checks on /en/bd-fraud-checker, then start a trial from /pricing and connect WooCommerce + couriers.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /fraudbd-alternative. English page: /en/fraudbd-alternative.',
+                ],
+            ],
+        ],
+
+        'en_courier_charge_calculator' => [
+            'title' => 'Courier Charge Calculator — Pathao · Steadfast · RedX | WooEasyLife',
+            'description' => 'Free courier charge calculator. Compare approximate Pathao, Steadfast, and RedX delivery charges by Dhaka / suburb / outside zone and weight — for Bangladesh COD merchants.',
+            'canonical_path' => '/en/courier-charge-calculator',
+            'html_lang' => 'en',
+            'prerender_h1' => 'Pathao · Steadfast · RedX — estimate delivery charges',
+            'prerender_lead' => 'Enter zone and parcel weight to compare approximate charges for three couriers. Includes COD fee. Verify final charges on the courier panel.',
+            'hreflang_paths' => [
+                'bn-BD' => '/courier-charge-calculator',
+                'en' => '/en/courier-charge-calculator',
+                'x-default' => '/courier-charge-calculator',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Courier Charge Calculator', 'path' => '/en/courier-charge-calculator'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'Are these official rates?',
+                    'a' => 'Steadfast rates sync daily from their public pricing API (steadfast.com.bd/pricing). Pathao’s public calculator is not available without login — merchant API can update samples, otherwise approximate. RedX is approximate. Always verify final charges on the courier panel.',
+                ],
+                [
+                    'q' => 'How often do rates update?',
+                    'a' => 'An automatic sync runs daily on the server (Asia/Dhaka). Manually: php artisan courier:sync-public-rates',
+                ],
+                [
+                    'q' => 'How is COD fee calculated?',
+                    'a' => 'As an example, about 1% of the COD amount is used as COD fee. If your courier plan differs, match the slider.',
+                ],
+                [
+                    'q' => 'How does WooEasyLife help?',
+                    'a' => 'When an order is confirmed, Pathao/Steadfast/RedX auto-entry runs — less repeated charge and address typing in panels. Details: /en/courier-auto-entry',
+                ],
+                [
+                    'q' => 'Which zone should I pick?',
+                    'a' => 'Inside Dhaka, suburb/nearby, or outside Dhaka — based on the delivery address. Wrong zone shows wrong charges.',
+                ],
+                [
+                    'q' => 'Is the cheapest courier always best?',
+                    'a' => 'Not always. High fake orders/returns can erase savings. Check with /en/bd-fraud-checker first and measure return loss on /return-loss-calculator.',
+                ],
+                [
+                    'q' => 'How should I set weight?',
+                    'a' => 'Enter approximate kg including packing. Extra kg adds charge — understating weight can raise the bill later.',
+                ],
+                [
+                    'q' => 'How do I combine this with ad spend?',
+                    'a' => 'Look at delivery charge + return loss + ad spend together. Use /en/ads-roas-calculator for real ROAS and /return-loss-calculator for monthly return loss.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /courier-charge-calculator. English page: /en/courier-charge-calculator.',
+                ],
+            ],
         ],
     ],
 
@@ -629,6 +1179,12 @@ return [
             ['path' => '/blog', 'priority' => '0.8', 'changefreq' => 'weekly'],
             ['path' => '/en', 'priority' => '0.85', 'changefreq' => 'weekly'],
             ['path' => '/en/bd-fraud-checker', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/fake-order-protection', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/en/return-loss-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/ads-roas-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/courier-charge-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/fraudbd-alternative', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/en/courier-auto-entry', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/en/blog', 'priority' => '0.75', 'changefreq' => 'weekly'],
             ['path' => '/wooeasylife/app/privacy-policy', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/app/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],

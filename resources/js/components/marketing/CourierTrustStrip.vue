@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     integrations: {
         type: Array,
         default: () => [
@@ -10,13 +12,18 @@ defineProps({
             { name: 'Carrybee', logo: '/images/carrybee.svg' },
         ],
     },
+    locale: { type: String, default: 'bn' },
 });
+
+const isEn = computed(() => props.locale === 'en');
 </script>
 
 <template>
     <section class="border-y border-white/10 bg-[#111111] py-8 sm:py-10">
         <div class="mx-auto max-w-6xl px-4 text-center lg:px-8">
-            <p class="text-sm font-semibold text-slate-400">যেসব কুরিয়ার আমরা সাপোর্ট করি</p>
+            <p class="text-sm font-semibold text-slate-400">
+                {{ isEn ? 'Couriers we support' : 'যেসব কুরিয়ার আমরা সাপোর্ট করি' }}
+            </p>
             <div
                 class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5 lg:gap-3"
             >

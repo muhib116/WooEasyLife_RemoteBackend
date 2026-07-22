@@ -59,9 +59,29 @@ class MarketingSeoTest extends TestCase
         $response = $this->get('/fake-order-protection');
 
         $response->assertOk();
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/fake-order-protection', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/FakeOrderProtection')
             ->where('seo.canonical_path', '/fake-order-protection')
+            ->has('seo.faqs')
+        );
+    }
+
+    public function test_english_fake_order_protection_page_renders(): void
+    {
+        $response = $this->get('/en/fake-order-protection');
+
+        $response->assertOk();
+        $response->assertSee('Fake Order Protection', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('hreflang="bn-BD"', false);
+        $response->assertSee('/fake-order-protection', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnFakeOrderProtection')
+            ->has('seo.faqs')
+            ->where('seo.canonical_path', '/en/fake-order-protection')
+            ->where('seo.html_lang', 'en')
         );
     }
 
@@ -72,11 +92,32 @@ class MarketingSeoTest extends TestCase
         $response->assertOk();
         $response->assertSee('রিটার্ন লস', false);
         $response->assertSee('name="description"', false);
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/return-loss-calculator', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/ReturnLossCalculator')
             ->has('roiCalculator')
-            ->has('seo')
+            ->has('seo.faqs')
             ->where('seo.canonical_path', '/return-loss-calculator')
+        );
+    }
+
+    public function test_english_return_loss_calculator_page_renders(): void
+    {
+        $response = $this->get('/en/return-loss-calculator');
+
+        $response->assertOk();
+        $response->assertSee('Return Loss', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('hreflang="bn-BD"', false);
+        $response->assertSee('/return-loss-calculator', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnReturnLossCalculator')
+            ->has('roiCalculator.inputs.daily_orders')
+            ->has('roiScenarios')
+            ->has('seo.faqs')
+            ->where('seo.canonical_path', '/en/return-loss-calculator')
+            ->where('seo.html_lang', 'en')
         );
     }
 
@@ -87,6 +128,8 @@ class MarketingSeoTest extends TestCase
         $response->assertOk();
         $response->assertSee('কুরিয়ার চার্জ', false);
         $response->assertSee('BreadcrumbList', false);
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/courier-charge-calculator', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/CourierChargeCalculator')
             ->has('courierChargeCalculator.couriers.pathao')
@@ -104,6 +147,8 @@ class MarketingSeoTest extends TestCase
         $response->assertOk();
         $response->assertSee('ROAS', false);
         $response->assertSee('BreadcrumbList', false);
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/ads-roas-calculator', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/AdsRoasCalculator')
             ->has('adsRoasCalculator.inputs.ad_spend')
@@ -113,11 +158,50 @@ class MarketingSeoTest extends TestCase
         );
     }
 
+    public function test_english_ads_roas_calculator_page_renders(): void
+    {
+        $response = $this->get('/en/ads-roas-calculator');
+
+        $response->assertOk();
+        $response->assertSee('ROAS', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('hreflang="bn-BD"', false);
+        $response->assertSee('/ads-roas-calculator', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnAdsRoasCalculator')
+            ->has('adsRoasCalculator.inputs.ad_spend')
+            ->has('seo.faqs')
+            ->where('seo.canonical_path', '/en/ads-roas-calculator')
+            ->where('seo.html_lang', 'en')
+        );
+    }
+
+    public function test_english_courier_charge_calculator_page_renders(): void
+    {
+        $response = $this->get('/en/courier-charge-calculator');
+
+        $response->assertOk();
+        $response->assertSee('Courier', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('hreflang="bn-BD"', false);
+        $response->assertSee('/courier-charge-calculator', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnCourierChargeCalculator')
+            ->has('courierChargeCalculator.couriers.pathao')
+            ->has('courierChargeCalculator.zones.dhaka')
+            ->has('seo.faqs')
+            ->where('seo.canonical_path', '/en/courier-charge-calculator')
+            ->where('seo.html_lang', 'en')
+        );
+    }
+
     public function test_courier_auto_entry_page_renders(): void
     {
         $response = $this->get('/courier-auto-entry');
 
         $response->assertOk();
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/courier-auto-entry', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/CourierAutoEntry')
             ->where('seo.canonical_path', '/courier-auto-entry')
@@ -131,16 +215,65 @@ class MarketingSeoTest extends TestCase
         );
     }
 
+    public function test_english_courier_auto_entry_page_renders(): void
+    {
+        $response = $this->get('/en/courier-auto-entry');
+
+        $response->assertOk();
+        $response->assertSee('Courier Auto Entry', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('hreflang="bn-BD"', false);
+        $response->assertSee('/courier-auto-entry', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnCourierAutoEntry')
+            ->has('seo.faqs')
+            ->where('seo.canonical_path', '/en/courier-auto-entry')
+            ->where('seo.html_lang', 'en')
+        );
+
+        $faqs = collect(config('seo.pages.en_courier_auto_entry.faqs', []));
+        $this->assertTrue(
+            $faqs->contains(fn (array $faq) => str_contains(strtolower((string) ($faq['q'] ?? '')), 'parcel note')),
+            'English courier auto-entry SEO FAQs should mention parcel note history.',
+        );
+    }
+
     public function test_fraudbd_alternative_page_renders(): void
     {
         $response = $this->get('/fraudbd-alternative');
 
         $response->assertOk();
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/fraudbd-alternative', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/FraudBdAlternative')
             ->where('seo.canonical_path', '/fraudbd-alternative')
             ->has('seo.breadcrumbs')
+            ->has('seo.faqs')
         );
+    }
+
+    public function test_english_fraudbd_alternative_page_renders(): void
+    {
+        $response = $this->get('/en/fraudbd-alternative');
+
+        $response->assertOk();
+        $response->assertSee('FraudBD', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('hreflang="bn-BD"', false);
+        $response->assertSee('/fraudbd-alternative', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnFraudBdAlternative')
+            ->where('seo.canonical_path', '/en/fraudbd-alternative')
+            ->where('seo.html_lang', 'en')
+            ->has('seo.faqs')
+        );
+    }
+
+    public function test_fraud_bd_alternative_hyphen_redirects(): void
+    {
+        $this->get('/fraud-bd-alternative')->assertRedirect('/fraudbd-alternative');
+        $this->get('/en/fraud-bd-alternative')->assertRedirect('/en/fraudbd-alternative');
     }
 
     public function test_home_prerenders_h1_for_crawlers(): void
@@ -215,8 +348,19 @@ class MarketingSeoTest extends TestCase
         $home->assertOk();
         $home->assertSee('hreflang="en"', false);
         $home->assertSee('hreflang="bn-BD"', false);
+        $home->assertInertia(fn (Assert $page) => $page
+            ->component('Welcome3')
+            ->where('locale', 'en')
+            ->where('seo.canonical_path', '/en')
+            ->has('hero.headline')
+            ->has('fraudCheck')
+        );
 
         $this->get('/en/bd-fraud-checker')->assertOk();
+        $this->get('/en/fake-order-protection')->assertOk();
+        $this->get('/en/return-loss-calculator')->assertOk();
+        $this->get('/en/ads-roas-calculator')->assertOk();
+        $this->get('/en/courier-auto-entry')->assertOk();
         $this->get('/en/blog')->assertOk();
     }
 
@@ -289,6 +433,8 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/pathao-fraud-check', false);
         $response->assertSee('/blog', false);
         $response->assertSee('/en/bd-fraud-checker', false);
+        $response->assertSee('/en/courier-charge-calculator', false);
+        $response->assertSee('/en/fraudbd-alternative', false);
         $response->assertSee('/pricing', false);
     }
 
@@ -349,6 +495,13 @@ class MarketingSeoTest extends TestCase
             'courier_auto_entry',
             'en_home',
             'en_bd_fraud_checker',
+            'en_fake_order_protection',
+            'en_return_loss_calculator',
+            'en_ads_roas_calculator',
+            'en_courier_charge_calculator',
+            'en_fraudbd_alternative',
+            'en_courier_auto_entry',
+            'fraudbd_alternative',
         ];
 
         $seoService = app(\App\Services\SeoMetaService::class);

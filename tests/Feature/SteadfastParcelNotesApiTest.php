@@ -116,7 +116,7 @@ class SteadfastParcelNotesApiTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJsonPath('status', false)
-            ->assertJsonPath('message', 'Parcel note history is not included in your current plan.');
+            ->assertJsonPath('message', 'Parcel notes or courier automation is not included in your current plan.');
     }
 
     public function test_parcel_notes_denied_without_active_package(): void
@@ -164,7 +164,7 @@ class SteadfastParcelNotesApiTest extends TestCase
             ->assertJsonPath('data.merchant_note', 'ok');
     }
 
-    public function test_parcel_notes_explicit_false_overrides_courier_inference(): void
+    public function test_parcel_notes_allowed_with_courier_automation_even_when_notes_feature_false(): void
     {
         [$user, $plainToken] = $this->createMerchantWithToken();
         $this->attachCatalogPackage($user, [
@@ -173,12 +173,27 @@ class SteadfastParcelNotesApiTest extends TestCase
         ]);
         $this->attachSteadfastPortalCredentials($user);
 
+        $this->mock(SteadfastParcelNotesService::class, function ($mock) {
+            $mock->shouldReceive('fetchNotes')
+                ->once()
+                ->andReturn([
+                    'consignment_id' => '12345678',
+                    'merchant_note' => 'from-return-flow',
+                    'cus_address' => 'Dhaka',
+                    'cod_amount' => 100,
+                    'notes' => [],
+                    'rider' => null,
+                ]);
+        });
+
         $response = $this->withHeaders($this->apiHeaders($plainToken))
             ->postJson('/api/steadfast/parcel-notes', [
                 'consignment_id' => '12345678',
             ]);
 
-        $response->assertStatus(403);
+        $response->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.merchant_note', 'from-return-flow');
     }
 
     public function test_parcel_notes_requires_portal_credentials(): void
@@ -268,7 +283,7 @@ class SteadfastParcelNotesApiTest extends TestCase
             ]);
 
         $response->assertStatus(422)
-            ->assertJsonPath('message', 'Provide a note, address, or COD amount to update.');
+            ->assertJsonPath('message', 'Provide a note, address, COD amount, or customer details to update.');
     }
 
     public function test_legacy_plan_can_access_parcel_notes(): void

@@ -131,6 +131,7 @@ Route::get('/courier-auto-entry', [MarketingSeoController::class, 'courierAutoEn
     ->name('seo.courier-auto-entry');
 Route::get('/fraudbd-alternative', [MarketingSeoController::class, 'fraudBdAlternative'])
     ->name('seo.fraudbd-alternative');
+Route::redirect('/fraud-bd-alternative', '/fraudbd-alternative', 301);
 Route::get('/pathao-fraud-check', [MarketingSeoController::class, 'courierIntent'])
     ->defaults('courier', 'pathao')
     ->name('seo.pathao-fraud-check');
@@ -169,6 +170,19 @@ Route::prefix('en')->name('seo.en.')->group(function () {
     Route::get('/', [EnglishMarketingController::class, 'home'])->name('home');
     Route::get('/bd-fraud-checker', [EnglishMarketingController::class, 'bdFraudChecker'])
         ->name('bd-fraud-checker');
+    Route::get('/fake-order-protection', [EnglishMarketingController::class, 'fakeOrderProtection'])
+        ->name('fake-order-protection');
+    Route::get('/return-loss-calculator', [EnglishMarketingController::class, 'returnLossCalculator'])
+        ->name('return-loss-calculator');
+    Route::get('/courier-auto-entry', [EnglishMarketingController::class, 'courierAutoEntry'])
+        ->name('courier-auto-entry');
+    Route::get('/ads-roas-calculator', [EnglishMarketingController::class, 'adsRoasCalculator'])
+        ->name('ads-roas-calculator');
+    Route::get('/courier-charge-calculator', [EnglishMarketingController::class, 'courierChargeCalculator'])
+        ->name('courier-charge-calculator');
+    Route::get('/fraudbd-alternative', [EnglishMarketingController::class, 'fraudBdAlternative'])
+        ->name('fraudbd-alternative');
+    Route::redirect('/fraud-bd-alternative', '/en/fraudbd-alternative', 301);
     Route::get('/blog', [EnglishMarketingController::class, 'blogIndex'])->name('blog');
 });
 

@@ -8,8 +8,10 @@ const props = defineProps({
     primaryCtaUrl: { type: String, default: '#' },
     primaryCtaLabel: { type: String, default: 'ফ্রি ট্রায়াল শুরু করুন' },
     showIntro: { type: Boolean, default: true },
+    locale: { type: String, default: 'bn' },
 });
 
+const isEn = computed(() => props.locale === 'en');
 const zones = computed(() => props.config?.zones ?? {});
 const couriers = computed(() => props.config?.couriers ?? {});
 const inputs = computed(() => props.config?.inputs ?? {});
@@ -24,18 +26,19 @@ const model = reactive({
 const toBnDigits = (value) =>
     String(value).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
 
-const formatBnNumber = (value, decimals = 0) => {
+const formatNumber = (value, decimals = 0) => {
     const n = Number(value);
     if (! Number.isFinite(n)) {
-        return toBnDigits('0');
+        return isEn.value ? '0' : toBnDigits('0');
     }
     const fixed = decimals > 0 ? n.toFixed(decimals) : Math.round(n).toString();
     const [intPart, decPart] = fixed.split('.');
     const withCommas = Number(intPart).toLocaleString('en-US');
-    return toBnDigits(decPart ? `${withCommas}.${decPart}` : withCommas);
+    const formatted = decPart ? `${withCommas}.${decPart}` : withCommas;
+    return isEn.value ? formatted : toBnDigits(formatted);
 };
 
-const formatTaka = (value) => `৳${formatBnNumber(value)}`;
+const formatTaka = (value) => `৳${formatNumber(value)}`;
 
 /** Mirrors steadfast.com.bd/pricing calcPrice for Dhaka-origin parcel. */
 const steadfastBillableWeight = (zone, weight) => {
@@ -114,11 +117,40 @@ const lastSyncedLabel = computed(() => {
     const raw = props.config?.last_synced_at;
     if (!raw) return null;
     try {
-        return new Date(raw).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' });
+        return new Date(raw).toLocaleString(isEn.value ? 'en-GB' : 'bn-BD', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        });
     } catch {
         return raw;
     }
 });
+
+const ui = computed(() => (isEn.value
+    ? {
+        zoneLabel: 'Delivery zone (from Dhaka)',
+        officialTitle: 'Official calculators',
+        cheapest: 'Lowest',
+        delivery: 'Delivery',
+        codFee: 'COD fee',
+        liveRate: 'Live rate',
+        approxRate: 'Estimate',
+        source: 'Source',
+        liveUpdated: 'Live rates updated:',
+        defaultBadge: 'Courier charge',
+    }
+    : {
+        zoneLabel: 'ডেলিভারি জোন (ঢাকা থেকে)',
+        officialTitle: 'অফিসিয়াল ক্যালকুলেটর',
+        cheapest: 'সবচেয়ে কম',
+        delivery: 'ডেলিভারি',
+        codFee: 'COD ফি',
+        liveRate: 'লাইভ রেট',
+        approxRate: 'আনুমানিক রেট',
+        source: 'সোর্স',
+        liveUpdated: 'লাইভ রেট আপডেট:',
+        defaultBadge: 'কুরিয়ার চার্জ',
+    }));
 </script>
 
 <template>
@@ -126,7 +158,7 @@ const lastSyncedLabel = computed(() => {
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div v-if="showIntro" class="text-center">
                 <span class="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-300">
-                    {{ config.badge ?? 'কুরিয়ার চার্জ' }}
+                    {{ config.badge ?? ui.defaultBadge }}
                 </span>
                 <h2 class="mt-4 text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
                     {{ config.headline }}
@@ -135,13 +167,13 @@ const lastSyncedLabel = computed(() => {
                     {{ config.subtitle }}
                 </p>
                 <p v-if="lastSyncedLabel" class="mt-2 text-xs text-emerald-300/80">
-                    লাইভ রেট আপডেট: {{ lastSyncedLabel }}
+                    {{ ui.liveUpdated }} {{ lastSyncedLabel }}
                 </p>
             </div>
 
             <div class="mt-10 grid gap-5 lg:grid-cols-2 lg:gap-6" :class="{ 'mt-0': !showIntro }">
                 <div class="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
-                    <p class="text-sm font-medium text-slate-300">ডেলিভারি জোন (ঢাকা থেকে)</p>
+                    <p class="text-sm font-medium text-slate-300">{{ ui.zoneLabel }}</p>
                     <div class="mt-3 grid gap-2 sm:grid-cols-3">
                         <button
                             v-for="(label, key) in zones"
@@ -164,7 +196,7 @@ const lastSyncedLabel = computed(() => {
                                     {{ inputs[key]?.label }}
                                 </label>
                                 <span class="text-lg font-bold text-amber-300">
-                                    {{ inputs[key]?.prefix || '' }}{{ formatBnNumber(model[key], key === 'weight_kg' ? 1 : 0) }}{{ inputs[key]?.suffix || '' }}
+                                    {{ inputs[key]?.prefix || '' }}{{ formatNumber(model[key], key === 'weight_kg' ? 1 : 0) }}{{ inputs[key]?.suffix || '' }}
                                 </span>
                             </div>
                             <input
@@ -181,7 +213,7 @@ const lastSyncedLabel = computed(() => {
                     </div>
 
                     <div v-if="officialLinks.length" class="mt-6 space-y-1 border-t border-white/10 pt-4 text-xs text-slate-400">
-                        <p class="font-semibold text-slate-300">অফিসিয়াল ক্যালকুলেটর</p>
+                        <p class="font-semibold text-slate-300">{{ ui.officialTitle }}</p>
                         <a
                             v-for="link in officialLinks"
                             :key="link.url"
@@ -212,22 +244,22 @@ const lastSyncedLabel = computed(() => {
                                         v-if="cheapest?.key === row.key"
                                         class="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300"
                                     >
-                                        সবচেয়ে কম
+                                        {{ ui.cheapest }}
                                     </span>
                                 </p>
                                 <p class="mt-1 text-xs text-slate-400">
-                                    ডেলিভারি {{ formatTaka(row.delivery) }}
-                                    <span v-if="row.codFee"> · COD ফি {{ formatTaka(row.codFee) }}</span>
+                                    {{ ui.delivery }} {{ formatTaka(row.delivery) }}
+                                    <span v-if="row.codFee"> · {{ ui.codFee }} {{ formatTaka(row.codFee) }}</span>
                                 </p>
                                 <p class="mt-1 text-[11px]" :class="row.source === 'live' ? 'text-emerald-400/90' : 'text-slate-500'">
-                                    {{ row.source === 'live' ? 'লাইভ রেট' : 'আনুমানিক রেট' }}
+                                    {{ row.source === 'live' ? ui.liveRate : ui.approxRate }}
                                     <a
                                         v-if="row.sourceUrl"
                                         :href="row.sourceUrl"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         class="ml-1 text-amber-400/90 hover:text-amber-300"
-                                    >সোর্স</a>
+                                    >{{ ui.source }}</a>
                                 </p>
                             </div>
                             <p class="text-2xl font-extrabold text-amber-300">{{ formatTaka(row.total) }}</p>
@@ -253,7 +285,7 @@ const lastSyncedLabel = computed(() => {
                 {{ config.note }}
             </p>
             <p v-if="!showIntro && lastSyncedLabel" class="mt-2 text-center text-xs text-emerald-300/80">
-                লাইভ রেট আপডেট: {{ lastSyncedLabel }}
+                {{ ui.liveUpdated }} {{ lastSyncedLabel }}
             </p>
         </div>
     </section>

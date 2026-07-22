@@ -8,8 +8,10 @@ const props = defineProps({
     primaryCtaUrl: { type: String, default: '#' },
     primaryCtaLabel: { type: String, default: 'ফ্রি ট্রায়াল শুরু করুন' },
     showIntro: { type: Boolean, default: true },
+    locale: { type: String, default: 'bn' },
 });
 
+const isEn = computed(() => props.locale === 'en');
 const inputs = computed(() => props.config?.inputs ?? {});
 
 const model = reactive({
@@ -22,18 +24,19 @@ const model = reactive({
 const toBnDigits = (value) =>
     String(value).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
 
-const formatBnNumber = (value, decimals = 0) => {
+const formatNumber = (value, decimals = 0) => {
     const n = Number(value);
     if (! Number.isFinite(n)) {
-        return toBnDigits('0');
+        return isEn.value ? '0' : toBnDigits('0');
     }
     const fixed = decimals > 0 ? n.toFixed(decimals) : Math.round(n).toString();
     const [intPart, decPart] = fixed.split('.');
     const withCommas = Number(intPart).toLocaleString('en-US');
-    return toBnDigits(decPart ? `${withCommas}.${decPart}` : withCommas);
+    const formatted = decPart ? `${withCommas}.${decPart}` : withCommas;
+    return isEn.value ? formatted : toBnDigits(formatted);
 };
 
-const formatTaka = (value) => `৳${formatBnNumber(value)}`;
+const formatTaka = (value) => `৳${formatNumber(value)}`;
 
 const confirmedPurchases = computed(() =>
     Math.round(model.pixel_purchases * (1 - model.fake_cancel_rate / 100)),
@@ -59,8 +62,36 @@ const displayValue = (key) => {
     if (!slider) {
         return '';
     }
-    return `${slider.prefix ?? ''}${formatBnNumber(model[key])}${slider.suffix ?? ''}`;
+    return `${slider.prefix ?? ''}${formatNumber(model[key])}${slider.suffix ?? ''}`;
 };
+
+const copy = computed(() => (isEn.value
+    ? {
+        reported: 'Pixel reported ROAS',
+        reportedDetail: (purchases, aov, revenue) =>
+            `${formatNumber(purchases)} purchases × ${formatTaka(aov)} = ${formatTaka(revenue)}`,
+        real: 'Real ROAS (confirmed orders)',
+        realDetail: (confirmed, revenue) =>
+            `≈ ${formatNumber(confirmed)} confirmed · revenue ${formatTaka(revenue)}`,
+        fake: 'Fake purchase signal',
+        fakeDetail: (fake, signal) =>
+            `${formatNumber(fake)} · ≈ ${formatTaka(signal)}`,
+        waste: (waste, rate) =>
+            `Estimated ad budget waste ≈ ${formatTaka(waste)} (${formatNumber(rate)}% of spend)`,
+    }
+    : {
+        reported: 'Pixel রিপোর্টেড ROAS',
+        reportedDetail: (purchases, aov, revenue) =>
+            `${formatNumber(purchases)}টি Purchase × ${formatTaka(aov)} = ${formatTaka(revenue)}`,
+        real: 'আসল ROAS (কনফার্মড অর্ডার)',
+        realDetail: (confirmed, revenue) =>
+            `≈ ${formatNumber(confirmed)}টি কনফার্মড · রেভিনিউ ${formatTaka(revenue)}`,
+        fake: 'ফেক Purchase সিগন্যাল',
+        fakeDetail: (fake, signal) =>
+            `${formatNumber(fake)}টি · ≈ ${formatTaka(signal)}`,
+        waste: (waste, rate) =>
+            `আনুমানিক অ্যাড বাজেট অপচয় ≈ ${formatTaka(waste)} (স্পেন্ডের ${formatNumber(rate)}%)`,
+    }));
 </script>
 
 <template>
@@ -104,34 +135,32 @@ const displayValue = (key) => {
 
                 <div class="flex flex-col gap-4">
                     <div class="rounded-2xl border border-rose-500/25 bg-rose-950/20 p-5 sm:p-6">
-                        <p class="text-sm text-rose-200/80">Pixel রিপোর্টেড ROAS</p>
+                        <p class="text-sm text-rose-200/80">{{ copy.reported }}</p>
                         <p class="mt-1 text-3xl font-extrabold text-rose-300 sm:text-4xl">
-                            {{ formatBnNumber(reportedRoas, 2) }}x
+                            {{ formatNumber(reportedRoas, 2) }}x
                         </p>
                         <p class="mt-2 text-xs text-slate-400">
-                            {{ formatBnNumber(model.pixel_purchases) }}টি Purchase × {{ formatTaka(model.aov) }}
-                            = {{ formatTaka(reportedRevenue) }}
+                            {{ copy.reportedDetail(model.pixel_purchases, model.aov, reportedRevenue) }}
                         </p>
                     </div>
 
                     <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-emerald-900/10 p-5 sm:p-6">
-                        <p class="text-sm text-emerald-200/90">আসল ROAS (কনফার্মড অর্ডার)</p>
+                        <p class="text-sm text-emerald-200/90">{{ copy.real }}</p>
                         <p class="mt-1 text-4xl font-extrabold text-emerald-300 sm:text-5xl">
-                            {{ formatBnNumber(realRoas, 2) }}x
+                            {{ formatNumber(realRoas, 2) }}x
                         </p>
                         <p class="mt-2 text-xs text-emerald-100/70">
-                            ≈ {{ formatBnNumber(confirmedPurchases) }}টি কনফার্মড · রেভিনিউ {{ formatTaka(realRevenue) }}
+                            {{ copy.realDetail(confirmedPurchases, realRevenue) }}
                         </p>
                     </div>
 
                     <div class="rounded-2xl border border-amber-500/25 bg-amber-950/20 p-5">
-                        <p class="text-sm text-amber-200/80">ফেক Purchase সিগন্যাল</p>
+                        <p class="text-sm text-amber-200/80">{{ copy.fake }}</p>
                         <p class="mt-1 text-xl font-extrabold text-amber-300">
-                            {{ formatBnNumber(fakePurchases) }}টি · ≈ {{ formatTaka(fakeRevenueSignal) }}
+                            {{ copy.fakeDetail(fakePurchases, fakeRevenueSignal) }}
                         </p>
                         <p class="mt-2 text-xs text-slate-400">
-                            আনুমানিক অ্যাড বাজেট অপচয় ≈ {{ formatTaka(wastedSpend) }}
-                            (স্পেন্ডের {{ formatBnNumber(model.fake_cancel_rate) }}%)
+                            {{ copy.waste(wastedSpend, model.fake_cancel_rate) }}
                         </p>
                     </div>
 

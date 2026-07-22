@@ -16,7 +16,9 @@ class PublicFraudCheckController extends Controller
 
     public function stats(Request $request): JsonResponse
     {
-        return response()->json($this->publicFraudCheckService->meta($request->ip()));
+        $locale = $this->resolveLocale($request);
+
+        return response()->json($this->publicFraudCheckService->meta($request->ip(), $locale));
     }
 
     public function check(Request $request): JsonResponse
@@ -25,12 +27,16 @@ class PublicFraudCheckController extends Controller
 
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
+            'locale' => ['nullable', 'string', 'in:bn,en'],
         ]);
+
+        $locale = $this->resolveLocale($request, $validated['locale'] ?? null);
 
         try {
             $result = $this->publicFraudCheckService->check(
                 (string) $request->ip(),
                 (string) $validated['phone'],
+                $locale,
             );
 
             if ($result['limited'] ?? false) {
@@ -46,8 +52,20 @@ class PublicFraudCheckController extends Controller
             LogHelper::saveLog('Public fraud check error', $th->getMessage());
 
             return response()->json([
-                'message' => 'ফ্রড চেক সম্পন্ন করা যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+                'message' => $locale === 'en'
+                    ? 'Fraud check could not be completed. Please try again shortly.'
+                    : 'ফ্রড চেক সম্পন্ন করা যায়নি। কিছুক্ষণ পর আবার চেষ্টা করুন।',
             ], 500);
         }
+    }
+
+    private function resolveLocale(Request $request, ?string $explicit = null): string
+    {
+        $candidate = $explicit
+            ?? $request->input('locale')
+            ?? $request->header('X-Locale')
+            ?? 'bn';
+
+        return $candidate === 'en' ? 'en' : 'bn';
     }
 }

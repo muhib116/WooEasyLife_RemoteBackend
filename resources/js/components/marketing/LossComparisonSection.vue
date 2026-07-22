@@ -7,7 +7,10 @@ const props = defineProps({
     primaryCtaUrl: { type: String, default: '#' },
     primaryCtaLabel: { type: String, default: 'ফ্রি ট্রায়াল শুরু করুন' },
     fraudCheckEnabled: { type: Boolean, default: true },
+    locale: { type: String, default: 'bn' },
 });
+
+const isEn = computed(() => props.locale === 'en');
 
 const withoutIcons = ['💸', '⏳', '📦', '📱'];
 const withIcons = ['🛡️', '🚚', '✅', '🔔', '🌐'];
@@ -28,7 +31,7 @@ const scrollToFraudCheck = () => {
         <div class="relative mx-auto max-w-6xl px-4 lg:px-8">
             <div class="mx-auto max-w-3xl text-center">
                 <span class="inline-flex rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-300">
-                    তুলনা করে দেখুন
+                    {{ isEn ? 'Compare side by side' : 'তুলনা করে দেখুন' }}
                 </span>
                 <h2 class="mt-4 text-2xl font-extrabold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
                     {{ lossComparison.headline }}
@@ -55,7 +58,9 @@ const scrollToFraudCheck = () => {
                                 ✕
                             </span>
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-rose-300/80">বর্তমান সমস্যা</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-rose-300/80">
+                                    {{ isEn ? 'Current pain' : 'বর্তমান সমস্যা' }}
+                                </p>
                                 <h3 class="text-xl font-bold text-rose-200">
                                     {{ lossComparison.without?.title }}
                                 </h3>
@@ -91,7 +96,7 @@ const scrollToFraudCheck = () => {
                     <!-- With -->
                     <article class="relative flex flex-col rounded-3xl border border-emerald-400/40 bg-gradient-to-br from-emerald-950/50 via-[#141414] to-amber-950/20 p-6 shadow-2xl shadow-emerald-900/20 sm:p-7 lg:-translate-y-1 lg:scale-[1.02]">
                         <span class="absolute -top-3 right-6 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 px-3 py-1 text-xs font-bold text-emerald-950">
-                            সুপারিশকৃত
+                            {{ isEn ? 'Recommended' : 'সুপারিশকৃত' }}
                         </span>
 
                         <div class="flex items-center gap-3">
@@ -99,7 +104,9 @@ const scrollToFraudCheck = () => {
                                 ✓
                             </span>
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-emerald-300/80">স্মার্ট সমাধান</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-emerald-300/80">
+                                    {{ isEn ? 'Smart solution' : 'স্মার্ট সমাধান' }}
+                                </p>
                                 <h3 class="text-xl font-bold text-emerald-200">
                                     {{ lossComparison.with?.title }}
                                 </h3>
@@ -138,7 +145,7 @@ const scrollToFraudCheck = () => {
                                 class="inline-flex flex-1 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
                                 @click="scrollToFraudCheck"
                             >
-                                Free fraud check করুন
+                                {{ isEn ? 'Free fraud check' : 'Free fraud check করুন' }}
                             </button>
                         </div>
                     </article>

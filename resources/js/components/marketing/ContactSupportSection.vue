@@ -4,12 +4,33 @@ import { computed } from 'vue';
 
 const props = defineProps({
     whatsappContactUrl: { type: String, default: null },
-    headline: { type: String, default: 'আরও প্রশ্ন আছে?' },
-    subheadline: { type: String, default: 'আমাদের সাপোর্ট টিম সবসময় প্রস্তুত' },
-    buttonLabel: { type: String, default: 'যোগাযোগ করুন' },
+    headline: { type: String, default: null },
+    subheadline: { type: String, default: null },
+    buttonLabel: { type: String, default: null },
+    locale: { type: String, default: 'bn' },
 });
 
 const page = usePage();
+
+const isEn = computed(() => props.locale === 'en');
+
+const copy = computed(() => (isEn.value
+    ? {
+        headline: 'More questions?',
+        subheadline: 'Our support team is ready to help',
+        buttonLabel: 'Contact us',
+        videoNote: 'Built-in video tutorials on every feature page — get unstuck fast',
+    }
+    : {
+        headline: 'আরও প্রশ্ন আছে?',
+        subheadline: 'আমাদের সাপোর্ট টিম সবসময় প্রস্তুত',
+        buttonLabel: 'যোগাযোগ করুন',
+        videoNote: 'প্রতিটি ফিচারের পেজেই বিল্ট-ইন ভিডিও টিউটোরিয়াল — আটকে গেলে সাথে সাথেই সমাধান',
+    }));
+
+const headlineText = computed(() => props.headline ?? copy.value.headline);
+const subheadlineText = computed(() => props.subheadline ?? copy.value.subheadline);
+const buttonText = computed(() => props.buttonLabel ?? copy.value.buttonLabel);
 
 const contactUrl = computed(
     () => props.whatsappContactUrl || page.props.marketing?.whatsapp_contact_url || null,
@@ -26,14 +47,14 @@ const helpline = computed(() => page.props.marketing?.helpline || null);
                 class="flex flex-col items-center justify-between gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md sm:flex-row sm:gap-8 sm:p-8"
             >
                 <div class="text-center sm:text-left">
-                    <h2 class="text-xl font-bold text-white sm:text-2xl">{{ headline }}</h2>
-                    <p class="mt-1.5 text-sm text-slate-400 sm:text-base">{{ subheadline }}</p>
+                    <h2 class="text-xl font-bold text-white sm:text-2xl">{{ headlineText }}</h2>
+                    <p class="mt-1.5 text-sm text-slate-400 sm:text-base">{{ subheadlineText }}</p>
                     <p class="mt-3 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2 text-left text-xs leading-snug text-slate-300 sm:justify-start sm:rounded-full sm:py-1.5 sm:text-sm">
                         <svg class="h-4 w-4 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        প্রতিটি ফিচারের পেজেই বিল্ট-ইন ভিডিও টিউটোরিয়াল — আটকে গেলে সাথে সাথেই সমাধান
+                        {{ copy.videoNote }}
                     </p>
                     <div
                         v-if="helpline || adminEmail"
@@ -71,7 +92,7 @@ const helpline = computed(() => page.props.marketing?.helpline || null);
                             d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                         />
                     </svg>
-                    {{ buttonLabel }}
+                    {{ buttonText }}
                 </a>
             </div>
         </div>

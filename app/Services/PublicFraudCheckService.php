@@ -24,11 +24,12 @@ class PublicFraudCheckService
     /**
      * @return array<string, mixed>
      */
-    public function meta(?string $ip = null): array
+    public function meta(?string $ip = null, string $locale = 'bn'): array
     {
         $limit = $this->dailyFreeLimit();
         $used = $ip ? $this->ipUsageCount($ip) : 0;
         $displayCount = $this->displayDailySearchCount();
+        $isEn = $locale === 'en';
 
         return [
             'enabled' => $this->isEnabled(),
@@ -36,27 +37,36 @@ class PublicFraudCheckService
             'used_searches' => $used,
             'remaining_searches' => max(0, $limit - $used),
             'daily_search_count' => $displayCount,
-            'daily_search_label' => $this->formatCountLabel($displayCount),
-            'daily_search_phrase' => 'আজকে '.$this->formatCountLabel($displayCount).' বার সার্চ হয়েছে',
-            'free_search_note' => 'রেজিস্ট্রেশন ছাড়াই · প্রতিদিন '.$this->toBnDigits((string) $limit).'টি ফ্রি কাস্টমার চেক',
+            'daily_search_label' => $this->formatCountLabel($displayCount, $locale),
+            'daily_search_phrase' => $isEn
+                ? $this->formatCountLabel($displayCount, $locale).' searches today'
+                : 'আজকে '.$this->formatCountLabel($displayCount, $locale).' বার সার্চ হয়েছে',
+            'free_search_note' => $isEn
+                ? 'No registration · '.$limit.' free customer checks per day'
+                : 'রেজিস্ট্রেশন ছাড়াই · প্রতিদিন '.$this->toBnDigits((string) $limit).'টি ফ্রি কাস্টমার চেক',
             'demo' => config('landing.fraud_check.demo'),
+            'locale' => $locale,
         ];
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function check(string $ip, string $phone): array
+    public function check(string $ip, string $phone, string $locale = 'bn'): array
     {
         if (! $this->isEnabled()) {
             throw new InvalidArgumentException('Public fraud check is currently unavailable.');
         }
 
+        $isEn = $locale === 'en';
+
         if ($this->ipUsageCount($ip) >= $this->dailyFreeLimit()) {
             return [
                 'limited' => true,
-                'message' => 'আপনি আজকের জন্য '.$this->dailyFreeLimit().' টি সার্চ সীমা পৌঁছে গেছেন। আগামীকাল আবার চেষ্টা করুন অথবা সাবস্ক্রিপশন নিন।',
-                'meta' => $this->meta($ip),
+                'message' => $isEn
+                    ? 'You have reached today’s free search limit of '.$this->dailyFreeLimit().'. Try again tomorrow or start a subscription.'
+                    : 'আপনি আজকের জন্য '.$this->dailyFreeLimit().' টি সার্চ সীমা পৌঁছে গেছেন। আগামীকাল আবার চেষ্টা করুন অথবা সাবস্ক্রিপশন নিন।',
+                'meta' => $this->meta($ip, $locale),
             ];
         }
 
@@ -70,10 +80,10 @@ class PublicFraudCheckService
             'limited' => false,
             'phone' => $normalizedPhone,
             'phone_masked' => $this->maskPhone($normalizedPhone),
-            'risk_label' => $this->riskLabel($report),
-            'risk_tone' => $this->riskTone($report),
+            'risk_label' => $this->riskLabel($report, $locale),
+            'risk_tone' => $this->riskTone($report, $locale),
             'report' => $report,
-            'meta' => $this->meta($ip),
+            'meta' => $this->meta($ip, $locale),
         ];
     }
 
@@ -105,19 +115,24 @@ class PublicFraudCheckService
         return (int) round($base * $fraction * $jitter) + $real;
     }
 
-    public function formatCountLabel(int $count): string
+    public function formatCountLabel(int $count, string $locale = 'bn'): string
     {
+        $isEn = $locale === 'en';
+
         if ($count >= 100000) {
-            return $this->toBnDigits(number_format($count / 100000, 1)).' লক্ষ';
+            $value = number_format($count / 100000, 1);
+
+            return $isEn ? $value.' lakh' : $this->toBnDigits($value).' লক্ষ';
         }
 
         if ($count >= 1000) {
             $formatted = number_format($count / 1000, 1);
+            $trimmed = rtrim(rtrim($formatted, '0'), '.');
 
-            return $this->toBnDigits(rtrim(rtrim($formatted, '0'), '.')).'K+';
+            return $isEn ? $trimmed.'K+' : $this->toBnDigits($trimmed).'K+';
         }
 
-        return $this->toBnDigits((string) $count);
+        return $isEn ? (string) $count : $this->toBnDigits((string) $count);
     }
 
     private function toBnDigits(string $value): string
@@ -172,48 +187,49 @@ class PublicFraudCheckService
     /**
      * @param  array<string, mixed>  $report
      */
-    private function riskLabel(array $report): string
+    private function riskLabel(array $report, string $locale = 'bn'): string
     {
+        $isEn = $locale === 'en';
         $rate = (string) ($report['success_rate'] ?? '');
         $percent = $this->extractPercent($rate);
         $total = (int) ($report['total_order'] ?? 0);
 
         if ($total === 0 || str_contains(strtolower($rate), 'no order')) {
-            return 'ইতিহাস নেই';
+            return $isEn ? 'No history' : 'ইতিহাস নেই';
         }
 
         if ($percent === null) {
             if (str_contains(strtolower($rate), 'excellent') || str_contains(strtolower($rate), 'good')) {
-                return 'নিরাপদ গ্রাহক';
+                return $isEn ? 'Safe customer' : 'নিরাপদ গ্রাহক';
             }
 
             if (str_contains(strtolower($rate), 'poor') || str_contains(strtolower($rate), 'risky')) {
-                return 'ঝুঁকিপূর্ণ গ্রাহক';
+                return $isEn ? 'Risky customer' : 'ঝুঁকিপূর্ণ গ্রাহক';
             }
 
-            return 'সতর্কতা প্রয়োজন';
+            return $isEn ? 'Caution advised' : 'সতর্কতা প্রয়োজন';
         }
 
         if ($percent >= 75) {
-            return 'নিরাপদ গ্রাহক';
+            return $isEn ? 'Safe customer' : 'নিরাপদ গ্রাহক';
         }
 
         if ($percent >= 45) {
-            return 'সতর্কতা প্রয়োজন';
+            return $isEn ? 'Caution advised' : 'সতর্কতা প্রয়োজন';
         }
 
-        return 'ঝুঁকিপূর্ণ গ্রাহক';
+        return $isEn ? 'Risky customer' : 'ঝুঁকিপূর্ণ গ্রাহক';
     }
 
     /**
      * @param  array<string, mixed>  $report
      */
-    private function riskTone(array $report): string
+    private function riskTone(array $report, string $locale = 'bn'): string
     {
-        return match ($this->riskLabel($report)) {
-            'নিরাপদ গ্রাহক' => 'safe',
-            'ঝুঁকিপূর্ণ গ্রাহক' => 'risky',
-            'ইতিহাস নেই' => 'neutral',
+        return match ($this->riskLabel($report, $locale)) {
+            'নিরাপদ গ্রাহক', 'Safe customer' => 'safe',
+            'ঝুঁকিপূর্ণ গ্রাহক', 'Risky customer' => 'risky',
+            'ইতিহাস নেই', 'No history' => 'neutral',
             default => 'caution',
         };
     }

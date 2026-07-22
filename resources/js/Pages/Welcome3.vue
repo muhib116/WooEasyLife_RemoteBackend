@@ -58,12 +58,54 @@ const props = defineProps({
     pluginDownloadUrl: { type: String, default: null },
     pendingSubscriptionInquiry: { type: Object, default: null },
     seo: { type: Object, default: null },
+    locale: { type: String, default: 'bn' },
 });
 
 const openFaq = ref(null);
 const showWizard = ref(false);
 const selectedPlan = ref(null);
 const page = usePage();
+
+const isEn = computed(() => props.locale === 'en');
+const localeTag = computed(() => (props.locale === 'en' ? 'en' : 'bn'));
+
+const enRoute = (name, fallback) => {
+    try {
+        return route(name);
+    } catch {
+        return fallback;
+    }
+};
+
+const bdFraudCheckerHref = computed(() => (
+    isEn.value
+        ? enRoute('seo.en.bd-fraud-checker', '/en/bd-fraud-checker')
+        : route('seo.bd-fraud-checker')
+));
+
+const fakeOrderProtectionHref = computed(() => (
+    isEn.value
+        ? enRoute('seo.en.fake-order-protection', '/en/fake-order-protection')
+        : route('seo.fake-order-protection')
+));
+
+const courierAutoEntryHref = computed(() => (
+    isEn.value
+        ? enRoute('seo.en.courier-auto-entry', '/en/courier-auto-entry')
+        : route('seo.courier-auto-entry')
+));
+
+const fraudBdAlternativeHref = computed(() => (
+    isEn.value
+        ? enRoute('seo.en.fraudbd-alternative', '/en/fraudbd-alternative')
+        : route('seo.fraudbd-alternative')
+));
+
+const returnLossCalculatorHref = computed(() => (
+    isEn.value
+        ? enRoute('seo.en.return-loss-calculator', '/en/return-loss-calculator')
+        : route('seo.return-loss-calculator')
+));
 
 const hasPendingInquiry = computed(() => Boolean(props.pendingSubscriptionInquiry?.id));
 
@@ -115,9 +157,13 @@ const previewPlans = computed(() => {
 });
 
 const primaryCtaUrlValue = computed(() => primaryCtaUrl());
-const primaryCtaLabelValue = computed(() => primaryCtaLabel());
+const primaryCtaLabelValue = computed(() => primaryCtaLabel(localeTag.value));
 const merchantLoginLink = computed(() => merchantLoginHref(page.props.auth));
-const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth));
+const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth, localeTag.value));
+
+const pendingButtonLabel = computed(() => (
+    isEn.value ? 'Request in progress' : 'অনুরোধ প্রক্রিয়াধীন'
+));
 
 const pricingHook = computed(() => {
     const featured = props.featuredPlan;
@@ -126,61 +172,178 @@ const pricingHook = computed(() => {
         return null;
     }
 
+    if (isEn.value) {
+        return `${featured.title ?? 'Plan'} ${featured.price_label}/mo — often pays for itself from one day of return loss`;
+    }
+
     return `${featured.title ?? 'প্ল্যান'} ${featured.price_label}/মাস — এক দিনের রিটার্ন লস থেকেই সাশ্রয়`;
 });
 
+const copy = computed(() => (isEn.value
+    ? {
+        seoTitle: 'WooEasyLife — Stop fake orders, simplify courier, grow profit',
+        fraudBadge: 'Free Courier Fraud Checker BD',
+        fraudH2: 'Mobile fraud checker — see history & success rate',
+        fraudP: 'Fake order check · Fake customer check · BD Courier ratio —',
+        fraudToolLink: 'Full tool →',
+        banglaVersion: 'বাংলা ভার্সন',
+        seoCards: [
+            { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'Free fraud checker · courier history', theme: 'emerald' },
+            { href: fakeOrderProtectionHref.value, title: 'Fake order protection', desc: 'OTP · block · cut return loss', theme: 'amber' },
+            { href: courierAutoEntryHref.value, title: 'Courier auto entry', desc: 'Pathao · Steadfast · RedX', theme: 'sky' },
+        ],
+        fraudBdAltPrefix: 'Only need a checker tool?',
+        fraudBdAltLink: 'See FraudBD Alternative',
+        pricingH2: 'The right plan for your business',
+        pricingSub: 'Transparent pricing — no hidden fees',
+        buyPlan: 'Buy this plan',
+        startTrial: 'Start free trial',
+        paymentPrefix: 'Payment:',
+        viewAllPlans: 'View all plans →',
+        trialH2: 'Start free today!',
+        trialSubSuffix: 'Try it yourself — upgrade when you are ready.',
+        faqH2: 'Common questions',
+        finalH2: 'Decide today — save the money and time you lose from tomorrow',
+        finalSub: 'Try the free fraud check first — upgrade when it fits',
+        freeFraudCheck: 'Free fraud check',
+        dedicatedPageLabel: 'Return loss calculator page',
+    }
+    : {
+        seoTitle: 'WooEasyLife — ফেক অর্ডার আটকান, কুরিয়ার সহজ করুন, লাভ বাড়ান',
+        fraudBadge: 'Free Courier Fraud Checker BD · ফ্রড চেকার',
+        fraudH2: 'মোবাইল নম্বর দিয়ে ফ্রড চেকার — হিস্টোরি ও সাকসেস রেট দেখুন',
+        fraudP: 'Fake order check · Fake customer check · BD Courier ratio —',
+        fraudToolLink: 'বিস্তারিত টুল →',
+        fraudHowLink: 'কিভাবে আটকাবো?',
+        banglaVersion: null,
+        seoCards: [
+            { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'ফ্রি ফ্রড চেকার · কুরিয়ার হিস্টোরি', theme: 'emerald' },
+            { href: fakeOrderProtectionHref.value, title: 'ফেক অর্ডার প্রোটেকশন', desc: 'OTP · ব্লক · রিটার্ন লস কমান', theme: 'amber' },
+            { href: courierAutoEntryHref.value, title: 'কুরিয়ার অটো এন্ট্রি', desc: 'Pathao · Steadfast · RedX', theme: 'sky' },
+        ],
+        fraudBdAltPrefix: 'টুল-শুধু চেকারের বিকল্প?',
+        fraudBdAltLink: 'FraudBD Alternative দেখুন',
+        pricingH2: 'আপনার ব্যবসার জন্য সঠিক প্ল্যান',
+        pricingSub: 'স্বচ্ছ মূল্য — কোনো হিডেন চার্জ নেই',
+        buyPlan: 'এই প্ল্যান কিনুন',
+        startTrial: 'ফ্রি ট্রায়াল শুরু করুন',
+        paymentPrefix: 'পেমেন্ট:',
+        viewAllPlans: 'সব প্যাকেজ দেখুন →',
+        trialH2: 'আজই শুরু করুন বিনামূল্যে!',
+        trialSubSuffix: 'নিজে ব্যবহার করে দেখুন, ভালো লাগলে প্ল্যান নিন।',
+        faqH2: 'যা জানতে চান',
+        finalH2: 'আজই সিদ্ধান্ত নিন — কাল থেকেই যে টাকা ও সময় যাচ্ছে, বাঁচান',
+        finalSub: 'আগে ফ্রি ফ্রড চেক করুন — ভালো লাগলে প্ল্যান নিন',
+        freeFraudCheck: 'ফ্রি ফ্রড চেক করুন',
+        dedicatedPageLabel: 'রিটার্ন লস ক্যালকুলেটর পেজ',
+    }));
+
 const faqs = computed(() => {
     const seoFaqs = (props.seo?.faqs || []).map((item) => ({ q: item.q, a: item.a }));
-    const base = [
-        {
-            q: 'কাদের জন্য WooEasyLife?',
-            a: 'বাংলাদেশে WooCommerce ওয়েবসাইট দিয়ে অনলাইন ব্যবসা চালানোদের জন্য — যারা ফেক অর্ডার কমাতে, কুরিয়ার সহজ করতে ও সময় বাঁচাতে চান।',
-        },
-        {
-            q: 'ফ্রি ট্রায়াল কীভাবে পাব?',
-            a: trialPlan.value
-                ? `${trialPlan.value.title} — ${trialPlan.value.duration_label}। কোনো কার্ড লাগবে না। প্রাইসিং পেজ থেকে শুরু করুন।`
-                : 'প্রাইসিং পেজ দেখুন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।',
-        },
-        {
-            q: 'ফ্রি ফ্রড চেক কীভাবে কাজ করে?',
-            a: `এই পেজেই অ্যাকাউন্ট ছাড়া প্রতিদিন ${props.fraudCheck?.daily_free_limit ?? 5}টি ফ্রি চেক করতে পারবেন। নম্বর দিলে কুরিয়ার ডেলিভারি রেকর্ড দেখা যায় — অর্ডার পাঠানোর আগেই বুঝে নিন কাস্টমার বিশ্বস্ত না ঝুঁকিপূর্ণ। বিস্তারিত টুল পেজ: /bd-fraud-checker`,
-        },
-        {
-            q: 'হারানো অর্ডার কীভাবে ফেরাব?',
-            a: 'কাস্টমার কার্টে প্রোডাক্ট রেখে বা অর্ডার শেষ না করলে সেটি আলাদা লিস্টে জমা হয়। কল বা ফ্রড চেক করে এক ক্লিকে অর্ডার বানিয়ে বিক্রি ফিরিয়ে আনতে পারবেন।',
-        },
-        {
-            q: 'একাধিক ওয়েবসাইট চালানো যাবে?',
-            a: 'হ্যাঁ। প্ল্যান অনুযায়ী ২টি, ৩টি বা আনলিমিটেড ওয়েবসাইট — সব এক ড্যাশবোর্ড ও মোবাইল অ্যাপে।',
-        },
-        {
-            q: 'স্টাফের কাজ কীভাবে দেখব?',
-            a: 'স্টাফ যোগ করুন, অর্ডার অ্যাসাইন করুন। অ্যাপ দিয়ে কল করলে কতক্ষণ কথা হয়েছিল সেভ হয় — ক্যানসেল হলে কারণ বোঝা সহজ।',
-        },
-        {
-            q: 'পার্সেল স্টিকার প্রিন্ট করা যায়?',
-            a: 'হ্যাঁ। নাম-ঠিকানা-ফোন সহ স্টিকার ও ইনভয়েস এক ক্লিকে প্রিন্ট — প্যাকিং দ্রুত, ভুল কমে।',
-        },
-        {
-            q: 'কোন কুরিয়ার কাজ করে?',
-            a: 'Pathao, Steadfast, RedX সহ একাধিক কুরিয়ার — এক জায়গা থেকে এন্ট্রি ও আপডেট।',
-        },
-        {
-            q: 'ফেক অর্ডার কি Facebook অ্যাড নষ্ট করে?',
-            a: 'হ্যাঁ। সাধারণ সেটআপে ফেক/ক্যানসেল অর্ডারও «বিক্রি» হিসেবে গোনা হয়, তাই Facebook ভুল মানুষের কাছে অ্যাড দেখায়। WooEasyLife শুধু কনফার্মড অর্ডারকেই বিক্রি ধরে — অ্যাড বাজেট বাঁচে।',
-        },
-        {
-            q: 'সমস্যায় পড়লে সাহায্য পাব কীভাবে?',
-            a: 'প্রতিটি ফিচার পেজে ভিডিও গাইড আছে। আটকে গেলে হোয়াটসঅ্যাপে সরাসরি সাহায্য পাবেন।',
-        },
-        {
-            q: 'পেমেন্ট কীভাবে করব?',
-            a: paymentMethodLabels.value
-                ? `${paymentMethodLabels.value} — পেমেন্ট জমা দিলে দ্রুত চালু হয়ে যায়।`
-                : 'প্রাইসিং পেজ থেকে প্ল্যান বেছে নিন। পেমেন্ট নম্বর সেট থাকলে সেখানেই দেখাবে; নইলে WhatsApp সাপোর্টে যোগাযোগ করুন।',
-        },
-    ];
+    const dailyLimit = props.fraudCheck?.daily_free_limit ?? 5;
+    const fraudPath = isEn.value ? '/en/bd-fraud-checker' : '/bd-fraud-checker';
+
+    const base = isEn.value
+        ? [
+            {
+                q: 'Who is WooEasyLife for?',
+                a: 'Online sellers in Bangladesh running WooCommerce stores — who want fewer fake orders, simpler courier workflows, and more time saved.',
+            },
+            {
+                q: 'How do I get a free trial?',
+                a: trialPlan.value
+                    ? `${trialPlan.value.title} — ${trialPlan.value.duration_label}. No card required. Start from the pricing page.`
+                    : 'See the pricing page or contact us on WhatsApp.',
+            },
+            {
+                q: 'How does the free fraud check work?',
+                a: `Check up to ${dailyLimit} numbers free daily on this page without an account. Enter a phone number to see courier delivery records — know if a customer is trustworthy or risky before shipping. Full tool page: ${fraudPath}`,
+            },
+            {
+                q: 'How do I recover missing orders?',
+                a: 'When customers leave items in cart or abandon checkout, those sit in a separate list. Call or fraud-check, then create the order in one click to recover the sale.',
+            },
+            {
+                q: 'Can I run multiple websites?',
+                a: 'Yes. Depending on your plan — 2, 3, or unlimited sites — all from one dashboard and mobile app.',
+            },
+            {
+                q: 'How do I track staff work?',
+                a: 'Add staff and assign orders. Calls from the app log duration — easier to understand why orders were cancelled.',
+            },
+            {
+                q: 'Can I print parcel stickers?',
+                a: 'Yes. Print stickers and invoices with name, address, and phone in one click — faster packing, fewer mistakes.',
+            },
+            {
+                q: 'Which couriers are supported?',
+                a: 'Pathao, Steadfast, RedX, and more — entry and updates from one place.',
+            },
+            {
+                q: 'Do fake orders hurt Facebook ad ROAS?',
+                a: 'Yes. With a typical setup, fake/cancelled orders still count as “sales”, so Facebook shows ads to the wrong people. WooEasyLife counts only confirmed orders as sales — ad budget goes further.',
+            },
+            {
+                q: 'How do I get help when stuck?',
+                a: 'Every feature page has a video guide. Message us on WhatsApp for direct support.',
+            },
+            {
+                q: 'How do I pay?',
+                a: paymentMethodLabels.value
+                    ? `${paymentMethodLabels.value} — submit payment and get activated quickly.`
+                    : 'Choose a plan on the pricing page. If payment numbers are configured you will see them there; otherwise contact WhatsApp support.',
+            },
+        ]
+        : [
+            {
+                q: 'কাদের জন্য WooEasyLife?',
+                a: 'বাংলাদেশে WooCommerce ওয়েবসাইট দিয়ে অনলাইন ব্যবসা চালানোদের জন্য — যারা ফেক অর্ডার কমাতে, কুরিয়ার সহজ করতে ও সময় বাঁচাতে চান।',
+            },
+            {
+                q: 'ফ্রি ট্রায়াল কীভাবে পাব?',
+                a: trialPlan.value
+                    ? `${trialPlan.value.title} — ${trialPlan.value.duration_label}। কোনো কার্ড লাগবে না। প্রাইসিং পেজ থেকে শুরু করুন।`
+                    : 'প্রাইসিং পেজ দেখুন বা হোয়াটসঅ্যাপে যোগাযোগ করুন।',
+            },
+            {
+                q: 'ফ্রি ফ্রড চেক কীভাবে কাজ করে?',
+                a: `এই পেজেই অ্যাকাউন্ট ছাড়া প্রতিদিন ${dailyLimit}টি ফ্রি চেক করতে পারবেন। নম্বর দিলে কুরিয়ার ডেলিভারি রেকর্ড দেখা যায় — অর্ডার পাঠানোর আগেই বুঝে নিন কাস্টমার বিশ্বস্ত না ঝুঁকিপূর্ণ। বিস্তারিত টুল পেজ: ${fraudPath}`,
+            },
+            {
+                q: 'হারানো অর্ডার কীভাবে ফেরাব?',
+                a: 'কাস্টমার কার্টে প্রোডাক্ট রেখে বা অর্ডার শেষ না করলে সেটি আলাদা লিস্টে জমা হয়। কল বা ফ্রড চেক করে এক ক্লিকে অর্ডার বানিয়ে বিক্রি ফিরিয়ে আনতে পারবেন।',
+            },
+            {
+                q: 'একাধিক ওয়েবসাইট চালানো যাবে?',
+                a: 'হ্যাঁ। প্ল্যান অনুযায়ী ২টি, ৩টি বা আনলিমিটেড ওয়েবসাইট — সব এক ড্যাশবোর্ড ও মোবাইল অ্যাপে।',
+            },
+            {
+                q: 'স্টাফের কাজ কীভাবে দেখব?',
+                a: 'স্টাফ যোগ করুন, অর্ডার অ্যাসাইন করুন। অ্যাপ দিয়ে কল করলে কতক্ষণ কথা হয়েছিল সেভ হয় — ক্যানসেল হলে কারণ বোঝা সহজ।',
+            },
+            {
+                q: 'পার্সেল স্টিকার প্রিন্ট করা যায়?',
+                a: 'হ্যাঁ। নাম-ঠিকানা-ফোন সহ স্টিকার ও ইনভয়েস এক ক্লিকে প্রিন্ট — প্যাকিং দ্রুত, ভুল কমে।',
+            },
+            {
+                q: 'কোন কুরিয়ার কাজ করে?',
+                a: 'Pathao, Steadfast, RedX সহ একাধিক কুরিয়ার — এক জায়গা থেকে এন্ট্রি ও আপডেট।',
+            },
+            {
+                q: 'ফেক অর্ডার কি Facebook অ্যাড নষ্ট করে?',
+                a: 'হ্যাঁ। সাধারণ সেটআপে ফেক/ক্যানসেল অর্ডারও «বিক্রি» হিসেবে গোনা হয়, তাই Facebook ভুল মানুষের কাছে অ্যাড দেখায়। WooEasyLife শুধু কনফার্মড অর্ডারকেই বিক্রি ধরে — অ্যাড বাজেট বাঁচে।',
+            },
+            {
+                q: 'সমস্যায় পড়লে সাহায্য পাব কীভাবে?',
+                a: 'প্রতিটি ফিচার পেজে ভিডিও গাইড আছে। আটকে গেলে হোয়াটসঅ্যাপে সরাসরি সাহায্য পাবেন।',
+            },
+            {
+                q: 'পেমেন্ট কীভাবে করব?',
+                a: paymentMethodLabels.value
+                    ? `${paymentMethodLabels.value} — পেমেন্ট জমা দিলে দ্রুত চালু হয়ে যায়।`
+                    : 'প্রাইসিং পেজ থেকে প্ল্যান বেছে নিন। পেমেন্ট নম্বর সেট থাকলে সেখানেই দেখাবে; নইলে WhatsApp সাপোর্টে যোগাযোগ করুন।',
+            },
+        ];
 
     const seen = new Set(seoFaqs.map((f) => f.q));
     const merged = [...seoFaqs];
@@ -199,7 +362,7 @@ const toggleFaq = (i) => {
 </script>
 
 <template>
-    <SeoHead :seo="seo" title="WooEasyLife — ফেক অর্ডার আটকান, কুরিয়ার সহজ করুন, লাভ বাড়ান" />
+    <SeoHead :seo="seo" :title="copy.seoTitle" />
 
     <MarketingLayout
         :can-login="canLogin"
@@ -217,6 +380,7 @@ const toggleFaq = (i) => {
             :primary-cta-url="primaryCtaUrlValue"
             :primary-cta-label="primaryCtaLabelValue"
             :fraud-check-enabled="fraudCheck?.enabled !== false"
+            :locale="locale"
         />
 
         <!-- 2. Free fraud check (try before buy) -->
@@ -224,19 +388,24 @@ const toggleFaq = (i) => {
             <div class="mx-auto max-w-3xl">
                 <div class="mb-6 text-center sm:mb-8">
                     <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                        Free Courier Fraud Checker BD · ফ্রড চেকার
+                        {{ copy.fraudBadge }}
                     </span>
                     <h2 class="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                        মোবাইল নম্বর দিয়ে ফ্রড চেকার — হিস্টোরি ও সাকসেস রেট দেখুন
+                        {{ copy.fraudH2 }}
                     </h2>
                     <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400 sm:text-base">
-                        Fake order check · Fake customer check · BD Courier ratio —
-                        <Link :href="route('seo.bd-fraud-checker')" class="text-amber-400 hover:text-amber-300">বিস্তারিত টুল →</Link>
-                        ·
-                        <Link :href="route('seo.ki-vabe-fake-order-atkabo')" class="text-amber-400 hover:text-amber-300">কিভাবে আটকাবো?</Link>
+                        {{ copy.fraudP }}
+                        <Link :href="bdFraudCheckerHref" class="text-amber-400 hover:text-amber-300">{{ copy.fraudToolLink }}</Link>
+                        <template v-if="copy.fraudHowLink">
+                            ·
+                            <Link :href="route('seo.ki-vabe-fake-order-atkabo')" class="text-amber-400 hover:text-amber-300">{{ copy.fraudHowLink }}</Link>
+                        </template>
+                    </p>
+                    <p v-if="copy.banglaVersion" class="mt-3">
+                        <Link href="/" class="text-sm text-slate-400 hover:text-amber-300">{{ copy.banglaVersion }}</Link>
                     </p>
                 </div>
-                <LandingFraudCheck :fraud-check="fraudCheck" />
+                <LandingFraudCheck :fraud-check="fraudCheck" :locale="locale" />
             </div>
         </ScrollReveal>
 
@@ -244,36 +413,29 @@ const toggleFaq = (i) => {
         <ScrollReveal as="section" class="px-4 pb-10 lg:px-8">
             <div class="mx-auto grid max-w-6xl gap-4 sm:grid-cols-3">
                 <Link
-                    :href="route('seo.bd-fraud-checker')"
-                    class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 transition hover:border-emerald-400/40"
+                    v-for="card in copy.seoCards"
+                    :key="card.title"
+                    :href="card.href"
+                    class="rounded-2xl border p-5 transition"
+                    :class="card.theme === 'emerald'
+                        ? 'border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-400/40'
+                        : card.theme === 'amber'
+                            ? 'border-amber-500/20 bg-amber-500/5 hover:border-amber-400/40'
+                            : 'border-sky-500/20 bg-sky-500/5 hover:border-sky-400/40'"
                 >
-                    <h2 class="text-base font-bold text-white">BD Fraud Checker</h2>
-                    <p class="mt-1 text-sm text-slate-400">ফ্রি ফ্রড চেকার · কুরিয়ার হিস্টোরি</p>
-                </Link>
-                <Link
-                    :href="route('seo.fake-order-protection')"
-                    class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 transition hover:border-amber-400/40"
-                >
-                    <h2 class="text-base font-bold text-white">ফেক অর্ডার প্রোটেকশন</h2>
-                    <p class="mt-1 text-sm text-slate-400">OTP · ব্লক · রিটার্ন লস কমান</p>
-                </Link>
-                <Link
-                    :href="route('seo.courier-auto-entry')"
-                    class="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-5 transition hover:border-sky-400/40"
-                >
-                    <h2 class="text-base font-bold text-white">কুরিয়ার অটো এন্ট্রি</h2>
-                    <p class="mt-1 text-sm text-slate-400">Pathao · Steadfast · RedX</p>
+                    <h2 class="text-base font-bold text-white">{{ card.title }}</h2>
+                    <p class="mt-1 text-sm text-slate-400">{{ card.desc }}</p>
                 </Link>
             </div>
             <p class="mx-auto mt-4 max-w-6xl text-center text-sm text-slate-500">
-                টুল-শুধু চেকারের বিকল্প?
-                <Link :href="route('seo.fraudbd-alternative')" class="text-amber-400 hover:text-amber-300">FraudBD Alternative দেখুন</Link>
+                {{ copy.fraudBdAltPrefix }}
+                <Link :href="fraudBdAlternativeHref" class="text-amber-400 hover:text-amber-300">{{ copy.fraudBdAltLink }}</Link>
             </p>
         </ScrollReveal>
 
         <!-- 3. Courier trust + performance proof -->
         <ScrollReveal :delay="80">
-            <CourierTrustStrip />
+            <CourierTrustStrip :locale="locale" />
         </ScrollReveal>
 
         <ScrollReveal :delay="100">
@@ -297,8 +459,9 @@ const toggleFaq = (i) => {
                 :scenarios="roiScenarios"
                 :primary-cta-url="primaryCtaUrlValue"
                 :primary-cta-label="primaryCtaLabelValue"
-                :dedicated-page-href="route('seo.return-loss-calculator')"
-                dedicated-page-label="রিটার্ন লস ক্যালকুলেটর পেজ"
+                :dedicated-page-href="returnLossCalculatorHref"
+                :dedicated-page-label="copy.dedicatedPageLabel"
+                :locale="locale"
             />
         </ScrollReveal>
 
@@ -309,6 +472,7 @@ const toggleFaq = (i) => {
                 :primary-cta-url="primaryCtaUrlValue"
                 :primary-cta-label="primaryCtaLabelValue"
                 :fraud-check-enabled="fraudCheck?.enabled !== false"
+                :locale="locale"
             />
         </ScrollReveal>
 
@@ -324,7 +488,7 @@ const toggleFaq = (i) => {
 
         <!-- 8. How it works -->
         <ScrollReveal :delay="80">
-            <HowItWorksSection :steps="howItWorks" />
+            <HowItWorksSection :steps="howItWorks" :locale="locale" />
         </ScrollReveal>
 
         <!-- 9. Feature deep-dives (accordion) -->
@@ -341,8 +505,8 @@ const toggleFaq = (i) => {
         <ScrollReveal as="section" id="pricing" class="scroll-mt-24 py-14 sm:py-20">
             <div class="mx-auto max-w-6xl px-4 lg:px-8">
                 <div class="text-center">
-                    <h2 class="text-2xl font-bold text-white sm:text-3xl">আপনার ব্যবসার জন্য সঠিক প্ল্যান</h2>
-                    <p class="mt-3 text-sm text-slate-400 sm:text-base">স্বচ্ছ মূল্য — কোনো হিডেন চার্জ নেই</p>
+                    <h2 class="text-2xl font-bold text-white sm:text-3xl">{{ copy.pricingH2 }}</h2>
+                    <p class="mt-3 text-sm text-slate-400 sm:text-base">{{ copy.pricingSub }}</p>
                     <p v-if="pricingHook" class="mx-auto mt-2 max-w-lg text-sm font-medium text-emerald-400">
                         {{ pricingHook }}
                     </p>
@@ -396,19 +560,19 @@ const toggleFaq = (i) => {
                             @click="openPurchase(plan, 'landing_pricing_card')"
                         >
                             {{ hasPendingInquiry
-                                ? 'অনুরোধ প্রক্রিয়াধীন'
-                                : (plan.package_duration === 'free_trial' ? 'ফ্রি ট্রায়াল শুরু করুন' : 'এই প্ল্যান কিনুন') }}
+                                ? pendingButtonLabel
+                                : (plan.package_duration === 'free_trial' ? copy.startTrial : copy.buyPlan) }}
                         </button>
                     </article>
                 </div>
 
                 <p v-if="paymentMethods.length" class="mt-6 text-center text-xs text-slate-500">
-                    পেমেন্ট: {{ paymentMethods.join(' · ') }}
+                    {{ copy.paymentPrefix }} {{ paymentMethods.join(' · ') }}
                 </p>
 
                 <div class="mt-8 text-center">
                     <Link :href="route('pricing')" class="text-sm font-semibold text-amber-400 hover:text-amber-300">
-                        সব প্যাকেজ দেখুন →
+                        {{ copy.viewAllPlans }}
                     </Link>
                 </div>
             </div>
@@ -424,10 +588,10 @@ const toggleFaq = (i) => {
             <section class="px-4 py-10 sm:py-14">
             <div class="mx-auto max-w-4xl">
                 <div class="overflow-hidden rounded-3xl bg-gradient-to-br from-amber-600 via-yellow-500 to-amber-800 p-6 text-center shadow-2xl sm:p-10">
-                    <h2 class="text-2xl font-extrabold text-white sm:text-3xl">আজই শুরু করুন বিনামূল্যে!</h2>
+                    <h2 class="text-2xl font-extrabold text-white sm:text-3xl">{{ copy.trialH2 }}</h2>
                     <p class="mx-auto mt-3 max-w-lg text-sm text-amber-50 sm:text-base">
-                        {{ trialPlan.title }} — {{ trialPlan.duration_label }}।
-                        নিজে ব্যবহার করে দেখুন, ভালো লাগলে প্ল্যান নিন।
+                        {{ trialPlan.title }} — {{ trialPlan.duration_label }}<template v-if="!isEn">।</template><template v-else>.</template>
+                        {{ copy.trialSubSuffix }}
                     </p>
                     <button
                         type="button"
@@ -435,7 +599,7 @@ const toggleFaq = (i) => {
                         :disabled="hasPendingInquiry"
                         @click="openPurchase(trialPlan, 'landing_trial_banner')"
                     >
-                        {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : 'ফ্রি ট্রায়াল শুরু করুন' }}
+                        {{ hasPendingInquiry ? pendingButtonLabel : copy.startTrial }}
                     </button>
                 </div>
             </div>
@@ -464,7 +628,7 @@ const toggleFaq = (i) => {
         <!-- 16. FAQ -->
         <ScrollReveal as="section" id="faq" class="scroll-mt-24 border-t border-white/10 bg-[#111111] py-14 sm:py-20">
             <div class="mx-auto max-w-3xl px-4 lg:px-8">
-                <h2 class="text-center text-2xl font-bold text-white sm:text-3xl">যা জানতে চান</h2>
+                <h2 class="text-center text-2xl font-bold text-white sm:text-3xl">{{ copy.faqH2 }}</h2>
                 <div class="mt-8 space-y-3 sm:mt-10">
                     <div
                         v-for="(item, i) in faqs"
@@ -498,7 +662,7 @@ const toggleFaq = (i) => {
 
         <!-- Contact support -->
         <ScrollReveal :delay="80">
-            <ContactSupportSection :whatsapp-contact-url="whatsappContactUrl" />
+            <ContactSupportSection :whatsapp-contact-url="whatsappContactUrl" :locale="locale" />
         </ScrollReveal>
 
         <!-- 16. Final CTA -->
@@ -506,17 +670,17 @@ const toggleFaq = (i) => {
             <section class="px-4 py-12 sm:py-16">
             <div class="mx-auto max-w-3xl text-center">
                 <h2 class="text-2xl font-bold text-white sm:text-3xl">
-                    আজই সিদ্ধান্ত নিন — কাল থেকেই যে টাকা ও সময় যাচ্ছে, বাঁচান
+                    {{ copy.finalH2 }}
                 </h2>
                 <p class="mt-3 text-sm text-slate-400 sm:text-base">
-                    আগে ফ্রি ফ্রড চেক করুন — ভালো লাগলে প্ল্যান নিন
+                    {{ copy.finalSub }}
                 </p>
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <a
                         href="#fraud-check"
                         class="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/10"
                     >
-                        ফ্রি ফ্রড চেক করুন
+                        {{ copy.freeFraudCheck }}
                     </a>
                     <Link
                         v-if="canLogin"
@@ -531,7 +695,7 @@ const toggleFaq = (i) => {
                         :disabled="hasPendingInquiry"
                         @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0], 'landing_final_cta')"
                     >
-                        {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : primaryCtaLabelValue }}
+                        {{ hasPendingInquiry ? pendingButtonLabel : primaryCtaLabelValue }}
                     </button>
                 </div>
             </div>
@@ -546,7 +710,7 @@ const toggleFaq = (i) => {
                 :disabled="hasPendingInquiry"
                 @click="openPurchase(trialPlan ?? featuredPlan ?? previewPlans[0], 'landing_sticky_cta')"
             >
-                {{ hasPendingInquiry ? 'অনুরোধ প্রক্রিয়াধীন' : primaryCtaLabelValue }}
+                {{ hasPendingInquiry ? pendingButtonLabel : primaryCtaLabelValue }}
             </button>
         </div>
 

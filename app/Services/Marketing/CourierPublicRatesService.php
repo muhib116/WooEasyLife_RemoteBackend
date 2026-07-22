@@ -27,7 +27,7 @@ class CourierPublicRatesService
     /**
      * @return array<string, mixed>
      */
-    public function calculatorConfig(): array
+    public function calculatorConfig(string $locale = 'bn'): array
     {
         $base = config('landing.courier_charge_calculator', []);
         $couriers = is_array($base['couriers'] ?? null) ? $base['couriers'] : [];
@@ -79,11 +79,6 @@ class CourierPublicRatesService
         $liveCount = collect($couriers)->where('source', 'live')->count();
 
         $base['couriers'] = $couriers;
-        $base['headline'] = 'Pathao · Steadfast · RedX — ডেলিভারি চার্জ হিসাব';
-        $base['subtitle'] = $liveCount > 0
-            ? 'Steadfast রেট প্রতিদিন অফিসিয়াল প্রাইসিং API থেকে আপডেট হয়। Pathao লাইভ সাইনক কনফিগ থাকলে চালু।'
-            : 'জোন ও ওজন দিন — তুলনা দেখুন। লাইভ সিঙ্ক চালু না থাকলে আনুমানিক রেট দেখায়।';
-        $base['note'] = '* Steadfast: অফিসিয়াল পাবলিক প্রাইসিং (steadfast.com.bd/pricing)। Pathao: মার্চেন্ট লগইন/API ছাড়া পাবলিক রেট নেই — কনফিগ থাকলে দৈনিক স্যাম্পল। RedX: আনুমানিক। COD ফি আলাদা অনুমান।';
         $base['official_links'] = [
             ['label' => 'Steadfast Price Calculator', 'url' => 'https://www.steadfast.com.bd/pricing'],
             ['label' => 'Pathao Merchant', 'url' => 'https://merchant.pathao.com/login'],
@@ -92,6 +87,55 @@ class CourierPublicRatesService
             $steadfastLive['synced_at'] ?? null,
             $pathaoLive['synced_at'] ?? null,
         ])->filter()->sortDesc()->first();
+
+        if ($locale === 'en') {
+            return $this->applyEnglishCopy($base, $liveCount);
+        }
+
+        $base['headline'] = 'Pathao · Steadfast · RedX — ডেলিভারি চার্জ হিসাব';
+        $base['subtitle'] = $liveCount > 0
+            ? 'Steadfast রেট প্রতিদিন অফিসিয়াল প্রাইসিং API থেকে আপডেট হয়। Pathao লাইভ সাইনক কনফিগ থাকলে চালু।'
+            : 'জোন ও ওজন দিন — তুলনা দেখুন। লাইভ সিঙ্ক চালু না থাকলে আনুমানিক রেট দেখায়।';
+        $base['note'] = '* Steadfast: অফিসিয়াল পাবলিক প্রাইসিং (steadfast.com.bd/pricing)। Pathao: মার্চেন্ট লগইন/API ছাড়া পাবলিক রেট নেই — কনফিগ থাকলে দৈনিক স্যাম্পল। RedX: আনুমানিক। COD ফি আলাদা অনুমান।';
+
+        return $base;
+    }
+
+    /**
+     * Overlay English marketing copy while keeping synced courier rate tables.
+     *
+     * @param  array<string, mixed>  $base
+     * @return array<string, mixed>
+     */
+    private function applyEnglishCopy(array $base, int $liveCount): array
+    {
+        $en = config('landing.courier_charge_calculator_en', []);
+
+        foreach (['badge', 'subscription_note', 'zones'] as $key) {
+            if (isset($en[$key])) {
+                $base[$key] = $en[$key];
+            }
+        }
+
+        if (isset($en['inputs']) && is_array($en['inputs'])) {
+            $inputs = is_array($base['inputs'] ?? null) ? $base['inputs'] : [];
+            foreach ($en['inputs'] as $inputKey => $inputCfg) {
+                if (! is_array($inputCfg)) {
+                    continue;
+                }
+                $inputs[$inputKey] = array_merge(
+                    is_array($inputs[$inputKey] ?? null) ? $inputs[$inputKey] : [],
+                    $inputCfg,
+                );
+            }
+            $base['inputs'] = $inputs;
+        }
+
+        $base['headline'] = $en['headline'] ?? 'Pathao · Steadfast · RedX — estimate delivery charges';
+        $base['subtitle'] = $liveCount > 0
+            ? ($en['subtitle_live'] ?? 'Steadfast rates update daily from the official pricing API. Pathao live sync runs when merchant API is configured.')
+            : ($en['subtitle'] ?? 'Enter zone and weight to compare estimates. Approximate rates show when live sync is off.');
+        $base['note'] = $en['note'] ?? '* Steadfast: official public pricing (steadfast.com.bd/pricing). Pathao: no public rates without merchant login/API — daily samples when configured. RedX: estimate. COD fee is a separate estimate.';
 
         return $base;
     }

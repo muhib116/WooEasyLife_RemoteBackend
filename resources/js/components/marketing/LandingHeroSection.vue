@@ -11,7 +11,22 @@ const props = defineProps({
     primaryCtaUrl: { type: String, required: true },
     primaryCtaLabel: { type: String, required: true },
     fraudCheckEnabled: { type: Boolean, default: true },
+    locale: { type: String, default: 'bn' },
 });
+
+const isEn = computed(() => props.locale === 'en');
+
+const copy = computed(() => (isEn.value
+    ? {
+        pricingCta: 'View plans & pricing',
+        fraudAnchor: 'Enter a phone number, see courier history —',
+        fraudAnchorAccent: 'completely free',
+    }
+    : {
+        pricingCta: 'প্যাকেজ ও মূল্য দেখুন',
+        fraudAnchor: 'শুধু নম্বর দিন, কাস্টমারের কুরিয়ার হিস্টোরি দেখে নিন —',
+        fraudAnchorAccent: 'একদম ফ্রি',
+    }));
 
 const badgeLabel = computed(() => {
     const raw = props.hero.badge || '';
@@ -75,9 +90,9 @@ const onHeroCta = (location, href, label) => {
                     <Link
                         :href="route('pricing')"
                         class="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 active:scale-[0.99] sm:min-h-[3.25rem] sm:w-auto sm:px-8"
-                        @click="onHeroCta('hero_pricing', route('pricing'), 'প্যাকেজ ও মূল্য দেখুন')"
+                        @click="onHeroCta('hero_pricing', route('pricing'), copy.pricingCta)"
                     >
-                        প্যাকেজ ও মূল্য দেখুন
+                        {{ copy.pricingCta }}
                     </Link>
                 </div>
 
@@ -85,7 +100,7 @@ const onHeroCta = (location, href, label) => {
                     v-if="fraudCheckEnabled"
                     href="#fraud-check"
                     class="landing-hero__item landing-hero__item--6 group mt-3 flex min-h-12 w-full items-center gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-3.5 py-3 text-left transition hover:border-amber-400/40 hover:bg-amber-500/15 sm:mt-4 sm:px-4"
-                    @click="onHeroCta('hero_fraud_anchor', '#fraud-check', 'ফ্রি ফ্রড চেক')"
+                    @click="onHeroCta('hero_fraud_anchor', '#fraud-check', isEn ? 'Free fraud check' : 'ফ্রি ফ্রড চেক')"
                 >
                     <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-300 transition group-hover:border-amber-400/50">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -93,8 +108,8 @@ const onHeroCta = (location, href, label) => {
                         </svg>
                     </span>
                     <span class="min-w-0 flex-1 text-sm font-semibold leading-snug text-amber-200">
-                        শুধু নম্বর দিন, কাস্টমারের কুরিয়ার হিস্টোরি দেখে নিন —
-                        <span class="text-amber-400">একদম ফ্রি</span>
+                        {{ copy.fraudAnchor }}
+                        <span class="text-amber-400">{{ copy.fraudAnchorAccent }}</span>
                     </span>
                     <svg class="hidden h-4 w-4 shrink-0 text-amber-400/80 transition group-hover:translate-x-0.5 sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />

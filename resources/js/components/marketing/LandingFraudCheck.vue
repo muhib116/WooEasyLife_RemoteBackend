@@ -8,7 +8,62 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    locale: { type: String, default: 'bn' },
 });
+
+const isEn = computed(() => props.locale === 'en');
+
+const copy = computed(() => (isEn.value
+    ? {
+        invalidPhone: 'Enter a valid Bangladesh mobile number (e.g. 017XXXXXXXX)',
+        limitExceeded: "Today's free searches are used up.",
+        checkFailed: 'Could not complete fraud check. Please try again.',
+        formTitle: 'Enter a number — reduce return risk.',
+        formSubtitle: 'See courier delivery history before you confirm the order',
+        checking: 'Checking...',
+        checkButton: 'Check fraud',
+        remainingToday: (n) => ` · ${n} left today`,
+        loading: 'Verifying courier data...',
+        sampleReport: 'Sample report — enter a number above to check yourself',
+        searchedNumber: 'Searched number',
+        total: 'Total',
+        delivered: 'Delivered',
+        returns: 'Returns',
+        successRate: 'Success rate',
+        courierReport: 'Courier breakdown',
+        noDeliveryData: 'No delivery data',
+        steadfastNotes: 'Steadfast fraud notes',
+        reportsCount: (n) => `${n} report${n === 1 ? '' : 's'}`,
+        consignment: 'Consignment',
+        user: 'User',
+        noFraudNotes: 'No Steadfast fraud notes found for this number.',
+        courierDeliveryLine: (confirmed, cancel) => `${confirmed} delivered · ${cancel} returns`,
+    }
+    : {
+        invalidPhone: 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)',
+        limitExceeded: 'আজকের ফ্রি সার্চ শেষ হয়ে গেছে।',
+        checkFailed: 'ফ্রড চেক সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।',
+        formTitle: 'নম্বর দিন — রিটার্নের ঝুঁকি কমান।',
+        formSubtitle: 'কুরিয়ার ডেলিভারি হিস্ট্রি দেখে অর্ডার কনফার্মের আগেই বুঝে নিন কাস্টমার কেমন',
+        checking: 'চেক হচ্ছে...',
+        checkButton: 'ফ্রড চেক করুন',
+        remainingToday: (n) => ` · আজ বাকি ${n}টি`,
+        loading: 'কুরিয়ার ডাটা যাচাই হচ্ছে...',
+        sampleReport: 'নমুনা রিপোর্ট — উপরে নম্বর দিয়ে নিজে চেক করুন',
+        searchedNumber: 'সার্চ করা নম্বর',
+        total: 'মোট',
+        delivered: 'ডেলিভারি',
+        returns: 'রিটার্ন',
+        successRate: 'সাকসেস রেট',
+        courierReport: 'কুরিয়ার ভিত্তিক রিপোর্ট',
+        noDeliveryData: 'কোনো ডেলিভারি ডাটা নেই',
+        steadfastNotes: 'Steadfast ফ্রড নোট',
+        reportsCount: (n) => `${n}টি রিপোর্ট`,
+        consignment: 'কনসাইনমেন্ট',
+        user: 'ইউজার',
+        noFraudNotes: 'এই নম্বরের জন্য Steadfast-এ কোনো ফ্রড নোট পাওয়া যায়নি।',
+        courierDeliveryLine: (confirmed, cancel) => `${confirmed} ডেলিভারি · ${cancel} রিটার্ন`,
+    }));
 
 const phone = ref('');
 const isLoading = ref(false);
@@ -109,7 +164,7 @@ const formatFraudDate = (value) => {
     }
 
     try {
-        return new Intl.DateTimeFormat('bn-BD', {
+        return new Intl.DateTimeFormat(isEn.value ? 'en-US' : 'bn-BD', {
             dateStyle: 'medium',
             timeStyle: 'short',
         }).format(new Date(value));
@@ -122,7 +177,7 @@ const handleSearch = async () => {
     const normalized = normalizePhone(phone.value);
 
     if (!/^01[3-9]\d{8}$/.test(normalized)) {
-        errorMessage.value = 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)';
+        errorMessage.value = copy.value.invalidPhone;
         return;
     }
 
@@ -134,6 +189,7 @@ const handleSearch = async () => {
     try {
         const { data } = await axios.post(route('landing.fraud-check.check'), {
             phone: normalized,
+            locale: props.locale,
         }, { timeout: 120000 });
 
         result.value = data;
@@ -147,12 +203,12 @@ const handleSearch = async () => {
         const response = error?.response;
 
         if (response?.status === 429) {
-            limitMessage.value = response.data?.message ?? 'আজকের ফ্রি সার্চ শেষ হয়ে গেছে।';
+            limitMessage.value = response.data?.message ?? copy.value.limitExceeded;
             meta.value = response.data?.meta ?? meta.value;
             return;
         }
 
-        errorMessage.value = response?.data?.message ?? 'ফ্রড চেক সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।';
+        errorMessage.value = response?.data?.message ?? copy.value.checkFailed;
     } finally {
         isLoading.value = false;
     }
@@ -171,9 +227,9 @@ const handleSearch = async () => {
 
         <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/80 shadow-2xl shadow-amber-900/20">
             <div class="border-b border-white/10 px-4 py-4 sm:px-5">
-                <p class="text-sm font-semibold text-white">নম্বর দিন — রিটার্নের ঝুঁকি কমান।</p>
+                <p class="text-sm font-semibold text-white">{{ copy.formTitle }}</p>
                 <p class="mt-1 text-xs text-slate-400">
-                    কুরিয়ার ডেলিভারি হিস্ট্রি দেখে অর্ডার কনফার্মের আগেই বুঝে নিন কাস্টমার কেমন
+                    {{ copy.formSubtitle }}
                 </p>
             </div>
 
@@ -196,14 +252,14 @@ const handleSearch = async () => {
                         :disabled="isLoading || remainingSearches <= 0"
                     >
                         <span v-if="isLoading" class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        {{ isLoading ? 'চেক হচ্ছে...' : 'ফ্রড চেক করুন' }}
+                        {{ isLoading ? copy.checking : copy.checkButton }}
                     </button>
                 </form>
 
                 <p v-if="freeSearchNote" class="mt-3 text-center text-xs text-slate-500">
                     {{ freeSearchNote }}
                     <span v-if="remainingSearches > 0" class="text-slate-400">
-                        · আজ বাকি {{ remainingSearches }}টি
+                        {{ copy.remainingToday(remainingSearches) }}
                     </span>
                 </p>
 
@@ -223,7 +279,7 @@ const handleSearch = async () => {
 
                 <div v-if="isLoading" class="mt-6 flex flex-col items-center gap-3 py-8 text-sm text-slate-400">
                     <div class="h-10 w-10 animate-spin rounded-full border-2 border-amber-500/30 border-t-amber-400" />
-                    কুরিয়ার ডাটা যাচাই হচ্ছে...
+                    {{ copy.loading }}
                 </div>
 
                 <!-- Sample report shown before the first search -->
@@ -231,14 +287,14 @@ const handleSearch = async () => {
                     <div class="flex items-center justify-between gap-2">
                         <span class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">
                             <span class="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                            নমুনা রিপোর্ট — উপরে নম্বর দিয়ে নিজে চেক করুন
+                            {{ copy.sampleReport }}
                         </span>
                     </div>
 
                     <div class="pointer-events-none space-y-4 opacity-80">
                         <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
                             <div>
-                                <p class="text-xs text-slate-400">সার্চ করা নম্বর</p>
+                                <p class="text-xs text-slate-400">{{ copy.searchedNumber }}</p>
                                 <p class="text-lg font-bold text-white">{{ demo.phone_masked }}</p>
                             </div>
                             <span class="rounded-full border px-3 py-1 text-xs font-bold" :class="riskClass(demo.risk_tone)">
@@ -248,26 +304,26 @@ const handleSearch = async () => {
 
                         <div class="grid grid-cols-3 gap-2 sm:gap-3">
                             <div class="rounded-xl border border-white/10 bg-white/5 p-2.5 text-center sm:p-3">
-                                <p class="text-[11px] text-slate-400 sm:text-xs">মোট</p>
+                                <p class="text-[11px] text-slate-400 sm:text-xs">{{ copy.total }}</p>
                                 <p class="text-lg font-bold text-white sm:text-xl">{{ demo.total_order }}</p>
                             </div>
                             <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-center sm:p-3">
-                                <p class="text-[11px] text-emerald-300 sm:text-xs">ডেলিভারি</p>
+                                <p class="text-[11px] text-emerald-300 sm:text-xs">{{ copy.delivered }}</p>
                                 <p class="text-lg font-bold text-emerald-300 sm:text-xl">{{ demo.confirmed }}</p>
                             </div>
                             <div class="rounded-xl border border-rose-500/20 bg-rose-500/10 p-2.5 text-center sm:p-3">
-                                <p class="text-[11px] text-rose-300 sm:text-xs">রিটার্ন</p>
+                                <p class="text-[11px] text-rose-300 sm:text-xs">{{ copy.returns }}</p>
                                 <p class="text-lg font-bold text-rose-300 sm:text-xl">{{ demo.cancel }}</p>
                             </div>
                         </div>
 
                         <div class="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-                            <p class="text-xs text-slate-400">সাকসেস রেট</p>
+                            <p class="text-xs text-slate-400">{{ copy.successRate }}</p>
                             <p class="mt-1 text-2xl font-extrabold text-amber-300">{{ demo.success_rate }}</p>
                         </div>
 
                         <div v-if="demo.couriers?.length" class="space-y-2">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">কুরিয়ার ভিত্তিক রিপোর্ট</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ copy.courierReport }}</p>
                             <div
                                 v-for="item in demo.couriers"
                                 :key="item.title"
@@ -285,7 +341,7 @@ const handleSearch = async () => {
                                     </div>
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-white">{{ item.title }}</p>
-                                        <p class="text-xs leading-snug text-slate-400">{{ item.confirmed }} ডেলিভারি · {{ item.cancel }} রিটার্ন</p>
+                                        <p class="text-xs leading-snug text-slate-400">{{ copy.courierDeliveryLine(item.confirmed, item.cancel) }}</p>
                                     </div>
                                 </div>
                                 <span class="shrink-0 text-sm font-bold text-emerald-400">{{ item.success_rate }}</span>
@@ -297,7 +353,7 @@ const handleSearch = async () => {
                 <div v-else-if="result?.report" class="mt-6 space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
                         <div>
-                            <p class="text-xs text-slate-400">সার্চ করা নম্বর</p>
+                            <p class="text-xs text-slate-400">{{ copy.searchedNumber }}</p>
                             <p class="text-lg font-bold text-white">{{ result.phone_masked }}</p>
                         </div>
                         <span
@@ -310,28 +366,28 @@ const handleSearch = async () => {
 
                     <div class="grid grid-cols-3 gap-2 sm:gap-3">
                         <div class="rounded-xl border border-white/10 bg-white/5 p-2.5 text-center sm:p-3">
-                            <p class="text-[11px] text-slate-400 sm:text-xs">মোট</p>
+                            <p class="text-[11px] text-slate-400 sm:text-xs">{{ copy.total }}</p>
                             <p class="text-lg font-bold text-white sm:text-xl">{{ result.report.total_order ?? 0 }}</p>
                         </div>
                         <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-center sm:p-3">
-                            <p class="text-[11px] text-emerald-300 sm:text-xs">ডেলিভারি</p>
+                            <p class="text-[11px] text-emerald-300 sm:text-xs">{{ copy.delivered }}</p>
                             <p class="text-lg font-bold text-emerald-300 sm:text-xl">{{ result.report.confirmed ?? 0 }}</p>
                         </div>
                         <div class="rounded-xl border border-rose-500/20 bg-rose-500/10 p-2.5 text-center sm:p-3">
-                            <p class="text-[11px] text-rose-300 sm:text-xs">রিটার্ন</p>
+                            <p class="text-[11px] text-rose-300 sm:text-xs">{{ copy.returns }}</p>
                             <p class="text-lg font-bold text-rose-300 sm:text-xl">{{ result.report.cancel ?? 0 }}</p>
                         </div>
                     </div>
 
                     <div class="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-                        <p class="text-xs text-slate-400">সাকসেস রেট</p>
+                        <p class="text-xs text-slate-400">{{ copy.successRate }}</p>
                         <p class="mt-1 text-2xl font-extrabold text-amber-300">
                             {{ result.report.success_rate }}
                         </p>
                     </div>
 
                     <div v-if="result.report.courier?.length" class="space-y-2">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">কুরিয়ার ভিত্তিক রিপোর্ট</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ copy.courierReport }}</p>
                         <div
                             v-for="item in result.report.courier"
                             :key="item.title"
@@ -355,9 +411,9 @@ const handleSearch = async () => {
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-semibold text-white">{{ item.title }}</p>
                                     <p v-if="item.report?.total_order > 0" class="text-xs leading-snug text-slate-400">
-                                        {{ item.report.confirmed }} ডেলিভারি · {{ item.report.cancel }} রিটার্ন
+                                        {{ copy.courierDeliveryLine(item.report.confirmed, item.report.cancel) }}
                                     </p>
-                                    <p v-else class="text-xs text-slate-500">কোনো ডেলিভারি ডাটা নেই</p>
+                                    <p v-else class="text-xs text-slate-500">{{ copy.noDeliveryData }}</p>
                                 </div>
                             </div>
                             <span class="shrink-0 text-sm font-bold" :class="courierRateClass(item.report)">
@@ -369,13 +425,13 @@ const handleSearch = async () => {
                     <div class="space-y-2">
                         <div class="flex items-center justify-between gap-2">
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                Steadfast ফ্রড নোট
+                                {{ copy.steadfastNotes }}
                             </p>
                             <span
                                 v-if="fraudNotes.length"
                                 class="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-xs font-bold text-rose-300"
                             >
-                                {{ fraudNotes.length }}টি রিপোর্ট
+                                {{ copy.reportsCount(fraudNotes.length) }}
                             </span>
                         </div>
 
@@ -412,8 +468,8 @@ const handleSearch = async () => {
                                             {{ note.details }}
                                         </p>
                                         <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-rose-200/80">
-                                            <span v-if="note.consignment_id">কনসাইনমেন্ট: {{ note.consignment_id }}</span>
-                                            <span v-if="note.user_id">ইউজার: {{ note.user_id }}</span>
+                                            <span v-if="note.consignment_id">{{ copy.consignment }}: {{ note.consignment_id }}</span>
+                                            <span v-if="note.user_id">{{ copy.user }}: {{ note.user_id }}</span>
                                             <span v-if="note.created_at">{{ formatFraudDate(note.created_at) }}</span>
                                         </div>
                                     </div>
@@ -425,7 +481,7 @@ const handleSearch = async () => {
                             v-else
                             class="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400"
                         >
-                            এই নম্বরের জন্য Steadfast-এ কোনো ফ্রড নোট পাওয়া যায়নি।
+                            {{ copy.noFraudNotes }}
                         </p>
                     </div>
                 </div>

@@ -1,15 +1,24 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     steps: { type: Array, default: () => [] },
+    locale: { type: String, default: 'bn' },
 });
+
+const isEn = computed(() => props.locale === 'en');
 </script>
 
 <template>
     <section v-if="steps.length" id="how-it-works" class="scroll-mt-24 border-t border-white/10 bg-[#111111] py-14 sm:py-20">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div class="text-center">
-                <h2 class="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">কিভাবে কাজ করে?</h2>
-                <p class="mt-3 text-sm text-slate-400 sm:text-base">মাত্র ৪ ধাপে শুরু — সহজ ও দ্রুত</p>
+                <h2 class="text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
+                    {{ isEn ? 'How it works' : 'কিভাবে কাজ করে?' }}
+                </h2>
+                <p class="mt-3 text-sm text-slate-400 sm:text-base">
+                    {{ isEn ? 'Get started in 4 simple steps' : 'মাত্র ৪ ধাপে শুরু — সহজ ও দ্রুত' }}
+                </p>
             </div>
 
             <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">

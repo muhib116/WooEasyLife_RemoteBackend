@@ -62,8 +62,8 @@ class SteadfastParcelNotesService
 
     /**
      * @param  array{username: string, password: string}  $credentials
-     * @param  array{note?: string, cus_address?: string, cod_amount?: float|int|string|null}  $overrides
-     * @return array{consignment_id: string, note: string, cus_address: string, cod_amount: float|int|string}
+     * @param  array{note?: string, cus_address?: string, cod_amount?: float|int|string|null, customer_name?: string, customer_phone?: string}  $overrides
+     * @return array{consignment_id: string, note: string, cus_address: string, cod_amount: float|int|string, customer_name?: string, customer_phone?: string}
      */
     public function updateMerchantNote(string $consignmentId, string $note, array $credentials, array $overrides = []): array
     {
@@ -75,9 +75,25 @@ class SteadfastParcelNotesService
         $codAmount = array_key_exists('cod_amount', $overrides)
             ? $overrides['cod_amount']
             : null;
+        $customerName = array_key_exists('customer_name', $overrides)
+            ? trim((string) $overrides['customer_name'])
+            : null;
+        $customerPhone = array_key_exists('customer_phone', $overrides)
+            ? trim((string) $overrides['customer_phone'])
+            : null;
 
-        if ($note === '' && ($cusAddress === null || $cusAddress === '') && $codAmount === null) {
-            throw new RuntimeException('Provide a note, address, or COD amount to update.');
+        if (
+            $note === ''
+            && ($cusAddress === null || $cusAddress === '')
+            && $codAmount === null
+            && ($customerName === null || $customerName === '')
+            && ($customerPhone === null || $customerPhone === '')
+        ) {
+            throw new RuntimeException('Provide a note, address, COD amount, or customer details to update.');
+        }
+
+        if ($customerName !== null && $customerName === '') {
+            throw new RuntimeException('Customer name cannot be empty.');
         }
 
         if (mb_strlen($note) > 500) {
@@ -105,7 +121,7 @@ class SteadfastParcelNotesService
             SteadfastPortalSessionClient $client,
             string $host,
             array $cookies
-        ) use ($consignmentId, $note, $cusAddress, $codAmount, $credentials) {
+        ) use ($consignmentId, $note, $cusAddress, $codAmount, $customerName, $customerPhone, $credentials) {
             $editPath = '/user/edit-parcel/' . rawurlencode($consignmentId);
             $page = $client->get($editPath, $host, $cookies, expectJson: false);
             // Steadfast/Laravel rotates XSRF on page load — must use the fresh cookie for POST.
@@ -120,9 +136,11 @@ class SteadfastParcelNotesService
                 $page->body(),
                 $consignmentId,
                 // Empty note with address/COD-only update keeps the portal note.
-                ($note === '' && ($cusAddress !== null || $codAmount !== null)) ? null : $note,
+                ($note === '' && ($cusAddress !== null || $codAmount !== null || $customerName !== null || $customerPhone !== null)) ? null : $note,
                 $cusAddress,
-                $codAmount
+                $codAmount,
+                $customerName,
+                $customerPhone
             );
             if ($payload === null) {
                 throw new RuntimeException('Unable to parse Steadfast edit-parcel consignment data safely.');
@@ -161,6 +179,8 @@ class SteadfastParcelNotesService
                 'note' => (string) ($payload['note'] ?? $note),
                 'cus_address' => (string) ($payload['cus_address'] ?? ''),
                 'cod_amount' => $payload['cod_amount'] ?? 0,
+                'customer_name' => (string) ($payload['cus_name'] ?? ''),
+                'customer_phone' => (string) ($payload['cus_phone'] ?? ''),
             ];
 
             $body = $response->json();
@@ -1046,6 +1066,8 @@ class SteadfastParcelNotesService
         ?string $note = null,
         ?string $cusAddress = null,
         float|int|string|null $codAmount = null,
+        ?string $customerName = null,
+        ?string $customerPhone = null,
     ): ?array {
         $consignment = $this->extractEditParcelConsignment($html);
         if (! is_array($consignment)) {
@@ -1068,8 +1090,12 @@ class SteadfastParcelNotesService
 
         $payload = [
             'consignment_id' => (string) ($consignment['id'] ?? $consignmentId),
-            'cus_phone' => trim((string) ($consignment['phone'] ?? $consignment['cus_phone'] ?? '')),
-            'cus_name' => trim((string) ($consignment['name'] ?? $consignment['cus_name'] ?? '')),
+            'cus_phone' => $customerPhone !== null
+                ? trim($customerPhone)
+                : trim((string) ($consignment['phone'] ?? $consignment['cus_phone'] ?? '')),
+            'cus_name' => $customerName !== null
+                ? trim($customerName)
+                : trim((string) ($consignment['name'] ?? $consignment['cus_name'] ?? '')),
             'cus_address' => $cusAddress !== null
                 ? trim($cusAddress)
                 : trim((string) ($consignment['address'] ?? $consignment['cus_address'] ?? '')),

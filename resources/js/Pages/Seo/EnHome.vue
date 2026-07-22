@@ -36,6 +36,9 @@ const ctaLabel = computed(() => primaryCtaLabel());
                     <Link :href="'/en/bd-fraud-checker'" class="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black hover:bg-amber-400">
                         Free fraud check
                     </Link>
+                    <Link :href="'/en/ads-roas-calculator'" class="rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10">
+                        Ads ROAS calculator
+                    </Link>
                     <MetaCtaLink
                         :href="ctaUrl"
                         :label="ctaLabel"

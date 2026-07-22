@@ -13,9 +13,12 @@ const props = defineProps({
     /** Optional link to the standalone calculator page (homepage section). */
     dedicatedPageHref: { type: String, default: null },
     dedicatedPageLabel: { type: String, default: 'আলাদা পেজে খুলুন' },
+    /** 'bn' uses Bangla digits; 'en' uses Western digits + English UI strings from config.ui */
+    locale: { type: String, default: 'bn' },
 });
 
 const inputs = computed(() => props.config?.inputs ?? {});
+const isEn = computed(() => props.locale === 'en');
 
 const model = reactive({
     daily_orders: inputs.value.daily_orders?.default ?? 50,
@@ -38,8 +41,50 @@ const reducedRate = computed(() =>
 const toBnDigits = (value) =>
     String(value).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);
 
-const formatBnNumber = (value) => toBnDigits(Number(value).toLocaleString('en-US'));
-const formatTaka = (value) => `৳${formatBnNumber(value)}`;
+const formatNumber = (value) => {
+    const formatted = Number(value).toLocaleString('en-US');
+    return isEn.value ? formatted : toBnDigits(formatted);
+};
+const formatTaka = (value) => `৳${formatNumber(value)}`;
+
+const ui = computed(() => {
+    const fromConfig = props.config?.ui ?? {};
+    const defaults = isEn.value
+        ? {
+              current_loss: 'Current monthly return loss',
+              returns_line: '~{returns} returns/month × {cost}',
+              savings: 'Estimated monthly savings with WooEasyLife',
+              rate_line: 'Return rate {from}% → ~{to}% ({avoided} returns blocked)',
+              more_savings: 'Other ways you save time and money',
+          }
+        : {
+              current_loss: 'বর্তমান মাসিক রিটার্ন লস',
+              returns_line: 'মাসে ~{returns}টি রিটার্ন × {cost}',
+              savings: 'WooEasyLife দিয়ে সম্ভাব্য মাসিক সাশ্রয়',
+              rate_line: 'রিটার্ন রেট {from}% → ~{to}% ({avoided}টি রিটার্ন আটকে)',
+              more_savings: 'আরও যেসব কাজে আপনার সময় ও খরচ কমবে',
+          };
+
+    return { ...defaults, ...fromConfig };
+});
+
+const fillTemplate = (template, vars) =>
+    Object.entries(vars).reduce((text, [key, val]) => text.replaceAll(`{${key}}`, String(val)), template);
+
+const returnsLine = computed(() =>
+    fillTemplate(ui.value.returns_line, {
+        returns: formatNumber(monthlyReturns.value),
+        cost: formatTaka(model.cost_per_return),
+    }),
+);
+
+const rateLine = computed(() =>
+    fillTemplate(ui.value.rate_line, {
+        from: formatNumber(model.return_rate),
+        to: formatNumber(reducedRate.value),
+        avoided: formatNumber(returnsAvoided.value),
+    }),
+);
 
 const sliders = computed(() =>
     ['daily_orders', 'return_rate', 'cost_per_return']
@@ -48,7 +93,7 @@ const sliders = computed(() =>
 );
 
 const displayValue = (slider) =>
-    `${slider.prefix ?? ''}${formatBnNumber(model[slider.key])}${slider.suffix ?? ''}`;
+    `${slider.prefix ?? ''}${formatNumber(model[slider.key])}${slider.suffix ?? ''}`;
 
 const accentClass = (accent) => {
     const map = {
@@ -80,10 +125,10 @@ const titleClass = (accent) => {
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div v-if="showIntro" class="text-center">
                 <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                    {{ config.badge ?? 'ROI ক্যালকুলেটর' }}
+                    {{ config.badge ?? (isEn ? 'ROI calculator' : 'ROI ক্যালকুলেটর') }}
                 </span>
                 <h2 class="mt-4 text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
-                    {{ config.headline ?? 'মাসে কত টাকা বাঁচবে — নিজেই হিসাব করুন' }}
+                    {{ config.headline ?? (isEn ? 'How much can you save monthly?' : 'মাসে কত টাকা বাঁচবে — নিজেই হিসাব করুন') }}
                 </h2>
                 <p v-if="config.subtitle" class="mx-auto mt-3 max-w-2xl text-sm text-slate-400 sm:text-base">
                     {{ config.subtitle }}
@@ -99,7 +144,6 @@ const titleClass = (accent) => {
             </div>
 
             <div class="mt-10 grid gap-5 lg:grid-cols-2 lg:gap-6" :class="{ 'mt-0': !showIntro }">
-                <!-- Controls -->
                 <div class="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
                     <div class="space-y-6">
                         <div v-for="slider in sliders" :key="slider.key">
@@ -120,33 +164,31 @@ const titleClass = (accent) => {
                                 :style="rangeTrackStyle(model[slider.key], slider.min, slider.max)"
                             />
                             <div class="mt-1 flex justify-between text-[11px] text-slate-500">
-                                <span>{{ slider.prefix ?? '' }}{{ formatBnNumber(slider.min) }}{{ slider.suffix ?? '' }}</span>
-                                <span>{{ slider.prefix ?? '' }}{{ formatBnNumber(slider.max) }}{{ slider.suffix ?? '' }}</span>
+                                <span>{{ slider.prefix ?? '' }}{{ formatNumber(slider.min) }}{{ slider.suffix ?? '' }}</span>
+                                <span>{{ slider.prefix ?? '' }}{{ formatNumber(slider.max) }}{{ slider.suffix ?? '' }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Results -->
                 <div class="flex flex-col gap-4">
                     <div class="rounded-2xl border border-rose-500/25 bg-rose-950/20 p-5 sm:p-6">
-                        <p class="text-sm text-rose-200/80">বর্তমান মাসিক রিটার্ন লস</p>
+                        <p class="text-sm text-rose-200/80">{{ ui.current_loss }}</p>
                         <p class="mt-1 text-3xl font-extrabold text-rose-300 sm:text-4xl">
                             ≈ {{ formatTaka(currentMonthlyLoss) }}
                         </p>
                         <p class="mt-2 text-xs text-slate-400">
-                            মাসে ~{{ formatBnNumber(monthlyReturns) }}টি রিটার্ন × {{ formatTaka(model.cost_per_return) }}
+                            {{ returnsLine }}
                         </p>
                     </div>
 
                     <div class="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-emerald-900/10 p-5 sm:p-6">
-                        <p class="text-sm text-emerald-200/90">WooEasyLife দিয়ে সম্ভাব্য মাসিক সাশ্রয়</p>
+                        <p class="text-sm text-emerald-200/90">{{ ui.savings }}</p>
                         <p class="mt-1 text-4xl font-extrabold text-emerald-300 sm:text-5xl">
                             ≈ {{ formatTaka(monthlySavings) }}
                         </p>
                         <p class="mt-2 text-xs text-emerald-100/70">
-                            রিটার্ন রেট {{ formatBnNumber(model.return_rate) }}% → ~{{ formatBnNumber(reducedRate) }}%
-                            ({{ formatBnNumber(returnsAvoided) }}টি রিটার্ন আটকে)
+                            {{ rateLine }}
                         </p>
                         <p
                             v-if="config.subscription_note"
@@ -168,9 +210,8 @@ const titleClass = (accent) => {
                 {{ config.note }}
             </p>
 
-            <!-- Supporting savings scenarios -->
             <div v-if="scenarios.length" class="mt-12">
-                <p class="text-center text-sm font-semibold text-slate-400">আরও যেসব কাজে আপনার সময় ও খরচ কমবে</p>
+                <p class="text-center text-sm font-semibold text-slate-400">{{ ui.more_savings }}</p>
                 <div class="mt-6 grid gap-4 sm:grid-cols-2">
                     <article
                         v-for="item in scenarios"

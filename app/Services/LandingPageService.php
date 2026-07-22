@@ -23,7 +23,7 @@ class LandingPageService
     /**
      * @return array<string, mixed>
      */
-    public function payload(?Request $request = null): array
+    public function payload(?Request $request = null, string $locale = 'bn'): array
     {
         $plans = PackageHub::query()
             ->where('is_active', true)
@@ -40,8 +40,9 @@ class LandingPageService
 
         $whatsappPhone = $this->landingSettings->adminWhatsapp();
         $paymentMethods = $this->paymentConfig->forApi();
+        $fraudMeta = $this->publicFraudCheckService->meta($request?->ip(), $locale);
 
-        return [
+        $payload = [
             'plans' => $this->planResolver->mapPlansForDisplay($plans),
             'featuredPlan' => $featuredPayload
                 ? PlanDisplayPresenter::enrich($featuredPayload)
@@ -77,6 +78,7 @@ class LandingPageService
             'roiCalculator' => config('landing.roi_calculator', []),
             'courierChargeCalculator' => app(\App\Services\Marketing\CourierPublicRatesService::class)->calculatorConfig(),
             'adsRoasCalculator' => config('landing.ads_roas_calculator', []),
+            'adsRoasCalculatorEn' => config('landing.ads_roas_calculator_en', []),
             'howItWorks' => config('landing.how_it_works', []),
             'appShowcase' => config('landing.app_showcase', []),
             'featureShowcases' => $featuredPayload
@@ -98,7 +100,9 @@ class LandingPageService
             'whatsappUrl' => WhatsappLink::url($whatsappPhone),
             'whatsappContactUrl' => WhatsappLink::url(
                 $whatsappPhone,
-                config('landing.whatsapp_default_message'),
+                $locale === 'en'
+                    ? 'Hi, I want a WooEasyLife subscription.'
+                    : config('landing.whatsapp_default_message'),
             ),
             'whatsappDisplayPhone' => $this->displayPhone($whatsappPhone),
             'adminEmail' => $this->landingSettings->adminEmail(),
@@ -111,10 +115,60 @@ class LandingPageService
             'appDownloadUrl' => $this->landingSettings->appDownloadUrl(),
             'playStoreUrl' => $this->landingSettings->playStoreUrl(),
             'pluginDownloadUrl' => $this->landingSettings->pluginDownloadUrl(),
-            'fraudCheck' => $this->publicFraudCheckService->meta($request?->ip()),
+            'fraudCheck' => $fraudMeta,
             'fraudBenefitCards' => config('landing.fraud_benefit_cards', []),
             'caseStudies' => config('landing.case_studies', []),
+            'locale' => $locale,
         ];
+
+        if ($locale === 'en') {
+            return $this->applyEnglishLandingOverlays($payload, $paymentMethods);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  list<array<string, mixed>>  $paymentMethods
+     * @return array<string, mixed>
+     */
+    private function applyEnglishLandingOverlays(array $payload, array $paymentMethods): array
+    {
+        $en = config('landing_en', []);
+
+        $payload['hero'] = $en['hero'] ?? $payload['hero'];
+        $payload['heroBullets'] = $en['hero_bullets'] ?? $payload['heroBullets'];
+        $payload['heroTrustBadges'] = collect($en['hero_trust_badges'] ?? [])
+            ->map(function ($badge) use ($paymentMethods) {
+                if ($badge !== 'payment_methods') {
+                    return $badge;
+                }
+
+                $labels = collect($paymentMethods)->pluck('payment_partner')->filter()->implode(' · ');
+
+                return $labels !== '' ? $labels : null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+        $payload['howItWorks'] = $en['how_it_works'] ?? $payload['howItWorks'];
+        $payload['appShowcase'] = $en['app_showcase'] ?? $payload['appShowcase'];
+        $payload['fraudBenefitCards'] = $en['fraud_benefit_cards'] ?? $payload['fraudBenefitCards'];
+        $payload['caseStudies'] = $en['case_studies'] ?? $payload['caseStudies'];
+        $payload['stats'] = $en['stats'] ?? $payload['stats'];
+        $payload['courierPerformance'] = $en['courier_performance'] ?? $payload['courierPerformance'];
+        $payload['lossComparison'] = $en['loss_comparison'] ?? $payload['lossComparison'];
+        $payload['enterpriseCta'] = $en['enterprise_cta'] ?? $payload['enterpriseCta'];
+        $payload['integrations'] = $en['integrations'] ?? $payload['integrations'];
+        $payload['roiCalculator'] = config('landing.roi_calculator_en', $payload['roiCalculator']);
+        $payload['roiScenarios'] = config('landing.roi_scenarios_en', $payload['roiScenarios']);
+
+        if (isset($en['fraud_check_demo']) && is_array($payload['fraudCheck'] ?? null)) {
+            $payload['fraudCheck']['demo'] = $en['fraud_check_demo'];
+        }
+
+        return $payload;
     }
 
     private function displayPhone(?string $phone): ?string
