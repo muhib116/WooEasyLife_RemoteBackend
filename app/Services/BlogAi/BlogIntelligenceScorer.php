@@ -167,10 +167,10 @@ class BlogIntelligenceScorer
 
         $status = $score >= $max ? 'ready' : ($score > 0 ? 'partial' : 'missing');
         $hint = ! $ready
-            ? 'Connect Search Console (Admin → SEO & Learning).'
+            ? 'Connect Search Console (Admin → SEO & Learning) — free real keyword demand.'
             : ($metrics === 0
-                ? 'Run Blog learning insights to sync GSC queries.'
-                : 'Search Console opportunities feeding the AI.');
+                ? 'Run Blog learning insights to sync GSC queries for Smart Post.'
+                : 'Search Console opportunities drive Smart Post topic picks.');
 
         return [
             'key' => 'gsc',

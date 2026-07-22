@@ -1,10 +1,17 @@
 <script setup>
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
+
 defineProps({
     sections: {
         type: Array,
         default: () => [],
     },
 });
+
+const page = usePage();
+const isEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('en'));
 </script>
 
 <template>
@@ -30,7 +37,7 @@ defineProps({
                     :key="pIndex"
                     class="text-sm leading-relaxed text-slate-300 sm:text-base"
                 >
-                    {{ paragraph }}
+                    <LinkedRichText :text="paragraph" :is-en="isEn" />
                 </p>
             </article>
         </div>

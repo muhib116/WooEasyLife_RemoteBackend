@@ -17,5 +17,6 @@ class VerifyCsrfToken extends Middleware
         'deploy',
         'deploy/setup',
         'blog/analytics/event',
+        'analytics/visitors/event',
     ];
 }

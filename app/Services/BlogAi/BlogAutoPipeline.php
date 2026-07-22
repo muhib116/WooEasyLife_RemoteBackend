@@ -230,7 +230,7 @@ class BlogAutoPipeline
 
         // Prefer landing angle as seed when Auto still has no topic.
         if ($seed === '') {
-            $seed = (string) ($resolved['landing']['angle_hint'] ?? config('blog_ai.clusters.'.$cluster, $cluster));
+            $seed = (string) ($resolved['landing']['angle_hint'] ?? app(BlogClusterCatalog::class)->label($cluster));
         }
 
         if ($pasted === []) {
@@ -1370,28 +1370,54 @@ class BlogAutoPipeline
         $run->save();
 
         // Optional competitor URLs provided with one-click / draft-for-query.
+        // If none provided (or manual analyze fails) and no fresh analysis exists, auto-discover.
         $urlsText = trim((string) ($input['competitor_urls_text'] ?? ''));
-        if ($urlsText !== '' && config('blog_ai.competitors.enabled', true)) {
-            $urls = preg_split('/[\r\n,]+/', $urlsText) ?: [];
-            try {
-                $this->competitorAnalyzer->analyze(
-                    keyword: (string) $pick['keyword'],
-                    urls: array_values(array_filter(array_map('trim', $urls))),
-                    cluster: $pick['cluster'],
-                    userId: $run->user_id,
-                );
+        $keyword = (string) ($pick['keyword'] ?? '');
+        $analyzed = false;
+
+        if ($urlsText !== '' && $keyword !== '' && config('blog_ai.competitors.enabled', true)) {
+            $urls = array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $urlsText) ?: [])));
+            if ($urls !== []) {
+                try {
+                    $this->competitorAnalyzer->analyze(
+                        keyword: $keyword,
+                        urls: $urls,
+                        cluster: $pick['cluster'],
+                        userId: $run->user_id,
+                        allowDiscover: false,
+                    );
+                    $analyzed = true;
+                    $run->appendLog([
+                        'step' => 'sync',
+                        'event' => 'competitors_analyzed',
+                        'message' => 'Competitor pages analyzed for '.$keyword,
+                    ]);
+                    $run->save();
+                } catch (Throwable $e) {
+                    $run->appendLog([
+                        'step' => 'sync',
+                        'event' => 'competitors_skipped',
+                        'message' => 'Competitor analyze skipped: '.Str::limit($e->getMessage(), 160),
+                    ]);
+                    $run->save();
+                }
+            }
+        }
+
+        if (! $analyzed && $keyword !== '' && config('blog_ai.competitors.enabled', true)) {
+            $ensured = $this->competitorAnalyzer->ensureAnalysisForKeyword(
+                $keyword,
+                $pick['cluster'] ?? null,
+                $run->user_id,
+            );
+            if ($ensured !== null) {
                 $run->appendLog([
                     'step' => 'sync',
-                    'event' => 'competitors_analyzed',
-                    'message' => 'Competitor pages analyzed for '.$pick['keyword'],
+                    'event' => 'competitors_auto_analyzed',
+                    'message' => 'Auto-discovered and analyzed competitors for '.$keyword,
                 ]);
-                $run->save();
-            } catch (Throwable $e) {
-                $run->appendLog([
-                    'step' => 'sync',
-                    'event' => 'competitors_skipped',
-                    'message' => 'Competitor analyze skipped: '.Str::limit($e->getMessage(), 160),
-                ]);
+                $input['competitors_auto_analyzed'] = true;
+                $run->input_json = $input;
                 $run->save();
             }
         }
@@ -1583,11 +1609,27 @@ class BlogAutoPipeline
     private function syncScore(BlogAiRun $run, array $parts): array
     {
         $computed = $this->scorer->compute($parts);
+        $breakdown = $computed['breakdown'];
+
+        // Surface soft competitor gap coverage when present on the live draft quality.
+        $session = $run->blog_ai_session_id
+            ? BlogAiSession::query()->find($run->blog_ai_session_id)
+            : null;
+        $quality = is_array($session?->draft_json['quality'] ?? null)
+            ? $session->draft_json['quality']
+            : [];
+        if (isset($quality['competitor_gap_coverage_pct']) && is_numeric($quality['competitor_gap_coverage_pct'])) {
+            $breakdown['competitor_gap_coverage'] = max(0, min(100, (int) $quality['competitor_gap_coverage_pct']));
+        }
+
         $run->live_score = $computed['score'];
-        $run->score_breakdown = $computed['breakdown'];
+        $run->score_breakdown = $breakdown;
         $run->save();
 
-        return $computed;
+        return [
+            'score' => $computed['score'],
+            'breakdown' => $breakdown,
+        ];
     }
 
     private function bumpRevision(BlogAiRun $run, string $step, int $attempt): void

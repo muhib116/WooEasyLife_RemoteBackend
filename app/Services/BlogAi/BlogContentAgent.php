@@ -21,6 +21,7 @@ class BlogContentAgent
         private BlogPromptLibrary $prompts,
         private BlogLearningService $learning,
         private BlogCompetitorAnalyzer $competitors,
+        private BlogCompetitorGapService $gapService,
     ) {}
 
     /**
@@ -31,11 +32,8 @@ class BlogContentAgent
      */
     public function suggestSeedKeywords(string $seedTopic, string $cluster): array
     {
-        $clusterLabel = (string) config('blog_ai.clusters.'.$cluster, $cluster);
-        $seedQueries = config('blog_ai.cluster_seed_queries.'.$cluster, []);
-        if (! is_array($seedQueries)) {
-            $seedQueries = [];
-        }
+        $clusterLabel = app(BlogClusterCatalog::class)->label($cluster);
+        $seedQueries = app(BlogClusterCatalog::class)->seedQueries($cluster);
 
         $gscSeeds = $this->learning->gscKeywordSeeds(10);
         $gscQueries = collect($gscSeeds)->pluck('query')->filter()->values()->all();
@@ -180,7 +178,7 @@ TXT;
         $user = json_encode([
             'seed_topic' => $seedTopic,
             'cluster' => $cluster,
-            'cluster_label' => config('blog_ai.clusters.'.$cluster),
+            'cluster_label' => app(BlogClusterCatalog::class)->label((string) $cluster),
             'pasted_keywords' => $pasted,
             'avoid_primary_keywords' => $avoidPrimaries,
             'live_google_suggest_bd' => $liveSuggestions,
@@ -497,7 +495,7 @@ Hooks must target BD COD / WooCommerce sellers. Mix angles. No clickbait lies.
 Each hook MUST use a different angle and a distinct title wording.
 Ground hooks in cluster_landing angle_hint / page lead — do not invent unrelated product pillars.
 If existing_posts or avoid_titles is present, differentiate: new angle, persona, tool angle, or long-tail — do not clone those titles.
-When competitor_intelligence is present, prefer title_angles / must_cover_angles that beat those competitors.
+When competitor_intelligence is present, prefer title_angles / must_cover_angles / open gap_checklist items that beat those competitors.
 TXT;
 
         $cluster = (string) ($session->cluster ?: 'general');
@@ -564,27 +562,19 @@ TXT;
         }
 
         $outlinePrompt = $this->prompts->outline();
-        $system = $this->systemPrompt()."\n\n".($outlinePrompt !== '' ? $outlinePrompt : <<<'TXT'
+        $articleType = trim((string) data_get($session->keywords_json, 'article_type', config('blog_ai.default_article_type', 'howto')));
+        if (! in_array($articleType, BlogPost::ARTICLE_TYPES, true)) {
+            $articleType = 'howto';
+        }
+        $structure = $this->prompts->structureContract($articleType);
+        $system = $this->systemPrompt()
+            ."\n\n".$structure
+            ."\n\n## Article type\n".$articleType
+            ."\n\n".($outlinePrompt !== '' ? $outlinePrompt : <<<'TXT'
 Create one SEO outline for a Bangla blog post using the selected hook(s).
 Prefer the first selected hook as H1; others may become H2 angles if complementary.
-Return JSON:
-{
-  "h1": "...",
-  "focus_keyword": "...",
-  "slug_suggestion": "latin-kebab-slug",
-  "sections": [{"heading": "H2...", "bullets": ["..."]}],
-  "faqs": [{"q": "...", "a_points": ["..."]}],
-  "internal_links": [{"path": "/...", "anchor": "...", "reason": "..."}],
-  "cta": "soft CTA sentence"
-}
-Use ONLY paths from the provided internal link catalog (2–4 links).
-MUST include cluster_landing.primary_path (or must_link_paths) as the first internal link(s).
-Use keyword-rich anchors from seo_tools / catalog anchor_hints (e.g. “রিটার্ন লস ক্যালকুলেটর”, “ফ্রড চেকার”) — never “এখানে ক্লিক” / “এই লিংক”.
-Prefer ranking free tools: /bd-fraud-checker, /return-loss-calculator, /courier-charge-calculator, /ads-roas-calculator when relevant.
-Echo page FAQs/angle_hint truth — do not invent features beyond product_brief + cluster_landing.
-Include at least 5 FAQ items under faqs (q + a_points).
-Include a differentiation section that beats generic competitor blogs (practical BD COD steps + WooEasyLife truth).
-When competitor_intelligence is present, cover content_gaps / must_cover_angles / faq_gaps explicitly.
+Return JSON with h1, focus_keyword, sections (each with slot), faqs, internal_links, cta.
+Follow the editorial playbook + skeleton slot order exactly.
 TXT);
 
         $cluster = (string) ($session->cluster ?: 'general');
@@ -597,6 +587,12 @@ TXT);
             'fix_instructions' => $fixInstructions,
             'previous_outline' => $fixInstructions ? ($session->outline_json ?? null) : null,
             'competitor_intelligence' => $this->competitorBlockForSession($session),
+            'article_type' => $articleType,
+            'structure_contract' => [
+                'playbook' => 'editorial-playbook.md',
+                'skeleton' => 'skeletons/'.$articleType.'.md',
+                'rule' => 'Skeleton slot order wins over creativity; competitor gaps map into slots.',
+            ],
             'seo_targets' => [
                 'min_faqs' => (int) config('blog_ai.seo_quality.min_faqs', 5),
                 'min_sections' => 4,
@@ -646,15 +642,15 @@ TXT);
 
         $articlePrompt = $this->prompts->articleWriter((string) $author, $minWords);
         $typeHint = $this->articleTypeHint($articleType);
-        $system = $this->systemPrompt()."\n\n".$typeHint."\n\n".($articlePrompt !== '' ? $articlePrompt : <<<TXT
+        $structure = $this->prompts->structureContract($articleType);
+        $system = $this->systemPrompt()
+            ."\n\n".$structure
+            ."\n\n".$typeHint
+            ."\n\n".($articlePrompt !== '' ? $articlePrompt : <<<TXT
 Write a complete Bangladesh SEO blog post in Bangla based on the outline.
 Return JSON with title, slug, focus_keyword, meta_title, meta_description, excerpt,
 author_name "{$author}", quick_answer, ai_search_summary, body_html, faqs, seo_notes.
-Requirements: {$minWords}+ words; keyword in title, first <p>, meta, one H2;
-at least {$minFaqs} FAQs; Featured Snippet Quick Answer + AI Search Summary sections;
-2+ internal links including ALL cluster_landing.must_link_paths with keyword-rich anchors;
-link free SEO tools when relevant (/bd-fraud-checker, /return-loss-calculator, /courier-charge-calculator, /ads-roas-calculator);
-H2+H3; lists; soft CTA to primary tool.
+Follow editorial playbook + skeleton slot order. {$minWords}+ words; {$minFaqs}+ FAQs.
 TXT);
 
         $cluster = (string) ($session->cluster ?: 'general');
@@ -669,6 +665,12 @@ TXT);
                 ? ($session->draft_json['quality'] ?? null)
                 : null,
             'competitor_intelligence' => $this->competitorBlockForSession($session),
+            'article_type' => $articleType,
+            'structure_contract' => [
+                'playbook' => 'editorial-playbook.md',
+                'skeleton' => 'skeletons/'.$articleType.'.md',
+                'rule' => 'Render slots in skeleton order; product_brief is content truth.',
+            ],
             'seo_targets' => [
                 'min_words' => $minWords,
                 'min_faqs' => $minFaqs,
@@ -691,7 +693,7 @@ TXT);
         $result = $this->openAi->chatJson([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
-        ], 0.35);
+        ], 0.55);
 
         $draft = $this->openAi->decodeJsonObject($result['content']);
         $draft = $this->normalizeDraft(
@@ -717,22 +719,20 @@ TXT);
         return match ($articleType) {
             'comparison' => <<<'TXT'
 ## Article type: comparison
-Structure as WooEasyLife / modern ops vs Manual management, Excel, or multiple browser tabs.
-Use a comparison table. Never invent metrics — only product_brief claims. Soft CTA to primary_path.
+Follow skeletons/comparison.md exactly. Use a real comparison table. Never invent metrics.
 TXT,
             'glossary' => <<<'TXT'
 ## Article type: glossary
-Define one BD ecommerce / WooCommerce ops term clearly (what it is, why it matters for COD sellers, how to act).
-Shorter body is OK (meet glossary min words). Heavy FAQ. Link the related landing tool.
+Follow skeletons/glossary.md exactly. Shorter body OK. FAQ-heavy. Link the related landing tool.
 TXT,
             'case_study' => <<<'TXT'
 ## Article type: case_study
-Narrative: merchant problem → workflow → result framing. Do NOT invent customer names, revenue, or % numbers.
-Use qualitative outcomes and product_brief truths only. Soft CTA.
+Follow skeletons/case_study.md exactly. Narrative problem → workflow → qualitative results.
+Do NOT invent customer names, revenue, or % numbers.
 TXT,
             default => <<<'TXT'
 ## Article type: howto
-Step-by-step practical Bangla guide for BD COD / WooCommerce sellers. Aim 1400–2000 words.
+Follow skeletons/howto.md exactly. Coach-on-a-call Bangla. Numbered list only in the `steps` slot.
 TXT,
         };
     }
@@ -772,6 +772,47 @@ TXT,
 
         // Never inject an unrelated "latest" competitor analysis — wrong niche poisons drafts.
         return null;
+    }
+
+    /**
+     * Soft competitor gap coverage on draft quality (informational; never blocks publish).
+     *
+     * @param  array<string, mixed>  $quality
+     * @param  list<array{q?: string, a?: string}>  $faqs
+     * @return array<string, mixed>
+     */
+    private function enrichCompetitorGapCoverage(
+        array $quality,
+        string $focusKeyword,
+        string $bodyHtml,
+        array $faqs,
+        string $title,
+    ): array {
+        $block = $this->competitors->promptBlockForKeyword($focusKeyword);
+        if ($block === null) {
+            return $quality;
+        }
+
+        $checklist = is_array($block['gap_checklist'] ?? null)
+            ? $block['gap_checklist']
+            : (is_array($block['diff_checklist'] ?? null) ? $block['diff_checklist'] : []);
+
+        $open = $this->gapService->openGapTexts(
+            array_map(
+                fn ($row) => is_array($row) ? $row : ['gap' => (string) $row, 'status' => 'open'],
+                $checklist
+            )
+        );
+
+        if ($open === []) {
+            return $quality;
+        }
+
+        $coverage = $this->gapService->measureCoverage($open, $bodyHtml, $faqs, $title);
+        $quality['competitor_gap_coverage'] = $coverage;
+        $quality['competitor_gap_coverage_pct'] = $coverage['pct'];
+
+        return $quality;
     }
 
     /**
@@ -1011,6 +1052,14 @@ TXT,
             secondaryKeywords: $secondary,
             slug: $slug,
             locale: 'bn',
+        );
+
+        $quality = $this->enrichCompetitorGapCoverage(
+            $quality,
+            $focusKeyword,
+            $body,
+            $faqs,
+            $title,
         );
 
         $notes = is_array($draft['seo_notes'] ?? null) ? $draft['seo_notes'] : [];

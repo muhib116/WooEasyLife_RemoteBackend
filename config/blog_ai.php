@@ -77,7 +77,8 @@ return [
         'require_quick_answer' => true,
         'require_ai_search_summary' => true,
         'require_h3' => true,
-        'require_lists' => true,
+        // Prefer natural paragraphs; lists only when counting real steps (prompt-enforced).
+        'require_lists' => filter_var(env('BLOG_SEO_REQUIRE_LISTS', false), FILTER_VALIDATE_BOOLEAN),
         /*
         | Hard publish gates only — everything else is soft-warned in the CMS.
         */
@@ -183,7 +184,22 @@ return [
     ],
 
     /*
-    | Competitor URL analyzer — fetch public pages + LLM gap analysis for drafting.
+    | Landing page reference — cluster primary_path URL + optional live snapshot
+    | used as content source of truth for Blog AI (structure still uses skeletons).
+    */
+    'landing_reference' => [
+        'fetch_live' => filter_var(env('BLOG_LANDING_REF_FETCH', true), FILTER_VALIDATE_BOOLEAN),
+        'public_base_url' => env('BLOG_LANDING_PUBLIC_BASE_URL', env('APP_URL')),
+        'fetch_timeout' => (int) env('BLOG_LANDING_REF_TIMEOUT', 8),
+        'max_html_bytes' => (int) env('BLOG_LANDING_REF_MAX_HTML', 400000),
+        'allowed_hosts' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('BLOG_LANDING_REF_ALLOWED_HOSTS', ''))
+        ))),
+    ],
+
+    /*
+    | Competitor URL analyzer — discover / fetch public pages + LLM gap analysis for drafting.
     */
     'competitors' => [
         'enabled' => filter_var(env('BLOG_COMPETITOR_ANALYZER', true), FILTER_VALIDATE_BOOLEAN),
@@ -192,6 +208,25 @@ return [
         'max_age_days' => (int) env('BLOG_COMPETITOR_MAX_AGE_DAYS', 30),
         'fetch_timeout' => (int) env('BLOG_COMPETITOR_FETCH_TIMEOUT', 12),
         'max_html_bytes' => (int) env('BLOG_COMPETITOR_MAX_HTML_BYTES', 500000),
+        'excerpt_chars' => (int) env('BLOG_COMPETITOR_EXCERPT_CHARS', 3500),
+        'discovery' => [
+            'enabled' => filter_var(env('BLOG_COMPETITOR_DISCOVERY', true), FILTER_VALIDATE_BOOLEAN),
+            /*
+            | auto = Brave when BLOG_COMPETITOR_SEARCH_API_KEY is set, else DuckDuckGo HTML.
+            */
+            'provider' => env('BLOG_COMPETITOR_SEARCH_PROVIDER', 'auto'),
+            'api_key' => env('BLOG_COMPETITOR_SEARCH_API_KEY'),
+            'bing_api_key' => env('BLOG_COMPETITOR_BING_API_KEY'),
+            'max_results' => (int) env('BLOG_COMPETITOR_DISCOVERY_MAX', 5),
+            'auto_on_smart_post' => filter_var(env('BLOG_COMPETITOR_AUTO_ON_SMART', true), FILTER_VALIDATE_BOOLEAN),
+            'exclude_hosts' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env(
+                    'BLOG_COMPETITOR_EXCLUDE_HOSTS',
+                    'wpsalehub.com,www.wpsalehub.com,app.wpsalehub.com,wooeasylife.com,www.wooeasylife.com'
+                ))
+            ))),
+        ],
     ],
 
     /*
@@ -219,6 +254,8 @@ return [
         'multistore_app' => 'মাল্টিস্টোর / Mobile app',
         'team_calls' => 'টিম / Call tracking',
         'operations' => 'অপারেশন / ড্যাশবোর্ড',
+        'woocommerce' => 'WooCommerce Bangladesh',
+        'cod' => 'COD / Cash on Delivery',
         'general' => 'সাধারণ WooCommerce BD',
     ],
 
@@ -427,6 +464,30 @@ return [
             ],
             'angle_hint' => 'সম্পূর্ণ WooCommerce অপারেশন + ফ্রি টুলস — টুল-শুধু নয়',
         ],
+        'woocommerce' => [
+            'primary_path' => '/',
+            'seo_pages' => ['home', 'pricing'],
+            'related_paths' => ['/pricing', '/bd-fraud-checker', '/courier-auto-entry', '/fake-order-protection'],
+            'must_link_paths' => ['/', '/pricing'],
+            'claims' => [
+                'WooCommerce Bangladesh অপারেশন ও প্লাগইন',
+                'অটোমেশন, নোটিফিকেশন ও মোবাইল অ্যাপ',
+                '১৪ দিন ফ্রি ট্রায়াল',
+            ],
+            'angle_hint' => 'WooCommerce Bangladesh — প্লাগইন, অটোমেশন, ম্যানেজমেন্ট',
+        ],
+        'cod' => [
+            'primary_path' => '/fake-order-protection',
+            'seo_pages' => ['fake_order_protection', 'return_loss_calculator'],
+            'related_paths' => ['/bd-fraud-checker', '/return-loss-calculator', '/fake-order-protection', '/pricing'],
+            'must_link_paths' => ['/fake-order-protection', '/return-loss-calculator'],
+            'claims' => [
+                'COD রিটার্ন রেট ও ফ্রড কমান',
+                'ভেরিফিকেশন + অটোমেশন দিয়ে অর্ডার ম্যানেজমেন্ট',
+                'রিটার্ন লস হিসাব করে সিদ্ধান্ত নিন',
+            ],
+            'angle_hint' => 'COD fraud, verification, automation ও return rate',
+        ],
         'general' => [
             'primary_path' => '/',
             'seo_pages' => ['home', 'pricing'],
@@ -458,25 +519,45 @@ return [
         'multistore_app' => ['মাল্টিস্টোর', 'multistore', 'মোবাইল অ্যাপ', 'mobile app', 'এক ড্যাশবোর্ড'],
         'team_calls' => ['কল হিস্ট্রি', 'call tracking', 'স্টাফ', 'team call', 'customer call'],
         'operations' => ['অপারেশন', 'ড্যাশবোর্ড', 'order management', 'অর্ডার ম্যানেজমেন্ট', 'cod সেলার টুল'],
+        'woocommerce' => ['woocommerce bangladesh', 'woocommerce plugin', 'woocommerce automation', 'woocommerce app', 'woocommerce management'],
+        'cod' => ['cod return', 'cod fraud', 'cod verification', 'cod automation', 'cash on delivery', 'ক্যাশ অন ডেলিভারি'],
     ],
 
     /*
     | Seed queries for Google Suggest (gl=bd) when generating keywords per cluster.
     */
     'cluster_seed_queries' => [
-        'fake_order' => ['ফেক অর্ডার', 'কিভাবে ফেক অর্ডার আটকাবো', 'COD fraud check'],
-        'fraud_checker' => ['ফ্রড চেকার', 'কুরিয়ার হিস্টোরি চেক', 'pathao fraud check'],
+        'fake_order' => [
+            'Stop Fake Orders', 'OTP Verification', 'Duplicate Orders', 'Blacklist Customers',
+            'Fake Customer Detection', 'High Risk Customer', 'ফেক অর্ডার', 'কিভাবে ফেক অর্ডার আটকাবো', 'COD fraud check',
+        ],
+        'fraud_checker' => [
+            'What is Fraud Checker', 'Best Fraud Checker BD', 'Free Fraud Checker', 'FraudBD Alternative',
+            'Courier Fraud Checker', 'Fake Order Detection', 'Phone Number Fraud Check',
+            'ফ্রড চেকার', 'কুরিয়ার হিস্টোরি চেক', 'pathao fraud check',
+        ],
         'return_loss' => ['রিটার্ন লস', 'রিটার্ন লস ক্যালকুলেটর', 'COD রিটার্ন খরচ'],
         'checkout_protection' => ['চেকআউট OTP', 'ডুপ্লিকেট অর্ডার ব্লক', 'fake customer block'],
-        'courier' => ['কুরিয়ার অটো এন্ট্রি', 'pathao steadfast redx', 'WooCommerce courier', 'পার্সেল নোট হিস্ট্রি', 'steadfast parcel note'],
+        'courier' => [
+            'Steadfast Integration', 'Pathao Integration', 'RedX Integration', 'Auto Courier Entry',
+            'Courier Tracking', 'Courier History', 'কুরিয়ার অটো এন্ট্রি', 'পার্সেল নোট হিস্ট্রি', 'steadfast parcel note',
+        ],
         'courier_charge' => ['কুরিয়ার চার্জ', 'pathao ডেলিভারি চার্জ', 'steadfast প্রাইসিং'],
         'missing_order' => ['হারানো অর্ডার', 'missing order WooCommerce', 'abandoned checkout'],
         'facebook_ads' => ['Facebook Ads ROAS', 'পিক্সেল প্রোটেকশন', 'ফেক purchase facebook'],
         'ai_orders' => ['মেসেজ থেকে অর্ডার', 'AI order WooCommerce', 'screenshot থেকে অর্ডার'],
         'packing_print' => ['ইনভয়েস প্রিন্ট', 'কুরিয়ার স্টিকার প্রিন্ট', 'packing slip'],
         'multistore_app' => ['মাল্টিস্টোর ড্যাশবোর্ড', 'WooCommerce mobile app', 'এক ড্যাশবোর্ডে সব স্টোর'],
-        'team_calls' => ['কল হিস্ট্রি', 'customer call identifier', 'স্টাফ ম্যানেজমেন্ট'],
+        'team_calls' => ['কল হিস্ট্রি', 'true call identifier', 'স্টাফ ম্যানেজমেন্ট'],
         'operations' => ['WooCommerce অপারেশন', 'অর্ডার ম্যানেজমেন্ট বাংলাদেশ', 'COD সেলার টুল'],
+        'woocommerce' => [
+            'WooCommerce Bangladesh', 'WooCommerce Plugins', 'WooCommerce Automation',
+            'WooCommerce Mobile App', 'WooCommerce Management', 'WooCommerce Notifications', 'WooCommerce বাংলাদেশ',
+        ],
+        'cod' => [
+            'COD Return Rate', 'COD Fraud', 'COD Verification', 'COD Automation',
+            'COD Order Management', 'COD ব্যবসা', 'ক্যাশ অন ডেলিভারি',
+        ],
         'general' => ['WooCommerce বাংলাদেশ', 'COD ব্যবসা', 'অনলাইন ব্যবসা গাইড'],
     ],
 
@@ -566,8 +647,18 @@ return [
     'persona' => [
         'product' => 'WooEasyLife',
         'audience' => 'বাংলাদেশের WooCommerce / Facebook / COD সেলার',
-        'tone' => 'বাস্তবসম্মত, সহজ বাংলা, সেলার-টক — কর্পোরেট US ব্লগ নয়',
+        'tone' => 'মেসেঞ্জার-স্টাইল সেলার টক — বাস্তবসম্মত সহজ বাংলা; কর্পোরেট/এআই ব্লগ টোন নয়',
         'founder' => 'Muhibbullah Ansary, Developer of WooEasyLife',
+        'voice_do' => [
+            'কথ্য বাংলা (করেন/হয়/দেখুন), ছোট অনুচ্ছেদ, বাস্তব COD উদাহরণ',
+            'সমস্যা → ধাপ → টুল — গল্পের মতো; প্রতিটি সেকশন কীওয়ার্ড দিয়ে শুরু নয়',
+            'চেকলিস্ট ছাড়া অপ্রয়োজনীয় বুলেট এড়ানো',
+        ],
+        'voice_dont' => [
+            'আজকের ডিজিটাল যুগে / কম্প্রিহেনসিভ স্ট্র্যাটেজি / গেমচেঞ্জার / সিমলেস',
+            'In today\'s digital age / It is important to note / In conclusion / Let\'s dive in',
+            'প্রতিটি H2-কে লিস্টিকল বানানো বা সারফার-স্টাইল ফিলার',
+        ],
     ],
 
     /*
@@ -609,6 +700,11 @@ return [
         */
         'smart_one_click' => filter_var(env('BLOG_AI_SMART_ONE_CLICK', true), FILTER_VALIDATE_BOOLEAN),
         'smart_sync_learning' => filter_var(env('BLOG_AI_SMART_SYNC_LEARNING', true), FILTER_VALIDATE_BOOLEAN),
+        /*
+        | When GSC rank opportunities exist, Smart Post ignores cluster/learning guesses
+        | and only picks real Search Console queries (free + real demand).
+        */
+        'prefer_gsc' => filter_var(env('BLOG_AI_SMART_PREFER_GSC', true), FILTER_VALIDATE_BOOLEAN),
         /*
         | When true, Smart One-Click refuses soft-pass drafts (classic Auto unchanged).
         | Keep false on live until you are ready for stricter Auto quality.

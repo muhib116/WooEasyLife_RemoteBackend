@@ -6,7 +6,7 @@
                     One-click Smart Post
                 </p>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    Sync learning + GSC → pick best topic → AI writes a draft. Review before publishing.
+                    Uses free real Search Console demand first (striking distance / fix CTR), then writes a draft. Review before publishing.
                 </p>
             </div>
             <Button

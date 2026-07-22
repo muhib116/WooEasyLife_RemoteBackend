@@ -11,6 +11,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import { trackCtaClick } from '@/utils/metaPixel';
+import { trackCta as trackSiteCta } from '@/utils/siteVisitors';
 
 const props = defineProps({
     href: { type: String, required: true },
@@ -25,5 +26,7 @@ const onClick = () => {
         href: props.href,
         label: props.label || undefined,
     });
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    trackSiteCta(path, props.label || props.location || 'cta');
 };
 </script>

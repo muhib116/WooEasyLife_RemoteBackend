@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import { primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -128,6 +129,7 @@ const whoFor = [
 ];
 
 const relatedLinks = [
+    { href: '/en/woocommerce-bangladesh', label: 'WooCommerce Bangladesh guide' },
     { href: '/en/bd-fraud-checker', label: 'BD Fraud Checker' },
     { href: '/en/fake-order-protection', label: 'Fake order protection' },
     { href: '/en/courier-charge-calculator', label: 'Courier charge calculator' },
@@ -158,22 +160,22 @@ const relatedLinks = [
                 <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
                     Built for WooCommerce and Facebook page COD sellers — status sync, SMS, and parcel note history in one place.
                 </p>
-                <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                     <MetaCtaLink
                         :href="ctaUrl"
                         :label="ctaLabel"
                         location="seo_en_courier_auto_entry_hero"
-                        link-class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
+                        link-class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400 sm:w-auto"
                     />
                     <Link
                         href="/en/bd-fraud-checker"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto"
                     >
                         Fraud check first
                     </Link>
                     <Link
                         href="/courier-auto-entry"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 sm:w-auto"
                     >
                         বাংলা ভার্সন
                     </Link>
@@ -254,7 +256,7 @@ const relatedLinks = [
                             and real ad ROAS with the
                             <Link href="/en/ads-roas-calculator" class="font-semibold text-amber-400 hover:text-amber-300">Ads ROAS calculator</Link>.
                         </template>
-                        <template v-else>{{ paragraph }}</template>
+                        <template v-else><LinkedRichText :text="paragraph" :is-en="true" /></template>
                     </p>
                 </article>
             </div>
@@ -266,8 +268,9 @@ const relatedLinks = [
                 <p class="mx-auto mt-3 max-w-2xl text-center text-sm text-slate-400">
                     Side-by-side differences — why COD teams switch to auto-entry.
                 </p>
-                <div class="mt-8 overflow-hidden rounded-2xl border border-white/10">
-                    <div class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/10 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-300 sm:text-sm">
+                <div class="-mx-4 mt-8 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+                    <div class="min-w-[22rem] overflow-hidden rounded-2xl border border-white/10 sm:min-w-0">
+                    <div class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/10 px-3 py-3 text-[11px] font-bold uppercase tracking-wide text-slate-300 sm:px-4 sm:text-sm">
                         <span>Topic</span>
                         <span>Manual</span>
                         <span class="text-amber-300">Auto</span>
@@ -275,11 +278,12 @@ const relatedLinks = [
                     <div
                         v-for="row in compareRows"
                         :key="row.label"
-                        class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 last:border-b-0"
+                        class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/5 px-3 py-3 text-xs text-slate-300 last:border-b-0 sm:px-4 sm:text-sm"
                     >
                         <span class="font-semibold text-slate-200">{{ row.label }}</span>
                         <span class="text-rose-300/90">{{ row.manual }}</span>
                         <span class="text-emerald-300/90">{{ row.auto }}</span>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -366,7 +370,7 @@ const relatedLinks = [
                     Start a trial from
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">pricing</Link>.
                     Bangla:
-                    <Link href="/courier-auto-entry" class="font-semibold text-amber-400 hover:text-amber-300">/courier-auto-entry</Link>.
+                    <Link href="/courier-auto-entry" class="font-semibold text-amber-400 hover:text-amber-300">Bangla version</Link>.
                 </p>
             </div>
         </section>
@@ -412,7 +416,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="true" />
                         </div>
                     </div>
                 </div>

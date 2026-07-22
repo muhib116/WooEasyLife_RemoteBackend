@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import RoiCalculatorSection from '@/components/marketing/RoiCalculatorSection.vue';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 import { primaryCtaUrl } from '@/utils/marketingCta';
 
 defineProps({
@@ -126,6 +127,7 @@ const whoFor = [
 ];
 
 const relatedLinks = [
+    { href: '/en/woocommerce-bangladesh', label: 'WooCommerce Bangladesh guide' },
     { href: '/en/bd-fraud-checker', label: 'BD Fraud Checker' },
     { href: '/en/fake-order-protection', label: 'Fake order protection' },
     { href: '/en/ads-roas-calculator', label: 'Ads ROAS calculator' },
@@ -252,7 +254,7 @@ const relatedLinks = [
                             <Link href="/en/ads-roas-calculator" class="font-semibold text-amber-400 hover:text-amber-300">Ads ROAS calculator</Link>
                             compares reported vs real ROAS.
                         </template>
-                        <template v-else>{{ paragraph }}</template>
+                        <template v-else><LinkedRichText :text="paragraph" :is-en="true" /></template>
                     </p>
                 </article>
             </div>
@@ -344,7 +346,7 @@ const relatedLinks = [
                     and
                     <Link href="/en/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">protection</Link>.
                     Bangla:
-                    <Link href="/return-loss-calculator" class="font-semibold text-amber-400 hover:text-amber-300">/return-loss-calculator</Link>.
+                    <Link href="/return-loss-calculator" class="font-semibold text-amber-400 hover:text-amber-300">Bangla version</Link>.
                     Start:
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">pricing</Link>.
                 </p>
@@ -392,7 +394,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="true" />
                         </div>
                     </div>
                 </div>

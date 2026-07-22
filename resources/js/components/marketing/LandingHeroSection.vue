@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { trackCtaClick } from '@/utils/metaPixel';
+import { trackCta as trackSiteCta } from '@/utils/siteVisitors';
 
 const props = defineProps({
     hero: { type: Object, default: () => ({}) },
@@ -36,6 +37,8 @@ const badgeLabel = computed(() => {
 
 const onHeroCta = (location, href, label) => {
     trackCtaClick({ location, href, label });
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    trackSiteCta(path, label || location || 'hero_cta');
 };
 </script>
 
@@ -62,7 +65,7 @@ const onHeroCta = (location, href, label) => {
                     {{ badgeLabel }}
                 </span>
 
-                <h1 class="landing-hero__item landing-hero__item--3 mt-4 text-[1.7rem] font-extrabold leading-[1.35] tracking-tight text-white sm:mt-5 sm:text-4xl sm:leading-[1.28] lg:text-[2.75rem] lg:leading-[1.25]">
+                <h1 class="landing-hero__item landing-hero__item--3 mt-4 text-[1.7rem] font-extrabold !leading-[1.35] tracking-tight text-white sm:mt-5 sm:text-4xl sm:!leading-[1.28] lg:text-[2.75rem] lg:!leading-[1.25]">
                     {{ hero.headline }}
                     <span
                         v-if="hero.headline_accent"

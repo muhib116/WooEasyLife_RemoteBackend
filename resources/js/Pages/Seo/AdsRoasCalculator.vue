@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import AdsRoasCalculatorSection from '@/components/marketing/AdsRoasCalculatorSection.vue';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 
 defineProps({
@@ -260,7 +261,7 @@ const whoFor = [
                         :key="idx"
                         class="text-sm leading-relaxed text-slate-300 sm:text-base"
                     >
-                        {{ paragraph }}
+                        <LinkedRichText :text="paragraph" :is-en="false" />
                     </p>
                 </article>
 
@@ -378,7 +379,7 @@ const whoFor = [
                     হিসাব শিক্ষামূলক; নিজের রিটার্ন রেট মিলিয়ে নিন,                     তারপর
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>
                     থেকে ট্রায়াল শুরু করুন। English:
-                    <Link href="/en/ads-roas-calculator" class="font-semibold text-amber-400 hover:text-amber-300">/en/ads-roas-calculator</Link>।
+                    <Link href="/en/ads-roas-calculator" class="font-semibold text-amber-400 hover:text-amber-300">English version</Link>।
                 </p>
             </div>
         </section>
@@ -430,7 +431,7 @@ const whoFor = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="false" />
                         </div>
                     </div>
                 </div>

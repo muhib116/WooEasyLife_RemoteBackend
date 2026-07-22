@@ -38,7 +38,7 @@ class BlogAiController extends Controller
             'enabled' => (bool) config('blog_ai.enabled', true),
             'queue' => $this->shouldQueue(),
             'image_enabled' => (bool) config('blog_ai.image_enabled', true),
-            'clusters' => config('blog_ai.clusters', []),
+            'clusters' => app(\App\Services\BlogAi\BlogClusterCatalog::class)->labels(),
             'article_types' => \App\Models\BlogPost::ARTICLE_TYPES,
             'default_article_type' => config('blog_ai.default_article_type', 'howto'),
             'default_locale' => config('blog_ai.default_locale', 'bn'),
@@ -51,6 +51,7 @@ class BlogAiController extends Controller
             'competitors' => [
                 'enabled' => (bool) config('blog_ai.competitors.enabled', true),
                 'max_urls' => (int) config('blog_ai.competitors.max_urls', 5),
+                'discovery_enabled' => (bool) config('blog_ai.competitors.discovery.enabled', true),
                 'recent' => app(\App\Services\BlogAi\BlogCompetitorAnalyzer::class)->recentForAdmin(5),
             ],
             'auto' => [
@@ -78,8 +79,39 @@ class BlogAiController extends Controller
         return response()->json([
             'enabled' => (bool) config('blog_ai.competitors.enabled', true),
             'max_urls' => (int) config('blog_ai.competitors.max_urls', 5),
+            'discovery_enabled' => (bool) config('blog_ai.competitors.discovery.enabled', true),
             'items' => $analyzer->recentForAdmin(12),
             'intelligence' => app(\App\Services\BlogAi\BlogIntelligenceScorer::class)->score(),
+        ]);
+    }
+
+    public function discoverCompetitors(Request $request, \App\Services\BlogAi\BlogCompetitorDiscoveryService $discovery): JsonResponse
+    {
+        $this->ensureEnabled();
+
+        if (! config('blog_ai.competitors.enabled', true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Competitor analyzer is disabled.',
+            ]);
+        }
+
+        if (! config('blog_ai.competitors.discovery.enabled', true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Competitor discovery is disabled.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'keyword' => ['required', 'string', 'max:255'],
+        ]);
+
+        $results = $discovery->discover($validated['keyword']);
+
+        return response()->json([
+            'ok' => true,
+            'keyword' => $validated['keyword'],
+            'results' => $results,
+            'urls_text' => implode("\n", array_map(fn (array $row) => $row['url'], $results)),
         ]);
     }
 
@@ -95,18 +127,22 @@ class BlogAiController extends Controller
 
         $validated = $request->validate([
             'keyword' => ['required', 'string', 'max:255'],
-            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
-            'urls_text' => ['required', 'string', 'max:4000'],
+            'cluster' => ['nullable', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
+            'urls_text' => ['nullable', 'string', 'max:4000'],
+            'allow_discover' => ['nullable', 'boolean'],
         ]);
 
-        $urls = preg_split('/[\r\n,]+/', $validated['urls_text']) ?: [];
-        $urls = array_values(array_filter(array_map('trim', $urls)));
+        $urlsText = trim((string) ($validated['urls_text'] ?? ''));
+        $urls = $urlsText !== ''
+            ? array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $urlsText) ?: [])))
+            : [];
 
         $result = $analyzer->analyze(
             keyword: $validated['keyword'],
             urls: $urls,
             cluster: $validated['cluster'] ?? null,
             userId: $request->user()?->id,
+            allowDiscover: (bool) ($validated['allow_discover'] ?? true),
         );
 
         /** @var \App\Models\BlogCompetitorAnalysis $analysis */
@@ -143,7 +179,7 @@ class BlogAiController extends Controller
         $validated = $request->validate([
             'type' => ['required', 'string', Rule::in(\App\Models\BlogAiMemory::TYPES)],
             'content' => ['required', 'string', 'max:500'],
-            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['nullable', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
             'priority' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
@@ -171,7 +207,7 @@ class BlogAiController extends Controller
             'priority' => ['nullable', 'integer', 'min:1', 'max:100'],
             'content' => ['nullable', 'string', 'max:500'],
             'type' => ['nullable', 'string', Rule::in(\App\Models\BlogAiMemory::TYPES)],
-            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['nullable', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
         ]);
 
         $row = \App\Models\BlogAiMemory::query()->findOrFail($memoryId);
@@ -234,7 +270,7 @@ class BlogAiController extends Controller
         $this->enforceDailyCaps($request, creatingSession: true);
 
         $validated = $request->validate([
-            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['nullable', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
             'seed_topic' => ['nullable', 'string', 'max:255'],
             'keywords_text' => ['required', 'string', 'max:2000'],
             'article_type' => ['nullable', 'string', Rule::in(\App\Models\BlogPost::ARTICLE_TYPES)],
@@ -276,7 +312,7 @@ class BlogAiController extends Controller
         $this->enforceDailyCaps($request);
 
         $validated = $request->validate([
-            'cluster' => ['required', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['required', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
             'seed_topic' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -490,7 +526,7 @@ class BlogAiController extends Controller
 
         $validated = $request->validate([
             'seed_topic' => ['nullable', 'string', 'max:255'],
-            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['nullable', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
             'keywords_text' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -568,7 +604,7 @@ class BlogAiController extends Controller
         $this->assertNoActiveAutoRun((int) $request->user()->id);
 
         $validated = $request->validate([
-            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['nullable', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
             'seed_topic' => ['nullable', 'string', 'max:255'],
             'keywords_text' => ['nullable', 'string', 'max:2000'],
             'article_type' => ['nullable', 'string', Rule::in(\App\Models\BlogPost::ARTICLE_TYPES)],
@@ -704,7 +740,7 @@ class BlogAiController extends Controller
         $this->assertNoActiveAutoRun((int) $request->user()->id);
 
         $validated = $request->validate([
-            'cluster' => ['nullable', 'string', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['nullable', 'string', app(\App\Services\BlogAi\BlogClusterCatalog::class)->inRule()],
             'seed_topic' => ['nullable', 'string', 'max:255'],
             'sync_learning' => ['nullable', 'boolean'],
             'create_post' => ['nullable', 'boolean'],

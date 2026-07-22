@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import CourierChargeCalculatorSection from '@/components/marketing/CourierChargeCalculatorSection.vue';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 
 defineProps({
@@ -225,7 +226,7 @@ const relatedLinks = [
                         :key="idx"
                         class="text-sm leading-relaxed text-slate-300 sm:text-base"
                     >
-                        {{ paragraph }}
+                        <LinkedRichText :text="paragraph" :is-en="false" />
                     </p>
                 </article>
             </div>
@@ -332,7 +333,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="false" />
                         </div>
                     </div>
                 </div>

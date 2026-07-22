@@ -7,6 +7,7 @@ use App\Models\BlogGscQueryMetric;
 use App\Models\BlogLearningInsight;
 use App\Models\BlogPost;
 use App\Models\BlogPostAnalytics;
+use App\Services\BlogAi\BlogLandingContextService;
 use App\Services\Seo\GoogleSearchConsoleClient;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -623,7 +624,7 @@ class BlogLearningService
             ->get()
             ->map(fn ($r) => [
                 'cluster' => $r->cluster,
-                'label' => config('blog_ai.clusters.'.$r->cluster, $r->cluster),
+                'label' => app(BlogClusterCatalog::class)->label((string) $r->cluster),
                 'avg_score' => round((float) $r->avg_score, 2),
                 'views_28d' => (int) $r->views,
                 'posts' => (int) $r->posts,
@@ -708,7 +709,9 @@ class BlogLearningService
                 'Do not cannibalize exact focus_keyword of top winners unless updating that topic.',
                 'Underperforming topics: change intent/angle; do not rewrite the same weak hook.',
                 'Include soft CTA patterns similar to cta_labels_that_convert when relevant.',
-                'Keep Bangla seller-talk; practical steps beat generic fluff.',
+                'Write spoken Bangla seller-talk (Messenger tone). Ban AI fluff and corporate Bangla.',
+                'Prefer short paragraphs + concrete BD COD steps; lists only for real checklists.',
+                'FAQs must sound like real seller questions, not textbook headings.',
             ],
             'coverage_gaps' => $coverageGaps,
         ];
@@ -878,6 +881,17 @@ class BlogLearningService
             $memoryStats = $memory->stats();
         }
 
+        $rankOps = $this->rankOpportunitiesForAdmin(25);
+        $gscFocus = collect($rankOps['items'] ?? [])
+            ->filter(fn ($row) => is_array($row) && in_array($row['bucket'] ?? '', [
+                BlogGscQueryMetric::BUCKET_STRIKING,
+                BlogGscQueryMetric::BUCKET_FIX_CTR,
+                BlogGscQueryMetric::BUCKET_DEFEND,
+            ], true))
+            ->take(8)
+            ->values()
+            ->all();
+
         return [
             'insight' => $insight ? [
                 'generated_at' => optional($insight->generated_at)?->toIso8601String(),
@@ -887,41 +901,30 @@ class BlogLearningService
                 'payload' => $insight->payload_json,
             ] : null,
             'top_posts' => $top,
-            'rank_opportunities' => $this->rankOpportunitiesForAdmin(25),
+            'rank_opportunities' => $rankOps,
+            'gsc_focus' => [
+                'prefer_gsc' => (bool) config('blog_ai.auto.prefer_gsc', true),
+                'label' => 'Smart Post prioritizes these Search Console queries (free real demand).',
+                'items' => $gscFocus,
+                'count' => count($gscFocus),
+            ],
             'competitors' => $competitors,
+            'competitors_discovery_enabled' => (bool) config('blog_ai.competitors.discovery.enabled', true),
             'memories' => $memories,
             'memory_stats' => $memoryStats,
             'intelligence' => app(BlogIntelligenceScorer::class)->score(),
-            'clusters' => config('blog_ai.clusters', []),
+            'clusters' => app(BlogClusterCatalog::class)->labels(),
         ];
     }
 
     private function inferCluster(?string $focusKeyword, ?string $title): ?string
     {
-        $hay = mb_strtolower(trim(($focusKeyword ?? '').' '.($title ?? '')));
+        $hay = trim(($focusKeyword ?? '').' '.($title ?? ''));
         if ($hay === '') {
             return null;
         }
 
-        $map = [
-            'fake_order' => ['ফেক', 'fake order', 'cod fraud'],
-            'fraud_checker' => ['ফ্রড', 'fraud', 'হিস্টোরি', 'history'],
-            'courier' => ['কুরিয়ার', 'courier', 'pathao', 'steadfast', 'redx'],
-            'checkout_protection' => ['otp', 'চেকআউট', 'block', 'ডুপ্লিকেট'],
-            'missing_order' => ['হারানো', 'missing', 'abandoned'],
-            'facebook_ads' => ['pixel', 'ফেসবুক', 'facebook ads'],
-            'ai_orders' => ['ai order', 'মেসেজ থেকে', 'screenshot'],
-        ];
-
-        foreach ($map as $cluster => $needles) {
-            foreach ($needles as $needle) {
-                if (str_contains($hay, mb_strtolower($needle))) {
-                    return $cluster;
-                }
-            }
-        }
-
-        return 'general';
+        return app(BlogLandingContextService::class)->detectCluster($hay) ?: 'general';
     }
 
     /**
@@ -954,7 +957,7 @@ class BlogLearningService
      */
     private function coverageGaps(): array
     {
-        $clusters = array_keys(config('blog_ai.clusters', []));
+        $clusters = app(BlogClusterCatalog::class)->keys();
         $covered = BlogPostAnalytics::query()
             ->whereNotNull('cluster')
             ->distinct()
@@ -1070,10 +1073,10 @@ class BlogLearningService
             if (count($ideas) >= 5) {
                 break;
             }
-            $seeds = config('blog_ai.cluster_seed_queries.'.$cluster, []);
-            $seed = is_array($seeds) && $seeds !== []
+            $seeds = app(BlogClusterCatalog::class)->seedQueries((string) $cluster);
+            $seed = $seeds !== []
                 ? (string) $seeds[0]
-                : (string) config('blog_ai.clusters.'.$cluster, $cluster);
+                : app(BlogClusterCatalog::class)->label((string) $cluster);
             $seedKey = mb_strtolower($seed);
             if (isset($seenSeeds[$seedKey])) {
                 continue;

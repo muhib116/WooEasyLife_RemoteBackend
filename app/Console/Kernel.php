@@ -26,6 +26,12 @@ class Kernel extends ConsoleKernel
         $schedule->command('blog:build-learning-insights')
             ->dailyAt('02:15')
             ->timezone('Asia/Dhaka');
+        $schedule->command('site-visitors:rollup')
+            ->dailyAt('02:30')
+            ->timezone('Asia/Dhaka');
+        $schedule->command('site-visitors:sync-gsc')
+            ->dailyAt('02:45')
+            ->timezone('Asia/Dhaka');
         $schedule->command('courier:sync-public-rates')
             ->dailyAt('03:10')
             ->timezone('Asia/Dhaka');

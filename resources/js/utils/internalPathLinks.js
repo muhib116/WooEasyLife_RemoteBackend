@@ -1,0 +1,117 @@
+/**
+ * Turn raw internal paths in marketing copy into labeled link tokens.
+ * Only known marketing routes are linked (avoids /wp-login, /images/…).
+ * Optional Bangla case markers glued after a path (-এ, -তে, …) are dropped
+ * so labeled links don’t leave a dangling “-এ”.
+ */
+
+const LABELS = {
+    '/bd-fraud-checker': { bn: 'ফ্রড চেকার', en: 'BD Fraud Checker' },
+    '/en/bd-fraud-checker': { bn: 'ফ্রড চেকার (EN)', en: 'BD Fraud Checker' },
+    '/fake-order-protection': { bn: 'ফেক অর্ডার প্রোটেকশন', en: 'Fake Order Protection' },
+    '/en/fake-order-protection': { bn: 'ফেক অর্ডার প্রোটেকশন (EN)', en: 'Fake Order Protection' },
+    '/courier-auto-entry': { bn: 'কুরিয়ার অটো এন্ট্রি', en: 'Courier Auto Entry' },
+    '/en/courier-auto-entry': { bn: 'কুরিয়ার অটো এন্ট্রি (EN)', en: 'Courier Auto Entry' },
+    '/return-loss-calculator': { bn: 'রিটার্ন লস ক্যালকুলেটর', en: 'Return Loss Calculator' },
+    '/en/return-loss-calculator': { bn: 'রিটার্ন লস ক্যালকুলেটর (EN)', en: 'Return Loss Calculator' },
+    '/courier-charge-calculator': { bn: 'কুরিয়ার চার্জ ক্যালকুলেটর', en: 'Courier Charge Calculator' },
+    '/en/courier-charge-calculator': { bn: 'কুরিয়ার চার্জ ক্যালকুলেটর (EN)', en: 'Courier Charge Calculator' },
+    '/ads-roas-calculator': { bn: 'Ads ROAS ক্যালকুলেটর', en: 'Ads ROAS Calculator' },
+    '/en/ads-roas-calculator': { bn: 'Ads ROAS Calculator', en: 'Ads ROAS Calculator' },
+    '/woocommerce-bangladesh': { bn: 'WooCommerce Bangladesh গাইড', en: 'WooCommerce Bangladesh guide' },
+    '/en/woocommerce-bangladesh': { bn: 'ইংরেজি গাইড', en: 'English WooCommerce guide' },
+    '/pricing': { bn: 'প্রাইসিং', en: 'Pricing' },
+    '/fraudbd-alternative': { bn: 'FraudBD Alternative', en: 'FraudBD Alternative' },
+    '/en/fraudbd-alternative': { bn: 'FraudBD Alternative (EN)', en: 'FraudBD Alternative' },
+    '/steadfast-integration': { bn: 'Steadfast ইন্টিগ্রেশন', en: 'Steadfast integration' },
+    '/en/steadfast-integration': { bn: 'Steadfast (EN)', en: 'Steadfast integration' },
+    '/pathao-courier-guide': { bn: 'Pathao কুরিয়ার গাইড', en: 'Pathao courier guide' },
+    '/en/pathao-courier-guide': { bn: 'Pathao (EN)', en: 'Pathao courier guide' },
+    '/redx-courier-guide': { bn: 'RedX কুরিয়ার গাইড', en: 'RedX courier guide' },
+    '/en/redx-courier-guide': { bn: 'RedX (EN)', en: 'RedX courier guide' },
+    '/woocommerce-mobile-app': { bn: 'মোবাইল অ্যাপ গাইড', en: 'Mobile app guide' },
+    '/en/woocommerce-mobile-app': { bn: 'Mobile app (EN)', en: 'Mobile app guide' },
+    '/customer-verification': { bn: 'কাস্টমার ভেরিফিকেশন', en: 'Customer verification' },
+    '/en/customer-verification': { bn: 'Customer verification (EN)', en: 'Customer verification' },
+    '/cod-return-reduction': { bn: 'COD রিটার্ন কমান', en: 'COD return reduction' },
+    '/en/cod-return-reduction': { bn: 'COD returns (EN)', en: 'COD return reduction' },
+    '/woocommerce-notifications': { bn: 'নোটিফিকেশন অটোমেশন', en: 'Notifications automation' },
+    '/en/woocommerce-notifications': { bn: 'Notifications (EN)', en: 'Notifications automation' },
+    '/facebook-ads-for-woocommerce': { bn: 'Facebook Ads গাইড', en: 'Facebook Ads guide' },
+    '/en/facebook-ads-for-woocommerce': { bn: 'Facebook Ads (EN)', en: 'Facebook Ads guide' },
+    '/ki-vabe-fake-order-atkabo': { bn: 'কিভাবে ফেক অর্ডার আটকাবো', en: 'How to stop fake orders (BN)' },
+    '/fake-customer-check': { bn: 'Fake Customer Check', en: 'Fake Customer Check' },
+    '/pathao-fraud-check': { bn: 'Pathao ফ্রড চেক', en: 'Pathao fraud check' },
+    '/steadfast-fraud-check': { bn: 'Steadfast ফ্রড চেক', en: 'Steadfast fraud check' },
+    '/redx-fraud-check': { bn: 'RedX ফ্রড চেক', en: 'RedX fraud check' },
+    '/bd-courier-ratio-checker': { bn: 'BD Courier Ratio Checker', en: 'BD Courier Ratio Checker' },
+};
+
+const KNOWN_PATHS = Object.keys(LABELS).sort((a, b) => b.length - a.length);
+
+/** Bangla case markers sometimes glued onto slugs in copy (e.g. /pricing-এ). */
+const BN_PATH_SUFFIX_RE = /^(?:-এ|-তে|-র|-য়|-য়ে|-য়ের|-কে|-ও)/u;
+
+export function labelForInternalPath(path, isEn = false) {
+    const key = String(path || '').replace(/\/+$/, '') || '/';
+    const entry = LABELS[key];
+    if (entry) return isEn ? entry.en : entry.bn;
+    return key;
+}
+
+/**
+ * @param {string} text
+ * @param {boolean} isEn
+ * @returns {Array<{ type: 'text', text: string } | { type: 'link', href: string, label: string }>}
+ */
+export function linkifyInternalPaths(text, isEn = false) {
+    const raw = String(text || '');
+    if (!raw) return [];
+
+    const hits = [];
+    for (const path of KNOWN_PATHS) {
+        let from = 0;
+        while (from < raw.length) {
+            const idx = raw.indexOf(path, from);
+            if (idx < 0) break;
+            const afterPath = idx + path.length;
+            const next = raw[afterPath] || '';
+            // Skip if this is a longer Latin slug prefix (/foo vs /foo-bar)
+            if (next && /[a-z0-9]/i.test(next)) {
+                from = afterPath;
+                continue;
+            }
+            let end = afterPath;
+            const suffix = raw.slice(afterPath).match(BN_PATH_SUFFIX_RE);
+            if (suffix) {
+                end += suffix[0].length;
+            }
+            const overlaps = hits.some((h) => idx < h.end && end > h.start);
+            if (!overlaps) {
+                hits.push({ start: idx, end, path });
+            }
+            from = end;
+        }
+    }
+
+    hits.sort((a, b) => a.start - b.start);
+    if (!hits.length) return [{ type: 'text', text: raw }];
+
+    const parts = [];
+    let last = 0;
+    for (const hit of hits) {
+        if (hit.start > last) {
+            parts.push({ type: 'text', text: raw.slice(last, hit.start) });
+        }
+        parts.push({
+            type: 'link',
+            href: hit.path,
+            label: labelForInternalPath(hit.path, isEn),
+        });
+        last = hit.end;
+    }
+    if (last < raw.length) {
+        parts.push({ type: 'text', text: raw.slice(last) });
+    }
+    return parts;
+}

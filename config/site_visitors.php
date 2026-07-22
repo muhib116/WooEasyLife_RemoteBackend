@@ -4,7 +4,21 @@ return [
     'enabled' => env('SITE_VISITORS_ENABLED', true),
 
     /*
-    | Reject paths that start with any of these prefixes (admin / auth / app).
+    | Extra public paths always allowed (beyond auto-derived seo.pages + /blog + /en).
+    */
+    'allowed_path_prefixes_extra' => [
+        '/',
+        '/pricing',
+        '/privacy-policy',
+        '/terms-of-service',
+        '/download',
+        '/fraud-bd-alternative',
+    ],
+
+    'allowlist_cache_seconds' => (int) env('SITE_VISITORS_ALLOWLIST_CACHE', 300),
+
+    /*
+    | Always reject these (admin / auth / app), even if somehow allowlisted.
     */
     'blocked_path_prefixes' => [
         '/dashboard',
@@ -32,17 +46,40 @@ return [
         '/telescope',
         '/_ignition',
         '/analytics/visitors',
+        '/profile',
+        '/sessions',
+        '/backups',
+        '/migrations',
+        '/maintenance',
+        '/products',
+        '/customers',
+        '/orders',
+        '/plugins',
+        '/packages',
+        '/package-payments',
+        '/api-keys',
+        '/tutorials',
+        '/landing-settings',
+        '/marketing-settings',
+        '/fraud-check',
+        '/fraud-stream',
+        '/icons',
+        '/primeicons',
+        '/builder',
+        '/developer',
+        '/curl',
+        '/deploy',
     ],
 
     'max_views_per_visitor_day' => (int) env('SITE_VISITORS_MAX_VIEWS_DAY', 80),
     'max_cta_per_visitor_hour' => (int) env('SITE_VISITORS_MAX_CTA_HOUR', 40),
     'max_tool_actions_per_visitor_hour' => (int) env('SITE_VISITORS_MAX_TOOL_HOUR', 60),
+    'max_heartbeats_per_visitor_day' => (int) env('SITE_VISITORS_MAX_HEARTBEATS_DAY', 200),
 
-    /** Minimum seconds between persisted heartbeat rows per session+path. */
+    'page_view_dedupe_seconds' => (int) env('SITE_VISITORS_PAGEVIEW_DEDUPE_SECONDS', 30),
     'heartbeat_min_interval_seconds' => (int) env('SITE_VISITORS_HEARTBEAT_INTERVAL', 15),
-
-    /** Client heartbeat interval hint (ms). */
     'client_heartbeat_interval_ms' => (int) env('SITE_VISITORS_CLIENT_HEARTBEAT_MS', 15000),
+    'max_report_range_days' => (int) env('SITE_VISITORS_MAX_REPORT_DAYS', 90),
 
     'bot_ua_snippets' => [
         'bot',
@@ -60,5 +97,14 @@ return [
         'mj12bot',
         'petalbot',
         'bytespider',
+        'gptbot',
+        'claudebot',
+        'amazonbot',
+        'dotbot',
+        'applebot',
+        'twitterbot',
+        'linkedinbot',
+        'whatsapp',
+        'telegram',
     ],
 ];

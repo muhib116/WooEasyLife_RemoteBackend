@@ -3,7 +3,7 @@
 /* Document scroll (anchors / nav) — .marketing-page itself is not the scroll container. */
 html:has(.marketing-page) {
     scroll-behavior: smooth;
-    scroll-padding-top: 5.5rem;
+    scroll-padding-top: 7rem;
 }
 
 .marketing-page {

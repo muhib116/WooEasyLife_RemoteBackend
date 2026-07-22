@@ -40,6 +40,8 @@ class BlogProductBriefBuilder
             'product' => config('blog_ai.persona.product'),
             'audience' => config('blog_ai.persona.audience'),
             'tone' => config('blog_ai.persona.tone'),
+            'voice_do' => array_values(config('blog_ai.persona.voice_do', [])),
+            'voice_dont' => array_values(config('blog_ai.persona.voice_dont', [])),
             'founder' => config('blog_ai.persona.founder'),
             'author_name' => config('blog_ai.author_name'),
             'location' => config('landing.location', 'ঢাকা, বাংলাদেশ'),
@@ -65,18 +67,22 @@ class BlogProductBriefBuilder
                 'Write primarily in Bangla (bn). Use a Latin SEO slug.',
                 'Soft-promote WooEasyLife; prioritize helpful education over hard sell.',
                 'Obey performance_learning guidance when choosing topic angle and hooks.',
-                'Stay aligned with cluster_landing page truth (H1, lead, FAQs, claims). Do not contradict landing SEO copy.',
+                'Stay aligned with cluster_landing / landing_page_reference (primary_url, H1, lead, FAQs, claims). Do not contradict landing SEO copy.',
+                'Treat landing_page_reference.primary_url as the content source of truth; use editorial skeleton for blog section flow (do not clone landing layout).',
                 'Include a soft CTA to the cluster primary_path (and /pricing when natural).',
                 'Rank SEO tools: every post MUST internally link cluster must_link_paths first, using high-intent keyword anchors from seo_tools (never generic “এখানে ক্লিক”).',
                 'When natural, also link 1 related free tool (return-loss / courier-charge / ads-roas / fraud checker) so tool pages gain topical authority.',
                 'Focus keyword should match search intent for the primary tool when the cluster is tool-led (fraud_checker, return_loss, courier_charge, facebook_ads).',
+                'Voice: Messenger-style Bangla seller talk. Prefer short paragraphs over listicles. Ban corporate/AI fluff (see voice_dont).',
+                'Never open sections with “আজকের ডিজিটাল যুগে”, “গুরুত্বপূর্ণ বিষয় হলো”, or English “In today’s digital age”.',
+                'Do not start every section with the focus keyword; place it naturally once in first paragraph + one H2.',
             ],
         ];
 
         if (filled($cluster)) {
             $landing = $this->landingContext->forCluster((string) $cluster);
             $brief['cluster'] = (string) $cluster;
-            $brief['cluster_label'] = config('blog_ai.clusters.'.$cluster, $cluster);
+            $brief['cluster_label'] = app(BlogClusterCatalog::class)->label((string) $cluster);
             $brief['cluster_landing'] = $landing;
             $brief['seo_tools'] = $this->toolsForCluster((string) $cluster, $landing);
         } else {

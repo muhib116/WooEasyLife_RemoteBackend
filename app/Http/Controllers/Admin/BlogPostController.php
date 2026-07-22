@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\BlogPost;
 use App\Models\BlogPostAnalytics;
+use App\Services\BlogAi\BlogClusterCatalog;
 use App\Services\BlogAi\BlogLearningService;
 use App\Services\BlogSeoQuality;
 use App\Services\BlogService;
@@ -25,6 +26,7 @@ class BlogPostController extends Controller
         private BlogService $blogService,
         private BlogSeoQuality $blogSeoQuality,
         private FacebookPagePublisher $facebookPagePublisher,
+        private BlogClusterCatalog $clusterCatalog,
     ) {}
 
     public function index(Request $request): Response
@@ -76,12 +78,25 @@ class BlogPostController extends Controller
 
         return Inertia::render('BlogPosts/Index', [
             'posts' => $posts,
-            'learning' => app(BlogLearningService::class)->adminDashboard(),
             'facebook_sharing' => [
                 'enabled' => $this->facebookPagePublisher->configured(),
                 'public_links' => $this->facebookPagePublisher->isPublicShareUrl(),
                 'share_base_url' => $this->facebookPagePublisher->shareBaseUrl(),
             ],
+        ]);
+    }
+
+    public function ai(): Response
+    {
+        return Inertia::render('BlogPosts/Ai', [
+            'learning' => app(BlogLearningService::class)->adminDashboard(),
+        ]);
+    }
+
+    public function seo(): Response
+    {
+        return Inertia::render('BlogPosts/Seo', [
+            'learning' => app(BlogLearningService::class)->adminDashboard(),
         ]);
     }
 
@@ -243,7 +258,7 @@ class BlogPostController extends Controller
                 Rule::unique('blog_posts', 'slug')->ignore($ignoreId),
             ],
             'locale' => ['required', Rule::in(BlogPost::LOCALES)],
-            'cluster' => ['nullable', 'string', 'max:64', Rule::in(array_keys(config('blog_ai.clusters', [])))],
+            'cluster' => ['nullable', 'string', 'max:64', $this->clusterCatalog->inRule(false)],
             'article_type' => ['nullable', 'string', 'max:32', Rule::in(BlogPost::ARTICLE_TYPES)],
             'status' => ['required', Rule::in(BlogPost::STATUSES)],
             'excerpt' => ['nullable', 'string', 'max:500'],
@@ -416,7 +431,7 @@ class BlogPostController extends Controller
                 'noindex,nofollow',
             ],
             'markdown_slugs' => $this->blogService->markdownSlugs(),
-            'clusters' => config('blog_ai.clusters', []),
+            'clusters' => $this->clusterCatalog->labels(),
             'article_types' => BlogPost::ARTICLE_TYPES,
             'seo' => [
                 'min_body_words' => (int) config('blog_ai.min_body_words', 1200),

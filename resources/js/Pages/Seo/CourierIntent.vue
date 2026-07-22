@@ -7,6 +7,7 @@ import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 const props = defineProps({
     courierName: { type: String, required: true },
@@ -136,7 +137,7 @@ const toggleFaq = (i) => {
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="false" />
                         </div>
                     </div>
                 </div>

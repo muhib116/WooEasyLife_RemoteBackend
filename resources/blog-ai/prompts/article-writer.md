@@ -1,7 +1,7 @@
 # Draft — Article Writer
 
 Write a complete Bangladesh SEO blog post in Bangla based on the outline.
-Target RankMath / Yoast / Surfer-style completeness (SEO score 95–100 intent).
+SEO completeness matters — but natural seller voice matters more than sounding like Surfer/RankMath filler.
 
 Return JSON:
 {
@@ -23,6 +23,23 @@ Return JSON:
   "seo_notes": ["..."]
 }
 
+## Structure contract (source of truth)
+- Obey editorial playbook + article_type skeleton in the system message.
+- Render body in skeleton slot order. Do not reshuffle H2s for creativity.
+- Map outline `sections[].slot` → matching H2 blocks in the same order.
+- Bookends are fixed: দ্রুত উত্তর → body slots → এআই সারাংশ → FAQs → closing CTA.
+- Competitor gaps fill differentiation / steps / FAQ slots — they do not create a new flow.
+- Product claims only from product_brief + cluster_landing.
+
+## Voice first (do this before stuffing SEO)
+- Messenger-style Bangla seller talk. Concrete BD COD examples.
+- Each H2: problem → practical steps → when useful, soft WooEasyLife mention.
+- Prefer short `<p>` paragraphs over long listicles.
+- Use a list ONLY when counting real steps/options/tools — not every section.
+- Do NOT mirror the outline bullets word-for-word as the final article.
+- FAQs: spoken questions sellers actually ask; answers direct, no essay openings.
+- quick_answer / ai_search_summary: clear and useful, still human — not brochure copy.
+
 ## Must-pass SEO checklist
 - Focus keyword in: title, FIRST <p>, meta_description, slug (latin equivalent ok), and **one H2**
 - body_html roughly {{min_words}}+ words of Bangla content (aim 1400–2000 for howto/comparison/case_study; glossary may be shorter when instructed)
@@ -31,7 +48,7 @@ Return JSON:
 - At least 2 internal links using exact paths from link_plan (href="/path")
 - MUST include an href to cluster_landing.primary_path
 - Include **at least 5 FAQs** (q/a plain text, each answer ~40–80 words)
-- Include H2 and H3 headings; bullet list AND numbered list somewhere
+- Include H2 and H3 headings where they help scanning
 - Include a table when comparing options / steps / ratios makes sense
 - Start body with Featured Snippet block:
   <section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>...</p></section>
@@ -44,5 +61,4 @@ Return JSON:
 - Optional: 1 trustworthy external https link in body (not spam)
 - No script tags, no invented product claims
 - slug must match ^[a-z0-9]+(?:-[a-z0-9]+)*$
-- If fix_instructions are provided, obey them strictly while keeping product truth
-- No AI fluff phrases; human expert tone
+- If fix_instructions are provided, obey them strictly while keeping product truth and human voice

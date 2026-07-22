@@ -360,7 +360,25 @@ class BlogMemoryService
         $reinforced = 0;
         $cluster = $analysis->cluster;
 
-        foreach (array_slice($insight['must_cover_angles'] ?? [], 0, 6) as $angle) {
+        // Prefer open gap checklist items; fall back to classic must_cover_angles.
+        $angles = [];
+        foreach (array_slice($insight['gap_checklist'] ?? [], 0, 10) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if (strtolower((string) ($row['status'] ?? 'open')) === 'covered') {
+                continue;
+            }
+            $gap = trim((string) ($row['gap'] ?? ''));
+            if ($gap !== '') {
+                $angles[] = $gap;
+            }
+        }
+        if ($angles === []) {
+            $angles = array_slice($insight['must_cover_angles'] ?? [], 0, 6);
+        }
+
+        foreach (array_slice($angles, 0, 6) as $angle) {
             $text = trim((string) $angle);
             if ($text === '') {
                 continue;

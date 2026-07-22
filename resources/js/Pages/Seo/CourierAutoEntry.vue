@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -128,6 +129,7 @@ const whoFor = [
 ];
 
 const relatedLinks = [
+    { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
     { href: '/bd-fraud-checker', label: 'BD Fraud Checker' },
     { href: '/fake-order-protection', label: 'ফেক অর্ডার প্রোটেকশন' },
     { href: '/courier-charge-calculator', label: 'কুরিয়ার চার্জ ক্যালকুলেটর' },
@@ -158,28 +160,28 @@ const relatedLinks = [
                 <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
                     WooCommerce ও Facebook পেজ COD সেলারদের জন্য — স্ট্যাটাস সিঙ্ক, SMS ও পার্সেল নোট হিস্ট্রি এক জায়গায়।
                 </p>
-                <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                     <MetaCtaLink
                         :href="ctaUrl"
                         :label="ctaLabel"
                         location="seo_courier_auto_entry_hero"
-                        link-class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
+                        link-class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400 sm:w-auto"
                     />
                     <Link
                         href="/bd-fraud-checker"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto"
                     >
                         আগে ফ্রড চেক
                     </Link>
                     <Link
                         href="/courier-charge-calculator"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 sm:w-auto"
                     >
                         চার্জ ক্যালকুলেটর
                     </Link>
                     <Link
                         href="/en/courier-auto-entry"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 sm:w-auto"
                     >
                         English version
                     </Link>
@@ -249,8 +251,8 @@ const relatedLinks = [
                         </template>
                         <template v-else-if="section.heading.startsWith('নিরাপদ ওয়ার্কফ্লো') && idx === 0">
                             অটো এন্ট্রি দ্রুত, কিন্তু ঝুঁকিপূর্ণ অর্ডার অটো শিপ করা উচিত নয়। প্রথমে
-                            <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">BD Fraud Checker</Link>-এ
-                            মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখুন। কম সাকসেস রেট বা বারবার রিটার্ন হলে ফোন-কনফার্ম বা হোল্ড করুন।
+                            <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">BD Fraud Checker</Link>
+                            দিয়ে মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখুন। কম সাকসেস রেট বা বারবার রিটার্ন হলে ফোন-কনফার্ম বা হোল্ড করুন।
                         </template>
                         <template v-else-if="section.heading.startsWith('নিরাপদ ওয়ার্কফ্লো') && idx === 1">
                             ভালো হিস্টোরি থাকলে দ্রুত কনফার্ম করুন — কনফার্ম হলেই অটো এন্ট্রি। বারবার ফেক প্যাটার্ন আটকাতে
@@ -260,7 +262,7 @@ const relatedLinks = [
                             অ্যাড বাজেটের আসল ROAS দেখতে
                             <Link href="/ads-roas-calculator" class="font-semibold text-amber-400 hover:text-amber-300">Ads ROAS ক্যালকুলেটর</Link>।
                         </template>
-                        <template v-else>{{ paragraph }}</template>
+                        <template v-else><LinkedRichText :text="paragraph" :is-en="false" /></template>
                     </p>
                 </article>
             </div>
@@ -272,8 +274,9 @@ const relatedLinks = [
                 <p class="mx-auto mt-3 max-w-2xl text-center text-sm text-slate-400">
                     এক নজরে পার্থক্য — কেন COD টিম অটো এন্ট্রিতে যায়।
                 </p>
-                <div class="mt-8 overflow-hidden rounded-2xl border border-white/10">
-                    <div class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/10 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-300 sm:text-sm">
+                <div class="-mx-4 mt-8 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+                    <div class="min-w-[22rem] overflow-hidden rounded-2xl border border-white/10 sm:min-w-0">
+                    <div class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/10 px-3 py-3 text-[11px] font-bold uppercase tracking-wide text-slate-300 sm:px-4 sm:text-sm">
                         <span>বিষয়</span>
                         <span>ম্যানুয়াল</span>
                         <span class="text-amber-300">অটো</span>
@@ -281,11 +284,12 @@ const relatedLinks = [
                     <div
                         v-for="row in compareRows"
                         :key="row.label"
-                        class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 last:border-b-0"
+                        class="grid grid-cols-3 gap-2 border-b border-white/10 bg-white/5 px-3 py-3 text-xs text-slate-300 last:border-b-0 sm:px-4 sm:text-sm"
                     >
                         <span class="font-semibold text-slate-200">{{ row.label }}</span>
                         <span class="text-rose-300/90">{{ row.manual }}</span>
                         <span class="text-emerald-300/90">{{ row.auto }}</span>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -372,7 +376,7 @@ const relatedLinks = [
                     শুরু করতে
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>
                     থেকে ট্রায়াল নিন। English:
-                    <Link href="/en/courier-auto-entry" class="font-semibold text-amber-400 hover:text-amber-300">/en/courier-auto-entry</Link>।
+                    <Link href="/en/courier-auto-entry" class="font-semibold text-amber-400 hover:text-amber-300">English version</Link>।
                 </p>
             </div>
         </section>
@@ -418,7 +422,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="false" />
                         </div>
                     </div>
                 </div>

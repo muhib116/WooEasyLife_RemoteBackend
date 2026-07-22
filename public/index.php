@@ -7,6 +7,24 @@ define('LARAVEL_START', microtime(true));
 
 /*
 |--------------------------------------------------------------------------
+| Cached Vite assets (no full Laravel boot)
+|--------------------------------------------------------------------------
+|
+| When Apache/nginx routes /build/assets/*.js|css through index.php, serve
+| them with long-lived Cache-Control before bootstrapping the framework.
+|
+*/
+
+$welAssetUri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '');
+if (preg_match('#^/build/assets/([A-Za-z0-9._\-]+)$#', $welAssetUri, $welAssetMatch) === 1) {
+    $welStaticAssetPath = __DIR__.'/build/assets/'.$welAssetMatch[1];
+    if (is_file($welStaticAssetPath)) {
+        require __DIR__.'/serve-static-asset.php';
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Check If The Application Is Under Maintenance
 |--------------------------------------------------------------------------
 |

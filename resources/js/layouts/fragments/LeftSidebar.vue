@@ -312,14 +312,14 @@ type NavChild = {
     title: string;
     name: string;
     icon: IconName;
-    permission?: string;
+    permission?: string | string[];
 };
 
 type NavItem = {
     title: string;
     name?: string;
     icon: IconName;
-    permission?: string;
+    permission?: string | string[];
     children?: NavChild[];
 };
 
@@ -460,9 +460,40 @@ const allSections: NavSection[] = [
             },
             {
                 title: "Blog Posts",
-                name: "blogPosts.index",
                 icon: "PhNewspaper",
                 permission: "billing.manage",
+                children: [
+                    {
+                        title: "All Posts",
+                        name: "blogPosts.index",
+                        icon: "PhListBullets",
+                        permission: "billing.manage",
+                    },
+                    {
+                        title: "Blog AI",
+                        name: "blogPosts.ai",
+                        icon: "PhSparkle",
+                        permission: "billing.manage",
+                    },
+                    {
+                        title: "AI Settings",
+                        name: "blogPosts.settings",
+                        icon: "PhGearSix",
+                        permission: "billing.manage",
+                    },
+                    {
+                        title: "Topic Clusters",
+                        name: "blogPosts.clusters.index",
+                        icon: "PhTreeStructure",
+                        permission: "billing.manage",
+                    },
+                    {
+                        title: "SEO & Learning",
+                        name: "blogPosts.seo",
+                        icon: "PhChartLineUp",
+                        permission: ["roles.manage", "billing.manage"],
+                    },
+                ],
             },
             {
                 title: "Subscription Alerts",
@@ -486,6 +517,12 @@ const allSections: NavSection[] = [
     {
         label: "Analytics",
         items: [
+            {
+                title: "Visitors",
+                name: "siteVisitors.index",
+                icon: "PhUsers",
+                permission: "dashboard.view",
+            },
             {
                 title: "Visitor Report",
                 name: "visitor.index",
@@ -581,7 +618,13 @@ watch(
     },
 );
 
-const canSee = (permission?: string) => !permission || can(permission);
+const canSee = (permission?: string | string[]) => {
+    if (!permission) return true;
+    if (Array.isArray(permission)) {
+        return permission.some((p) => can(p));
+    }
+    return can(permission);
+};
 
 const filterItem = (item: NavItem): NavItem | null => {
     if (item.children?.length) {
@@ -822,6 +865,7 @@ const expandedGroups = reactive<Record<string, boolean>>({
             || route().current("customerNotices.*"),
     ),
     "Fraud Checker": Boolean(route().current("frauds.*")),
+    "Blog Posts": Boolean(route().current("blogPosts.*")),
 });
 
 const toggleGroup = (title: string) => {

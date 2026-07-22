@@ -18,7 +18,8 @@ class SeoMetaService
     public function forPage(string $page, array $overrides = []): array
     {
         $pages = config('seo.pages', []);
-        $config = array_merge($pages[$page] ?? [], $overrides);
+        $clusterPages = config('seo_cluster_pages', []);
+        $config = array_merge($pages[$page] ?? $clusterPages[$page] ?? [], $overrides);
 
         if ($config === []) {
             return [];
@@ -51,9 +52,11 @@ class SeoMetaService
             'og_image' => $ogImage,
             'og_image_width' => (int) config('seo.og_image_width', 1200),
             'og_image_height' => (int) config('seo.og_image_height', 630),
-            'og_image_type' => str_ends_with(strtolower(parse_url($ogImagePath, PHP_URL_PATH) ?: $ogImagePath), '.webp')
-                ? 'image/webp'
-                : 'image/jpeg',
+            'og_image_type' => match (true) {
+                str_ends_with(strtolower(parse_url($ogImagePath, PHP_URL_PATH) ?: $ogImagePath), '.webp') => 'image/webp',
+                str_ends_with(strtolower(parse_url($ogImagePath, PHP_URL_PATH) ?: $ogImagePath), '.png') => 'image/png',
+                default => 'image/jpeg',
+            },
             'facebook_app_id' => filled(config('seo.facebook_app_id'))
                 ? (string) config('seo.facebook_app_id')
                 : null,
@@ -66,7 +69,23 @@ class SeoMetaService
             'prerender_h1' => $prerenderH1,
             'prerender_lead' => $prerenderLead,
             'content_sections' => $contentSections,
-            'json_ld' => $this->buildJsonLd($title, $description, $canonical, $faqs, $breadcrumbs, $ogImage, $config),
+            'cluster_eyebrow' => $config['cluster_eyebrow'] ?? null,
+            'cluster_links' => is_array($config['cluster_links'] ?? null) ? $config['cluster_links'] : [],
+            'alternate_path' => $config['alternate_path'] ?? null,
+            'alternate_label' => $config['alternate_label'] ?? null,
+            'pillar_path' => $config['pillar_path'] ?? null,
+            'is_pillar' => (bool) ($config['is_pillar'] ?? false),
+            'json_ld' => $this->buildJsonLd(
+                $title,
+                $description,
+                $canonical,
+                $faqs,
+                $breadcrumbs,
+                $ogImage,
+                $config,
+                $contentSections,
+                $page,
+            ),
         ];
     }
 
@@ -169,6 +188,24 @@ class SeoMetaService
             '- [English Ads ROAS Calculator]('.$link('/en/ads-roas-calculator').'): Reported vs real ROAS after fake purchases.',
             '- [English Courier Charge Calculator]('.$link('/en/courier-charge-calculator').'): Pathao, Steadfast, RedX charge estimates.',
             '- [English Courier Auto Entry]('.$link('/en/courier-auto-entry').'): Pathao, Steadfast, RedX auto parcel entry.',
+            '- [WooCommerce Bangladesh hub]('.$link('/woocommerce-bangladesh').'): 30-part master guide (COD, fraud, courier APIs, ads, scaling).',
+            '- [English WooCommerce Bangladesh hub]('.$link('/en/woocommerce-bangladesh').'): English mirror of the hub guide.',
+            '- [Steadfast Integration]('.$link('/steadfast-integration').'): Steadfast API booking and tracking.',
+            '- [Pathao Courier Guide]('.$link('/pathao-courier-guide').'): Pathao API connect and bulk booking.',
+            '- [RedX Courier Guide]('.$link('/redx-courier-guide').'): RedX auto entry and returns.',
+            '- [WooCommerce Mobile App]('.$link('/woocommerce-mobile-app').'): Admin push, call, fraud flags.',
+            '- [Customer Verification]('.$link('/customer-verification').'): OTP and courier history zones.',
+            '- [COD Return Reduction]('.$link('/cod-return-reduction').'): Return-loss math and RTS prevention.',
+            '- [WooCommerce Notifications]('.$link('/woocommerce-notifications').'): SMS/WhatsApp recovery and tracking.',
+            '- [Facebook Ads for WooCommerce]('.$link('/facebook-ads-for-woocommerce').'): Pixel, CAPI, audiences, GA4.',
+            '- [English Steadfast Integration]('.$link('/en/steadfast-integration').'): English Steadfast API guide.',
+            '- [English Pathao Courier Guide]('.$link('/en/pathao-courier-guide').'): English Pathao API guide.',
+            '- [English RedX Courier Guide]('.$link('/en/redx-courier-guide').'): English RedX guide.',
+            '- [English WooCommerce Mobile App]('.$link('/en/woocommerce-mobile-app').'): English admin app guide.',
+            '- [English Customer Verification]('.$link('/en/customer-verification').'): English OTP / fraud zones.',
+            '- [English COD Return Reduction]('.$link('/en/cod-return-reduction').'): English return-loss prevention.',
+            '- [English WooCommerce Notifications]('.$link('/en/woocommerce-notifications').'): English SMS/WhatsApp automation.',
+            '- [English Facebook Ads for WooCommerce]('.$link('/en/facebook-ads-for-woocommerce').'): English Pixel/CAPI guide.',
             '- [English blog]('.$link('/en/blog').'): English blog index.',
             '- [Sitemap]('.$link('/sitemap.xml').'): Full indexable URL list for crawlers.',
             '- [Robots]('.$link('/robots.txt').'): Crawl directives.',
@@ -197,14 +234,14 @@ class SeoMetaService
 
     /**
      * @param  array<string, mixed>  $config
-     * @return list<array{heading: string|null, paragraphs: list<string>}>
+     * @return list<array{heading: string|null, paragraphs: list<string>, figures: list<array{src: string, alt: string, caption: string|null}>}>
      */
     private function contentSectionsFor(string $page, array $config): array
     {
         $fromConfig = $config['content_sections'] ?? null;
         $sections = is_array($fromConfig) && $fromConfig !== []
             ? $fromConfig
-            : (config('seo_content.'.$page, []) ?: []);
+            : (config('seo_content.'.$page, []) ?: config('seo_cluster_content.'.$page, []) ?: []);
 
         $normalized = [];
 
@@ -220,7 +257,25 @@ class SeoMetaService
                 )
             ));
 
-            if ($paragraphs === []) {
+            $figures = [];
+            foreach (is_array($section['figures'] ?? null) ? $section['figures'] : [] as $figure) {
+                if (! is_array($figure)) {
+                    continue;
+                }
+                $src = is_string($figure['src'] ?? null) ? trim((string) $figure['src']) : '';
+                if ($src === '') {
+                    continue;
+                }
+                $alt = is_string($figure['alt'] ?? null) ? trim((string) $figure['alt']) : '';
+                $caption = is_string($figure['caption'] ?? null) ? trim((string) $figure['caption']) : null;
+                $figures[] = [
+                    'src' => $src,
+                    'alt' => $alt !== '' ? $alt : ($caption ?: 'Diagram'),
+                    'caption' => $caption !== '' ? $caption : null,
+                ];
+            }
+
+            if ($paragraphs === [] && $figures === []) {
                 continue;
             }
 
@@ -228,6 +283,7 @@ class SeoMetaService
             $normalized[] = [
                 'heading' => is_string($heading) && trim($heading) !== '' ? trim($heading) : null,
                 'paragraphs' => $paragraphs,
+                'figures' => $figures,
             ];
         }
 
@@ -304,6 +360,13 @@ class SeoMetaService
      * @param  list<array{name: string, path: string}>  $breadcrumbs
      * @return array<string, mixed>
      */
+    /**
+     * @param  list<array{q: string, a: string}>  $faqs
+     * @param  list<array{name: string, path: string}>  $breadcrumbs
+     * @param  array<string, mixed>  $config
+     * @param  list<array{heading: string|null, paragraphs: list<string>}>  $contentSections
+     * @return array<string, mixed>
+     */
     private function buildJsonLd(
         string $title,
         string $description,
@@ -312,6 +375,8 @@ class SeoMetaService
         array $breadcrumbs,
         string $ogImage,
         array $config = [],
+        array $contentSections = [],
+        string $page = '',
     ): array {
         $org = config('seo.organization', []);
         $siteName = (string) config('seo.site_name', 'WooEasyLife');
@@ -365,6 +430,9 @@ class SeoMetaService
             $authorName = (string) ($config['author_name'] ?? config('blog_ai.author_name', 'Muhibbullah Ansary'));
             $authorRole = (string) ($config['author_role'] ?? config('blog_ai.author_role', 'Developer of WooEasyLife'));
             $personId = $this->absoluteUrl('/').'#person-'.Str::slug($authorName);
+            $published = (string) ($config['date_published'] ?? '2026-07-01');
+            $modified = (string) ($config['date_modified'] ?? $published);
+            $articleType = (string) ($config['schema_type'] ?? 'Article');
 
             $graphs[] = [
                 '@type' => 'Person',
@@ -374,14 +442,14 @@ class SeoMetaService
                 'worksFor' => ['@id' => $this->absoluteUrl('/').'#organization'],
             ];
 
-            $graphs[] = [
-                '@type' => 'BlogPosting',
+            $article = [
+                '@type' => $articleType,
                 '@id' => $canonical.'#article',
                 'headline' => $title,
                 'description' => $description,
                 'image' => [$ogImage],
-                'datePublished' => $config['date_published'] ?? null,
-                'dateModified' => $config['date_modified'] ?? ($config['date_published'] ?? null),
+                'datePublished' => $published,
+                'dateModified' => $modified,
                 'author' => ['@id' => $personId],
                 'publisher' => ['@id' => $this->absoluteUrl('/').'#organization'],
                 'mainEntityOfPage' => ['@id' => $canonical.'#webpage'],
@@ -389,7 +457,44 @@ class SeoMetaService
             ];
 
             if (filled($config['focus_keyword'] ?? null)) {
-                $graphs[array_key_last($graphs)]['keywords'] = $config['focus_keyword'];
+                $article['keywords'] = $config['focus_keyword'];
+            }
+
+            if (! empty($config['is_pillar'])) {
+                $article['articleSection'] = 'WooCommerce Bangladesh';
+            }
+
+            $graphs[] = array_filter($article, static fn ($value) => $value !== null);
+
+            if (! empty($config['is_pillar']) && $contentSections !== []) {
+                $tocItems = [];
+                $position = 1;
+                foreach ($contentSections as $section) {
+                    $heading = trim((string) ($section['heading'] ?? ''));
+                    if ($heading === '') {
+                        continue;
+                    }
+                    $lower = mb_strtolower($heading);
+                    if (str_contains($lower, 'দ্রুত') || str_contains($lower, 'quick')) {
+                        continue;
+                    }
+                    $tocItems[] = [
+                        '@type' => 'ListItem',
+                        'position' => $position,
+                        'name' => $heading,
+                        'url' => $canonical.'#guide-section-'.$position,
+                    ];
+                    $position++;
+                }
+                if (count($tocItems) >= 3) {
+                    $graphs[] = [
+                        '@type' => 'ItemList',
+                        '@id' => $canonical.'#toc',
+                        'name' => $title.' — table of contents',
+                        'numberOfItems' => count($tocItems),
+                        'itemListElement' => $tocItems,
+                    ];
+                }
             }
         }
 

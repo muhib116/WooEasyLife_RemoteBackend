@@ -1,7 +1,8 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { RANGE_SLIDER_CLASS, rangeTrackStyle } from '@/utils/rangeSlider';
+import { trackToolAction } from '@/utils/siteVisitors';
 
 const props = defineProps({
     config: { type: Object, default: () => ({}) },
@@ -112,6 +113,19 @@ const results = computed(() =>
 );
 
 const cheapest = computed(() => results.value[0] ?? null);
+
+let toolActionSent = false;
+watch(
+    () => [model.zone, model.weight_kg, model.cod_amount],
+    () => {
+        if (toolActionSent) {
+            return;
+        }
+        toolActionSent = true;
+        const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+        trackToolAction(path, 'courier_charge_calculate');
+    },
+);
 
 const lastSyncedLabel = computed(() => {
     const raw = props.config?.last_synced_at;

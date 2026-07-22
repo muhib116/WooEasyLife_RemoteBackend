@@ -34,7 +34,15 @@
             <meta property="og:url" content="{{ $seo['canonical'] }}">
         @endif
         <meta property="og:type" content="{{ $seo['og_type'] ?? 'website' }}">
-        <meta property="og:locale" content="{{ str_replace('-', '_', $seo['html_lang'] ?? 'bn_BD') }}">
+        @php
+            $htmlLang = (string) ($seo['html_lang'] ?? 'bn-BD');
+            $ogLocale = str_starts_with(strtolower($htmlLang), 'en')
+                ? 'en_US'
+                : (str_starts_with(strtolower($htmlLang), 'bn') ? 'bn_BD' : str_replace('-', '_', $htmlLang));
+            $ogLocaleAlt = $ogLocale === 'en_US' ? 'bn_BD' : 'en_US';
+        @endphp
+        <meta property="og:locale" content="{{ $ogLocale }}">
+        <meta property="og:locale:alternate" content="{{ $ogLocaleAlt }}">
         <meta property="og:site_name" content="{{ config('seo.site_name', 'WooEasyLife') }}">
         @if (! empty($seo['facebook_app_id']))
             <meta property="fb:app_id" content="{{ $seo['facebook_app_id'] }}">
@@ -173,6 +181,25 @@
         #seo-prerender a {
             color: #fbbf24;
         }
+
+        #seo-prerender figure {
+            margin: 1rem 0 1.25rem;
+        }
+
+        #seo-prerender figure img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #seo-prerender figcaption {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #94a3b8;
+        }
     </style>
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead
@@ -204,6 +231,9 @@
     @endif
 
     @isset($seo)
+        @php
+            $isEnPrerender = str_starts_with((string) ($seo['html_lang'] ?? 'bn-BD'), 'en');
+        @endphp
         <section id="seo-prerender">
             <h1>{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</h1>
             @if (! empty($seo['prerender_lead'] ?? $seo['description'] ?? null))
@@ -216,27 +246,65 @@
                     @endif
                     @foreach (($section['paragraphs'] ?? []) as $paragraph)
                         @if (is_string($paragraph) && $paragraph !== '')
-                            <p>{{ $paragraph }}</p>
+                            <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($paragraph, $isEnPrerender) !!}</p>
+                        @endif
+                    @endforeach
+                    @foreach (($section['figures'] ?? []) as $figure)
+                        @if (! empty($figure['src']))
+                            <figure>
+                                <img
+                                    src="{{ $figure['src'] }}"
+                                    alt="{{ $figure['alt'] ?? ($figure['caption'] ?? 'Diagram') }}"
+                                    loading="lazy"
+                                    decoding="async"
+                                    width="1200"
+                                    height="675"
+                                />
+                                @if (! empty($figure['caption']))
+                                    <figcaption>{{ $figure['caption'] }}</figcaption>
+                                @endif
+                            </figure>
                         @endif
                     @endforeach
                 @endforeach
             @endif
             <ul>
-                <li><a href="/bd-fraud-checker">BD Fraud Checker / ফ্রড চেকার</a></li>
-                <li><a href="/return-loss-calculator">রিটার্ন লস ক্যালকুলেটর</a></li>
-                <li><a href="/courier-charge-calculator">কুরিয়ার চার্জ ক্যালকুলেটর</a></li>
-                <li><a href="/ads-roas-calculator">Ads ROAS ক্যালকুলেটর</a></li>
-                <li><a href="/fake-order-protection">ফেক অর্ডার প্রোটেকশন</a></li>
-                <li><a href="/courier-auto-entry">কুরিয়ার অটো এন্ট্রি</a></li>
-                <li><a href="/fraudbd-alternative">FraudBD Alternative</a></li>
-                <li><a href="/pricing">প্রাইসিং</a></li>
+                @if ($isEnPrerender)
+                    <li><a href="/en/bd-fraud-checker">BD Fraud Checker</a></li>
+                    <li><a href="/en/return-loss-calculator">Return Loss Calculator</a></li>
+                    <li><a href="/en/courier-charge-calculator">Courier Charge Calculator</a></li>
+                    <li><a href="/en/ads-roas-calculator">Ads ROAS Calculator</a></li>
+                    <li><a href="/en/fake-order-protection">Fake Order Protection</a></li>
+                    <li><a href="/en/courier-auto-entry">Courier Auto Entry</a></li>
+                    <li><a href="/en/woocommerce-bangladesh">WooCommerce Bangladesh Guide</a></li>
+                    <li><a href="/pricing">Pricing</a></li>
+                @else
+                    <li><a href="/bd-fraud-checker">BD Fraud Checker / ফ্রড চেকার</a></li>
+                    <li><a href="/return-loss-calculator">রিটার্ন লস ক্যালকুলেটর</a></li>
+                    <li><a href="/courier-charge-calculator">কুরিয়ার চার্জ ক্যালকুলেটর</a></li>
+                    <li><a href="/ads-roas-calculator">Ads ROAS ক্যালকুলেটর</a></li>
+                    <li><a href="/fake-order-protection">ফেক অর্ডার প্রোটেকশন</a></li>
+                    <li><a href="/courier-auto-entry">কুরিয়ার অটো এন্ট্রি</a></li>
+                    <li><a href="/woocommerce-bangladesh">WooCommerce Bangladesh গাইড</a></li>
+                    <li><a href="/fraudbd-alternative">FraudBD Alternative</a></li>
+                    <li><a href="/pricing">প্রাইসিং</a></li>
+                @endif
             </ul>
+            @if (! empty($seo['cluster_links']) && is_array($seo['cluster_links']))
+                <ul>
+                    @foreach ($seo['cluster_links'] as $link)
+                        @if (! empty($link['path']) && ! empty($link['label']))
+                            <li><a href="{{ $link['path'] }}">{{ $link['label'] }}</a></li>
+                        @endif
+                    @endforeach
+                </ul>
+            @endif
             @if (! empty($seo['faqs']) && is_array($seo['faqs']))
                 <div>
                     @foreach ($seo['faqs'] as $faq)
                         @if (! empty($faq['q']) && ! empty($faq['a']))
                             <h2>{{ $faq['q'] }}</h2>
-                            <p>{{ $faq['a'] }}</p>
+                            <p>{!! \App\Support\SeoPrerenderText::linkifyHtml((string) $faq['a'], $isEnPrerender) !!}</p>
                         @endif
                     @endforeach
                 </div>
@@ -244,7 +312,7 @@
         </section>
         <noscript>
             <section style="max-width:48rem;margin:0 auto;padding:1.5rem 1rem;color:#e2e8f0;background:#0a0a0a;font-family:system-ui,sans-serif">
-                <h1>{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</h1>
+                <p style="font-size:1.25rem;font-weight:700;color:#fff">{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</p>
                 <p>{{ $seo['prerender_lead'] ?? $seo['description'] ?? '' }}</p>
                 <p><a href="/bd-fraud-checker" style="color:#fbbf24">ফ্রি ফ্রড চেক</a> · <a href="/pricing" style="color:#fbbf24">প্রাইসিং</a></p>
             </section>

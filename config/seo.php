@@ -84,7 +84,7 @@ return [
                 ],
                 [
                     'q' => 'Fake customer check কীভাবে করব?',
-                    'a' => '/fake-customer-check পেজে নম্বর দিয়ে ডেলিভারি সাকসেস রেট ও রিটার্ন হিস্টোরি দেখে সিদ্ধান্ত নিন।',
+                    'a' => '/fake-customer-check দিয়ে নম্বর চেক করে ডেলিভারি সাকসেস রেট ও রিটার্ন হিস্টোরি দেখে সিদ্ধান্ত নিন।',
                 ],
                 [
                     'q' => 'শুধু ফ্রড টুলের সাথে WooEasyLife-এর পার্থক্য কী?',
@@ -173,7 +173,7 @@ return [
                 ],
                 [
                     'q' => 'ইংরেজি পেজ আছে কি?',
-                    'a' => 'হ্যাঁ — /en/bd-fraud-checker। বাংলা গাইড: /ki-vabe-fake-order-atkabo',
+                    'a' => 'হ্যাঁ — ইংরেজি: /en/bd-fraud-checker। ধাপে ধাপে বাংলা গাইড: /ki-vabe-fake-order-atkabo।',
                 ],
             ],
         ],
@@ -228,7 +228,7 @@ return [
                 ],
                 [
                     'q' => 'কীভাবে শুরু করব?',
-                    'a' => 'প্রথমে /bd-fraud-checker-এ ফ্রি চেক করুন, তারপর /pricing থেকে ট্রায়াল নিয়ে OTP ও ব্লক চালু করুন।',
+                    'a' => 'প্রথমে /bd-fraud-checker দিয়ে ফ্রি চেক করুন, তারপর /pricing থেকে ট্রায়াল নিয়ে OTP ও ব্লক চালু করুন।',
                 ],
                 [
                     'q' => 'ইংরেজি ভার্সন আছে কি?',
@@ -459,7 +459,7 @@ return [
                 ],
                 [
                     'q' => 'Courier number check online কিভাবে?',
-                    'a' => 'এই পেজে বা /bd-fraud-checker-এ বাংলাদেশি মোবাইল নম্বর দিয়ে সার্চ করুন।',
+                    'a' => 'এই পেজে বা /bd-fraud-checker দিয়ে বাংলাদেশি মোবাইল নম্বর সার্চ করুন।',
                 ],
             ],
         ],
@@ -601,7 +601,7 @@ return [
                 ],
                 [
                     'q' => 'কীভাবে শুরু করব?',
-                    'a' => 'প্রথমে /bd-fraud-checker-এ ফ্রি চেক টেস্ট করুন, তারপর /pricing থেকে ট্রায়াল নিন এবং WooCommerce + কুরিয়ার কানেক্ট করুন।',
+                    'a' => 'প্রথমে /bd-fraud-checker দিয়ে ফ্রি চেক টেস্ট করুন, তারপর /pricing থেকে ট্রায়াল নিন এবং WooCommerce + কুরিয়ার কানেক্ট করুন।',
                 ],
                 [
                     'q' => 'ইংরেজি ভার্সন আছে?',
@@ -657,7 +657,7 @@ return [
                 ],
                 [
                     'q' => 'ফ্রি কিভাবে চেক করব?',
-                    'a' => 'এই পেজে বা /bd-fraud-checker-এ নম্বর দিয়ে অ্যাকাউন্ট ছাড়াই চেক করুন।',
+                    'a' => 'এই পেজে বা /bd-fraud-checker দিয়ে নম্বর চেক করুন—অ্যাকাউন্ট লাগে না।',
                 ],
             ],
         ],
@@ -792,7 +792,7 @@ return [
                 ],
                 [
                     'q' => 'Is there a Bangla version?',
-                    'a' => 'Yes — /bd-fraud-checker. Step-by-step Bangla guide: /ki-vabe-fake-order-atkabo.',
+                    'a' => 'Yes — Bangla: /bd-fraud-checker. Step-by-step Bangla guide: /ki-vabe-fake-order-atkabo.',
                 ],
                 [
                     'q' => 'Do I need an account for free checks?',
@@ -1185,6 +1185,24 @@ return [
             ['path' => '/en/courier-charge-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/en/fraudbd-alternative', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/en/courier-auto-entry', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/woocommerce-bangladesh', 'priority' => '0.95', 'changefreq' => 'weekly'],
+            ['path' => '/steadfast-integration', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/pathao-courier-guide', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/redx-courier-guide', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/woocommerce-mobile-app', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/customer-verification', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/cod-return-reduction', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/woocommerce-notifications', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/facebook-ads-for-woocommerce', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/en/woocommerce-bangladesh', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/steadfast-integration', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/pathao-courier-guide', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/redx-courier-guide', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/woocommerce-mobile-app', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/customer-verification', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/cod-return-reduction', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/woocommerce-notifications', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/facebook-ads-for-woocommerce', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/en/blog', 'priority' => '0.75', 'changefreq' => 'weekly'],
             ['path' => '/wooeasylife/app/privacy-policy', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/app/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],

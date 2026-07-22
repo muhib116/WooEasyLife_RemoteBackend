@@ -115,6 +115,39 @@ class EnglishMarketingController extends Controller
         return $this->page($request, $landing, $seo, $landingSettings, 'en_fraudbd_alternative', 'Seo/EnFraudBdAlternative');
     }
 
+    public function clusterGuide(
+        Request $request,
+        string $seoKey,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        $allowed = [
+            'woocommerce_bangladesh',
+            'steadfast_integration',
+            'pathao_courier_guide',
+            'redx_courier_guide',
+            'woocommerce_mobile_app',
+            'customer_verification',
+            'cod_return_reduction',
+            'woocommerce_notifications',
+            'facebook_ads_for_woocommerce',
+        ];
+
+        if (! in_array($seoKey, $allowed, true)) {
+            abort(404);
+        }
+
+        return $this->page(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            'en_'.$seoKey,
+            'Seo/ClusterGuide',
+        );
+    }
+
     public function adsRoasCalculator(
         Request $request,
         LandingPageService $landing,

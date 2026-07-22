@@ -1,7 +1,8 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { RANGE_SLIDER_CLASS, rangeTrackStyle } from '@/utils/rangeSlider';
+import { trackToolAction } from '@/utils/siteVisitors';
 
 const props = defineProps({
     config: { type: Object, default: () => ({}) },
@@ -25,6 +26,19 @@ const model = reactive({
     return_rate: inputs.value.return_rate?.default ?? 25,
     cost_per_return: inputs.value.cost_per_return?.default ?? 120,
 });
+
+let toolActionSent = false;
+watch(
+    () => [model.daily_orders, model.return_rate, model.cost_per_return],
+    () => {
+        if (toolActionSent) {
+            return;
+        }
+        toolActionSent = true;
+        const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+        trackToolAction(path, 'return_loss_calculate');
+    },
+);
 
 const daysPerMonth = computed(() => Number(props.config?.days_per_month ?? 30));
 const reductionPercent = computed(() => Number(props.config?.reduction_percent ?? 40));

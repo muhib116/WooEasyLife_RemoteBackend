@@ -7,6 +7,7 @@ import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -109,6 +110,7 @@ const mistakeList = [
 ];
 
 const relatedLinks = [
+    { href: '/en/woocommerce-bangladesh', label: 'WooCommerce Bangladesh guide' },
     { href: '/en/fake-order-protection', label: 'Fake order protection' },
     { href: '/en/return-loss-calculator', label: 'Return loss calculator' },
     { href: '/en/ads-roas-calculator', label: 'Ads ROAS calculator' },
@@ -236,7 +238,7 @@ const relatedLinks = [
                         :key="idx"
                         class="text-sm leading-relaxed text-slate-300 sm:text-base"
                     >
-                        {{ paragraph }}
+                        <LinkedRichText :text="paragraph" :is-en="true" />
                     </p>
                 </article>
             </div>
@@ -321,7 +323,7 @@ const relatedLinks = [
                     Start with a phone search on this page, or begin a trial from
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">pricing</Link>.
                     Bangla mirror:
-                    <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">/bd-fraud-checker</Link>.
+                    <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">Bangla version</Link>.
                 </p>
             </div>
         </section>
@@ -344,7 +346,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="true" />
                         </div>
                     </div>
                 </div>

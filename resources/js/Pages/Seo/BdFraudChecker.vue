@@ -7,6 +7,7 @@ import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import LandingFraudCheck from '@/components/marketing/LandingFraudCheck.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -110,6 +111,7 @@ const mistakeList = [
 ];
 
 const relatedLinks = [
+    { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
     { href: '/en/bd-fraud-checker', label: 'English version' },
     { href: '/fake-order-protection', label: 'ফেক অর্ডার প্রোটেকশন' },
     { href: '/return-loss-calculator', label: 'রিটার্ন লস ক্যালকুলেটর' },
@@ -246,7 +248,7 @@ const relatedLinks = [
                             <Link href="/fraudbd-alternative" class="font-semibold text-amber-400 hover:text-amber-300">FraudBD Alternative</Link>
                             পড়ুন।
                         </template>
-                        <template v-else>{{ paragraph }}</template>
+                        <template v-else><LinkedRichText :text="paragraph" :is-en="false" /></template>
                     </p>
                 </article>
             </div>
@@ -331,7 +333,7 @@ const relatedLinks = [
                     শুরু করতে এই পেজে নম্বর সার্চ করুন, বা
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>
                     থেকে ট্রায়াল নিন। English:
-                    <Link href="/en/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">/en/bd-fraud-checker</Link>।
+                    <Link href="/en/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">English version</Link>।
                 </p>
             </div>
         </section>
@@ -354,7 +356,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="false" />
                         </div>
                     </div>
                 </div>

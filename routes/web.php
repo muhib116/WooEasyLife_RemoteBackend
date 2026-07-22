@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\ApiKeyController;
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\BlogAiController;
+use App\Http\Controllers\Admin\BlogAiSettingsController;
+use App\Http\Controllers\Admin\BlogClusterController;
 use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -32,12 +34,14 @@ use App\Http\Controllers\Admin\GoogleSearchConsoleOAuthController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VisitorController;
+use App\Http\Controllers\Admin\SiteVisitorsAdminController;
 use App\Http\Controllers\Admin\WebhookActivityController;
 use App\Http\Controllers\Admin\WhitelistedDomainController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\Analysis\UseAnalysisController;
 use App\Http\Controllers\App\BlogAnalyticsController;
 use App\Http\Controllers\App\BlogController;
+use App\Http\Controllers\App\SiteVisitorAnalyticsController;
 use App\Http\Controllers\App\EnglishMarketingController;
 use App\Http\Controllers\App\LegalController;
 use App\Http\Controllers\App\MarketingSeoController;
@@ -132,6 +136,35 @@ Route::get('/courier-auto-entry', [MarketingSeoController::class, 'courierAutoEn
 Route::get('/fraudbd-alternative', [MarketingSeoController::class, 'fraudBdAlternative'])
     ->name('seo.fraudbd-alternative');
 Route::redirect('/fraud-bd-alternative', '/fraudbd-alternative', 301);
+
+Route::get('/woocommerce-bangladesh', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'woocommerce_bangladesh')
+    ->name('seo.woocommerce-bangladesh');
+Route::get('/steadfast-integration', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'steadfast_integration')
+    ->name('seo.steadfast-integration');
+Route::get('/pathao-courier-guide', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'pathao_courier_guide')
+    ->name('seo.pathao-courier-guide');
+Route::get('/redx-courier-guide', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'redx_courier_guide')
+    ->name('seo.redx-courier-guide');
+Route::get('/woocommerce-mobile-app', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'woocommerce_mobile_app')
+    ->name('seo.woocommerce-mobile-app');
+Route::get('/customer-verification', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'customer_verification')
+    ->name('seo.customer-verification');
+Route::get('/cod-return-reduction', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'cod_return_reduction')
+    ->name('seo.cod-return-reduction');
+Route::get('/woocommerce-notifications', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'woocommerce_notifications')
+    ->name('seo.woocommerce-notifications');
+Route::get('/facebook-ads-for-woocommerce', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'facebook_ads_for_woocommerce')
+    ->name('seo.facebook-ads-for-woocommerce');
+
 Route::get('/pathao-fraud-check', [MarketingSeoController::class, 'courierIntent'])
     ->defaults('courier', 'pathao')
     ->name('seo.pathao-fraud-check');
@@ -165,6 +198,9 @@ Route::get('/blog/{slug}', [BlogController::class, 'show'])
 Route::post('/blog/analytics/event', [BlogAnalyticsController::class, 'store'])
     ->middleware('throttle:60,1')
     ->name('blog.analytics.event');
+Route::post('/analytics/visitors/event', [SiteVisitorAnalyticsController::class, 'store'])
+    ->middleware('throttle:60,1')
+    ->name('siteVisitors.event');
 
 Route::prefix('en')->name('seo.en.')->group(function () {
     Route::get('/', [EnglishMarketingController::class, 'home'])->name('home');
@@ -183,6 +219,35 @@ Route::prefix('en')->name('seo.en.')->group(function () {
     Route::get('/fraudbd-alternative', [EnglishMarketingController::class, 'fraudBdAlternative'])
         ->name('fraudbd-alternative');
     Route::redirect('/fraud-bd-alternative', '/en/fraudbd-alternative', 301);
+
+    Route::get('/woocommerce-bangladesh', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'woocommerce_bangladesh')
+        ->name('woocommerce-bangladesh');
+    Route::get('/steadfast-integration', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'steadfast_integration')
+        ->name('steadfast-integration');
+    Route::get('/pathao-courier-guide', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'pathao_courier_guide')
+        ->name('pathao-courier-guide');
+    Route::get('/redx-courier-guide', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'redx_courier_guide')
+        ->name('redx-courier-guide');
+    Route::get('/woocommerce-mobile-app', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'woocommerce_mobile_app')
+        ->name('woocommerce-mobile-app');
+    Route::get('/customer-verification', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'customer_verification')
+        ->name('customer-verification');
+    Route::get('/cod-return-reduction', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'cod_return_reduction')
+        ->name('cod-return-reduction');
+    Route::get('/woocommerce-notifications', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'woocommerce_notifications')
+        ->name('woocommerce-notifications');
+    Route::get('/facebook-ads-for-woocommerce', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'facebook_ads_for_woocommerce')
+        ->name('facebook-ads-for-woocommerce');
+
     Route::get('/blog', [EnglishMarketingController::class, 'blogIndex'])->name('blog');
 });
 
@@ -420,6 +485,19 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/', [VisitorController::class, 'index'])->name('index');
         Route::get('/visitor/report', [VisitorController::class, 'getRouteHitReport'])->name('report');
     });
+    Route::group([
+        'as' => 'siteVisitors.',
+        'prefix' => 'visitors',
+        'middleware' => 'permission:dashboard.view',
+    ], function () {
+        Route::get('/', [SiteVisitorsAdminController::class, 'index'])->name('index');
+        Route::get('/report', [SiteVisitorsAdminController::class, 'report'])->name('report');
+        Route::get('/insights', [SiteVisitorsAdminController::class, 'insights'])->name('insights');
+        Route::get('/seo', [SiteVisitorsAdminController::class, 'seo'])->name('seo');
+        Route::post('/sync-gsc', [SiteVisitorsAdminController::class, 'syncGsc'])
+            ->middleware('throttle:3,5')
+            ->name('syncGsc');
+    });
     Route::group(['as' => 'useAnalysis.', 'prefix' => 'use-analysis'], function () {
         Route::get('/', [UseAnalysisController::class, 'index'])->name('index');
         Route::post('/get-use-report', [UseAnalysisController::class, 'getUseReport'])->name('getUseReport');
@@ -559,6 +637,19 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     Route::group(['as' => 'blogPosts.', 'prefix' => 'blog-posts'], function () {
         Route::get('/', [BlogPostController::class, 'index'])->name('index');
         Route::get('/create', [BlogPostController::class, 'create'])->name('create');
+        Route::middleware('permission:billing.manage')->group(function () {
+            Route::get('/intelligence', [BlogPostController::class, 'ai'])->name('ai');
+            Route::get('/settings', [BlogAiSettingsController::class, 'index'])->name('settings');
+            Route::put('/settings', [BlogAiSettingsController::class, 'update'])->name('settings.update');
+            Route::post('/settings/reset', [BlogAiSettingsController::class, 'reset'])->name('settings.reset');
+            Route::get('/clusters', [BlogClusterController::class, 'index'])->name('clusters.index');
+            Route::post('/clusters', [BlogClusterController::class, 'store'])->name('clusters.store');
+            Route::put('/clusters/{blogCluster}', [BlogClusterController::class, 'update'])->name('clusters.update');
+            Route::delete('/clusters/{blogCluster}', [BlogClusterController::class, 'destroy'])->name('clusters.destroy');
+        });
+        Route::get('/seo-learning', [BlogPostController::class, 'seo'])
+            ->middleware('permission:roles.manage|billing.manage')
+            ->name('seo');
         Route::post('/', [BlogPostController::class, 'store'])->name('store');
         Route::post('/upload-image', [BlogPostController::class, 'uploadImage'])->name('uploadImage');
         Route::get('/{blogPost}/edit', [BlogPostController::class, 'edit'])->name('edit');
@@ -597,6 +688,9 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
             Route::post('/competitors/analyze', [BlogAiController::class, 'analyzeCompetitors'])
                 ->middleware('throttle:10,1')
                 ->name('competitors.analyze');
+            Route::post('/competitors/discover', [BlogAiController::class, 'discoverCompetitors'])
+                ->middleware('throttle:10,1')
+                ->name('competitors.discover');
             Route::post('/memories', [BlogAiController::class, 'storeMemory'])->name('memories.store');
             Route::put('/memories/{memoryId}', [BlogAiController::class, 'updateMemory'])->name('memories.update');
             Route::delete('/memories/{memoryId}', [BlogAiController::class, 'destroyMemory'])->name('memories.destroy');

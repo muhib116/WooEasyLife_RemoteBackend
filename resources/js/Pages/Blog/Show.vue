@@ -123,7 +123,7 @@ const onFraudCtaClick = () => {
                 </p>
 
                 <div
-                    class="prose prose-invert prose-amber mt-10 max-w-none prose-headings:text-white prose-a:text-amber-400 prose-strong:text-white prose-li:text-slate-300 prose-p:text-slate-300"
+                    class="blog-prose prose prose-invert prose-amber mt-10 max-w-none prose-headings:text-white prose-a:text-amber-400 prose-strong:text-white prose-li:text-slate-300 prose-p:text-slate-300 prose-th:text-white prose-td:text-slate-300"
                     v-html="post.html"
                 />
 
@@ -146,3 +146,40 @@ const onFraudCtaClick = () => {
         </article>
     </MarketingLayout>
 </template>
+
+<style scoped>
+/* CKEditor wraps tables in <figure class="table"> — keep them readable on dark marketing pages */
+.blog-prose :deep(figure.table) {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.blog-prose :deep(table) {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.blog-prose :deep(th),
+.blog-prose :deep(td) {
+    border: 1px solid rgb(255 255 255 / 0.12);
+    padding: 0.65rem 0.9rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.blog-prose :deep(thead th) {
+    background: rgb(255 255 255 / 0.08);
+    color: #fff;
+    font-weight: 600;
+}
+
+.blog-prose :deep(tbody td) {
+    background: rgb(15 23 42 / 0.55);
+    color: rgb(203 213 225);
+}
+
+.blog-prose :deep(tbody tr:nth-child(even) td) {
+    background: rgb(15 23 42 / 0.8);
+}
+</style>

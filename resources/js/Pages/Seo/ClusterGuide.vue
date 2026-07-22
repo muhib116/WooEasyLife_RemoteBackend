@@ -1,0 +1,569 @@
+<script setup>
+import { Link } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import MarketingLayout from '@/layouts/MarketingLayout.vue';
+import SeoHead from '@/components/marketing/SeoHead.vue';
+import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
+import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
+import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import ClusterGuideBlocks from '@/components/marketing/ClusterGuideBlocks.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
+import { buildContentBlocks } from '@/utils/clusterContentBlocks';
+
+const props = defineProps({
+    canLogin: { type: Boolean, default: false },
+    seo: { type: Object, default: null },
+    whatsappUrl: { type: String, default: null },
+    faqs: { type: Array, default: () => [] },
+});
+
+const openFaq = ref(null);
+const tocOpen = ref(false);
+const showBackTop = ref(false);
+const readProgress = ref(0);
+
+const ctaUrl = computed(() => primaryCtaUrl());
+const ctaLabel = computed(() => primaryCtaLabel());
+const isEn = computed(() => (props.seo?.html_lang || '').startsWith('en'));
+const isPillar = computed(() => Boolean(props.seo?.is_pillar));
+const sections = computed(() => props.seo?.content_sections || []);
+const clusterLinks = computed(() => props.seo?.cluster_links || []);
+
+const isRedundantStubSection = (section) => {
+    if (!section) return true;
+    const heading = String(section.heading || '').trim();
+    const headingLc = heading.toLowerCase();
+    if (headingLc.includes('দ্রুত') || headingLc.includes('quick')) return true;
+
+    const paras = (section.paragraphs || []).map((p) => String(p || '').trim()).filter(Boolean);
+
+    // BN stub that only repeated the landscape title / tagline
+    if (/ভূমিকা এবং দেশের ই-কমার্স ল্যান্ডস্কেপ/i.test(heading)) {
+        const joined = paras.join(' ');
+        if (joined.length < 160) return true;
+        if (paras.some((p) => p.startsWith(heading.slice(0, 18)) || /^ভূমিকা এবং/.test(p))) return true;
+    }
+
+    return false;
+};
+
+const extractPart = (heading = '') => {
+    const m = String(heading).match(
+        /(?:অংশ|part|পার্ট)\s*(\d+)\s*\/\s*(?:৩০|30)|(\d+)\s*\/\s*(?:৩০|30)/i,
+    );
+    if (!m) return null;
+    return Number(m[1] || m[2]);
+};
+
+const bodySections = computed(() => sections.value
+    .filter((s) => !isRedundantStubSection(s))
+    .map((s, idx) => {
+        const part = extractPart(s.heading);
+        const paragraphs = (s.paragraphs || []).filter((p) => {
+            const t = String(p || '').trim();
+            // Drop truncated next-chapter title leaks: "পার্ট ২: … ("
+            if (/^(?:পার্ট|অংশ|Part)\s*\d+/i.test(t) && t.endsWith('(')) return false;
+            return t.length > 0;
+        });
+        const blocks = buildContentBlocks(paragraphs, s.figures || []);
+        return {
+            ...s,
+            paragraphs,
+            id: `guide-section-${idx + 1}`,
+            part,
+            blocks,
+            tone: idx % 3,
+        };
+    }));
+
+const tocItems = computed(() => bodySections.value
+    .filter((s) => s.heading)
+    .map((s) => ({
+        id: s.id,
+        label: s.heading,
+        part: s.part,
+    })));
+
+const showToc = computed(() => tocItems.value.length >= 6);
+
+const journeyGroups = computed(() => {
+    if (!isPillar.value || bodySections.value.length < 8) return [];
+
+    const groups = isEn.value
+        ? [
+            { key: 'setup', label: 'Store & checkout', range: [1, 7], hint: 'Fast checkout, recovery, OTP' },
+            { key: 'ops', label: 'Courier & ops', range: [8, 13], hint: 'App, tracking, LTV' },
+            { key: 'ads', label: 'Ads & growth', range: [14, 22], hint: 'Pixel, Shopping, SEO' },
+            { key: 'scale', label: 'Scale & future', range: [23, 30], hint: 'AI, marketplace, roadmap' },
+        ]
+        : [
+            { key: 'setup', label: 'স্টোর ও চেকআউট', range: [1, 7], hint: 'ফাস্ট চেকআউট, রিকভারি, OTP' },
+            { key: 'ops', label: 'কুরিয়ার ও অপস', range: [8, 13], hint: 'অ্যাপ, ট্র্যাকিং, LTV' },
+            { key: 'ads', label: 'অ্যাডস ও গ্রোথ', range: [14, 22], hint: 'পিক্সেল, Shopping, SEO' },
+            { key: 'scale', label: 'স্কেল ও ফিউচার', range: [23, 30], hint: 'AI, মার্কেটপ্লেস, রোডম্যাপ' },
+        ];
+
+    return groups.map((g) => {
+        const first = bodySections.value.find((s) => s.part != null && s.part >= g.range[0] && s.part <= g.range[1]);
+        return { ...g, targetId: first?.id || bodySections.value[0]?.id };
+    });
+});
+
+const heroStats = computed(() => {
+    if (!isPillar.value) return [];
+    return isEn.value
+        ? [
+            { value: '30', label: 'Guide parts' },
+            { value: String(clusterLinks.value.length || '12'), label: 'Spoke pages' },
+            { value: 'BN+EN', label: 'Languages' },
+        ]
+        : [
+            { value: '৩০', label: 'গাইড অংশ' },
+            { value: String(clusterLinks.value.length || '১২'), label: 'স্পোক পেজ' },
+            { value: 'BN+EN', label: 'ভাষা' },
+        ];
+});
+
+const toggleFaq = (i) => {
+    openFaq.value = openFaq.value === i ? null : i;
+};
+
+const onScroll = () => {
+    showBackTop.value = window.scrollY > 720;
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - window.innerHeight;
+    readProgress.value = max > 0 ? Math.min(100, Math.round((window.scrollY / max) * 100)) : 0;
+};
+
+const scrollTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const jumpTo = (id) => {
+    tocOpen.value = false;
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+});
+
+onUnmounted(() => {
+    window.removeEventListener('scroll', onScroll);
+});
+</script>
+
+<template>
+    <SeoHead :seo="seo" />
+
+    <MarketingLayout
+        :can-login="canLogin"
+        :whatsapp-url="whatsappUrl"
+        active-nav="features"
+        suppress-seo-content-sections
+    >
+        <!-- Reading progress -->
+        <div
+            class="pointer-events-none fixed inset-x-0 top-0 z-[45] h-0.5 bg-transparent"
+            aria-hidden="true"
+        >
+            <div
+                class="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-300 transition-[width] duration-150 ease-out"
+                :style="{ width: `${readProgress}%` }"
+            />
+        </div>
+
+        <!-- Hero -->
+        <section class="relative overflow-hidden border-b border-white/10">
+            <div
+                class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(245,158,11,0.14),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(16,185,129,0.08),_transparent_45%)]"
+                aria-hidden="true"
+            />
+            <div
+                class="pointer-events-none absolute inset-0 opacity-[0.07]"
+                style="background-image: linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px); background-size: 48px 48px;"
+                aria-hidden="true"
+            />
+
+            <div class="relative mx-auto max-w-5xl px-4 py-8 sm:py-12 lg:px-8 lg:py-16">
+                <div class="text-left">
+                    <SeoBreadcrumbs :items="seo?.breadcrumbs || []" />
+                </div>
+
+                <div class="mt-2 grid items-end gap-8 lg:grid-cols-[1.35fr_0.65fr]">
+                    <div>
+                        <p class="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-200 sm:text-xs">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+                            {{ seo?.cluster_eyebrow || 'WooCommerce Bangladesh' }}
+                        </p>
+                        <h1 class="mt-4 max-w-3xl break-words text-[1.7rem] font-extrabold !leading-[1.15] text-white sm:text-4xl lg:text-[2.75rem]">
+                            {{ seo?.prerender_h1 }}
+                        </h1>
+                        <p class="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-lg">
+                            {{ seo?.prerender_lead }}
+                        </p>
+
+                        <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <MetaCtaLink
+                                :href="ctaUrl"
+                                :label="ctaLabel"
+                                location="seo_cluster_hero"
+                                link-class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black shadow-lg shadow-amber-900/30 hover:bg-amber-400 sm:w-auto"
+                            />
+                            <Link
+                                v-if="seo?.pillar_path && !seo?.is_pillar"
+                                :href="seo.pillar_path"
+                                class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto"
+                            >
+                                {{ isEn ? 'Cluster hub' : 'ক্লাস্টার হাব' }}
+                            </Link>
+                            <Link
+                                v-if="seo?.alternate_path"
+                                :href="seo.alternate_path"
+                                class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 sm:w-auto"
+                            >
+                                {{ seo?.alternate_label || (isEn ? 'বাংলা ভার্সন' : 'English version') }}
+                            </Link>
+                            <button
+                                v-if="bodySections.length"
+                                type="button"
+                                class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10 px-5 py-3 text-sm font-semibold text-amber-200 hover:bg-amber-500/20 sm:w-auto"
+                                @click="jumpTo(bodySections[0].id)"
+                            >
+                                {{ isEn ? 'Start reading →' : 'পড়া শুরু →' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <aside
+                        v-if="heroStats.length"
+                        class="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-1"
+                    >
+                        <div
+                            v-for="stat in heroStats"
+                            :key="stat.label"
+                            class="rounded-2xl border border-white/10 bg-black/30 px-2 py-3 text-center backdrop-blur sm:px-4 sm:py-4 lg:text-left"
+                        >
+                            <p class="text-lg font-extrabold text-amber-300 sm:text-2xl">{{ stat.value }}</p>
+                            <p class="mt-0.5 text-[10px] leading-snug text-slate-400 sm:text-xs">{{ stat.label }}</p>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </section>
+
+        <!-- Journey map (pillar) -->
+        <section v-if="journeyGroups.length" class="border-b border-white/10 px-4 py-8 sm:py-10 lg:px-8">
+            <div class="mx-auto max-w-5xl">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-white sm:text-2xl">
+                            {{ isEn ? 'Your 30-part roadmap' : '৩০ অংশের রোডম্যাপ' }}
+                        </h2>
+                        <p class="mt-2 max-w-xl text-sm text-slate-400">
+                            {{ isEn
+                                ? 'Jump into a stage — each chapter below expands when you need depth.'
+                                : 'যে ধাপে দরকার সেখানে যান — প্রতিটি চ্যাপ্টার চাইলে বিস্তারিত খুলবে।' }}
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <button
+                        v-for="(group, gi) in journeyGroups"
+                        :key="group.key"
+                        type="button"
+                        class="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-amber-400/40 hover:bg-amber-500/5"
+                        @click="jumpTo(group.targetId)"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
+                                {{ String(gi + 1).padStart(2, '0') }}
+                            </span>
+                            <span class="text-[11px] text-slate-500">{{ group.range[0] }}–{{ group.range[1] }}</span>
+                        </div>
+                        <p class="mt-2 text-sm font-bold text-white group-hover:text-amber-100">{{ group.label }}</p>
+                        <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ group.hint }}</p>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sticky TOC -->
+        <section
+            v-if="showToc"
+            class="sticky top-[4.75rem] z-30 border-b border-white/10 bg-[#0a0a0a]/95 px-4 py-2 backdrop-blur sm:top-20 lg:px-8"
+        >
+            <div class="mx-auto max-w-5xl">
+                <button
+                    type="button"
+                    class="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-left text-sm font-semibold text-white lg:hidden"
+                    :aria-expanded="tocOpen"
+                    @click="tocOpen = !tocOpen"
+                >
+                    <span>{{ isEn ? 'On this page' : 'এই পেজে' }} ({{ tocItems.length }})</span>
+                    <span class="text-amber-300" aria-hidden="true">{{ tocOpen ? '−' : '+' }}</span>
+                </button>
+
+                <div class="hidden lg:block">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {{ isEn ? 'On this page' : 'এই পেজে' }}
+                    </p>
+                    <div class="mt-2 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <button
+                            v-for="item in tocItems"
+                            :key="item.id"
+                            type="button"
+                            class="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-amber-400/40 hover:text-amber-200"
+                            @click="jumpTo(item.id)"
+                        >
+                            <span v-if="item.part" class="mr-1 text-amber-400/80">{{ item.part }}.</span>
+                            {{ item.label.length > 36 ? item.label.slice(0, 34) + '…' : item.label }}
+                        </button>
+                        <!-- Crawlable in-page anchors (visually mirrored by buttons) -->
+                        <a
+                            v-for="item in tocItems"
+                            :key="`a-${item.id}`"
+                            :href="`#${item.id}`"
+                            class="sr-only"
+                        >{{ item.label }}</a>
+                    </div>
+                </div>
+
+                <div
+                    v-show="tocOpen"
+                    class="mt-2 max-h-[min(60dvh,24rem)] space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-[#111] p-2 lg:hidden"
+                >
+                    <button
+                        v-for="item in tocItems"
+                        :key="item.id"
+                        type="button"
+                        class="flex min-h-11 w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left text-sm leading-snug text-slate-300 hover:bg-white/5 hover:text-amber-200"
+                        @click="jumpTo(item.id)"
+                    >
+                        <span
+                            v-if="item.part"
+                            class="mt-0.5 shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300"
+                        >
+                            {{ item.part }}
+                        </span>
+                        <span class="break-words">{{ item.label }}</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cluster spokes -->
+        <section v-if="clusterLinks.length" class="border-b border-white/10 px-4 py-8 sm:py-10 lg:px-8">
+            <div class="mx-auto max-w-5xl">
+                <h2 class="text-center text-xl font-bold text-white sm:text-2xl">
+                    {{ isEn ? 'Dive into a spoke' : 'স্পোক পেজে ডুব দিন' }}
+                </h2>
+                <p class="mx-auto mt-3 max-w-2xl text-center text-sm leading-relaxed text-slate-400">
+                    {{ isEn
+                        ? 'Focused guides linked from this hub — pick the problem you need to solve now.'
+                        : 'এই হাব থেকে লিংক করা ফোকাসড গাইড — এখন যে সমস্যাটা জরুরি সেখানে যান।' }}
+                </p>
+
+                <div
+                    class="mt-6 flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+                >
+                    <Link
+                        v-for="(item, i) in clusterLinks"
+                        :key="`m-${item.path}`"
+                        :href="item.path"
+                        class="snap-start shrink-0 w-[78%] rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-transparent p-4 active:border-amber-400/40"
+                    >
+                        <p class="text-[11px] font-bold text-amber-300/80">{{ String(i + 1).padStart(2, '0') }}</p>
+                        <p class="mt-2 text-sm font-semibold leading-snug text-white">{{ item.label }}</p>
+                        <p class="mt-3 text-xs font-semibold text-amber-200">
+                            {{ isEn ? 'Open →' : 'খুলুন →' }}
+                        </p>
+                    </Link>
+                </div>
+
+                <div class="mt-8 hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+                    <Link
+                        v-for="(item, i) in clusterLinks"
+                        :key="item.path"
+                        :href="item.path"
+                        class="group flex min-h-[5.5rem] flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-amber-400/40 hover:bg-amber-500/[0.06]"
+                    >
+                        <div>
+                            <p class="text-[11px] font-bold text-amber-300/70">{{ String(i + 1).padStart(2, '0') }}</p>
+                            <p class="mt-2 break-words text-sm font-semibold leading-snug text-amber-100 group-hover:text-amber-50">
+                                {{ item.label }}
+                            </p>
+                        </div>
+                        <span class="mt-3 text-xs font-semibold text-slate-500 transition group-hover:text-amber-300">
+                            {{ isEn ? 'Read guide →' : 'গাইড পড়ুন →' }}
+                        </span>
+                    </Link>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chapter body -->
+        <section class="px-4 py-8 sm:py-12 lg:px-8">
+            <div class="mx-auto max-w-3xl">
+                <div class="mb-8 flex items-end justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.16em] text-amber-300/80">
+                            {{ isEn ? 'Guide body' : 'গাইড বডি' }}
+                        </p>
+                        <p class="mt-2 text-sm text-slate-400">
+                            {{ isEn
+                                ? 'Long chapters stay collapsed — expand only what you need. Full text remains in the page for search engines.'
+                                : 'লম্বা চ্যাপ্টার ডিফল্টে ভাঁজ থাকে — যা লাগে খুলুন। পুরো টেক্সট পেজে থাকে (SEO-friendly)।' }}
+                        </p>
+                    </div>
+                    <p class="shrink-0 text-xs font-semibold text-slate-500">
+                        {{ bodySections.length }}
+                        {{ isEn ? 'chapters' : 'টি' }}
+                    </p>
+                </div>
+
+                <div class="relative space-y-5 sm:space-y-6">
+                    <div
+                        class="pointer-events-none absolute bottom-4 left-[1.15rem] top-4 w-px bg-gradient-to-b from-amber-400/40 via-white/10 to-transparent sm:left-[1.35rem]"
+                        aria-hidden="true"
+                    />
+
+                    <article
+                        v-for="(section, si) in bodySections"
+                        :id="section.id"
+                        :key="section.id"
+                        class="cluster-chapter relative scroll-mt-36 rounded-2xl border border-white/10 bg-[#111]/80 p-4 pl-14 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-sm sm:scroll-mt-32 sm:p-7 sm:pl-16"
+                        :class="{
+                            'border-amber-400/20': section.tone === 0,
+                            'border-emerald-400/15': section.tone === 1,
+                            'border-sky-400/15': section.tone === 2,
+                        }"
+                    >
+                        <div
+                            class="absolute left-3 top-4 flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-bold sm:left-4 sm:top-6 sm:h-9 sm:w-9 sm:text-xs"
+                            :class="{
+                                'border-amber-400/40 bg-amber-500/15 text-amber-200': section.tone === 0,
+                                'border-emerald-400/40 bg-emerald-500/15 text-emerald-200': section.tone === 1,
+                                'border-sky-400/40 bg-sky-500/15 text-sky-200': section.tone === 2,
+                            }"
+                        >
+                            {{ section.part || String(si + 1).padStart(2, '0') }}
+                        </div>
+
+                        <h2
+                            v-if="section.heading"
+                            class="break-words text-lg font-bold leading-snug text-white sm:text-xl"
+                        >
+                            {{ section.heading }}
+                        </h2>
+
+                        <ClusterGuideBlocks
+                            class="mt-3 sm:mt-4"
+                            :blocks="section.blocks"
+                            :is-en="isEn"
+                            lead-first
+                        />
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mid CTA band -->
+        <section class="relative overflow-hidden border-y border-white/10 px-4 py-10 sm:py-12 lg:px-8">
+            <div
+                class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(245,158,11,0.12),_transparent_60%)]"
+                aria-hidden="true"
+            />
+            <div class="relative mx-auto max-w-3xl text-center">
+                <h2 class="text-xl font-bold text-white sm:text-2xl">
+                    {{ isEn ? 'Put the system to work' : 'সিস্টেম কাজে লাগান' }}
+                </h2>
+                <p class="mt-3 text-sm leading-relaxed text-slate-400">
+                    {{ isEn
+                        ? 'Free fraud check first, then trial protection, courier auto-entry, and messaging.'
+                        : 'আগে ফ্রি ফ্রড চেক, তারপর প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও মেসেজিং ট্রায়াল।' }}
+                </p>
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+                    <Link
+                        :href="isEn ? '/en/bd-fraud-checker' : '/bd-fraud-checker'"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto"
+                    >
+                        {{ isEn ? 'Free fraud check' : 'ফ্রি ফ্রড চেক' }}
+                    </Link>
+                    <MetaCtaLink
+                        :href="ctaUrl"
+                        :label="ctaLabel"
+                        location="seo_cluster_mid"
+                        link-class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400 sm:w-auto"
+                    />
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section id="faq" class="px-4 py-10 pb-24 sm:py-12 sm:pb-12 lg:px-8">
+            <div class="mx-auto max-w-3xl">
+                <div class="text-center">
+                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-amber-300/80">
+                        {{ isEn ? 'FAQ' : 'সচরাচর জিজ্ঞাসা' }}
+                    </p>
+                    <h2 class="mt-2 text-xl font-bold text-white sm:text-2xl">
+                        {{ isEn ? 'Common questions' : 'যা প্রায়ই জিজ্ঞেস করা হয়' }}
+                    </h2>
+                    <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">
+                        {{ isEn
+                            ? 'Detailed answers with labeled links to the tools and spoke guides you need next.'
+                            : 'বিস্তারিত উত্তর—পরবর্তী টুল ও স্পোক গাইডের লেবেলযুক্ত লিংকসহ।' }}
+                    </p>
+                </div>
+                <div class="mt-6 space-y-3 sm:mt-8">
+                    <div
+                        v-for="(faq, i) in faqs"
+                        :key="i"
+                        class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]"
+                    >
+                        <button
+                            type="button"
+                            class="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-semibold text-white sm:text-[0.95rem]"
+                            :aria-expanded="openFaq === i"
+                            :aria-controls="`faq-answer-${i}`"
+                            @click="toggleFaq(i)"
+                        >
+                            <span class="break-words pr-2">{{ faq.q }}</span>
+                            <span
+                                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-300"
+                                aria-hidden="true"
+                            >
+                                {{ openFaq === i ? '−' : '+' }}
+                            </span>
+                        </button>
+                        <div
+                            :id="`faq-answer-${i}`"
+                            class="border-t border-white/10 px-4 py-3.5 text-sm leading-7 text-slate-300 sm:leading-8"
+                            :class="openFaq === i ? '' : 'hidden'"
+                        >
+                            <p>
+                                <LinkedRichText :text="faq.a" :is-en="isEn" />
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <button
+            v-show="showBackTop"
+            type="button"
+            class="fixed bottom-24 left-4 z-30 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/15 bg-[#151515]/95 text-sm font-bold text-amber-300 shadow-lg backdrop-blur hover:bg-white/10 sm:bottom-8 sm:left-6"
+            style="margin-bottom: env(safe-area-inset-bottom, 0px);"
+            :aria-label="isEn ? 'Back to top' : 'উপরে যান'"
+            @click="scrollTop"
+        >
+            ↑
+        </button>
+    </MarketingLayout>
+</template>

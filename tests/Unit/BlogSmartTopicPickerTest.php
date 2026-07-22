@@ -72,4 +72,38 @@ class BlogSmartTopicPickerTest extends TestCase
         $this->assertSame('fraud_checker', $pick['cluster']);
         $this->assertSame('explicit_seed', $pick['reason']);
     }
+
+    public function test_prefers_gsc_striking_over_learning_ideas(): void
+    {
+        config(['blog_ai.auto.prefer_gsc' => true]);
+
+        BlogGscQueryMetric::query()->create([
+            'pair_hash' => hash('sha256', 'ফ্রড চেকার কিভাবে|https://example.com/blog/x'),
+            'query' => 'ফ্রড চেকার কিভাবে',
+            'page_url' => 'https://example.com/blog/x',
+            'slug' => null,
+            'clicks_28d' => 2,
+            'impressions_28d' => 220,
+            'ctr_28d' => 0.01,
+            'position_28d' => 14,
+            'bucket' => BlogGscQueryMetric::BUCKET_STRIKING,
+            'opportunity_score' => 55,
+            'improvement_hint' => 'Climb',
+            'synced_at' => now(),
+        ]);
+
+        $pick = app(BlogSmartTopicPicker::class)->pick(null, null, [
+            'next_post_ideas' => [
+                [
+                    'seed_topic' => 'Random cluster guess topic',
+                    'cluster' => 'general',
+                    'reason' => 'learning_next_idea',
+                ],
+            ],
+        ]);
+
+        $this->assertSame('ফ্রড চেকার কিভাবে', $pick['keyword']);
+        $this->assertSame('gsc', $pick['source'] ?? null);
+        $this->assertStringContainsString('gsc_', (string) $pick['reason']);
+    }
 }

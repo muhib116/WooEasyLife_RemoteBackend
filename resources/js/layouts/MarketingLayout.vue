@@ -9,6 +9,12 @@ import {
     trackOnce,
     trackViewContent,
 } from '@/utils/metaPixel';
+import {
+    attachSiteEngagementTracking,
+    attachSiteScrollDepthTracking,
+    trackCta as trackSiteCta,
+    trackPageView as trackSitePageView,
+} from '@/utils/siteVisitors';
 import SeoContentSections from '@/components/marketing/SeoContentSections.vue';
 import '../../css/marketing.css';
 
@@ -19,13 +25,17 @@ const props = defineProps({
     variant: { type: String, default: 'dark' },
     /** Hide floating WhatsApp FAB on mobile when landing sticky CTA is shown */
     suppressMobileWhatsappFab: { type: Boolean, default: false },
+    /** Cluster/long-form pages already render content_sections in-body — skip the footer dump */
+    suppressSeoContentSections: { type: Boolean, default: false },
 });
 
 const page = usePage();
 const mobileOpen = ref(false);
 
 const marketing = computed(() => page.props.marketing ?? {});
-const seoContentSections = computed(() => page.props.seo?.content_sections ?? []);
+const seoContentSections = computed(() => (
+    props.suppressSeoContentSections ? [] : (page.props.seo?.content_sections ?? [])
+));
 
 const announcement = computed(() => marketing.value.announcement ?? {});
 const announcementMessages = computed(() =>
@@ -38,6 +48,7 @@ const pricingNavHref = computed(() =>
 
 /** Distinct public tools only (SEO keyword variants of the same checker are omitted). */
 const toolLinks = [
+    { label: 'WooCommerce Bangladesh গাইড', href: '/woocommerce-bangladesh' },
     { label: 'রিটার্ন লস ক্যালকুলেটর', href: route('seo.return-loss-calculator') },
     { label: 'কুরিয়ার চার্জ ক্যালকুলেটর', href: route('seo.courier-charge-calculator') },
     { label: 'Ads ROAS ক্যালকুলেটর', href: route('seo.ads-roas-calculator') },
@@ -106,6 +117,7 @@ const onDocumentKeydown = (event) => {
 
 const footerProductLinks = [
     { label: 'প্রাইসিং', href: route('pricing') },
+    { label: 'WooCommerce Bangladesh গাইড', href: '/woocommerce-bangladesh' },
     { label: 'ফ্রি ফ্রড চেক', href: route('seo.bd-fraud-checker') },
     { label: 'রিটার্ন লস ক্যালকুলেটর', href: route('seo.return-loss-calculator') },
     { label: 'কুরিয়ার চার্জ ক্যালকুলেটর', href: route('seo.courier-charge-calculator') },
@@ -248,6 +260,8 @@ const onHeaderCtaClick = (location) => {
         label: headerCtaLabel.value,
         href: headerCtaUrl.value,
     });
+    const path = page.url?.split('?')[0] || window.location.pathname;
+    trackSiteCta(path, headerCtaLabel.value || location || 'header_cta');
 };
 
 const onContactClick = (method) => {
@@ -255,6 +269,8 @@ const onContactClick = (method) => {
 };
 
 let detachScroll = () => {};
+let detachSiteScroll = () => {};
+let detachSiteEngagement = () => {};
 
 onMounted(() => {
     document.addEventListener('click', onDocumentClick);
@@ -263,6 +279,10 @@ onMounted(() => {
     const path = page.url?.split('?')[0] || window.location.pathname;
     const contentName = page.props.seo?.title
         || (typeof document !== 'undefined' ? document.title : path);
+
+    trackSitePageView(path);
+    detachSiteScroll = attachSiteScrollDepthTracking(path);
+    detachSiteEngagement = attachSiteEngagementTracking(path);
 
     trackOnce(`viewcontent:page:${path}`, () =>
         trackViewContent({
@@ -291,6 +311,8 @@ onUnmounted(() => {
     document.removeEventListener('click', onDocumentClick);
     document.removeEventListener('keydown', onDocumentKeydown);
     detachScroll();
+    detachSiteScroll();
+    detachSiteEngagement();
     document.body.style.overflow = '';
 });
 </script>
@@ -545,7 +567,7 @@ onUnmounted(() => {
                             v-for="tool in toolLinks"
                             :key="tool.href"
                             :href="tool.href"
-                            class="block rounded-lg px-3 py-2.5 text-sm transition"
+                            class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm transition"
                             :class="isDark
                                 ? 'text-slate-300 hover:bg-white/10 hover:text-amber-300'
                                 : 'text-slate-700 hover:bg-slate-50 hover:text-primary-700'"
@@ -725,6 +747,7 @@ onUnmounted(() => {
             rel="noopener noreferrer"
             class="fixed right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl shadow-emerald-900/50 transition hover:scale-105 hover:bg-emerald-400 md:bottom-6"
             :class="suppressMobileWhatsappFab ? 'bottom-6 hidden md:flex' : 'bottom-20 md:bottom-6'"
+            style="margin-bottom: env(safe-area-inset-bottom, 0px);"
             aria-label="হোয়াটসঅ্যাপে যোগাযোগ"
             @click="onContactClick('whatsapp_fab')"
         >

@@ -18,10 +18,22 @@ class EnsurePermission
     {
         $user = $request->user();
 
-        if (! $user || ! $this->rbac->hasPermission($user, $permission)) {
+        if (! $user) {
             abort(403, 'You do not have permission to perform this action.');
         }
 
-        return $next($request);
+        // Support OR lists: permission:roles.manage|billing.manage
+        $any = array_values(array_filter(array_map(
+            'trim',
+            preg_split('/[|,]/', $permission) ?: []
+        )));
+
+        foreach ($any as $slug) {
+            if ($this->rbac->hasPermission($user, $slug)) {
+                return $next($request);
+            }
+        }
+
+        abort(403, 'You do not have permission to perform this action.');
     }
 }

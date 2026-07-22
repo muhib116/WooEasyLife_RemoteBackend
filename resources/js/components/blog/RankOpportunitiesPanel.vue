@@ -6,7 +6,7 @@
                     Google rank opportunities
                 </p>
                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    GSC query×page analysis — what to improve first
+                    Free real demand from Search Console — Smart Post prefers these before cluster guesses
                     <span v-if="data?.refreshed_at"> · synced {{ formatDate(data.refreshed_at) }}</span>
                 </p>
             </div>

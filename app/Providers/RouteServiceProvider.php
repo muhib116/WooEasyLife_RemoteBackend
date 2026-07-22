@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\App\CachedBuildAssetController;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -31,6 +32,11 @@ class RouteServiceProvider extends ServiceProvider
         });
 
         $this->routes(function () {
+            // No session/cookies middleware — keep Cache-Control intact for hashed Vite assets.
+            Route::get('/build/assets/{file}', CachedBuildAssetController::class)
+                ->where('file', '[A-Za-z0-9._\-]+')
+                ->name('build.assets.show');
+
             Route::middleware('api')
                 // ->prefix('api')
                 ->group(base_path('routes/api.php'));

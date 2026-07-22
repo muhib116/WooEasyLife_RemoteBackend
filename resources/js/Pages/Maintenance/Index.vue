@@ -42,7 +42,7 @@
                 </template>
             </PageHeader>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
                     title="Environment"
                     :value="status.app_env"
@@ -59,6 +59,15 @@
                     :icon-class="status.app_debug ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'"
                 />
                 <StatCard
+                    title="Cache driver"
+                    :value="status.cache?.driver || 'database'"
+                    icon="PhDatabase"
+                    :subtitle="cacheSourceLabel"
+                    accent-class="bg-sky-500"
+                    icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
+                    icon-class="text-sky-600 dark:text-sky-400"
+                />
+                <StatCard
                     title="Storage link"
                     :value="status.storage_link_exists ? 'Ready' : 'Missing'"
                     icon="PhLink"
@@ -68,6 +77,66 @@
                     :icon-class="status.storage_link_exists ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
                 />
             </div>
+
+            <PageCard
+                title="Cache driver"
+                description="Controls Laravel CACHE_DRIVER for Visitors dedupe/quotas and framework cache. Default is database."
+            >
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="min-w-0 flex-1 space-y-2">
+                        <label class="block text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                            Active driver
+                        </label>
+                        <SelectButton
+                            v-model="cacheDriverDraft"
+                            :options="cacheDriverOptions"
+                            option-label="label"
+                            option-value="value"
+                            :allow-empty="false"
+                            :disabled="busy || savingCache"
+                            class="flex flex-wrap"
+                        />
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            {{ status.cache?.note || 'Use database, redis, or file — not array.' }}
+                            <span v-if="status.cache?.source === 'database'" class="text-sky-600 dark:text-sky-400">
+                                Currently overridden in admin settings.
+                            </span>
+                            <span v-else-if="status.cache?.source === 'env'">
+                                Using .env CACHE_DRIVER={{ status.cache?.env_default }}.
+                            </span>
+                            <span v-else>
+                                Using app default (database).
+                            </span>
+                        </p>
+                        <p
+                            v-if="cacheDriverDraft === 'redis' && !status.cache?.redis_configured"
+                            class="text-xs text-amber-700 dark:text-amber-300"
+                        >
+                            Redis host/client does not look configured — set Redis in .env before switching.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            label="Save driver"
+                            icon="pi pi-save"
+                            size="small"
+                            :loading="savingCache"
+                            :disabled="busy || cacheDriverDraft === status.cache?.driver"
+                            @click="saveCacheDriver"
+                        />
+                        <Button
+                            label="Reset to .env"
+                            icon="pi pi-replay"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            :loading="savingCache"
+                            :disabled="busy || status.cache?.source !== 'database'"
+                            @click="resetCacheDriver"
+                        />
+                    </div>
+                </div>
+            </PageCard>
 
             <PageCard
                 v-for="section in actionSections"
@@ -207,12 +276,22 @@ type MaintenanceAction = {
     is_batch?: boolean;
 };
 
+type CacheDriverStatus = {
+    driver?: string;
+    env_default?: string;
+    source?: 'database' | 'env' | 'default';
+    options?: string[];
+    redis_configured?: boolean;
+    note?: string;
+};
+
 type MaintenanceStatus = {
     storage_link_exists: boolean;
     storage_link_path: string;
     public_storage_path: string;
     app_env: string;
     app_debug: boolean;
+    cache?: CacheDriverStatus | null;
     actions: MaintenanceAction[];
     groups?: Record<string, string>;
     blog_learning?: {
@@ -270,6 +349,7 @@ const toast = useToast();
 
 const status = reactive<MaintenanceStatus>({
     ...props.initialStatus,
+    cache: props.initialStatus.cache ?? null,
     groups: props.initialStatus.groups ?? {},
     blog_learning: props.initialStatus.blog_learning ?? null,
     rank_opportunities: props.initialStatus.rank_opportunities ?? null,
@@ -277,9 +357,28 @@ const status = reactive<MaintenanceStatus>({
 });
 const loading = ref(false);
 const runningAction = ref<string | null>(null);
+const savingCache = ref(false);
 const lastOutput = ref("");
+const cacheDriverDraft = ref(props.initialStatus.cache?.driver || "database");
 
-const busy = computed(() => loading.value || runningAction.value !== null);
+const busy = computed(() => loading.value || runningAction.value !== null || savingCache.value);
+
+const cacheDriverOptions = computed(() => {
+    const options = status.cache?.options?.length
+        ? status.cache.options
+        : ["database", "redis", "file"];
+    return options.map((value) => ({
+        label: value,
+        value,
+    }));
+});
+
+const cacheSourceLabel = computed(() => {
+    const source = status.cache?.source;
+    if (source === "database") return "Admin override";
+    if (source === "env") return "From .env";
+    return "App default";
+});
 
 const actionSections = computed(() => {
     const groups = status.groups || {};
@@ -338,11 +437,67 @@ const applyStatus = (next?: MaintenanceStatus) => {
     status.public_storage_path = next.public_storage_path;
     status.app_env = next.app_env;
     status.app_debug = next.app_debug;
+    status.cache = next.cache ?? null;
     status.actions = next.actions;
     status.groups = next.groups ?? {};
     status.blog_learning = next.blog_learning ?? null;
     status.rank_opportunities = next.rank_opportunities ?? null;
     status.gsc_status = next.gsc_status ?? null;
+    if (next.cache?.driver) {
+        cacheDriverDraft.value = next.cache.driver;
+    }
+};
+
+const saveCacheDriver = async () => {
+    savingCache.value = true;
+    try {
+        const { data } = await axios.put(route("maintenance.cacheDriver.update"), {
+            driver: cacheDriverDraft.value,
+        });
+        applyStatus(data?.status);
+        toast.add({
+            severity: "success",
+            summary: "Cache driver",
+            detail: data?.message || "Saved.",
+            life: 4000,
+            group: "br",
+        });
+    } catch (error: any) {
+        toast.add({
+            severity: "error",
+            summary: "Could not save",
+            detail: error?.response?.data?.message || error?.response?.data?.errors?.driver?.[0] || "Failed to update cache driver.",
+            life: 5000,
+            group: "br",
+        });
+    } finally {
+        savingCache.value = false;
+    }
+};
+
+const resetCacheDriver = async () => {
+    savingCache.value = true;
+    try {
+        const { data } = await axios.post(route("maintenance.cacheDriver.reset"));
+        applyStatus(data?.status);
+        toast.add({
+            severity: "success",
+            summary: "Cache driver",
+            detail: data?.message || "Reset.",
+            life: 4000,
+            group: "br",
+        });
+    } catch (error: any) {
+        toast.add({
+            severity: "error",
+            summary: "Could not reset",
+            detail: error?.response?.data?.message || "Failed to reset cache driver.",
+            life: 5000,
+            group: "br",
+        });
+    } finally {
+        savingCache.value = false;
+    }
 };
 
 const loadStatus = async () => {

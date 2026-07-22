@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import AdsRoasCalculatorSection from '@/components/marketing/AdsRoasCalculatorSection.vue';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 import { primaryCtaUrl } from '@/utils/marketingCta';
 
 defineProps({
@@ -251,7 +252,7 @@ const whoFor = [
                         :key="idx"
                         class="text-sm leading-relaxed text-slate-300 sm:text-base"
                     >
-                        {{ paragraph }}
+                        <LinkedRichText :text="paragraph" :is-en="true" />
                     </p>
                 </article>
 
@@ -351,7 +352,7 @@ const whoFor = [
                     </ul>
                     <p class="mt-6 text-sm leading-relaxed text-slate-400">
                         Prefer Bangla?
-                        <Link href="/ads-roas-calculator" class="font-semibold text-amber-400 hover:text-amber-300">/ads-roas-calculator</Link>
+                        <Link href="/ads-roas-calculator" class="font-semibold text-amber-400 hover:text-amber-300">Bangla version</Link>
                     </p>
                 </div>
             </div>
@@ -416,7 +417,7 @@ const whoFor = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="true" />
                         </div>
                     </div>
                 </div>

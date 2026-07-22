@@ -26,15 +26,16 @@
 
 
 @layer utilities {
-    .table th {
+    /* Scope to <table class="table"> only — not CKEditor <figure class="table"> */
+    table.table th {
         @apply bg-[#f3f4f6] dark:bg-gray-900 py-2 px-5 text-left;
     }
 
-    .table tbody tr {
+    table.table tbody tr {
         @apply bg-white dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-slate-200;
     }
 
-    .table td {
+    table.table td {
         @apply py-2 px-5 text-left;
     }
 

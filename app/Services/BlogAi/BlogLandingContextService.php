@@ -28,7 +28,7 @@ class BlogLandingContextService
         array $keywords = [],
         array $learning = [],
     ): array {
-        $valid = array_keys(config('blog_ai.clusters', []));
+        $valid = app(BlogClusterCatalog::class)->keys();
         $explicit = trim((string) $explicitCluster);
         if ($explicit !== '' && ! in_array($explicit, $valid, true)) {
             $explicit = '';
@@ -88,7 +88,7 @@ class BlogLandingContextService
         }
 
         $scores = [];
-        foreach (config('blog_ai.cluster_detect_needles', []) as $cluster => $needles) {
+        foreach (app(BlogClusterCatalog::class)->detectNeedlesMap(true) as $cluster => $needles) {
             if (! is_array($needles)) {
                 continue;
             }
@@ -120,8 +120,10 @@ class BlogLandingContextService
      */
     public function forCluster(string $cluster): array
     {
-        $map = config('blog_ai.cluster_landing.'.$cluster)
-            ?? config('blog_ai.cluster_landing.general', []);
+        $map = app(BlogClusterCatalog::class)->landing($cluster);
+        if ($map === []) {
+            $map = config('blog_ai.cluster_landing.general', []);
+        }
 
         $seoKeys = is_array($map['seo_pages'] ?? null) ? $map['seo_pages'] : [];
         $pages = [];
@@ -144,15 +146,21 @@ class BlogLandingContextService
             ...(is_array($map['must_link_paths'] ?? null) ? $map['must_link_paths'] : []),
         ]));
 
-        return [
+        $landing = [
             'cluster' => $cluster,
-            'primary_path' => is_string($primary) ? $primary : null,
+            'primary_path' => is_string($primary) && $primary !== '' ? $primary : null,
             'related_paths' => $related,
             'pages' => $pages,
             'must_link_paths' => $mustLink !== [] ? $mustLink : array_values(array_filter([$primary])),
             'claims' => is_array($map['claims'] ?? null) ? array_values($map['claims']) : [],
-            'angle_hint' => (string) ($map['angle_hint'] ?? config('blog_ai.clusters.'.$cluster, $cluster)),
+            'angle_hint' => (string) ($map['angle_hint'] ?? app(BlogClusterCatalog::class)->label($cluster)),
         ];
+
+        $reference = app(BlogLandingPageReferenceService::class)->forLanding($landing);
+        $landing['primary_url'] = $reference['primary_url'] ?? null;
+        $landing['landing_page_reference'] = $reference;
+
+        return $landing;
     }
 
     /**
@@ -167,7 +175,7 @@ class BlogLandingContextService
 
         $faqs = collect($page['faqs'] ?? [])
             ->filter(fn ($row) => is_array($row) && filled($row['q'] ?? null))
-            ->take(4)
+            ->take(8)
             ->map(fn (array $row) => [
                 'q' => (string) $row['q'],
                 'a' => (string) ($row['a'] ?? ''),
@@ -183,6 +191,7 @@ class BlogLandingContextService
             'description' => (string) ($page['description'] ?? ''),
             'lead' => (string) ($page['prerender_lead'] ?? ''),
             'faqs' => $faqs,
+            'role' => 'landing_seo_source_of_truth',
         ];
     }
 
@@ -191,13 +200,24 @@ class BlogLandingContextService
      */
     public function catalog(): array
     {
-        $keys = collect(config('blog_ai.cluster_landing', []))
+        $keys = collect(app(BlogClusterCatalog::class)->keys(false))
+            ->map(fn (string $key) => app(BlogClusterCatalog::class)->landing($key))
             ->pluck('seo_pages')
             ->flatten()
             ->filter()
             ->unique()
             ->values()
             ->all();
+
+        if ($keys === []) {
+            $keys = collect(config('blog_ai.cluster_landing', []))
+                ->pluck('seo_pages')
+                ->flatten()
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
 
         $out = [];
         foreach ($keys as $key) {

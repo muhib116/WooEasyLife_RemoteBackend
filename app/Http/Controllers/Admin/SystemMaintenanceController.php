@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\BlogLearningInsight;
 use App\Services\BlogAi\BlogLearningService;
+use App\Services\CacheRuntimeConfig;
 use App\Services\Seo\GoogleSearchConsoleClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -234,6 +235,46 @@ class SystemMaintenanceController extends Controller
     public function status(): JsonResponse
     {
         return response()->json($this->statusPayload());
+    }
+
+    public function updateCacheDriver(Request $request, CacheRuntimeConfig $cacheRuntime): JsonResponse
+    {
+        $validated = $request->validate([
+            'driver' => ['required', 'string', 'in:'.implode(',', CacheRuntimeConfig::DRIVERS)],
+        ]);
+
+        $snapshot = $cacheRuntime->update($validated['driver']);
+
+        Log::info('Cache driver updated from System Maintenance.', [
+            'driver' => $snapshot['driver'],
+            'source' => $snapshot['source'],
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => "Cache driver set to {$snapshot['driver']} ({$snapshot['source']}).",
+            'cache' => $snapshot,
+            'status' => $this->statusPayload(),
+        ]);
+    }
+
+    public function resetCacheDriver(Request $request, CacheRuntimeConfig $cacheRuntime): JsonResponse
+    {
+        $snapshot = $cacheRuntime->resetToEnv();
+
+        Log::info('Cache driver reset to env/default from System Maintenance.', [
+            'driver' => $snapshot['driver'],
+            'source' => $snapshot['source'],
+            'user_id' => $request->user()?->id,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => "Cache driver reset to {$snapshot['driver']} ({$snapshot['source']}).",
+            'cache' => $snapshot,
+            'status' => $this->statusPayload(),
+        ]);
     }
 
     public function run(Request $request): JsonResponse
@@ -548,12 +589,27 @@ class SystemMaintenanceController extends Controller
             // ignore
         }
 
+        $cache = [
+            'driver' => CacheRuntimeConfig::DEFAULT_DRIVER,
+            'env_default' => CacheRuntimeConfig::DEFAULT_DRIVER,
+            'source' => 'default',
+            'options' => CacheRuntimeConfig::DRIVERS,
+            'redis_configured' => false,
+            'note' => '',
+        ];
+        try {
+            $cache = app(CacheRuntimeConfig::class)->snapshot();
+        } catch (Throwable) {
+            // ignore
+        }
+
         return [
             'storage_link_exists' => is_link($link) || File::exists($link),
             'storage_link_path' => $link,
             'public_storage_path' => storage_path('app/public'),
             'app_env' => (string) config('app.env'),
             'app_debug' => (bool) config('app.debug'),
+            'cache' => $cache,
             'actions' => $actions,
             'groups' => $groups,
             'blog_learning' => $learning,
@@ -561,7 +617,7 @@ class SystemMaintenanceController extends Controller
             'gsc_status' => $gscStatus,
             'intelligence' => $intelligence,
             'competitors' => $competitors,
-            'clusters' => config('blog_ai.clusters', []),
+            'clusters' => app(\App\Services\BlogAi\BlogClusterCatalog::class)->labels(),
         ];
     }
 }

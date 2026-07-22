@@ -72,6 +72,7 @@ class BlogSmartTopicPicker
                 'opportunity_score' => (float) ($item['opportunity_score'] ?? 0),
                 'target_slug' => filled($item['slug'] ?? null) ? (string) $item['slug'] : null,
                 'impressions' => (int) ($item['impressions_28d'] ?? 0),
+                'source' => 'gsc',
             ];
         }
 
@@ -89,6 +90,7 @@ class BlogSmartTopicPicker
                 'opportunity_score' => (float) ($row['opportunity_score'] ?? $this->estimateScore($row)),
                 'target_slug' => filled($row['slug'] ?? null) ? (string) $row['slug'] : null,
                 'impressions' => (int) ($row['impressions'] ?? 0),
+                'source' => 'gsc',
             ];
         }
 
@@ -100,25 +102,35 @@ class BlogSmartTopicPicker
             if ($seed === '') {
                 continue;
             }
+            $isGscIdea = str_starts_with((string) ($idea['reason'] ?? ''), 'gsc_');
             $candidates[] = [
                 'seed_topic' => $seed,
                 'keyword' => $seed,
                 'cluster' => (string) ($idea['cluster'] ?? ''),
                 'reason' => (string) ($idea['reason'] ?? 'learning_next_idea'),
-                'bucket' => str_starts_with((string) ($idea['reason'] ?? ''), 'gsc_')
+                'bucket' => $isGscIdea
                     ? substr((string) $idea['reason'], 4)
                     : null,
-                'opportunity_score' => 35.0,
+                'opportunity_score' => $isGscIdea ? 35.0 : 12.0,
                 'target_slug' => null,
                 'impressions' => 0,
+                'source' => $isGscIdea ? 'gsc' : 'learning',
             ];
         }
+
+        $preferGsc = (bool) config('blog_ai.auto.prefer_gsc', true);
+        $hasGsc = collect($candidates)->contains(fn (array $c) => ($c['source'] ?? '') === 'gsc');
 
         $best = null;
         $bestScore = -1.0;
         $recentAngles = $this->recentAnglesByCluster();
 
         foreach ($candidates as $candidate) {
+            if ($preferGsc && $hasGsc && ($candidate['source'] ?? '') !== 'gsc') {
+                // Free real demand first: skip cluster/learning ideas when GSC has anything.
+                continue;
+            }
+
             $resolved = $this->finalizeCandidate($candidate, $learning, $explicitCluster !== '' ? $explicitCluster : null, scoreOnly: true);
             if ($resolved === null) {
                 continue;
@@ -130,20 +142,13 @@ class BlogSmartTopicPicker
                 continue;
             }
 
-            $score = (float) $resolved['opportunity_score'];
-            if ($resolved['competitor_ready']) {
-                $score += 12;
-            }
-            if ($resolved['action'] === 'refresh') {
-                $score += 8; // prefer easy CTR/defend wins
-            }
-            $score += $this->bucketBoost($resolved['bucket'] ?? null);
-            $score += min(10, ((int) ($candidate['impressions'] ?? 0)) / 50);
+            $score = $this->scoreCandidate($candidate, $resolved);
 
             if ($score > $bestScore) {
                 $bestScore = $score;
                 $best = $resolved;
                 $best['opportunity_score'] = round($score, 2);
+                $best['source'] = (string) ($candidate['source'] ?? 'unknown');
             }
         }
 
@@ -154,12 +159,12 @@ class BlogSmartTopicPicker
                 if ($resolved === null) {
                     continue;
                 }
-                $score = (float) $resolved['opportunity_score'];
-                $score += $this->bucketBoost($resolved['bucket'] ?? null);
+                $score = $this->scoreCandidate($candidate, $resolved);
                 if ($score > $bestScore) {
                     $bestScore = $score;
                     $best = $resolved;
                     $best['opportunity_score'] = round($score, 2);
+                    $best['source'] = (string) ($candidate['source'] ?? 'unknown');
                     $best['reason'] = ($best['reason'] ?? 'scored').'_recent_fallback';
                 }
             }
@@ -170,10 +175,11 @@ class BlogSmartTopicPicker
         }
 
         $cluster = $explicitCluster !== '' ? $explicitCluster : 'fake_order';
-        $seeds = config('blog_ai.cluster_seed_queries.'.$cluster, []);
-        $fallback = is_array($seeds) && $seeds !== []
+        $catalog = app(BlogClusterCatalog::class);
+        $seeds = $catalog->seedQueries($cluster);
+        $fallback = $seeds !== []
             ? (string) $seeds[0]
-            : (string) config('blog_ai.clusters.'.$cluster, 'WooCommerce বাংলাদেশ');
+            : $catalog->label($cluster);
 
         return $this->finalizeCandidate([
             'seed_topic' => $fallback,
@@ -246,7 +252,31 @@ class BlogSmartTopicPicker
             'target_post_id' => $postId,
             'bucket' => is_string($bucket) ? $bucket : null,
             'opportunity_score' => (float) ($candidate['opportunity_score'] ?? 0),
+            'source' => (string) ($candidate['source'] ?? 'unknown'),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $candidate
+     * @param  array<string, mixed>  $resolved
+     */
+    private function scoreCandidate(array $candidate, array $resolved): float
+    {
+        $score = (float) ($resolved['opportunity_score'] ?? 0);
+        if ($resolved['competitor_ready'] ?? false) {
+            $score += 12;
+        }
+        if (($resolved['action'] ?? '') === 'refresh') {
+            $score += 8;
+        }
+        $score += $this->bucketBoost($resolved['bucket'] ?? null);
+        // Real GSC demand: impressions matter more than cluster seed guesses.
+        $score += min(25, ((int) ($candidate['impressions'] ?? 0)) / 30);
+        if (($candidate['source'] ?? '') === 'gsc') {
+            $score += 40;
+        }
+
+        return $score;
     }
 
     /**
@@ -264,11 +294,11 @@ class BlogSmartTopicPicker
     private function bucketBoost(?string $bucket): float
     {
         return match ($bucket) {
-            BlogGscQueryMetric::BUCKET_STRIKING => 25,
-            BlogGscQueryMetric::BUCKET_FIX_CTR => 30,
-            BlogGscQueryMetric::BUCKET_DEFEND => 20,
-            BlogGscQueryMetric::BUCKET_BURIED => 12,
-            BlogGscQueryMetric::BUCKET_CANNIBALIZED => 8,
+            BlogGscQueryMetric::BUCKET_STRIKING => 40,
+            BlogGscQueryMetric::BUCKET_FIX_CTR => 45,
+            BlogGscQueryMetric::BUCKET_DEFEND => 28,
+            BlogGscQueryMetric::BUCKET_BURIED => 18,
+            BlogGscQueryMetric::BUCKET_CANNIBALIZED => 10,
             default => 0,
         };
     }

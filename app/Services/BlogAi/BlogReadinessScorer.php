@@ -99,6 +99,12 @@ class BlogReadinessScorer
             $score = min($score, 55);
         }
 
+        // Soft informational signal — never required for ai_ready / publish.
+        if (isset($quality['competitor_gap_coverage_pct']) && is_numeric($quality['competitor_gap_coverage_pct'])) {
+            $pct = max(0, min(100, (int) $quality['competitor_gap_coverage_pct']));
+            $score += (int) round(($pct / 100) * 6);
+        }
+
         if (! empty($quality['ai_ready'])) {
             $score = max($score, 88);
         }

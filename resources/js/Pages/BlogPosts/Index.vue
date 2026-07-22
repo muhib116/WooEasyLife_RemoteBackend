@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <PageHeader
                 title="Blog Posts"
-                description="Write SEO-friendly posts with the rich editor. Published posts appear on /blog alongside existing guides."
+                description="CMS list for SEO posts. AI, clusters, and SEO tools live on their own pages."
                 icon="PhNewspaper"
                 icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
                 icon-class="text-amber-600 dark:text-amber-400"
@@ -11,32 +11,42 @@
                 <template #actions>
                     <div class="flex flex-wrap gap-2">
                         <Button
-                            v-if="canManageMaintenance"
+                            v-if="canManageAi"
+                            label="Blog AI"
+                            icon="pi pi-sparkles"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            @click="router.visit(route('blogPosts.ai'))"
+                        />
+                        <Button
+                            v-if="canManageAi"
+                            label="Topic Clusters"
+                            icon="pi pi-sitemap"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            @click="router.visit(route('blogPosts.clusters.index'))"
+                        />
+                        <Button
+                            v-if="canManageSeo"
                             label="SEO & Learning"
                             icon="pi pi-chart-line"
                             size="small"
                             severity="secondary"
                             outlined
-                            @click="openSeoLearningDialog"
+                            @click="router.visit(route('blogPosts.seo'))"
                         />
                         <Button
                             label="New Post"
                             icon="pi pi-plus"
                             size="small"
-                            severity="secondary"
-                            outlined
                             @click="router.visit(route('blogPosts.create'))"
                         />
                         <Button
                             v-if="canManageAi"
-                            label="Smart One-Click"
-                            icon="pi pi-bolt"
-                            size="small"
-                            @click="scrollToSmart"
-                        />
-                        <Button
                             label="AI Auto Create"
-                            icon="pi pi-sparkles"
+                            icon="pi pi-bolt"
                             size="small"
                             severity="secondary"
                             outlined
@@ -74,125 +84,6 @@
                 />
             </div>
 
-            <div id="blog-ai-intelligence">
-            <PageCard
-                title="Blog AI intelligence"
-                description="Live readiness of GSC, self-learning, analytics, and competitor analysis."
-            >
-                <div class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-                    <div class="space-y-4">
-                        <BlogIntelligenceRing :data="intelligence" />
-                        <div
-                            v-if="canManageAi"
-                            class="rounded-xl border border-amber-200/80 bg-amber-50/50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10"
-                        >
-                            <SmartOneClickPanel
-                                ref="smartOneClickRef"
-                                @intelligence="onIntelligenceUpdate"
-                                @updated="onCompetitorUpdated"
-                            />
-                        </div>
-                        <div
-                            v-if="canManageAi"
-                            class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
-                        >
-                            <BlogMemoryPanel
-                                :initial-items="learning?.memories || []"
-                                :initial-stats="learning?.memory_stats || {}"
-                                :clusters="clusterMap"
-                                @intelligence="onIntelligenceUpdate"
-                                @updated="onCompetitorUpdated"
-                            />
-                        </div>
-                    </div>
-                    <div
-                        v-if="canManageAi"
-                        class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
-                    >
-                        <CompetitorAnalyzerPanel
-                            :initial-items="learning?.competitors || []"
-                            :clusters="clusterMap"
-                            @intelligence="onIntelligenceUpdate"
-                            @updated="onCompetitorUpdated"
-                        />
-                    </div>
-                    <p
-                        v-else
-                        class="text-sm text-slate-500 dark:text-slate-400"
-                    >
-                        Competitor analyzer needs billing.manage permission.
-                        Open SEO &amp; Learning for GSC sync and learning insights.
-                    </p>
-                </div>
-            </PageCard>
-            </div>
-
-            <PageCard
-                v-if="learning?.insight || (learning?.top_posts || []).length"
-                title="Content learning"
-                description="Day-by-day engagement + GSC feed the AI writer so future drafts get more precise."
-            >
-                <p v-if="learning?.insight?.summary_bn" class="text-sm text-gray-700 dark:text-gray-200">
-                    {{ learning.insight.summary_bn }}
-                </p>
-                <p v-else class="text-sm text-gray-500">
-                    No insight snapshot yet. Traffic on /blog will build one
-                    <template v-if="canManageMaintenance">
-                        — or open
-                        <button
-                            type="button"
-                            class="font-medium text-sky-600 underline dark:text-sky-400"
-                            @click="openSeoLearningDialog"
-                        >
-                            SEO &amp; Learning
-                        </button>
-                        to run blog learning insights
-                    </template>.
-                </p>
-                <p v-if="learning?.insight?.generated_at" class="mt-2 text-xs text-gray-500">
-                    Last learning build: {{ formatDate(learning.insight.generated_at) }}
-                    · events 28d: {{ learning.insight.events_analyzed ?? 0 }}
-                </p>
-                <ul
-                    v-if="(learning?.insight?.payload?.recommended_clusters || []).length"
-                    class="mt-3 flex flex-wrap gap-2 text-xs"
-                >
-                    <li
-                        v-for="c in learning.insight.payload.recommended_clusters"
-                        :key="c"
-                        class="rounded-full bg-amber-500/15 px-2.5 py-1 font-medium text-amber-800 dark:text-amber-200"
-                    >
-                        {{ c }}
-                    </li>
-                </ul>
-            </PageCard>
-
-            <PageCard
-                v-if="showRankOpportunitiesCard"
-                title="Google rank opportunities"
-                description="Query×page gaps from Search Console — fix CTR, striking distance, and cannibalization."
-            >
-                <RankOpportunitiesPanel
-                    :data="learning.rank_opportunities"
-                    :can-draft="canManageAi"
-                    :draft-busy="smartDraftBusy"
-                    @draft-for-query="onDraftForQuery"
-                />
-                <div
-                    v-if="canManageMaintenance"
-                    class="mt-3"
-                >
-                    <Button
-                        label="Open SEO & Learning"
-                        icon="pi pi-chart-line"
-                        size="small"
-                        severity="secondary"
-                        outlined
-                        @click="openSeoLearningDialog"
-                    />
-                </div>
-            </PageCard>
-
             <PageCard
                 title="All posts"
                 :description="`${posts.length} post${posts.length === 1 ? '' : 's'} in the CMS`"
@@ -221,6 +112,7 @@
                                 </span>
                                 <span class="text-xs text-gray-500 dark:text-gray-400">
                                     /blog/{{ data.slug }}
+                                    <template v-if="data.cluster"> · {{ data.cluster }}</template>
                                 </span>
                             </div>
                         </template>
@@ -366,7 +258,7 @@
                     class="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center"
                 >
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        No CMS posts yet. Markdown guides on /blog still work — create a post here to publish new SEO content.
+                        No CMS posts yet. Create a post to publish new SEO content.
                     </p>
                     <Button
                         label="Write first post"
@@ -378,32 +270,6 @@
         </div>
 
         <Dialog
-            v-model:visible="seoLearningDialogVisible"
-            modal
-            header="Blog SEO & learning"
-            :style="{ width: '48rem' }"
-            :breakpoints="{ '640px': '95vw' }"
-            @show="onSeoLearningDialogShow"
-        >
-            <p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
-                SEO reports and AI learning jobs for the blog writer — same tools as System Maintenance.
-            </p>
-            <BlogSeoLearningPanel
-                v-if="seoLearningDialogVisible"
-                ref="seoLearningPanelRef"
-                @updated="onSeoLearningUpdated"
-            />
-            <template #footer>
-                <Button
-                    label="Close"
-                    severity="secondary"
-                    text
-                    @click="seoLearningDialogVisible = false"
-                />
-            </template>
-        </Dialog>
-
-        <Dialog
             v-model:visible="shareDialogVisible"
             modal
             header="Share to Facebook Page"
@@ -412,22 +278,15 @@
         >
             <div v-if="sharePost" class="space-y-4">
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                    Posts the cover/OG image to your Facebook Page (uploaded directly), with the blog URL in the caption.
+                    Posts the cover/OG image to your Facebook Page, with the blog URL in the caption.
                 </p>
                 <div
                     v-if="!facebookSharing.public_links"
                     class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-100"
                 >
-                    APP_URL is local, so Facebook won’t scrape a link preview. Image + caption still post.
-                    For clickable production links, set
+                    APP_URL is local, so Facebook won’t scrape a link preview. Set
                     <code class="text-[11px]">FACEBOOK_SHARE_BASE_URL</code>
-                    (e.g. https://wooeasylife.com).
-                </div>
-                <div v-if="sharePost.facebook_post_id" class="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
-                    Already shared
-                    <span v-if="sharePost.facebook_shared_at">
-                        ({{ formatDate(sharePost.facebook_shared_at) }})</span
-                    >. Check “Post again” to publish another Page post.
+                    for production links.
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs font-medium text-gray-700 dark:text-gray-200" for="fb-caption">
@@ -471,18 +330,12 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Pages/Users/fragments/PageHeader.vue';
 import PageCard from '@/Pages/Users/fragments/PageCard.vue';
 import StatCard from '@/Pages/Users/fragments/StatCard.vue';
-import BlogSeoLearningPanel from '@/components/blog/BlogSeoLearningPanel.vue';
-import RankOpportunitiesPanel from '@/components/blog/RankOpportunitiesPanel.vue';
-import BlogIntelligenceRing from '@/components/blog/BlogIntelligenceRing.vue';
-import CompetitorAnalyzerPanel from '@/components/blog/CompetitorAnalyzerPanel.vue';
-import SmartOneClickPanel from '@/components/blog/SmartOneClickPanel.vue';
-import BlogMemoryPanel from '@/components/blog/BlogMemoryPanel.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
@@ -494,43 +347,13 @@ import Textarea from 'primevue/textarea';
 
 const props = defineProps({
     posts: { type: Array, default: () => [] },
-    learning: { type: Object, default: null },
     facebook_sharing: { type: Object, default: () => ({ enabled: false }) },
 });
 
 const { can } = usePermissions();
 const canManageMaintenance = computed(() => can('roles.manage'));
 const canManageAi = computed(() => can('billing.manage'));
-
-const intelligence = ref(props.learning?.intelligence || null);
-
-watch(
-    () => props.learning?.intelligence,
-    (next) => {
-        if (next) intelligence.value = next;
-    },
-);
-
-const clusterMap = computed(() => props.learning?.clusters || {});
-
-const onIntelligenceUpdate = (next) => {
-    if (next) intelligence.value = next;
-};
-
-const onCompetitorUpdated = () => {
-    router.reload({ only: ['learning'], preserveScroll: true });
-};
-
-const scrollToSmart = () => {
-    document.getElementById('blog-ai-intelligence')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
-
-const showRankOpportunitiesCard = computed(() => {
-    const ops = props.learning?.rank_opportunities;
-    if (!ops) return false;
-    if (ops.configured === false) return true;
-    return (ops.items || []).length > 0 || Object.keys(ops.summary || {}).length > 0;
-});
+const canManageSeo = computed(() => can('roles.manage') || can('billing.manage'));
 
 const facebookSharing = computed(() => ({
     enabled: false,
@@ -555,34 +378,6 @@ const shareMessage = ref('');
 const shareForce = ref(false);
 const shareSubmitting = ref(false);
 
-const seoLearningDialogVisible = ref(false);
-const seoLearningPanelRef = ref(null);
-const smartOneClickRef = ref(null);
-const smartDraftBusy = ref(false);
-
-const onDraftForQuery = async (item) => {
-    smartDraftBusy.value = true;
-    try {
-        document.getElementById('blog-ai-intelligence')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        await smartOneClickRef.value?.startForOpportunity?.(item);
-    } finally {
-        smartDraftBusy.value = false;
-    }
-};
-
-const openSeoLearningDialog = () => {
-    seoLearningDialogVisible.value = true;
-};
-
-const onSeoLearningDialogShow = async () => {
-    await nextTick();
-    seoLearningPanelRef.value?.loadStatus?.();
-};
-
-const onSeoLearningUpdated = () => {
-    router.reload({ only: ['learning'], preserveScroll: true });
-};
-
 const formatDate = (value) => {
     if (!value) return '—';
     try {
@@ -593,54 +388,32 @@ const formatDate = (value) => {
 };
 
 const aiScoreClass = (score) => {
-    const n = Number(score);
-    if (n >= 80) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
-    if (n >= 60) return 'bg-amber-500/15 text-amber-800 dark:text-amber-200';
+    if (score >= 80) return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (score >= 60) return 'bg-amber-500/15 text-amber-800 dark:text-amber-200';
     return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
-};
-
-const shareUrlFor = (post) => {
-    const base = (facebookSharing.value.share_base_url || '').replace(/\/$/, '');
-    if (!base || !post?.slug) return `/blog/${post?.slug || ''}`;
-    return `${base}/blog/${post.slug}`;
-};
-
-const defaultCaption = (post) => {
-    const title = (post?.title || '').trim();
-    const excerpt = (post?.excerpt || '').trim();
-    const lines = [title];
-    if (excerpt) {
-        lines.push(excerpt.length > 180 ? `${excerpt.slice(0, 180)}…` : excerpt);
-    }
-    lines.push('👉 বিস্তারিত পড়ুন 👇');
-    lines.push(shareUrlFor(post));
-    return lines.filter(Boolean).join('\n\n');
 };
 
 const openShareDialog = (post) => {
     sharePost.value = post;
-    shareMessage.value = defaultCaption(post);
-    shareForce.value = !post.facebook_post_id;
+    shareForce.value = false;
+    const url = post.public_url || facebookSharing.value.share_base_url + (post.public_path || '');
+    shareMessage.value = `${post.title}\n\n${url}`.trim();
     shareDialogVisible.value = true;
 };
 
 const submitShare = () => {
     if (!sharePost.value) return;
-    if (sharePost.value.facebook_post_id && !shareForce.value) return;
-
     shareSubmitting.value = true;
     router.post(
         route('blogPosts.shareFacebook', sharePost.value.id),
         {
             message: shareMessage.value,
-            force: !!shareForce.value,
+            force: shareForce.value,
         },
         {
             preserveScroll: true,
             onFinish: () => {
                 shareSubmitting.value = false;
-            },
-            onSuccess: () => {
                 shareDialogVisible.value = false;
             },
         },
@@ -648,12 +421,7 @@ const submitShare = () => {
 };
 
 const confirmDelete = (post) => {
-    if (!window.confirm(`Delete “${post.title}”? This can be restored from soft-deletes only by a developer.`)) {
-        return;
-    }
-
-    router.delete(route('blogPosts.destroy', post.id), {
-        preserveScroll: true,
-    });
+    if (!window.confirm(`Delete “${post.title}”?`)) return;
+    router.delete(route('blogPosts.destroy', post.id), { preserveScroll: true });
 };
 </script>

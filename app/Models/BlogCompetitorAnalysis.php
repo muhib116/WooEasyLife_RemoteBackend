@@ -12,6 +12,7 @@ class BlogCompetitorAnalysis extends Model
         'keyword',
         'cluster',
         'competitor_urls',
+        'discovery_json',
         'snapshots_json',
         'insight_json',
         'summary_bn',
@@ -24,6 +25,7 @@ class BlogCompetitorAnalysis extends Model
     {
         return [
             'competitor_urls' => 'array',
+            'discovery_json' => 'array',
             'snapshots_json' => 'array',
             'insight_json' => 'array',
             'beat_score' => 'integer',

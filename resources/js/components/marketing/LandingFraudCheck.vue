@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import axios from 'axios';
 import { trackSearch } from '@/utils/metaPixel';
+import { trackToolAction } from '@/utils/siteVisitors';
 
 const props = defineProps({
     fraudCheck: {
@@ -199,6 +200,8 @@ const handleSearch = async () => {
             search_string: 'fraud_phone_check',
             content_category: 'fraud_check',
         });
+        const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+        trackToolAction(path, 'fraud_check_submit');
     } catch (error) {
         const response = error?.response;
 

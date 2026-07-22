@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import { primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -120,6 +121,7 @@ const whoFor = [
 ];
 
 const relatedLinks = [
+    { href: '/en/woocommerce-bangladesh', label: 'WooCommerce Bangladesh guide' },
     { href: '/en/bd-fraud-checker', label: 'BD Fraud Checker' },
     { href: '/ki-vabe-fake-order-atkabo', label: 'How to stop fake orders (BN)' },
     { href: '/en/return-loss-calculator', label: 'Return loss calculator' },
@@ -150,22 +152,22 @@ const relatedLinks = [
                 <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
                     On COD and Facebook page sales, fake orders mean return fees and wasted ad budget — stop risk before you ship.
                 </p>
-                <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                     <MetaCtaLink
                         :href="ctaUrl"
                         :label="ctaLabel"
                         location="seo_en_fake_order_protection_hero"
-                        link-class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
+                        link-class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400 sm:w-auto"
                     />
                     <Link
                         href="/en/bd-fraud-checker"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto"
                     >
                         Free fraud check
                     </Link>
                     <Link
                         href="/fake-order-protection"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 sm:w-auto"
                     >
                         বাংলা ভার্সন
                     </Link>
@@ -252,7 +254,7 @@ const relatedLinks = [
                             Prefer a full platform over checker-only tools? Read
                             <Link href="/en/fraudbd-alternative" class="font-semibold text-amber-400 hover:text-amber-300">FraudBD Alternative</Link>.
                         </template>
-                        <template v-else>{{ paragraph }}</template>
+                        <template v-else><LinkedRichText :text="paragraph" :is-en="true" /></template>
                     </p>
                 </article>
             </div>
@@ -338,7 +340,7 @@ const relatedLinks = [
                     Bangla guide:
                     <Link href="/ki-vabe-fake-order-atkabo" class="font-semibold text-amber-400 hover:text-amber-300">কিভাবে ফেক অর্ডার আটকাবো</Link>.
                     Bangla mirror:
-                    <Link href="/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">/fake-order-protection</Link>.
+                    <Link href="/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">Bangla version</Link>.
                 </p>
             </div>
         </section>
@@ -384,7 +386,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="true" />
                         </div>
                     </div>
                 </div>

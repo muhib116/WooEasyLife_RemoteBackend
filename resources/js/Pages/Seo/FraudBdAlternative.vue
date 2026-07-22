@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -70,7 +71,7 @@ const guideSections = [
     {
         heading: 'কীভাবে সুইচ করবেন',
         paragraphs: [
-            'প্রথমে /bd-fraud-checker-এ ফ্রি চেক টেস্ট করুন — অ্যাকাউন্ট লাগে না। তারপর /fake-order-protection ও /courier-auto-entry পড়ে ওয়ার্কফ্লো বুঝুন।',
+            'প্রথমে /bd-fraud-checker দিয়ে ফ্রি চেক টেস্ট করুন — অ্যাকাউন্ট লাগে না। তারপর /fake-order-protection ও /courier-auto-entry পড়ে ওয়ার্কফ্লো বুঝুন।',
             '/pricing থেকে ট্রায়াল বা সাবস্ক্রিপশন নিন। WooCommerce কানেক্ট করুন, কুরিয়ার অ্যাকাউন্ট লিংক করুন, প্রোটেকশন রুল চালু করুন। পুরনো চেকার টুল রাখতে পারেন — কিন্তু বেশিরভাগ দৈনন্দিন কাজ WooEasyLife-এ সরে যায়।',
         ],
     },
@@ -258,7 +259,7 @@ const relatedLinks = [
                         :key="idx"
                         class="text-sm leading-relaxed text-slate-300 sm:text-base"
                     >
-                        {{ paragraph }}
+                        <LinkedRichText :text="paragraph" :is-en="false" />
                     </p>
                 </article>
             </div>
@@ -341,11 +342,11 @@ const relatedLinks = [
                     WooEasyLife হলো FraudBD Alternative — ফ্রি BD fraud checker-এর সাথে ফেক অর্ডার প্রোটেকশন,
                     কুরিয়ার অটো এন্ট্রি, হারানো অর্ডার রিকভারি ও মোবাইল অ্যাপ। শুধু-চেকার টুল হিস্টোরি দেখায়;
                     WooEasyLife পুরো COD ওয়ার্কফ্লো কভার করে। ফ্রি চেক:
-                    <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">/bd-fraud-checker</Link>,
+                    <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">ফ্রড চেকার</Link>,
                     ট্রায়াল:
-                    <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">/pricing</Link>।
+                    <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>।
                     English:
-                    <Link href="/en/fraudbd-alternative" class="font-semibold text-amber-400 hover:text-amber-300">/en/fraudbd-alternative</Link>।
+                    <Link href="/en/fraudbd-alternative" class="font-semibold text-amber-400 hover:text-amber-300">English version</Link>।
                 </p>
             </div>
         </section>
@@ -368,7 +369,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="false" />
                         </div>
                     </div>
                 </div>

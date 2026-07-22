@@ -51,15 +51,27 @@
             <RankOpportunitiesPanel :data="rankOpportunities" />
         </div>
 
-        <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
+        <div
+            v-if="canManageAi"
+            class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600"
+        >
             <CompetitorAnalyzerPanel
                 :initial-items="competitors"
                 :clusters="clusters"
                 @intelligence="(next) => { intelligence = next; }"
             />
         </div>
+        <p
+            v-else
+            class="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400"
+        >
+            Competitor analyzer needs <code>billing.manage</code>. Open Blog AI if you have that permission.
+        </p>
 
-        <div class="grid grid-cols-1 gap-3">
+        <div
+            v-if="canManageMaintenance"
+            class="grid grid-cols-1 gap-3"
+        >
             <div
                 v-for="action in blogActions"
                 :key="action.key"
@@ -91,9 +103,15 @@
                 />
             </div>
         </div>
+        <p
+            v-else-if="!canManageMaintenance"
+            class="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400"
+        >
+            GSC / learning jobs need <code>roles.manage</code> (System Maintenance). Rank opportunities above still load from blog learning data when available.
+        </p>
 
         <div
-            v-if="!blogActions.length && !loading"
+            v-if="canManageMaintenance && !blogActions.length && !loading"
             class="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400"
         >
             Could not load blog maintenance actions.
@@ -130,8 +148,17 @@ import RankOpportunitiesPanel from '@/components/blog/RankOpportunitiesPanel.vue
 import GscStatusPanel from '@/components/blog/GscStatusPanel.vue';
 import BlogIntelligenceRing from '@/components/blog/BlogIntelligenceRing.vue';
 import CompetitorAnalyzerPanel from '@/components/blog/CompetitorAnalyzerPanel.vue';
+import { usePermissions } from '@/composables/usePermissions';
 
 const emit = defineEmits(['updated']);
+
+const props = defineProps({
+    initialLearning: { type: Object, default: null },
+});
+
+const { can } = usePermissions();
+const canManageAi = computed(() => can('billing.manage'));
+const canManageMaintenance = computed(() => can('roles.manage'));
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -140,12 +167,20 @@ const loading = ref(false);
 const runningAction = ref(null);
 const lastOutput = ref('');
 const actions = ref([]);
-const blogLearning = ref(null);
-const rankOpportunities = ref(null);
+const blogLearning = ref(props.initialLearning?.insight
+    ? {
+        summary_bn: props.initialLearning.insight.summary_bn,
+        generated_at: props.initialLearning.insight.generated_at,
+        posts_analyzed: props.initialLearning.insight.posts_analyzed,
+        events_analyzed: props.initialLearning.insight.events_analyzed,
+        next_post_ideas: props.initialLearning.insight.payload?.next_post_ideas || [],
+    }
+    : null);
+const rankOpportunities = ref(props.initialLearning?.rank_opportunities || null);
 const gscStatus = ref(null);
-const intelligence = ref(null);
-const competitors = ref([]);
-const clusters = ref({});
+const intelligence = ref(props.initialLearning?.intelligence || null);
+const competitors = ref(props.initialLearning?.competitors || []);
+const clusters = ref(props.initialLearning?.clusters || {});
 
 const busy = computed(() => loading.value || runningAction.value !== null);
 
@@ -176,6 +211,9 @@ const applyStatus = (next) => {
 };
 
 const loadStatus = async () => {
+    if (!canManageMaintenance.value) {
+        return;
+    }
     loading.value = true;
     try {
         const { data } = await axios.get(route('maintenance.status'));

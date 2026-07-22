@@ -1,7 +1,8 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { RANGE_SLIDER_CLASS, rangeTrackStyle } from '@/utils/rangeSlider';
+import { trackToolAction } from '@/utils/siteVisitors';
 
 const props = defineProps({
     config: { type: Object, default: () => ({}) },
@@ -20,6 +21,19 @@ const model = reactive({
     fake_cancel_rate: inputs.value.fake_cancel_rate?.default ?? 30,
     aov: inputs.value.aov?.default ?? 1200,
 });
+
+let toolActionSent = false;
+watch(
+    () => [model.ad_spend, model.pixel_purchases, model.fake_cancel_rate, model.aov],
+    () => {
+        if (toolActionSent) {
+            return;
+        }
+        toolActionSent = true;
+        const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+        trackToolAction(path, 'ads_roas_calculate');
+    },
+);
 
 const toBnDigits = (value) =>
     String(value).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[Number(d)]);

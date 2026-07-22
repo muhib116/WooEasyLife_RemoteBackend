@@ -45,7 +45,7 @@ class AdminSidebarNavOrder
                     'Subscription Alerts',
                 ],
                 'Marketing' => ['Meta Pixel'],
-                'Analytics' => ['Visitor Report', 'Use Analysis', 'Order Intelligence'],
+                'Analytics' => ['Visitors', 'Visitor Report', 'Use Analysis', 'Order Intelligence'],
                 'System' => [
                     'Webhook Activities',
                     'Error Logs',
@@ -64,6 +64,13 @@ class AdminSidebarNavOrder
                     'Landing Orders',
                     'Payment Requests',
                     'Customer Notices',
+                ],
+                'Blog Posts' => [
+                    'All Posts',
+                    'Blog AI',
+                    'AI Settings',
+                    'Topic Clusters',
+                    'SEO & Learning',
                 ],
             ],
         ];

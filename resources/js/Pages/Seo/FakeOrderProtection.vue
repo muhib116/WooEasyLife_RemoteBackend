@@ -6,6 +6,7 @@ import SeoHead from '@/components/marketing/SeoHead.vue';
 import SeoBreadcrumbs from '@/components/marketing/SeoBreadcrumbs.vue';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
+import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
 defineProps({
     canLogin: { type: Boolean, default: false },
@@ -120,6 +121,7 @@ const whoFor = [
 ];
 
 const relatedLinks = [
+    { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
     { href: '/bd-fraud-checker', label: 'BD Fraud Checker' },
     { href: '/ki-vabe-fake-order-atkabo', label: 'কিভাবে ফেক অর্ডার আটকাবো' },
     { href: '/return-loss-calculator', label: 'রিটার্ন লস ক্যালকুলেটর' },
@@ -150,22 +152,22 @@ const relatedLinks = [
                 <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
                     COD ও Facebook পেজ ব্যবসায় ফেক অর্ডার মানে রিটার্ন চার্জ ও নষ্ট অ্যাড বাজেট — অর্ডার পাঠানোর আগেই ঝুঁকি আটকান।
                 </p>
-                <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                     <MetaCtaLink
                         :href="ctaUrl"
                         :label="ctaLabel"
                         location="seo_fake_order_protection_hero"
-                        link-class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
+                        link-class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400 sm:w-auto"
                     />
                     <Link
                         href="/bd-fraud-checker"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto"
                     >
                         ফ্রি ফ্রড চেক
                     </Link>
                     <Link
                         href="/en/fake-order-protection"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 sm:w-auto"
                     >
                         English version
                     </Link>
@@ -255,7 +257,7 @@ const relatedLinks = [
                             <Link href="/fraudbd-alternative" class="font-semibold text-amber-400 hover:text-amber-300">FraudBD Alternative</Link>
                             পড়ুন।
                         </template>
-                        <template v-else>{{ paragraph }}</template>
+                        <template v-else><LinkedRichText :text="paragraph" :is-en="false" /></template>
                     </p>
                 </article>
             </div>
@@ -341,7 +343,7 @@ const relatedLinks = [
                     গাইড:
                     <Link href="/ki-vabe-fake-order-atkabo" class="font-semibold text-amber-400 hover:text-amber-300">কিভাবে ফেক অর্ডার আটকাবো</Link>।
                     English:
-                    <Link href="/en/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">/en/fake-order-protection</Link>।
+                    <Link href="/en/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">English version</Link>।
                 </p>
             </div>
         </section>
@@ -387,7 +389,7 @@ const relatedLinks = [
                             <span class="shrink-0 text-slate-400">{{ openFaq === i ? '−' : '+' }}</span>
                         </button>
                         <div v-show="openFaq === i" class="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-                            {{ item.a }}
+                            <LinkedRichText :text="item.a" :is-en="false" />
                         </div>
                     </div>
                 </div>

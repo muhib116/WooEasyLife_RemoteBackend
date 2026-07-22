@@ -35,6 +35,7 @@ class SiteVisitorEvent extends Model
         'utm_campaign',
         'utm_content',
         'utm_term',
+        'search_keyword',
         'source_channel',
         'device_type',
         'country',

@@ -445,13 +445,13 @@ Return JSON only:
   "notes": ["what you changed"]
 }
 Rules:
-- Keep Bangla seller tone; preserve product truth (fraud checker, courier, fake order, WooCommerce BD).
-- Prefer surgical edits over full rewrites. Do not invent US-centric claims.
+- Keep Messenger-style Bangla seller tone; preserve product truth (fraud checker, courier, fake order, WooCommerce BD).
+- Prefer surgical edits over full rewrites. Do not invent US-centric claims. Do not rewrite into corporate/AI fluff.
 - Include focus_keyword naturally in title, first content <p> AFTER Quick Answer and AI Summary sections (not inside those sections), one <h2>, and meta_description.
 - If keyword_in_first_paragraph fails: rewrite/insert the first content <p> so it starts with or clearly includes focus_keyword.
 - If word_count_ok fails: expand body_html with useful Bangla seller paragraphs until min_body_words is reached (do not pad with gibberish). Keep all existing good sections.
-- Ensure <h2>, <h3>, and at least one <ul>/<ol> when those checks fail.
-- FAQs must be ≥ min_faqs with useful BD seller Q&A.
+- Ensure <h2>/<h3> when those checks fail. Add <ul>/<ol> only if has_lists fails — otherwise prefer short paragraphs.
+- FAQs must be ≥ min_faqs with useful BD seller Q&A (spoken questions, not textbook headings).
 - Internal links must use paths from allowed_internal_links only (href="/...").
 - Keep valid HTML fragments (p, h2, h3, ul, ol, li, a, section, strong, em, figure, img).
 - Do not remove existing good sections unless required for SEO.
