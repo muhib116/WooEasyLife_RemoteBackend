@@ -112,6 +112,7 @@ class PackageCatalogFeaturesTest extends TestCase
         $this->assertArrayHasKey('customer_delivery_history', $normalized);
         $this->assertArrayHasKey('customer_behavior', $normalized);
         $this->assertArrayHasKey('pixel_protection', $normalized);
+        $this->assertArrayHasKey('parcel_note_history', $normalized);
     }
 
     public function test_normalize_infers_split_keys_from_legacy_parent_toggles(): void
@@ -120,12 +121,25 @@ class PackageCatalogFeaturesTest extends TestCase
             'ai_intelligence' => true,
             'app_connect' => true,
             'missing_orders' => true,
+            'courier_automation' => true,
         ]);
 
         $this->assertTrue($normalized['customer_delivery_history']);
         $this->assertTrue($normalized['customer_behavior']);
         $this->assertFalse($normalized['create_order']);
         $this->assertTrue($normalized['call_and_status_log']);
+        $this->assertTrue($normalized['parcel_note_history']);
+    }
+
+    public function test_normalize_respects_explicit_parcel_note_history_false(): void
+    {
+        $normalized = PackageCatalogFeatures::normalize([
+            'courier_automation' => true,
+            'parcel_note_history' => false,
+        ]);
+
+        $this->assertTrue($normalized['courier_automation']);
+        $this->assertFalse($normalized['parcel_note_history']);
     }
 
     public function test_expand_for_legacy_api_includes_new_power_keys(): void
@@ -137,6 +151,7 @@ class PackageCatalogFeaturesTest extends TestCase
             'customer_delivery_history' => true,
             'customer_behavior' => true,
             'pixel_protection' => true,
+            'parcel_note_history' => true,
         ]);
 
         $this->assertTrue($legacy['customer_order_create']);
@@ -145,6 +160,22 @@ class PackageCatalogFeaturesTest extends TestCase
         $this->assertTrue($legacy['customer_delivery_history']);
         $this->assertTrue($legacy['customer_behavior_track']);
         $this->assertTrue($legacy['pixel_protection']);
+        $this->assertTrue($legacy['parcel_note_history']);
+    }
+
+    public function test_power_keys_include_parcel_note_history(): void
+    {
+        $keys = PackageCatalogFeatures::powerKeys();
+
+        $this->assertContains('parcel_note_history', $keys);
+        $this->assertSame(
+            'পার্সেল নোট হিস্ট্রি',
+            PackageCatalogFeatures::powerLabelsBn()['parcel_note_history'],
+        );
+        $this->assertSame(
+            'Parcel note history',
+            PackageCatalogFeatures::powerLabelsEn()['parcel_note_history'],
+        );
     }
 
     public function test_map_defaults_all_power_keys_to_true(): void

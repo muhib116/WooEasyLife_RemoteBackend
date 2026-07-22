@@ -121,6 +121,13 @@ class MarketingSeoTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/CourierAutoEntry')
             ->where('seo.canonical_path', '/courier-auto-entry')
+            ->has('seo.faqs')
+        );
+
+        $faqs = collect(config('seo.pages.courier_auto_entry.faqs', []));
+        $this->assertTrue(
+            $faqs->contains(fn (array $faq) => str_contains((string) ($faq['q'] ?? ''), 'পার্সেল নোট')),
+            'Courier auto-entry SEO FAQs should mention parcel note history.',
         );
     }
 

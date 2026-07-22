@@ -8,7 +8,10 @@ use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierShipmentService;
+use App\Services\Courier\SteadfastParcelNotesService;
 use App\Services\Courier\SteadfastStatusBatchService;
+use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
+use App\Services\MerchantPackageFeatureGate;
 use App\Services\PathaoCourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +28,9 @@ class SteadFastController extends Controller
         protected CourierShipmentService $shipmentService,
         protected CourierAccountService $courierAccountService,
         protected SteadfastStatusBatchService $steadfastStatusBatchService,
+        protected SteadfastParcelNotesService $parcelNotesService,
+        protected MerchantSteadfastFraudCredentialResolver $steadfastPortalCredentials,
+        protected MerchantPackageFeatureGate $packageFeatureGate,
     ) {
         $this->baseUrl = 'https://portal.packzy.com/api/v1';
     }
@@ -402,4 +408,111 @@ class SteadFastController extends Controller
 
     //     return $response->json();
     // }
+
+    public function parcelNotes(Request $request)
+    {
+        if ($denied = $this->denyUnlessParcelNoteHistoryEnabled($request)) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'consignment_id' => ['required', 'string', 'regex:/^\d{4,20}$/'],
+            'tracking_code' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
+        }
+
+        $credentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        if ($credentials === null) {
+            return $this->errorResponse(
+                'Steadfast portal username/password are not configured.',
+                422
+            );
+        }
+
+        try {
+            $data = $this->parcelNotesService->fetchNotes(
+                (string) $request->input('consignment_id'),
+                $credentials,
+                $request->input('tracking_code')
+            );
+
+            return $this->successResponse($data);
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast parcel notes fetch failed', $th->getMessage());
+
+            return $this->errorResponse($th->getMessage() ?: 'Unable to fetch Steadfast parcel notes.');
+        }
+    }
+
+    public function updateParcelNote(Request $request)
+    {
+        if ($denied = $this->denyUnlessParcelNoteHistoryEnabled($request)) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'consignment_id' => ['required', 'string', 'regex:/^\d{4,20}$/'],
+            'note' => 'nullable|string|max:500',
+            'cus_address' => 'nullable|string|max:500',
+            'cod_amount' => 'nullable|numeric|min:0|max:9999999',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
+        }
+
+        $note = trim((string) $request->input('note', ''));
+        $hasAddress = $request->exists('cus_address');
+        $hasCod = $request->exists('cod_amount');
+
+        if ($note === '' && ! $hasAddress && ! $hasCod) {
+            return $this->errorResponse('Provide a note, address, or COD amount to update.', 422);
+        }
+
+        $credentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        if ($credentials === null) {
+            return $this->errorResponse(
+                'Steadfast portal username/password are not configured.',
+                422
+            );
+        }
+
+        $overrides = [];
+        if ($hasAddress) {
+            $overrides['cus_address'] = (string) $request->input('cus_address');
+        }
+        if ($hasCod) {
+            $overrides['cod_amount'] = $request->input('cod_amount');
+        }
+
+        try {
+            $data = $this->parcelNotesService->updateMerchantNote(
+                (string) $request->input('consignment_id'),
+                $note,
+                $credentials,
+                $overrides
+            );
+
+            return $this->successResponse($data, 'Parcel updated');
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast parcel note update failed', $th->getMessage());
+
+            return $this->errorResponse($th->getMessage() ?: 'Unable to update Steadfast parcel note.');
+        }
+    }
+
+    private function denyUnlessParcelNoteHistoryEnabled(Request $request)
+    {
+        if ($this->packageFeatureGate->hasFromRequest($request, 'parcel_note_history')) {
+            return null;
+        }
+
+        return $this->errorResponse(
+            'Parcel note history is not included in your current plan.',
+            403
+        );
+    }
 }

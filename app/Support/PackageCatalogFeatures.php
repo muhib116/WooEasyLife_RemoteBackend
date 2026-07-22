@@ -202,6 +202,11 @@ class PackageCatalogFeatures
         if (! $explicit('call_and_status_log') && ($normalized['app_connect'] ?? false)) {
             $normalized['call_and_status_log'] = true;
         }
+
+        // Packages saved before parcel_note_history existed should keep courier access.
+        if (! $explicit('parcel_note_history') && ($normalized['courier_automation'] ?? false)) {
+            $normalized['parcel_note_history'] = true;
+        }
     }
 
     /**

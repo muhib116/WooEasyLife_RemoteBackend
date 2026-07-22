@@ -36,6 +36,7 @@ return [
         'missing_orders',
         'sms_management',
         'pixel_protection',
+        'parcel_note_history',
     ],
 
     'power_feature_labels_bn' => [
@@ -58,6 +59,7 @@ return [
         'missing_orders' => 'মিসিং অর্ডার',
         'sms_management' => 'এসএমএস ম্যানেজমেন্ট',
         'pixel_protection' => 'পিক্সেল প্রোটেকশন',
+        'parcel_note_history' => 'পার্সেল নোট হিস্ট্রি',
     ],
 
     'power_feature_labels_en' => [
@@ -80,6 +82,7 @@ return [
         'missing_orders' => 'Missing orders',
         'sms_management' => 'SMS management',
         'pixel_protection' => 'Pixel protection',
+        'parcel_note_history' => 'Parcel note history',
     ],
 
     /*
@@ -129,6 +132,7 @@ return [
         'courier_auto_status_sync',
         'courier_webhook_integrations',
         'pixel_protection',
+        'parcel_note_history',
     ],
 
     'app_feature_keys' => [
@@ -294,6 +298,9 @@ return [
         ],
         'pixel_protection' => [
             'pixel_protection',
+        ],
+        'parcel_note_history' => [
+            'parcel_note_history',
         ],
     ],
 ];

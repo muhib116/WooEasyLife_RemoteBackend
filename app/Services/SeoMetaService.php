@@ -367,7 +367,7 @@ class SeoMetaService
                 'category' => 'FreeTrial',
                 'description' => 'Free trial available — see pricing for paid plans',
             ],
-            'featureList' => 'BD courier fraud checker, Fake order protection, Courier auto-entry (Pathao, Steadfast, RedX), WooCommerce plugin + Android app',
+            'featureList' => 'BD courier fraud checker, Fake order protection, Courier auto-entry (Pathao, Steadfast, RedX), Parcel note history, WooCommerce plugin + Android app',
         ];
 
         if (is_string($playStore) && $playStore !== '') {

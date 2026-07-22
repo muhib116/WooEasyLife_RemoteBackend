@@ -109,6 +109,7 @@ export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
     missing_orders: ["missing_orders", "missing_order_one_click_create"],
     sms_management: ["customer_sms_for_order", "bulk_sms"],
     pixel_protection: ["pixel_protection"],
+    parcel_note_history: ["parcel_note_history"],
 };
 
 export const POWER_FULL_FEATURE_DEFINITIONS: {
@@ -140,6 +141,7 @@ export const POWER_FULL_FEATURE_DEFINITIONS: {
     { key: "missing_orders", label: "মিসিং অর্ডার" },
     { key: "sms_management", label: "এসএমএস ম্যানেজমেন্ট" },
     { key: "pixel_protection", label: "পিক্সেল প্রোটেকশন" },
+    { key: "parcel_note_history", label: "পার্সেল নোট হিস্ট্রি" },
 ];
 
 const LEGACY_KEYS = new Set(

@@ -149,6 +149,8 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/check-status', [SteadFastController::class, 'checkStatus']);
             Route::post('/bulk-check-status', [SteadFastController::class, 'bulkCheckStatus']);
             Route::post('/check-balance', [SteadFastController::class, 'checkBalance']);
+            Route::post('/parcel-notes', [SteadFastController::class, 'parcelNotes']);
+            Route::post('/parcel-notes/update', [SteadFastController::class, 'updateParcelNote']);
         });
 
         Route::group(['as' => 'pathao.', 'prefix' => 'pathao'], function () use ($pathaoDevCatalog, $registerPathaoCatalogRoutes) {

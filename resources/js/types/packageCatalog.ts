@@ -25,7 +25,8 @@ export type PowerFeatureKey =
     | "label_and_pos_sticker_print"
     | "missing_orders"
     | "sms_management"
-    | "pixel_protection";
+    | "pixel_protection"
+    | "parcel_note_history";
 
 export type PackageFeatureKey = PowerFeatureKey;
 
