@@ -9,6 +9,7 @@ import {
     trackOnce,
     trackViewContent,
 } from '@/utils/metaPixel';
+import SeoContentSections from '@/components/marketing/SeoContentSections.vue';
 import '../../css/marketing.css';
 
 const props = defineProps({
@@ -24,6 +25,7 @@ const page = usePage();
 const mobileOpen = ref(false);
 
 const marketing = computed(() => page.props.marketing ?? {});
+const seoContentSections = computed(() => page.props.seo?.content_sections ?? []);
 
 const announcement = computed(() => marketing.value.announcement ?? {});
 const announcementMessages = computed(() =>
@@ -581,6 +583,7 @@ onUnmounted(() => {
 
         <main>
             <slot />
+            <SeoContentSections :sections="seoContentSections" />
         </main>
 
         <footer class="border-t" :class="isDark ? 'border-white/10 bg-[#080808]' : 'border-slate-800 bg-slate-950'">

@@ -55,7 +55,6 @@ return [
             'title' => 'Free Courier Fraud Checker BD — ফ্রড চেকার | WooEasyLife',
             'description' => 'ফ্রি Courier Fraud Checker BD ও ফ্রড চেকার। মোবাইল নম্বর দিয়ে Pathao, Steadfast, RedX ডেলিভারি হিস্টোরি, সাকসেস রেট ও রিটার্ন রেট দেখুন। ফেক অর্ডার আটকান — ই-কমার্স ও Facebook পেজ সেলারদের জন্য।',
             'canonical_path' => '/',
-            'software_application' => true,
             'prerender_h1' => 'Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার',
             'prerender_lead' => 'মোবাইল নম্বর দিয়ে কাস্টমারের কুরিয়ার হিস্টোরি ও ডেলিভারি রেশিও চেক করুন। ফেক অর্ডার আটকান, রিটার্ন লস কমান — WooCommerce ও Facebook পেজ ব্যবসার জন্য।',
             'hreflang_paths' => [
@@ -108,7 +107,24 @@ return [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'প্রাইসিং', 'path' => '/pricing'],
             ],
-            'faqs' => [],
+            'faqs' => [
+                [
+                    'q' => 'ফ্রি ট্রায়াল কতদিন?',
+                    'a' => 'সাধারণত ১৪ দিন ফ্রি ট্রায়াল পাওয়া যায় — প্ল্যান কার্ডে সঠিক দিনসংখ্যা দেখুন। ট্রায়ালে মূল ফিচার টেস্ট করে তারপর আপগ্রেড করতে পারেন।',
+                ],
+                [
+                    'q' => 'কীভাবে পেমেন্ট করব?',
+                    'a' => 'bKash, Nagad বা Rocket দিয়ে পেমেন্ট অনুরোধ জমা দিতে পারেন। অ্যাডমিন যাচাইয়ের পর প্ল্যান সক্রিয় হয়।',
+                ],
+                [
+                    'q' => 'লগইন ছাড়া কি সাবস্ক্রিপশন নেওয়া যায়?',
+                    'a' => 'হ্যাঁ — প্রাইসিং পেজ থেকে প্ল্যান বেছে সাবস্ক্রিপশন অনুরোধ করা যায়। পরে মার্চেন্ট পোর্টালে লগইন করে স্টোর ও কুরিয়ার সেটআপ করুন।',
+                ],
+                [
+                    'q' => 'প্ল্যানে কী কী থাকে?',
+                    'a' => 'প্ল্যান অনুযায়ী ফ্রড চেকার, ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটো এন্ট্রি, এসএমএস, পার্সেল নোট হিস্ট্রি ও মোবাইল অ্যাপ কানেক্ট থাকতে পারে। প্রতিটি কার্ডে ফিচার তালিকা দেখুন।',
+                ],
+            ],
         ],
 
         'bd_fraud_checker' => [
@@ -521,7 +537,6 @@ return [
             'description' => 'Free Courier Fraud Checker BD. Verify Pathao, Steadfast, RedX history by phone, block fake COD orders, and auto-enter parcels. For Bangladesh e-commerce & Facebook sellers.',
             'canonical_path' => '/en',
             'html_lang' => 'en',
-            'software_application' => true,
             'prerender_h1' => 'Free Courier Fraud Checker BD for WooCommerce sellers',
             'prerender_lead' => 'Stop fake COD orders, check courier success rates, and automate Pathao, Steadfast, and RedX entry — built for Bangladesh.',
             'hreflang_paths' => [

@@ -43,6 +43,7 @@ use App\Http\Controllers\App\LegalController;
 use App\Http\Controllers\App\MarketingSeoController;
 use App\Http\Controllers\App\PricingController;
 use App\Http\Controllers\App\PublicSubscriptionController;
+use App\Http\Controllers\App\LlmsTxtController;
 use App\Http\Controllers\App\RobotsController;
 use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\CurlController;
@@ -82,6 +83,7 @@ Route::get('/storage/{path}', [PublicStorageController::class, 'show'])
 
 Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('/llms.txt', LlmsTxtController::class)->name('llms-txt');
 
 Route::get('/', function () {
     $landingSettings = app(LandingSettingsService::class);

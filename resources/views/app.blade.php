@@ -152,6 +152,13 @@
             margin: 0 0 0.75rem;
         }
 
+        #seo-prerender h2 {
+            font-size: 1.125rem;
+            line-height: 1.4;
+            color: #f8fafc;
+            margin: 1.25rem 0 0.5rem;
+        }
+
         #seo-prerender p {
             margin: 0 0 1rem;
             line-height: 1.6;
@@ -202,6 +209,18 @@
             @if (! empty($seo['prerender_lead'] ?? $seo['description'] ?? null))
                 <p>{{ $seo['prerender_lead'] ?? $seo['description'] }}</p>
             @endif
+            @if (! empty($seo['content_sections']) && is_array($seo['content_sections']))
+                @foreach ($seo['content_sections'] as $section)
+                    @if (! empty($section['heading']))
+                        <h2>{{ $section['heading'] }}</h2>
+                    @endif
+                    @foreach (($section['paragraphs'] ?? []) as $paragraph)
+                        @if (is_string($paragraph) && $paragraph !== '')
+                            <p>{{ $paragraph }}</p>
+                        @endif
+                    @endforeach
+                @endforeach
+            @endif
             <ul>
                 <li><a href="/bd-fraud-checker">BD Fraud Checker / ফ্রড চেকার</a></li>
                 <li><a href="/return-loss-calculator">রিটার্ন লস ক্যালকুলেটর</a></li>
@@ -212,6 +231,16 @@
                 <li><a href="/fraudbd-alternative">FraudBD Alternative</a></li>
                 <li><a href="/pricing">প্রাইসিং</a></li>
             </ul>
+            @if (! empty($seo['faqs']) && is_array($seo['faqs']))
+                <div>
+                    @foreach ($seo['faqs'] as $faq)
+                        @if (! empty($faq['q']) && ! empty($faq['a']))
+                            <h2>{{ $faq['q'] }}</h2>
+                            <p>{{ $faq['a'] }}</p>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
         </section>
         <noscript>
             <section style="max-width:48rem;margin:0 auto;padding:1.5rem 1rem;color:#e2e8f0;background:#0a0a0a;font-family:system-ui,sans-serif">

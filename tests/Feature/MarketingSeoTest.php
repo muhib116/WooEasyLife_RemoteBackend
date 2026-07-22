@@ -240,19 +240,21 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('content="1234567890"', false);
     }
 
-    public function test_home_includes_software_application_json_ld(): void
+    public function test_home_json_ld_omits_software_application_without_ratings(): void
     {
         $response = $this->get('/');
 
         $response->assertOk();
         $html = $response->getContent();
-        $this->assertStringContainsString('"@type":"SoftwareApplication"', $html);
-        $this->assertStringContainsString('"price":0', $html);
-        $this->assertStringContainsString('"availability":"https://schema.org/InStock"', $html);
-        $this->assertStringContainsString('#software', $html);
+        // Google requires aggregateRating/review for SoftwareApplication; we omit it
+        // rather than invent ratings (Semrush flagged / and /en as invalid).
+        $this->assertStringNotContainsString('"@type":"SoftwareApplication"', $html);
+        $this->assertStringContainsString('"@type":"Organization"', $html);
+        $this->assertStringContainsString('"@type":"WebPage"', $html);
+        $this->assertStringContainsString('"@type":"FAQPage"', $html);
     }
 
-    public function test_tool_landing_pages_omit_software_application_json_ld(): void
+    public function test_tool_landing_pages_keep_webpage_json_ld(): void
     {
         foreach (['/pricing', '/return-loss-calculator', '/courier-charge-calculator', '/ads-roas-calculator'] as $path) {
             $response = $this->get($path);
@@ -298,5 +300,94 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('User-agent: *', false);
         $response->assertSee('Sitemap:', false);
         $response->assertSee('/sitemap.xml', false);
+    }
+
+    public function test_llms_txt_is_public_and_follows_spec(): void
+    {
+        $response = $this->get('/llms.txt');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
+        $response->assertSee('# WooEasyLife', false);
+        $response->assertSee('> Bangladesh WooCommerce platform', false);
+        $response->assertSee('## Primary tools', false);
+        $response->assertSee('/bd-fraud-checker', false);
+        $response->assertSee('/pricing', false);
+        $response->assertSee('/sitemap.xml', false);
+        $response->assertSee('## Optional', false);
+    }
+
+    public function test_home_prerender_includes_longform_content(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('বাংলাদেশি COD সেলারদের জন্য WooEasyLife', false);
+        $response->assertSee('id="seo-prerender"', false);
+
+        $seo = app(\App\Services\SeoMetaService::class)->forPage('home');
+        $this->assertNotEmpty($seo['content_sections']);
+
+        $tokens = $this->seoPrerenderTokenCount($seo);
+        $this->assertGreaterThan(
+            200,
+            $tokens,
+            'Home prerender copy should exceed Semrush 200-word threshold.'
+        );
+    }
+
+    public function test_flagged_thin_pages_have_content_sections(): void
+    {
+        $pages = [
+            'home',
+            'pricing',
+            'bd_fraud_checker',
+            'fake_order_protection',
+            'return_loss_calculator',
+            'courier_charge_calculator',
+            'ads_roas_calculator',
+            'courier_auto_entry',
+            'en_home',
+            'en_bd_fraud_checker',
+        ];
+
+        $seoService = app(\App\Services\SeoMetaService::class);
+
+        foreach ($pages as $page) {
+            $seo = $seoService->forPage($page);
+            $this->assertNotEmpty($seo['content_sections'], "Missing content_sections for {$page}");
+            $this->assertGreaterThan(
+                200,
+                $this->seoPrerenderTokenCount($seo),
+                "Thin content risk for {$page}"
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $seo
+     */
+    private function seoPrerenderTokenCount(array $seo): int
+    {
+        $parts = [
+            (string) ($seo['prerender_h1'] ?? ''),
+            (string) ($seo['prerender_lead'] ?? ''),
+        ];
+
+        foreach ($seo['content_sections'] ?? [] as $section) {
+            $parts[] = (string) ($section['heading'] ?? '');
+            foreach ($section['paragraphs'] ?? [] as $paragraph) {
+                $parts[] = (string) $paragraph;
+            }
+        }
+
+        foreach ($seo['faqs'] ?? [] as $faq) {
+            $parts[] = (string) ($faq['q'] ?? '');
+            $parts[] = (string) ($faq['a'] ?? '');
+        }
+
+        $tokens = preg_split('/\s+/u', trim(implode(' ', $parts))) ?: [];
+
+        return count(array_filter($tokens));
     }
 }
