@@ -399,11 +399,18 @@ return [
         ],
 
         'ki_vabe_fake_order_atkabo' => [
-            'title' => 'কিভাবে ফেক অর্ডার আটকাবো? — সম্পূর্ণ গাইড | WooEasyLife',
-            'description' => 'কিভাবে ফেক অর্ডার আটকাবো (ki vabe fake order atkabo)? মোবাইল নম্বর ফ্রড চেক, সাকসেস রেট, OTP ও ব্ল্যাকলিস্ট দিয়ে পার্সেল রিটার্ন ও অ্যাড লস কমান — বাংলাদেশ COD সেলার গাইড।',
+            'title' => 'কিভাবে ফেক অর্ডার আটকাবো গাইড ২০২৬ — চেক→OTP→ব্লক',
+            'description' => 'কিভাবে ফেক অর্ডার আটকাবো: কুরিয়ার হিস্টোরি চেক, OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে BD COD রিটার্ন ও অ্যাড লস কমান—ধাপে ধাপে গাইড।',
             'canonical_path' => '/ki-vabe-fake-order-atkabo',
-            'prerender_h1' => 'কিভাবে ফেক অর্ডার আটকাবো?',
-            'prerender_lead' => 'ধাপে ধাপে: ফ্রড চেক → যাচাই → ব্লক → কুরিয়ার অটো এন্ট্রি। টুল-শুধু চেকার নয় — পূর্ণ WooCommerce সুরক্ষা।',
+            'og_type' => 'article',
+            'og_image' => '/images/seo/cluster/fraud-layers.jpg',
+            'prerender_h1' => 'কিভাবে ফেক অর্ডার আটকাবো — ধাপে ধাপে সম্পূর্ণ গাইড',
+            'prerender_lead' => 'ফ্রড চেক → কল/OTP → ব্ল্যাকলিস্ট → কনফার্ম → কুরিয়ার অটো এন্ট্রি। টুল-শুধু নয়—পূর্ণ WooCommerce COD সুরক্ষা।',
+            'hreflang_paths' => [
+                'bn-BD' => '/ki-vabe-fake-order-atkabo',
+                'en' => '/en/ki-vabe-fake-order-atkabo',
+                'x-default' => '/ki-vabe-fake-order-atkabo',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'কিভাবে ফেক অর্ডার আটকাবো', 'path' => '/ki-vabe-fake-order-atkabo'],
@@ -411,21 +418,44 @@ return [
             'faqs' => [
                 [
                     'q' => 'কিভাবে ফেক অর্ডার আটকাবো সবচেয়ে দ্রুত?',
-                    'a' => 'অর্ডার কনফার্মের আগে মোবাইল নম্বর দিয়ে Courier Fraud Checker BD চালান। সাকসেস রেট খারাপ হলে পাঠাবেন না।',
+                    'a' => 'সবচেয়ে দ্রুত উপায়: অর্ডার কনফার্ম বা কুরিয়ার বুকিংয়ের আগে কাস্টমারের মোবাইল নম্বর দিয়ে /bd-fraud-checker বা /fake-customer-check চালান। Pathao/Steadfast/RedX হিস্টোরি ও সাকসেস রেট দেখে সবুজ হলে কনফার্ম করুন; হলুদ/লাল বা খুব কম সাকসেস হলে অন্ধ শিপ না করে কল, OTP বা হোল্ড নিন। একবারের চেক যথেষ্ট নয়—বারবার ফেক আটকাতে /fake-order-protection-এ চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট চালু রাখুন। মোবাইল থেকে দ্রুত approve/hold: /woocommerce-mobile-app।',
                 ],
                 [
                     'q' => 'শুধু ফ্রি টুল কি যথেষ্ট?',
-                    'a' => 'ফ্রি চেক শুরু। বারবার ফেক অর্ডার আটকাতে OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট লাগে — WooEasyLife-এ সব একসাথে।',
+                    'a' => 'ফ্রি কুরিয়ার-হিস্টোরি চেক শুরুর স্তর—প্রতিদিনের নতুন অর্ডারে ঝুঁকি দেখতে যথেষ্ট। কিন্তু একই নম্বর/ডিভাইস বারবার অর্ডার দিলে বা ভুয়া নম্বর টাইপ করলে শুধু ম্যানুয়াল চেক স্টাফ ক্লান্ত করে আবার অন্ধ শিপ শুরু হয়। দীর্ঘমেয়াদে চেকআউট OTP, ডুপ্লিকেট ভ্যালিডেশন, ফোন/ডিভাইস ব্ল্যাকলিস্ট ও দৈনিক অর্ডার লিমিট লাগে—সব /fake-order-protection ও /pricing ট্রায়ালে একসাথে পাওয়া যায়। কনফার্মের পর ভুল কমাতে /courier-auto-entry ব্যবহার করুন।',
+                ],
+                [
+                    'q' => 'সবুজ/হলুদ/লাল জোনে কী করব?',
+                    'a' => 'সবুজ (উচ্চ সাকসেস): দ্রুত কনফার্ম করে /courier-auto-entry দিয়ে বুকিং করুন। হলুদ (মাঝারি): ফোন-কনফার্ম বা কন্ডিশনাল OTP নিন, ঠিকানা পরিষ্কার করুন, তারপর approve। লাল (কম সাকসেস/বারবার রিটার্ন): অগ্রিম ডেলিভারি চার্জ ছাড়া শিপ করবেন না—হোল্ড বা বাতিল রাখুন এবং নোট লিখে রাখুন। জোন রুল ও OTP সেটআপের বিস্তারিত: /customer-verification। একটা খারাপ রেকর্ড মানেই সবসময় ফেক নয়—তাই হিস্টোরি + ছোট কল একসাথে সবচেয়ে নিরাপদ।',
+                ],
+                [
+                    'q' => 'কনফার্মের পর কী করব?',
+                    'a' => 'ভেরিফায়েড অর্ডারে /courier-auto-entry দিয়ে Pathao/Steadfast/RedX পার্সেল বুক করুন—ম্যানুয়াল প্যানেলে কপি-পেস্ট ভুল ও সময় কমে। ট্র্যাকিং আইডি সেভ হলে /woocommerce-notifications দিয়ে In Transit ও বিশেষ করে Out for Delivery মেসেজ পাঠান; এতে কাস্টমার COD টাকা রেডি রাখে ও রাইডার কল এক্সপেক্ট করে, “কাস্টমার নট এভেলেবল” রিটার্ন কমে। কুরিয়ার সেটআপ: /pathao-courier-guide, /steadfast-integration, /redx-courier-guide।',
+                ],
+                [
+                    'q' => 'রিটার্ন লস ও অ্যাড ROAS কীভাবে মাপব?',
+                    'a' => 'প্রথমে /return-loss-calculator-এ দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ বসিয়ে মাসিক ৳ লস দেখুন—বেসলাইন ছাড়া “কমেছে কি?” বোঝা যায় না। ফেক Purchase Pixel-এ গেলে Facebook ROAS ফুলে দেখায়; ডেলিভারি-অ্যাডজাস্টেড হিসাবের জন্য /ads-roas-calculator ব্যবহার করুন। RTS কমানোর পূর্ণ প্লেবুক: /cod-return-reduction। অ্যাড বাজেট বাড়ানোর আগে ফেক ফিল্টার স্থিতিশীল করুন: /facebook-ads-for-woocommerce।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে কি?',
+                    'a' => 'হ্যাঁ—সম্পূর্ণ ইংরেজি ধাপে ধাপে গাইড: /en/ki-vabe-fake-order-atkabo (hreflang-যুক্ত মিরর)। সম্পর্কিত ইংরেজি টুল ও প্রোডাক্ট পেজ: /en/bd-fraud-checker, /en/fake-order-protection, /en/customer-verification। বাংলা হাব কনটেক্সট চাইলে /woocommerce-bangladesh থেকে শুরু করুন।',
                 ],
             ],
         ],
 
         'fake_customer_check' => [
-            'title' => 'Fake Customer Check — মোবাইল নম্বর দিয়ে ফ্রড কাস্টমার চেক | WooEasyLife',
-            'description' => 'Fake customer check BD। মোবাইল নম্বর দিয়ে কাস্টমারের কুরিয়ার ডেলিভারি হিস্টোরি, রিটার্ন রেট ও গুণমান চেক করুন — ফেক অর্ডার আটকান, ফ্রি সার্চ।',
+            'title' => 'Fake Customer Check BD ২০২৬ — নম্বর দিয়ে যাচাই',
+            'description' => 'Fake customer check BD: মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি, সাকসেস রেট ও রিটার্ন প্যাটার্ন দেখে COD কনফার্মের আগে ফেক কাস্টমার আটকান।',
             'canonical_path' => '/fake-customer-check',
-            'prerender_h1' => 'Fake Customer Check — মোবাইল নম্বর দিয়ে ফ্রড কাস্টমার চেক',
-            'prerender_lead' => 'অর্ডার কনফার্মের আগেই কাস্টমার যাচাই করুন। ফোন নম্বর দিয়ে সার্চ করুন — কুরিয়ার হিস্টোরি ও রিটার্ন রেট তাৎক্ষণিক।',
+            'og_type' => 'article',
+            'og_image' => '/images/seo/cluster/fraud-layers.jpg',
+            'prerender_h1' => 'Fake Customer Check — অর্ডার কনফার্মের আগে কাস্টমার যাচাই',
+            'prerender_lead' => 'মোবাইল নম্বর দিয়ে Pathao/Steadfast/RedX হিস্টোরি দেখুন—সবুজ হলে কনফার্ম, হলুদ/লালে কল বা হোল্ড। ফ্রি চেক, অ্যাকাউন্ট লাগে না।',
+            'hreflang_paths' => [
+                'bn-BD' => '/fake-customer-check',
+                'en' => '/en/fake-customer-check',
+                'x-default' => '/fake-customer-check',
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'Fake Customer Check', 'path' => '/fake-customer-check'],
@@ -433,11 +463,31 @@ return [
             'faqs' => [
                 [
                     'q' => 'Fake customer check কী?',
-                    'a' => 'কাস্টমারের ফোন নম্বর দিয়ে আগের ডেলিভারি সাকসেস/রিটার্ন হিস্টোরি দেখে তিনি বিশ্বস্ত কিনা বোঝা।',
+                    'a' => 'Fake customer check মানে অর্ডার কনফার্ম বা পার্সেল বুকিংয়ের আগে কাস্টমারের মোবাইল নম্বর দিয়ে আগের কুরিয়ার ডেলিভারি সাকসেস, রিটার্ন ও ক্যানসেল হিস্টোরি দেখে তিনি কতটা বিশ্বস্ত তা বোঝা। COD-তে ভুল নম্বর বা বারবার-রিফিউজ কাস্টমার আগেই ধরলে রিটার্ন ফি ও অ্যাড CPA বাঁচে। একই ইঞ্জিনের পূর্ণ টুল UI: /bd-fraud-checker। চেকআউট OTP ও ব্ল্যাকলিস্ট যোগ করতে: /fake-order-protection। ধাপে ধাপে গাইড: /ki-vabe-fake-order-atkabo। হোম: /।',
                 ],
                 [
-                    'q' => 'এটি কি ফ্রি?',
-                    'a' => 'হ্যাঁ — দৈনিক সীমিত ফ্রি চেক অ্যাকাউন্ট ছাড়াই করা যায়।',
+                    'q' => 'এটি কি ফ্রি? অ্যাকাউন্ট লাগে?',
+                    'a' => 'হ্যাঁ—ল্যান্ডিং পেজে অ্যাকাউন্ট ছাড়াই প্রতিদিন সীমিত সংখ্যক ফ্রি চেক করা যায়, তাই ঝুঁকি ছাড়াই ওয়ার্কফ্লো টেস্ট করতে পারেন। বেশি ভলিউম, অটোমেটেড চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট চাইলে /pricing থেকে ট্রায়াল বা সাবস্ক্রিপশন নিন। মোবাইলে পুশসহ চালাতে: /woocommerce-mobile-app।',
+                ],
+                [
+                    'q' => 'সাকসেস রেট কম হলে কী করব?',
+                    'a' => 'কম সাকসেস বা বারবার রিটার্ন দেখলে অন্ধ শিপ করবেন না—প্রথমে ফোন-কনফার্ম করুন, ঠিকানা যাচাই করুন, প্রয়োজনে OTP বা অগ্রিম ডেলিভারি চার্জ নিন, নাহলে হোল্ড রাখুন। জোন অনুযায়ী রুলের বিস্তারিত: /customer-verification। মাসে কত ৳ কাটছে জানতে /return-loss-calculator ব্যবহার করুন। পূর্ণ স্ট্যাক: /ki-vabe-fake-order-atkabo।',
+                ],
+                [
+                    'q' => 'Fake customer check আর BD Fraud Checker আলাদা?',
+                    'a' => 'মূল ইঞ্জিন একই—কুরিয়ার হিস্টোরি দিয়ে কাস্টমার কোয়ালিটি যাচাই। এই পেজ “কনফার্মের আগে কাস্টমার যাচাই / fake customer check” কিওয়ার্ড ও ওয়ার্কফ্লোতে ফোকাস করে; /bd-fraud-checker পূর্ণ Courier Fraud Checker BD টুল UI ও বিস্তারিত গাইড। দুটোই ফ্রি চেক দেয়। পরবর্তী ধাপ হিসেবে /fake-order-protection ও /ki-vabe-fake-order-atkabo পড়ুন।',
+                ],
+                [
+                    'q' => 'শুধু চেক করলেই কি ফেক অর্ডার বন্ধ?',
+                    'a' => 'চেক শুরুর গেটকিপার—প্রতি অর্ডারে ঝুঁকি দেখায়। কিন্তু একই প্যাটার্ন বারবার আটকাতে চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট লাগে (/fake-order-protection)। কনফার্মের পর /courier-auto-entry দিয়ে বুকিং এবং /woocommerce-notifications দিয়ে Out-for-Delivery মেসেজ দিলে বৈধ রিটার্নও কমে। COD প্লেবুক: /cod-return-reduction।',
+                ],
+                [
+                    'q' => 'কোন কুরিয়ারের হিস্টোরি দেখা যায়?',
+                    'a' => 'Pathao, Steadfast, RedX সহ WooEasyLife-এ সাপোর্টেড প্রধান কুরিয়ার নেটওয়ার্কের ডেলিভারি/রিটার্ন রেকর্ড দেখা যায়—এক নম্বরে একাধিক সিগন্যাল। স্টোরে API কানেক্ট করে অটো বুকিং চালাতে: /pathao-courier-guide, /steadfast-integration, /redx-courier-guide। দৈনন্দিন কনফার্ম→বুকিং ফ্লো: /courier-auto-entry।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে কি?',
+                    'a' => 'হ্যাঁ—/en/fake-customer-check। সম্পর্কিত: /en/bd-fraud-checker ও /en/fake-order-protection। ইংরেজি হোম: /en।',
                 ],
             ],
         ],
@@ -801,6 +851,98 @@ return [
             ],
         ],
 
+        'en_ki_vabe_fake_order_atkabo' => [
+            'title' => 'How to Stop Fake Orders Guide 2026 — Check→OTP→Block',
+            'description' => 'How to stop fake COD orders in Bangladesh: courier history checks, OTP, duplicate blocks, and blacklists—step-by-step for WooCommerce and Facebook sellers.',
+            'canonical_path' => '/en/ki-vabe-fake-order-atkabo',
+            'html_lang' => 'en',
+            'og_type' => 'article',
+            'og_image' => '/images/seo/cluster/fraud-layers.jpg',
+            'prerender_h1' => 'How to stop fake orders — step-by-step guide',
+            'prerender_lead' => 'Fraud check → call/OTP → blacklist → confirm → courier auto entry. Not checker-only—full WooCommerce COD protection.',
+            'hreflang_paths' => [
+                'bn-BD' => '/ki-vabe-fake-order-atkabo',
+                'en' => '/en/ki-vabe-fake-order-atkabo',
+                'x-default' => '/ki-vabe-fake-order-atkabo',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'How to stop fake orders', 'path' => '/en/ki-vabe-fake-order-atkabo'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'How do I stop fake orders fastest?',
+                    'a' => 'Fastest path: before you confirm or book courier, run the customer mobile on /en/bd-fraud-checker or /en/fake-customer-check. Read Pathao/Steadfast/RedX history and success rate—confirm green orders; on yellow/red or very low success, do not blind-ship—call, require OTP, or hold. One-off checks are not enough long term: keep checkout OTP, duplicate blocks, and blacklists on via /en/fake-order-protection. Approve/hold from the road with /en/woocommerce-mobile-app. Bangla mirror: /ki-vabe-fake-order-atkabo. English home: /en.',
+                ],
+                [
+                    'q' => 'Is a free checker enough?',
+                    'a' => 'A free courier-history check is the first layer—great for screening every new COD order. But when the same number/device repeats or people type fake phones, manual checks alone burn staff time and shops slip back into shipping everything. Lasting control needs checkout OTP, duplicate validation, phone/device blacklists, and daily limits—available together in WooEasyLife via /en/fake-order-protection and /pricing. After confirm, cut panel typos with /en/courier-auto-entry.',
+                ],
+                [
+                    'q' => 'What should I do in green/yellow/red zones?',
+                    'a' => 'Green (high success): confirm quickly and book with /en/courier-auto-entry. Yellow (medium): call-confirm or conditional OTP, clean the address, then approve. Red (low success / serial returns): do not ship without an advance delivery fee—hold or cancel and leave a short order note. Full zone and OTP rules: /en/customer-verification. One bad record is not always “fake”—history plus a short call is safest.',
+                ],
+                [
+                    'q' => 'What after I confirm?',
+                    'a' => 'On verified orders, create the Pathao/Steadfast/RedX parcel with /en/courier-auto-entry so you skip merchant-panel copy-paste. Once the tracking ID is saved, send In Transit and especially Out for Delivery messages via /en/woocommerce-notifications—customers keep COD cash ready and expect rider calls, which cuts “customer unavailable” returns. Setup guides: /en/pathao-courier-guide, /en/steadfast-integration, /en/redx-courier-guide.',
+                ],
+                [
+                    'q' => 'How do I measure return loss and ROAS?',
+                    'a' => 'Baseline monthly ৳ loss with /en/return-loss-calculator (orders, return rate, cost per return)—without a baseline you cannot tell if filters work. Fake Purchase events inflate Meta ROAS; use /en/ads-roas-calculator for delivery-adjusted math. Full RTS playbook: /en/cod-return-reduction. Do not scale ad spend until fraud filters are stable—see /en/facebook-ads-for-woocommerce.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes—the full Bangla step guide is /ki-vabe-fake-order-atkabo (hreflang-paired with this page). Related English tools: /en/bd-fraud-checker, /en/fake-customer-check, /en/fake-order-protection, /en/customer-verification. For the broader ops hub start at /en/woocommerce-bangladesh. English home: /en.',
+                ],
+            ],
+        ],
+
+        'en_fake_customer_check' => [
+            'title' => 'Fake Customer Check BD 2026 — Verify Before Confirm',
+            'description' => 'Fake customer check BD: verify courier history, success rate, and return patterns by mobile number before confirming COD orders.',
+            'canonical_path' => '/en/fake-customer-check',
+            'html_lang' => 'en',
+            'og_type' => 'article',
+            'og_image' => '/images/seo/cluster/fraud-layers.jpg',
+            'prerender_h1' => 'Fake Customer Check — verify before you confirm',
+            'prerender_lead' => 'Check Pathao/Steadfast/RedX history by mobile—green confirm, yellow call/OTP, red hold. Free checks, no account required.',
+            'hreflang_paths' => [
+                'bn-BD' => '/fake-customer-check',
+                'en' => '/en/fake-customer-check',
+                'x-default' => '/fake-customer-check',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Fake Customer Check', 'path' => '/en/fake-customer-check'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'What is a fake customer check?',
+                    'a' => 'Checking courier delivery success and return history by mobile before COD confirm. Same engine as /en/bd-fraud-checker. Full protection: /en/fake-order-protection. Step guide: /en/ki-vabe-fake-order-atkabo. English home: /en.',
+                ],
+                [
+                    'q' => 'Is it free? Do I need an account?',
+                    'a' => 'Yes—limited free daily checks work without signup. For volume plus OTP/blacklist, start a trial on /pricing. Mobile ops: /en/woocommerce-mobile-app.',
+                ],
+                [
+                    'q' => 'What if success rate is low?',
+                    'a' => 'Call, require OTP, or ask for an advance delivery fee—do not ship blindly. Verification guide: /en/customer-verification. Measure loss: /en/return-loss-calculator.',
+                ],
+                [
+                    'q' => 'Is this different from BD Fraud Checker?',
+                    'a' => 'Same courier-history intent—this page focuses on “verify before confirm.” Full tool UI: /en/bd-fraud-checker. Step guide: /en/ki-vabe-fake-order-atkabo.',
+                ],
+                [
+                    'q' => 'Will checking alone stop fake orders?',
+                    'a' => 'Checking is the start. Long-term: /en/fake-order-protection (OTP, duplicate blocks, blacklists) and /en/courier-auto-entry after confirm. COD playbook: /en/cod-return-reduction.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes—/fake-customer-check. Bangla home: /. Related English tools: /en/bd-fraud-checker and /en/fake-order-protection.',
+                ],
+            ],
+        ],
+
         'en_blog_index' => [
             'title' => 'Blog — Fake Orders, Fraud Checks & COD Tips | WooEasyLife',
             'description' => 'Guides for Bangladesh WooCommerce sellers on fake order prevention, courier history checks, and reducing return losses.',
@@ -843,7 +985,7 @@ return [
                 ],
                 [
                     'q' => 'How do I stop fake orders?',
-                    'a' => 'Check courier history by mobile, enable checkout OTP, and keep duplicate blocks plus blacklists on. Bangla step guide: /ki-vabe-fake-order-atkabo',
+                    'a' => 'Check courier history by mobile, enable checkout OTP, and keep duplicate blocks plus blacklists on. Step guide: /en/ki-vabe-fake-order-atkabo. Bangla: /ki-vabe-fake-order-atkabo',
                 ],
                 [
                     'q' => 'How does WooEasyLife block fake orders?',
@@ -1164,6 +1306,7 @@ return [
             ['path' => '/bd-fraud-checker', 'priority' => '0.95', 'changefreq' => 'weekly'],
             ['path' => '/ki-vabe-fake-order-atkabo', 'priority' => '0.95', 'changefreq' => 'weekly'],
             ['path' => '/fake-customer-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/fake-customer-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/bd-courier-ratio-checker', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/fake-order-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/courier-checker', 'priority' => '0.9', 'changefreq' => 'weekly'],
@@ -1179,6 +1322,7 @@ return [
             ['path' => '/blog', 'priority' => '0.8', 'changefreq' => 'weekly'],
             ['path' => '/en', 'priority' => '0.85', 'changefreq' => 'weekly'],
             ['path' => '/en/bd-fraud-checker', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/ki-vabe-fake-order-atkabo', 'priority' => '0.95', 'changefreq' => 'weekly'],
             ['path' => '/en/fake-order-protection', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/en/return-loss-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/en/ads-roas-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],

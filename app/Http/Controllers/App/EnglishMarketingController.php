@@ -115,6 +115,61 @@ class EnglishMarketingController extends Controller
         return $this->page($request, $landing, $seo, $landingSettings, 'en_fraudbd_alternative', 'Seo/EnFraudBdAlternative');
     }
 
+    public function kiVabeFakeOrderAtkabo(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        $payload = $landing->payload($request);
+        $whatsapp = $landingSettings->adminWhatsapp();
+        $seoMeta = $seo->forPage('en_ki_vabe_fake_order_atkabo');
+
+        return Inertia::render('Seo/KeywordIntent', [
+            'canLogin' => Route::has('merchant.login'),
+            'seo' => $seoMeta,
+            'fraudCheck' => $payload['fraudCheck'] ?? [],
+            'whatsappUrl' => $payload['whatsappUrl'] ?? null,
+            'faqs' => $seoMeta['faqs'] ?? [],
+            'showChecker' => true,
+            'steps' => [
+                'Before confirm, run a courier history check with the free tool on this page or /en/bd-fraud-checker.',
+                'Use success-rate zones: green confirm, yellow call/OTP, red hold or advance fee.',
+                'Keep checkout OTP, duplicate blocks, and blacklists on (/en/fake-order-protection).',
+                'After confirm, book via /en/courier-auto-entry and send tracking with /en/woocommerce-notifications.',
+            ],
+            'headline' => $seoMeta['prerender_h1'] ?? '',
+            'lead' => $seoMeta['prerender_lead'] ?? '',
+        ])->withViewData(['seo' => $seoMeta]);
+    }
+
+    public function fakeCustomerCheck(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        $payload = $landing->payload($request);
+        $seoMeta = $seo->forPage('en_fake_customer_check');
+
+        return Inertia::render('Seo/KeywordIntent', [
+            'canLogin' => Route::has('merchant.login'),
+            'seo' => $seoMeta,
+            'fraudCheck' => $payload['fraudCheck'] ?? [],
+            'whatsappUrl' => $payload['whatsappUrl'] ?? null,
+            'faqs' => $seoMeta['faqs'] ?? [],
+            'showChecker' => true,
+            'steps' => [
+                'Copy the customer’s Bangladesh mobile number from the order (before you confirm).',
+                'Run the free checker below — review Pathao / Steadfast / RedX history and success rate.',
+                'Green/high success → confirm; yellow → call or OTP; red/low success → hold or ask for advance fee.',
+                'Stop repeats with Fake Order Protection (OTP, blacklist), then book via courier auto-entry.',
+            ],
+            'headline' => $seoMeta['prerender_h1'] ?? '',
+            'lead' => $seoMeta['prerender_lead'] ?? '',
+        ])->withViewData(['seo' => $seoMeta]);
+    }
+
     public function clusterGuide(
         Request $request,
         string $seoKey,

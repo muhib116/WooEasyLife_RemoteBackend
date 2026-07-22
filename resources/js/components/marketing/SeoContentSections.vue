@@ -20,7 +20,7 @@ const isEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('
         class="border-t border-white/10 bg-[#0a0a0a] px-4 py-12 lg:px-8"
         data-seo-longform
     >
-        <div class="mx-auto max-w-3xl space-y-8">
+        <div class="mx-auto max-w-3xl space-y-10">
             <article
                 v-for="(section, index) in sections"
                 :key="section.heading || index"
@@ -39,6 +39,25 @@ const isEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('
                 >
                     <LinkedRichText :text="paragraph" :is-en="isEn" />
                 </p>
+                <figure
+                    v-for="(figure, fIndex) in section.figures || []"
+                    :key="`${index}-fig-${fIndex}`"
+                    class="overflow-hidden rounded-xl border border-white/10 bg-white/5"
+                >
+                    <img
+                        :src="figure.src"
+                        :alt="figure.alt || section.heading || 'Diagram'"
+                        class="h-auto w-full"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                    <figcaption
+                        v-if="figure.caption"
+                        class="border-t border-white/10 px-3 py-2 text-xs text-slate-400 sm:text-sm"
+                    >
+                        {{ figure.caption }}
+                    </figcaption>
+                </figure>
             </article>
         </div>
     </section>

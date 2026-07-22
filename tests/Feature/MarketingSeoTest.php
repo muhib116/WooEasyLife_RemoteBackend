@@ -442,7 +442,9 @@ class MarketingSeoTest extends TestCase
     {
         foreach ([
             '/ki-vabe-fake-order-atkabo',
+            '/en/ki-vabe-fake-order-atkabo',
             '/fake-customer-check',
+            '/en/fake-customer-check',
             '/bd-courier-ratio-checker',
             '/fake-order-check',
             '/courier-checker',
@@ -548,6 +550,7 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/bd-fraud-checker', false);
         $response->assertSee('/ki-vabe-fake-order-atkabo', false);
         $response->assertSee('/fake-customer-check', false);
+        $response->assertSee('/en/fake-customer-check', false);
         $response->assertSee('/bd-courier-ratio-checker', false);
         $response->assertSee('/fake-order-check', false);
         $response->assertSee('/courier-checker', false);
@@ -648,6 +651,10 @@ class MarketingSeoTest extends TestCase
             'en_steadfast_integration',
             'en_customer_verification',
             'en_facebook_ads_for_woocommerce',
+            'fake_customer_check',
+            'ki_vabe_fake_order_atkabo',
+            'en_ki_vabe_fake_order_atkabo',
+            'en_fake_customer_check',
         ];
 
         $seoService = app(\App\Services\SeoMetaService::class);

@@ -172,6 +172,7 @@ class SeoMetaService
             '## Guides & intent pages',
             '- [কিভাবে ফেক অর্ডার আটকাবো]('.$link('/ki-vabe-fake-order-atkabo').'): Bangla guide to stopping fake orders.',
             '- [Fake Customer Check]('.$link('/fake-customer-check').'): Check customers before confirming.',
+            '- [English Fake Customer Check]('.$link('/en/fake-customer-check').'): Verify customers before COD confirm.',
             '- [BD Courier Ratio Checker]('.$link('/bd-courier-ratio-checker').'): Delivery success / return ratio check.',
             '- [FraudBD Alternative]('.$link('/fraudbd-alternative').'): Full platform alternative to fraud-only tools.',
             '- [English FraudBD Alternative]('.$link('/en/fraudbd-alternative').'): English comparison of checker-only tools vs WooEasyLife.',

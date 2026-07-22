@@ -208,6 +208,10 @@ Route::prefix('en')->name('seo.en.')->group(function () {
         ->name('bd-fraud-checker');
     Route::get('/fake-order-protection', [EnglishMarketingController::class, 'fakeOrderProtection'])
         ->name('fake-order-protection');
+    Route::get('/ki-vabe-fake-order-atkabo', [EnglishMarketingController::class, 'kiVabeFakeOrderAtkabo'])
+        ->name('ki-vabe-fake-order-atkabo');
+    Route::get('/fake-customer-check', [EnglishMarketingController::class, 'fakeCustomerCheck'])
+        ->name('fake-customer-check');
     Route::get('/return-loss-calculator', [EnglishMarketingController::class, 'returnLossCalculator'])
         ->name('return-loss-calculator');
     Route::get('/courier-auto-entry', [EnglishMarketingController::class, 'courierAutoEntry'])

@@ -11,6 +11,8 @@ class SeoPrerenderText
 {
     /** @var array<string, array{bn: string, en: string}> */
     private const PATH_LABELS = [
+        '/' => ['bn' => 'হোম', 'en' => 'Bangla home'],
+        '/en' => ['bn' => 'ইংরেজি হোম', 'en' => 'English home'],
         '/bd-fraud-checker' => ['bn' => 'ফ্রড চেকার', 'en' => 'BD Fraud Checker'],
         '/en/bd-fraud-checker' => ['bn' => 'ফ্রড চেকার (EN)', 'en' => 'BD Fraud Checker'],
         '/fake-order-protection' => ['bn' => 'ফেক অর্ডার প্রোটেকশন', 'en' => 'Fake Order Protection'],
@@ -45,7 +47,13 @@ class SeoPrerenderText
         '/facebook-ads-for-woocommerce' => ['bn' => 'Facebook Ads গাইড', 'en' => 'Facebook Ads guide'],
         '/en/facebook-ads-for-woocommerce' => ['bn' => 'Facebook Ads (EN)', 'en' => 'Facebook Ads guide'],
         '/ki-vabe-fake-order-atkabo' => ['bn' => 'কিভাবে ফেক অর্ডার আটকাবো', 'en' => 'How to stop fake orders (BN)'],
+        '/en/ki-vabe-fake-order-atkabo' => ['bn' => 'How to stop fake orders (EN)', 'en' => 'How to stop fake orders'],
         '/fake-customer-check' => ['bn' => 'Fake Customer Check', 'en' => 'Fake Customer Check'],
+        '/en/fake-customer-check' => ['bn' => 'Fake Customer Check (EN)', 'en' => 'Fake Customer Check'],
+        '/pathao-fraud-check' => ['bn' => 'Pathao ফ্রড চেক', 'en' => 'Pathao fraud check'],
+        '/steadfast-fraud-check' => ['bn' => 'Steadfast ফ্রড চেক', 'en' => 'Steadfast fraud check'],
+        '/redx-fraud-check' => ['bn' => 'RedX ফ্রড চেক', 'en' => 'RedX fraud check'],
+        '/bd-courier-ratio-checker' => ['bn' => 'BD Courier Ratio Checker', 'en' => 'BD Courier Ratio Checker'],
     ];
 
     public static function plain(string $text): string

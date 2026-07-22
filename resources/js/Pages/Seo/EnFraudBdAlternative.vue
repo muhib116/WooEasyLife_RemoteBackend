@@ -119,10 +119,12 @@ const mistakeList = [
 
 const relatedLinks = [
     { href: '/en/bd-fraud-checker', label: 'BD Fraud Checker' },
-    { href: '/fake-order-protection', label: 'Fake order protection' },
+    { href: '/en/fake-customer-check', label: 'Fake Customer Check' },
+    { href: '/en/fake-order-protection', label: 'Fake order protection' },
     { href: '/en/courier-auto-entry', label: 'Courier auto entry' },
     { href: '/en/return-loss-calculator', label: 'Return loss calculator' },
     { href: '/en/ads-roas-calculator', label: 'Ads ROAS calculator' },
+    { href: '/en', label: 'English home' },
     { href: '/pricing', label: 'Pricing' },
     { href: '/fraudbd-alternative', label: 'বাংলা ভার্সন' },
 ];

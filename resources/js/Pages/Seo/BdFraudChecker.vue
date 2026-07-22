@@ -113,12 +113,14 @@ const mistakeList = [
 const relatedLinks = [
     { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
     { href: '/en/bd-fraud-checker', label: 'English version' },
+    { href: '/fake-customer-check', label: 'Fake Customer Check' },
     { href: '/fake-order-protection', label: 'ফেক অর্ডার প্রোটেকশন' },
     { href: '/return-loss-calculator', label: 'রিটার্ন লস ক্যালকুলেটর' },
     { href: '/ads-roas-calculator', label: 'Ads ROAS ক্যালকুলেটর' },
     { href: '/ki-vabe-fake-order-atkabo', label: 'কিভাবে ফেক অর্ডার আটকাবো' },
     { href: '/courier-auto-entry', label: 'কুরিয়ার অটো এন্ট্রি' },
     { href: '/fraudbd-alternative', label: 'FraudBD Alternative' },
+    { href: '/', label: 'হোম' },
     { href: '/pricing', label: 'প্রাইসিং' },
 ];
 </script>

@@ -123,11 +123,13 @@ const whoFor = [
 const relatedLinks = [
     { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
     { href: '/bd-fraud-checker', label: 'BD Fraud Checker' },
+    { href: '/fake-customer-check', label: 'Fake Customer Check' },
     { href: '/ki-vabe-fake-order-atkabo', label: 'কিভাবে ফেক অর্ডার আটকাবো' },
     { href: '/return-loss-calculator', label: 'রিটার্ন লস ক্যালকুলেটর' },
     { href: '/ads-roas-calculator', label: 'Ads ROAS ক্যালকুলেটর' },
     { href: '/courier-auto-entry', label: 'কুরিয়ার অটো এন্ট্রি' },
     { href: '/fraudbd-alternative', label: 'FraudBD Alternative' },
+    { href: '/', label: 'হোম' },
     { href: '/pricing', label: 'প্রাইসিং' },
     { href: '/en/fake-order-protection', label: 'English version' },
 ];

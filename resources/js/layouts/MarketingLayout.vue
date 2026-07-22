@@ -42,9 +42,12 @@ const announcementMessages = computed(() =>
     announcement.value.enabled === false ? [] : (announcement.value.messages ?? []),
 );
 
-const pricingNavHref = computed(() =>
-    props.activeNav === 'home' ? '/#pricing' : route('pricing'),
-);
+const pricingNavHref = computed(() => {
+    if (props.activeNav !== 'home') {
+        return route('pricing');
+    }
+    return isEnLocale.value ? '/en#pricing' : '/#pricing';
+});
 
 /** Distinct public tools only (SEO keyword variants of the same checker are omitted). */
 const toolLinks = [
@@ -66,6 +69,16 @@ const currentPath = computed(() => {
     return raw.endsWith('/') && raw.length > 1 ? raw.slice(0, -1) : raw;
 });
 
+const isEnLocale = computed(() =>
+    String(page.props.seo?.html_lang || '').startsWith('en')
+    || currentPath.value === '/en'
+    || currentPath.value.startsWith('/en/'),
+);
+
+const homeHref = computed(() => (isEnLocale.value ? '/en' : '/'));
+
+const homeAnchor = (hash) => (isEnLocale.value ? `/en#${hash}` : `/#${hash}`);
+
 const isToolsActive = computed(() => {
     if (props.activeNav === 'tools' || props.activeNav === 'fraud-check') {
         return true;
@@ -82,12 +95,12 @@ const isToolsActive = computed(() => {
 });
 
 const navLinks = computed(() => [
-    { label: 'হোম', href: '/', key: 'home', anchor: false },
-    { label: 'ফিচার', href: '/#features', key: 'features', anchor: true },
-    { label: 'প্রাইসিং', href: pricingNavHref.value, key: 'pricing', anchor: props.activeNav === 'home' },
-    { label: 'অ্যাপ', href: '/#download-app', key: 'app', anchor: true },
-    { label: 'ডাউনলোড', href: '/#downloads', key: 'downloads', anchor: true },
-    { label: 'FAQ', href: '/#faq', key: 'faq', anchor: true },
+    { label: isEnLocale.value ? 'Home' : 'হোম', href: homeHref.value, key: 'home', anchor: false },
+    { label: isEnLocale.value ? 'Features' : 'ফিচার', href: homeAnchor('features'), key: 'features', anchor: true },
+    { label: isEnLocale.value ? 'Pricing' : 'প্রাইসিং', href: pricingNavHref.value, key: 'pricing', anchor: props.activeNav === 'home' },
+    { label: isEnLocale.value ? 'App' : 'অ্যাপ', href: homeAnchor('download-app'), key: 'app', anchor: true },
+    { label: isEnLocale.value ? 'Downloads' : 'ডাউনলোড', href: homeAnchor('downloads'), key: 'downloads', anchor: true },
+    { label: 'FAQ', href: homeAnchor('faq'), key: 'faq', anchor: true },
 ]);
 
 const closeToolsMenu = () => {
@@ -124,6 +137,7 @@ const footerProductLinks = [
     { label: 'Ads ROAS ক্যালকুলেটর', href: route('seo.ads-roas-calculator') },
     { label: 'কিভাবে ফেক অর্ডার আটকাবো', href: route('seo.ki-vabe-fake-order-atkabo') },
     { label: 'Fake Customer Check', href: route('seo.fake-customer-check') },
+    { label: 'Fake Customer Check (EN)', href: route('seo.en.fake-customer-check') },
     { label: 'BD Courier Ratio', href: route('seo.bd-courier-ratio-checker') },
     { label: 'Courier Checker', href: route('seo.courier-checker') },
     { label: 'Pathao Fraud Check', href: route('seo.pathao-fraud-check') },
@@ -349,7 +363,7 @@ onUnmounted(() => {
             style="padding-top: env(safe-area-inset-top, 0px);"
         >
             <nav class="relative mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-6 sm:py-3 lg:px-8">
-                <Link href="/" class="flex min-w-0 shrink items-center gap-2 sm:gap-2.5">
+                <Link :href="homeHref" class="flex min-w-0 shrink items-center gap-2 sm:gap-2.5">
                     <img
                         src="/app-logo"
                         alt="WooEasyLife"
