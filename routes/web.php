@@ -596,6 +596,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
                 ->middleware('throttle:5,1')
                 ->name('smartOneClick');
             Route::post('/runs/{blogAiRun}/cancel', [BlogAiController::class, 'cancelRun'])->name('runs.cancel');
+            Route::post('/runs/{blogAiRun}/save-draft', [BlogAiController::class, 'saveDraftPost'])
+                ->name('runs.saveDraft');
             Route::post('/sessions', [BlogAiController::class, 'store'])->name('store');
             Route::post('/sessions/{blogAiSession}/recover', [BlogAiController::class, 'recover'])->name('recover');
             Route::post('/sessions/{blogAiSession}/research', [BlogAiController::class, 'research'])->name('research');

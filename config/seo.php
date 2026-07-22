@@ -55,6 +55,7 @@ return [
             'title' => 'Free Courier Fraud Checker BD — ফ্রড চেকার | WooEasyLife',
             'description' => 'ফ্রি Courier Fraud Checker BD ও ফ্রড চেকার। মোবাইল নম্বর দিয়ে Pathao, Steadfast, RedX ডেলিভারি হিস্টোরি, সাকসেস রেট ও রিটার্ন রেট দেখুন। ফেক অর্ডার আটকান — ই-কমার্স ও Facebook পেজ সেলারদের জন্য।',
             'canonical_path' => '/',
+            'software_application' => true,
             'prerender_h1' => 'Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার',
             'prerender_lead' => 'মোবাইল নম্বর দিয়ে কাস্টমারের কুরিয়ার হিস্টোরি ও ডেলিভারি রেশিও চেক করুন। ফেক অর্ডার আটকান, রিটার্ন লস কমান — WooCommerce ও Facebook পেজ ব্যবসার জন্য।',
             'hreflang_paths' => [
@@ -516,6 +517,7 @@ return [
             'description' => 'Free Courier Fraud Checker BD. Verify Pathao, Steadfast, RedX history by phone, block fake COD orders, and auto-enter parcels. For Bangladesh e-commerce & Facebook sellers.',
             'canonical_path' => '/en',
             'html_lang' => 'en',
+            'software_application' => true,
             'prerender_h1' => 'Free Courier Fraud Checker BD for WooCommerce sellers',
             'prerender_lead' => 'Stop fake COD orders, check courier success rates, and automate Pathao, Steadfast, and RedX entry — built for Bangladesh.',
             'hreflang_paths' => [

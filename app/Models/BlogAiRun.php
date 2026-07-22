@@ -94,7 +94,8 @@ class BlogAiRun extends Model
             || ! empty($flags['outline_soft_pass'])
             || ! empty($flags['image_auto_approved'])
             || ! empty($flags['image_skipped'])
-            || ! empty($flags['interrupted_recovery']);
+            || ! empty($flags['interrupted_recovery'])
+            || ! empty($flags['post_create_failed']);
     }
 
     /**
@@ -133,6 +134,7 @@ class BlogAiRun extends Model
             'image_skipped' => (bool) ($this->input_json['image_skipped'] ?? false),
             'image_disabled' => (bool) ($this->input_json['image_disabled'] ?? false),
             'interrupted_recovery' => (bool) ($this->input_json['interrupted_recovery'] ?? false),
+            'post_create_failed' => (bool) ($this->input_json['post_create_failed'] ?? false),
             'soft_pass_steps' => array_values(array_filter([
                 ! empty($this->input_json['research_soft_pass']) ? 'research' : null,
                 ! empty($this->input_json['hooks_soft_pass']) ? 'hooks' : null,

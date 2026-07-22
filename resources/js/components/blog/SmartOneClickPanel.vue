@@ -14,7 +14,7 @@
                 icon="pi pi-bolt"
                 size="small"
                 :loading="starting || polling"
-                :disabled="starting || polling"
+                :disabled="starting || polling || savingDraft"
                 @click="start"
             />
         </div>
@@ -57,10 +57,10 @@
             </p>
 
             <div
-                v-if="error"
+                v-if="error || postCreateFailed"
                 class="mt-2 rounded-lg bg-rose-50 px-2.5 py-2 text-xs text-rose-700 dark:bg-rose-500/10 dark:text-rose-200"
             >
-                {{ error }}
+                {{ error || run?.last_error || 'AI draft is ready, but the CMS draft post was not saved.' }}
             </div>
 
             <div class="mt-3 flex flex-wrap gap-2">
@@ -81,6 +81,23 @@
                     size="small"
                     @click="openDraft"
                 />
+                <Button
+                    v-if="canSaveDraft"
+                    label="Save draft"
+                    icon="pi pi-save"
+                    size="small"
+                    :loading="savingDraft"
+                    @click="saveDraft"
+                />
+                <Button
+                    v-if="canOpenWizard"
+                    label="Open in AI wizard"
+                    icon="pi pi-sparkles"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    @click="openWizard"
+                />
             </div>
         </div>
     </div>
@@ -99,18 +116,42 @@ const toast = useToast();
 const starting = ref(false);
 const polling = ref(false);
 const cancelling = ref(false);
+const savingDraft = ref(false);
 const run = ref(null);
 const error = ref('');
 let pollTimer = null;
 
+const TERMINAL = ['completed', 'completed_needs_review', 'failed', 'cancelled'];
+const SUCCESS = ['completed', 'completed_needs_review'];
+
 const progress = computed(() => Math.max(0, Math.min(100, Number(run.value?.progress_pct || 0))));
 const isActive = computed(() => ['pending', 'running'].includes(run.value?.status));
+const isSuccess = computed(() => SUCCESS.includes(run.value?.status));
+const runInput = computed(() => run.value?.input || run.value?.input_json || {});
 const latestMessage = computed(() => {
     const log = run.value?.step_log;
     if (!Array.isArray(log) || !log.length) return '';
     return log[log.length - 1]?.message || '';
 });
-const pickedTopic = computed(() => run.value?.input_json?.smart_pick?.seed_topic || run.value?.input_json?.seed_topic || '');
+const pickedTopic = computed(() => {
+    const input = runInput.value;
+    return input?.smart_pick?.seed_topic || input?.seed_topic || '';
+});
+const postCreateFailed = computed(() => {
+    // Once a CMS post exists, never treat historical step_log failures as current.
+    if (run.value?.blog_post_id) {
+        return false;
+    }
+    if (run.value?.post_create_failed || runInput.value?.post_create_failed) {
+        return true;
+    }
+    const log = run.value?.step_log;
+    if (!Array.isArray(log)) return false;
+    return log.some((entry) => entry?.event === 'post_create_failed')
+        && !log.some((entry) => entry?.event === 'post_materialized');
+});
+const canSaveDraft = computed(() => isSuccess.value && !run.value?.blog_post_id);
+const canOpenWizard = computed(() => isSuccess.value && !run.value?.blog_post_id && Boolean(run.value?.blog_ai_session_id));
 const stepLabel = computed(() => {
     const step = run.value?.current_step || 'idle';
     const map = {
@@ -123,12 +164,14 @@ const stepLabel = computed(() => {
         draft: 'Writing draft',
         image: 'Cover image',
         finalize: 'Saving draft post',
+        done: 'Done',
     };
     return map[step] || step;
 });
 const statusClass = computed(() => {
     const s = run.value?.status;
     if (s === 'completed') return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    if (s === 'completed_needs_review') return 'bg-amber-500/15 text-amber-800 dark:text-amber-200';
     if (s === 'failed' || s === 'cancelled') return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
     return 'bg-sky-500/15 text-sky-800 dark:text-sky-200';
 });
@@ -141,6 +184,35 @@ const stopPoll = () => {
     polling.value = false;
 };
 
+const onTerminal = (data) => {
+    stopPoll();
+    const status = data.run?.status;
+    if (SUCCESS.includes(status)) {
+        if (data.run.blog_post_id) {
+            toast.add({
+                severity: 'success',
+                summary: 'Smart post ready',
+                detail: 'Draft created — review and publish when ready.',
+                life: 6000,
+                group: 'br',
+            });
+        } else {
+            error.value = data.run.last_error
+                || 'AI draft is ready, but the CMS draft post was not saved. Click Save draft to retry.';
+            toast.add({
+                severity: 'warn',
+                summary: 'Draft not saved to CMS',
+                detail: 'Use Save draft, or open the AI wizard to apply the session draft.',
+                life: 8000,
+                group: 'br',
+            });
+        }
+        emit('updated', data);
+    } else if (status === 'failed') {
+        error.value = data.run.last_error || 'Smart one-click failed.';
+    }
+};
+
 const poll = async (runId) => {
     polling.value = true;
     try {
@@ -149,22 +221,8 @@ const poll = async (runId) => {
         if (data?.intelligence) {
             emit('intelligence', data.intelligence);
         }
-        if (['completed', 'failed', 'cancelled'].includes(data.run?.status)) {
-            stopPoll();
-            if (data.run.status === 'completed') {
-                toast.add({
-                    severity: 'success',
-                    summary: 'Smart post ready',
-                    detail: data.run.blog_post_id
-                        ? 'Draft created — review and publish when ready.'
-                        : 'Draft ready in the AI session.',
-                    life: 6000,
-                    group: 'br',
-                });
-                emit('updated', data);
-            } else if (data.run.status === 'failed') {
-                error.value = data.run.last_error || 'Smart one-click failed.';
-            }
+        if (TERMINAL.includes(data.run?.status)) {
+            onTerminal(data);
             return;
         }
         pollTimer = setTimeout(() => poll(runId), 2500);
@@ -202,15 +260,8 @@ const start = async (overrides = {}) => {
         }
         if (data.queued || ['pending', 'running'].includes(data.run?.status)) {
             await poll(data.run.id);
-        } else if (data.run?.status === 'completed') {
-            emit('updated', data);
-            toast.add({
-                severity: 'success',
-                summary: 'Smart post ready',
-                detail: 'Draft created — open it to review.',
-                life: 5000,
-                group: 'br',
-            });
+        } else if (SUCCESS.includes(data.run?.status)) {
+            onTerminal(data);
         }
     } catch (e) {
         const activeId = Number(
@@ -245,9 +296,44 @@ const cancel = async () => {
     }
 };
 
+const saveDraft = async () => {
+    if (!run.value?.id || run.value?.blog_post_id) return;
+    savingDraft.value = true;
+    error.value = '';
+    try {
+        const { data } = await axios.post(route('blogAi.runs.saveDraft', run.value.id), {}, { timeout: 60000 });
+        run.value = data.run;
+        error.value = '';
+        toast.add({
+            severity: 'success',
+            summary: 'Draft saved',
+            detail: data.post_id ? `Draft post #${data.post_id} created.` : 'CMS draft saved.',
+            life: 5000,
+            group: 'br',
+        });
+        emit('updated', data);
+        if (data.post_id) {
+            router.visit(route('blogPosts.edit', data.post_id));
+        }
+    } catch (e) {
+        error.value = e?.response?.data?.errors?.ai?.[0]
+            || e?.response?.data?.message
+            || e?.message
+            || 'Could not save CMS draft.';
+    } finally {
+        savingDraft.value = false;
+    }
+};
+
 const openDraft = () => {
     if (!run.value?.blog_post_id) return;
     router.visit(route('blogPosts.edit', run.value.blog_post_id));
+};
+
+const openWizard = () => {
+    const sessionId = run.value?.blog_ai_session_id;
+    const qs = sessionId ? `?ai=1&session=${sessionId}` : '?ai=1';
+    router.visit(route('blogPosts.create') + qs);
 };
 
 onBeforeUnmount(() => stopPoll());

@@ -135,14 +135,24 @@ class BlogPost extends Model
         return Str::limit(strip_tags($this->body_html), 160, '');
     }
 
-    public static function makeSlug(string $title, ?int $ignoreId = null): string
+    public static function makeSlug(string $title, ?int $ignoreId = null, int $maxLength = 191): string
     {
+        $maxLength = max(16, min(191, $maxLength));
         $base = Str::slug($title);
 
         // Prefer Latin from focus keywords; never invent random for empty Bangla alone here —
         // callers that need a draft placeholder still get post-xxxxx.
         if ($base === '') {
             $base = 'post-'.Str::lower(Str::random(6));
+        }
+
+        // Reserve room for uniqueness suffixes like "-12".
+        $baseMax = max(8, $maxLength - 6);
+        if (strlen($base) > $baseMax) {
+            $base = rtrim(substr($base, 0, $baseMax), '-');
+            if ($base === '') {
+                $base = 'post-'.Str::lower(Str::random(6));
+            }
         }
 
         $slug = $base;
@@ -154,7 +164,12 @@ class BlogPost extends Model
                 ->where('slug', $slug)
                 ->exists()
         ) {
-            $slug = $base.'-'.$i;
+            $suffix = '-'.$i;
+            $trimmedBase = $base;
+            if (strlen($trimmedBase) + strlen($suffix) > $maxLength) {
+                $trimmedBase = rtrim(substr($base, 0, $maxLength - strlen($suffix)), '-');
+            }
+            $slug = $trimmedBase.$suffix;
             $i++;
         }
 

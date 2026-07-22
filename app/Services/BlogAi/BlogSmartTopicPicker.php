@@ -124,8 +124,9 @@ class BlogSmartTopicPicker
                 continue;
             }
 
-            if ($this->isRecentDuplicateAngle($resolved, $recentAngles)) {
-                // Soft-skip near-duplicate angles from the last 30 days (same cluster).
+            if ($resolved['action'] !== 'refresh' && $this->isRecentDuplicateAngle($resolved, $recentAngles)) {
+                // Soft-skip near-duplicate *new* angles from the last 30 days (same cluster).
+                // Refresh of an existing post is intentional and must not be filtered out.
                 continue;
             }
 

@@ -233,6 +233,32 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('content="1234567890"', false);
     }
 
+    public function test_home_includes_software_application_json_ld(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $html = $response->getContent();
+        $this->assertStringContainsString('"@type":"SoftwareApplication"', $html);
+        $this->assertStringContainsString('"price":0', $html);
+        $this->assertStringContainsString('"availability":"https://schema.org/InStock"', $html);
+        $this->assertStringContainsString('#software', $html);
+    }
+
+    public function test_tool_landing_pages_omit_software_application_json_ld(): void
+    {
+        foreach (['/pricing', '/return-loss-calculator', '/courier-charge-calculator', '/ads-roas-calculator'] as $path) {
+            $response = $this->get($path);
+            $response->assertOk();
+            $this->assertStringNotContainsString(
+                '"@type":"SoftwareApplication"',
+                $response->getContent(),
+                "Unexpected SoftwareApplication on {$path}"
+            );
+            $this->assertStringContainsString('"@type":"WebPage"', $response->getContent());
+        }
+    }
+
     public function test_sitemap_lists_marketing_urls(): void
     {
         $response = $this->get('/sitemap.xml');

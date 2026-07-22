@@ -931,6 +931,40 @@ class BlogAiController extends Controller
         ]);
     }
 
+    public function saveDraftPost(Request $request, BlogAiRun $blogAiRun, \App\Services\BlogAi\BlogAutoPipeline $pipeline): JsonResponse
+    {
+        if ((int) $blogAiRun->user_id !== (int) $request->user()?->id) {
+            abort(403);
+        }
+
+        if (! $blogAiRun->isTerminal() || ! in_array($blogAiRun->status, BlogAiRun::SUCCESS_STATUSES, true)) {
+            throw ValidationException::withMessages([
+                'ai' => 'Save draft is only available after a completed AI run.',
+            ]);
+        }
+
+        try {
+            $post = $pipeline->materializeDraftPost($blogAiRun);
+        } catch (Throwable $e) {
+            $message = $e instanceof ValidationException
+                ? (string) (collect($e->errors())->flatten()->first() ?: $e->getMessage())
+                : $e->getMessage();
+
+            throw ValidationException::withMessages([
+                'ai' => $message !== '' ? $message : 'Could not save CMS draft post.',
+            ]);
+        }
+
+        $run = $blogAiRun->fresh();
+
+        return response()->json([
+            'ok' => true,
+            'post_id' => $post->id,
+            'run' => $run?->toAdminArray(),
+            'session' => $run?->session?->toAdminArray(),
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      */

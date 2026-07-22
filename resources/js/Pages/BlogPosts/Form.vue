@@ -15,7 +15,7 @@
                             label="AI Auto Create"
                             icon="pi pi-sparkles"
                             size="small"
-                            @click="aiWizardOpen = true"
+                            @click="openAiWizard()"
                         />
                         <Button
                             label="Back"
@@ -493,13 +493,14 @@
 
         <BlogAiWizard
             v-model:visible="aiWizardOpen"
+            :session-id="aiSessionId"
             @apply="applyAiDraft"
         />
     </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
@@ -535,14 +536,28 @@ const isEdit = computed(() => Boolean(props.post?.id));
 const mediaPickerOpen = ref(false);
 const mediaPickerMode = ref('og');
 const aiWizardOpen = ref(false);
+const aiSessionId = ref(null);
 const seoRegenLoading = ref(false);
 const seoRegenNote = ref('');
+
+const openAiWizard = (sessionId = null) => {
+    aiSessionId.value = sessionId ? Number(sessionId) : null;
+    aiWizardOpen.value = true;
+};
+
+watch(aiWizardOpen, (open) => {
+    if (!open) {
+        // Don't keep a recovery session sticky after the dialog closes.
+        aiSessionId.value = null;
+    }
+});
 
 onMounted(() => {
     if (!isEdit.value && canUseBlogAi.value) {
         const params = new URLSearchParams(window.location.search);
         if (params.get('ai') === '1') {
-            aiWizardOpen.value = true;
+            const sid = Number(params.get('session') || 0);
+            openAiWizard(sid > 0 ? sid : null);
         }
     }
 });

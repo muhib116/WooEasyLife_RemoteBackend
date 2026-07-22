@@ -220,6 +220,8 @@ class SeoMetaService
                 'logo' => [
                     '@type' => 'ImageObject',
                     'url' => $logo,
+                    'width' => 180,
+                    'height' => 180,
                 ],
                 'description' => $org['description'] ?? $description,
                 'sameAs' => $sameAs,
@@ -230,7 +232,7 @@ class SeoMetaService
                 'name' => $siteName,
                 'url' => $this->absoluteUrl('/'),
                 'publisher' => ['@id' => $this->absoluteUrl('/').'#organization'],
-                'inLanguage' => 'bn-BD',
+                'inLanguage' => (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD')),
             ],
             [
                 '@type' => 'WebPage',
@@ -239,28 +241,19 @@ class SeoMetaService
                 'name' => $title,
                 'description' => $description,
                 'isPartOf' => ['@id' => $this->absoluteUrl('/').'#website'],
-                'inLanguage' => 'bn-BD',
+                'inLanguage' => (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD')),
                 'primaryImageOfPage' => [
                     '@type' => 'ImageObject',
                     'url' => $ogImage,
                 ],
             ],
-            [
-                '@type' => 'SoftwareApplication',
-                'name' => $siteName,
-                'applicationCategory' => 'BusinessApplication',
-                'operatingSystem' => 'Web, Android',
-                'offers' => [
-                    '@type' => 'Offer',
-                    'price' => '0',
-                    'priceCurrency' => 'BDT',
-                    'description' => 'Free trial available',
-                ],
-                'description' => $org['description'] ?? $description,
-                'url' => $this->absoluteUrl('/'),
-                'image' => $ogImage,
-            ],
         ];
+
+        // Only emit SoftwareApplication on product landing pages.
+        // Repeating it on every calculator/guide URL is a common Semrush/Google invalidation cause.
+        if (! empty($config['software_application'])) {
+            $graphs[] = $this->softwareApplicationNode($siteName, $description, $ogImage, $org, $config);
+        }
 
         if (($config['og_type'] ?? null) === 'article') {
             $authorName = (string) ($config['author_name'] ?? config('blog_ai.author_name', 'Muhibbullah Ansary'));
@@ -326,5 +319,66 @@ class SeoMetaService
             '@context' => 'https://schema.org',
             '@graph' => $graphs,
         ];
+    }
+
+    /**
+     * Google SoftwareApplication rich-result shape (name + offers.price required).
+     *
+     * @param  array<string, mixed>  $org
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function softwareApplicationNode(
+        string $siteName,
+        string $description,
+        string $ogImage,
+        array $org,
+        array $config,
+    ): array {
+        $home = $this->absoluteUrl('/');
+        $pricing = $this->absoluteUrl('/pricing');
+        $playStore = filled(config('seo.organization.same_as'))
+            ? collect(config('seo.organization.same_as'))->first(
+                fn ($url) => is_string($url) && str_contains($url, 'play.google.com')
+            )
+            : null;
+
+        $node = [
+            '@type' => 'SoftwareApplication',
+            '@id' => $home.'#software',
+            'name' => $siteName,
+            'applicationCategory' => 'BusinessApplication',
+            'operatingSystem' => 'Web browser, Android',
+            'description' => (string) ($org['description'] ?? $description),
+            'url' => $home,
+            'image' => [
+                '@type' => 'ImageObject',
+                'url' => $ogImage,
+            ],
+            'author' => ['@id' => $home.'#organization'],
+            'publisher' => ['@id' => $home.'#organization'],
+            'offers' => [
+                '@type' => 'Offer',
+                // Google docs use numeric 0 for free apps.
+                'price' => 0,
+                'priceCurrency' => 'BDT',
+                'availability' => 'https://schema.org/InStock',
+                'url' => $pricing,
+                'category' => 'FreeTrial',
+                'description' => 'Free trial available — see pricing for paid plans',
+            ],
+            'featureList' => 'BD courier fraud checker, Fake order protection, Courier auto-entry (Pathao, Steadfast, RedX), WooCommerce plugin + Android app',
+        ];
+
+        if (is_string($playStore) && $playStore !== '') {
+            $node['installUrl'] = $playStore;
+            $node['downloadUrl'] = $playStore;
+        }
+
+        if (filled($config['software_version'] ?? null)) {
+            $node['softwareVersion'] = (string) $config['software_version'];
+        }
+
+        return $node;
     }
 }

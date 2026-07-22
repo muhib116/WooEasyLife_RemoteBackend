@@ -254,6 +254,115 @@ class AdminBlogAiAutoTest extends TestCase
         $this->assertContains('completed', $events);
     }
 
+    public function test_post_create_failure_is_surfaced_and_save_draft_recovers(): void
+    {
+        $admin = $this->adminUser();
+        $this->fakeAutoHttp();
+
+        $failOnce = true;
+        BlogPost::creating(function () use (&$failOnce) {
+            if ($failOnce) {
+                $failOnce = false;
+                throw new \RuntimeException('Data too long for column excerpt');
+            }
+        });
+
+        $response = $this->actingAs($admin)->postJson(route('blogAi.auto'), [
+            'cluster' => 'fake_order',
+            'seed_topic' => 'ফেক অর্ডার কমানো',
+            'keywords_text' => "ফেক অর্ডার\nকুরিয়ার হিস্টোরি চেক",
+            'create_post' => true,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('run.status', 'completed_needs_review')
+            ->assertJsonPath('run.post_create_failed', true)
+            ->assertJsonPath('post_id', null);
+
+        $runId = (int) $response->json('run.id');
+        $this->assertSame(0, BlogPost::query()->count());
+
+        $save = $this->actingAs($admin)->postJson(route('blogAi.runs.saveDraft', $runId));
+        $save->assertOk()
+            ->assertJsonPath('ok', true);
+
+        $this->assertNotNull($save->json('post_id'));
+        $this->assertSame(1, BlogPost::query()->count());
+
+        $run = BlogAiRun::query()->find($runId);
+        $this->assertNotNull($run?->blog_post_id);
+        $this->assertFalse((bool) ($run->input_json['post_create_failed'] ?? false));
+        $this->assertSame('completed', $run->status);
+        $this->assertFalse($run->needsReview());
+    }
+
+    public function test_create_draft_truncates_to_varchar_191_columns(): void
+    {
+        $admin = $this->adminUser();
+
+        $session = BlogAiSession::query()->create([
+            'user_id' => $admin->id,
+            'status' => 'draft_ready',
+            'locale' => 'bn',
+            'cluster' => 'fake_order',
+            'job_token' => 'tok-trunc',
+            'keywords_json' => ['pasted' => ['x'], 'primary' => 'x', 'secondary' => []],
+            'draft_json' => [
+                'title' => str_repeat('T', 300),
+                'slug' => 'trunc-191-'.uniqid(),
+                'focus_keyword' => str_repeat('K', 300),
+                'meta_title' => str_repeat('M', 300),
+                'meta_description' => str_repeat('D', 600),
+                'excerpt' => str_repeat('E', 600),
+                'body_html' => '<p>body</p><a href="/a">a</a><a href="/b">b</a>',
+                'faqs' => [],
+                'locale' => 'bn',
+                'article_type' => 'howto',
+                'ai_quality_score' => 70,
+            ],
+        ]);
+
+        $run = BlogAiRun::query()->create([
+            'blog_ai_session_id' => $session->id,
+            'user_id' => $admin->id,
+            'mode' => 'auto',
+            'status' => 'completed_needs_review',
+            'current_step' => 'done',
+            'progress_pct' => 100,
+            'live_score' => 70,
+            'step_log' => [],
+            'input_json' => ['create_post' => true, 'post_create_failed' => true],
+            'finished_at' => now(),
+        ]);
+
+        $post = app(\App\Services\BlogAi\BlogAutoPipeline::class)->materializeDraftPost($run);
+
+        $this->assertLessThanOrEqual(191, mb_strlen($post->title));
+        $this->assertLessThanOrEqual(191, mb_strlen((string) $post->meta_title));
+        $this->assertLessThanOrEqual(191, mb_strlen((string) $post->focus_keyword));
+        $this->assertLessThanOrEqual(500, mb_strlen((string) $post->excerpt));
+        $this->assertLessThanOrEqual(500, mb_strlen((string) $post->meta_description));
+        $this->assertSame('draft', $post->status);
+        $this->assertLessThanOrEqual(191, strlen((string) $post->slug));
+    }
+
+    public function test_long_slug_collision_stays_unique_within_varchar_191(): void
+    {
+        $long = str_repeat('slug-piece-', 30); // > 191 when uniquified naively
+        BlogPost::query()->create([
+            'title' => 'Existing',
+            'slug' => BlogPost::makeSlug($long),
+            'locale' => 'bn',
+            'status' => 'draft',
+            'body_html' => '<p>x</p>',
+        ]);
+
+        $second = BlogPost::makeSlug($long);
+        $this->assertNotSame(BlogPost::query()->value('slug'), $second);
+        $this->assertLessThanOrEqual(191, strlen($second));
+        $this->assertTrue((bool) preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $second));
+    }
+
     public function test_soft_pass_caps_score_and_marks_needs_review(): void
     {
         config([

@@ -663,6 +663,7 @@ import Select from 'primevue/select';
 
 const props = defineProps({
     visible: { type: Boolean, default: false },
+    sessionId: { type: [Number, String], default: null },
 });
 
 const emit = defineEmits(['update:visible', 'apply', 'post-created']);
@@ -1187,7 +1188,9 @@ const loadOptions = async () => {
         onClusterChange(cluster.value);
 
         const activeId = data.auto?.active_run_id;
-        if (activeId && writerMode.value === 'auto') {
+        const resumeSessionId = Number(props.sessionId || 0);
+        // When opening a specific session (Save-draft recovery), do not hijack into another active run.
+        if (activeId && writerMode.value === 'auto' && resumeSessionId <= 0) {
             await resumeActiveRun(activeId);
         }
     } catch {
@@ -1224,10 +1227,29 @@ const applyIdea = (idea) => {
 
 watch(
     () => props.visible,
-    (open) => {
+    async (open) => {
         if (open) {
             reset();
-            loadOptions();
+            await loadOptions();
+            const resumeSessionId = Number(props.sessionId || 0);
+            if (resumeSessionId > 0) {
+                try {
+                    loading.value = true;
+                    const { data } = await axios.get(route('blogAi.show', resumeSessionId), { timeout: 30000 });
+                    session.value = data.session;
+                    if (data.session?.draft) {
+                        writerMode.value = data.session?.status === 'auto_running' ? 'auto' : 'manual';
+                        // Jump to draft step when a body already exists.
+                        if (data.session.draft?.body_html) {
+                            step.value = 4;
+                        }
+                    }
+                } catch (e) {
+                    error.value = e?.response?.data?.message || e?.message || 'Could not load AI session.';
+                } finally {
+                    loading.value = false;
+                }
+            }
         }
     },
 );

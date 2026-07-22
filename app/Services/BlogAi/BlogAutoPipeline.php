@@ -5,7 +5,9 @@ namespace App\Services\BlogAi;
 use App\Models\BlogAiRun;
 use App\Models\BlogAiSession;
 use App\Models\BlogPost;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -847,6 +849,7 @@ class BlogAutoPipeline
         $session->saveIfJobCurrent();
 
         $postId = null;
+        $createError = null;
         $createPost = (bool) data_get($run->input_json, 'create_post', config('blog_ai.auto.create_post', true));
         if ($createPost) {
             try {
@@ -856,16 +859,28 @@ class BlogAutoPipeline
                 $post->ai_run_id = $run->id;
                 $post->save();
             } catch (Throwable $e) {
+                $createError = $e->getMessage();
                 Log::warning('Blog AI auto createDraftPost failed', [
                     'run_id' => $run->id,
-                    'message' => $e->getMessage(),
+                    'message' => $createError,
                 ]);
                 $run->appendLog([
                     'step' => 'finalize',
                     'event' => 'post_create_failed',
-                    'message' => 'Draft is ready in the wizard, but CMS post create failed: '.$e->getMessage(),
+                    'message' => 'Draft is ready in the AI session, but CMS post create failed: '.$createError,
                 ]);
             }
+        }
+
+        if ($createPost && ! $postId) {
+            $needsReview = true;
+            $flags['post_create_failed'] = true;
+            if (filled($createError)) {
+                $flags['post_create_error'] = Str::limit($createError, 400, '');
+            }
+            $run->input_json = $flags;
+            $run->last_error = 'AI draft is ready, but the CMS draft post was not saved'
+                .($createError ? ': '.$createError : '.');
         }
 
         $run->status = $needsReview ? 'completed_needs_review' : 'completed';
@@ -882,10 +897,83 @@ class BlogAutoPipeline
             'soft_pass' => $softPass,
             'image_auto_approved' => $imageAutoApproved,
             'image_skipped' => $imageSkipped,
+            'post_create_failed' => $createPost && ! $postId,
         ]);
         $run->save();
 
         return $run->fresh();
+    }
+
+    /**
+     * Create (or return) the CMS draft post for a finished auto/smart run whose AI draft already exists.
+     */
+    public function materializeDraftPost(BlogAiRun $run): BlogPost
+    {
+        return DB::transaction(function () use ($run) {
+            /** @var BlogAiRun $locked */
+            $locked = BlogAiRun::query()->whereKey($run->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->blog_post_id) {
+                $existing = BlogPost::query()->find($locked->blog_post_id);
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            $session = BlogAiSession::query()->find($locked->blog_ai_session_id);
+            if (! $session) {
+                throw ValidationException::withMessages([
+                    'ai' => 'AI session missing for this run.',
+                ]);
+            }
+
+            $draft = is_array($session->draft_json) ? $session->draft_json : [];
+            if (empty($draft['title']) || empty($draft['body_html'])) {
+                throw ValidationException::withMessages([
+                    'ai' => 'No usable AI draft body to save as a CMS post.',
+                ]);
+            }
+
+            $computed = [
+                'score' => (int) ($locked->live_score ?? ($draft['ai_quality_score'] ?? 0)),
+                'breakdown' => is_array($locked->score_breakdown)
+                    ? $locked->score_breakdown
+                    : (is_array($draft['ai_quality_breakdown'] ?? null) ? $draft['ai_quality_breakdown'] : []),
+            ];
+
+            $post = $this->createDraftPost($session, $locked, $draft, $computed);
+            $locked->blog_post_id = $post->id;
+            $post->ai_run_id = $locked->id;
+            $post->save();
+
+            $flags = is_array($locked->input_json) ? $locked->input_json : [];
+            $hadPostCreateFailure = ! empty($flags['post_create_failed']);
+            unset($flags['post_create_failed'], $flags['post_create_error']);
+            $locked->input_json = $flags;
+            $locked->last_error = null;
+
+            // If needs_review was only due to CMS create failure, mark fully completed.
+            if (
+                $hadPostCreateFailure
+                && $locked->status === 'completed_needs_review'
+                && ! $this->hasAnySoftPass($flags)
+                && empty($flags['image_auto_approved'])
+                && empty($flags['image_skipped'])
+                && empty($flags['interrupted_recovery'])
+            ) {
+                $locked->status = 'completed';
+            }
+
+            $locked->appendLog([
+                'step' => 'finalize',
+                'event' => 'post_materialized',
+                'message' => 'CMS draft post #'.$post->id.' saved from AI session.',
+                'blog_post_id' => $post->id,
+            ]);
+            $locked->save();
+
+            return $post;
+        });
     }
 
     /**
@@ -998,6 +1086,8 @@ class BlogAutoPipeline
         $parts = [];
         if ($postId) {
             $parts[] = "Draft post #{$postId} created";
+        } elseif (! empty($flags['post_create_failed'])) {
+            $parts[] = 'Pipeline complete but CMS draft was not saved — click Save draft to retry';
         } else {
             $parts[] = 'Pipeline complete';
         }
@@ -1031,28 +1121,70 @@ class BlogAutoPipeline
             $slug = BlogPost::makeSlug($slug);
         }
 
-        return BlogPost::query()->create([
-            'title' => (string) $draft['title'],
+        $limitChars = static function (?string $value, int $limit): ?string {
+            if ($value === null) {
+                return null;
+            }
+            $trimmed = trim($value);
+            if ($trimmed === '') {
+                return null;
+            }
+
+            // Match MySQL varchar(N) character semantics (not mb_strwidth used by Str::limit).
+            return mb_strlen($trimmed, 'UTF-8') > $limit
+                ? mb_substr($trimmed, 0, $limit, 'UTF-8')
+                : $trimmed;
+        };
+
+        // Production schema uses varchar(191) for several string columns (utf8mb4 index-safe).
+        $payload = [
+            'title' => $limitChars(trim((string) $draft['title']), 191) ?: 'Untitled draft',
             'slug' => $slug,
-            'locale' => (string) ($draft['locale'] ?? 'bn'),
-            'cluster' => $session->cluster ?: ($draft['cluster'] ?? null),
-            'article_type' => $this->resolveArticleType($run, $session, $draft),
+            'locale' => mb_substr((string) ($draft['locale'] ?? 'bn'), 0, 5, 'UTF-8'),
             'status' => 'draft',
-            'excerpt' => $draft['excerpt'] ?? null,
-            'meta_title' => $draft['meta_title'] ?? null,
-            'meta_description' => $draft['meta_description'] ?? null,
-            'focus_keyword' => $draft['focus_keyword'] ?? null,
-            'og_image' => $draft['og_image'] ?? null,
-            'robots' => $draft['robots'] ?? 'index,follow',
-            'author_name' => $draft['author_name'] ?? config('blog_ai.author_name'),
+            'excerpt' => $limitChars(isset($draft['excerpt']) ? (string) $draft['excerpt'] : null, 500),
+            'meta_title' => $limitChars(isset($draft['meta_title']) ? (string) $draft['meta_title'] : null, 191),
+            'meta_description' => $limitChars(
+                isset($draft['meta_description']) ? (string) $draft['meta_description'] : null,
+                500,
+            ),
+            'focus_keyword' => $limitChars(
+                isset($draft['focus_keyword']) ? (string) $draft['focus_keyword'] : null,
+                191,
+            ),
+            'og_image' => $limitChars(isset($draft['og_image']) ? (string) $draft['og_image'] : null, 191),
+            'robots' => $limitChars(isset($draft['robots']) ? (string) $draft['robots'] : null, 64)
+                ?? 'index,follow',
+            'author_name' => $limitChars(
+                isset($draft['author_name']) ? (string) $draft['author_name'] : null,
+                191,
+            ) ?? config('blog_ai.author_name'),
             'faqs_json' => $draft['faqs'] ?? null,
             'body_html' => (string) $draft['body_html'],
-            'ai_quality_score' => $computed['score'],
-            'ai_quality_breakdown' => $computed['breakdown'],
-            'seo_soft_pass' => $this->hasAnySoftPass(is_array($run->input_json) ? $run->input_json : []),
             'created_by' => $run->user_id,
             'updated_by' => $run->user_id,
-        ]);
+        ];
+
+        if (Schema::hasColumn('blog_posts', 'cluster')) {
+            $payload['cluster'] = $limitChars(
+                (string) ($session->cluster ?: ($draft['cluster'] ?? '')),
+                64,
+            );
+        }
+        if (Schema::hasColumn('blog_posts', 'article_type')) {
+            $payload['article_type'] = $this->resolveArticleType($run, $session, $draft);
+        }
+        if (Schema::hasColumn('blog_posts', 'ai_quality_score')) {
+            $payload['ai_quality_score'] = $computed['score'];
+        }
+        if (Schema::hasColumn('blog_posts', 'ai_quality_breakdown')) {
+            $payload['ai_quality_breakdown'] = $computed['breakdown'];
+        }
+        if (Schema::hasColumn('blog_posts', 'seo_soft_pass')) {
+            $payload['seo_soft_pass'] = $this->hasAnySoftPass(is_array($run->input_json) ? $run->input_json : []);
+        }
+
+        return BlogPost::query()->create($payload);
     }
 
     /**
