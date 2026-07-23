@@ -9,6 +9,8 @@
                 icon-class="text-violet-600 dark:text-violet-400"
             />
 
+            <GaRealtimePanel />
+
             <div
                 class="box-bg box-color box-border overflow-hidden rounded-2xl border px-3 py-3 shadow-sm sm:px-4"
             >
@@ -673,6 +675,7 @@ import axios from 'axios';
 import { AuthenticatedLayout } from '@/layouts';
 import PageHeader from '@/Pages/Users/fragments/PageHeader.vue';
 import PageCard from '@/Pages/Users/fragments/PageCard.vue';
+import GaRealtimePanel from '@/components/analytics/GaRealtimePanel.vue';
 import StatCard from '@/Pages/Users/fragments/StatCard.vue';
 import StatCardSkeleton from '@/Pages/Users/fragments/StatCardSkeleton.vue';
 import TableSkeletonLoader from '@/Pages/Users/fragments/TableSkeletonLoader.vue';

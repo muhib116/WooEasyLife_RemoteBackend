@@ -192,7 +192,12 @@ class GoogleSearchConsoleClient
     {
         return Http::withToken($token)
             ->timeout(45)
-            ->retry(2, 300)
+            ->retry(
+                2,
+                300,
+                fn ($exception) => $exception instanceof \Illuminate\Http\Client\ConnectionException,
+                false,
+            )
             ->acceptJson()
             ->asJson()
             ->post($endpoint, $body);
@@ -211,7 +216,12 @@ class GoogleSearchConsoleClient
 
         $response = Http::asForm()
             ->timeout(20)
-            ->retry(2, 200)
+            ->retry(
+                2,
+                200,
+                fn ($exception) => $exception instanceof \Illuminate\Http\Client\ConnectionException,
+                false,
+            )
             ->post('https://oauth2.googleapis.com/token', [
                 'client_id' => $this->clientId(),
                 'client_secret' => $this->clientSecret(),

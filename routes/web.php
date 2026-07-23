@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\SidebarNavOrderController;
 use App\Http\Controllers\Admin\SubscriptionAlertAdminController;
 use App\Http\Controllers\Admin\TutorialController;
+use App\Http\Controllers\Admin\GoogleAnalyticsOAuthController;
 use App\Http\Controllers\Admin\GoogleSearchConsoleOAuthController;
 use App\Http\Controllers\Admin\SystemMaintenanceController;
 use App\Http\Controllers\Admin\UserController;
@@ -376,6 +377,15 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/gsc/disconnect', [GoogleSearchConsoleOAuthController::class, 'disconnect'])
             ->middleware('throttle:10,1')
             ->name('gsc.disconnect');
+        Route::get('/ga/connect', [GoogleAnalyticsOAuthController::class, 'connect'])
+            ->middleware('throttle:10,1')
+            ->name('ga.connect');
+        Route::post('/ga/disconnect', [GoogleAnalyticsOAuthController::class, 'disconnect'])
+            ->middleware('throttle:10,1')
+            ->name('ga.disconnect');
+        Route::put('/ga/property', [GoogleAnalyticsOAuthController::class, 'updateProperty'])
+            ->middleware('throttle:20,1')
+            ->name('ga.property');
     });
 
     Route::group(['as' => 'webhooks.', 'prefix' => 'webhooks'], function () {
@@ -502,6 +512,10 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
             ->middleware('throttle:3,5')
             ->name('syncGsc');
     });
+    // Outside dashboard.view-only group so SEO Learning (billing.manage) can poll too.
+    Route::get('/visitors/ga-realtime', [SiteVisitorsAdminController::class, 'gaRealtime'])
+        ->middleware(['permission:dashboard.view|roles.manage|billing.manage', 'throttle:30,1'])
+        ->name('siteVisitors.gaRealtime');
     Route::group(['as' => 'useAnalysis.', 'prefix' => 'use-analysis'], function () {
         Route::get('/', [UseAnalysisController::class, 'index'])->name('index');
         Route::post('/get-use-report', [UseAnalysisController::class, 'getUseReport'])->name('getUseReport');
@@ -763,10 +777,13 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     });
 });
 
-// GSC OAuth callback — outside auth so it survives session expiry during Google consent.
+// GSC / GA OAuth callbacks — outside auth so they survive session expiry during Google consent.
 Route::get('/maintenance/gsc/callback', [GoogleSearchConsoleOAuthController::class, 'callback'])
     ->middleware('throttle:20,1')
     ->name('maintenance.gsc.callback');
+Route::get('/maintenance/ga/callback', [GoogleAnalyticsOAuthController::class, 'callback'])
+    ->middleware('throttle:20,1')
+    ->name('maintenance.ga.callback');
 
 require __DIR__.'/portal.php';
 require __DIR__.'/auth.php';

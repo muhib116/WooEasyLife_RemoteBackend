@@ -39,6 +39,22 @@ return [
         'country' => env('SEO_GSC_COUNTRY'),
     ],
 
+    'ga' => [
+        // GA4 property ID (numeric), e.g. 123456789 — Admin → Property settings.
+        'property_id' => env('SEO_GA_PROPERTY_ID'),
+        /*
+        | OAuth (preferred): reuse Google Cloud OAuth client + a refresh token
+        | with scope https://www.googleapis.com/auth/analytics.readonly
+        */
+        'client_id' => env('SEO_GA_CLIENT_ID', env('GOOGLE_CLIENT_ID')),
+        'client_secret' => env('SEO_GA_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET')),
+        'refresh_token' => env('SEO_GA_REFRESH_TOKEN', env('GOOGLE_GA_REFRESH_TOKEN')),
+        // Legacy fallback: short-lived access token (avoid in production).
+        'access_token' => env('SEO_GA_ACCESS_TOKEN'),
+        // One-click admin connect callback (must match Google Cloud OAuth redirect URI).
+        'oauth_redirect' => env('SEO_GA_REDIRECT_URI'),
+    ],
+
     'organization' => [
         'name' => 'WooEasyLife',
         'description' => 'Bangladesh WooCommerce platform with BD fraud checker, fake order protection, and courier auto-entry.',
@@ -128,7 +144,7 @@ return [
         ],
 
         'bd_fraud_checker' => [
-            'title' => 'Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার | WooEasyLife',
+            'title' => 'Free Courier Fraud Checker BD — ফোন নম্বরে হিস্টোরি চেক | WooEasyLife',
             'description' => 'Free Courier Fraud Checker BD। মোবাইল নম্বর দিয়ে Pathao, Steadfast, RedX ডেলিভারি হিস্টোরি ও সাকসেস রেট চেক করুন — ফেক অর্ডার ও পার্সেল রিটার্ন কমান। অ্যাকাউন্ট ছাড়াই ফ্রি সার্চ।',
             'canonical_path' => '/bd-fraud-checker',
             'prerender_h1' => 'Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার',
@@ -179,7 +195,7 @@ return [
         ],
 
         'fake_order_protection' => [
-            'title' => 'কিভাবে ফেক অর্ডার আটকাবো — Fake Order Protection | WooEasyLife',
+            'title' => 'কিভাবে ফেক অর্ডার আটকাবো — চেক, OTP ও ব্লক | WooEasyLife',
             'description' => 'কিভাবে ফেক অর্ডার আটকাবো? কুরিয়ার হিস্টোরি চেক, চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে COD পার্সেল রিটার্ন কমান — WooCommerce ও Facebook পেজ সেলারদের জন্য।',
             'canonical_path' => '/fake-order-protection',
             'prerender_h1' => 'কিভাবে ফেক অর্ডার আটকাবো — Fake Order Protection',
@@ -519,7 +535,7 @@ return [
         ],
 
         'fake_order_check' => [
-            'title' => 'Fake Order Check BD — ফ্রি কুরিয়ার ফ্রড চেকার | WooEasyLife',
+            'title' => 'Fake Order Check BD — অর্ডার কনফার্মের আগে যাচাই | WooEasyLife',
             'description' => 'Fake order check ও Courier Checker BD। ফোন নম্বর দিয়ে ফেক অর্ডার ঝুঁকি দেখুন — ডেলিভারি হিস্টোরি, রিটার্ন রেট, ফ্রি অনলাইন চেক।',
             'canonical_path' => '/fake-order-check',
             'prerender_h1' => 'Fake Order Check BD — ফ্রি কুরিয়ার ফ্রড চেকার',
@@ -537,19 +553,49 @@ return [
         ],
 
         'courier_checker' => [
-            'title' => 'Courier Checker BD — কুরিয়ার নম্বর চেক অনলাইন ফ্রি | WooEasyLife',
-            'description' => 'Courier Checker ও BD Courier check। কাস্টমার মোবাইল নম্বর দিয়ে অনলাইন ফ্রি কুরিয়ার হিস্টোরি ও কোয়ালিটি চেক — Pathao, Steadfast, RedX।',
+            'title' => 'Courier Checker BD ২০২৬ — নম্বর চেক অনলাইন ফ্রি',
+            'description' => 'Courier Checker BD: মোবাইল নম্বর দিয়ে Pathao/Steadfast/RedX কুরিয়ার হিস্টোরি ও সাকসেস রেট অনলাইন ফ্রি চেক করুন—COD কনফার্মের আগে ফেক অর্ডার এড়ান।',
             'canonical_path' => '/courier-checker',
-            'prerender_h1' => 'Courier Checker BD — অনলাইন ফ্রি কুরিয়ার চেক',
-            'prerender_lead' => 'Courier number check online — নম্বর দিন, হিস্টোরি দেখুন, ফেক অর্ডার এড়ান।',
+            'og_type' => 'article',
+            'og_image' => '/images/seo/cluster/fraud-layers.jpg',
+            'prerender_h1' => 'Courier Checker BD — অনলাইন ফ্রি কুরিয়ার নম্বর চেক',
+            'prerender_lead' => 'Courier number check online: বাংলাদেশি মোবাইল দিন, Pathao/Steadfast/RedX হিস্টোরি ও কোয়ালিটি দেখুন, তারপরই কনফার্ম বা হোল্ড সিদ্ধান্ত নিন।',
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'Courier Checker', 'path' => '/courier-checker'],
             ],
             'faqs' => [
                 [
-                    'q' => 'BD Courier check কী?',
-                    'a' => 'বাংলাদেশি কুরিয়ার নেটওয়ার্কে কাস্টমারের আগের পার্সেল ডেলিভারি/রিটার্ন রেকর্ড যাচাই।',
+                    'q' => 'Courier Checker BD কী?',
+                    'a' => 'Courier Checker BD মানে কাস্টমারের মোবাইল নম্বর দিয়ে বাংলাদেশি কুরিয়ার নেটওয়ার্কে আগের ডেলিভারি, রিটার্ন ও ক্যানসেল হিস্টোরি অনলাইনে যাচাই করা। COD ও Facebook/WooCommerce সেলাররা পার্সেল বুকিংয়ের আগে কোয়ালিটি দেখে ফেক/ঝুঁকিপূর্ণ অর্ডার কমায়। টুল সিগন্যাল দেয়—অন্ধ অটো-শিপ করে না। একই ইঞ্জিনের পূর্ণ UI: /bd-fraud-checker। কাস্টমার-ফোকাসড ওয়ার্কফ্লো: /fake-customer-check। ধাপে ধাপে: /ki-vabe-fake-order-atkabo।',
+                ],
+                [
+                    'q' => 'Courier number check online কীভাবে করব?',
+                    'a' => 'এই পেজের ফ্রি টুলে 01XXXXXXXXX ফরম্যাটে বাংলাদেশি মোবাইল নম্বর দিন—অ্যাকাউন্ট লাগে না। Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের হিস্টোরি ও সাকসেস রেট দেখুন। সবুজে কনফার্ম, হলুদে কল/OTP, লালে হোল্ড বা অগ্রিম চার্জ। বিকল্প UI: /bd-fraud-checker। রেশিও-ফোকাস: /bd-courier-ratio-checker। কুরিয়ার-নির্দিষ্ট: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+                ],
+                [
+                    'q' => 'এটি কি ফ্রি? দৈনিক লিমিট আছে?',
+                    'a' => 'হ্যাঁ—ল্যান্ডিংয়ে সীমিত ফ্রি চেক অ্যাকাউন্ট ছাড়াই চলে, তাই ঝুঁকি ছাড়াই SOP টেস্ট করতে পারেন। বেশি ভলিউম, চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট চাইলে /pricing থেকে ট্রায়াল নিন এবং /fake-order-protection চালু করুন। মোবাইলে পুশসহ: /woocommerce-mobile-app। চেকার-শুধু টুলের সাথে তুলনা: /fraudbd-alternative।',
+                ],
+                [
+                    'q' => 'Courier Checker আর Fake Order Check / Fraud Checker আলাদা?',
+                    'a' => 'মূল ইঞ্জিন একই—কুরিয়ার হিস্টোরি দিয়ে ঝুঁকি দেখা। এই পেজ “courier checker / courier number check online” সার্চ ইন্টেন্টে ফোকাস করে; /fake-order-check ফেক অর্ডার কিওয়ার্ডে; /fake-customer-check কনফার্মের আগে কাস্টমার যাচাইতে; /bd-fraud-checker পূর্ণ টুল ল্যান্ডিং। যেকোনো পেজ থেকে ফ্রি চেক চালাতে পারেন। পরের ধাপ: /fake-order-protection ও /courier-auto-entry।',
+                ],
+                [
+                    'q' => 'হিস্টোরি খারাপ হলে কী করব?',
+                    'a' => 'কম সাকসেস বা বারবার রিটার্ন দেখলে অন্ধ শিপ করবেন না—ফোন-কনফার্ম, ঠিকানা যাচাই, প্রয়োজনে OTP বা অগ্রিম ডেলিভারি চার্জ নিন, নাহলে হোল্ড/বাতিল ও নোটে কারণ লিখুন। জোন রুল: /customer-verification। মাসিক লস মাপুন: /return-loss-calculator। পূর্ণ COD প্লেবুক: /cod-return-reduction। গাইড: /ki-vabe-fake-order-atkabo।',
+                ],
+                [
+                    'q' => 'কোন কুরিয়ার সাপোর্ট করে?',
+                    'a' => 'Pathao, Steadfast, RedX সহ WooEasyLife-এ সাপোর্টেড প্রধান কুরিয়ার নেটওয়ার্কের ডেলিভারি/রিটার্ন রেকর্ড দেখা যায়—এক নম্বরে একাধিক সিগন্যাল, তাই শুধু এক কুরিয়ারের প্যানেলে লগইন করে খোঁজার দরকার কমে। স্টোরে API কানেক্ট করে অটো বুকিং চালাতে: /pathao-courier-guide, /steadfast-integration, /redx-courier-guide। কনফার্মের পর দৈনন্দিন এন্ট্রি: /courier-auto-entry। ট্র্যাকিং মেসেজ: /woocommerce-notifications।',
+                ],
+                [
+                    'q' => 'শুধু Courier Checker দিয়েই কি ফেক অর্ডার বন্ধ?',
+                    'a' => 'চেক শুরুর গেটকিপার—প্রতি অর্ডারে কোয়ালিটি দেখায়। কিন্তু একই নম্বর/ডিভাইস বারবার অর্ডার দিলে শুধু ম্যানুয়াল চেক স্টাফ ক্লান্ত করে আবার অন্ধ শিপ শুরু হয়। দীর্ঘমেয়াদে চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট লাগে (/fake-order-protection)। কনফার্মের পর অটো এন্ট্রি + Out-for-Delivery নোটিফিকেশন বৈধ রিটার্নও কমায়। অ্যাড ROAS পরিষ্কার রাখতে: /ads-roas-calculator ও /facebook-ads-for-woocommerce।',
+                ],
+                [
+                    'q' => 'রিটার্ন লস ও Ads ROAS কীভাবে মাপব?',
+                    'a' => 'প্রথমে /return-loss-calculator-এ দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ বসিয়ে মাসিক ৳ লস দেখুন—বেসলাইন ছাড়া “চেক কাজ করছে কি?” বোঝা যায় না। ফেক Purchase Pixel-এ গেলে Facebook ROAS ফুলে দেখায়; ডেলিভারি-অ্যাডজাস্টেড হিসাব: /ads-roas-calculator। অ্যাড স্কেলের আগে Courier Checker + প্রোটেকশন স্থিতিশীল করুন—গাইড: /facebook-ads-for-woocommerce। হাব: /woocommerce-bangladesh।',
                 ],
             ],
         ],
@@ -743,7 +789,7 @@ return [
         ],
 
         'blog_index' => [
-            'title' => 'ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস | WooEasyLife',
+            'title' => 'WooEasyLife ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস',
             'description' => 'WooEasyLife ব্লগ — বাংলাদেশি WooCommerce সেলারদের জন্য ফেক অর্ডার কমানো, কুরিয়ার হিস্টোরি চেক ও রিটার্ন লস কমানোর গাইড।',
             'canonical_path' => '/blog',
             'prerender_h1' => 'ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস',

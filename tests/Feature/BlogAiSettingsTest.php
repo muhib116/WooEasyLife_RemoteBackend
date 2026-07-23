@@ -67,6 +67,37 @@ class BlogAiSettingsTest extends TestCase
         $this->assertNotEmpty($snap['how_to']);
     }
 
+    public function test_admin_can_save_ga_property_id_from_settings(): void
+    {
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)
+            ->put(route('blogPosts.settings.update'), [
+                'prefer_gsc' => true,
+                'enabled' => true,
+                'smart_one_click' => true,
+                'competitors_enabled' => true,
+                'competitors_in_prompts' => true,
+                'discovery_enabled' => true,
+                'discovery_auto_on_smart' => true,
+                'landing_ref_fetch' => true,
+                'memory_enabled' => true,
+                'memory_in_prompts' => true,
+                'ga_property_id' => '123456789',
+            ])
+            ->assertRedirect(route('blogPosts.settings'));
+
+        $this->assertSame('123456789', app(\App\Services\Seo\GaCredentialStore::class)->getPropertyId());
+
+        $this->actingAs($admin)
+            ->get(route('blogPosts.settings'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('BlogPosts/Settings')
+                ->where('settings.ga_property_id', '123456789')
+                ->where('sources.ga_property_id', 'database'));
+    }
+
     public function test_reset_clears_overrides(): void
     {
         $admin = $this->adminUser();

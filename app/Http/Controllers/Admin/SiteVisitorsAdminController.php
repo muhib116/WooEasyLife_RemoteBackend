@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Services\Analytics\SiteSeoGscSyncService;
 use App\Services\Analytics\SiteVisitorReportingService;
 use App\Services\Analytics\SiteVisitorTracker;
+use App\Services\RbacService;
+use App\Services\Seo\GoogleAnalyticsClient;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,6 +79,31 @@ class SiteVisitorsAdminController extends Controller
             'filters' => [
                 'path' => $path,
             ],
+        ]);
+    }
+
+    public function gaRealtime(Request $request, GoogleAnalyticsClient $ga, RbacService $rbac): JsonResponse
+    {
+        $force = $request->boolean('force');
+        $snapshot = $ga->realtimeSnapshot(force: $force);
+
+        $user = $request->user();
+        $canManageOauth = $user
+            && $user->role === 'admin'
+            && $rbac->hasPermission($user, 'roles.manage');
+
+        if (! $canManageOauth) {
+            $snapshot['connect_url'] = null;
+            if (is_array($snapshot['status'] ?? null)) {
+                $snapshot['status']['connect_url'] = null;
+                $snapshot['status']['disconnect_url'] = null;
+                $snapshot['status']['can_connect'] = false;
+            }
+        }
+
+        return response()->json([
+            'ok' => $snapshot['ready'] && $snapshot['error'] === null,
+            'realtime' => $snapshot,
         ]);
     }
 

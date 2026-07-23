@@ -188,6 +188,15 @@
                         />
                     </div>
                     <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
+                        <GaStatusPanel
+                            :data="status.ga_status"
+                            :probing="runningAction === 'seo_ga_status'"
+                            :disabled="busy"
+                            @probe="confirmRun('seo_ga_status')"
+                            @updated="(next) => { if (next) status.ga_status = next; }"
+                        />
+                    </div>
+                    <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
                         <RankOpportunitiesPanel :data="status.rank_opportunities" />
                     </div>
                 </div>
@@ -264,6 +273,7 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatCard from "@/Pages/Users/fragments/StatCard.vue";
 import RankOpportunitiesPanel from "@/components/blog/RankOpportunitiesPanel.vue";
 import GscStatusPanel from "@/components/blog/GscStatusPanel.vue";
+import GaStatusPanel from "@/components/blog/GaStatusPanel.vue";
 
 defineOptions({ name: "SystemMaintenance" });
 
@@ -327,6 +337,20 @@ type MaintenanceStatus = {
         disconnect_url?: string | null;
         refresh_token_source?: string | null;
     } | null;
+    ga_status?: {
+        property_id?: string | null;
+        has_property_id?: boolean;
+        has_client_id?: boolean;
+        has_client_secret?: boolean;
+        has_refresh_token?: boolean;
+        has_static_access_token?: boolean;
+        auth_mode?: string;
+        ready?: boolean;
+        can_connect?: boolean;
+        connect_url?: string | null;
+        disconnect_url?: string | null;
+        refresh_token_source?: string | null;
+    } | null;
 };
 
 const GROUP_ORDER = ["meta", "cache", "blog", "subscriptions", "domains", "ops"];
@@ -354,6 +378,7 @@ const status = reactive<MaintenanceStatus>({
     blog_learning: props.initialStatus.blog_learning ?? null,
     rank_opportunities: props.initialStatus.rank_opportunities ?? null,
     gsc_status: props.initialStatus.gsc_status ?? null,
+    ga_status: props.initialStatus.ga_status ?? null,
 });
 const loading = ref(false);
 const runningAction = ref<string | null>(null);
@@ -443,6 +468,7 @@ const applyStatus = (next?: MaintenanceStatus) => {
     status.blog_learning = next.blog_learning ?? null;
     status.rank_opportunities = next.rank_opportunities ?? null;
     status.gsc_status = next.gsc_status ?? null;
+    status.ga_status = next.ga_status ?? null;
     if (next.cache?.driver) {
         cacheDriverDraft.value = next.cache.driver;
     }

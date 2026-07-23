@@ -143,6 +143,24 @@
                             />
                         </div>
 
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                Google Analytics GA4 Property ID
+                                <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase dark:bg-slate-700">
+                                    {{ sources.ga_property_id || 'missing' }}
+                                </span>
+                            </label>
+                            <InputText
+                                v-model="form.ga_property_id"
+                                class="w-full"
+                                placeholder="123456789 (Admin → Property settings)"
+                            />
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                                Numeric GA4 property ID — not the G-XXXX measurement ID. Saved to the database (overrides .env).
+                                Then connect OAuth on SEO & Learning.
+                            </p>
+                        </div>
+
                         <div class="grid gap-3 sm:grid-cols-2">
                             <div class="space-y-1.5">
                                 <label class="text-xs font-medium text-slate-700 dark:text-slate-200">
@@ -249,6 +267,7 @@ const form = useForm({
     memory_in_prompts: !!props.settings.memory_in_prompts,
     queue: !!props.settings.queue,
     landing_public_base_url: props.settings.landing_public_base_url || '',
+    ga_property_id: props.settings.ga_property_id || '',
     brave_api_key: '',
     bing_api_key: '',
     clear_brave_api_key: false,

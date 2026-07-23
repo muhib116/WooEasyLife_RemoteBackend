@@ -81,6 +81,44 @@ class GoogleSearchConsoleClientTest extends TestCase
         });
     }
 
+    public function test_search_analytics_refreshes_access_token_after_401(): void
+    {
+        config([
+            'seo.gsc.site_url' => 'https://example.com/',
+            'seo.gsc.access_token' => null,
+            'seo.gsc.refresh_token' => 'refresh-xyz',
+            'seo.gsc.client_id' => 'client-id',
+            'seo.gsc.client_secret' => 'client-secret',
+        ]);
+
+        Cache::flush();
+        Cache::put(
+            'seo:gsc:access_token:'.sha1('client-id|refresh-xyz'),
+            'ya29.stale',
+            now()->addHour()
+        );
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'ya29.fresh',
+                'expires_in' => 3600,
+                'token_type' => 'Bearer',
+            ], 200),
+            'www.googleapis.com/webmasters/v3/sites/*' => Http::sequence()
+                ->push(['error' => 'expired'], 401)
+                ->push(['rows' => [['keys' => ['ok'], 'clicks' => 1]]], 200),
+        ]);
+
+        $payload = app(GoogleSearchConsoleClient::class)->searchAnalytics([
+            'startDate' => '2026-07-01',
+            'endDate' => '2026-07-10',
+            'dimensions' => ['query'],
+            'rowLimit' => 1,
+        ]);
+
+        $this->assertSame('ok', $payload['rows'][0]['keys'][0]);
+    }
+
     public function test_falls_back_to_static_token_when_refresh_fails(): void
     {
         config([

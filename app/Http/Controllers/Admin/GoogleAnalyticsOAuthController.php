@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\RbacService;
-use App\Services\Seo\GoogleSearchConsoleClient;
-use App\Services\Seo\GscCredentialStore;
+use App\Services\Seo\GaCredentialStore;
+use App\Services\Seo\GoogleAnalyticsClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,18 +15,18 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class GoogleSearchConsoleOAuthController extends Controller
+class GoogleAnalyticsOAuthController extends Controller
 {
-    public const SESSION_STATE = 'seo.gsc.oauth_state';
+    public const SESSION_STATE = 'seo.ga.oauth_state';
 
-    public const CACHE_PREFIX = 'seo.gsc.oauth.';
+    public const CACHE_PREFIX = 'seo.ga.oauth.';
 
-    public function connect(Request $request, GoogleSearchConsoleClient $gsc): RedirectResponse
+    public function connect(Request $request, GoogleAnalyticsClient $ga): RedirectResponse
     {
-        if (! filled($gsc->clientId()) || ! filled($gsc->clientSecret())) {
+        if (! filled($ga->clientId()) || ! filled($ga->clientSecret())) {
             return redirect()
                 ->route('maintenance.index')
-                ->with('error', 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET before connecting Search Console.');
+                ->with('error', 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET before connecting Google Analytics.');
         }
 
         $user = $request->user();
@@ -42,10 +42,10 @@ class GoogleSearchConsoleOAuthController extends Controller
         ], now()->addMinutes(20));
 
         $query = http_build_query([
-            'client_id' => $gsc->clientId(),
+            'client_id' => $ga->clientId(),
             'redirect_uri' => $this->redirectUri(),
             'response_type' => 'code',
-            'scope' => 'https://www.googleapis.com/auth/webmasters.readonly',
+            'scope' => 'https://www.googleapis.com/auth/analytics.readonly',
             'access_type' => 'offline',
             'prompt' => 'consent',
             'include_granted_scopes' => 'true',
@@ -57,8 +57,8 @@ class GoogleSearchConsoleOAuthController extends Controller
 
     public function callback(
         Request $request,
-        GoogleSearchConsoleClient $gsc,
-        GscCredentialStore $store,
+        GoogleAnalyticsClient $ga,
+        GaCredentialStore $store,
         RbacService $rbac,
     ): RedirectResponse {
         $state = (string) $request->query('state', '');
@@ -71,7 +71,7 @@ class GoogleSearchConsoleOAuthController extends Controller
         if ($state === '' || ! $stateOk) {
             return redirect()
                 ->route('maintenance.index')
-                ->with('error', 'Search Console connect failed: invalid or expired OAuth state. Try Connect again.');
+                ->with('error', 'Google Analytics connect failed: invalid or expired OAuth state. Try Connect again.');
         }
 
         if ($userId > 0) {
@@ -79,7 +79,7 @@ class GoogleSearchConsoleOAuthController extends Controller
             if (! $user || $user->role !== 'admin' || ! $user->canAccessPlatform() || ! $rbac->hasPermission($user, 'roles.manage')) {
                 return redirect()
                     ->route('login')
-                    ->with('error', 'Search Console connect failed: admin access no longer valid.');
+                    ->with('error', 'Google Analytics connect failed: admin access no longer valid.');
             }
 
             if (! Auth::check() || (int) Auth::id() !== $user->id) {
@@ -89,7 +89,7 @@ class GoogleSearchConsoleOAuthController extends Controller
         } elseif (! Auth::check()) {
             return redirect()
                 ->route('login')
-                ->with('error', 'Search Console connect failed: please sign in and try again.');
+                ->with('error', 'Google Analytics connect failed: please sign in and try again.');
         }
 
         if ($request->filled('error')) {
@@ -102,10 +102,10 @@ class GoogleSearchConsoleOAuthController extends Controller
         if ($code === '') {
             return redirect()
                 ->route('maintenance.index')
-                ->with('error', 'Search Console connect failed: missing authorization code.');
+                ->with('error', 'Google Analytics connect failed: missing authorization code.');
         }
 
-        if (! filled($gsc->clientId()) || ! filled($gsc->clientSecret())) {
+        if (! filled($ga->clientId()) || ! filled($ga->clientSecret())) {
             return redirect()
                 ->route('maintenance.index')
                 ->with('error', 'GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are not configured.');
@@ -117,13 +117,13 @@ class GoogleSearchConsoleOAuthController extends Controller
                 ->retry(2, 200)
                 ->post('https://oauth2.googleapis.com/token', [
                     'code' => $code,
-                    'client_id' => $gsc->clientId(),
-                    'client_secret' => $gsc->clientSecret(),
+                    'client_id' => $ga->clientId(),
+                    'client_secret' => $ga->clientSecret(),
                     'redirect_uri' => $this->redirectUri(),
                     'grant_type' => 'authorization_code',
                 ]);
         } catch (\Throwable $e) {
-            Log::warning('GSC OAuth token exchange failed', ['message' => $e->getMessage()]);
+            Log::warning('GA OAuth token exchange failed', ['message' => $e->getMessage()]);
 
             return redirect()
                 ->route('maintenance.index')
@@ -131,7 +131,7 @@ class GoogleSearchConsoleOAuthController extends Controller
         }
 
         if (! $response->successful()) {
-            Log::warning('GSC OAuth token exchange HTTP error', [
+            Log::warning('GA OAuth token exchange HTTP error', [
                 'status' => $response->status(),
                 'body' => Str::limit($response->body(), 300),
             ]);
@@ -149,22 +149,22 @@ class GoogleSearchConsoleOAuthController extends Controller
         }
 
         try {
-            $gsc->forgetCachedAccessToken();
+            $ga->forgetCachedAccessToken();
             $store->putRefreshToken($refreshToken);
-            $gsc->forgetCachedAccessToken();
+            $ga->forgetCachedAccessToken();
         } catch (\Throwable $e) {
-            Log::error('GSC refresh token save failed', ['message' => $e->getMessage()]);
+            Log::error('GA refresh token save failed', ['message' => $e->getMessage()]);
 
             return redirect()
                 ->route('maintenance.index')
                 ->with('error', 'Connected, but saving the token failed. Check logs and try again.');
         }
 
-        Log::info('GSC OAuth connected', ['user_id' => $request->user()?->id]);
+        Log::info('GA OAuth connected', ['user_id' => $request->user()?->id]);
 
-        $message = 'Google Search Console connected. Token saved automatically.';
-        if (! filled($gsc->siteUrl())) {
-            $message .= ' Still set SEO_GSC_SITE_URL in .env to your verified property URL.';
+        $message = 'Google Analytics connected. Token saved automatically.';
+        if (! filled($ga->propertyId())) {
+            $message .= ' Still set the GA4 Property ID under Blog AI Settings or SEO & Learning.';
         }
 
         return redirect()
@@ -172,29 +172,95 @@ class GoogleSearchConsoleOAuthController extends Controller
             ->with('success', $message);
     }
 
+    public function updateProperty(
+        Request $request,
+        GoogleAnalyticsClient $ga,
+        GaCredentialStore $store,
+    ): RedirectResponse|\Illuminate\Http\JsonResponse {
+        $validated = $request->validate([
+            'property_id' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $raw = trim((string) ($validated['property_id'] ?? ''));
+        if ($raw !== '' && $store->normalizePropertyId($raw) === null) {
+            $message = 'Enter a numeric GA4 property ID (e.g. 123456789).';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return redirect()
+                ->back()
+                ->with('error', $message);
+        }
+
+        try {
+            $store->putPropertyId($raw === '' ? null : $raw);
+            $ga->forgetCachedAccessToken();
+            Cache::forget('seo:ga:realtime:'.($ga->propertyId() ?? 'unknown'));
+            // Also clear cache for previous id if it changed.
+            if ($raw !== '') {
+                $normalized = $store->normalizePropertyId($raw);
+                if ($normalized) {
+                    Cache::forget('seo:ga:realtime:'.$normalized);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('GA property ID save failed', ['message' => $e->getMessage()]);
+            $message = 'Could not save GA property ID. Check logs and try again.';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 500);
+            }
+
+            return redirect()->back()->with('error', $message);
+        }
+
+        Log::info('GA property ID updated', [
+            'user_id' => $request->user()?->id,
+            'property_id' => $ga->propertyId(),
+            'source' => $ga->propertyIdSource(),
+        ]);
+
+        $status = $ga->configurationStatus();
+        $message = filled($ga->propertyId())
+            ? 'GA4 property ID saved.'
+            : 'GA4 property ID cleared.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'ga_status' => $status,
+            ]);
+        }
+
+        return redirect()
+            ->back()
+            ->with('success', $message);
+    }
+
     public function disconnect(
         Request $request,
-        GoogleSearchConsoleClient $gsc,
-        GscCredentialStore $store,
+        GoogleAnalyticsClient $ga,
+        GaCredentialStore $store,
     ): RedirectResponse {
-        $gsc->forgetCachedAccessToken();
+        $ga->forgetCachedAccessToken();
         $store->clearRefreshToken();
-        $gsc->forgetCachedAccessToken();
+        $ga->forgetCachedAccessToken();
 
-        Log::info('GSC OAuth disconnected', ['user_id' => $request->user()?->id]);
+        Log::info('GA OAuth disconnected', ['user_id' => $request->user()?->id]);
 
         return redirect()
             ->route('maintenance.index')
-            ->with('success', 'Search Console disconnected. Saved refresh token cleared.');
+            ->with('success', 'Google Analytics disconnected. Saved refresh token cleared.');
     }
 
     private function redirectUri(): string
     {
-        $configured = trim((string) config('seo.gsc.oauth_redirect', ''));
+        $configured = trim((string) config('seo.ga.oauth_redirect', ''));
         if ($configured !== '') {
             return $configured;
         }
 
-        return route('maintenance.gsc.callback', absolute: true);
+        return route('maintenance.ga.callback', absolute: true);
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BlogLearningInsight;
 use App\Services\BlogAi\BlogLearningService;
 use App\Services\CacheRuntimeConfig;
+use App\Services\Seo\GoogleAnalyticsClient;
 use App\Services\Seo\GoogleSearchConsoleClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -144,6 +145,15 @@ class SystemMaintenanceController extends Controller
             'description' => 'php artisan seo:gsc-status --probe — check Google Search Console OAuth + fetch sample queries',
             'commands' => [
                 ['seo:gsc-status', ['--probe' => true]],
+            ],
+            'group' => 'blog',
+            'include_in_run_all' => false,
+        ],
+        'seo_ga_status' => [
+            'label' => 'GA status / probe',
+            'description' => 'php artisan seo:ga-status --probe — check Google Analytics OAuth + fetch sample sessions',
+            'commands' => [
+                ['seo:ga-status', ['--probe' => true]],
             ],
             'group' => 'blog',
             'include_in_run_all' => false,
@@ -580,6 +590,28 @@ class SystemMaintenanceController extends Controller
             // ignore
         }
 
+        $gaStatus = [
+            'property_id' => null,
+            'has_property_id' => false,
+            'has_client_id' => false,
+            'has_client_secret' => false,
+            'has_refresh_token' => false,
+            'has_static_access_token' => false,
+            'auth_mode' => 'missing',
+            'ready' => false,
+            'can_connect' => false,
+            'connect_url' => null,
+            'disconnect_url' => null,
+            'refresh_token_source' => null,
+            'property_id_source' => null,
+            'property_id_save_url' => null,
+        ];
+        try {
+            $gaStatus = app(GoogleAnalyticsClient::class)->configurationStatus();
+        } catch (Throwable) {
+            // ignore
+        }
+
         $intelligence = null;
         $competitors = [];
         try {
@@ -615,6 +647,7 @@ class SystemMaintenanceController extends Controller
             'blog_learning' => $learning,
             'rank_opportunities' => $rankOpportunities,
             'gsc_status' => $gscStatus,
+            'ga_status' => $gaStatus,
             'intelligence' => $intelligence,
             'competitors' => $competitors,
             'clusters' => app(\App\Services\BlogAi\BlogClusterCatalog::class)->labels(),

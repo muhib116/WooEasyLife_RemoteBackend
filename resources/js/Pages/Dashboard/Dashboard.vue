@@ -112,6 +112,15 @@
 
             <section class="space-y-4">
                 <DashboardSectionHeading
+                    title="Live site traffic"
+                    :href="route('siteVisitors.index')"
+                    link-text="Visitors"
+                />
+                <GaRealtimePanel />
+            </section>
+
+            <section class="space-y-4">
+                <DashboardSectionHeading
                     title="Needs Attention"
                     :href="hasAttentionItems ? route('packagePayments.index') : undefined"
                     :link-text="hasAttentionItems ? 'Review items' : undefined"
@@ -209,6 +218,7 @@ import StatCard from "./fragments/StatCard.vue";
 import Widget from "./fragments/Widget.vue";
 import DashboardSectionHeading from "./fragments/DashboardSectionHeading.vue";
 import AllClearCard from "./fragments/AllClearCard.vue";
+import GaRealtimePanel from "@/components/analytics/GaRealtimePanel.vue";
 import { Icon } from "@/plugins";
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";

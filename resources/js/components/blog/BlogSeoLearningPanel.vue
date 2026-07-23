@@ -48,6 +48,18 @@
         </div>
 
         <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
+            <GaStatusPanel
+                :data="gaStatus"
+                :probing="runningAction === 'seo_ga_status'"
+                :disabled="busy"
+                @probe="confirmRun('seo_ga_status')"
+                @updated="(next) => { if (next) gaStatus = next; }"
+            />
+        </div>
+
+        <GaRealtimePanel v-if="canViewRealtime" />
+
+        <div class="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-600">
             <RankOpportunitiesPanel :data="rankOpportunities" />
         </div>
 
@@ -107,7 +119,7 @@
             v-else-if="!canManageMaintenance"
             class="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400"
         >
-            GSC / learning jobs need <code>roles.manage</code> (System Maintenance). Rank opportunities above still load from blog learning data when available.
+            GSC / GA / learning jobs need <code>roles.manage</code> (System Maintenance). Rank opportunities above still load from blog learning data when available.
         </p>
 
         <div
@@ -146,6 +158,8 @@ import { useToast } from 'primevue/usetoast';
 import Button from 'primevue/button';
 import RankOpportunitiesPanel from '@/components/blog/RankOpportunitiesPanel.vue';
 import GscStatusPanel from '@/components/blog/GscStatusPanel.vue';
+import GaStatusPanel from '@/components/blog/GaStatusPanel.vue';
+import GaRealtimePanel from '@/components/analytics/GaRealtimePanel.vue';
 import BlogIntelligenceRing from '@/components/blog/BlogIntelligenceRing.vue';
 import CompetitorAnalyzerPanel from '@/components/blog/CompetitorAnalyzerPanel.vue';
 import { usePermissions } from '@/composables/usePermissions';
@@ -159,6 +173,9 @@ const props = defineProps({
 const { can } = usePermissions();
 const canManageAi = computed(() => can('billing.manage'));
 const canManageMaintenance = computed(() => can('roles.manage'));
+const canViewRealtime = computed(
+    () => can('dashboard.view') || can('roles.manage') || can('billing.manage'),
+);
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -178,6 +195,7 @@ const blogLearning = ref(props.initialLearning?.insight
     : null);
 const rankOpportunities = ref(props.initialLearning?.rank_opportunities || null);
 const gscStatus = ref(null);
+const gaStatus = ref(null);
 const intelligence = ref(props.initialLearning?.intelligence || null);
 const competitors = ref(props.initialLearning?.competitors || []);
 const clusters = ref(props.initialLearning?.clusters || {});
@@ -203,6 +221,7 @@ const applyStatus = (next) => {
     blogLearning.value = next.blog_learning ?? null;
     rankOpportunities.value = next.rank_opportunities ?? null;
     gscStatus.value = next.gsc_status ?? null;
+    gaStatus.value = next.ga_status ?? null;
     intelligence.value = next.intelligence ?? intelligence.value;
     competitors.value = next.competitors ?? competitors.value;
     if (next.clusters) {
