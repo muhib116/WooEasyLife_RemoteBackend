@@ -36,7 +36,7 @@
                     v-model="propertyDraft"
                     type="text"
                     class="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-900"
-                    placeholder="123456789"
+                    placeholder="123456789 or G-XXXX"
                     :disabled="disabled || savingProperty"
                     @keyup.enter="saveProperty"
                 >

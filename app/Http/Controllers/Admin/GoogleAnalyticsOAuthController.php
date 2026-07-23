@@ -182,27 +182,27 @@ class GoogleAnalyticsOAuthController extends Controller
         ]);
 
         $raw = trim((string) ($validated['property_id'] ?? ''));
-        if ($raw !== '' && $store->normalizePropertyId($raw) === null) {
-            $message = 'Enter a numeric GA4 property ID (e.g. 123456789).';
+        $resolved = $ga->resolvePropertyIdInput($raw === '' ? null : $raw);
+        if ($resolved['error'] !== null) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => $message], 422);
+                return response()->json(['message' => $resolved['error']], 422);
             }
 
             return redirect()
                 ->back()
-                ->with('error', $message);
+                ->with('error', $resolved['error']);
         }
 
+        $previous = $ga->propertyId();
+
         try {
-            $store->putPropertyId($raw === '' ? null : $raw);
+            $store->putPropertyId($resolved['property_id']);
             $ga->forgetCachedAccessToken();
-            Cache::forget('seo:ga:realtime:'.($ga->propertyId() ?? 'unknown'));
-            // Also clear cache for previous id if it changed.
-            if ($raw !== '') {
-                $normalized = $store->normalizePropertyId($raw);
-                if ($normalized) {
-                    Cache::forget('seo:ga:realtime:'.$normalized);
-                }
+            if ($previous) {
+                Cache::forget('seo:ga:realtime:'.$previous);
+            }
+            if ($resolved['property_id']) {
+                Cache::forget('seo:ga:realtime:'.$resolved['property_id']);
             }
         } catch (\Throwable $e) {
             Log::error('GA property ID save failed', ['message' => $e->getMessage()]);
@@ -218,12 +218,17 @@ class GoogleAnalyticsOAuthController extends Controller
             'user_id' => $request->user()?->id,
             'property_id' => $ga->propertyId(),
             'source' => $ga->propertyIdSource(),
+            'from_measurement' => $resolved['from_measurement'],
         ]);
 
         $status = $ga->configurationStatus();
-        $message = filled($ga->propertyId())
-            ? 'GA4 property ID saved.'
-            : 'GA4 property ID cleared.';
+        if ($resolved['property_id'] === null) {
+            $message = 'GA4 property ID cleared.';
+        } elseif ($resolved['from_measurement']) {
+            $message = 'Resolved Measurement ID to property '.$resolved['property_id'].' and saved.';
+        } else {
+            $message = 'GA4 property ID saved.';
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

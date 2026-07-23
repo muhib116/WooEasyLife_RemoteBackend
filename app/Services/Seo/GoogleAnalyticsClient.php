@@ -97,6 +97,129 @@ class GoogleAnalyticsClient
         return null;
     }
 
+    /**
+     * Accept numeric property ID, properties/N, or Measurement ID (G-XXXX) when OAuth is connected.
+     *
+     * @return array{property_id: string|null, error: string|null, from_measurement: bool}
+     */
+    public function resolvePropertyIdInput(?string $raw): array
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return ['property_id' => null, 'error' => null, 'from_measurement' => false];
+        }
+
+        $numeric = $this->credentials->normalizePropertyId($raw);
+        if ($numeric !== null) {
+            return ['property_id' => $numeric, 'error' => null, 'from_measurement' => false];
+        }
+
+        $measurementId = $this->credentials->normalizeMeasurementId($raw);
+        if ($measurementId === null) {
+            return [
+                'property_id' => null,
+                'error' => 'Enter a numeric GA4 Property ID (e.g. 123456789), not the G-XXXX Measurement ID — or paste G-XXXX after connecting Google Analytics to auto-resolve.',
+                'from_measurement' => false,
+            ];
+        }
+
+        if (! filled($this->resolveAccessToken())) {
+            return [
+                'property_id' => null,
+                'error' => 'G-XXXX is a Measurement ID. Connect Google Analytics first to auto-resolve it, or enter the numeric Property ID from Admin → Property details.',
+                'from_measurement' => true,
+            ];
+        }
+
+        try {
+            $propertyId = $this->resolveMeasurementIdToPropertyId($measurementId);
+        } catch (\Throwable $e) {
+            Log::warning('GA measurement ID resolve failed', [
+                'measurement_id' => $measurementId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return [
+                'property_id' => null,
+                'error' => $this->publicErrorMessage($e),
+                'from_measurement' => true,
+            ];
+        }
+
+        if ($propertyId === null) {
+            return [
+                'property_id' => null,
+                'error' => "No GA4 property found for {$measurementId}. Check the Google account used for Connect, or paste the numeric Property ID instead.",
+                'from_measurement' => true,
+            ];
+        }
+
+        return ['property_id' => $propertyId, 'error' => null, 'from_measurement' => true];
+    }
+
+    /**
+     * Resolve Measurement ID (G-XXXX) → numeric property ID via Analytics Admin API.
+     */
+    public function resolveMeasurementIdToPropertyId(string $measurementId): ?string
+    {
+        $measurementId = $this->credentials->normalizeMeasurementId($measurementId);
+        if ($measurementId === null) {
+            return null;
+        }
+
+        $cacheKey = 'seo:ga:measurement:'.$measurementId;
+        $cached = Cache::get($cacheKey);
+        if (is_string($cached) && preg_match('/^\d{6,12}$/', $cached) === 1) {
+            return $cached;
+        }
+
+        $token = $this->resolveAccessToken();
+        if (! filled($token)) {
+            throw new RuntimeException('Google Analytics OAuth is required to resolve Measurement IDs.');
+        }
+
+        $summaries = $this->getAdminApi('https://analyticsadmin.googleapis.com/v1beta/accountSummaries', $token);
+        $propertyIds = [];
+        foreach ($summaries['accountSummaries'] ?? [] as $account) {
+            if (! is_array($account)) {
+                continue;
+            }
+            foreach ($account['propertySummaries'] ?? [] as $property) {
+                if (! is_array($property)) {
+                    continue;
+                }
+                $name = (string) ($property['property'] ?? '');
+                if (preg_match('#properties/(\d+)#', $name, $m) === 1) {
+                    $propertyIds[] = $m[1];
+                }
+            }
+        }
+
+        foreach (array_unique($propertyIds) as $propertyId) {
+            $streams = $this->getAdminApi(
+                'https://analyticsadmin.googleapis.com/v1beta/properties/'.$propertyId.'/dataStreams',
+                $token,
+            );
+            foreach ($streams['dataStreams'] ?? [] as $stream) {
+                if (! is_array($stream)) {
+                    continue;
+                }
+                $found = strtoupper((string) (
+                    $stream['webStreamData']['measurementId']
+                    ?? $stream['measurementId']
+                    ?? ''
+                ));
+                if ($found === $measurementId) {
+                    Cache::put($cacheKey, $propertyId, now()->addDay());
+
+                    return $propertyId;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function clientId(): ?string
     {
         $id = trim((string) config('seo.ga.client_id'));
@@ -361,6 +484,42 @@ class GoogleAnalyticsClient
         $static = trim((string) config('seo.ga.access_token'));
 
         return $static !== '' ? $static : null;
+    }
+
+    private function getAdminApi(string $endpoint, string $token): array
+    {
+        $response = Http::withToken($token)
+            ->timeout(30)
+            ->retry(
+                2,
+                300,
+                fn ($exception) => $exception instanceof \Illuminate\Http\Client\ConnectionException,
+                false,
+            )
+            ->acceptJson()
+            ->get($endpoint);
+
+        if ($response->status() === 401 && filled($this->refreshToken())) {
+            Cache::forget($this->accessTokenCacheKey());
+            $token = $this->resolveAccessToken(forceRefresh: true);
+            if (! filled($token)) {
+                throw new RuntimeException('GA OAuth refresh failed after 401.');
+            }
+            $response = Http::withToken($token)
+                ->timeout(30)
+                ->acceptJson()
+                ->get($endpoint);
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException(
+                'GA Admin API HTTP '.$response->status().': '.Str::limit($response->body(), 300)
+            );
+        }
+
+        $json = $response->json();
+
+        return is_array($json) ? $json : [];
     }
 
     private function postReport(string $endpoint, string $token, array $body): \Illuminate\Http\Client\Response

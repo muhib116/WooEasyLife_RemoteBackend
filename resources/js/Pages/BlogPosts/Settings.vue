@@ -153,11 +153,12 @@
                             <InputText
                                 v-model="form.ga_property_id"
                                 class="w-full"
-                                placeholder="123456789 (Admin → Property settings)"
+                                placeholder="123456789 or G-XXXXXXXX (after Connect)"
                             />
                             <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                                Numeric GA4 property ID — not the G-XXXX measurement ID. Saved to the database (overrides .env).
-                                Then connect OAuth on SEO & Learning.
+                                Prefer the numeric Property ID from GA Admin → Property details.
+                                Measurement IDs like <code>G-XXXX</code> only work after Connect (auto-resolved).
+                                Not the same as the website tracking snippet alone.
                             </p>
                         </div>
 

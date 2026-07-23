@@ -51,17 +51,22 @@ class BlogAiSettingsController extends Controller
         $this->runtime->update($validated);
 
         $gaRaw = trim((string) ($validated['ga_property_id'] ?? ''));
-        if ($gaRaw !== '' && $this->gaCredentials->normalizePropertyId($gaRaw) === null) {
+        $resolved = $this->ga->resolvePropertyIdInput($gaRaw === '' ? null : $gaRaw);
+        if ($resolved['error'] !== null) {
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['ga_property_id' => 'Enter a numeric GA4 property ID (e.g. 123456789).']);
+                ->withErrors(['ga_property_id' => $resolved['error']]);
         }
-        $this->saveGaPropertyId($gaRaw === '' ? null : $gaRaw);
+        $this->saveGaPropertyId($resolved['property_id']);
+
+        $suffix = $resolved['from_measurement'] && $resolved['property_id']
+            ? ' (resolved Measurement ID → property '.$resolved['property_id'].')'
+            : '';
 
         return redirect()
             ->route('blogPosts.settings')
-            ->with('success', 'Blog AI settings saved.');
+            ->with('success', 'Blog AI settings saved.'.$suffix);
     }
 
     public function reset(): RedirectResponse
@@ -88,17 +93,11 @@ class BlogAiSettingsController extends Controller
         return $payload;
     }
 
-    private function saveGaPropertyId(mixed $raw): void
+    private function saveGaPropertyId(?string $propertyId): void
     {
-        $value = trim((string) ($raw ?? ''));
-        if ($value !== '' && $this->gaCredentials->normalizePropertyId($value) === null) {
-            // Soft-skip invalid empty-after-normalize; validation already max-length.
-            return;
-        }
-
         try {
             $previous = $this->ga->propertyId();
-            $this->gaCredentials->putPropertyId($value === '' ? null : $value);
+            $this->gaCredentials->putPropertyId($propertyId);
             $this->ga->forgetCachedAccessToken();
             if ($previous) {
                 Cache::forget('seo:ga:realtime:'.$previous);

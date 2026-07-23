@@ -133,13 +133,36 @@ class GaCredentialStore
             return null;
         }
 
+        // Measurement IDs (G-XXXX) must never be digit-stripped into a fake property ID.
+        if ($this->isMeasurementId($id)) {
+            return null;
+        }
+
         if (preg_match('#properties/(\d+)#i', $id, $m) === 1) {
             return $m[1];
         }
 
-        $id = preg_replace('/\D+/', '', $id) ?: '';
+        // Strict numeric property ID only (no mixed alphanumeric).
+        if (preg_match('/^\d{6,12}$/', $id) === 1) {
+            return $id;
+        }
 
-        return $id !== '' ? $id : null;
+        return null;
+    }
+
+    public function isMeasurementId(string $raw): bool
+    {
+        return preg_match('/^G-[A-Z0-9]+$/i', trim($raw)) === 1;
+    }
+
+    public function normalizeMeasurementId(string $raw): ?string
+    {
+        $id = strtoupper(trim($raw));
+        if (! $this->isMeasurementId($id)) {
+            return null;
+        }
+
+        return $id;
     }
 
     private function tableReady(): bool

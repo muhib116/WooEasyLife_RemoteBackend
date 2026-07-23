@@ -122,6 +122,61 @@ class GoogleAnalyticsClientTest extends TestCase
         $this->assertSame('987654321', $client->propertyId());
     }
 
+    public function test_measurement_id_is_not_mistaken_for_property_id(): void
+    {
+        $store = app(GaCredentialStore::class);
+
+        $this->assertNull($store->normalizePropertyId('G-V3TDVR7ED9'));
+        $this->assertTrue($store->isMeasurementId('G-V3TDVR7ED9'));
+        $this->assertSame('G-V3TDVR7ED9', $store->normalizeMeasurementId('g-v3tdvr7ed9'));
+
+        $resolved = app(GoogleAnalyticsClient::class)->resolvePropertyIdInput('G-V3TDVR7ED9');
+        $this->assertNull($resolved['property_id']);
+        $this->assertNotNull($resolved['error']);
+        $this->assertStringContainsString('Measurement ID', $resolved['error']);
+    }
+
+    public function test_measurement_id_resolves_via_admin_api_when_oauth_ready(): void
+    {
+        config([
+            'seo.ga.property_id' => null,
+            'seo.ga.access_token' => null,
+            'seo.ga.refresh_token' => 'refresh-xyz',
+            'seo.ga.client_id' => 'client-id',
+            'seo.ga.client_secret' => 'client-secret',
+        ]);
+
+        Cache::flush();
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'ya29.from-refresh',
+                'expires_in' => 3600,
+                'token_type' => 'Bearer',
+            ], 200),
+            'analyticsadmin.googleapis.com/v1beta/accountSummaries' => Http::response([
+                'accountSummaries' => [[
+                    'propertySummaries' => [
+                        ['property' => 'properties/555666777'],
+                    ],
+                ]],
+            ], 200),
+            'analyticsadmin.googleapis.com/v1beta/properties/555666777/dataStreams' => Http::response([
+                'dataStreams' => [[
+                    'webStreamData' => [
+                        'measurementId' => 'G-V3TDVR7ED9',
+                    ],
+                ]],
+            ], 200),
+        ]);
+
+        $resolved = app(GoogleAnalyticsClient::class)->resolvePropertyIdInput('G-V3TDVR7ED9');
+
+        $this->assertSame('555666777', $resolved['property_id']);
+        $this->assertNull($resolved['error']);
+        $this->assertTrue($resolved['from_measurement']);
+    }
+
     public function test_reads_refresh_token_from_platform_setting_when_env_empty(): void
     {
         config([
