@@ -180,4 +180,4 @@ If you have questions about these Terms, contact:
 
 **WPSaleHub**  
 Email: dev.muhibbullah@gmail.com  
-Website: https://app.wpsalehub.com
+Website: [WooEasyLife home](https://app.wpsalehub.com)

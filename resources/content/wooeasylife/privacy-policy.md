@@ -18,7 +18,7 @@ By installing or using the App, you agree to this Privacy Policy. If you do not 
 **Data controller:**
 
 WPSaleHub  
-Website: https://app.wpsalehub.com  
+Website: [WooEasyLife home](https://app.wpsalehub.com)  
 Email: dev.muhibbullah@gmail.com
 
 For most store and customer data, **you (the merchant)** remain the controller of data processed through your own WordPress/WooCommerce site. We provide the App and related services to help you access and manage that data.
@@ -219,4 +219,4 @@ If you have questions about this Privacy Policy or our data practices, contact:
 
 **WPSaleHub**  
 Email: dev.muhibbullah@gmail.com  
-Website: https://app.wpsalehub.com
+Website: [WooEasyLife home](https://app.wpsalehub.com)

@@ -412,7 +412,7 @@
             </a>
 
             <a class="header-link" href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">
-                app.wpsalehub.com ↗
+                {{ ($brandName ?? 'WooEasyLife') }} home ↗
             </a>
         </div>
     </header>
@@ -429,7 +429,7 @@
 
     <footer class="site-footer">
         © {{ date('Y') }} WPSaleHub ·
-        <a href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">app.wpsalehub.com</a>
+        <a href="{{ $contactWebsite ?? 'https://app.wpsalehub.com' }}">{{ ($brandName ?? 'WooEasyLife') }} home</a>
     </footer>
 
     <script>
