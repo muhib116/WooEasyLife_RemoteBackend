@@ -78,6 +78,10 @@ class BlogService
 
     public function toHtml(string $body): string
     {
+        // Blog show page already renders the post title as H1; drop a leading
+        // markdown # heading so body content cannot emit a second H1.
+        $body = (string) preg_replace('/\A\s*#\s+[^\n]+\n+/u', '', $body, 1);
+
         return Str::markdown($body);
     }
 

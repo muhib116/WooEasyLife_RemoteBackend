@@ -669,6 +669,7 @@ class MarketingSeoTest extends TestCase
             'en_customer_verification',
             'en_facebook_ads_for_woocommerce',
             'fake_customer_check',
+            'courier_checker',
             'ki_vabe_fake_order_atkabo',
             'en_ki_vabe_fake_order_atkabo',
             'en_fake_customer_check',

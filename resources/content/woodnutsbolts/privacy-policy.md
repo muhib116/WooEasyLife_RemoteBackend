@@ -30,7 +30,7 @@ If ads are enabled, we use Google AdMob (and possibly mediation partners). These
 - Device model, OS version, app version
 - Ad interaction data (views, clicks)
 
-See Google’s policy: [https://policies.google.com/privacy](https://policies.google.com/privacy)
+See Google’s policy: [Google Privacy Policy](https://policies.google.com/privacy)
 
 ### 2.3 Analytics & crash reporting
 
@@ -40,7 +40,7 @@ If enabled, Firebase Analytics and Crashlytics may collect:
 - Crash logs and performance diagnostics
 - Device and app version information
 
-Firebase privacy: [https://firebase.google.com/support/privacy](https://firebase.google.com/support/privacy)
+Firebase privacy: [Firebase Privacy](https://firebase.google.com/support/privacy)
 
 ### 2.4 In-app purchases
 

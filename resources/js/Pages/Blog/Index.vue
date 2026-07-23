@@ -41,12 +41,12 @@ const formatDate = (value) => {
                 </div>
                 <p class="text-sm font-semibold tracking-[0.18em] text-amber-300/90">WooEasyLife</p>
                 <h1 class="mt-3 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-                    {{ isEn ? 'Blog — COD fraud & operations guides' : 'ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস' }}
+                    {{ seo?.prerender_h1 || (isEn ? 'Blog — COD fraud & operations guides' : 'ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস') }}
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
-                    {{ isEn
+                    {{ seo?.prerender_lead || (isEn
                         ? 'Practical guides for Bangladesh WooCommerce COD sellers.'
-                        : 'বাংলাদেশি WooCommerce সেলারদের জন্য প্র্যাকটিক্যাল গাইড — কুরিয়ার হিস্টোরি, রিটার্ন লস ও ফ্রড চেক।' }}
+                        : 'বাংলাদেশি WooCommerce সেলারদের জন্য প্র্যাকটিক্যাল গাইড — কুরিয়ার হিস্টোরি, রিটার্ন লস ও ফ্রড চেক।') }}
                 </p>
                 <p class="mt-3 text-sm">
                     <Link v-if="isEn" href="/blog" class="text-amber-400 hover:text-amber-300">বাংলা ব্লগ</Link>

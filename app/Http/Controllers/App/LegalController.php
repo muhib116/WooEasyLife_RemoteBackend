@@ -14,7 +14,7 @@ class LegalController extends Controller
         return $this->legalPage(
             markdownPath: 'content/wooeasylife/privacy-policy.md',
             view: 'legal.privacy-policy',
-            title: 'Privacy Policy — WooEasyLife',
+            title: 'WooEasyLife App Privacy Policy | WPSaleHub',
             effectiveDate: 'June 22, 2026',
             lastUpdated: 'June 22, 2026',
             brandName: 'WooEasyLife',
@@ -30,7 +30,7 @@ class LegalController extends Controller
         return $this->legalPage(
             markdownPath: 'content/wooeasylife/terms-of-service.md',
             view: 'legal.terms-of-service',
-            title: 'Terms of Service — WooEasyLife',
+            title: 'WooEasyLife App Terms of Service | WPSaleHub',
             effectiveDate: 'June 23, 2026',
             lastUpdated: 'June 23, 2026',
             brandName: 'WooEasyLife',
@@ -46,7 +46,7 @@ class LegalController extends Controller
         return $this->legalPage(
             markdownPath: 'content/woodnutsbolts/privacy-policy.md',
             view: 'legal.privacy-policy',
-            title: 'Privacy Policy — Wood Nuts & Bolts',
+            title: 'Wood Nuts & Bolts Privacy Policy | WPSaleHub',
             effectiveDate: '12 July 2026',
             lastUpdated: '12 July 2026',
             brandName: 'Wood Nuts & Bolts',
@@ -62,7 +62,7 @@ class LegalController extends Controller
         return $this->legalPage(
             markdownPath: 'content/woodnutsbolts/terms-of-service.md',
             view: 'legal.terms-of-service',
-            title: 'Terms of Service — Wood Nuts & Bolts',
+            title: 'Wood Nuts & Bolts Terms of Service | WPSaleHub',
             effectiveDate: '12 July 2026',
             lastUpdated: '12 July 2026',
             brandName: 'Wood Nuts & Bolts',
@@ -86,6 +86,9 @@ class LegalController extends Controller
         string $metaDescription,
     ): View {
         $markdown = File::get(resource_path($markdownPath));
+        // Hero already renders the page H1; drop the markdown title heading so we
+        // do not emit a second H1 (or one that duplicates <title>).
+        $markdown = (string) preg_replace('/\A\s*#\s+[^\n]+\n+/u', '', $markdown, 1);
 
         return view($view, [
             'title' => $title,
