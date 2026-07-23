@@ -54,6 +54,7 @@ class LegalController extends Controller
             appId: 'Wood Nuts & Bolts',
             lead: 'How we handle information when you play the Wood Nuts & Bolts mobile puzzle game on Google Play.',
             metaDescription: 'Privacy Policy for Wood Nuts & Bolts, a mobile puzzle game by WP Sale Hub.',
+            robots: 'noindex,nofollow',
         );
     }
 
@@ -70,6 +71,7 @@ class LegalController extends Controller
             appId: 'Wood Nuts & Bolts',
             lead: 'Rules and conditions for using the Wood Nuts & Bolts mobile puzzle game on Google Play.',
             metaDescription: 'Terms of Service for Wood Nuts & Bolts, a mobile puzzle game by WP Sale Hub.',
+            robots: 'noindex,nofollow',
         );
     }
 
@@ -84,6 +86,7 @@ class LegalController extends Controller
         string $appId,
         string $lead,
         string $metaDescription,
+        string $robots = 'index,follow',
     ): View {
         $markdown = File::get(resource_path($markdownPath));
         // Hero already renders the page H1; drop the markdown title heading so we
@@ -100,6 +103,7 @@ class LegalController extends Controller
             'appId' => $appId,
             'lead' => $lead,
             'metaDescription' => $metaDescription,
+            'robots' => $robots,
             'contactEmail' => 'dev.muhibbullah@gmail.com',
             'contactWebsite' => 'https://app.wpsalehub.com',
         ]);

@@ -13,7 +13,8 @@ class RobotsController extends Controller
         $sitemap = $seo->absoluteUrl('/sitemap.xml');
 
         $body = "User-agent: *\n"
-            ."Disallow:\n"
+            ."Disallow: /woodnutsbolts/privacy-policy\n"
+            ."Disallow: /woodnutsbolts/terms-of-service\n"
             ."\n"
             .'Sitemap: '.$sitemap."\n";
 

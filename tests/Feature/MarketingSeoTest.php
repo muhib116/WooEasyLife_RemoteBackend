@@ -288,6 +288,7 @@ class MarketingSeoTest extends TestCase
             '/cod-return-reduction' => 'cod_return_reduction',
             '/woocommerce-notifications' => 'woocommerce_notifications',
             '/facebook-ads-for-woocommerce' => 'facebook_ads_for_woocommerce',
+            '/facebook-page-cod-management' => 'facebook_page_cod_management',
         ];
 
         foreach ($bnPaths as $path => $key) {
@@ -336,6 +337,7 @@ class MarketingSeoTest extends TestCase
             '/en/cod-return-reduction',
             '/en/woocommerce-notifications',
             '/en/facebook-ads-for-woocommerce',
+            '/en/facebook-page-cod-management',
         ];
 
         foreach ($enPaths as $path) {
@@ -405,6 +407,52 @@ class MarketingSeoTest extends TestCase
         $llms->assertOk();
         $llms->assertSee('/en/steadfast-integration', false);
         $llms->assertSee('/en/facebook-ads-for-woocommerce', false);
+        $llms->assertSee('/facebook-page-cod-management', false);
+        $llms->assertSee('/en/facebook-page-cod-management', false);
+    }
+
+    public function test_facebook_page_cod_management_pillar_is_seo_complete(): void
+    {
+        $seoService = app(\App\Services\SeoMetaService::class);
+        $pillar = $seoService->forPage('facebook_page_cod_management');
+        $graph = collect($pillar['json_ld']['@graph'] ?? []);
+
+        $this->assertTrue((bool) ($pillar['is_pillar'] ?? false));
+        $this->assertGreaterThan(
+            200,
+            $this->seoPrerenderTokenCount($pillar),
+            'Facebook page COD pillar should exceed thin-content threshold'
+        );
+
+        $article = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Article');
+        $this->assertNotNull($article, 'Pillar should emit Article JSON-LD');
+        $this->assertNotEmpty($article['datePublished'] ?? null);
+        $this->assertNotEmpty($article['dateModified'] ?? null);
+
+        $faq = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'FAQPage');
+        $this->assertNotNull($faq, 'Pillar should emit FAQPage JSON-LD');
+
+        $toc = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'ItemList');
+        $this->assertNotNull($toc, 'Pillar should emit ItemList TOC JSON-LD');
+        $this->assertGreaterThanOrEqual(10, (int) ($toc['numberOfItems'] ?? 0));
+
+        $bn = $this->get('/facebook-page-cod-management');
+        $bn->assertOk();
+        $bn->assertSee('hreflang="en"', false);
+        $bn->assertSee('"@type":"Article"', false);
+        $bn->assertSee('seo-prerender', false);
+        $bn->assertSee('/bd-fraud-checker', false);
+        $bn->assertSee('/courier-auto-entry', false);
+        $bn->assertSee('/images/seo/cluster/omnichannel-inbox.jpg', false);
+        $bn->assertSee($pillar['faqs'][0]['a'] ?? 'missing-faq', false);
+
+        $en = $this->get('/en/facebook-page-cod-management');
+        $en->assertOk();
+        $en->assertSee('lang="en"', false);
+        $en->assertSee('hreflang="bn-BD"', false);
+        $enSeo = $seoService->forPage('en_facebook_page_cod_management');
+        $this->assertSame('en', $enSeo['html_lang']);
+        $this->assertTrue((bool) ($enSeo['is_pillar'] ?? false));
     }
 
     public function test_home_prerenders_h1_for_crawlers(): void
@@ -570,7 +618,10 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/steadfast-integration', false);
         $response->assertSee('/customer-verification', false);
         $response->assertSee('/facebook-ads-for-woocommerce', false);
+        $response->assertSee('/facebook-page-cod-management', false);
         $response->assertSee('/pricing', false);
+        $response->assertDontSee('/woodnutsbolts/privacy-policy', false);
+        $response->assertDontSee('/woodnutsbolts/terms-of-service', false);
     }
 
     public function test_home_prerender_links_every_sitemap_path(): void
@@ -596,6 +647,8 @@ class MarketingSeoTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('User-agent: *', false);
+        $response->assertSee('Disallow: /woodnutsbolts/privacy-policy', false);
+        $response->assertSee('Disallow: /woodnutsbolts/terms-of-service', false);
         $response->assertSee('Sitemap:', false);
         $response->assertSee('/sitemap.xml', false);
     }
@@ -614,6 +667,11 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/woocommerce-bangladesh', false);
         $response->assertSee('/sitemap.xml', false);
         $response->assertSee('## Optional', false);
+        $response->assertSee('/fake-order-check', false);
+        $response->assertSee('/courier-checker', false);
+        $response->assertSee('/en/ki-vabe-fake-order-atkabo', false);
+        $response->assertDontSee('/woodnutsbolts/privacy-policy', false);
+        $response->assertDontSee('/woodnutsbolts/terms-of-service', false);
     }
 
     public function test_home_prerender_includes_longform_content(): void

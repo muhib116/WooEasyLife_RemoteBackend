@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="{{ $metaDescription ?? 'Legal information from WPSaleHub.' }}">
+    @if (! empty($robots))
+        <meta name="robots" content="{{ $robots }}">
+    @endif
     <title>{{ $title ?? 'WPSaleHub' }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">

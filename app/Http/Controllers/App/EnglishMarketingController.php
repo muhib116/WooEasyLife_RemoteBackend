@@ -187,6 +187,7 @@ class EnglishMarketingController extends Controller
             'cod_return_reduction',
             'woocommerce_notifications',
             'facebook_ads_for_woocommerce',
+            'facebook_page_cod_management',
         ];
 
         if (! in_array($seoKey, $allowed, true)) {

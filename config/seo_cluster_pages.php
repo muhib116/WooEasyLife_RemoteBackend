@@ -128,6 +128,11 @@ return array (
         'path' => '/facebook-ads-for-woocommerce',
         'label' => 'Facebook Ads for WooCommerce',
       ),
+      12 => 
+      array (
+        'path' => '/facebook-page-cod-management',
+        'label' => 'Facebook Page COD Management',
+      ),
     ),
     'alternate_path' => '/en/woocommerce-bangladesh',
     'alternate_label' => 'English version',
@@ -262,6 +267,11 @@ return array (
       array (
         'path' => '/en/facebook-ads-for-woocommerce',
         'label' => 'Facebook Ads for WooCommerce',
+      ),
+      12 => 
+      array (
+        'path' => '/en/facebook-page-cod-management',
+        'label' => 'Facebook Page COD Management',
       ),
     ),
     'alternate_path' => '/woocommerce-bangladesh',
@@ -2513,4 +2523,6 @@ return array (
     'schema_type' => 'Article',
     'og_image' => '/images/seo/cluster/pixel-vs-capi.jpg',
   ),
+  'facebook_page_cod_management' => require __DIR__.'/seo_cluster_page_meta/facebook_page_cod_management.php',
+  'en_facebook_page_cod_management' => require __DIR__.'/seo_cluster_page_meta/en_facebook_page_cod_management.php',
 );
