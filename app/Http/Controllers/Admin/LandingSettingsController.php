@@ -34,6 +34,8 @@ class LandingSettingsController extends Controller
             'admin_phone',
             'openai_api_key',
             'openai_blog_model',
+            'openai_blog_planning_model',
+            'openai_blog_writing_model',
             'openai_image_model',
         ];
 
@@ -63,6 +65,8 @@ class LandingSettingsController extends Controller
             'admin_phone' => ['nullable', 'string', 'max:32'],
             'openai_api_key' => ['nullable', 'string', 'max:512'],
             'openai_blog_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::BLOG_MODELS)],
+            'openai_blog_planning_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::BLOG_MODELS)],
+            'openai_blog_writing_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::BLOG_MODELS)],
             'openai_image_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::IMAGE_MODELS)],
             'blog_ai_daily_token_cap' => ['nullable', 'integer', 'min:1000', 'max:10000000'],
         ]);

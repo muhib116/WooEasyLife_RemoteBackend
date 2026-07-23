@@ -35,6 +35,18 @@ return [
 
     'openai_blog_model' => env('OPENAI_BLOG_MODEL', 'gpt-4o-mini'),
 
+    /*
+    | Mid-tier model for research, outline, competitor analysis, and step review.
+    | Leave empty to reuse openai_blog_model.
+    */
+    'openai_blog_planning_model' => env('OPENAI_BLOG_PLANNING_MODEL', 'gpt-4.1-mini'),
+
+    /*
+    | Dedicated model for long-form article drafts (generateDraft / Fix SEO expand).
+    | Leave empty to reuse planning model. Prefer gpt-4.1 / gpt-4o / gpt-5 for quality.
+    */
+    'openai_blog_writing_model' => env('OPENAI_BLOG_WRITING_MODEL', 'gpt-4.1'),
+
     'openai_image_model' => env('OPENAI_IMAGE_MODEL', 'gpt-image-1'),
 
     'subscription_wizard' => [

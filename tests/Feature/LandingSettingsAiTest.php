@@ -27,10 +27,14 @@ it('includes openai settings on the landing settings page', function () {
             ->component('LandingSettings/Index')
             ->has('settings.openai_api_key')
             ->has('settings.openai_blog_model')
+            ->has('settings.openai_blog_planning_model')
+            ->has('settings.openai_blog_writing_model')
             ->has('settings.openai_image_model')
             ->has('settings.blog_ai_daily_token_cap')
             ->has('settings.blog_ai_daily_token_cap_source')
             ->has('settings.blog_model_options')
+            ->has('settings.blog_planning_model_options')
+            ->has('settings.blog_writing_model_options')
             ->has('settings.image_model_options')
         );
 });
@@ -42,6 +46,8 @@ it('saves openai api key and model selections', function () {
         ->put(route('landingSettings.update'), [
             'openai_api_key' => 'sk-test-landing-settings-key',
             'openai_blog_model' => 'gpt-4o',
+            'openai_blog_planning_model' => 'gpt-4.1-mini',
+            'openai_blog_writing_model' => 'gpt-4.1',
             'openai_image_model' => 'dall-e-3',
         ])
         ->assertRedirect();
@@ -50,6 +56,8 @@ it('saves openai api key and model selections', function () {
 
     expect($settings->openaiApiKey())->toBe('sk-test-landing-settings-key')
         ->and($settings->openaiBlogModel())->toBe('gpt-4o')
+        ->and($settings->openaiBlogPlanningModel())->toBe('gpt-4.1-mini')
+        ->and($settings->openaiBlogWritingModel())->toBe('gpt-4.1')
         ->and($settings->openaiImageModel())->toBe('dall-e-3');
 });
 
@@ -111,10 +119,12 @@ it('rejects invalid openai model selections', function () {
         ->from(route('landingSettings.index'))
         ->put(route('landingSettings.update'), [
             'openai_blog_model' => 'not-a-real-model',
+            'openai_blog_planning_model' => 'fake-planning',
+            'openai_blog_writing_model' => 'also-fake-writing',
             'openai_image_model' => 'also-fake',
         ])
         ->assertRedirect(route('landingSettings.index'))
-        ->assertSessionHasErrors(['openai_blog_model', 'openai_image_model']);
+        ->assertSessionHasErrors(['openai_blog_model', 'openai_blog_planning_model', 'openai_blog_writing_model', 'openai_image_model']);
 });
 
 it('clears openai api key when left blank', function () {
@@ -127,6 +137,8 @@ it('clears openai api key when left blank', function () {
         'openai_image_model' => 'gpt-image-1',
     ]);
 
+    expect($settings->openaiApiKey())->toBe('sk-temp-key');
+
     $this->actingAs($admin)
         ->put(route('landingSettings.update'), [
             'openai_api_key' => '',
@@ -135,5 +147,13 @@ it('clears openai api key when left blank', function () {
         ])
         ->assertRedirect();
 
-    expect($settings->openaiApiKey())->toBeNull();
+    // DB override cleared; effective value may still come from .env / config.
+    expect($settings->all()['openai_api_key_source'])->not->toBe('database');
+
+    $envFallback = trim((string) config('landing.openai_api_key'));
+    if ($envFallback === '') {
+        expect($settings->openaiApiKey())->toBeNull();
+    } else {
+        expect($settings->openaiApiKey())->toBe($envFallback);
+    }
 });

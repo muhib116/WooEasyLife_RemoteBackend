@@ -31,21 +31,69 @@ class LandingSettingsService
 
     public const OPENAI_BLOG_MODEL_KEY = 'landing.openai_blog_model';
 
+    public const OPENAI_BLOG_PLANNING_MODEL_KEY = 'landing.openai_blog_planning_model';
+
+    public const OPENAI_BLOG_WRITING_MODEL_KEY = 'landing.openai_blog_writing_model';
+
     public const OPENAI_IMAGE_MODEL_KEY = 'landing.openai_image_model';
 
     public const BLOG_AI_DAILY_TOKEN_CAP_KEY = 'landing.blog_ai_daily_token_cap';
 
     /**
+     * Chat models allowed for blog research / outline / writing.
+     *
      * @var list<string>
      */
     public const BLOG_MODELS = [
-        'gpt-4o',
-        'gpt-4o-mini',
+        'gpt-5',
+        'gpt-5-mini',
+        'gpt-5-nano',
         'gpt-4.1',
         'gpt-4.1-mini',
         'gpt-4.1-nano',
+        'gpt-4o',
+        'gpt-4o-mini',
+        'o3',
         'o3-mini',
         'o4-mini',
+    ];
+
+    /**
+     * Models recommended for outline / research / review (shown first in planning dropdown).
+     *
+     * @var list<string>
+     */
+    public const BLOG_PLANNING_MODELS = [
+        'gpt-4.1-mini',
+        'gpt-5-mini',
+        'gpt-4o',
+        'gpt-4.1',
+        'gpt-5',
+        'o3-mini',
+        'gpt-4o-mini',
+        'o4-mini',
+        'gpt-4.1-nano',
+        'gpt-5-nano',
+        'o3',
+    ];
+
+    /**
+     * Models recommended for long-form article writing (shown first in writing dropdown).
+     *
+     * @var list<string>
+     */
+    public const BLOG_WRITING_MODELS = [
+        'gpt-4.1',
+        'gpt-5',
+        'gpt-4o',
+        'o3',
+        'gpt-5-mini',
+        'gpt-4.1-mini',
+        'gpt-4o-mini',
+        'o3-mini',
+        'o4-mini',
+        'gpt-5-nano',
+        'gpt-4.1-nano',
     ];
 
     /**
@@ -85,13 +133,19 @@ class LandingSettingsService
             'meta_pixel_id_source' => $this->sourceWithConfig(self::META_PIXEL_ID_KEY, 'landing.meta_pixel_id'),
             'openai_api_key' => $this->openaiApiKey(),
             'openai_blog_model' => $this->openaiBlogModel(),
+            'openai_blog_planning_model' => $this->openaiBlogPlanningModel(),
+            'openai_blog_writing_model' => $this->openaiBlogWritingModel(),
             'openai_image_model' => $this->openaiImageModel(),
             'openai_api_key_source' => $this->sourceWithConfig(self::OPENAI_API_KEY_KEY, 'landing.openai_api_key'),
             'openai_blog_model_source' => $this->sourceWithConfig(self::OPENAI_BLOG_MODEL_KEY, 'landing.openai_blog_model'),
+            'openai_blog_planning_model_source' => $this->sourceWithConfig(self::OPENAI_BLOG_PLANNING_MODEL_KEY, 'landing.openai_blog_planning_model'),
+            'openai_blog_writing_model_source' => $this->sourceWithConfig(self::OPENAI_BLOG_WRITING_MODEL_KEY, 'landing.openai_blog_writing_model'),
             'openai_image_model_source' => $this->sourceWithConfig(self::OPENAI_IMAGE_MODEL_KEY, 'landing.openai_image_model'),
             'blog_ai_daily_token_cap' => $this->blogAiDailyTokenCap(),
             'blog_ai_daily_token_cap_source' => $this->sourceWithConfig(self::BLOG_AI_DAILY_TOKEN_CAP_KEY, 'blog_ai.daily_token_cap'),
             'blog_model_options' => self::BLOG_MODELS,
+            'blog_planning_model_options' => self::BLOG_PLANNING_MODELS,
+            'blog_writing_model_options' => self::BLOG_WRITING_MODELS,
             'image_model_options' => self::IMAGE_MODELS,
         ];
     }
@@ -162,6 +216,33 @@ class LandingSettingsService
         return $this->resolve(self::OPENAI_BLOG_MODEL_KEY, config('landing.openai_blog_model'));
     }
 
+    /**
+     * Mid-tier model for research / outline / competitor / step review.
+     * Falls back to openai_blog_model when unset.
+     */
+    public function openaiBlogPlanningModel(): ?string
+    {
+        $dedicated = $this->resolve(self::OPENAI_BLOG_PLANNING_MODEL_KEY, config('landing.openai_blog_planning_model'));
+        if (filled($dedicated)) {
+            return $dedicated;
+        }
+
+        return $this->openaiBlogModel();
+    }
+
+    /**
+     * Stronger model for article body drafts (falls back to planning, then blog model).
+     */
+    public function openaiBlogWritingModel(): ?string
+    {
+        $dedicated = $this->resolve(self::OPENAI_BLOG_WRITING_MODEL_KEY, config('landing.openai_blog_writing_model'));
+        if (filled($dedicated)) {
+            return $dedicated;
+        }
+
+        return $this->openaiBlogPlanningModel();
+    }
+
     public function openaiImageModel(): ?string
     {
         return $this->resolve(self::OPENAI_IMAGE_MODEL_KEY, config('landing.openai_image_model'));
@@ -219,6 +300,8 @@ class LandingSettingsService
             'meta_pixel_id' => self::META_PIXEL_ID_KEY,
             'openai_api_key' => self::OPENAI_API_KEY_KEY,
             'openai_blog_model' => self::OPENAI_BLOG_MODEL_KEY,
+            'openai_blog_planning_model' => self::OPENAI_BLOG_PLANNING_MODEL_KEY,
+            'openai_blog_writing_model' => self::OPENAI_BLOG_WRITING_MODEL_KEY,
             'openai_image_model' => self::OPENAI_IMAGE_MODEL_KEY,
         ] as $field => $key) {
             if (array_key_exists($field, $data)) {

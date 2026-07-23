@@ -75,7 +75,7 @@ TXT;
             'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonLight([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
         ], 0.45);
@@ -187,7 +187,7 @@ TXT;
             'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonPlanning([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
         ], 0.4);
@@ -511,7 +511,7 @@ TXT;
             'competitor_intelligence' => $this->competitorBlockForSession($session),
         ], JSON_UNESCAPED_UNICODE);
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonLight([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
         ], 0.8);
@@ -599,7 +599,7 @@ TXT);
             ],
         ], JSON_UNESCAPED_UNICODE);
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonPlanning([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
         ], 0.4);
@@ -690,7 +690,7 @@ TXT);
             ),
         ], JSON_UNESCAPED_UNICODE);
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonWriting([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
         ], 0.55);
@@ -706,6 +706,7 @@ TXT);
         );
 
         $draft['article_type'] = $articleType;
+        $draft['writing_model'] = $result['model'] ?? null;
         $session->draft_json = $draft;
         $session->addUsage($result['usage']);
         $session->status = 'draft_ready';

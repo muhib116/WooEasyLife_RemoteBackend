@@ -43,6 +43,9 @@ Return JSON:
 ## Must-pass SEO checklist
 - Focus keyword in: title, FIRST <p>, meta_description, slug (latin equivalent ok), and **one H2**
 - body_html roughly {{min_words}}+ words of Bangla content (aim 1400–2000 for howto/comparison/case_study; glossary may be shorter when instructed)
+- Write enough real teaching in each slot so the draft clears {{min_words}} without filler
+- NEVER pad with repeated keyword sentences, fake “ধাপ N” clones, or off-topic fraud/history lines when the topic is different (invoice, packing, ads, courier, etc.)
+- Stay on the focus keyword’s actual job — every H2 must teach that topic for BD COD sellers
 - Include at least 2 secondary keywords from keywords.secondary naturally (not stuffed)
 - Keyword density ~1% — natural, no stuffing or repetition
 - At least 2 internal links using exact paths from link_plan (href="/path")

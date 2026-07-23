@@ -122,7 +122,7 @@ TXT;
             'competitor_snapshots' => $snapshots,
         ], JSON_UNESCAPED_UNICODE);
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonPlanning([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
         ], 0.35);

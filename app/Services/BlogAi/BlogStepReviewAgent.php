@@ -409,7 +409,7 @@ TXT;
             'pass_score' => $passScore,
         ];
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonPlanning([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) json_encode($payload, JSON_UNESCAPED_UNICODE)],
         ], 0.2);

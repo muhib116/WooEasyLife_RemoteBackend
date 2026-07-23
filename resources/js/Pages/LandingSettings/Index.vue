@@ -75,10 +75,10 @@
                                 for="openai_blog_model"
                                 class="text-sm font-semibold text-gray-800 dark:text-white/90"
                             >
-                                Blog post model
+                                Light model (keywords / hooks)
                             </label>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Chat model used to draft blog titles, body, and SEO fields.
+                                Cheap model for keyword suggestions and title hooks. Default: gpt-4o-mini.
                                 <span
                                     v-if="settings.openai_blog_model_source !== 'none'"
                                     class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
@@ -91,13 +91,77 @@
                                 v-model="form.openai_blog_model"
                                 :options="blogModelOptions"
                                 class="mt-2 w-full"
-                                placeholder="Select a blog model"
+                                placeholder="Select a light model"
                             />
                             <p
                                 v-if="form.errors.openai_blog_model"
                                 class="mt-1 text-xs text-rose-500"
                             >
                                 {{ form.errors.openai_blog_model }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="openai_blog_planning_model"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Planning model (research / outline / review)
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Research, outline, competitor analysis, step review, and image vision checks.
+                                Prefer <span class="font-medium">gpt-4.1-mini</span> or <span class="font-medium">gpt-5-mini</span>.
+                                <span
+                                    v-if="settings.openai_blog_planning_model_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.openai_blog_planning_model_source }}
+                                </span>
+                            </p>
+                            <Select
+                                id="openai_blog_planning_model"
+                                v-model="form.openai_blog_planning_model"
+                                :options="blogPlanningModelOptions"
+                                class="mt-2 w-full"
+                                placeholder="Select a planning model"
+                            />
+                            <p
+                                v-if="form.errors.openai_blog_planning_model"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.openai_blog_planning_model }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="openai_blog_writing_model"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Writing model (article draft)
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Long-form article drafts and Fix SEO body expands only.
+                                Best for your quality bar: <span class="font-medium">gpt-4.1</span> (default) or <span class="font-medium">gpt-5</span>.
+                                <span
+                                    v-if="settings.openai_blog_writing_model_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.openai_blog_writing_model_source }}
+                                </span>
+                            </p>
+                            <Select
+                                id="openai_blog_writing_model"
+                                v-model="form.openai_blog_writing_model"
+                                :options="blogWritingModelOptions"
+                                class="mt-2 w-full"
+                                placeholder="Select a writing model"
+                            />
+                            <p
+                                v-if="form.errors.openai_blog_writing_model"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.openai_blog_writing_model }}
                             </p>
                         </div>
 
@@ -250,13 +314,19 @@ type LandingSettings = {
     admin_phone_source: string;
     openai_api_key: string | null;
     openai_blog_model: string | null;
+    openai_blog_planning_model: string | null;
+    openai_blog_writing_model: string | null;
     openai_image_model: string | null;
     openai_api_key_source: string;
     openai_blog_model_source: string;
+    openai_blog_planning_model_source: string;
+    openai_blog_writing_model_source: string;
     openai_image_model_source: string;
     blog_ai_daily_token_cap: number;
     blog_ai_daily_token_cap_source: string;
     blog_model_options: string[];
+    blog_planning_model_options: string[];
+    blog_writing_model_options: string[];
     image_model_options: string[];
 };
 
@@ -272,6 +342,8 @@ type FormFields = {
     admin_phone: string;
     openai_api_key: string;
     openai_blog_model: string;
+    openai_blog_planning_model: string;
+    openai_blog_writing_model: string;
     openai_image_model: string;
     blog_ai_daily_token_cap: string;
 };
@@ -372,6 +444,8 @@ const contactFields: SettingsField[] = [
 ];
 
 const blogModelOptions = props.settings.blog_model_options ?? [];
+const blogPlanningModelOptions = props.settings.blog_planning_model_options ?? blogModelOptions;
+const blogWritingModelOptions = props.settings.blog_writing_model_options ?? blogModelOptions;
 const imageModelOptions = props.settings.image_model_options ?? [];
 const defaultTokenCap = props.settings.blog_ai_daily_token_cap ?? 400000;
 
@@ -390,6 +464,8 @@ const form = useForm({
     admin_phone: props.settings.admin_phone ?? "",
     openai_api_key: props.settings.openai_api_key ?? "",
     openai_blog_model: props.settings.openai_blog_model ?? "gpt-4o-mini",
+    openai_blog_planning_model: props.settings.openai_blog_planning_model ?? "gpt-4.1-mini",
+    openai_blog_writing_model: props.settings.openai_blog_writing_model ?? "gpt-4.1",
     openai_image_model: props.settings.openai_image_model ?? "gpt-image-1",
     // Always include the effective cap so saving other tabs does not clear a DB override.
     blog_ai_daily_token_cap: String(props.settings.blog_ai_daily_token_cap ?? 400000),
@@ -450,7 +526,7 @@ const tabForError = (field: string): TabValue | null => {
         return "contact";
     }
 
-    if (["openai_api_key", "openai_blog_model", "openai_image_model", "blog_ai_daily_token_cap"].includes(field)) {
+    if (["openai_api_key", "openai_blog_model", "openai_blog_planning_model", "openai_blog_writing_model", "openai_image_model", "blog_ai_daily_token_cap"].includes(field)) {
         return "ai";
     }
 

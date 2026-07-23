@@ -16,29 +16,78 @@ class OpenAiBlogClient
 
     /**
      * @param  list<array{role: string, content: string}>  $messages
-     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}}
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}, model: string}
      */
-    public function chatJson(array $messages, float $temperature = 0.7): array
+    public function chatJson(array $messages, float $temperature = 0.7, ?string $model = null): array
     {
-        return $this->requestChat($messages, $temperature);
+        return $this->requestChat($messages, $temperature, $model);
     }
 
     /**
      * Multimodal chat with JSON object response (vision review).
      *
      * @param  list<array{role: string, content: mixed}>  $messages
-     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}}
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}, model: string}
      */
-    public function chatJsonVision(array $messages, float $temperature = 0.2): array
+    public function chatJsonVision(array $messages, float $temperature = 0.2, ?string $model = null): array
     {
-        return $this->requestChat($messages, $temperature);
+        return $this->requestChat(
+            $messages,
+            $temperature,
+            $model ?: $this->landingSettings->openaiBlogPlanningModel(),
+        );
+    }
+
+    /**
+     * Light model: keyword suggest + title hooks (default openai_blog_model).
+     *
+     * @param  list<array{role: string, content: mixed}>  $messages
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}, model: string}
+     */
+    public function chatJsonLight(array $messages, float $temperature = 0.7): array
+    {
+        return $this->requestChat(
+            $messages,
+            $temperature,
+            $this->landingSettings->openaiBlogModel(),
+        );
+    }
+
+    /**
+     * Mid-tier model: research, outline, competitor, step review, vision.
+     *
+     * @param  list<array{role: string, content: mixed}>  $messages
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}, model: string}
+     */
+    public function chatJsonPlanning(array $messages, float $temperature = 0.4): array
+    {
+        return $this->requestChat(
+            $messages,
+            $temperature,
+            $this->landingSettings->openaiBlogPlanningModel(),
+        );
+    }
+
+    /**
+     * Prefer dedicated writing model when set (article draft / SEO body expand).
+     *
+     * @param  list<array{role: string, content: mixed}>  $messages
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}, model: string}
+     */
+    public function chatJsonWriting(array $messages, float $temperature = 0.55): array
+    {
+        return $this->requestChat(
+            $messages,
+            $temperature,
+            $this->landingSettings->openaiBlogWritingModel(),
+        );
     }
 
     /**
      * @param  list<array{role: string, content: mixed}>  $messages
-     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}}
+     * @return array{content: string, usage: array{prompt_tokens?: int, completion_tokens?: int, total_tokens?: int}, model: string}
      */
-    private function requestChat(array $messages, float $temperature): array
+    private function requestChat(array $messages, float $temperature, ?string $model = null): array
     {
         $apiKey = $this->landingSettings->openaiApiKey();
         if (! filled($apiKey)) {
@@ -47,14 +96,14 @@ class OpenAiBlogClient
             ]);
         }
 
-        $model = $this->landingSettings->openaiBlogModel() ?: 'gpt-4o-mini';
+        $resolved = $this->resolveChatModel($model);
 
         $response = Http::withToken($apiKey)
-            ->timeout(150)
+            ->timeout(180)
             ->connectTimeout(20)
             ->acceptJson()
             ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $model,
+                'model' => $resolved,
                 'temperature' => $temperature,
                 'response_format' => ['type' => 'json_object'],
                 'messages' => $messages,
@@ -74,12 +123,23 @@ class OpenAiBlogClient
 
         return [
             'content' => $content,
+            'model' => $resolved,
             'usage' => [
                 'prompt_tokens' => (int) data_get($response->json(), 'usage.prompt_tokens', 0),
                 'completion_tokens' => (int) data_get($response->json(), 'usage.completion_tokens', 0),
                 'total_tokens' => (int) data_get($response->json(), 'usage.total_tokens', 0),
             ],
         ];
+    }
+
+    private function resolveChatModel(?string $model): string
+    {
+        $candidate = trim((string) ($model ?: ''));
+        if ($candidate !== '' && in_array($candidate, LandingSettingsService::BLOG_MODELS, true)) {
+            return $candidate;
+        }
+
+        return $this->landingSettings->openaiBlogModel() ?: 'gpt-4o-mini';
     }
 
     /**

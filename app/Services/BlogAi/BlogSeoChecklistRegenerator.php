@@ -449,7 +449,7 @@ Rules:
 - Prefer surgical edits over full rewrites. Do not invent US-centric claims. Do not rewrite into corporate/AI fluff.
 - Include focus_keyword naturally in title, first content <p> AFTER Quick Answer and AI Summary sections (not inside those sections), one <h2>, and meta_description.
 - If keyword_in_first_paragraph fails: rewrite/insert the first content <p> so it starts with or clearly includes focus_keyword.
-- If word_count_ok fails: expand body_html with useful Bangla seller paragraphs until min_body_words is reached (do not pad with gibberish). Keep all existing good sections.
+- If word_count_ok fails: expand body_html with useful Bangla seller paragraphs ON THE SAME TOPIC as focus_keyword until min_body_words is reached. Do not pad with gibberish, repeated keyword clones, fake “ধাপ N” lines, or off-topic fraud/history text when the article is about something else (invoice, packing, ads, etc.). Keep all existing good sections.
 - Ensure <h2>/<h3> when those checks fail. Add <ul>/<ol> only if has_lists fails — otherwise prefer short paragraphs.
 - FAQs must be ≥ min_faqs with useful BD seller Q&A (spoken questions, not textbook headings).
 - Internal links must use paths from allowed_internal_links only (href="/...").
@@ -482,7 +482,7 @@ TXT;
             'competitor_diff_checklist' => $extraContext['competitor_diff_checklist'] ?? null,
         ], JSON_UNESCAPED_UNICODE);
 
-        $result = $this->openAi->chatJson([
+        $result = $this->openAi->chatJsonWriting([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => (string) $user],
         ], 0.35);

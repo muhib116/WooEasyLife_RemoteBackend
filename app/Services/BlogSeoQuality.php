@@ -681,7 +681,9 @@ class BlogSeoQuality
     }
 
     /**
-     * Expand body until min word count with varied on-topic Bangla paragraphs.
+     * Expand body until min word count with varied, topic-neutral Bangla paragraphs.
+     * Templates must work for any focus keyword (invoice, fraud, courier, ads, etc.).
+     * Never loops with "(ধাপ N)" spam — caps after a finite set of unique pads.
      */
     public function ensureMinBodyWords(string $bodyHtml, string $focusKeyword, ?int $minWords = null): string
     {
@@ -694,26 +696,29 @@ class BlogSeoQuality
         }
 
         $templates = [
-            "{$kw} ব্যবহার করে অর্ডার কনফার্মের আগে কাস্টমার হিস্টোরি যাচাই করলে রিটার্ন লস কমে এবং ক্যাশফ্লো স্থিতিশীল থাকে।",
-            "বাংলাদেশের COD সেলারদের জন্য {$kw} একটি প্র্যাকটিক্যাল ধাপ — নম্বর দিয়ে রেটিং দেখে ঝুঁকি বোঝা যায়।",
-            "প্রতিদিনের অর্ডারে {$kw} চালু রাখলে ফেক অর্ডার আটকানো সহজ হয় এবং কুরিয়ার খরচ বাঁচে।",
-            "টিমকে {$kw} ওয়ার্কফ্লো শেখালে কনফার্মেশন কোয়ালিটি বাড়ে এবং সাপোর্ট টিকেট কমে।",
-            "Pathao, Steadfast বা RedX অর্ডারেও {$kw} দিয়ে আগে চেক করলে ডেলিভারি সাকসেস রেট উন্নত হয়।",
-            "চেকআউটের আগে {$kw} রেজাল্ট সেভ করে রাখলে পরে ডিসপিউট হ্যান্ডেল করা সহজ হয়।",
-            "নতুন স্টাফ অনবোর্ডে {$kw} স্ট্যান্ডার্ড অপারেটিং প্রসিডিউর দিলে মিস-কনফার্ম কমে।",
-            "হাই-রিস্ক নম্বারে {$kw} রেটিং খারাপ হলে অগ্রিম পেমেন্ট বা বাতিল নীতি প্রয়োগ করা যায়।",
+            "{$kw} বিষয়ে বাংলাদেশি COD ও WooCommerce সেলারদের ব্যবহারিক ধাপ এক জায়গায় সাজানো হয়েছে—অর্ডার ডেটা ঠিক রাখা, ভুল কমানো, আর টিমকে একই SOP দেওয়া।",
+            "দোকানের অর্ডার ভলিউম বাড়লে {$kw} নিয়মিত ও সঠিকভাবে করলে বিলম্ব, কাস্টমার কমপ্লেইন এবং অপ্রয়োজনীয় রিটার্ন চাপ কমে।",
+            "টিম SOP-তে {$kw} যোগ করলে নতুন স্টাফ দ্রুত শেখে; কে কী চেক করবে, কী নোট রাখবে এবং কখন কুরিয়ারে পাঠাবে তা পরিষ্কার থাকে।",
+            "Pathao, Steadfast বা RedX ফ্লোর সাথে {$kw} মিলিয়ে রাখলে প্যাকিং, লেবেল ও ডেলিভারি ধাপে নাম-ফোন-ঠিকানা-COD অমিল কম হয়।",
+            "{$kw} করার আগে অর্ডার নম্বর, কাস্টমার নাম, মোবাইল, ঠিকানা ও পণ্য/COD যাচাই করলে ডিসপিউট ও ভুল শিপমেন্ট কমে।",
+            "প্রতিদিনের চেকলিস্টে {$kw} রাখলে মান স্থিতিশীল থাকে এবং মাস শেষে ক্যাশফ্লো ও রিটার্ন লস অনুমান করা সহজ হয়।",
+            "{$kw} ভুল বা অসম্পূর্ণ হলে কুরিয়ার ও কাস্টমার উভয় পাশে সমস্যা বাড়ে—তাই টেমপ্লেট, প্রুফরিড এবং এক ক্লিক অটোমেশন জরুরি।",
+            "WooEasyLife-এ অর্ডার ডেটা এক ড্যাশবোর্ডে থাকলে {$kw} দ্রুত করা যায়; ফ্রড চেক, কনফার্ম ও কুরিয়ার অটো এন্ট্রির সাথে একই ওয়ার্কফ্লোতে মিলিয়ে নেওয়া যায়।",
+            "ছোট স্টোরেও {$kw} স্ট্যান্ডার্ড রাখলে স্কেল করার সময় একই মান ধরে রাখা যায়—অ্যাড বাজেট বাড়ানোর আগে অপস ভুল কমানো জরুরি।",
+            "{$kw} নিয়ে সাধারণ ভুল: অসম্পূর্ণ ঠিকানা, ভুল ফোন, পুরনো টেমপ্লেট, আর টিমকে না শিখিয়ে শুধু টুল চালু রাখা।",
+            "প্র্যাকটিক্যাল রুল: {$kw} শেষে একবার প্রুফরিড করুন, তারপরই কুরিয়ার বুকিং বা প্যাকিং—পরে সংশোধন ব্যয়বহুল।",
+            "আরও গভীর গাইড ও টুলের জন্য সম্পর্কিত WooEasyLife পেজ (ফ্রড চেক, রিটার্ন লস ক্যালকুলেটর, কুরিয়ার অটো এন্ট্রি) দেখে {$kw} ওয়ার্কফ্লো সম্পূর্ণ করুন।",
         ];
 
-        $guard = 0;
         $n = count($templates);
-        // ~12–18 words per template line; size the loop so thin drafts can still hit min_body_words.
-        $approxWordsPerPad = 14;
-        $maxPads = max(24, (int) ceil(($min - $current) / $approxWordsPerPad) + 8);
-        while ($this->bodyWordCount($body) < $min && $guard < $maxPads) {
-            $line = $templates[$guard % $n];
-            $suffix = $guard >= $n ? ' (ধাপ '.($guard + 1).')' : '';
-            $body = rtrim($body)."\n<p>".e($line.$suffix).'</p>';
-            $guard++;
+        // Finite pads only — never invent endless "(ধাপ N)" clones. Thin drafts should
+        // rely on a stronger writing model / Fix SEO checklist AI expand instead of spam.
+        $maxPads = min($n, max(4, (int) ceil(($min - $current) / 35)));
+        for ($i = 0; $i < $maxPads; $i++) {
+            if ($this->bodyWordCount($body) >= $min) {
+                break;
+            }
+            $body = rtrim($body)."\n<p>".e($templates[$i]).'</p>';
         }
 
         return $body;
