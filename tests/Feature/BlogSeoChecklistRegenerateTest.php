@@ -125,7 +125,81 @@ class BlogSeoChecklistRegenerateTest extends TestCase
             ->assertOk();
 
         Http::assertNothingSent();
-        $notes = implode(' ', $response->json('notes') ?? []);
-        expect($notes)->toContain('OG/cover');
+        $body = (string) $response->json('body_html');
+        $this->assertMatchesRegularExpression('/<img[\s>]/i', $body);
+        $this->assertSame([], $response->json('remaining_failures'));
+    }
+
+    public function test_regenerate_deterministic_polish_clears_soft_gates_without_perfect_ai(): void
+    {
+        config([
+            'blog_ai.enabled' => true,
+            'landing.openai_api_key' => 'sk-test-key',
+            'blog_ai.min_body_words' => 200,
+            'blog_ai.seo_quality.min_internal_links' => 2,
+            'blog_ai.seo_quality.min_faqs' => 5,
+            'seo.default_og_image' => '/images/seo/og-default.jpg',
+        ]);
+
+        // Thin / incomplete AI payload — server must still green soft SEO via deterministic polish.
+        Http::fake([
+            'api.openai.com/*' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'title' => 'অর্ডার গাইড',
+                            'meta_title' => 'অর্ডার গাইড',
+                            'meta_description' => 'short',
+                            'excerpt' => 'short',
+                            'body_html' => '<p>সাধারণ লেখা।</p>',
+                            'faqs' => [],
+                            'notes' => ['minimal'],
+                        ], JSON_UNESCAPED_UNICODE),
+                    ],
+                ]],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 20, 'total_tokens' => 30],
+            ], 200),
+        ]);
+
+        $admin = $this->adminUser();
+
+        $response = $this->actingAs($admin)
+            ->postJson(route('blogAi.regenerateSeoChecklist'), [
+                'title' => 'অর্ডার গাইড',
+                'focus_keyword' => 'fake order atkabo',
+                'body_html' => '<p>সাধারণ লেখা।</p>',
+                'meta_description' => '',
+                'faqs_json' => [],
+                'locale' => 'bn',
+                'article_type' => 'howto',
+            ])
+            ->assertOk();
+
+        $body = (string) $response->json('body_html');
+        $quality = $response->json('quality') ?? [];
+
+        $this->assertStringContainsString('fake order atkabo', (string) $response->json('title'));
+        $this->assertStringContainsString('fake order atkabo', (string) $response->json('meta_description'));
+        $this->assertGreaterThanOrEqual(50, mb_strlen((string) $response->json('meta_description')));
+        $this->assertStringContainsString('seo-quick-answer', $body);
+        $this->assertStringContainsString('seo-ai-summary', $body);
+        $this->assertMatchesRegularExpression('/<h2[\s>]/i', $body);
+        $this->assertMatchesRegularExpression('/<h3[\s>]/i', $body);
+        $this->assertMatchesRegularExpression('/<(ul|ol)[\s>]/i', $body);
+        $this->assertMatchesRegularExpression('/<img[\s>]/i', $body);
+        $this->assertGreaterThanOrEqual(5, count($response->json('faqs_json')));
+        $this->assertSame('fake-order-atkabo', $response->json('slug'));
+        $this->assertTrue((bool) ($quality['word_count_ok'] ?? false));
+        $this->assertTrue((bool) ($quality['keyword_in_title'] ?? false));
+        $this->assertTrue((bool) ($quality['keyword_in_meta'] ?? false));
+        $this->assertTrue((bool) ($quality['keyword_in_h2'] ?? false));
+        $this->assertTrue((bool) ($quality['keyword_in_first_paragraph'] ?? false));
+        $this->assertTrue((bool) ($quality['has_quick_answer'] ?? false));
+        $this->assertTrue((bool) ($quality['has_ai_search_summary'] ?? false));
+        $this->assertTrue((bool) ($quality['has_h3'] ?? false));
+        $this->assertTrue((bool) ($quality['has_lists'] ?? false));
+        $this->assertTrue((bool) ($quality['faq_count_ok'] ?? false));
+        $this->assertTrue((bool) ($quality['has_content_image'] ?? false));
+        $this->assertSame([], $response->json('remaining_failures'));
     }
 }

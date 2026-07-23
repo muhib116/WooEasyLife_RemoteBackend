@@ -711,17 +711,111 @@ class BlogSeoQuality
         ];
 
         $n = count($templates);
-        // Finite pads only — never invent endless "(ধাপ N)" clones. Thin drafts should
-        // rely on a stronger writing model / Fix SEO checklist AI expand instead of spam.
-        $maxPads = min($n, max(4, (int) ceil(($min - $current) / 35)));
+        $variations = [
+            '',
+            ' স্টোরের অর্ডার ভলিউম অনুযায়ী টেমপ্লেট কাস্টমাইজ করুন।',
+            ' প্রতিদিন একই চেকলিস্ট ফলো করলে ভুল কমে।',
+            ' নতুন স্টাফকে একবার ডেমো দিয়ে SOP হস্তান্তর করুন।',
+            ' মাস শেষে মেট্রিক দেখে কোন ধাপ আটকে আছে বুঝুন।',
+        ];
+        // Cycle topic-neutral templates until min words (hard cap prevents infinite loops).
+        // Avoid "(ধাপ N)" spam — variation suffixes keep pads distinct without gibberish.
+        // Bangla tokens are denser than Latin; use a conservative words-per-pad estimate.
+        $maxPads = 96;
         for ($i = 0; $i < $maxPads; $i++) {
             if ($this->bodyWordCount($body) >= $min) {
                 break;
             }
-            $body = rtrim($body)."\n<p>".e($templates[$i]).'</p>';
+            $text = $templates[$i % $n].$variations[(int) floor($i / $n) % count($variations)];
+            $body = rtrim($body)."\n<p>".e($text).'</p>';
         }
 
         return $body;
+    }
+
+    /**
+     * Pad FAQs to the configured minimum with topic-relevant Bangla Q&A.
+     *
+     * @param  list<array{q?: string, a?: string}>  $faqs
+     * @return list<array{q: string, a: string}>
+     */
+    public function ensureMinFaqs(array $faqs, string $focusKeyword, ?int $minFaqs = null): array
+    {
+        $min = $minFaqs ?? (int) config('blog_ai.seo_quality.min_faqs', 5);
+        $kw = trim($focusKeyword) !== '' ? trim($focusKeyword) : 'WooEasyLife';
+        $out = collect($faqs)
+            ->filter(fn ($row) => is_array($row))
+            ->map(fn (array $row) => [
+                'q' => trim((string) ($row['q'] ?? '')),
+                'a' => trim((string) ($row['a'] ?? '')),
+            ])
+            ->filter(fn (array $row) => $row['q'] !== '' && $row['a'] !== '')
+            ->values()
+            ->all();
+
+        $defaults = [
+            ['q' => $kw.' কী এবং কেন দরকার?', 'a' => $kw.' বাংলাদেশি COD সেলারদের অর্ডার ভুল, রিটার্ন ও সময় নষ্ট কমাতে সাহায্য করে।'],
+            ['q' => $kw.' কখন ব্যবহার করব?', 'a' => 'অর্ডার কনফার্ম বা কুরিয়ার বুকিংয়ের আগে রুটিনে '.$kw.' ব্যবহার করুন।'],
+            ['q' => $kw.' ছোট স্টোরেও লাগে?', 'a' => 'হ্যাঁ—ছোট ভলিউমেও একই SOP রাখলে স্কেল করার সময় মান ধরে রাখা যায়।'],
+            ['q' => $kw.' দিয়ে কী কী চেক করব?', 'a' => 'নাম, মোবাইল, ঠিকানা, পণ্য/COD এবং কুরিয়ার নোট মিলিয়ে দেখুন; অমিল থাকলে কনফার্ম আটকান।'],
+            ['q' => 'WooEasyLife-এ '.$kw.' কীভাবে মিলবে?', 'a' => 'অর্ডার ডেটা এক ড্যাশবোর্ডে রেখে ফ্রড চেক, কনফার্ম ও কুরিয়ার অটো এন্ট্রির সাথে একই ওয়ার্কফ্লোতে মিলান।'],
+            ['q' => $kw.' ভুল হলে কী হয়?', 'a' => 'ভুল বা অসম্পূর্ণ ধাপে রিটার্ন, ডিসপিউট ও ক্যাশফ্লো চাপ বাড়ে—তাই টেমপ্লেট ও প্রুফরিড জরুরি।'],
+        ];
+
+        foreach ($defaults as $row) {
+            if (count($out) >= $min) {
+                break;
+            }
+            $exists = collect($out)->contains(
+                fn (array $existing) => mb_strtolower($existing['q']) === mb_strtolower($row['q']),
+            );
+            if (! $exists) {
+                $out[] = $row;
+            }
+        }
+
+        return array_slice($out, 0, max($min, 12));
+    }
+
+    /**
+     * Ensure the body has at least one H3 heading (after SEO blocks / first H2 when possible).
+     */
+    public function ensureHasH3(string $bodyHtml, string $focusKeyword = ''): string
+    {
+        if (preg_match('/<h3[\s>]/i', $bodyHtml)) {
+            return $bodyHtml;
+        }
+
+        $kw = trim($focusKeyword);
+        $heading = e($kw !== '' ? $kw.' — বিস্তারিত ধাপ' : 'বিস্তারিত ধাপ');
+        $block = '<h3>'.$heading.'</h3>';
+
+        if (preg_match('/<\/h2>/i', $bodyHtml, $m, PREG_OFFSET_CAPTURE)) {
+            $end = $m[0][1] + strlen($m[0][0]);
+
+            return substr($bodyHtml, 0, $end)."\n".$block.substr($bodyHtml, $end);
+        }
+
+        return rtrim($bodyHtml)."\n".$block;
+    }
+
+    /**
+     * Ensure the body has a bullet or numbered list.
+     */
+    public function ensureHasLists(string $bodyHtml, string $focusKeyword = ''): string
+    {
+        if (preg_match('/<(ul|ol)[\s>]/i', $bodyHtml)) {
+            return $bodyHtml;
+        }
+
+        $kw = trim($focusKeyword) !== '' ? trim($focusKeyword) : 'এই প্রক্রিয়া';
+        $list = '<ul>'
+            .'<li>'.e($kw).' শুরুর আগে অর্ডার ডেটা যাচাই করুন।</li>'
+            .'<li>নাম, মোবাইল, ঠিকানা ও COD মিলিয়ে দেখুন।</li>'
+            .'<li>প্রুফরিড শেষে কুরিয়ার বুকিং বা প্যাকিং করুন।</li>'
+            .'</ul>';
+
+        return rtrim($bodyHtml)."\n".$list;
     }
 
     public function bodyWordCount(string $html): int

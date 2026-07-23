@@ -229,10 +229,9 @@ HTML;
         $this->assertStringNotContainsString('কাস্টমার হিস্টোরি যাচাই', $padded);
         $this->assertStringNotContainsString('নম্বর দিয়ে রেটিং', $padded);
         $this->assertStringContainsString($invoiceKw, $padded);
-        // Finite topic-neutral pads only — may still be under target; AI writing model / checklist expand fills the rest.
-        $this->assertGreaterThan(40, $service->bodyWordCount($padded));
-        // Original short <p> + at most 12 topic-neutral pads (no infinite loop).
-        $this->assertLessThanOrEqual(13, substr_count($padded, '<p>'));
+        $this->assertGreaterThanOrEqual(800, $service->bodyWordCount($padded));
+        // Cycled topic-neutral pads (no infinite "(ধাপ N)" spam).
+        $this->assertLessThanOrEqual(100, substr_count($padded, '<p>'));
     }
 
     public function test_deterministic_keyword_placement_for_bangla_focus(): void

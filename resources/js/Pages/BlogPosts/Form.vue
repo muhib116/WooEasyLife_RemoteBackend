@@ -142,7 +142,7 @@
                                 <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                                     Body <span class="text-rose-500">*</span>
                                 </label>
-                                <div class="mb-2">
+                                <div class="mb-2 flex flex-wrap gap-2">
                                     <Button
                                         type="button"
                                         label="Insert from media library"
@@ -152,11 +152,17 @@
                                         outlined
                                         @click="openMediaPicker('body')"
                                     />
+                                    <small class="self-center text-[11px] text-slate-500 dark:text-slate-400">
+                                        Or use the editor image icon to upload directly into HTML.
+                                    </small>
                                 </div>
                                 <BlogClassic
+                                    ref="bodyEditorRef"
                                     v-model="form.body_html"
                                     :upload-url="route('blogPosts.uploadImage')"
-                                    min-height="640px"
+                                    min-height="350px"
+                                    @uploaded="onBodyImageUploaded"
+                                    @upload-error="onBodyImageUploadError"
                                 />
                                 <small v-if="form.errors.body_html" class="mt-1 block text-rose-500">
                                     {{ form.errors.body_html }}
@@ -500,7 +506,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
@@ -535,6 +541,7 @@ const canUseBlogAi = computed(() => can('billing.manage'));
 const isEdit = computed(() => Boolean(props.post?.id));
 const mediaPickerOpen = ref(false);
 const mediaPickerMode = ref('og');
+const bodyEditorRef = ref(null);
 const aiWizardOpen = ref(false);
 const aiSessionId = ref(null);
 const seoRegenLoading = ref(false);
@@ -583,9 +590,36 @@ const onMediaSelected = (media) => {
         return;
     }
 
-    const alt = escapeAttr(media.alt || media.title || '');
-    const html = `<p><img src="${escapeAttr(media.url)}" alt="${alt}"></p>`;
-    form.body_html = `${form.body_html || ''}${html}`;
+    const alt = media.alt || media.title || '';
+    if (bodyEditorRef.value?.insertImage) {
+        bodyEditorRef.value.insertImage(media.url, alt);
+    } else {
+        const html = `<p><img src="${escapeAttr(media.url)}" alt="${escapeAttr(alt)}"></p>`;
+        form.body_html = `${form.body_html || ''}${html}`;
+    }
+};
+
+const onBodyImageUploaded = ({ url }) => {
+    toast.add({
+        severity: 'success',
+        summary: 'Image uploaded',
+        detail: 'Inserted into body HTML.',
+        life: 3000,
+        group: 'br',
+    });
+    if (url && /YOUR_COVER_IMAGE_URL/i.test(form.body_html || '')) {
+        form.body_html = form.body_html.replace(/YOUR_COVER_IMAGE_URL/gi, url);
+    }
+};
+
+const onBodyImageUploadError = (message) => {
+    toast.add({
+        severity: 'error',
+        summary: 'Image upload failed',
+        detail: message || 'Could not upload image.',
+        life: 6000,
+        group: 'br',
+    });
 };
 
 const applyAiDraft = (draft) => {
@@ -948,9 +982,19 @@ const regenerateSeoChecklist = async () => {
         if (data.meta_title != null) form.meta_title = data.meta_title;
         if (data.meta_description != null) form.meta_description = data.meta_description;
         if (data.excerpt != null) form.excerpt = data.excerpt;
-        if (data.body_html != null) form.body_html = data.body_html;
+        if (data.body_html != null) {
+            form.body_html = data.body_html;
+            await nextTick();
+            const editor = bodyEditorRef.value?.getEditor?.();
+            if (editor && typeof editor.setData === 'function') {
+                editor.setData(data.body_html);
+            }
+        }
         if (Array.isArray(data.faqs_json)) form.faqs_json = data.faqs_json;
         if (data.focus_keyword) form.focus_keyword = data.focus_keyword;
+        if (data.slug && (!form.slug || isPlaceholderSlug(form.slug) || !isSeoSlug(form.slug))) {
+            form.slug = data.slug;
+        }
         if (data.ai_quality_score != null) form.ai_quality_score = data.ai_quality_score;
         if (data.ai_quality_breakdown != null) form.ai_quality_breakdown = data.ai_quality_breakdown;
         if (typeof data.seo_soft_pass === 'boolean') {

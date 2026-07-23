@@ -2,10 +2,13 @@
 
 namespace App\Services\BlogAi;
 
+use App\Models\BlogPost;
 use App\Services\BlogSeoQuality;
 use App\Support\BlogHtmlSanitizer;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Surgically regenerate blog fields to satisfy failing SEO checklist gates.
@@ -39,6 +42,7 @@ class BlogSeoChecklistRegenerator
      * }  $input
      * @return array{
      *     title: string,
+     *     slug: string|null,
      *     meta_title: string,
      *     meta_description: string,
      *     excerpt: string,
@@ -104,8 +108,11 @@ class BlogSeoChecklistRegenerator
 
             $seoSoftPass = $this->syncSoftPassFlag($ignoreId, $before, []);
 
+            $slugOut = $this->suggestSlug($slug, $focus, $title, $ignoreId);
+
             return [
                 'title' => $title,
+                'slug' => $slugOut,
                 'meta_title' => $metaTitle !== '' ? $metaTitle : $title,
                 'meta_description' => $meta,
                 'excerpt' => $excerpt !== '' ? $excerpt : $meta,
@@ -143,6 +150,12 @@ class BlogSeoChecklistRegenerator
         if ($ogImage !== '' && ! preg_match('/<img[\s>]/i', $body)) {
             $body = $this->seoQuality->injectContentImage($body, $ogImage, $focus ?: $title);
             $notes[] = 'Injected cover image into body with keyword alt text.';
+        } elseif ($ogImage === '' && ! preg_match('/<img[\s>]/i', $body)) {
+            $defaultOg = trim((string) config('seo.default_og_image', ''));
+            if ($defaultOg !== '') {
+                $body = $this->seoQuality->injectContentImage($body, $defaultOg, $focus ?: $title);
+                $notes[] = 'Injected site default OG image into body — replace with a custom cover before publish for best CTR.';
+            }
         }
 
         $mid = $this->seoQuality->analyze(
@@ -157,7 +170,7 @@ class BlogSeoChecklistRegenerator
             $locale,
             $articleType,
         );
-        $targets = $this->failingTargets($mid, $ogImage !== '');
+        $targets = $this->failingTargets($mid, $ogImage !== '' || (bool) preg_match('/<img[\s>]/i', $body));
         // AI cannot invent media files — never spend tokens on image-only gaps.
         $mediaOnlyKeys = ['og_or_content_image', 'has_content_image', 'content_image_alt_ok'];
         $aiTargets = array_values(array_filter(
@@ -167,101 +180,112 @@ class BlogSeoChecklistRegenerator
 
         if ($aiTargets !== []) {
             $originalBody = $body;
-            $ai = $this->callModel(
-                title: $title,
-                metaTitle: $metaTitle,
-                metaDescription: $meta,
-                excerpt: $excerpt,
-                focus: $focus,
-                secondary: $secondary,
-                bodyHtml: $body,
-                faqs: $faqs,
-                targets: $aiTargets,
-                cluster: $cluster,
-                linkPlan: $linkPlan,
-                extraContext: [
-                    'refresh_instructions' => $input['refresh_instructions'] ?? null,
-                    'competitor_intelligence' => $input['competitor_intelligence'] ?? null,
-                    'competitor_diff_checklist' => $input['competitor_diff_checklist'] ?? null,
-                ],
-            );
-            $usage = $ai['usage'];
-
-            $title = trim((string) ($ai['title'] ?? $title)) ?: $title;
-            $metaTitle = trim((string) ($ai['meta_title'] ?? $metaTitle)) ?: $title;
-            $meta = trim((string) ($ai['meta_description'] ?? $meta));
-            $excerpt = trim((string) ($ai['excerpt'] ?? $excerpt)) ?: $meta;
-            $faqs = is_array($ai['faqs'] ?? null) ? $ai['faqs'] : $faqs;
-
-            $aiBody = trim((string) ($ai['body_html'] ?? ''));
-            $bodyTruncatedForPrompt = ! empty($ai['body_was_truncated']);
-            $keepOriginalBody = $bodyTruncatedForPrompt
-                || $aiBody === ''
-                || (
-                    mb_strlen($originalBody) > 2000
-                    && mb_strlen($aiBody) < (int) (mb_strlen($originalBody) * 0.7)
+            try {
+                $ai = $this->callModel(
+                    title: $title,
+                    metaTitle: $metaTitle,
+                    metaDescription: $meta,
+                    excerpt: $excerpt,
+                    focus: $focus,
+                    secondary: $secondary,
+                    bodyHtml: $body,
+                    faqs: $faqs,
+                    targets: $aiTargets,
+                    cluster: $cluster,
+                    linkPlan: $linkPlan,
+                    extraContext: [
+                        'refresh_instructions' => $input['refresh_instructions'] ?? null,
+                        'competitor_intelligence' => $input['competitor_intelligence'] ?? null,
+                        'competitor_diff_checklist' => $input['competitor_diff_checklist'] ?? null,
+                    ],
                 );
+                $usage = $ai['usage'];
 
-            if ($keepOriginalBody) {
-                $body = $originalBody;
-                $notes[] = $bodyTruncatedForPrompt
-                    ? 'Long body preserved (prompt truncated) — applied meta/FAQs/SEO blocks only.'
-                    : 'AI body rewrite looked incomplete — kept original body and applied SEO blocks only.';
-            } else {
-                $body = $aiBody;
+                $title = trim((string) ($ai['title'] ?? $title)) ?: $title;
+                $metaTitle = trim((string) ($ai['meta_title'] ?? $metaTitle)) ?: $title;
+                $meta = trim((string) ($ai['meta_description'] ?? $meta));
+                $excerpt = trim((string) ($ai['excerpt'] ?? $excerpt)) ?: $meta;
+                $faqs = is_array($ai['faqs'] ?? null) ? $ai['faqs'] : $faqs;
+
+                $aiBody = trim((string) ($ai['body_html'] ?? ''));
+                $bodyTruncatedForPrompt = ! empty($ai['body_was_truncated']);
+                $keepOriginalBody = $bodyTruncatedForPrompt
+                    || $aiBody === ''
+                    || (
+                        mb_strlen($originalBody) > 2000
+                        && mb_strlen($aiBody) < (int) (mb_strlen($originalBody) * 0.7)
+                    );
+
+                if ($keepOriginalBody) {
+                    $body = $originalBody;
+                    $notes[] = $bodyTruncatedForPrompt
+                        ? 'Long body preserved (prompt truncated) — applied meta/FAQs/SEO blocks only.'
+                        : 'AI body rewrite looked incomplete — kept original body and applied SEO blocks only.';
+                } else {
+                    $body = $aiBody;
+                }
+
+                $body = $this->seoQuality->ensureSeoContentBlocks(
+                    $body,
+                    is_string($ai['quick_answer'] ?? null) ? $ai['quick_answer'] : null,
+                    is_string($ai['ai_search_summary'] ?? null) ? $ai['ai_search_summary'] : null,
+                );
+                $notes[] = 'AI applied targeted SEO edits for failing checklist items.';
+            } catch (Throwable $e) {
+                Log::warning('SEO checklist OpenAI regenerate failed; falling back to deterministic polish', [
+                    'message' => $e->getMessage(),
+                ]);
+                $notes[] = 'OpenAI unavailable — applied deterministic SEO polish only.';
             }
-
-            $body = $this->seoQuality->ensureSeoContentBlocks(
-                $body,
-                is_string($ai['quick_answer'] ?? null) ? $ai['quick_answer'] : null,
-                is_string($ai['ai_search_summary'] ?? null) ? $ai['ai_search_summary'] : null,
-            );
-            $body = $this->seoQuality->ensureInternalLinks(
-                $body,
-                $linkPlan,
-                (int) config('blog_ai.seo_quality.min_internal_links', 2),
-            );
-            $body = BlogHtmlSanitizer::sanitize($body);
-            $notes[] = 'AI applied targeted SEO edits for failing checklist items.';
         } elseif ($targets !== []) {
-            $notes[] = 'Fixed with deterministic SEO helpers (links/image inject). Remaining items need manual upload.';
+            $notes[] = 'Fixed with deterministic SEO helpers (links/image inject).';
         } else {
             $notes[] = 'Fixed with deterministic SEO helpers (links/blocks).';
         }
 
-        // Finish with targeted deterministic fixes only when those gates still fail.
-        $probe = $this->seoQuality->analyze(
-            $title,
-            $focus,
-            $body,
-            $meta,
-            $faqs,
-            $secondary,
-            $slug !== '' ? $slug : null,
-            $ignoreId,
-            $locale,
-            $articleType,
+        // Always finish with Auto-style deterministic polish so soft checklist can go green
+        // even when the model returns thin/incomplete edits.
+        $polished = $this->polishDeterministically(
+            title: $title,
+            meta: $meta,
+            body: $body,
+            faqs: $faqs,
+            focus: $focus,
+            secondary: $secondary,
+            articleType: $articleType,
+            linkPlan: $linkPlan,
         );
-        $beforeDepth = $body;
-        if (empty($probe['keyword_in_first_paragraph'])) {
-            $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
+        $title = $polished['title'];
+        $meta = $polished['meta'];
+        $body = $polished['body'];
+        $faqs = $polished['faqs'];
+        if ($polished['changed']) {
+            $notes[] = 'Applied deterministic keyword, FAQ, structure, and word-count SEO polish.';
         }
-        if (empty($probe['word_count_ok'])) {
-            $body = $this->seoQuality->ensureMinBodyWords(
-                $body,
-                $focus,
-                $this->seoQuality->minBodyWordsForType($articleType),
-            );
-        }
-        if ($body !== $beforeDepth) {
-            $notes[] = 'Applied deterministic first-paragraph keyword and/or minimum word-count expansion.';
-        }
-        $body = BlogHtmlSanitizer::sanitize($body);
 
+        // AI rewrites can drop media — re-inject cover / default OG if still missing.
+        if (! preg_match('/<img[\s>]/i', $body)) {
+            $imageUrl = $ogImage !== '' ? $ogImage : trim((string) config('seo.default_og_image', ''));
+            if ($imageUrl !== '') {
+                $body = $this->seoQuality->injectContentImage($body, $imageUrl, $focus ?: $title);
+                $notes[] = $ogImage !== ''
+                    ? 'Re-injected cover image into body with keyword alt text.'
+                    : 'Injected site default OG image into body — replace with a custom cover before publish for best CTR.';
+            }
+        }
+
+        $body = BlogHtmlSanitizer::sanitize($body);
         $faqs = $this->normalizeFaqs($faqs);
         $meta = $this->clampMetaDescription($meta);
         $excerpt = $this->clampExcerpt($excerpt !== '' ? $excerpt : $meta);
         $metaTitle = Str::limit($metaTitle !== '' ? $metaTitle : $title, 70, '');
+        $slugOut = $this->suggestSlug($slug, $focus, $title, $ignoreId);
+        if ($slugOut && ($slug === '' || BlogPost::isPlaceholderSlug($slug) || $slug !== $slugOut)) {
+            if ($slug === '' || BlogPost::isPlaceholderSlug($slug)) {
+                $notes[] = 'Suggested English SEO slug from focus keyword / title.';
+            }
+            $slug = $slugOut;
+        }
 
         $after = $this->seoQuality->analyze(
             $title,
@@ -308,6 +332,7 @@ class BlogSeoChecklistRegenerator
 
         return [
             'title' => $title,
+            'slug' => $slugOut,
             'meta_title' => $metaTitle !== '' ? $metaTitle : $title,
             'meta_description' => $meta,
             'excerpt' => $excerpt !== '' ? $excerpt : $meta,
@@ -323,6 +348,84 @@ class BlogSeoChecklistRegenerator
             'notes' => $notes,
             'usage' => $usage,
         ];
+    }
+
+    /**
+     * Mirror Auto pipeline polish + checklist structure gates (H3/lists/SEO blocks/FAQs).
+     *
+     * @param  list<array{q?: string, a?: string}>  $faqs
+     * @param  list<string>  $secondary
+     * @param  list<array{path?: string, anchor?: string}>  $linkPlan
+     * @return array{title: string, meta: string, body: string, faqs: list<array{q: string, a: string}>, changed: bool}
+     */
+    private function polishDeterministically(
+        string $title,
+        string $meta,
+        string $body,
+        array $faqs,
+        string $focus,
+        array $secondary,
+        string $articleType,
+        array $linkPlan,
+    ): array {
+        $before = $title."\0".$meta."\0".$body."\0".json_encode($faqs, JSON_UNESCAPED_UNICODE);
+
+        $title = $this->seoQuality->ensureKeywordInTitle($title, $focus);
+        $meta = $this->seoQuality->ensureKeywordInMeta($meta, $focus);
+        $body = $this->seoQuality->ensureKeywordInH2($body, $focus);
+        $body = $this->seoQuality->ensureKeywordInFirstParagraph($body, $focus);
+        $body = $this->seoQuality->ensureSecondaryKeywordsInBody($body, $secondary);
+
+        $quick = $focus.' নিয়ে বাংলাদেশি COD সেলারদের জন্য সংক্ষিপ্ত উত্তর: অর্ডার ডেটা যাচাই, ভুল কমানো এবং একই SOP দিয়ে টিম চালানো।';
+        $summary = $focus.' বাংলাদেশি ইকমার্স সেলারদের অর্ডার ভুল, রিটার্ন চাপ ও সময় নষ্ট কমাতে সাহায্য করে। '
+            .'WooEasyLife ড্যাশবোর্ডে অর্ডার ডেটা রেখে ফ্রড চেক, কনফার্ম ও কুরিয়ার ওয়ার্কফ্লো একসাথে মেলানো যায়। '
+            .'প্রতিদিনের চেকলিস্টে এই ধাপ রাখলে মান স্থিতিশীল থাকে।';
+        $body = $this->seoQuality->ensureSeoContentBlocks($body, $quick, $summary);
+
+        $body = $this->seoQuality->ensureHasH3($body, $focus);
+        $body = $this->seoQuality->ensureHasLists($body, $focus);
+        $body = $this->seoQuality->ensureInternalLinks(
+            $body,
+            $linkPlan,
+            (int) config('blog_ai.seo_quality.min_internal_links', 2),
+        );
+        $body = $this->seoQuality->ensureMinBodyWords(
+            $body,
+            $focus,
+            $this->seoQuality->minBodyWordsForType($articleType),
+        );
+        $faqs = $this->seoQuality->ensureMinFaqs(
+            $faqs,
+            $focus,
+            (int) config('blog_ai.seo_quality.min_faqs', 5),
+        );
+
+        $after = $title."\0".$meta."\0".$body."\0".json_encode($faqs, JSON_UNESCAPED_UNICODE);
+
+        return [
+            'title' => $title,
+            'meta' => $meta,
+            'body' => $body,
+            'faqs' => $faqs,
+            'changed' => $before !== $after,
+        ];
+    }
+
+    private function suggestSlug(string $slug, string $focus, string $title, ?int $ignoreId): ?string
+    {
+        $slug = trim($slug);
+        if ($slug !== '' && ! BlogPost::isPlaceholderSlug($slug) && preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
+            return $slug;
+        }
+
+        foreach ([$focus, $title] as $source) {
+            $base = Str::slug(trim((string) $source));
+            if ($base !== '') {
+                return BlogPost::makeSlug($base, $ignoreId);
+            }
+        }
+
+        return $slug !== '' ? $slug : null;
     }
 
     /**
