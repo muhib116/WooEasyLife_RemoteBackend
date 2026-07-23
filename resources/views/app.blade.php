@@ -268,28 +268,14 @@
                     @endforeach
                 @endforeach
             @endif
-            <ul>
-                @if ($isEnPrerender)
-                    <li><a href="/en/bd-fraud-checker">BD Fraud Checker</a></li>
-                    <li><a href="/en/return-loss-calculator">Return Loss Calculator</a></li>
-                    <li><a href="/en/courier-charge-calculator">Courier Charge Calculator</a></li>
-                    <li><a href="/en/ads-roas-calculator">Ads ROAS Calculator</a></li>
-                    <li><a href="/en/fake-order-protection">Fake Order Protection</a></li>
-                    <li><a href="/en/courier-auto-entry">Courier Auto Entry</a></li>
-                    <li><a href="/en/woocommerce-bangladesh">WooCommerce Bangladesh Guide</a></li>
-                    <li><a href="/pricing">Pricing</a></li>
-                @else
-                    <li><a href="/bd-fraud-checker">BD Fraud Checker / ফ্রড চেকার</a></li>
-                    <li><a href="/return-loss-calculator">রিটার্ন লস ক্যালকুলেটর</a></li>
-                    <li><a href="/courier-charge-calculator">কুরিয়ার চার্জ ক্যালকুলেটর</a></li>
-                    <li><a href="/ads-roas-calculator">Ads ROAS ক্যালকুলেটর</a></li>
-                    <li><a href="/fake-order-protection">ফেক অর্ডার প্রোটেকশন</a></li>
-                    <li><a href="/courier-auto-entry">কুরিয়ার অটো এন্ট্রি</a></li>
-                    <li><a href="/woocommerce-bangladesh">WooCommerce Bangladesh গাইড</a></li>
-                    <li><a href="/fraudbd-alternative">FraudBD Alternative</a></li>
-                    <li><a href="/pricing">প্রাইসিং</a></li>
-                @endif
-            </ul>
+            {{-- Full sitemap link list so crawlers never see orphaned sitemap URLs --}}
+            <nav aria-label="Site pages">
+                <ul>
+                    @foreach (\App\Support\SeoPrerenderText::sitemapNavLinks($isEnPrerender) as $navLink)
+                        <li><a href="{{ $navLink['href'] }}">{{ $navLink['label'] }}</a></li>
+                    @endforeach
+                </ul>
+            </nav>
             @if (! empty($seo['cluster_links']) && is_array($seo['cluster_links']))
                 <ul>
                     @foreach ($seo['cluster_links'] as $link)

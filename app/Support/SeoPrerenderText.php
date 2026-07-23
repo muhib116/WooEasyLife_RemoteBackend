@@ -54,7 +54,38 @@ class SeoPrerenderText
         '/steadfast-fraud-check' => ['bn' => 'Steadfast ফ্রড চেক', 'en' => 'Steadfast fraud check'],
         '/redx-fraud-check' => ['bn' => 'RedX ফ্রড চেক', 'en' => 'RedX fraud check'],
         '/bd-courier-ratio-checker' => ['bn' => 'BD Courier Ratio Checker', 'en' => 'BD Courier Ratio Checker'],
+        '/fake-order-check' => ['bn' => 'Fake Order Check', 'en' => 'Fake Order Check'],
+        '/courier-checker' => ['bn' => 'Courier Checker', 'en' => 'Courier Checker'],
+        '/blog' => ['bn' => 'ব্লগ', 'en' => 'Blog (BN)'],
+        '/en/blog' => ['bn' => 'ব্লগ (EN)', 'en' => 'Blog'],
+        '/wooeasylife/app/privacy-policy' => ['bn' => 'প্রাইভেসি পলিসি', 'en' => 'Privacy Policy'],
+        '/wooeasylife/app/terms-of-service' => ['bn' => 'টার্মস অফ সার্ভিস', 'en' => 'Terms of Service'],
     ];
+
+    /**
+     * Every sitemap marketing URL as internal links (Ahrefs: avoid orphaned sitemap pages).
+     *
+     * @return list<array{href: string, label: string}>
+     */
+    public static function sitemapNavLinks(bool $isEn = false): array
+    {
+        $lang = $isEn ? 'en' : 'bn';
+        $links = [];
+
+        foreach (config('seo.sitemap.paths', []) as $item) {
+            $path = (string) ($item['path'] ?? '');
+            if ($path === '' || $path === '/') {
+                continue;
+            }
+
+            $links[] = [
+                'href' => $path,
+                'label' => self::PATH_LABELS[$path][$lang] ?? ltrim($path, '/'),
+            ];
+        }
+
+        return $links;
+    }
 
     public static function plain(string $text): string
     {

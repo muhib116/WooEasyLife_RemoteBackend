@@ -49,16 +49,30 @@ const pricingNavHref = computed(() => {
     return isEnLocale.value ? '/en#pricing' : '/#pricing';
 });
 
-/** Distinct public tools only (SEO keyword variants of the same checker are omitted). */
-const toolLinks = [
-    { label: 'WooCommerce Bangladesh গাইড', href: '/woocommerce-bangladesh' },
-    { label: 'রিটার্ন লস ক্যালকুলেটর', href: route('seo.return-loss-calculator') },
-    { label: 'কুরিয়ার চার্জ ক্যালকুলেটর', href: route('seo.courier-charge-calculator') },
-    { label: 'Ads ROAS ক্যালকুলেটর', href: route('seo.ads-roas-calculator') },
-    { label: 'ফ্রি ফ্রড চেকার', href: route('seo.bd-fraud-checker') },
-    { label: 'ফেক অর্ডার প্রোটেকশন', href: route('seo.fake-order-protection') },
-    { label: 'কুরিয়ার অটো এন্ট্রি', href: route('seo.courier-auto-entry') },
-];
+/** Distinct public tools for the Tools dropdown (locale-aware). */
+const toolLinks = computed(() =>
+    isEnLocale.value
+        ? [
+            { label: 'WooCommerce Bangladesh Guide', href: '/en/woocommerce-bangladesh' },
+            { label: 'Return Loss Calculator', href: '/en/return-loss-calculator' },
+            { label: 'Courier Charge Calculator', href: '/en/courier-charge-calculator' },
+            { label: 'Ads ROAS Calculator', href: '/en/ads-roas-calculator' },
+            { label: 'Free Fraud Checker', href: '/en/bd-fraud-checker' },
+            { label: 'Fake Order Protection', href: '/en/fake-order-protection' },
+            { label: 'Courier Auto Entry', href: '/en/courier-auto-entry' },
+            { label: 'How to Stop Fake Orders', href: '/en/ki-vabe-fake-order-atkabo' },
+        ]
+        : [
+            { label: 'WooCommerce Bangladesh গাইড', href: '/woocommerce-bangladesh' },
+            { label: 'রিটার্ন লস ক্যালকুলেটর', href: '/return-loss-calculator' },
+            { label: 'কুরিয়ার চার্জ ক্যালকুলেটর', href: '/courier-charge-calculator' },
+            { label: 'Ads ROAS ক্যালকুলেটর', href: '/ads-roas-calculator' },
+            { label: 'ফ্রি ফ্রড চেকার', href: '/bd-fraud-checker' },
+            { label: 'ফেক অর্ডার প্রোটেকশন', href: '/fake-order-protection' },
+            { label: 'কুরিয়ার অটো এন্ট্রি', href: '/courier-auto-entry' },
+            { label: 'কিভাবে ফেক অর্ডার আটকাবো', href: '/ki-vabe-fake-order-atkabo' },
+        ],
+);
 
 const toolsOpen = ref(false);
 const mobileToolsOpen = ref(false);
@@ -84,7 +98,7 @@ const isToolsActive = computed(() => {
         return true;
     }
 
-    return toolLinks.some((link) => {
+    return toolLinks.value.some((link) => {
         try {
             const path = new URL(link.href, 'https://example.com').pathname;
             return currentPath.value === path || currentPath.value === path.replace(/\/$/, '');
@@ -128,27 +142,25 @@ const onDocumentKeydown = (event) => {
     }
 };
 
-const footerProductLinks = [
-    { label: 'প্রাইসিং', href: route('pricing') },
-    { label: 'WooCommerce Bangladesh গাইড', href: '/woocommerce-bangladesh' },
-    { label: 'ফ্রি ফ্রড চেক', href: route('seo.bd-fraud-checker') },
-    { label: 'রিটার্ন লস ক্যালকুলেটর', href: route('seo.return-loss-calculator') },
-    { label: 'কুরিয়ার চার্জ ক্যালকুলেটর', href: route('seo.courier-charge-calculator') },
-    { label: 'Ads ROAS ক্যালকুলেটর', href: route('seo.ads-roas-calculator') },
-    { label: 'কিভাবে ফেক অর্ডার আটকাবো', href: route('seo.ki-vabe-fake-order-atkabo') },
-    { label: 'Fake Customer Check', href: route('seo.fake-customer-check') },
-    { label: 'Fake Customer Check (EN)', href: route('seo.en.fake-customer-check') },
-    { label: 'BD Courier Ratio', href: route('seo.bd-courier-ratio-checker') },
-    { label: 'Courier Checker', href: route('seo.courier-checker') },
-    { label: 'Pathao Fraud Check', href: route('seo.pathao-fraud-check') },
-    { label: 'ফেক অর্ডার প্রোটেকশন', href: route('seo.fake-order-protection') },
-    { label: 'কুরিয়ার অটো এন্ট্রি', href: route('seo.courier-auto-entry') },
-    { label: 'ব্লগ', href: route('blog.index') },
-    { label: 'FraudBD Alternative', href: route('seo.fraudbd-alternative') },
-    { label: 'English', href: route('seo.en.home') },
-    { label: 'মোবাইল অ্যাপ', href: '/#download-app' },
-    { label: 'ডাউনলোড', href: '/#downloads' },
-];
+/**
+ * Sitewide footer links = full sitemap (minus home). Fixes Ahrefs “Orphaned sitemap pages”.
+ */
+const footerProductLinks = computed(() => {
+    const fromServer = Array.isArray(page.props.sitemapNavLinks) ? page.props.sitemapNavLinks : [];
+    const links = fromServer.map((link) => ({
+        label: link.label,
+        href: link.href,
+    }));
+
+    if (! isEnLocale.value) {
+        links.push(
+            { label: 'মোবাইল অ্যাপ', href: '/#download-app' },
+            { label: 'ডাউনলোড', href: '/#downloads' },
+        );
+    }
+
+    return links;
+});
 
 const isDark = computed(() => props.variant === 'dark');
 
@@ -655,14 +667,14 @@ onUnmounted(() => {
 
                     <!-- Product -->
                     <div>
-                        <p class="text-sm font-bold text-white">প্রোডাক্ট</p>
-                        <div class="mt-4 flex flex-col gap-2.5">
+                        <p class="text-sm font-bold text-white">{{ isEnLocale ? 'Site pages' : 'সাইট পেজ' }}</p>
+                        <div class="mt-4 flex max-h-80 flex-col gap-1.5 overflow-y-auto pr-1">
                             <component
                                 :is="link.href.startsWith('/#') ? 'a' : Link"
                                 v-for="link in footerProductLinks"
-                                :key="link.label"
+                                :key="link.href + link.label"
                                 :href="link.href"
-                                class="text-sm text-slate-400 transition hover:text-white"
+                                class="text-xs text-slate-400 transition hover:text-white"
                                 @click="link.href.startsWith('/#') ? onAnchorNavClick($event, link.href) : undefined"
                             >
                                 {{ link.label }}

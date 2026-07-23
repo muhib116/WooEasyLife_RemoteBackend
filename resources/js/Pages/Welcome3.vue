@@ -398,7 +398,10 @@ const toggleFaq = (i) => {
                         <Link :href="bdFraudCheckerHref" class="text-amber-400 hover:text-amber-300">{{ copy.fraudToolLink }}</Link>
                         <template v-if="copy.fraudHowLink">
                             ·
-                            <Link :href="route('seo.ki-vabe-fake-order-atkabo')" class="text-amber-400 hover:text-amber-300">{{ copy.fraudHowLink }}</Link>
+                            <Link
+                                :href="isEn ? '/en/ki-vabe-fake-order-atkabo' : '/ki-vabe-fake-order-atkabo'"
+                                class="text-amber-400 hover:text-amber-300"
+                            >{{ copy.fraudHowLink }}</Link>
                         </template>
                     </p>
                     <p v-if="copy.banglaVersion" class="mt-3">

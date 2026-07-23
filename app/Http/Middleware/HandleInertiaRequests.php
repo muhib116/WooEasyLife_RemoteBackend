@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\WhatsappLink;
+use App\Support\SeoPrerenderText;
 use App\Services\AdminSidebarNavOrder;
 use App\Services\LandingSettingsService;
 use App\Services\MerchantPortalContext;
@@ -63,6 +64,12 @@ class HandleInertiaRequests extends Middleware
             default => null,
         };
 
+        $requestPath = '/'.ltrim($request->path(), '/');
+        if ($requestPath === '/.') {
+            $requestPath = '/';
+        }
+        $isEnMarketing = $requestPath === '/en' || str_starts_with($requestPath, '/en/');
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -76,6 +83,7 @@ class HandleInertiaRequests extends Middleware
                 'access_label' => $accessLabel,
                 'portal' => $user ? $portal->sharePayload($user) : null,
             ],
+            'sitemapNavLinks' => SeoPrerenderText::sitemapNavLinks($isEnMarketing),
             'admin_sidebar_nav_order' => $adminSidebarNavOrder,
             'flash' => [
                 'success' => session('success'),

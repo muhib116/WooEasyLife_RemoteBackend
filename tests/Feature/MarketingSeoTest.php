@@ -573,6 +573,23 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/pricing', false);
     }
 
+    public function test_home_prerender_links_every_sitemap_path(): void
+    {
+        $response = $this->get('/');
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $this->assertStringContainsString('aria-label="Site pages"', $html);
+
+        foreach (config('seo.sitemap.paths', []) as $item) {
+            $path = (string) ($item['path'] ?? '');
+            if ($path === '' || $path === '/') {
+                continue;
+            }
+            $this->assertStringContainsString('href="'.$path.'"', $html, "Missing internal link for sitemap path {$path}");
+        }
+    }
+
     public function test_robots_includes_sitemap(): void
     {
         $response = $this->get('/robots.txt');
