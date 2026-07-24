@@ -41,4 +41,13 @@ assert.ok(punct.some((s) => s.external && s.href === 'https://www.linkedin.com/i
 assert.ok(punct.some((s) => s.external && s.href === 'https://app.wpsalehub.com' && s.label === 'WPSaleHub'));
 assert.ok(punct.some((s) => s.type === 'text' && s.text.startsWith('. ')));
 
+// Short locale roots must not steal longer unknown /en/... paths.
+const unknownEn = linkifyInternalPaths('See /en/some-unknown-spoke for details', true);
+assert.equal(unknownEn.some((s) => s.href === '/en'), false);
+assert.ok(unknownEn.some((s) => s.type === 'text' && s.text.includes('/en/some-unknown-spoke')));
+
+const knownEn = linkifyInternalPaths('Read /en/facebook-page-cod-management next', true);
+assert.ok(knownEn.some((s) => s.href === '/en/facebook-page-cod-management' && s.label === 'Facebook Page COD guide'));
+assert.equal(knownEn.some((s) => s.href === '/en'), false);
+
 console.log('internalPathLinks.spec.mjs: ok');

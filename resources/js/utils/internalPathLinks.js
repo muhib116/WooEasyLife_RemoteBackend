@@ -26,7 +26,7 @@ const LABELS = {
     '/ads-roas-calculator': { bn: 'Ads ROAS ক্যালকুলেটর', en: 'Ads ROAS Calculator' },
     '/en/ads-roas-calculator': { bn: 'Ads ROAS Calculator', en: 'Ads ROAS Calculator' },
     '/woocommerce-bangladesh': { bn: 'WooCommerce Bangladesh গাইড', en: 'WooCommerce Bangladesh guide' },
-    '/en/woocommerce-bangladesh': { bn: 'ইংরেজি গাইড', en: 'English WooCommerce guide' },
+    '/en/woocommerce-bangladesh': { bn: 'ইংরেজি গাইড', en: 'WooCommerce Bangladesh guide' },
     '/pricing': { bn: 'প্রাইসিং / ট্রায়াল', en: 'Pricing / free trial' },
     '/fraudbd-alternative': { bn: 'FraudBD Alternative', en: 'FraudBD Alternative' },
     '/en/fraudbd-alternative': { bn: 'FraudBD Alternative (EN)', en: 'FraudBD Alternative' },
@@ -126,8 +126,13 @@ function linkifyKnownPathsInPlainText(raw, isEn = false) {
             }
             const afterPath = idx + path.length;
             const next = raw[afterPath] || '';
-            // Skip if this is a longer Latin slug prefix (/foo vs /foo-bar)
+            const next2 = raw[afterPath + 1] || '';
+            // Skip longer Latin slug prefixes: /foo vs /foo-bar, and /en vs /en/foo
             if (next && /[a-z0-9]/i.test(next)) {
+                from = afterPath;
+                continue;
+            }
+            if (next === '/' && /[a-z0-9]/i.test(next2)) {
                 from = afterPath;
                 continue;
             }
