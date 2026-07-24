@@ -494,12 +494,18 @@ class MarketingSeoTest extends TestCase
         $bn->assertSee('Founder & CEO, WPSaleHub', false);
         $bn->assertSee('dev.muhibbullah@gmail.com', false);
         $bn->assertSee('Automating Business. Empowering People.', false);
+        $bn->assertSee('WPSaleHub হলো একটি automation-first technology company', false);
+        $bn->assertSee('WooCommerce মার্চেন্টদের জন্য তৈরি', false);
+        $bn->assertDontSee('https:Bangla home', false);
 
         $en = $this->get('/en/about');
         $en->assertOk();
         $en->assertSee('Muhibbullah Ansary', false);
         $en->assertSee('Founder & CEO, WPSaleHub', false);
         $en->assertSee('/images/seo/about/founder-portrait.png', false);
+        $en->assertSee('WooCommerce merchant solution', false);
+        $en->assertSee('The fastest way is email', false);
+        $en->assertDontSee('https:Bangla home', false);
     }
 
     public function test_home_prerenders_h1_for_crawlers(): void

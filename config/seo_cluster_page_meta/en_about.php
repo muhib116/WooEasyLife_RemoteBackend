@@ -26,23 +26,23 @@ return [
     'faqs' => [
         [
             'q' => 'What is WPSaleHub?',
-            'a' => 'WPSaleHub is an automation-first technology company. We automate repetitive work, connect systems, and make operations faster and more accurate. Portal: https://app.wpsalehub.com',
+            'a' => 'WPSaleHub is an automation-first technology company. We automate repetitive work, connect software and APIs, and make day-to-day operations faster and more accurate. Our goal is simple: help businesses run smarter—in less time and at lower cost. Visit the portal: https://app.wpsalehub.com',
         ],
         [
             'q' => 'Who founded WooEasyLife?',
-            'a' => 'WooEasyLife is WPSaleHub’s flagship product. Founder & CEO: Muhibbullah Ansary. Contact: dev.muhibbullah@gmail.com · LinkedIn: https://www.linkedin.com/in/dev-muhib',
+            'a' => 'WooEasyLife is WPSaleHub’s flagship product—a WooCommerce merchant solution built for Bangladesh COD sellers. It was founded by Muhibbullah Ansary, Founder & CEO of WPSaleHub. You can email him at dev.muhibbullah@gmail.com or connect on https://www.linkedin.com/in/dev-muhib — his full story is on this page: /en/about',
         ],
         [
             'q' => 'What can WooEasyLife do?',
-            'a' => 'Multistore WooCommerce management, fraud number and courier history checks, courier automation, order workflow automation, and customer history—in one place. More: /en/bd-fraud-checker · /pricing',
+            'a' => 'WooEasyLife brings everyday WooCommerce COD operations into one place: multistore management, fraud number and courier history checks, fake-order protection, courier automation, order workflows, and customer history. Start with /en/bd-fraud-checker or /pricing. Selling from a Facebook page? See /en/facebook-page-cod-management',
         ],
         [
             'q' => 'How can I contact you?',
-            'a' => 'Email: dev.muhibbullah@gmail.com · LinkedIn: https://www.linkedin.com/in/dev-muhib · Product trial: https://app.wpsalehub.com/pricing',
+            'a' => 'The fastest way is email: dev.muhibbullah@gmail.com. You can also connect on https://www.linkedin.com/in/dev-muhib. To try WooEasyLife or compare plans, head to /pricing.',
         ],
         [
             'q' => 'Where is the Bangla About page?',
-            'a' => 'Bangla About: /about. Home: /en · Bangla home: /',
+            'a' => 'Read the Bangla About page at /about. English home: /en · Bangla home: /',
         ],
     ],
     'cluster_eyebrow' => 'WPSaleHub · About',

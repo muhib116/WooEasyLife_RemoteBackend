@@ -8,7 +8,7 @@ import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 import ClusterGuideBlocks from '@/components/marketing/ClusterGuideBlocks.vue';
 import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
-import { buildContentBlocks } from '@/utils/clusterContentBlocks';
+import { buildContentBlocks, injectFigureBlocks } from '@/utils/clusterContentBlocks';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -70,7 +70,15 @@ const bodySections = computed(() => sections.value
             return t.length > 0;
         });
         const figuresForBlocks = s.layout === 'founder_hero' ? [] : (s.figures || []);
-        const blocks = buildContentBlocks(paragraphs, figuresForBlocks);
+        // About pages are hand-written prose: keep paragraphs verbatim.
+        // buildContentBlocks joins paragraphs (for pasted ASCII diagrams) and
+        // would glue sentences together without spaces.
+        const blocks = isAbout.value
+            ? injectFigureBlocks(
+                paragraphs.map((p) => ({ type: 'paragraph', text: String(p).trim() })),
+                figuresForBlocks,
+            )
+            : buildContentBlocks(paragraphs, figuresForBlocks);
         return {
             ...s,
             paragraphs,
@@ -646,9 +654,13 @@ onUnmounted(() => {
                         {{ isEn ? 'Common questions' : 'যা প্রায়ই জিজ্ঞেস করা হয়' }}
                     </h2>
                     <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">
-                        {{ isEn
-                            ? 'Detailed answers with labeled links to the tools and spoke guides you need next.'
-                            : 'বিস্তারিত উত্তর—পরবর্তী টুল ও স্পোক গাইডের লেবেলযুক্ত লিংকসহ।' }}
+                        {{ isAbout
+                            ? (isEn
+                                ? 'Clear answers about WPSaleHub, WooEasyLife, and how to reach the founder.'
+                                : 'WPSaleHub, WooEasyLife এবং প্রতিষ্ঠাতার যোগাযোগ নিয়ে স্পষ্ট উত্তর।')
+                            : (isEn
+                                ? 'Detailed answers with labeled links to the tools and spoke guides you need next.'
+                                : 'বিস্তারিত উত্তর—পরবর্তী টুল ও স্পোক গাইডের লেবেলযুক্ত লিংকসহ।') }}
                     </p>
                 </div>
                 <div class="mt-6 space-y-3 sm:mt-8">

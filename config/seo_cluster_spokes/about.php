@@ -75,7 +75,7 @@ return [
         'paragraphs' => [
             'আমরা এমন একটি ভবিষ্যৎ গড়তে চাই—যেখানে ব্যবসার মালিকরা সফটওয়্যার পরিচালনা করবেন না। সফটওয়্যার তাদের ব্যবসা পরিচালনা করবে।',
             'WPSaleHub — Automating Business. Empowering People.',
-            'যোগাযোগ: dev.muhibbullah@gmail.com · LinkedIn: https://www.linkedin.com/in/dev-muhib · প্রোডাক্ট: https://app.wpsalehub.com/pricing',
+            'যেকোনো প্রশ্ন বা আইডিয়া থাকলে সরাসরি ইমেইল করুন dev.muhibbullah@gmail.com ঠিকানায়, অথবা যুক্ত হোন https://www.linkedin.com/in/dev-muhib প্রোফাইলে। WooEasyLife ফ্রি ট্রায়াল শুরু করতে দেখুন /pricing পেজ।',
         ],
         'figures' => [
             [

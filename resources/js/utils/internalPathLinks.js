@@ -1,6 +1,9 @@
 /**
- * Turn raw internal paths in marketing copy into labeled link tokens.
- * Only known marketing routes are linked (avoids /wp-login, /images/…).
+ * Turn raw internal paths (and absolute https URLs) in marketing copy into
+ * labeled link tokens. Only known marketing routes are linked as internal
+ * paths (avoids /wp-login, /images/…). Absolute http(s) URLs become external
+ * links and must never be rewritten by the `/` home-path label.
+ *
  * Optional Bangla case markers glued after a path (-এ, -তে, …) are dropped
  * so labeled links don’t leave a dangling “-এ”.
  */
@@ -8,6 +11,8 @@
 const LABELS = {
     '/': { bn: 'হোম', en: 'Bangla home' },
     '/en': { bn: 'ইংরেজি হোম', en: 'English home' },
+    '/about': { bn: 'About পেজ', en: 'Bangla About' },
+    '/en/about': { bn: 'ইংরেজি About', en: 'English About' },
     '/bd-fraud-checker': { bn: 'ফ্রড চেকার', en: 'BD Fraud Checker' },
     '/en/bd-fraud-checker': { bn: 'ফ্রড চেকার (EN)', en: 'BD Fraud Checker' },
     '/fake-order-protection': { bn: 'ফেক অর্ডার প্রোটেকশন', en: 'Fake Order Protection' },
@@ -22,7 +27,7 @@ const LABELS = {
     '/en/ads-roas-calculator': { bn: 'Ads ROAS Calculator', en: 'Ads ROAS Calculator' },
     '/woocommerce-bangladesh': { bn: 'WooCommerce Bangladesh গাইড', en: 'WooCommerce Bangladesh guide' },
     '/en/woocommerce-bangladesh': { bn: 'ইংরেজি গাইড', en: 'English WooCommerce guide' },
-    '/pricing': { bn: 'প্রাইসিং', en: 'Pricing' },
+    '/pricing': { bn: 'প্রাইসিং / ট্রায়াল', en: 'Pricing / free trial' },
     '/fraudbd-alternative': { bn: 'FraudBD Alternative', en: 'FraudBD Alternative' },
     '/en/fraudbd-alternative': { bn: 'FraudBD Alternative (EN)', en: 'FraudBD Alternative' },
     '/steadfast-integration': { bn: 'Steadfast ইন্টিগ্রেশন', en: 'Steadfast integration' },
@@ -41,6 +46,8 @@ const LABELS = {
     '/en/woocommerce-notifications': { bn: 'Notifications (EN)', en: 'Notifications automation' },
     '/facebook-ads-for-woocommerce': { bn: 'Facebook Ads গাইড', en: 'Facebook Ads guide' },
     '/en/facebook-ads-for-woocommerce': { bn: 'Facebook Ads (EN)', en: 'Facebook Ads guide' },
+    '/facebook-page-cod-management': { bn: 'Facebook Page COD গাইড', en: 'Facebook Page COD guide' },
+    '/en/facebook-page-cod-management': { bn: 'Facebook Page COD (EN)', en: 'Facebook Page COD guide' },
     '/ki-vabe-fake-order-atkabo': { bn: 'কিভাবে ফেক অর্ডার আটকাবো', en: 'How to stop fake orders (BN)' },
     '/en/ki-vabe-fake-order-atkabo': { bn: 'How to stop fake orders (EN)', en: 'How to stop fake orders' },
     '/fake-customer-check': { bn: 'Fake Customer Check', en: 'Fake Customer Check' },
@@ -51,13 +58,18 @@ const LABELS = {
     '/pathao-fraud-check': { bn: 'Pathao ফ্রড চেক', en: 'Pathao fraud check' },
     '/steadfast-fraud-check': { bn: 'Steadfast ফ্রড চেক', en: 'Steadfast fraud check' },
     '/redx-fraud-check': { bn: 'RedX ফ্রড চেক', en: 'RedX fraud check' },
-    '/bd-courier-ratio-checker': { bn: 'BD Courier Ratio Checker', en: 'BD Courier Ratio Checker' },
 };
 
 const KNOWN_PATHS = Object.keys(LABELS).sort((a, b) => b.length - a.length);
 
 /** Bangla case markers sometimes glued onto slugs in copy (e.g. /pricing-এ). */
 const BN_PATH_SUFFIX_RE = /^(?:-এ|-তে|-র|-য়|-য়ে|-য়ের|-কে|-ও)/u;
+
+/** Absolute URLs — must be linked as-is, never rewritten by the `/` home label. */
+const ABS_URL_RE = /https?:\/\/[^\s<>"'））\]},]+/gi;
+
+/** Trailing punctuation that belongs to the sentence, not the URL. */
+const URL_TRAILING_PUNCT_RE = /[.,;:!?।)"'»…]+$/u;
 
 export function labelForInternalPath(path, isEn = false) {
     const key = String(path || '').replace(/\/+$/, '') || '/';
@@ -67,12 +79,39 @@ export function labelForInternalPath(path, isEn = false) {
 }
 
 /**
+ * True when an internal path may start at idx (not mid-URL / mid-token).
+ * Prevents `https://…` from matching `/` as Bangla/English home.
+ */
+function canMatchInternalPathAt(raw, idx) {
+    if (idx === 0) return true;
+    const prev = raw[idx - 1];
+    // Colon/letter/digit/dot/underscore/hyphen → inside URL or slug
+    if (/[a-z0-9.:_-]/i.test(prev)) return false;
+    return true;
+}
+
+function labelForAbsoluteUrl(url) {
+    try {
+        const u = new URL(url);
+        const host = u.hostname.replace(/^www\./, '');
+        if (host.includes('linkedin.com')) return 'LinkedIn';
+        if (host.includes('wpsalehub.com')) {
+            if (u.pathname.includes('pricing')) return 'Pricing / free trial';
+            return 'WPSaleHub';
+        }
+        if (host.includes('freetoolssite.com')) return 'FreeToolsSite';
+        return host;
+    } catch {
+        return url;
+    }
+}
+
+/**
  * @param {string} text
  * @param {boolean} isEn
- * @returns {Array<{ type: 'text', text: string } | { type: 'link', href: string, label: string }>}
+ * @returns {Array<{ type: 'text', text: string } | { type: 'link', href: string, label: string, external?: boolean }>}
  */
-export function linkifyInternalPaths(text, isEn = false) {
-    const raw = String(text || '');
+function linkifyKnownPathsInPlainText(raw, isEn = false) {
     if (!raw) return [];
 
     const hits = [];
@@ -81,6 +120,10 @@ export function linkifyInternalPaths(text, isEn = false) {
         while (from < raw.length) {
             const idx = raw.indexOf(path, from);
             if (idx < 0) break;
+            if (!canMatchInternalPathAt(raw, idx)) {
+                from = idx + path.length;
+                continue;
+            }
             const afterPath = idx + path.length;
             const next = raw[afterPath] || '';
             // Skip if this is a longer Latin slug prefix (/foo vs /foo-bar)
@@ -119,6 +162,52 @@ export function linkifyInternalPaths(text, isEn = false) {
     }
     if (last < raw.length) {
         parts.push({ type: 'text', text: raw.slice(last) });
+    }
+    return parts;
+}
+
+/**
+ * @param {string} text
+ * @param {boolean} isEn
+ * @returns {Array<{ type: 'text', text: string } | { type: 'link', href: string, label: string, external?: boolean }>}
+ */
+export function linkifyInternalPaths(text, isEn = false) {
+    const raw = String(text || '');
+    if (!raw) return [];
+
+    const absHits = [];
+    ABS_URL_RE.lastIndex = 0;
+    let m;
+    while ((m = ABS_URL_RE.exec(raw)) !== null) {
+        let url = m[0];
+        const trailing = url.match(URL_TRAILING_PUNCT_RE);
+        if (trailing) {
+            url = url.slice(0, -trailing[0].length);
+        }
+        if (!url) continue;
+        absHits.push({ start: m.index, end: m.index + url.length, url });
+    }
+
+    if (!absHits.length) {
+        return linkifyKnownPathsInPlainText(raw, isEn);
+    }
+
+    const parts = [];
+    let last = 0;
+    for (const hit of absHits) {
+        if (hit.start > last) {
+            parts.push(...linkifyKnownPathsInPlainText(raw.slice(last, hit.start), isEn));
+        }
+        parts.push({
+            type: 'link',
+            href: hit.url,
+            label: labelForAbsoluteUrl(hit.url),
+            external: true,
+        });
+        last = hit.end;
+    }
+    if (last < raw.length) {
+        parts.push(...linkifyKnownPathsInPlainText(raw.slice(last), isEn));
     }
     return parts;
 }

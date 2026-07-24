@@ -26,23 +26,23 @@ return [
     'faqs' => [
         [
             'q' => 'WPSaleHub কী?',
-            'a' => 'WPSaleHub একটি Automation-First Technology Company। এরা ব্যবসার পুনরাবৃত্তিমূলক কাজ অটোমেট করে, সিস্টেম সংযুক্ত করে এবং অপারেশনকে দ্রুত ও নির্ভুল করে তোলে। পোর্টাল: https://app.wpsalehub.com',
+            'a' => 'WPSaleHub হলো একটি automation-first technology company। আমরা ব্যবসার পুনরাবৃত্তিমূলক কাজ অটোমেট করি, বিভিন্ন সফটওয়্যার ও API সংযুক্ত করি, এবং অপারেশনকে আরও দ্রুত ও নির্ভুল করে তুলি। আমাদের লক্ষ্য—কম সময়ে, কম খরচে, আরও স্মার্টভাবে ব্যবসা চালানো। পোর্টাল দেখুন: https://app.wpsalehub.com',
         ],
         [
             'q' => 'WooEasyLife কে বানিয়েছেন?',
-            'a' => 'WooEasyLife WPSaleHub-এর প্রধান প্রোডাক্ট। প্রতিষ্ঠাতা ও CEO Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী)। যোগাযোগ: dev.muhibbullah@gmail.com · LinkedIn: https://www.linkedin.com/in/dev-muhib',
+            'a' => 'WooEasyLife হলো WPSaleHub-এর প্রধান প্রোডাক্ট—বাংলাদেশের WooCommerce মার্চেন্টদের জন্য তৈরি একটা অপারেশন সলিউশন। প্রতিষ্ঠাতা ও CEO Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী)। ইমেইল করুন dev.muhibbullah@gmail.com ঠিকানায়, অথবা প্রোফাইল দেখুন https://www.linkedin.com/in/dev-muhib — পুরো গল্প এই পেজেই: /about',
         ],
         [
             'q' => 'WooEasyLife দিয়ে কী করা যায়?',
-            'a' => 'মাল্টিস্টোর WooCommerce ম্যানেজমেন্ট, ফ্রড নম্বর ও কুরিয়ার হিস্টোরি চেক, কুরিয়ার অটোমেশন, অর্ডার ওয়ার্কফ্লো অটোমেশন এবং কাস্টমার হিস্টোরি—সব এক জায়গায়। বিস্তারিত: /bd-fraud-checker · /pricing',
+            'a' => 'WooEasyLife WooCommerce মার্চেন্টদের দৈনন্দিন COD অপারেশন এক জায়গায় আনে। একাধিক স্টোর ম্যানেজমেন্ট, ফ্রড নম্বর ও কুরিয়ার হিস্টোরি চেক, ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটোমেশন, অর্ডার ওয়ার্কফ্লো এবং কাস্টমার হিস্টোরি—সব এক প্ল্যাটফর্মে। শুরু করতে পারেন /bd-fraud-checker বা /pricing থেকে; Facebook পেজ সেলার হলে দেখুন /facebook-page-cod-management',
         ],
         [
             'q' => 'যোগাযোগ করব কীভাবে?',
-            'a' => 'ইমেইল: dev.muhibbullah@gmail.com · LinkedIn: https://www.linkedin.com/in/dev-muhib · প্রোডাক্ট ট্রায়াল: https://app.wpsalehub.com/pricing',
+            'a' => 'সবচেয়ে সহজ উপায়—সরাসরি ইমেইল: dev.muhibbullah@gmail.com। LinkedIn-এ যুক্ত হতে চাইলে প্রোফাইল: https://www.linkedin.com/in/dev-muhib। আর WooEasyLife ট্রায়াল বা প্ল্যান দেখতে যান /pricing পেজে।',
         ],
         [
             'q' => 'ইংরেজি About পেজ কোথায়?',
-            'a' => 'English About: /en/about। হোম: / · ইংরেজি হোম: /en',
+            'a' => 'ইংরেজি About পড়তে যান: /en/about। বাংলা হোম: / · ইংরেজি হোম: /en',
         ],
     ],
     'cluster_eyebrow' => 'WPSaleHub · About',

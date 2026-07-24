@@ -75,7 +75,7 @@ return [
         'paragraphs' => [
             'We want a future where business owners don’t manage software—software manages their business.',
             'WPSaleHub — Automating Business. Empowering People.',
-            'Contact: dev.muhibbullah@gmail.com · LinkedIn: https://www.linkedin.com/in/dev-muhib · Product: https://app.wpsalehub.com/pricing',
+            'Have a question or an idea? Email dev.muhibbullah@gmail.com directly, or connect on https://www.linkedin.com/in/dev-muhib. To start a free WooEasyLife trial, visit /pricing.',
         ],
         'figures' => [
             [

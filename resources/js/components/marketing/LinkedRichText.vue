@@ -13,8 +13,15 @@ const segments = computed(() => linkifyInternalPaths(props.text, props.isEn));
 
 <template>
     <template v-for="(seg, si) in segments" :key="si">
+        <a
+            v-if="seg.type === 'link' && seg.external"
+            :href="seg.href"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline break-words font-semibold text-amber-400 underline-offset-2 hover:text-amber-300 hover:underline"
+        >{{ seg.label }}</a>
         <Link
-            v-if="seg.type === 'link'"
+            v-else-if="seg.type === 'link'"
             :href="seg.href"
             class="inline break-words font-semibold text-amber-400 underline-offset-2 hover:text-amber-300 hover:underline"
         >{{ seg.label }}</Link>
