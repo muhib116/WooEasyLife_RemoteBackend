@@ -220,6 +220,7 @@ class SteadfastPortalSessionClient
         string $host,
         array $cookies,
         ?string $referer = null,
+        bool $followRedirects = true,
     ): Response {
         $parts = [];
         foreach ($data as $name => $value) {
@@ -241,15 +242,82 @@ class SteadfastPortalSessionClient
 
         // Prefer form-urlencoded first — same fields Steadfast reads via $request->all(),
         // and more reliable CSRF cookie pairing than some multipart stacks.
-        return $this->apiClient($host, $cookies)
+        $request = $this->apiClient($host, $cookies)
             ->withCookies($cookies, $host)
             ->asForm()
             ->withHeaders([
                 'Referer' => $referer ?: $this->url($path, $host),
                 'X-XSRF-TOKEN' => $this->xsrfHeaderValue($cookies),
                 'X-CSRF-TOKEN' => $this->plainCsrfFromCookies($cookies),
+            ]);
+
+        if (! $followRedirects) {
+            $request = $request->withoutRedirecting();
+        }
+
+        return $request->post($this->url($path, $host), $this->multipartToAssoc($parts));
+    }
+
+    /**
+     * Send genuine multipart FormData, matching browser axios FormData requests.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, string>  $cookies
+     */
+    public function postMultipartFormData(
+        string $path,
+        array $data,
+        string $host,
+        array $cookies,
+        ?string $referer = null,
+        bool $followRedirects = true,
+    ): Response {
+        $request = $this->apiClient($host, $cookies)
+            ->withCookies($cookies, $host)
+            ->withHeaders([
+                'Referer' => $referer ?: $this->url($path, $host),
+                'X-XSRF-TOKEN' => $this->xsrfHeaderValue($cookies),
+                'X-CSRF-TOKEN' => $this->plainCsrfFromCookies($cookies),
+            ]);
+
+        if (! $followRedirects) {
+            $request = $request->withoutRedirecting();
+        }
+
+        foreach ($data as $name => $value) {
+            if ($value === null) {
+                $value = '';
+            } elseif (is_bool($value)) {
+                $value = $value ? '1' : '0';
+            } elseif (! is_scalar($value)) {
+                $value = json_encode($value) ?: '';
+            }
+
+            $request = $request->attach((string) $name, (string) $value);
+        }
+
+        return $request->post($this->url($path, $host));
+    }
+
+    /**
+     * JSON DELETE matching Steadfast Vue axios delete calls.
+     *
+     * @param  array<string, string>  $cookies
+     */
+    public function deleteJson(
+        string $path,
+        string $host,
+        array $cookies,
+        ?string $referer = null,
+    ): Response {
+        return $this->apiClient($host, $cookies)
+            ->withCookies($cookies, $host)
+            ->withHeaders([
+                'Referer' => $referer ?: $this->url($path, $host),
+                'X-XSRF-TOKEN' => $this->xsrfHeaderValue($cookies),
+                'X-CSRF-TOKEN' => $this->plainCsrfFromCookies($cookies),
             ])
-            ->post($this->url($path, $host), $this->multipartToAssoc($parts));
+            ->delete($this->url($path, $host));
     }
 
     /**

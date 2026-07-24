@@ -11,6 +11,7 @@ use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\SteadfastNotificationsService;
 use App\Services\Courier\SteadfastParcelNotesService;
 use App\Services\Courier\SteadfastReturnRequestsService;
+use App\Services\Courier\SteadfastConsignmentService;
 use App\Services\Courier\SteadfastStatusBatchService;
 use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\MerchantPackageFeatureGate;
@@ -32,6 +33,7 @@ class SteadFastController extends Controller
         protected SteadfastStatusBatchService $steadfastStatusBatchService,
         protected SteadfastParcelNotesService $parcelNotesService,
         protected SteadfastReturnRequestsService $returnRequestsService,
+        protected SteadfastConsignmentService $consignmentService,
         protected SteadfastNotificationsService $notificationsService,
         protected MerchantSteadfastFraudCredentialResolver $steadfastPortalCredentials,
         protected MerchantPackageFeatureGate $packageFeatureGate,
@@ -727,6 +729,42 @@ class SteadFastController extends Controller
             LogHelper::saveLog('Steadfast return request status update failed', $th->getMessage());
 
             return $this->errorResponse($th->getMessage() ?: 'Unable to update Steadfast return request status.');
+        }
+    }
+
+    public function deleteConsignment(Request $request)
+    {
+        if ($denied = $this->denyUnlessCourierAutomationEnabled($request)) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'consignment_id' => ['required', 'string', 'regex:/^\d{4,20}$/'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
+        }
+
+        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        if ($portalCredentials === null) {
+            return $this->errorResponse(
+                'Steadfast portal username/password are not configured. Add them in Config → Courier → Steadfast.',
+                422
+            );
+        }
+
+        try {
+            $data = $this->consignmentService->delete(
+                (string) $request->input('consignment_id'),
+                $portalCredentials
+            );
+
+            return $this->successResponse($data, 'Consignment deleted');
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast consignment delete failed', $th->getMessage());
+
+            return $this->errorResponse($th->getMessage() ?: 'Unable to delete Steadfast consignment.');
         }
     }
 
