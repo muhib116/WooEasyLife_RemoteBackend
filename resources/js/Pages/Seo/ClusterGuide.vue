@@ -22,12 +22,16 @@ const tocOpen = ref(false);
 const showBackTop = ref(false);
 const readProgress = ref(0);
 
-const ctaUrl = computed(() => primaryCtaUrl());
-const ctaLabel = computed(() => primaryCtaLabel());
 const isEn = computed(() => (props.seo?.html_lang || '').startsWith('en'));
+const ctaUrl = computed(() => primaryCtaUrl());
+const ctaLabel = computed(() => primaryCtaLabel(isEn.value ? 'en' : 'bn'));
 const isPillar = computed(() => Boolean(props.seo?.is_pillar));
+const isAbout = computed(() => props.seo?.page_kind === 'about');
 const sections = computed(() => props.seo?.content_sections || []);
 const clusterLinks = computed(() => props.seo?.cluster_links || []);
+const founderPortrait = computed(() => props.seo?.author_image || '/images/seo/about/founder-portrait.png');
+const founderName = computed(() => props.seo?.author_name || 'Muhibbullah Ansary');
+const founderRole = computed(() => props.seo?.author_role || 'Founder & CEO, WPSaleHub');
 
 const isRedundantStubSection = (section) => {
     if (!section) return true;
@@ -65,7 +69,8 @@ const bodySections = computed(() => sections.value
             if (/^(?:পার্ট|অংশ|Part)\s*\d+/i.test(t) && t.endsWith('(')) return false;
             return t.length > 0;
         });
-        const blocks = buildContentBlocks(paragraphs, s.figures || []);
+        const figuresForBlocks = s.layout === 'founder_hero' ? [] : (s.figures || []);
+        const blocks = buildContentBlocks(paragraphs, figuresForBlocks);
         return {
             ...s,
             paragraphs,
@@ -73,6 +78,10 @@ const bodySections = computed(() => sections.value
             part,
             blocks,
             tone: idx % 3,
+            layout: s.layout || null,
+            founder_name: s.founder_name || null,
+            founder_title: s.founder_title || null,
+            founder_quote: s.founder_quote || null,
         };
     }));
 
@@ -84,10 +93,10 @@ const tocItems = computed(() => bodySections.value
         part: s.part,
     })));
 
-const showToc = computed(() => tocItems.value.length >= 6);
+const showToc = computed(() => !isAbout.value && tocItems.value.length >= 6);
 
 const journeyGroups = computed(() => {
-    if (!isPillar.value || bodySections.value.length < 8) return [];
+    if (isAbout.value || !isPillar.value || bodySections.value.length < 8) return [];
 
     const groups = isEn.value
         ? [
@@ -110,7 +119,7 @@ const journeyGroups = computed(() => {
 });
 
 const heroStats = computed(() => {
-    if (!isPillar.value) return [];
+    if (isAbout.value || !isPillar.value) return [];
     return isEn.value
         ? [
             { value: '30', label: 'Guide parts' },
@@ -194,7 +203,10 @@ onUnmounted(() => {
                     <SeoBreadcrumbs :items="seo?.breadcrumbs || []" />
                 </div>
 
-                <div class="mt-2 grid items-end gap-8 lg:grid-cols-[1.35fr_0.65fr]">
+                <div
+                    class="mt-2 grid gap-8 lg:grid-cols-[1.35fr_0.65fr]"
+                    :class="isAbout ? 'items-center' : 'items-end'"
+                >
                     <div>
                         <p class="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-200 sm:text-xs">
                             <span class="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
@@ -215,7 +227,7 @@ onUnmounted(() => {
                                 link-class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black shadow-lg shadow-amber-900/30 hover:bg-amber-400 sm:w-auto"
                             />
                             <Link
-                                v-if="seo?.pillar_path && !seo?.is_pillar"
+                                v-if="seo?.pillar_path && !seo?.is_pillar && !isAbout"
                                 :href="seo.pillar_path"
                                 class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 sm:w-auto"
                             >
@@ -234,13 +246,42 @@ onUnmounted(() => {
                                 class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10 px-5 py-3 text-sm font-semibold text-amber-200 hover:bg-amber-500/20 sm:w-auto"
                                 @click="jumpTo(bodySections[0].id)"
                             >
-                                {{ isEn ? 'Start reading →' : 'পড়া শুরু →' }}
+                                {{ isEn ? (isAbout ? 'Read our story →' : 'Start reading →') : (isAbout ? 'আমাদের গল্প পড়ুন →' : 'পড়া শুরু →') }}
                             </button>
                         </div>
                     </div>
 
                     <aside
-                        v-if="heroStats.length"
+                        v-if="isAbout"
+                        class="relative mx-auto flex w-full max-w-[17.5rem] flex-col items-center text-center lg:mx-0 lg:max-w-none"
+                    >
+                        <div class="relative mx-auto aspect-square w-full max-w-[15.5rem] sm:max-w-[16.5rem]">
+                            <div
+                                class="pointer-events-none absolute -inset-6 rounded-full bg-[radial-gradient(circle,_rgba(245,158,11,0.28)_0%,_rgba(245,158,11,0.08)_38%,_transparent_68%)] blur-2xl"
+                                aria-hidden="true"
+                            />
+                            <div
+                                class="pointer-events-none absolute inset-0 rounded-full ring-1 ring-amber-300/25"
+                                aria-hidden="true"
+                            />
+                            <img
+                                :src="founderPortrait"
+                                :alt="`${founderName} — ${founderRole}`"
+                                class="relative z-[1] h-full w-full rounded-full object-contain drop-shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+                                width="640"
+                                height="640"
+                                loading="eager"
+                                decoding="async"
+                            />
+                        </div>
+                        <div class="mt-5">
+                            <p class="text-lg font-bold tracking-tight text-white sm:text-xl">{{ founderName }}</p>
+                            <p class="mt-1 text-sm font-medium text-amber-200/90">{{ founderRole }}</p>
+                        </div>
+                    </aside>
+
+                    <aside
+                        v-else-if="heroStats.length"
                         class="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-1"
                     >
                         <div
@@ -360,12 +401,18 @@ onUnmounted(() => {
         <section v-if="clusterLinks.length" class="border-b border-white/10 px-4 py-8 sm:py-10 lg:px-8">
             <div class="mx-auto max-w-5xl">
                 <h2 class="text-center text-xl font-bold text-white sm:text-2xl">
-                    {{ isEn ? 'Dive into a spoke' : 'স্পোক পেজে ডুব দিন' }}
+                    {{ isAbout
+                        ? (isEn ? 'Explore WooEasyLife' : 'WooEasyLife এক্সপ্লোর করুন')
+                        : (isEn ? 'Dive into a spoke' : 'স্পোক পেজে ডুব দিন') }}
                 </h2>
                 <p class="mx-auto mt-3 max-w-2xl text-center text-sm leading-relaxed text-slate-400">
-                    {{ isEn
-                        ? 'Focused guides linked from this hub — pick the problem you need to solve now.'
-                        : 'এই হাব থেকে লিংক করা ফোকাসড গাইড — এখন যে সমস্যাটা জরুরি সেখানে যান।' }}
+                    {{ isAbout
+                        ? (isEn
+                            ? 'Guides and tools that show how our automation vision works in practice.'
+                            : 'গাইড ও টুলস—আমাদের অটোমেশন ভিশন বাস্তবে কীভাবে কাজ করে।')
+                        : (isEn
+                            ? 'Focused guides linked from this hub — pick the problem you need to solve now.'
+                            : 'এই হাব থেকে লিংক করা ফোকাসড গাইড — এখন যে সমস্যাটা জরুরি সেখানে যান।') }}
                 </p>
 
                 <div
@@ -408,8 +455,8 @@ onUnmounted(() => {
 
         <!-- Chapter body -->
         <section class="px-4 py-8 sm:py-12 lg:px-8">
-            <div class="mx-auto max-w-3xl">
-                <div class="mb-8 flex items-end justify-between gap-3">
+            <div :class="isAbout ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl'">
+                <div v-if="!isAbout" class="mb-8 flex items-end justify-between gap-3">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-[0.16em] text-amber-300/80">
                             {{ isEn ? 'Guide body' : 'গাইড বডি' }}
@@ -426,48 +473,126 @@ onUnmounted(() => {
                     </p>
                 </div>
 
-                <div class="relative space-y-5 sm:space-y-6">
+                <div
+                    class="relative space-y-5 sm:space-y-6"
+                    :class="isAbout ? 'space-y-8 sm:space-y-10' : ''"
+                >
                     <div
+                        v-if="!isAbout"
                         class="pointer-events-none absolute bottom-4 left-[1.15rem] top-4 w-px bg-gradient-to-b from-amber-400/40 via-white/10 to-transparent sm:left-[1.35rem]"
                         aria-hidden="true"
                     />
 
-                    <article
-                        v-for="(section, si) in bodySections"
-                        :id="section.id"
-                        :key="section.id"
-                        class="cluster-chapter relative scroll-mt-36 rounded-2xl border border-white/10 bg-[#111]/80 p-4 pl-14 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-sm sm:scroll-mt-32 sm:p-7 sm:pl-16"
-                        :class="{
-                            'border-amber-400/20': section.tone === 0,
-                            'border-emerald-400/15': section.tone === 1,
-                            'border-sky-400/15': section.tone === 2,
-                        }"
-                    >
-                        <div
-                            class="absolute left-3 top-4 flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-bold sm:left-4 sm:top-6 sm:h-9 sm:w-9 sm:text-xs"
+                    <template v-for="(section, si) in bodySections" :key="section.id">
+                        <!-- Founder hero layout -->
+                        <article
+                            v-if="section.layout === 'founder_hero'"
+                            :id="section.id"
+                            class="scroll-mt-36 overflow-hidden rounded-[1.75rem] border border-amber-400/20 bg-gradient-to-br from-amber-500/[0.08] via-[#111]/95 to-[#0a0a0a] shadow-[0_0_0_1px_rgba(255,255,255,0.03)]"
+                        >
+                            <div class="grid items-center gap-6 p-6 sm:gap-8 sm:p-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-10 lg:p-10">
+                                <div class="relative mx-auto aspect-square w-full max-w-[16rem] sm:max-w-[18rem] lg:mx-0 lg:max-w-[19rem]">
+                                    <div
+                                        class="pointer-events-none absolute -inset-5 rounded-full bg-[radial-gradient(circle,_rgba(245,158,11,0.22)_0%,_transparent_70%)] blur-xl"
+                                        aria-hidden="true"
+                                    />
+                                    <img
+                                        v-if="section.figures?.[0]?.src"
+                                        :src="section.figures[0].src"
+                                        :alt="section.figures[0].alt || `${section.founder_name || founderName}`"
+                                        class="relative z-[1] h-full w-full rounded-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]"
+                                        width="640"
+                                        height="640"
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                </div>
+                                <div class="relative flex flex-col justify-center text-center lg:text-left">
+                                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-amber-300/80">
+                                        {{ section.heading || (isEn ? 'Our founder' : 'আমাদের প্রতিষ্ঠাতা') }}
+                                    </p>
+                                    <h2 class="mt-3 text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-[2.15rem]">
+                                        {{ section.founder_name || founderName }}
+                                    </h2>
+                                    <p class="mt-2 text-base font-semibold text-amber-200 sm:text-lg">
+                                        {{ section.founder_title || founderRole }}
+                                    </p>
+                                    <blockquote
+                                        v-if="section.founder_quote"
+                                        class="mt-5 border-amber-400/60 pl-0 text-sm italic leading-relaxed text-slate-200 sm:text-base lg:border-l-2 lg:pl-4"
+                                    >
+                                        “{{ section.founder_quote }}”
+                                    </blockquote>
+                                    <div class="mt-5 space-y-3 text-left">
+                                        <p
+                                            v-for="(paragraph, pIndex) in section.paragraphs"
+                                            :key="pIndex"
+                                            class="text-sm leading-7 text-slate-300 sm:text-[0.95rem] sm:leading-8"
+                                        >
+                                            <LinkedRichText :text="paragraph" :is-en="isEn" />
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- About story sections -->
+                        <article
+                            v-else-if="isAbout"
+                            :id="section.id"
+                            class="scroll-mt-36 rounded-2xl border border-white/10 bg-[#111]/80 p-5 sm:p-8"
+                        >
+                            <h2
+                                v-if="section.heading"
+                                class="break-words text-xl font-bold leading-snug text-white sm:text-2xl"
+                            >
+                                {{ section.heading }}
+                            </h2>
+                            <ClusterGuideBlocks
+                                class="mt-4 sm:mt-5"
+                                :blocks="section.blocks"
+                                :is-en="isEn"
+                                lead-first
+                            />
+                        </article>
+
+                        <!-- Default guide chapters -->
+                        <article
+                            v-else
+                            :id="section.id"
+                            class="cluster-chapter relative scroll-mt-36 rounded-2xl border border-white/10 bg-[#111]/80 p-4 pl-14 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-sm sm:scroll-mt-32 sm:p-7 sm:pl-16"
                             :class="{
-                                'border-amber-400/40 bg-amber-500/15 text-amber-200': section.tone === 0,
-                                'border-emerald-400/40 bg-emerald-500/15 text-emerald-200': section.tone === 1,
-                                'border-sky-400/40 bg-sky-500/15 text-sky-200': section.tone === 2,
+                                'border-amber-400/20': section.tone === 0,
+                                'border-emerald-400/15': section.tone === 1,
+                                'border-sky-400/15': section.tone === 2,
                             }"
                         >
-                            {{ section.part || String(si + 1).padStart(2, '0') }}
-                        </div>
+                            <div
+                                class="absolute left-3 top-4 flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-bold sm:left-4 sm:top-6 sm:h-9 sm:w-9 sm:text-xs"
+                                :class="{
+                                    'border-amber-400/40 bg-amber-500/15 text-amber-200': section.tone === 0,
+                                    'border-emerald-400/40 bg-emerald-500/15 text-emerald-200': section.tone === 1,
+                                    'border-sky-400/40 bg-sky-500/15 text-sky-200': section.tone === 2,
+                                }"
+                            >
+                                {{ section.part || String(si + 1).padStart(2, '0') }}
+                            </div>
 
-                        <h2
-                            v-if="section.heading"
-                            class="break-words text-lg font-bold leading-snug text-white sm:text-xl"
-                        >
-                            {{ section.heading }}
-                        </h2>
+                            <h2
+                                v-if="section.heading"
+                                class="break-words text-lg font-bold leading-snug text-white sm:text-xl"
+                            >
+                                {{ section.heading }}
+                            </h2>
 
-                        <ClusterGuideBlocks
-                            class="mt-3 sm:mt-4"
-                            :blocks="section.blocks"
-                            :is-en="isEn"
-                            lead-first
-                        />
-                    </article>
+                            <ClusterGuideBlocks
+                                class="mt-3 sm:mt-4"
+                                :blocks="section.blocks"
+                                :is-en="isEn"
+                                lead-first
+                            />
+                        </article>
+                    </template>
                 </div>
             </div>
         </section>
@@ -480,12 +605,18 @@ onUnmounted(() => {
             />
             <div class="relative mx-auto max-w-3xl text-center">
                 <h2 class="text-xl font-bold text-white sm:text-2xl">
-                    {{ isEn ? 'Put the system to work' : 'সিস্টেম কাজে লাগান' }}
+                    {{ isAbout
+                        ? (isEn ? 'Ready to automate your ops?' : 'অপস অটোমেট করতে প্রস্তুত?')
+                        : (isEn ? 'Put the system to work' : 'সিস্টেম কাজে লাগান') }}
                 </h2>
                 <p class="mt-3 text-sm leading-relaxed text-slate-400">
-                    {{ isEn
-                        ? 'Free fraud check first, then trial protection, courier auto-entry, and messaging.'
-                        : 'আগে ফ্রি ফ্রড চেক, তারপর প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও মেসেজিং ট্রায়াল।' }}
+                    {{ isAbout
+                        ? (isEn
+                            ? 'Start with WooEasyLife — fraud checks, courier automation, and order workflows in one place.'
+                            : 'WooEasyLife দিয়ে শুরু করুন—ফ্রড চেক, কুরিয়ার অটোমেশন ও অর্ডার ওয়ার্কফ্লো এক জায়গায়।')
+                        : (isEn
+                            ? 'Free fraud check first, then trial protection, courier auto-entry, and messaging.'
+                            : 'আগে ফ্রি ফ্রড চেক, তারপর প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও মেসেজিং ট্রায়াল।') }}
                 </p>
                 <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                     <Link

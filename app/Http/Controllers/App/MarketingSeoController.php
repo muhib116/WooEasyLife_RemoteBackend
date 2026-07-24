@@ -161,6 +161,7 @@ class MarketingSeoController extends Controller
             'woocommerce_notifications',
             'facebook_ads_for_woocommerce',
             'facebook_page_cod_management',
+            'about',
         ];
 
         if (! in_array($seoKey, $allowed, true)) {

@@ -2525,4 +2525,6 @@ return array (
   ),
   'facebook_page_cod_management' => require __DIR__.'/seo_cluster_page_meta/facebook_page_cod_management.php',
   'en_facebook_page_cod_management' => require __DIR__.'/seo_cluster_page_meta/en_facebook_page_cod_management.php',
+  'about' => require __DIR__.'/seo_cluster_page_meta/about.php',
+  'en_about' => require __DIR__.'/seo_cluster_page_meta/en_about.php',
 );

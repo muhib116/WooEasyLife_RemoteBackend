@@ -289,6 +289,7 @@ class MarketingSeoTest extends TestCase
             '/woocommerce-notifications' => 'woocommerce_notifications',
             '/facebook-ads-for-woocommerce' => 'facebook_ads_for_woocommerce',
             '/facebook-page-cod-management' => 'facebook_page_cod_management',
+            '/about' => 'about',
         ];
 
         foreach ($bnPaths as $path => $key) {
@@ -338,6 +339,7 @@ class MarketingSeoTest extends TestCase
             '/en/woocommerce-notifications',
             '/en/facebook-ads-for-woocommerce',
             '/en/facebook-page-cod-management',
+            '/en/about',
         ];
 
         foreach ($enPaths as $path) {
@@ -453,6 +455,51 @@ class MarketingSeoTest extends TestCase
         $enSeo = $seoService->forPage('en_facebook_page_cod_management');
         $this->assertSame('en', $enSeo['html_lang']);
         $this->assertTrue((bool) ($enSeo['is_pillar'] ?? false));
+    }
+
+    public function test_about_founder_page_has_person_image_schema(): void
+    {
+        $seo = app(\App\Services\SeoMetaService::class)->forPage('about');
+        $graph = collect($seo['json_ld']['@graph'] ?? []);
+
+        $person = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Person');
+        $this->assertNotNull($person);
+        $this->assertSame('Muhibbullah Ansary', $person['name'] ?? null);
+        $this->assertStringContainsString('founder-portrait', (string) ($person['image'] ?? ''));
+        $this->assertContains('https://www.linkedin.com/in/dev-muhib', $person['sameAs'] ?? []);
+        $this->assertSame('Founder & CEO, WPSaleHub', $person['jobTitle'] ?? null);
+
+        $org = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Organization');
+        $this->assertNotNull($org);
+        $this->assertSame('WPSaleHub', $org['name'] ?? null);
+        $this->assertNotNull($org['founder'] ?? null);
+
+        $product = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Product');
+        $this->assertNotNull($product);
+        $this->assertSame('WooEasyLife', $product['name'] ?? null);
+        $this->assertStringContainsString('WooCommerce', (string) ($product['category'] ?? $product['description'] ?? ''));
+
+        $aboutPage = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'AboutPage');
+        $this->assertNotNull($aboutPage);
+        $this->assertStringEndsWith('#webpage', (string) ($aboutPage['@id'] ?? ''));
+        $this->assertNull($graph->first(fn (array $node) => ($node['@id'] ?? null) === ($seo['canonical'] ?? '').'#article'));
+
+        $this->assertSame(1024, (int) ($seo['og_image_width'] ?? 0));
+        $this->assertSame(571, (int) ($seo['og_image_height'] ?? 0));
+
+        $bn = $this->get('/about');
+        $bn->assertOk();
+        $bn->assertSee('/images/seo/about/founder-hero.png', false);
+        $bn->assertSee('Muhibbullah Ansary', false);
+        $bn->assertSee('Founder & CEO, WPSaleHub', false);
+        $bn->assertSee('dev.muhibbullah@gmail.com', false);
+        $bn->assertSee('Automating Business. Empowering People.', false);
+
+        $en = $this->get('/en/about');
+        $en->assertOk();
+        $en->assertSee('Muhibbullah Ansary', false);
+        $en->assertSee('Founder & CEO, WPSaleHub', false);
+        $en->assertSee('/images/seo/about/founder-portrait.png', false);
     }
 
     public function test_home_prerenders_h1_for_crawlers(): void
@@ -571,6 +618,11 @@ class MarketingSeoTest extends TestCase
         // rather than invent ratings (Semrush flagged / and /en as invalid).
         $this->assertStringNotContainsString('"@type":"SoftwareApplication"', $html);
         $this->assertStringContainsString('"@type":"Organization"', $html);
+        $this->assertStringContainsString('"name":"WPSaleHub"', $html);
+        $this->assertStringContainsString('"@type":"Product"', $html);
+        $this->assertStringContainsString('"name":"WooEasyLife"', $html);
+        $this->assertStringContainsString('"@type":"Person"', $html);
+        $this->assertStringContainsString('Muhibbullah Ansary', $html);
         $this->assertStringContainsString('"@type":"WebPage"', $html);
         $this->assertStringContainsString('"@type":"FAQPage"', $html);
     }
@@ -660,7 +712,9 @@ class MarketingSeoTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
         $response->assertSee('# WooEasyLife', false);
-        $response->assertSee('> Bangladesh WooCommerce platform', false);
+        $response->assertSee('> WPSaleHub is a business automation company', false);
+        $response->assertSee('Organization: WPSaleHub', false);
+        $response->assertSee('Product: WooEasyLife', false);
         $response->assertSee('## Primary tools', false);
         $response->assertSee('/bd-fraud-checker', false);
         $response->assertSee('/pricing', false);

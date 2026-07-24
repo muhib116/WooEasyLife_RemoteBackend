@@ -15,6 +15,7 @@ return array (
   'woocommerce_notifications' => require __DIR__.'/seo_cluster_spokes/woocommerce_notifications.php',
   'facebook_ads_for_woocommerce' => require __DIR__.'/seo_cluster_spokes/facebook_ads_for_woocommerce.php',
   'facebook_page_cod_management' => require __DIR__.'/seo_cluster_spokes/facebook_page_cod_management.php',
+  'about' => require __DIR__.'/seo_cluster_spokes/about.php',
 
   'en_steadfast_integration' => require __DIR__.'/seo_cluster_spokes/en_steadfast_integration.php',
   'en_pathao_courier_guide' => require __DIR__.'/seo_cluster_spokes/en_pathao_courier_guide.php',
@@ -25,4 +26,5 @@ return array (
   'en_woocommerce_notifications' => require __DIR__.'/seo_cluster_spokes/en_woocommerce_notifications.php',
   'en_facebook_ads_for_woocommerce' => require __DIR__.'/seo_cluster_spokes/en_facebook_ads_for_woocommerce.php',
   'en_facebook_page_cod_management' => require __DIR__.'/seo_cluster_spokes/en_facebook_page_cod_management.php',
+  'en_about' => require __DIR__.'/seo_cluster_spokes/en_about.php',
 );

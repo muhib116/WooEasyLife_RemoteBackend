@@ -168,6 +168,9 @@ Route::get('/facebook-ads-for-woocommerce', [MarketingSeoController::class, 'clu
 Route::get('/facebook-page-cod-management', [MarketingSeoController::class, 'clusterGuide'])
     ->defaults('seoKey', 'facebook_page_cod_management')
     ->name('seo.facebook-page-cod-management');
+Route::get('/about', [MarketingSeoController::class, 'clusterGuide'])
+    ->defaults('seoKey', 'about')
+    ->name('seo.about');
 
 Route::get('/pathao-fraud-check', [MarketingSeoController::class, 'courierIntent'])
     ->defaults('courier', 'pathao')
@@ -258,6 +261,9 @@ Route::prefix('en')->name('seo.en.')->group(function () {
     Route::get('/facebook-page-cod-management', [EnglishMarketingController::class, 'clusterGuide'])
         ->defaults('seoKey', 'facebook_page_cod_management')
         ->name('facebook-page-cod-management');
+    Route::get('/about', [EnglishMarketingController::class, 'clusterGuide'])
+        ->defaults('seoKey', 'about')
+        ->name('about');
 
     Route::get('/blog', [EnglishMarketingController::class, 'blogIndex'])->name('blog');
 });

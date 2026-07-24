@@ -323,7 +323,19 @@ class SteadfastPortalSessionClient
      */
     private function attemptLogin(string $host, string $username, string $password, array $credentials): array
     {
-        $loginPage = $this->browserClient()->get($this->url('/login', $host));
+        try {
+            $loginPage = $this->browserClient()->get($this->url('/login', $host));
+        } catch (\Throwable $th) {
+            if ($this->isRetryableError($th)) {
+                throw new RuntimeException(
+                    "Steadfast portal is temporarily unreachable ({$host}). Please wait a few seconds and try again.",
+                    0,
+                    $th
+                );
+            }
+
+            throw $th;
+        }
 
         if (! $loginPage->successful()) {
             if ($loginPage->status() === 429 || $this->responseLooksRateLimited($loginPage->body())) {
@@ -507,12 +519,24 @@ class SteadfastPortalSessionClient
 
     private function browserClient(): PendingRequest
     {
-        return Http::timeout(25)
-            ->connectTimeout(10)
-            ->retry(2, 1200, fn ($exception) => $this->isRetryableError($exception), throw: false)
+        return Http::timeout(30)
+            ->connectTimeout(12)
+            // Steadfast intermittently resets TLS/HTTP2 negotiations from some hosts.
+            // HTTP/1.1 + IPv4 is the stable path we observed in production scrapes.
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                    CURLOPT_TCP_KEEPALIVE => 1,
+                ],
+            ])
+            ->retry(3, 1500, fn ($exception) => $this->isRetryableError($exception), throw: false)
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                 'Accept-Language' => 'en-US,en;q=0.9',
+                'Cache-Control' => 'no-cache',
+                'Pragma' => 'no-cache',
             ]);
     }
 
@@ -552,16 +576,22 @@ class SteadfastPortalSessionClient
             return true;
         }
 
-        if ($exception instanceof RequestException) {
-            $message = strtolower($exception->getMessage());
+        $message = strtolower($exception->getMessage());
 
-            return str_contains($message, 'connection reset')
-                || str_contains($message, 'connection refused')
-                || str_contains($message, 'timed out')
-                || str_contains($message, 'could not resolve');
-        }
-
-        return false;
+        return str_contains($message, 'connection reset')
+            || str_contains($message, 'recv failure')
+            || str_contains($message, 'connection refused')
+            || str_contains($message, 'timed out')
+            || str_contains($message, 'operation timed out')
+            || str_contains($message, 'could not resolve')
+            || str_contains($message, 'ssl connect')
+            || str_contains($message, 'ssl routines')
+            || str_contains($message, 'empty reply from server')
+            || str_contains($message, 'http/2')
+            || str_contains($message, 'curl error 56')
+            || str_contains($message, 'curl error 35')
+            || str_contains($message, 'curl error 28')
+            || str_contains($message, 'curl error 7');
     }
 
     /**

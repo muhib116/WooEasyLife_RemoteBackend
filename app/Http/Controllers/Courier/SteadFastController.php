@@ -8,6 +8,7 @@ use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierShipmentService;
+use App\Services\Courier\SteadfastNotificationsService;
 use App\Services\Courier\SteadfastParcelNotesService;
 use App\Services\Courier\SteadfastReturnRequestsService;
 use App\Services\Courier\SteadfastStatusBatchService;
@@ -31,6 +32,7 @@ class SteadFastController extends Controller
         protected SteadfastStatusBatchService $steadfastStatusBatchService,
         protected SteadfastParcelNotesService $parcelNotesService,
         protected SteadfastReturnRequestsService $returnRequestsService,
+        protected SteadfastNotificationsService $notificationsService,
         protected MerchantSteadfastFraudCredentialResolver $steadfastPortalCredentials,
         protected MerchantPackageFeatureGate $packageFeatureGate,
     ) {
@@ -520,6 +522,77 @@ class SteadFastController extends Controller
         }
     }
 
+    public function listNotifications(Request $request)
+    {
+        if ($denied = $this->denyUnlessCourierAutomationEnabled($request)) {
+            return $denied;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'cursor' => ['nullable', 'string', 'max:2000'],
+            'username' => ['nullable', 'string', 'max:255'],
+            'password' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
+        }
+
+        $credentials = $this->resolvePortalCredentialsForRequest($request);
+        if ($credentials === null) {
+            return $this->errorResponse(
+                'Steadfast portal username/password are not configured. Add them in Config → Courier → Steadfast.',
+                422
+            );
+        }
+
+        try {
+            $data = $this->notificationsService->list(
+                $credentials,
+                $request->input('cursor')
+            );
+
+            return $this->successResponse($data);
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast notifications fetch failed', $th->getMessage());
+
+            return $this->errorResponse($th->getMessage() ?: 'Unable to fetch Steadfast notifications.');
+        }
+    }
+
+    /**
+     * Prefer explicit request credentials (plugin local vault), then saved courier config.
+     *
+     * @return array{username: string, password: string}|null
+     */
+    private function resolvePortalCredentialsForRequest(Request $request): ?array
+    {
+        $fromRequest = $this->steadfastPortalCredentials->credentialsFromSettings([
+            'username' => (string) $request->input('username', ''),
+            'password' => (string) $request->input('password', ''),
+        ]);
+        if ($fromRequest !== null) {
+            return $fromRequest;
+        }
+
+        $stored = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        if ($stored === null) {
+            return null;
+        }
+
+        // Allow partial overrides (e.g. password from plugin + username from hub).
+        $username = trim((string) $request->input('username', ''));
+        $password = trim((string) $request->input('password', ''));
+        if ($username === '' && $password === '') {
+            return $stored;
+        }
+
+        return $this->steadfastPortalCredentials->credentialsFromSettings([
+            'username' => $username !== '' ? $username : $stored['username'],
+            'password' => $password !== '' ? $password : $stored['password'],
+        ]);
+    }
+
     public function createReturnRequest(Request $request)
     {
         if ($denied = $this->denyUnlessCourierAutomationEnabled($request)) {
@@ -571,9 +644,19 @@ class SteadFastController extends Controller
             return $denied;
         }
 
+        // Portal cancel-requests pagination can take well over PHP's default 30s.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(300);
+        }
+        @ini_set('max_execution_time', '300');
+        if (function_exists('ignore_user_abort')) {
+            @ignore_user_abort(true);
+        }
+
         $validator = Validator::make($request->all(), [
             'status' => ['nullable', 'string', 'max:32'],
             'date' => ['nullable', 'date_format:Y-m-d'],
+            'mode' => ['nullable', 'string', 'in:quick,full'],
         ]);
 
         if ($validator->fails()) {
@@ -595,7 +678,8 @@ class SteadFastController extends Controller
                 ],
                 $portalCredentials,
                 $request->input('status'),
-                $request->input('date')
+                $request->input('date'),
+                $request->input('mode', 'full')
             );
 
             return $this->successResponse($data);

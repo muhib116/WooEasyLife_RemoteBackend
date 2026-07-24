@@ -167,10 +167,10 @@ const isDark = computed(() => props.variant === 'dark');
 const contactUrl = computed(() => props.whatsappUrl || marketing.value.whatsapp_url || null);
 
 const headerCtaUrl = computed(() => primaryCtaUrl());
-const headerCtaLabel = computed(() => primaryCtaLabel());
-const headerCtaShortLabel = computed(() => primaryCtaShortLabel());
+const headerCtaLabel = computed(() => primaryCtaLabel(isEnLocale.value ? 'en' : 'bn'));
+const headerCtaShortLabel = computed(() => primaryCtaShortLabel(isEnLocale.value ? 'en' : 'bn'));
 const merchantLoginLink = computed(() => merchantLoginHref(page.props.auth));
-const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth));
+const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth, isEnLocale.value ? 'en' : 'bn'));
 
 const helplineDisplay = computed(() => {
     const phone = marketing.value.helpline;
@@ -684,7 +684,7 @@ onUnmounted(() => {
 
                     <!-- Account -->
                     <div>
-                        <p class="text-sm font-bold text-white">অ্যাকাউন্ট</p>
+                        <p class="text-sm font-bold text-white">{{ isEnLocale ? 'Account' : 'অ্যাকাউন্ট' }}</p>
                         <div class="mt-4 flex flex-col gap-2.5">
                             <Link
                                 v-if="canLogin"
@@ -697,7 +697,7 @@ onUnmounted(() => {
                                 :href="route('pricing')"
                                 class="text-sm text-slate-400 transition hover:text-white"
                             >
-                                ফ্রি ট্রায়াল / প্ল্যান
+                                {{ isEnLocale ? 'Free trial / Plans' : 'ফ্রি ট্রায়াল / প্ল্যান' }}
                             </Link>
                             <a
                                 v-if="contactUrl"
@@ -707,29 +707,29 @@ onUnmounted(() => {
                                 class="text-sm text-slate-400 transition hover:text-white"
                                 @click="onContactClick('whatsapp_footer')"
                             >
-                                কন্টাক্ট
+                                {{ isEnLocale ? 'Contact' : 'কন্টাক্ট' }}
                             </a>
                         </div>
                     </div>
 
                     <!-- Legal -->
                     <div>
-                        <p class="text-sm font-bold text-white">আইনী তথ্য</p>
+                        <p class="text-sm font-bold text-white">{{ isEnLocale ? 'Legal' : 'আইনী তথ্য' }}</p>
                         <div class="mt-4 flex flex-col gap-2.5">
                             <a
                                 :href="route('wooeasylife.app.terms-of-service')"
                                 class="text-sm text-slate-400 transition hover:text-white"
                             >
-                                শর্তাবলী
+                                {{ isEnLocale ? 'Terms of Service' : 'শর্তাবলী' }}
                             </a>
                             <a
                                 :href="route('wooeasylife.app.privacy-policy')"
                                 class="text-sm text-slate-400 transition hover:text-white"
                             >
-                                গোপনীয়তা নীতি
+                                {{ isEnLocale ? 'Privacy Policy' : 'গোপনীয়তা নীতি' }}
                             </a>
                             <p v-if="helplineDisplay" class="text-sm text-slate-400">
-                                হেল্পলাইন:
+                                {{ isEnLocale ? 'Helpline:' : 'হেল্পলাইন:' }}
                                 <a
                                     :href="`tel:${marketing.helpline}`"
                                     class="text-slate-300 transition hover:text-white"
@@ -739,7 +739,7 @@ onUnmounted(() => {
                                 </a>
                             </p>
                             <p v-if="marketing.admin_email" class="text-sm text-slate-400">
-                                ইমেইল:
+                                {{ isEnLocale ? 'Email:' : 'ইমেইল:' }}
                                 <a
                                     :href="`mailto:${marketing.admin_email}`"
                                     class="text-slate-300 transition hover:text-white"
@@ -757,10 +757,10 @@ onUnmounted(() => {
 
                 <div class="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-8 sm:flex-row">
                     <p class="text-xs text-slate-500">
-                        &copy; {{ new Date().getFullYear() }} WPSaleHub · WooEasyLife. সর্বস্বত্ব সংরক্ষিত।
+                        &copy; {{ new Date().getFullYear() }} WooEasyLife · a WPSaleHub product · by Muhibbullah Ansary.
                     </p>
                     <p class="text-xs text-slate-600">
-                        WPSaleHub প্ল্যাটফর্ম
+                        <Link href="/about" class="text-slate-400 transition hover:text-white">About</Link>
                     </p>
                 </div>
             </div>

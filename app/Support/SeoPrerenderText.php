@@ -48,6 +48,8 @@ class SeoPrerenderText
         '/en/facebook-ads-for-woocommerce' => ['bn' => 'Facebook Ads (EN)', 'en' => 'Facebook Ads guide'],
         '/facebook-page-cod-management' => ['bn' => 'Facebook Page COD ম্যানেজমেন্ট', 'en' => 'Facebook Page COD management'],
         '/en/facebook-page-cod-management' => ['bn' => 'Facebook Page COD (EN)', 'en' => 'Facebook Page COD management'],
+        '/about' => ['bn' => 'About / Founder Muhibbullah', 'en' => 'About / Founder Muhibbullah'],
+        '/en/about' => ['bn' => 'About (EN)', 'en' => 'About / Founder Muhibbullah'],
         '/ki-vabe-fake-order-atkabo' => ['bn' => 'কিভাবে ফেক অর্ডার আটকাবো', 'en' => 'How to stop fake orders (BN)'],
         '/en/ki-vabe-fake-order-atkabo' => ['bn' => 'How to stop fake orders (EN)', 'en' => 'How to stop fake orders'],
         '/fake-customer-check' => ['bn' => 'Fake Customer Check', 'en' => 'Fake Customer Check'],

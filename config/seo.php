@@ -56,14 +56,32 @@ return [
     ],
 
     'organization' => [
-        'name' => 'WooEasyLife',
-        'description' => 'Bangladesh WooCommerce platform with BD fraud checker, fake order protection, and courier auto-entry.',
+        'name' => 'WPSaleHub',
+        'description' => 'WPSaleHub is a business automation company. Its flagship product WooEasyLife helps WooCommerce merchants in Bangladesh reduce fake orders and run COD operations with fraud checks, protection, and courier automation. Founded by Muhibbullah Ansary.',
+        'founder_name' => 'Muhibbullah Ansary',
+        'founder_job_title' => 'Founder & CEO',
+        'founder_email' => 'dev.muhibbullah@gmail.com',
+        'founder_image' => '/images/seo/about/founder-portrait.png',
+        'founder_url_path' => '/about',
+        'founder_same_as' => [
+            'https://www.linkedin.com/in/dev-muhib',
+            'https://freetoolssite.com/',
+        ],
         'same_as' => array_values(array_filter([
             env('SEO_SAME_AS_FACEBOOK'),
             env('SEO_SAME_AS_YOUTUBE'),
-            env('SEO_SAME_AS_LINKEDIN'),
+            env('SEO_SAME_AS_LINKEDIN', 'https://www.linkedin.com/in/dev-muhib'),
             env('WOOEASYLIFE_PLAY_STORE_URL'),
         ])),
+    ],
+
+    // Public product brand (not the legal/org entity). Keep Product — avoid SoftwareApplication without real ratings.
+    'product' => [
+        'name' => 'WooEasyLife',
+        'description' => 'WooEasyLife is a WooCommerce merchant solution from WPSaleHub for Bangladesh COD sellers—fraud number and courier history checks, fake-order protection, courier automation, order workflows, and multistore ops.',
+        'url_path' => '/',
+        'category' => 'WooCommerce merchant solution',
+        'image' => '/images/seo/about/founder-work.png',
     ],
 
     'pages' => [
@@ -1397,6 +1415,7 @@ return [
             ['path' => '/woocommerce-notifications', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/facebook-ads-for-woocommerce', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/facebook-page-cod-management', 'priority' => '0.95', 'changefreq' => 'weekly'],
+            ['path' => '/about', 'priority' => '0.95', 'changefreq' => 'monthly'],
             ['path' => '/en/woocommerce-bangladesh', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/en/steadfast-integration', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/en/pathao-courier-guide', 'priority' => '0.8', 'changefreq' => 'monthly'],
@@ -1407,6 +1426,7 @@ return [
             ['path' => '/en/woocommerce-notifications', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/en/facebook-ads-for-woocommerce', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/en/facebook-page-cod-management', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/about', 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['path' => '/en/blog', 'priority' => '0.75', 'changefreq' => 'weekly'],
             ['path' => '/wooeasylife/app/privacy-policy', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/app/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],

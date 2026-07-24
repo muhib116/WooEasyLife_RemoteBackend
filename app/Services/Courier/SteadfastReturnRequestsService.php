@@ -25,6 +25,22 @@ class SteadfastReturnRequestsService
         4 => 'resent',
     ];
 
+    /** Safety cap when walking SteadFast cancel-requests ?page=N links. */
+    private const MAX_PORTAL_PAGES_PER_TAB = 40;
+
+    /** Soft deadline (seconds) so hub can return partial portal data before PHP/proxy kills the request. */
+    private const PORTAL_LIST_DEADLINE_SECONDS = 100;
+
+    /** Faster auto-sync: active cancel-request tabs only. */
+    private const PORTAL_QUICK_DEADLINE_SECONDS = 45;
+
+    /** @var list<string> */
+    private const PORTAL_QUICK_TAB_STATUSES = [
+        'pending',
+        'confirmed',
+        'resend_request',
+    ];
+
     public function __construct(
         private SteadfastPortalSessionClient $portal,
     ) {}
@@ -82,22 +98,27 @@ class SteadfastReturnRequestsService
     /**
      * @param  array{api_key: string, secret_key: string}  $apiConfig
      * @param  array{username?: string, password?: string}|null  $portalCredentials
-     * @return array{items: list<array<string, mixed>>, counts: array<string, int>}
+     * @param  string|null  $mode  `quick` (active tabs) or `full` (all tabs/pages)
+     * @return array{items: list<array<string, mixed>>, counts: array<string, int>, source: string, mode: string}
      */
     public function list(
         array $apiConfig,
         ?array $portalCredentials = null,
         ?string $status = null,
         ?string $date = null,
+        ?string $mode = 'full',
     ): array {
         $status = $this->normalizeStatus($status);
+        $mode = $this->normalizeListMode($mode);
+        /** @var array<string, array<string, mixed>> $packzyByConsignment */
+        $packzyByConsignment = [];
         /** @var array<string, array<string, mixed>> $byConsignment */
         $byConsignment = [];
         $packzyOk = false;
         $portalOk = false;
         $lastError = null;
 
-        // Packzy is primary (same pipeline as create_return_request).
+        // Packzy return-request API (different queue from portal cancel-requests).
         try {
             $json = $this->packzyRequest('GET', '/get_return_requests', $apiConfig);
             $raw = $json['data'] ?? $json;
@@ -117,7 +138,7 @@ class SteadfastReturnRequestsService
                 if ($key === '') {
                     continue;
                 }
-                $byConsignment[$key] = $item;
+                $packzyByConsignment[$key] = $item;
             }
             $packzyOk = true;
         } catch (\Throwable $th) {
@@ -125,13 +146,13 @@ class SteadfastReturnRequestsService
             LogHelper::saveLog('Steadfast return list API failed', $th->getMessage());
         }
 
-        // Portal cancel-requests merge: fills Decide-tab statuses Packzy may omit.
+        // Portal cancel-requests is the merchant UI source of truth.
         if ($portalCredentials !== null
             && trim((string) ($portalCredentials['username'] ?? '')) !== ''
             && trim((string) ($portalCredentials['password'] ?? '')) !== ''
         ) {
             try {
-                $portal = $this->listViaPortal($portalCredentials, null, $date);
+                $portal = $this->listViaPortal($portalCredentials, null, $date, $mode);
                 foreach ($portal['items'] as $row) {
                     if (! is_array($row)) {
                         continue;
@@ -141,32 +162,33 @@ class SteadfastReturnRequestsService
                     if ($key === '') {
                         continue;
                     }
-                    if (! isset($byConsignment[$key])) {
-                        $byConsignment[$key] = $item;
-                        continue;
-                    }
-                    // Portal status wins (matches merchant cancel-requests UI).
-                    $merged = $byConsignment[$key];
-                    $portalStatus = $this->normalizeStatus($item['status'] ?? '') ?: '';
-                    if ($portalStatus !== '') {
-                        $merged['status'] = $portalStatus;
-                    }
-                    foreach (['customer_name', 'charge', 'requested_at', 'reason', 'id'] as $field) {
-                        $incoming = $item[$field] ?? null;
-                        if ($incoming === null || $incoming === '') {
-                            continue;
-                        }
-                        if (($merged[$field] ?? null) === null || $merged[$field] === '') {
-                            $merged[$field] = $incoming;
+
+                    // Enrich with Packzy reason/invoice when the same consignment exists there.
+                    if (isset($packzyByConsignment[$key])) {
+                        $packzy = $packzyByConsignment[$key];
+                        foreach (['reason', 'invoice', 'tracking_code', 'customer_name', 'charge', 'id'] as $field) {
+                            $incoming = $packzy[$field] ?? null;
+                            if ($incoming === null || $incoming === '') {
+                                continue;
+                            }
+                            if (($item[$field] ?? null) === null || $item[$field] === '') {
+                                $item[$field] = $incoming;
+                            }
                         }
                     }
-                    $byConsignment[$key] = $merged;
+
+                    $byConsignment[$key] = $item;
                 }
                 $portalOk = true;
             } catch (\Throwable $th) {
                 $lastError = $th;
                 LogHelper::saveLog('Steadfast return list portal failed', $th->getMessage());
             }
+        }
+
+        // Only fall back to Packzy-only rows when portal cancel-requests is unavailable.
+        if (! $portalOk) {
+            $byConsignment = $packzyByConsignment;
         }
 
         if (! $packzyOk && ! $portalOk) {
@@ -190,7 +212,16 @@ class SteadfastReturnRequestsService
         return [
             'items' => array_values($items),
             'counts' => $counts,
+            'source' => $portalOk ? 'portal' : 'packzy',
+            'mode' => $mode,
         ];
+    }
+
+    private function normalizeListMode(?string $mode): string
+    {
+        $mode = strtolower(trim((string) $mode));
+
+        return $mode === 'quick' ? 'quick' : 'full';
     }
 
     /**
@@ -520,35 +551,62 @@ class SteadfastReturnRequestsService
      * @param  array{username: string, password: string}  $credentials
      * @return array{items: list<array<string, mixed>>, counts: array<string, int>}
      */
-    private function listViaPortal(array $credentials, ?string $status, ?string $date): array
+    private function listViaPortal(array $credentials, ?string $status, ?string $date, string $mode = 'full'): array
     {
+        $mode = $this->normalizeListMode($mode);
+
         return $this->portal->withSession($credentials, function (
             SteadfastPortalSessionClient $client,
             string $host,
             array $cookies
-        ) use ($credentials, $status, $date) {
+        ) use ($credentials, $status, $date, $mode) {
             $counts = $this->emptyCounts();
             $items = [];
             $targetStatus = $this->normalizeStatus($status);
+            $deadlineSeconds = $mode === 'quick'
+                ? self::PORTAL_QUICK_DEADLINE_SECONDS
+                : self::PORTAL_LIST_DEADLINE_SECONDS;
+            $deadlineAt = microtime(true) + $deadlineSeconds;
 
             foreach (self::PORTAL_TAB_STATUSES as $index => $slug) {
-                $path = '/user/consignment/cancel-requests/show/' . $index;
-                if ($date) {
-                    $path .= '?date=' . rawurlencode($date);
-                }
-
-                $page = $client->get($path, $host, $cookies, expectJson: false);
-                $cookies = $client->absorbCookies($cookies, $page, $host, $credentials);
-
-                if ($index === 0) {
-                    $this->assertAuthenticatedHtml($client, $page->body(), $page->status(), 'cancel-requests');
-                }
-
-                if (! $page->successful()) {
+                if ($mode === 'quick' && ! in_array($slug, self::PORTAL_QUICK_TAB_STATUSES, true)) {
                     continue;
                 }
 
-                $rows = $this->parseCancelRequestRows($page->body(), $slug);
+                if (microtime(true) >= $deadlineAt) {
+                    LogHelper::saveLog(
+                        'Steadfast cancel-requests list deadline reached',
+                        'Stopped before tab '.$slug.' (mode='.$mode.')'
+                    );
+                    break;
+                }
+
+                try {
+                    $tab = $this->fetchCancelRequestTabPages(
+                        $client,
+                        $cookies,
+                        $host,
+                        $credentials,
+                        $index,
+                        $slug,
+                        $date,
+                        requireAuthAssert: $index === 0,
+                        deadlineAt: $deadlineAt,
+                    );
+                    $cookies = $tab['cookies'];
+                    $rows = $tab['rows'];
+                } catch (\Throwable $th) {
+                    // Pending tab is required; other tabs are best-effort.
+                    if ($index === 0) {
+                        throw $th;
+                    }
+                    LogHelper::saveLog(
+                        'Steadfast cancel-requests tab skipped',
+                        $slug.': '.$th->getMessage()
+                    );
+                    continue;
+                }
+
                 $counts[$slug] = count($rows);
 
                 if ($targetStatus === null || $targetStatus === '' || $targetStatus === $slug) {
@@ -566,14 +624,295 @@ class SteadfastReturnRequestsService
     }
 
     /**
+     * Walk SteadFast cancel-requests pagination (?page=1..N) for one status tab.
+     *
+     * @param  array{username: string, password: string}  $credentials
+     * @param  array<string, string>  $cookies
+     * @return array{rows: list<array<string, mixed>>, cookies: array<string, string>}
+     */
+    private function fetchCancelRequestTabPages(
+        SteadfastPortalSessionClient $client,
+        array $cookies,
+        string $host,
+        array $credentials,
+        int $tabIndex,
+        string $slug,
+        ?string $date,
+        bool $requireAuthAssert = false,
+        ?float $deadlineAt = null,
+    ): array {
+        /** @var array<string, array<string, mixed>> $byConsignment */
+        $byConsignment = [];
+        $maxPage = 1;
+
+        for ($pageNum = 1; $pageNum <= $maxPage; $pageNum++) {
+            if ($deadlineAt !== null && microtime(true) >= $deadlineAt) {
+                LogHelper::saveLog(
+                    'Steadfast cancel-requests page deadline reached',
+                    $slug.' stopped at page '.$pageNum
+                );
+                break;
+            }
+
+            $path = $this->cancelRequestsTabPath($tabIndex, $date, $pageNum);
+
+            try {
+                $response = $this->portalGetWithRetries($client, $path, $host, $cookies, 3);
+            } catch (\Throwable $th) {
+                if ($pageNum === 1) {
+                    throw $th;
+                }
+                LogHelper::saveLog(
+                    'Steadfast cancel-requests page skipped',
+                    $slug.' page '.$pageNum.': '.$th->getMessage()
+                );
+                break;
+            }
+
+            $cookies = $client->absorbCookies($cookies, $response, $host, $credentials);
+
+            if ($requireAuthAssert && $pageNum === 1) {
+                $this->assertAuthenticatedHtml($client, $response->body(), $response->status(), 'cancel-requests');
+            }
+
+            if (! $response->successful()) {
+                if ($pageNum === 1) {
+                    throw new RuntimeException(
+                        'Steadfast cancel-requests '.$slug.' page returned HTTP '.$response->status().'.'
+                    );
+                }
+                LogHelper::saveLog(
+                    'Steadfast cancel-requests page skipped',
+                    $slug.' page '.$pageNum.': HTTP '.$response->status()
+                );
+                break;
+            }
+
+            $body = $response->body();
+            $rows = $this->parseCancelRequestRows($body, $slug);
+
+            // Page uses div.tbody-row / <cancel-request> (not <tr>). If markers exist but
+            // parse yields nothing, treat as scrape failure so Packzy fallback can run.
+            if ($rows === [] && $this->portalHtmlHasCancelRequestRows($body)) {
+                throw new RuntimeException(
+                    'Failed to parse Steadfast cancel-requests rows for status '.$slug
+                    .' (page '.$pageNum.').'
+                );
+            }
+
+            foreach ($rows as $row) {
+                $key = (string) ($row['consignment_id'] ?? '');
+                if ($key === '' || isset($byConsignment[$key])) {
+                    continue;
+                }
+                $byConsignment[$key] = $row;
+            }
+
+            if ($pageNum === 1) {
+                $maxPage = $this->detectCancelRequestsMaxPage($body);
+            }
+
+            // Stop early when a page returns no rows (pagination lied / trailing empty).
+            if ($pageNum > 1 && $rows === []) {
+                break;
+            }
+
+            if ($pageNum < $maxPage) {
+                usleep(120000);
+            }
+        }
+
+        return [
+            'rows' => array_values($byConsignment),
+            'cookies' => $cookies,
+        ];
+    }
+
+    private function cancelRequestsTabPath(int $tabIndex, ?string $date, int $page = 1): string
+    {
+        $path = '/user/consignment/cancel-requests/show/'.$tabIndex;
+        $query = [];
+        if ($date !== null && $date !== '') {
+            $query['date'] = $date;
+        }
+        if ($page > 1) {
+            $query['page'] = $page;
+        }
+        if ($query === []) {
+            return $path;
+        }
+
+        return $path.'?'.http_build_query($query);
+    }
+
+    private function detectCancelRequestsMaxPage(string $html): int
+    {
+        $max = 1;
+
+        if (preg_match_all('/[?&]page=(\d+)/i', $html, $matches)) {
+            foreach ($matches[1] as $value) {
+                $max = max($max, (int) $value);
+            }
+        }
+
+        if (preg_match_all('/class="[^"]*\bpage-link\b[^"]*"[^>]*>\s*(\d+)\s*</i', $html, $matches)) {
+            foreach ($matches[1] as $value) {
+                $max = max($max, (int) $value);
+            }
+        }
+
+        return max(1, min($max, self::MAX_PORTAL_PAGES_PER_TAB));
+    }
+
+    /**
+     * @param  array<string, string>  $cookies
+     */
+    private function portalGetWithRetries(
+        SteadfastPortalSessionClient $client,
+        string $path,
+        string $host,
+        array $cookies,
+        int $attempts = 3,
+    ): \Illuminate\Http\Client\Response {
+        $attempts = max(1, $attempts);
+        $lastError = null;
+
+        for ($i = 1; $i <= $attempts; $i++) {
+            try {
+                $page = $client->get($path, $host, $cookies, expectJson: false);
+                if ($page->successful() || $page->status() < 500) {
+                    return $page;
+                }
+                $lastError = new RuntimeException(
+                    'Steadfast portal HTTP '.$page->status().' for '.$path
+                );
+            } catch (\Throwable $th) {
+                $lastError = $th;
+            }
+
+            if ($i < $attempts) {
+                usleep(350000 * $i);
+            }
+        }
+
+        throw $lastError instanceof \Throwable
+            ? $lastError
+            : new RuntimeException('Steadfast portal request failed for '.$path);
+    }
+
+    /**
+     * SteadFast cancel-requests UI renders div.tbody-row + <cancel-request :item="...">,
+     * not classic <table>/<tr> markup.
+     */
+    private function portalHtmlHasCancelRequestRows(string $html): bool
+    {
+        return (bool) preg_match('/<cancel-request\b/i', $html)
+            || (bool) preg_match('/class="[^"]*\btbody-row\b/i', $html);
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function parseCancelRequestRows(string $html, string $status): array
     {
         $rows = [];
 
-        // Prefer table rows with consignment-looking IDs.
-        if (preg_match_all('/<tr\b[^>]*>(.*?)<\/tr>/is', $html, $trMatches)) {
+        // 1) Preferred: Vue <cancel-request :item="{...}"> payload (full note + consignment).
+        if (preg_match_all('/<cancel-request\s+:item="([^"]+)"/i', $html, $itemMatches)) {
+            foreach ($itemMatches[1] as $encoded) {
+                $decoded = html_entity_decode($encoded, ENT_QUOTES | ENT_HTML5);
+                $payload = json_decode($decoded, true);
+                if (! is_array($payload)) {
+                    continue;
+                }
+
+                $consignment = is_array($payload['consignment'] ?? null) ? $payload['consignment'] : [];
+                $consignmentId = (string) ($payload['consignment_id'] ?? $consignment['id'] ?? '');
+                if ($consignmentId === '' || ! preg_match('/^\d{6,20}$/', $consignmentId)) {
+                    continue;
+                }
+
+                $requestId = (string) ($payload['id'] ?? $consignmentId);
+                $note = trim((string) ($payload['note'] ?? ''));
+                $customer = trim((string) ($consignment['cus_name'] ?? $payload['customer_name'] ?? ''));
+                $charge = $consignment['cod_amount'] ?? $consignment['entry_cod_amount'] ?? null;
+                $invoice = (string) ($consignment['invoice'] ?? '');
+                $tracking = (string) ($consignment['track_id'] ?? '');
+                $requestedAt = (string) ($payload['created_at'] ?? $payload['updated_at'] ?? '');
+
+                $rows[] = [
+                    'id' => $requestId,
+                    'consignment_id' => $consignmentId,
+                    'status' => $status,
+                    'reason' => $note,
+                    'customer_name' => $customer,
+                    'charge' => is_numeric($charge) ? (float) $charge : null,
+                    'invoice' => $invoice,
+                    'tracking_code' => $tracking,
+                    'requested_at' => $requestedAt,
+                    'updated_at' => (string) ($payload['updated_at'] ?? ''),
+                ];
+            }
+        }
+
+        // 2) Fallback: div-based grid (Date | Id | Name | … | COD).
+        if ($rows === []) {
+            $parts = preg_split('/<div\b[^>]*class="[^"]*\btbody-row\b[^"]*"/i', $html);
+            if (is_array($parts) && count($parts) > 1) {
+                array_shift($parts);
+                foreach ($parts as $part) {
+                    $chunk = $part;
+                    // Limit chunk to before next structural close roughly via cell_2 Id.
+                    if (! preg_match('/cell_2.*?>(.*?)<\/div>/is', $chunk, $idCell)) {
+                        continue;
+                    }
+                    $idText = trim(html_entity_decode(strip_tags($idCell[1]), ENT_QUOTES | ENT_HTML5));
+                    $idText = preg_replace('/^\s*Id\s*/i', '', $idText) ?? $idText;
+                    if (! preg_match('/(\d{6,20})/', $idText, $idMatch)) {
+                        continue;
+                    }
+                    $consignmentId = $idMatch[1];
+
+                    $customer = '';
+                    if (preg_match('/cell_3.*?>(.*?)<\/div>/is', $chunk, $nameCell)) {
+                        $customer = trim(html_entity_decode(strip_tags($nameCell[1]), ENT_QUOTES | ENT_HTML5));
+                        $customer = trim(preg_replace('/^\s*Name\s*/i', '', $customer) ?? $customer);
+                    }
+
+                    $charge = null;
+                    if (preg_match('/cell_5.*?>(.*?)<\/div>/is', $chunk, $codCell)) {
+                        $codText = trim(html_entity_decode(strip_tags($codCell[1]), ENT_QUOTES | ENT_HTML5));
+                        $codText = trim(preg_replace('/^\s*COD\s*/i', '', $codText) ?? $codText);
+                        if (preg_match('/^\d+(\.\d+)?$/', $codText)) {
+                            $charge = (float) $codText;
+                        }
+                    }
+
+                    $requestedAt = null;
+                    if (preg_match('/cell_1.*?>(.*?)<\/div>/is', $chunk, $dateCell)) {
+                        $dateText = html_entity_decode(strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $dateCell[1])), ENT_QUOTES | ENT_HTML5);
+                        if (preg_match('/Entry\s*@\s*([A-Za-z]+ \d{1,2}, \d{4}\s+\d{1,2}:\d{2}:\d{2}\s*[AP]M)/i', $dateText, $dateMatch)) {
+                            $requestedAt = $dateMatch[1];
+                        } elseif (preg_match('/([A-Za-z]+ \d{1,2}, \d{4}\s+\d{1,2}:\d{2}:\d{2}\s*[AP]M)/', $dateText, $dateMatch)) {
+                            $requestedAt = $dateMatch[1];
+                        }
+                    }
+
+                    $rows[] = [
+                        'id' => $consignmentId,
+                        'consignment_id' => $consignmentId,
+                        'status' => $status,
+                        'reason' => '',
+                        'customer_name' => $customer,
+                        'charge' => $charge,
+                        'requested_at' => $requestedAt,
+                    ];
+                }
+            }
+        }
+
+        // 3) Legacy <tr>/<td> tables (older portal markup).
+        if ($rows === [] && preg_match_all('/<tr\b[^>]*>(.*?)<\/tr>/is', $html, $trMatches)) {
             foreach ($trMatches[1] as $trHtml) {
                 if (stripos($trHtml, '<th') !== false) {
                     continue;
@@ -584,51 +923,80 @@ class SteadfastReturnRequestsService
                     continue;
                 }
 
-                if (! preg_match('/\b(\d{6,20})\b/', $trHtml, $idMatch)) {
-                    continue;
-                }
-                $consignmentId = $idMatch[1];
-
-                // Skip obvious non-data rows.
-                if (preg_match('/change status|download excel|pending|confirmed/i', $text)
-                    && ! preg_match('/\b' . preg_quote($consignmentId, '/') . '\b/', $text)
-                ) {
-                    continue;
-                }
-
-                $customer = '';
-                if (preg_match_all('/<td\b[^>]*>(.*?)<\/td>/is', $trHtml, $tdMatches) && count($tdMatches[1]) >= 3) {
+                $cells = [];
+                if (preg_match_all('/<td\b[^>]*>(.*?)<\/td>/is', $trHtml, $tdMatches)) {
                     $cells = array_map(
                         static fn ($cell) => trim(html_entity_decode(strip_tags($cell), ENT_QUOTES | ENT_HTML5)),
                         $tdMatches[1]
                     );
-                    // Typical columns: Date, Id, Customer Name, Payment, Charge, Action, Details
-                    foreach ($cells as $cell) {
-                        if ($cell === $consignmentId || $cell === '' || is_numeric($cell)) {
-                            continue;
-                        }
-                        if (preg_match('/change status|view|select|confirm|resend/i', $cell)) {
-                            continue;
-                        }
-                        if (preg_match('/\d{4}/', $cell) && preg_match('/am|pm|entry|july|jan|feb|mar|apr|may|jun|aug|sep|oct|nov|dec/i', $cell)) {
-                            continue;
-                        }
-                        $customer = $cell;
-                        break;
-                    }
+                }
 
-                    $charge = null;
-                    foreach ($cells as $cell) {
+                // SteadFast columns: Date | Id | Customer Name | Payment | Charge | Action | Details
+                // Date cells often contain leading numeric noise — never take the first \d from the row.
+                $consignmentId = '';
+                if (isset($cells[1]) && preg_match('/^\d{6,20}$/', $cells[1])) {
+                    $consignmentId = $cells[1];
+                } else {
+                    foreach ($cells as $index => $cell) {
+                        if ($index === 0) {
+                            continue; // skip Date column
+                        }
+                        if (preg_match('/^\d{6,20}$/', $cell)) {
+                            $consignmentId = $cell;
+                            break;
+                        }
+                    }
+                }
+
+                if ($consignmentId === '') {
+                    continue;
+                }
+
+                $customer = '';
+                if (count($cells) >= 3) {
+                    $candidate = $cells[2] ?? '';
+                    if ($candidate !== ''
+                        && $candidate !== $consignmentId
+                        && ! preg_match('/change status|view|select|confirm|resend/i', $candidate)
+                        && ! preg_match('/^\d+(\.\d+)?$/', $candidate)
+                    ) {
+                        $customer = $candidate;
+                    } else {
+                        foreach ($cells as $cell) {
+                            if ($cell === $consignmentId || $cell === '' || is_numeric($cell)) {
+                                continue;
+                            }
+                            if (preg_match('/change status|view|select|confirm|resend/i', $cell)) {
+                                continue;
+                            }
+                            if (preg_match('/\d{4}/', $cell) && preg_match('/am|pm|entry|july|jan|feb|mar|apr|may|jun|aug|sep|oct|nov|dec/i', $cell)) {
+                                continue;
+                            }
+                            $customer = $cell;
+                            break;
+                        }
+                    }
+                }
+
+                $charge = null;
+                if (isset($cells[4]) && preg_match('/^\d+(\.\d+)?$/', $cells[4])) {
+                    $charge = (float) $cells[4];
+                } else {
+                    foreach ($cells as $index => $cell) {
+                        if ($index <= 1) {
+                            continue;
+                        }
                         if (preg_match('/^\d+(\.\d+)?$/', $cell) && $cell !== $consignmentId) {
                             $charge = (float) $cell;
                         }
                     }
-                } else {
-                    $charge = null;
                 }
 
                 $requestedAt = null;
-                if (preg_match('/([A-Za-z]+ \d{1,2}, \d{4}\s+\d{1,2}:\d{2}:\d{2}\s*[AP]M)/', $text, $dateMatch)) {
+                $dateCell = $cells[0] ?? $text;
+                if (preg_match('/Entry\s*@\s*([A-Za-z]+ \d{1,2}, \d{4}\s+\d{1,2}:\d{2}:\d{2}\s*[AP]M)/i', $dateCell, $dateMatch)) {
+                    $requestedAt = $dateMatch[1];
+                } elseif (preg_match('/([A-Za-z]+ \d{1,2}, \d{4}\s+\d{1,2}:\d{2}:\d{2}\s*[AP]M)/', $dateCell, $dateMatch)) {
                     $requestedAt = $dateMatch[1];
                 }
 
@@ -638,7 +1006,7 @@ class SteadfastReturnRequestsService
                     'status' => $status,
                     'reason' => '',
                     'customer_name' => $customer,
-                    'charge' => $charge ?? null,
+                    'charge' => $charge,
                     'requested_at' => $requestedAt,
                 ];
             }
@@ -689,15 +1057,16 @@ class SteadfastReturnRequestsService
             $json = [];
         }
 
-        $status = $json['status'] ?? null;
-        $ok = $response->successful()
-            && (
-                $status === true
+        // Packzy often returns `{ "data": [...] }` with no top-level status.
+        $ok = $response->successful();
+        if ($ok && array_key_exists('status', $json)) {
+            $status = $json['status'];
+            $ok = $status === true
                 || $status === 'success'
                 || (string) $status === '200'
                 || (int) $status === 200
-                || (int) $status === 1
-            );
+                || (int) $status === 1;
+        }
 
         if (! $ok) {
             $message = trim((string) ($json['message'] ?? ''));
@@ -718,22 +1087,38 @@ class SteadfastReturnRequestsService
     private function normalizeItem(array $row, array $defaults = []): array
     {
         $merged = array_merge($defaults, $row);
+
+        // Packzy nests parcel fields under consignment{}.
+        if (isset($merged['consignment']) && is_array($merged['consignment'])) {
+            $nested = $merged['consignment'];
+            unset($merged['consignment']);
+            $merged = array_merge($nested, $merged);
+        }
+
         $status = $this->normalizeStatus($merged['status'] ?? 'pending') ?: 'pending';
 
         $consignment = (string) ($merged['consignment_id'] ?? $merged['consignmentId'] ?? $defaults['consignment_id'] ?? '');
         $id = (string) ($merged['id'] ?? $merged['return_request_id'] ?? $merged['request_id'] ?? $consignment);
 
         $charge = $merged['charge'] ?? $merged['cod_amount'] ?? $merged['cod'] ?? null;
+        $reason = (string) ($merged['reason'] ?? $merged['note'] ?? $defaults['reason'] ?? '');
+        $customer = (string) (
+            $merged['customer_name']
+            ?? $merged['customer']
+            ?? $merged['recipient_name']
+            ?? $merged['cus_name']
+            ?? ''
+        );
 
         return [
             'id' => $id,
             'consignment_id' => $consignment,
             'status' => $status,
-            'reason' => (string) ($merged['reason'] ?? $defaults['reason'] ?? ''),
-            'customer_name' => (string) ($merged['customer_name'] ?? $merged['customer'] ?? $merged['recipient_name'] ?? ''),
+            'reason' => $reason,
+            'customer_name' => $customer,
             'charge' => is_numeric($charge) ? (float) $charge : null,
             'invoice' => (string) ($merged['invoice'] ?? ''),
-            'tracking_code' => (string) ($merged['tracking_code'] ?? ''),
+            'tracking_code' => (string) ($merged['tracking_code'] ?? $merged['track_id'] ?? ''),
             'requested_at' => (string) ($merged['requested_at'] ?? $merged['created_at'] ?? $merged['createdAt'] ?? ''),
             'updated_at' => (string) ($merged['updated_at'] ?? $merged['updatedAt'] ?? ''),
         ];
