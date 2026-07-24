@@ -3,14 +3,14 @@
 /** About / Founder page meta — EN (WPSaleHub company + founder). */
 
 return [
-    'title' => 'About WPSaleHub & WooEasyLife | Muhibbullah Ansary, Founder',
-    'description' => 'WPSaleHub — Automating Business. Empowering People. Meet Muhibbullah Ansary, Founder & CEO. Smart business automation and WooCommerce merchant tools via WooEasyLife.',
+    'title' => 'About WPSaleHub | WooEasyLife founder Muhibbullah Ansary',
+    'description' => 'WPSaleHub — Automating Business. Empowering People. Meet founder Muhibbullah Ansary and WooEasyLife WooCommerce tools for Bangladesh.',
     'canonical_path' => '/en/about',
     'html_lang' => 'en',
-    'og_type' => 'article',
-    'og_image' => '/images/seo/about/founder-hero.png',
-    'og_image_width' => 1024,
-    'og_image_height' => 571,
+    'og_type' => 'website',
+    'og_image' => '/images/seo/about/founder-hero-og.jpg',
+    'og_image_width' => 1200,
+    'og_image_height' => 630,
     'focus_keyword' => 'Muhibbullah Ansary WPSaleHub founder',
     'hreflang_paths' => [
         'bn-BD' => '/about',

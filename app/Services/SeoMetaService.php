@@ -423,6 +423,12 @@ class SeoMetaService
         $productImagePath = (string) ($productCfg['image'] ?? $founderImagePath);
         $isAboutPage = ($config['page_kind'] ?? null) === 'about'
             || (string) ($config['schema_type'] ?? '') === 'AboutPage';
+        if ($isAboutPage) {
+            $pageSameAs = array_values(array_filter($config['person_same_as'] ?? []));
+            if ($pageSameAs !== []) {
+                $founderSameAs = $pageSameAs;
+            }
+        }
 
         $founderPerson = array_filter([
             '@type' => 'Person',
@@ -430,7 +436,12 @@ class SeoMetaService
             'name' => $founderName,
             'url' => $founderUrl,
             'image' => $this->absoluteUrl($founderImagePath),
-            'jobTitle' => (string) ($org['founder_job_title'] ?? 'Founder & CEO'),
+            'jobTitle' => (string) (
+                $config['author_role']
+                ?? $config['person_job_title']
+                ?? $org['founder_job_title']
+                ?? 'Founder & CEO'
+            ),
             'email' => filled($org['founder_email'] ?? null) ? 'mailto:'.$org['founder_email'] : null,
             'worksFor' => ['@id' => $orgId],
             'sameAs' => $founderSameAs !== [] ? $founderSameAs : null,

@@ -476,6 +476,7 @@ class MarketingSeoTest extends TestCase
         $this->assertSame('WPSaleHub', $org['name'] ?? null);
         $this->assertNotNull($org['founder'] ?? null);
         $this->assertContains('https://www.facebook.com/wooeasylife', $org['sameAs'] ?? []);
+        $this->assertNotContains('https://www.linkedin.com/in/dev-muhib', $org['sameAs'] ?? []);
 
         $product = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Product');
         $this->assertNotNull($product);
@@ -487,8 +488,9 @@ class MarketingSeoTest extends TestCase
         $this->assertStringEndsWith('#webpage', (string) ($aboutPage['@id'] ?? ''));
         $this->assertNull($graph->first(fn (array $node) => ($node['@id'] ?? null) === ($seo['canonical'] ?? '').'#article'));
 
-        $this->assertSame(1024, (int) ($seo['og_image_width'] ?? 0));
-        $this->assertSame(571, (int) ($seo['og_image_height'] ?? 0));
+        $this->assertSame(1200, (int) ($seo['og_image_width'] ?? 0));
+        $this->assertSame(630, (int) ($seo['og_image_height'] ?? 0));
+        $this->assertStringContainsString('founder-hero-og.jpg', (string) ($seo['og_image'] ?? ''));
 
         $bn = $this->get('/about');
         $bn->assertOk();
@@ -507,6 +509,7 @@ class MarketingSeoTest extends TestCase
         $en->assertSee('Founder & CEO, WPSaleHub', false);
         $en->assertSee('/images/seo/about/founder-portrait.png', false);
         $en->assertSee('WooCommerce merchant solution', false);
+        $en->assertSee('About WPSaleHub | WooEasyLife founder Muhibbullah Ansary', false);
         $en->assertSee('The fastest way is email', false);
         $en->assertDontSee('https:Bangla home', false);
     }

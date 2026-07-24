@@ -72,7 +72,6 @@ return [
         'same_as' => array_values(array_filter([
             env('SEO_SAME_AS_FACEBOOK', 'https://www.facebook.com/wooeasylife'),
             env('SEO_SAME_AS_YOUTUBE'),
-            env('SEO_SAME_AS_LINKEDIN', 'https://www.linkedin.com/in/dev-muhib'),
             env('WOOEASYLIFE_PLAY_STORE_URL'),
         ])),
     ],
