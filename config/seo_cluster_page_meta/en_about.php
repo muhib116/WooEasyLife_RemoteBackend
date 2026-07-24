@@ -38,7 +38,7 @@ return [
         ],
         [
             'q' => 'How can I contact you?',
-            'a' => 'The fastest way is email: dev.muhibbullah@gmail.com. You can connect on LinkedIn https://www.linkedin.com/in/dev-muhib, or follow Muhibbullah on Facebook https://www.facebook.com/muhib116 and Instagram https://www.instagram.com/muhibbullah611/. For product updates, follow the WooEasyLife Facebook page: https://www.facebook.com/wooeasylife. To try WooEasyLife or compare plans, head to /pricing.',
+            'a' => 'The fastest way is email: dev.muhibbullah@gmail.com. You can connect on https://www.linkedin.com/in/dev-muhib, or follow Muhibbullah on https://www.facebook.com/muhib116 and https://www.instagram.com/muhibbullah611/. For product updates, follow https://www.facebook.com/wooeasylife. To try WooEasyLife or compare plans, head to /pricing.',
         ],
         [
             'q' => 'Where is the Bangla About page?',

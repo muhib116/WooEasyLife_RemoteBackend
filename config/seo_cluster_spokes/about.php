@@ -32,7 +32,7 @@ return [
             'WooEasyLife হলো আমাদের অন্যতম প্রধান প্রোডাক্ট, যা বিশেষভাবে WooCommerce Merchant-দের জন্য তৈরি।',
             'এর মাধ্যমে Merchant-রা সহজেই একাধিক WooCommerce Store পরিচালনা করতে পারেন, Fraud Number ও Courier History যাচাই করতে পারেন, Courier Automation ব্যবহার করতে পারেন, Order Workflow অটোমেট করতে পারেন, Customer History দেখতে পারেন এবং ব্যবসার দৈনন্দিন অপারেশন আরও দ্রুত সম্পন্ন করতে পারেন।',
             'WooEasyLife আমাদের Automation Vision-এর একটি বাস্তব উদাহরণ। বিস্তারিত: /bd-fraud-checker, /fake-order-protection, /courier-auto-entry, /facebook-page-cod-management, /woocommerce-bangladesh এবং /pricing।',
-            'আপডেট ও টিপস পেতে ফলো করুন WooEasyLife-এর ফেসবুক পেজ: https://www.facebook.com/wooeasylife',
+            'আপডেট ও টিপস পেতে ফলো করুন https://www.facebook.com/wooeasylife',
         ],
         'figures' => [
             [
@@ -76,7 +76,7 @@ return [
         'paragraphs' => [
             'আমরা এমন একটি ভবিষ্যৎ গড়তে চাই—যেখানে ব্যবসার মালিকরা সফটওয়্যার পরিচালনা করবেন না। সফটওয়্যার তাদের ব্যবসা পরিচালনা করবে।',
             'WPSaleHub — Automating Business. Empowering People.',
-            'যেকোনো প্রশ্ন বা আইডিয়া থাকলে সরাসরি ইমেইল করুন dev.muhibbullah@gmail.com ঠিকানায়, অথবা যুক্ত হোন LinkedIn-এ https://www.linkedin.com/in/dev-muhib প্রোফাইলে। Muhibbullah-কে অনুসরণ করতে পারেন Facebook https://www.facebook.com/muhib116 এবং Instagram https://www.instagram.com/muhibbullah611/ প্রোফাইলেও। WooEasyLife ফ্রি ট্রায়াল শুরু করতে দেখুন /pricing পেজ।',
+            'যেকোনো প্রশ্ন বা আইডিয়া থাকলে সরাসরি ইমেইল করুন dev.muhibbullah@gmail.com ঠিকানায়, অথবা যুক্ত হোন https://www.linkedin.com/in/dev-muhib প্রোফাইলে। Muhibbullah-কে অনুসরণ করতে পারেন https://www.facebook.com/muhib116 এবং https://www.instagram.com/muhibbullah611/ প্রোফাইলেও। WooEasyLife ফ্রি ট্রায়াল শুরু করতে দেখুন /pricing পেজ।',
         ],
         'figures' => [
             [
