@@ -467,12 +467,15 @@ class MarketingSeoTest extends TestCase
         $this->assertSame('Muhibbullah Ansary', $person['name'] ?? null);
         $this->assertStringContainsString('founder-portrait', (string) ($person['image'] ?? ''));
         $this->assertContains('https://www.linkedin.com/in/dev-muhib', $person['sameAs'] ?? []);
+        $this->assertContains('https://www.facebook.com/muhib116', $person['sameAs'] ?? []);
+        $this->assertContains('https://www.instagram.com/muhibbullah611/', $person['sameAs'] ?? []);
         $this->assertSame('Founder & CEO, WPSaleHub', $person['jobTitle'] ?? null);
 
         $org = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Organization');
         $this->assertNotNull($org);
         $this->assertSame('WPSaleHub', $org['name'] ?? null);
         $this->assertNotNull($org['founder'] ?? null);
+        $this->assertContains('https://www.facebook.com/wooeasylife', $org['sameAs'] ?? []);
 
         $product = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Product');
         $this->assertNotNull($product);

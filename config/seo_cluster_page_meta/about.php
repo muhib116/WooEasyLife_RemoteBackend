@@ -38,7 +38,7 @@ return [
         ],
         [
             'q' => 'যোগাযোগ করব কীভাবে?',
-            'a' => 'সবচেয়ে সহজ উপায়—সরাসরি ইমেইল: dev.muhibbullah@gmail.com। LinkedIn-এ যুক্ত হতে চাইলে প্রোফাইল: https://www.linkedin.com/in/dev-muhib। আর WooEasyLife ট্রায়াল বা প্ল্যান দেখতে যান /pricing পেজে।',
+            'a' => 'সবচেয়ে সহজ উপায়—সরাসরি ইমেইল: dev.muhibbullah@gmail.com। LinkedIn-এ যুক্ত হতে পারেন https://www.linkedin.com/in/dev-muhib প্রোফাইলে, অথবা Facebook https://www.facebook.com/muhib116 ও Instagram https://www.instagram.com/muhibbullah611/ প্রোফাইলে ফলো করতে পারেন। WooEasyLife-এর আপডেট পেতে ফেসবুক পেজ: https://www.facebook.com/wooeasylife। ট্রায়াল বা প্ল্যান দেখতে যান /pricing পেজে।',
         ],
         [
             'q' => 'ইংরেজি About পেজ কোথায়?',
@@ -67,6 +67,8 @@ return [
     'schema_type' => 'AboutPage',
     'person_same_as' => [
         'https://www.linkedin.com/in/dev-muhib',
+        'https://www.facebook.com/muhib116',
+        'https://www.instagram.com/muhibbullah611/',
         'https://freetoolssite.com/',
     ],
     'person_email' => 'dev.muhibbullah@gmail.com',

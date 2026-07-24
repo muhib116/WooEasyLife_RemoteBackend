@@ -95,6 +95,11 @@ function labelForAbsoluteUrl(url) {
         const u = new URL(url);
         const host = u.hostname.replace(/^www\./, '');
         if (host.includes('linkedin.com')) return 'LinkedIn';
+        if (host.includes('instagram.com')) return 'Instagram';
+        if (host.includes('facebook.com')) {
+            if (/wooeasylife/i.test(u.pathname)) return 'Facebook page';
+            return 'Facebook';
+        }
         if (host.includes('wpsalehub.com')) {
             if (u.pathname.includes('pricing')) return 'Pricing / free trial';
             return 'WPSaleHub';

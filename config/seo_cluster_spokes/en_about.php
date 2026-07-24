@@ -32,6 +32,7 @@ return [
             'WooEasyLife is one of our flagship products, built specifically for WooCommerce merchants.',
             'With it, merchants can manage multiple WooCommerce stores, verify fraud numbers and courier history, use courier automation, automate order workflows, review customer history, and finish everyday operations faster.',
             'WooEasyLife is a real example of our automation vision. Learn more: /en/bd-fraud-checker, /en/fake-order-protection, /en/courier-auto-entry, /en/facebook-page-cod-management, /en/woocommerce-bangladesh, and /pricing.',
+            'For updates and tips, follow the WooEasyLife Facebook page: https://www.facebook.com/wooeasylife',
         ],
         'figures' => [
             [
@@ -75,7 +76,7 @@ return [
         'paragraphs' => [
             'We want a future where business owners don’t manage software—software manages their business.',
             'WPSaleHub — Automating Business. Empowering People.',
-            'Have a question or an idea? Email dev.muhibbullah@gmail.com directly, or connect on https://www.linkedin.com/in/dev-muhib. To start a free WooEasyLife trial, visit /pricing.',
+            'Have a question or an idea? Email dev.muhibbullah@gmail.com directly, or connect on LinkedIn at https://www.linkedin.com/in/dev-muhib. You can also follow Muhibbullah on Facebook https://www.facebook.com/muhib116 and Instagram https://www.instagram.com/muhibbullah611/. To start a free WooEasyLife trial, visit /pricing.',
         ],
         'figures' => [
             [
