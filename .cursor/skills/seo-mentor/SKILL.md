@@ -86,7 +86,7 @@ Do **not** clone courier-brand support FAQs (payment schedules, warehouse securi
 
 Do in order — stop when the day's budget is used:
 
-1. **P0 — Deepen** `/bd-fraud-checker` + `/fake-customer-check` FAQs (BN) + keep FAQPage schema *(Result CTAs + SSR form + WebApplication/HowTo **shipped**)*  
+1. **P0 — Deepen** `/bd-fraud-checker` + `/fake-customer-check` FAQs (BN) + keep FAQPage schema *(Result CTAs + SSR form + HowTo **shipped**; WebApplication removed — Semrush Software App invalid without real ratings)*  
 2. **Internal links:** fraud ↔ COD ↔ calculators ↔ courier pillars ↔ `/faq` ↔ `/pricing`  
 3. **Courier pillars:** Pathao / Steadfast / RedX FAQ blocks + links into money URL *(thin alias long-form **shipped**)*  
 4. **GSC day-30:** keep/kill; next FAQs from real query gaps only *(hub + first 8 FAQs **shipped**)*  
@@ -141,7 +141,7 @@ Default: **(1) + (2)**. Validate FAQ shortlist in GSC before writing volume.
 
 | Priority | URL | Action |
 |----------|-----|--------|
-| **P0** | `/bd-fraud-checker` | Deepen FAQs — SSR form, Result CTAs, WebApplication/HowTo **shipped** |
+| **P0** | `/bd-fraud-checker` | Deepen FAQs — SSR form, Result CTAs, HowTo **shipped** (no WebApplication / fake AggregateRating) |
 | P0 | `/fake-customer-check` | “History ratio, not fraud verdict” honesty angle |
 | P0 | `/cod-return-reduction` | Attempt/return math → calculators |
 | P1 | `/pathao-fraud-check`, `/steadfast-fraud-check`, `/redx-fraud-check` | Courier-specific FAQs — long-form content **shipped**; keep deepening |
@@ -420,7 +420,7 @@ Already **wins** on: title, H1, FAQ schema (~8 Qs), visible courier names, ~900-
 | Priority | Gap | Fix |
 |----------|-----|-----|
 | ~~P0~~ | ~~Result → next action weak~~ | **Shipped:** post-check CTAs → protection, return-loss, guide, trial |
-| ~~P1~~ | ~~Missing `WebApplication` + `HowTo`~~ | **Shipped** (free offer; 3 steps). No fake ratings |
+| ~~P1~~ | ~~Missing `HowTo`~~ | **Shipped** (3 steps). WebApplication removed — Semrush flags Software App without real AggregateRating; never invent ratings |
 | P1 | FAQ can add rival intents | +Qs: mobile-number check, blacklist/fake-customer, WordPress/Woo use (Shipped only) → FAQ ≥10 |
 | P2 | "blacklist" weak in body | Add blacklist + WooCommerce protection story in body, not only sidebar |
 | P2 | No exact-match domain vs fraudchecker.link | Brand cluster + external links to **tool URL** (not home) |

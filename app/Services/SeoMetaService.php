@@ -774,28 +774,14 @@ class SeoMetaService
             }
         }
 
-        // Money fraud tool: free WebApplication + HowTo (no AggregateRating / fake reviews).
+        // Money fraud tool: HowTo only.
+        // Do NOT emit WebApplication/SoftwareApplication — Semrush/GSC treat it as
+        // "Software App" rich-result markup and flag it invalid without a real
+        // AggregateRating/Review (which we must never invent).
         $isFraudMoneyPage = in_array($page, ['bd_fraud_checker', 'en_bd_fraud_checker'], true)
             || (($config['schema_web_application'] ?? false) === true);
         if ($isFraudMoneyPage) {
             $isEn = str_starts_with((string) ($config['html_lang'] ?? 'bn-BD'), 'en');
-            $graphs[] = [
-                '@type' => 'WebApplication',
-                '@id' => $canonical.'#webapp',
-                'name' => $isEn ? 'Courier Fraud Checker BD' : 'Courier Fraud Checker BD — ফ্রড চেকার',
-                'url' => $canonical,
-                'applicationCategory' => 'BusinessApplication',
-                'operatingSystem' => 'Web',
-                'browserRequirements' => 'Requires JavaScript for live results',
-                'offers' => [
-                    '@type' => 'Offer',
-                    'price' => '0',
-                    'priceCurrency' => 'BDT',
-                    'availability' => 'https://schema.org/InStock',
-                ],
-                'provider' => ['@id' => $orgId],
-                'description' => $description,
-            ];
             $graphs[] = [
                 '@type' => 'HowTo',
                 '@id' => $canonical.'#howto',

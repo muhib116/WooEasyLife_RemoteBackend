@@ -71,9 +71,9 @@ class MarketingSeoTest extends TestCase
         $this->assertStringContainsString('Pathao', $html);
         $this->assertStringContainsString('Steadfast', $html);
         $this->assertStringContainsString('RedX', $html);
-        $this->assertStringContainsString('"@type":"WebApplication"', $html);
         $this->assertStringContainsString('"@type":"HowTo"', $html);
-        $this->assertStringContainsString('"price":"0"', $html);
+        $this->assertStringNotContainsString('"@type":"WebApplication"', $html);
+        $this->assertStringNotContainsString('"@type":"SoftwareApplication"', $html);
         $this->assertStringNotContainsString('aggregateRating', $html);
     }
 
