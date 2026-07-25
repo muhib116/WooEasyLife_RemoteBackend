@@ -48,6 +48,8 @@ Return JSON:
 - Stay on the focus keyword’s actual job — every H2 must teach that topic for BD COD sellers
 - Include at least 2 secondary keywords from keywords.secondary naturally (not stuffed)
 - Keyword density ~1% — natural, no stuffing or repetition
+- Prefer long-tail focus keywords from research; do not steal money-page head terms (fraud checker bd, ফ্রড চেকার, etc.)
+- If outline/research includes a suggested slug from seo_keyword_inventory, keep that slug when it matches ^[a-z0-9-]+$
 - At least 2 internal links using exact paths from link_plan (href="/path")
 - MUST include an href to cluster_landing.primary_path
 - Include **at least 5 FAQs** (q/a plain text, each answer ~40–80 words)

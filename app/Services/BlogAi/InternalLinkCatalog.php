@@ -23,6 +23,20 @@ class InternalLinkCatalog
             ])
             ->all();
 
+        $inventory = [];
+        try {
+            $inventory = app(\App\Services\Seo\SeoKeywordInventory::class)->liveLinkTargets();
+        } catch (\Throwable) {
+            $inventory = [];
+        }
+
+        // Prefer static titles when path already listed; still add inventory-only paths.
+        $staticPaths = collect($static)->pluck('path')->all();
+        $inventoryExtra = collect($inventory)
+            ->reject(fn (array $row) => in_array($row['path'], $staticPaths, true))
+            ->values()
+            ->all();
+
         $posts = BlogPost::query()
             ->where('status', 'published')
             ->whereNotNull('slug')
@@ -42,7 +56,7 @@ class InternalLinkCatalog
             ])
             ->all();
 
-        return array_values([...$static, ...$posts]);
+        return array_values([...$static, ...$inventoryExtra, ...$posts]);
     }
 
     public function toPromptBlock(): string

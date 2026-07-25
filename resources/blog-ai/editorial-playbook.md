@@ -8,14 +8,17 @@ Voice rules live in `prompts/system.md`. Product truth lives in `product_brief` 
 1. **Product / landing truth** — `cluster_landing.landing_page_reference`  
    (`primary_url`, SEO page H1/lead/FAQs/claims, optional live snapshot).  
    Never invent features, prices, metrics, or partnerships. Soft-link `primary_path`.
-2. **Structure truth** — this playbook + `skeletons/{article_type}.md`  
+2. **Keyword / slug inventory** — `config/seo_keyword_inventory.php`  
+   Money-page head terms are reserved. Prefer `planned_blog` long-tails for new posts.  
+   Do not create synonym URLs that cannibalize live money paths.
+3. **Structure truth** — this playbook + `skeletons/{article_type}.md`  
    Section **order is fixed**. Do **not** copy the landing page layout as the blog outline.
-3. **Standing memory** — prefer/avoid keywords, brand instructions, lessons  
+4. **Standing memory** — prefer/avoid keywords, brand instructions, lessons  
    Adjusts wording/angles inside slots; does not reorder slots.
-4. **Competitor gaps** — open gaps / must-cover angles  
+5. **Competitor gaps** — open gaps / must-cover angles  
    Map into the matching skeleton slot (usually differentiation, steps, or FAQ).  
    Never create a new top-level flow just to cover a gap.
-5. **Performance learning / GSC** — topic, title angle, CTR  
+6. **Performance learning / GSC** — topic, title angle, CTR  
    Chooses *what* to write about, not section order.
 
 ## Landing URL as reference

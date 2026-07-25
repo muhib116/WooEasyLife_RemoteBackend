@@ -38,10 +38,28 @@ class BlogContentAgent
         $gscSeeds = $this->learning->gscKeywordSeeds(10);
         $gscQueries = collect($gscSeeds)->pluck('query')->filter()->values()->all();
 
+        $inventorySeeds = [];
+        $plannedBlogPrimaries = [];
+        $reservedHeads = [];
+        try {
+            $inventory = app(\App\Services\Seo\SeoKeywordInventory::class);
+            $inventorySeeds = $inventory->seedQueriesForCluster($cluster, 12);
+            $plannedBlogPrimaries = collect($inventory->plannedBlogTopics($cluster, 8))
+                ->pluck('keyword')
+                ->filter()
+                ->values()
+                ->all();
+            $reservedHeads = $inventory->reservedHeadTermsForCluster($cluster);
+        } catch (\Throwable) {
+            // Inventory optional — Blog AI still works from GSC/config seeds.
+        }
+
         $suggestSeeds = array_values(array_filter(array_merge(
             $seedTopic !== '' ? [$seedTopic] : [],
             $gscQueries,
             $seedQueries,
+            $inventorySeeds,
+            $plannedBlogPrimaries,
             [$clusterLabel],
         )));
 
@@ -57,9 +75,11 @@ Return JSON only:
 }
 Rules:
 - Prefer Bangla or BD-English hybrid phrases BD COD / WooCommerce sellers actually search
-- Include 1–2 short head terms and several long-tail phrases
+- Prefer LONG-TAIL phrases suitable for a blog (not bare money-page head terms)
 - Ground keywords in live Google Suggest (gl=bd) when provided; do not invent US-centric terms
 - Prefer gsc_rank_queries (real Search Console opportunities) when relevant to the cluster
+- Prefer planned_blog_topics from seo_keyword_inventory when they fit the cluster
+- NEVER return reserved_head_terms as the only/primary candidates — those belong to live landing pages
 - Stay inside WooEasyLife product truth (fraud, courier, missing orders, pixel, AI order, packing, multistore, team)
 - Prefer phrases aligned with cluster_landing angle_hint and page H1/lead
 - No brand spam lists; each keyword must be useful for an article
@@ -71,6 +91,11 @@ TXT;
             'cluster_label' => $clusterLabel,
             'live_google_suggest_bd' => $liveSuggestions,
             'gsc_rank_queries' => $gscSeeds,
+            'seo_keyword_inventory' => [
+                'planned_blog_topics' => $plannedBlogPrimaries,
+                'reserved_head_terms' => $reservedHeads,
+                'inventory_seeds' => array_slice($inventorySeeds, 0, 10),
+            ],
             'product_brief' => $this->briefBuilder->build($cluster),
             'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
@@ -97,14 +122,15 @@ TXT;
         if ($keywords === []) {
             $fallback = array_values(array_filter(array_merge(
                 $seedTopic !== '' ? [$seedTopic] : [],
+                $plannedBlogPrimaries,
                 array_slice($gscQueries, 0, 5),
                 array_slice($seedQueries, 0, 5),
             )));
             $keywords = $fallback !== [] ? $fallback : ['WooCommerce বাংলাদেশ'];
         }
 
-        // Merge GSC opportunity queries the model missed, then live suggestions.
-        foreach (array_merge($gscQueries, $liveSuggestions) as $extra) {
+        // Merge planned blog primaries + GSC + live suggestions the model missed.
+        foreach (array_merge($plannedBlogPrimaries, $gscQueries, $liveSuggestions) as $extra) {
             if (count($keywords) >= 12) {
                 break;
             }
@@ -113,8 +139,26 @@ TXT;
             }
         }
 
+        // Demote reserved money-page heads to the end (keep long-tails first).
+        $reservedNorm = array_map(fn ($t) => mb_strtolower(trim($t)), $reservedHeads);
+        $keywords = collect($keywords)
+            ->unique()
+            ->sortBy(function ($kw) use ($reservedNorm) {
+                $n = mb_strtolower(trim((string) $kw));
+                foreach ($reservedNorm as $term) {
+                    if ($term !== '' && ($n === $term || (str_starts_with($n, $term) && mb_strlen($n) <= mb_strlen($term) + 2))) {
+                        return 1;
+                    }
+                }
+
+                return 0;
+            })
+            ->values()
+            ->take(12)
+            ->all();
+
         return [
-            'keywords' => array_values(array_slice($keywords, 0, 12)),
+            'keywords' => array_values($keywords),
             'live_suggestions' => $liveSuggestions,
             'gsc_rank_queries' => $gscSeeds,
             'usage' => $result['usage'],
@@ -170,10 +214,22 @@ Return JSON only:
 Prefer Bangla or BD-English hybrid phrases sellers actually search.
 Do not invent US-centric keywords.
 Prioritize pasted keywords, gsc_rank_queries (Search Console opportunities), then live Google Suggest (gl=bd).
+Use seo_keyword_inventory.planned_blog_topics as preferred long-tail angles when they match the seed/cluster.
 Align primary intent with cluster_landing (same problem the landing page solves).
 Do NOT use the landing page bare head term as primary (e.g. avoid exact “ফ্রড চেকার” if that is the LP H1) — pick a long-tail informational angle.
+NEVER pick seo_keyword_inventory.reserved_head_terms as primary — those belong to live money pages.
 If avoid_primary_keywords is non-empty, the primary MUST be a different long-tail angle that is not in that list and not an exact match of existing post focus keywords.
 TXT;
+
+        $inventoryBlock = null;
+        try {
+            $inventoryBlock = json_decode(
+                app(\App\Services\Seo\SeoKeywordInventory::class)->toPromptBlockForCluster($cluster),
+                true
+            );
+        } catch (\Throwable) {
+            $inventoryBlock = null;
+        }
 
         $user = json_encode([
             'seed_topic' => $seedTopic,
@@ -183,6 +239,7 @@ TXT;
             'avoid_primary_keywords' => $avoidPrimaries,
             'live_google_suggest_bd' => $liveSuggestions,
             'gsc_rank_queries' => $gscSeeds,
+            'seo_keyword_inventory' => $inventoryBlock,
             'product_brief' => $this->briefBuilder->build($cluster),
             'cluster_landing' => $this->landingContext->forCluster($cluster),
         ], JSON_UNESCAPED_UNICODE);
@@ -369,6 +426,15 @@ TXT;
                     }
                 }
             }
+        }
+
+        // Curated inventory reserved heads (money/tool/pillar primaries + short secondaries).
+        try {
+            foreach (app(\App\Services\Seo\SeoKeywordInventory::class)->reservedHeadTermsForCluster($cluster) as $kw) {
+                $terms[] = $kw;
+            }
+        } catch (\Throwable) {
+            // ignore
         }
 
         return array_values(array_unique(array_filter($terms)));

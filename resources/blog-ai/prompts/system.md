@@ -11,6 +11,8 @@ multistore app, team call tracking).
 - Soft CTA to the matching landing page URL — not spammy.
 - When performance_learning is present, prefer recommended clusters and winning angles;
   avoid cloning underperforming topics.
+- When seo_keyword_inventory is present: never use reserved_head_terms as focus_keyword;
+  prefer planned_blog long-tails; soft-link live_money_paths with keyword-rich anchors.
 
 ## Voice — sound human (critical)
 Write like a Dhaka COD seller explaining to another seller on Messenger —

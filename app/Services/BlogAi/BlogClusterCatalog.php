@@ -51,12 +51,20 @@ class BlogClusterCatalog
     {
         $row = $this->row($key);
         if ($row !== null) {
-            return array_values(array_filter(array_map('strval', $row['seed_queries'] ?? [])));
+            $base = array_values(array_filter(array_map('strval', $row['seed_queries'] ?? [])));
+        } else {
+            $fallback = config('blog_ai.cluster_seed_queries.'.$key, []);
+            $base = is_array($fallback) ? array_values(array_filter(array_map('strval', $fallback))) : [];
         }
 
-        $fallback = config('blog_ai.cluster_seed_queries.'.$key, []);
+        // Merge curated SEO inventory seeds (keywords/slugs roadmap) without dropping DB/config seeds.
+        try {
+            $inventory = app(\App\Services\Seo\SeoKeywordInventory::class)->seedQueriesForCluster($key, 12);
+        } catch (\Throwable) {
+            $inventory = [];
+        }
 
-        return is_array($fallback) ? array_values(array_filter(array_map('strval', $fallback))) : [];
+        return array_values(array_unique(array_merge($base, $inventory)));
     }
 
     /**

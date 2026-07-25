@@ -118,6 +118,27 @@ class BlogSmartTopicPicker
             ];
         }
 
+        // Curated SEO inventory planned blogs (long-tail roadmap) — below GSC, above cold cluster seeds.
+        try {
+            $inventoryTopics = app(\App\Services\Seo\SeoKeywordInventory::class)
+                ->plannedBlogTopics($explicitCluster !== '' ? $explicitCluster : null, 12);
+            foreach ($inventoryTopics as $topic) {
+                $candidates[] = [
+                    'seed_topic' => $topic['seed_topic'],
+                    'keyword' => $topic['keyword'],
+                    'cluster' => $topic['cluster'],
+                    'reason' => 'seo_keyword_inventory',
+                    'bucket' => null,
+                    'opportunity_score' => 18.0,
+                    'target_slug' => $topic['target_slug'],
+                    'impressions' => 0,
+                    'source' => 'inventory',
+                ];
+            }
+        } catch (\Throwable) {
+            // ignore
+        }
+
         $preferGsc = (bool) config('blog_ai.auto.prefer_gsc', true);
         $hasGsc = collect($candidates)->contains(fn (array $c) => ($c['source'] ?? '') === 'gsc');
 
@@ -176,6 +197,22 @@ class BlogSmartTopicPicker
 
         $cluster = $explicitCluster !== '' ? $explicitCluster : 'fake_order';
         $catalog = app(BlogClusterCatalog::class);
+        try {
+            $inventoryFirst = app(\App\Services\Seo\SeoKeywordInventory::class)->plannedBlogTopics($cluster, 1);
+        } catch (\Throwable) {
+            $inventoryFirst = [];
+        }
+        if ($inventoryFirst !== []) {
+            return $this->finalizeCandidate([
+                'seed_topic' => $inventoryFirst[0]['seed_topic'],
+                'keyword' => $inventoryFirst[0]['keyword'],
+                'cluster' => $inventoryFirst[0]['cluster'] ?: $cluster,
+                'reason' => 'cold_start_inventory',
+                'bucket' => null,
+                'opportunity_score' => 2,
+                'target_slug' => $inventoryFirst[0]['target_slug'],
+            ], $learning);
+        }
         $seeds = $catalog->seedQueries($cluster);
         $fallback = $seeds !== []
             ? (string) $seeds[0]
