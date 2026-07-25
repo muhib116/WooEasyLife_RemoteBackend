@@ -77,6 +77,43 @@ class MarketingSeoTest extends TestCase
         $this->assertStringNotContainsString('aggregateRating', $html);
     }
 
+    public function test_bn_fraud_money_pages_link_to_faqs_calculators_and_pricing(): void
+    {
+        $paths = [
+            '/faq',
+            '/faq/courier-success-rate-kivabe-bujhbo',
+            '/faq/success-rate-kom-hole-ki-korbo',
+            '/faq/cod-order-otp-kokhon',
+            '/faq/woocommerce-customer-blacklist',
+            '/faq/duplicate-cod-order-block',
+            '/faq/customer-delivery-history-check',
+            '/faq/customer-fraud-score-ki',
+            '/faq/cod-return-loss-hisab',
+            '/return-loss-calculator',
+            '/ads-roas-calculator',
+            '/pricing',
+        ];
+
+        $fraudChecker = $this->get('/bd-fraud-checker');
+        $fakeCustomerCheck = $this->get('/fake-customer-check');
+
+        $fraudChecker->assertOk();
+        $fakeCustomerCheck->assertOk();
+
+        $combinedHtml = $fraudChecker->getContent().$fakeCustomerCheck->getContent();
+        foreach ($paths as $path) {
+            $this->assertStringContainsString(
+                'href="'.$path.'"',
+                $combinedHtml,
+                "Expected fraud money pages to render an internal link to {$path}"
+            );
+        }
+
+        $fakeCustomerCheck->assertSee('কোনো আইনি বা চূড়ান্ত “fraud verdict” নয়', false);
+        $fakeCustomerCheck->assertSee('/bd-fraud-checker', false);
+        $fakeCustomerCheck->assertSee('/faq/customer-fraud-score-ki', false);
+    }
+
     public function test_return_loss_calculator_ssr_exposes_number_inputs(): void
     {
         $response = $this->get('/return-loss-calculator');

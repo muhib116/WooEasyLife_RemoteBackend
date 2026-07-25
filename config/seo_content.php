@@ -54,7 +54,7 @@ return array (
       'heading' => 'দ্রুত উত্তর',
       'paragraphs' => 
       array (
-        0 => 'Free Courier Fraud Checker BD-এ কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি হিস্টোরি ও সাকসেস রেট দেখা যায়। অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। সাকসেস রেট কম হলে অর্ডার কনফার্মের আগে থামুন — পার্সেল রিটার্ন ও অ্যাড লস কমে। দীর্ঘমেয়াদে /fake-order-protection ও কুরিয়ার অটো এন্ট্রি একসাথে চালান। কনফার্মের আগে যাচাই ফোকাস: /fake-customer-check। হোম: /।',
+        0 => 'Free Courier Fraud Checker BD-এ কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি হিস্টোরি ও সাকসেস রেট দেখা যায়। অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। এটি নিশ্চিত “fraud verdict” নয়—history ও ratio দেখে কল, ঠিকানা বা OTP যাচাইয়ের সিদ্ধান্ত নিন। বিস্তারিত প্রশ্ন: /faq/customer-delivery-history-check, /faq/courier-success-rate-kivabe-bujhbo এবং /faq/success-rate-kom-hole-ki-korbo। পূর্ণ সুরক্ষা ও প্ল্যান: /pricing।',
       ),
     ),
     1 => 
@@ -64,7 +64,7 @@ return array (
       array (
         0 => 'Free Courier Fraud Checker BD পেজে কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখা যায়। সাকসেস রেট কম বা রিটার্ন বেশি হলে অর্ডার কনফার্মের আগেই সিদ্ধান্ত নিন — পার্সেল পাঠিয়ে লস নেওয়ার দরকার নেই।',
         1 => 'অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। ই-কমার্স, Facebook পেজ ও WooCommerce COD সেলাররা অর্ডার কনফার্ম করার আগে এই চেক ব্যবহার করে ফেক অর্ডার ও পার্সেল রিটার্ন কমান।',
-        2 => 'শুধু চেক যথেষ্ট নয় দীর্ঘমেয়াদে। WooEasyLife সাবস্ক্রিপশনে চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক, ব্ল্যাকলিস্ট, কুরিয়ার অটো এন্ট্রি ও পার্সেল নোট হিস্ট্রি একসাথে পাবেন। ফ্রি টুল দিয়ে শুরু করুন, প্রোটেকশন দরকার হলে /pricing দেখুন।',
+        2 => 'শুধু চেক দীর্ঘমেয়াদি সুরক্ষার জন্য যথেষ্ট নয়। WooEasyLife সাবস্ক্রিপশনে checkout OTP, duplicate order block, blacklist, courier auto-entry ও parcel note history একসাথে পাওয়া যায়। ফ্রি বনাম paid বেছে নিতে আগে দৈনিক ম্যানুয়াল চেক দিয়ে workflow যাচাই করুন; automation ও protection দরকার হলে /pricing দেখুন। সম্পর্কিত FAQ: /faq/cod-order-otp-kokhon, /faq/duplicate-cod-order-block ও /faq/woocommerce-customer-blacklist।',
       ),
     ),
     2 => 
@@ -72,8 +72,8 @@ return array (
       'heading' => 'কীভাবে সাকসেস রেট পড়বেন',
       'paragraphs' => 
       array (
-        0 => 'উচ্চ সাকসেস রেট সাধারণত নিরাপদ সিগন্যাল — দ্রুত কনফার্ম করে কুরিয়ার এন্ট্রিতে পাঠাতে পারেন। খুব কম সাকসেস রেট, বারবার রিটার্ন বা নতুন/সন্দেহজনক প্যাটার্ন দেখলে ফোন-কনফার্ম করুন বা অর্ডার আটকে রাখুন।',
-        1 => 'একটি খারাপ রেকর্ড মানেই সবসময় ফেক নয় — কখনো কুরিয়ার এলাকা বা ঠিকানা সমস্যাও থাকে। তাই ফ্রড চেক + ছোট কল ভেরিফিকেশন একসাথে সবচেয়ে নিরাপদ। মাসিক লস হিসাব করতে /return-loss-calculator ব্যবহার করুন।',
+        0 => 'উচ্চ সাকসেস রেট ইতিবাচক সিগন্যাল, তবে একে একমাত্র সিদ্ধান্ত বানাবেন না। খুব কম সাকসেস রেট, একাধিক সাম্প্রতিক রিটার্ন বা অসামঞ্জস্যপূর্ণ প্যাটার্ন দেখলে ফোন-কনফার্ম করুন, ঠিকানা মিলিয়ে নিন এবং প্রয়োজনে অর্ডার হোল্ড রাখুন। রেশিও পড়ার গাইড: /faq/courier-success-rate-kivabe-bujhbo।',
+        1 => 'একটি খারাপ রেকর্ড মানেই সবসময় ফেক নয়—কুরিয়ার এলাকা, ঠিকানা, গ্রাহকের জরুরি সমস্যা বা seller-side ভুলও কারণ হতে পারে। তাই history + ratio + ছোট কল/OTP verification একসাথে সবচেয়ে নিরাপদ। কম রেটে করণীয়: /faq/success-rate-kom-hole-ki-korbo। মাসিক ক্ষতি: /return-loss-calculator ও /faq/cod-return-loss-hisab।',
       ),
     ),
     3 => 
@@ -81,8 +81,8 @@ return array (
       'heading' => 'কখন অর্ডার আটকাবেন',
       'paragraphs' => 
       array (
-        0 => 'নতুন নম্বর, খুব কম সাকসেস রেট, বারবার রিটার্ন বা সন্দেহজনক প্যাটার্ন দেখলে ফোন-কনফার্ম করুন বা অর্ডার বাতিল রাখুন। ভালো হিস্টোরি থাকলে দ্রুত কনফার্ম করে কুরিয়ার অটো এন্ট্রিতে পাঠাতে পারেন।',
-        1 => 'প্র্যাকটিক্যাল ফ্লো: নতুন অর্ডার → এই পেজে নম্বর চেক → প্রয়োজনে কল → কনফার্ম → /courier-auto-entry। বারবার ফেক আটকাতে /fake-order-protection চালু করুন।',
+        0 => 'নম্বরের সাকসেস রেট খুব কম, একাধিক সাম্প্রতিক রিটার্ন, ঠিকানা অসম্পূর্ণ, কল না ধরা, OTP ব্যর্থ এবং অগ্রিম চার্জে অস্বীকৃতি—একাধিক ঝুঁকি একসাথে থাকলে অন্ধভাবে শিপ করবেন না। হোল্ড করে পুনরায় যাচাই করুন; শুধু একটি পুরোনো রিটার্ন দেখে চূড়ান্ত সিদ্ধান্ত নেবেন না।',
+        1 => 'প্র্যাকটিক্যাল ফ্লো: নতুন অর্ডার → /bd-fraud-checker পেজে নম্বর চেক → প্রয়োজনে কল/OTP → নোট লিখুন → কনফার্ম → /courier-auto-entry। বারবার fake pattern আটকাতে /fake-order-protection ও /pricing দেখুন। সব সহায়ক প্রশ্ন: /faq।',
       ),
     ),
     4 => 
@@ -91,7 +91,7 @@ return array (
       'paragraphs' => 
       array (
         0 => 'ফেক অর্ডার শুধু কুরিয়ার লস নয় — Facebook Pixel-এ ফেক Purchase গেলে অ্যাড অপটিমাইজেশনও নষ্ট হয়। আসল ROAS দেখতে /ads-roas-calculator ব্যবহার করুন।',
-        1 => 'রিটার্ন লস ক্যালকুলেটরে দৈনিক অর্ডার ও রিটার্ন রেট দিয়ে মাসিক লস দেখুন। FraudBD Alternative তুলনা: /fraudbd-alternative। বাংলা ধাপে ধাপে গাইড: /ki-vabe-fake-order-atkabo। ইংরেজি মিরর: /en/bd-fraud-checker।',
+        1 => '/return-loss-calculator পেজে দৈনিক অর্ডার ও রিটার্ন রেট দিয়ে মাসিক লস দেখুন; হিসাবের ব্যাখ্যা: /faq/cod-return-loss-hisab। FraudBD Alternative তুলনা: /fraudbd-alternative। বাংলা ধাপে ধাপে গাইড: /ki-vabe-fake-order-atkabo। ইংরেজি মিরর: /en/bd-fraud-checker।',
       ),
     ),
     5 => 
@@ -119,8 +119,8 @@ return array (
       'heading' => 'Fake Customer Check কী — দ্রুত উত্তর',
       'paragraphs' => 
       array (
-        0 => 'Fake customer check মানে অর্ডার কনফার্ম বা পার্সেল বুকিংয়ের আগে কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার ডেলিভারি হিস্টোরি, সাকসেস রেট ও রিটার্ন প্যাটার্ন যাচাই করা। বাংলাদেশের COD ও Facebook/WooCommerce সেলাররা এতে ফেক বা বারবার-রিফিউজ কাস্টমার আগেই ধরেন।',
-        1 => 'এই পেজে অ্যাকাউন্ট ছাড়াই ফ্রি চেক চালান। একই ইঞ্জিনের পূর্ণ টুল UI: /bd-fraud-checker। চেকআউট সুরক্ষা যোগ করতে: /fake-order-protection। মাসিক রিটার্ন লস মাপতে: /return-loss-calculator।',
+        0 => 'Fake customer check মানে অর্ডার কনফার্ম বা পার্সেল বুকিংয়ের আগে কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার delivery history, success rate ও return pattern দেখা। এটি কোনো ব্যক্তিকে নিশ্চিতভাবে “fraud” ঘোষণা করে না—একটি risk signal, যার সঙ্গে কল, ঠিকানা ও OTP verification মিলিয়ে seller সিদ্ধান্ত নেন। Fraud score ব্যাখ্যা: /faq/customer-fraud-score-ki।',
+        1 => 'এই পেজে অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক চালান। একই ইঞ্জিনের পূর্ণ tool UI: /bd-fraud-checker। বেশি volume, checkout protection ও automation দরকার হলে /pricing দেখুন। মাসিক return loss: /return-loss-calculator। সব প্রশ্ন: /faq।',
       ),
       'figures' => 
       array (
@@ -138,7 +138,7 @@ return array (
       'paragraphs' => 
       array (
         0 => 'নতুন সিম, ভুল নম্বর বা মজার অর্ডার দিয়ে COD প্লেস করা সহজ—পার্সেল চলে গেলে রিটার্ন ফি, প্যাকিং ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে “সব অর্ডার শিপ” করলে লাভ কেটে যায়।',
-        1 => 'Fake customer check-এর কাজ হলো সিগন্যাল দেওয়া: এই নম্বর আগে কতবার সফল ডেলিভারি নিয়েছে, কতবার রিটার্ন/ক্যানসেল করেছে। সিদ্ধান্ত আপনার—টুল অন্ধ অটো-শিপ করে না।',
+        1 => 'Fake customer check-এর কাজ হলো সিগন্যাল দেওয়া: এই নম্বর আগে কতবার সফল delivery নিয়েছে, কতবার return বা cancel করেছে। “Fraud score” বা ratio সম্ভাব্য risk বোঝায়, পরিচয় বা উদ্দেশ্যের চূড়ান্ত প্রমাণ নয়। সিদ্ধান্ত seller-এর—টুল অন্ধ auto-ship করে না। বিস্তারিত: /faq/customer-fraud-score-ki ও /faq/customer-delivery-history-check।',
         2 => 'পূর্ণ COD ম্যাথ ও রিটার্ন প্লেবুক: /cod-return-reduction এবং হাব /woocommerce-bangladesh।',
       ),
     ),
@@ -156,8 +156,8 @@ return array (
       'heading' => 'সাকসেস রেট ও জোন কীভাবে পড়বেন',
       'paragraphs' => 
       array (
-        0 => 'উচ্চ সাকসেস রেট (সবুজ জোন): সাধারণত দ্রুত কনফার্ম ও শিপ নিরাপদ। মাঝারি (হলুদ): ফোন-কনফার্ম, ঠিকানা যাচাই, প্রয়োজনে OTP। কম সাকসেস বা বারবার রিটার্ন (লাল): অগ্রিম ডেলিভারি চার্জ ছাড়া শিপ করবেন না।',
-        1 => 'একটি খারাপ রেকর্ড মানেই সবসময় “ফেক” নয়—কখনো ঠিকানা/এলাকা সমস্যাও থাকে। তাই হিস্টোরি + ছোট কল ভেরিফিকেশন একসাথে সবচেয়ে নিরাপদ। বিস্তারিত: /customer-verification।',
+        0 => 'উচ্চ success rate ইতিবাচক signal; মাঝারি হলে ফোন-কনফার্ম, ঠিকানা যাচাই ও প্রয়োজনে OTP; কম success বা বারবার return হলে অগ্রিম delivery charge বা hold বিবেচনা করুন। কোনো fixed percentage-কে একা verdict বানাবেন না—sample size ও সাম্প্রতিক pattern-ও দেখুন। রেট পড়ুন: /faq/courier-success-rate-kivabe-bujhbo।',
+        1 => 'একটি খারাপ record মানেই সবসময় “fake” নয়—কখনো address, delivery area, courier বা seller-side সমস্যাও থাকে। তাই history + call verification একসাথে নিরাপদ। কম রেটে SOP: /faq/success-rate-kom-hole-ki-korbo।',
       ),
     ),
     4 => 
@@ -165,7 +165,7 @@ return array (
       'heading' => 'Fake customer check vs পূর্ণ ফেক অর্ডার প্রোটেকশন',
       'paragraphs' => 
       array (
-        0 => 'ম্যানুয়াল নম্বর চেক দৈনন্দিন গেটকিপার। কিন্তু একই ঝুঁকি বারবার আটকাতে চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক, ব্ল্যাকলিস্ট ও দৈনিক লিমিট লাগে—সেগুলো /fake-order-protection-এ।',
+        0 => 'ম্যানুয়াল নম্বর চেক দৈনন্দিন gatekeeper। কিন্তু একই ঝুঁকি বারবার আটকাতে checkout OTP, duplicate order block, blacklist ও daily limit লাগে—সেগুলো /fake-order-protection পেজে আছে। প্রশ্নভিত্তিক গাইড: /faq/cod-order-otp-kokhon, /faq/duplicate-cod-order-block ও /faq/woocommerce-customer-blacklist।',
         1 => 'প্র্যাকটিক্যাল স্ট্যাক: এই পেজ বা /bd-fraud-checker দিয়ে চেক → /fake-order-protection চালু → কনফার্ম → /courier-auto-entry → ট্র্যাকিং মেসেজ /woocommerce-notifications। ধাপে ধাপে বাংলা: /ki-vabe-fake-order-atkabo।',
       ),
     ),
@@ -202,7 +202,7 @@ return array (
       'paragraphs' => 
       array (
         0 => 'অনেক সেলার শুধু-চেকার টুল দিয়ে নম্বর দেখেই থেমে যায়। WooEasyLife Fake Customer Check একই হিস্টোরি সিগন্যাল দেয়, কিন্তু পরের ধাপ—OTP, ব্ল্যাকলিস্ট, অটো এন্ট্রি—এক প্ল্যাটফর্মে যোগ করা যায়। তুলনা পেজ: /fraudbd-alternative।',
-        1 => 'ফ্রি চেক দিয়ে শুরু করুন (/bd-fraud-checker বা এই পেজ), তারপর ভলিউম বাড়লে /pricing থেকে প্রোটেকশন চালু করুন। ইংরেজি মিরর: /en/fake-customer-check।',
+        1 => 'ফ্রি চেক দিয়ে শুরু করুন (/bd-fraud-checker বা এই পেজ), তারপর volume বাড়লে /pricing থেকে protection চালু করুন। সংশ্লিষ্ট hub: /faq। Return loss মাপুন: /return-loss-calculator ও /faq/cod-return-loss-hisab। ইংরেজি mirror: /en/fake-customer-check।',
       ),
     ),
     9 => 
