@@ -504,7 +504,6 @@ class MarketingSeoTest extends TestCase
 
         $bn = $this->get('/about');
         $bn->assertOk();
-        $bn->assertSee('/images/seo/about/founder-hero.png', false);
         $bn->assertSee('/images/seo/about/founder-headshot.jpg', false);
         $bn->assertSee('Muhibbullah Ansary', false);
         $bn->assertSee('Founder & CEO, WPSaleHub', false);
@@ -513,6 +512,16 @@ class MarketingSeoTest extends TestCase
         $bn->assertSee('WPSaleHub হলো একটি automation-first technology company', false);
         $bn->assertSee('WooCommerce মার্চেন্টদের জন্য তৈরি', false);
         $bn->assertDontSee('https:Bangla home', false);
+        $bn->assertDontSee('/images/seo/about/founder-work.png', false);
+        $bn->assertDontSee('/images/seo/about/founder-hero.png', false);
+        // First about photo in prerender HTML must be the Person headshot (not product/workspace shots).
+        $bnHtml = $bn->getContent();
+        $firstAboutImg = null;
+        if (preg_match('/<img[^>]+src="([^"]*seo\/about\/[^"]+)"/', $bnHtml, $m)) {
+            $firstAboutImg = $m[1];
+        }
+        $this->assertNotNull($firstAboutImg);
+        $this->assertStringContainsString('founder-headshot.jpg', $firstAboutImg);
 
         $en = $this->get('/en/about');
         $en->assertOk();
@@ -523,6 +532,14 @@ class MarketingSeoTest extends TestCase
         $en->assertSee('About WPSaleHub | WooEasyLife founder Muhibbullah Ansary', false);
         $en->assertSee('The fastest way is email', false);
         $en->assertDontSee('https:Bangla home', false);
+        $en->assertDontSee('/images/seo/about/founder-work.png', false);
+        $enHtml = $en->getContent();
+        $firstEnAboutImg = null;
+        if (preg_match('/<img[^>]+src="([^"]*seo\/about\/[^"]+)"/', $enHtml, $m)) {
+            $firstEnAboutImg = $m[1];
+        }
+        $this->assertNotNull($firstEnAboutImg);
+        $this->assertStringContainsString('founder-headshot.jpg', $firstEnAboutImg);
     }
 
     public function test_home_prerenders_h1_for_crawlers(): void

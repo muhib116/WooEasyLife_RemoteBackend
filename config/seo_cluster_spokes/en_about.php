@@ -26,22 +26,7 @@ return [
             'Every solution we ship has one aim: run the business smarter—in less time, at lower cost.',
         ],
     ],
-    [
-        'heading' => 'Our product — WooEasyLife',
-        'paragraphs' => [
-            'WooEasyLife is one of our flagship products, built specifically for WooCommerce merchants.',
-            'With it, merchants can manage multiple WooCommerce stores, verify fraud numbers and courier history, use courier automation, automate order workflows, review customer history, and finish everyday operations faster.',
-            'WooEasyLife is a real example of our automation vision. Learn more: /en/bd-fraud-checker, /en/fake-order-protection, /en/courier-auto-entry, /en/facebook-page-cod-management, /en/woocommerce-bangladesh, and /pricing.',
-            'For updates and tips, follow https://www.facebook.com/wooeasylife',
-        ],
-        'figures' => [
-            [
-                'src' => '/images/seo/about/founder-work.png',
-                'alt' => 'Building WooEasyLife',
-                'caption' => 'WooEasyLife — flagship product of WPSaleHub',
-            ],
-        ],
-    ],
+    // Founder first among photos — crawlers/Gemini see Person headshot before product workspace shots.
     [
         'heading' => 'Our founder',
         'layout' => 'founder_hero',
@@ -62,6 +47,16 @@ return [
         ],
     ],
     [
+        'heading' => 'Our product — WooEasyLife',
+        'paragraphs' => [
+            'WooEasyLife is one of our flagship products, built specifically for WooCommerce merchants.',
+            'With it, merchants can manage multiple WooCommerce stores, verify fraud numbers and courier history, use courier automation, automate order workflows, review customer history, and finish everyday operations faster.',
+            'WooEasyLife is a real example of our automation vision. Learn more: /en/bd-fraud-checker, /en/fake-order-protection, /en/courier-auto-entry, /en/facebook-page-cod-management, /en/woocommerce-bangladesh, and /pricing.',
+            'For updates and tips, follow https://www.facebook.com/wooeasylife',
+        ],
+        // No second face photo here — avoids competing with Person headshot for Gemini/GSC.
+    ],
+    [
         'heading' => 'Our values',
         'paragraphs' => [
             'Automation First — automate manual work wherever possible.',
@@ -77,13 +72,6 @@ return [
             'We want a future where business owners don’t manage software—software manages their business.',
             'WPSaleHub — Automating Business. Empowering People.',
             'Have a question or an idea? Email dev.muhibbullah@gmail.com directly, or connect on https://www.linkedin.com/in/dev-muhib. You can also follow Muhibbullah on https://www.facebook.com/muhib116 and https://www.instagram.com/muhibbullah611/. To start a free WooEasyLife trial, visit /pricing.',
-        ],
-        'figures' => [
-            [
-                'src' => '/images/seo/about/founder-hero.png',
-                'alt' => 'Muhibbullah Ansary and WPSaleHub',
-                'caption' => 'Automating Business. Empowering People.',
-            ],
         ],
     ],
 ];

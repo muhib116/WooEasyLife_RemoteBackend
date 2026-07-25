@@ -239,6 +239,20 @@
             @if (! empty($seo['prerender_lead'] ?? $seo['description'] ?? null))
                 <p>{{ $seo['prerender_lead'] ?? $seo['description'] }}</p>
             @endif
+            @if (($seo['page_kind'] ?? null) === 'about' && ! empty($seo['author_image']))
+                <figure>
+                    <img
+                        src="{{ $seo['author_image'] }}"
+                        alt="{{ ($seo['author_name'] ?? 'Muhibbullah Ansary').' — '.($seo['author_role'] ?? 'Founder & CEO, WPSaleHub') }}"
+                        width="1200"
+                        height="1200"
+                        loading="eager"
+                        decoding="async"
+                        fetchpriority="high"
+                    />
+                    <figcaption>{{ $seo['author_name'] ?? 'Muhibbullah Ansary' }} — {{ $seo['author_role'] ?? 'Founder & CEO, WPSaleHub' }}</figcaption>
+                </figure>
+            @endif
             @if (! empty($seo['content_sections']) && is_array($seo['content_sections']))
                 @foreach ($seo['content_sections'] as $section)
                     @if (! empty($section['heading']))
