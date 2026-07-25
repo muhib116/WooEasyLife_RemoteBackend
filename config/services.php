@@ -84,6 +84,13 @@ return [
                 'META_MESSENGER_SCOPES',
                 'pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement'
             ),
+            /*
+            | Facebook Login for Business configuration ID (preferred).
+            | When set, OAuth uses config_id instead of a raw scope= list — required for
+            | newer Meta apps where pages_* permissions are tied to a use-case config.
+            | Create under: App Dashboard → Facebook Login for Business → Configurations.
+            */
+            'login_config_id' => env('META_MESSENGER_LOGIN_CONFIG_ID'),
 
             /*
             | Direct connect (single-page mode): skip the Facebook login dialog and

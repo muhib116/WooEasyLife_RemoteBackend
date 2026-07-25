@@ -60,6 +60,15 @@ class MessengerPageOAuthService
         ));
     }
 
+    /**
+     * Facebook Login for Business configuration id (optional).
+     * When present, OAuth must use config_id instead of raw scope= parameters.
+     */
+    public function loginConfigId(): string
+    {
+        return trim((string) config('services.messenger.login_config_id', ''));
+    }
+
     public function isConfigured(): bool
     {
         return $this->appId() !== '' && $this->appSecret() !== '';
@@ -294,15 +303,23 @@ class MessengerPageOAuthService
         $state = Str::random(40);
         Cache::put(self::CACHE_PREFIX . $state, $context, now()->addMinutes(20));
 
-        $query = http_build_query([
+        $params = [
             'client_id' => $this->appId(),
             'redirect_uri' => $this->redirectUri(),
             'state' => $state,
             'response_type' => 'code',
-            'scope' => $this->scopes(),
-        ]);
+        ];
 
-        return 'https://www.facebook.com/' . $this->graphVersion() . '/dialog/oauth?' . $query;
+        $configId = $this->loginConfigId();
+        if ($configId !== '') {
+            // Login for Business: permissions come from the dashboard configuration.
+            $params['config_id'] = $configId;
+            $params['override_default_response_type'] = 'true';
+        } else {
+            $params['scope'] = $this->scopes();
+        }
+
+        return 'https://www.facebook.com/' . $this->graphVersion() . '/dialog/oauth?' . http_build_query($params);
     }
 
     /**
