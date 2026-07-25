@@ -465,7 +465,10 @@ class MarketingSeoTest extends TestCase
         $person = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Person');
         $this->assertNotNull($person);
         $this->assertSame('Muhibbullah Ansary', $person['name'] ?? null);
-        $this->assertStringContainsString('founder-portrait', (string) ($person['image'] ?? ''));
+        $this->assertStringContainsString(
+            'founder-portrait',
+            (string) (is_array($person['image'] ?? null) ? ($person['image']['url'] ?? '') : ($person['image'] ?? ''))
+        );
         $this->assertContains('https://www.linkedin.com/in/dev-muhib', $person['sameAs'] ?? []);
         $this->assertContains('https://www.facebook.com/muhib116', $person['sameAs'] ?? []);
         $this->assertContains('https://www.instagram.com/muhibbullah611/', $person['sameAs'] ?? []);
@@ -479,14 +482,21 @@ class MarketingSeoTest extends TestCase
         $this->assertNotContains('https://www.linkedin.com/in/dev-muhib', $org['sameAs'] ?? []);
 
         $product = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Product');
-        $this->assertNotNull($product);
-        $this->assertSame('WooEasyLife', $product['name'] ?? null);
-        $this->assertStringContainsString('WooCommerce', (string) ($product['category'] ?? $product['description'] ?? ''));
+        $this->assertNull($product, 'About must not emit bare Product (GSC Product enhancement errors)');
+
+        $faq = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'FAQPage');
+        $this->assertNull($faq, 'About must not emit FAQPage (GSC FAQ enhancement not eligible)');
 
         $aboutPage = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'AboutPage');
         $this->assertNotNull($aboutPage);
         $this->assertStringEndsWith('#webpage', (string) ($aboutPage['@id'] ?? ''));
         $this->assertNull($graph->first(fn (array $node) => ($node['@id'] ?? null) === ($seo['canonical'] ?? '').'#article'));
+        $this->assertSame('+8801770989591', $person['telephone'] ?? null);
+        $this->assertIsArray($person['image'] ?? null);
+        $this->assertStringContainsString('founder-portrait', (string) ($person['image']['url'] ?? ''));
+
+        $crumb = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'BreadcrumbList');
+        $this->assertNotNull($crumb, 'About should keep BreadcrumbList');
 
         $this->assertSame(1200, (int) ($seo['og_image_width'] ?? 0));
         $this->assertSame(630, (int) ($seo['og_image_height'] ?? 0));

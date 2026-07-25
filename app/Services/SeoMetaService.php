@@ -435,14 +435,33 @@ class SeoMetaService
             '@id' => $founderPersonId,
             'name' => $founderName,
             'url' => $founderUrl,
-            'image' => $this->absoluteUrl($founderImagePath),
+            'image' => [
+                '@type' => 'ImageObject',
+                'url' => $this->absoluteUrl(
+                    (string) ($config['author_image'] ?? $founderImagePath)
+                ),
+                'width' => 1024,
+                'height' => 1024,
+            ],
             'jobTitle' => (string) (
                 $config['author_role']
                 ?? $config['person_job_title']
                 ?? $org['founder_job_title']
                 ?? 'Founder & CEO'
             ),
-            'email' => filled($org['founder_email'] ?? null) ? 'mailto:'.$org['founder_email'] : null,
+            'email' => filled($config['person_email'] ?? $org['founder_email'] ?? null)
+                ? 'mailto:'.($config['person_email'] ?? $org['founder_email'])
+                : null,
+            'telephone' => filled($config['person_telephone'] ?? null)
+                ? (string) $config['person_telephone']
+                : null,
+            'address' => filled($config['person_address'] ?? null)
+                ? [
+                    '@type' => 'PostalAddress',
+                    'addressLocality' => (string) $config['person_address'],
+                    'addressCountry' => 'BD',
+                ]
+                : null,
             'worksFor' => ['@id' => $orgId],
             'sameAs' => $founderSameAs !== [] ? $founderSameAs : null,
         ], static fn ($value) => $value !== null);
@@ -463,21 +482,29 @@ class SeoMetaService
             'sameAs' => $sameAs !== [] ? $sameAs : null,
         ], static fn ($value) => $value !== null);
 
-        $product = array_filter([
-            '@type' => 'Product',
-            '@id' => $productId,
-            'name' => $productName,
-            'description' => $productCfg['description'] ?? $description,
-            'url' => $this->absoluteUrl((string) ($productCfg['url_path'] ?? '/')),
-            'image' => $this->absoluteUrl($productImagePath),
-            'category' => $productCfg['category'] ?? 'WooCommerce merchant solution',
-            'brand' => [
-                '@type' => 'Organization',
-                '@id' => $orgId,
-                'name' => $org['name'] ?? 'WPSaleHub',
-            ],
-            'manufacturer' => ['@id' => $orgId],
-        ], static fn ($value) => $value !== null);
+        // Product snippets need offers/reviews — omit bare Product on About to avoid GSC
+        // "URL is on Google, but has issues" enhancement warnings.
+        $product = null;
+        if (! $isAboutPage) {
+            $product = array_filter([
+                '@type' => 'Product',
+                '@id' => $productId,
+                'name' => $productName,
+                'description' => $productCfg['description'] ?? $description,
+                'url' => $this->absoluteUrl((string) ($productCfg['url_path'] ?? '/')),
+                'image' => $this->absoluteUrl($productImagePath),
+                'category' => $productCfg['category'] ?? 'WooCommerce merchant solution',
+                'brand' => [
+                    '@type' => 'Organization',
+                    '@id' => $orgId,
+                    'name' => $org['name'] ?? 'WPSaleHub',
+                ],
+                'manufacturer' => ['@id' => $orgId],
+            ], static fn ($value) => $value !== null);
+        }
+
+        $ogImageWidth = (int) ($config['og_image_width'] ?? config('seo.og_image_width', 1200));
+        $ogImageHeight = (int) ($config['og_image_height'] ?? config('seo.og_image_height', 630));
 
         $webPageType = $isAboutPage ? 'AboutPage' : 'WebPage';
         $webPage = array_filter([
@@ -491,30 +518,44 @@ class SeoMetaService
             'primaryImageOfPage' => [
                 '@type' => 'ImageObject',
                 'url' => $ogImage,
+                'width' => $ogImageWidth > 0 ? $ogImageWidth : null,
+                'height' => $ogImageHeight > 0 ? $ogImageHeight : null,
             ],
             'mainEntity' => $isAboutPage ? ['@id' => $founderPersonId] : null,
+            // About page is about the company + founder — not a Product rich-result entity.
             'about' => $isAboutPage ? [
                 ['@id' => $orgId],
-                ['@id' => $productId],
                 ['@id' => $founderPersonId],
             ] : null,
         ], static fn ($value) => $value !== null);
 
-        $graphs = [
+        // Strip null width/height inside nested ImageObject.
+        if (isset($webPage['primaryImageOfPage']) && is_array($webPage['primaryImageOfPage'])) {
+            $webPage['primaryImageOfPage'] = array_filter(
+                $webPage['primaryImageOfPage'],
+                static fn ($value) => $value !== null
+            );
+        }
+
+        $website = array_filter([
+            '@type' => 'WebSite',
+            '@id' => $this->absoluteUrl('/').'#website',
+            'name' => $siteName,
+            'url' => $this->absoluteUrl('/'),
+            'publisher' => ['@id' => $orgId],
+            'about' => $isAboutPage
+                ? ['@id' => $orgId]
+                : ['@id' => $productId],
+            'inLanguage' => (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD')),
+        ], static fn ($value) => $value !== null);
+
+        $graphs = array_values(array_filter([
             $organization,
             $product,
             $founderPerson,
-            [
-                '@type' => 'WebSite',
-                '@id' => $this->absoluteUrl('/').'#website',
-                'name' => $siteName,
-                'url' => $this->absoluteUrl('/'),
-                'publisher' => ['@id' => $orgId],
-                'about' => ['@id' => $productId],
-                'inLanguage' => (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD')),
-            ],
+            $website,
             $webPage,
-        ];
+        ]));
 
         // Strip nulls (e.g. empty sameAs) so validators don't see null properties.
         $graphs = array_map(static function (array $node): array {
@@ -638,17 +679,21 @@ class SeoMetaService
         }
 
         if ($faqs !== []) {
-            $graphs[] = [
-                '@type' => 'FAQPage',
-                'mainEntity' => array_map(static fn (array $item) => [
-                    '@type' => 'Question',
-                    'name' => $item['q'],
-                    'acceptedAnswer' => [
-                        '@type' => 'Answer',
-                        'text' => $item['a'],
-                    ],
-                ], $faqs),
-            ];
+            // FAQ rich results are largely limited (gov/health). Emitting FAQPage on About
+            // triggers GSC enhancement “has issues” without helping rankings. Keep on-page FAQs.
+            if (! $isAboutPage) {
+                $graphs[] = [
+                    '@type' => 'FAQPage',
+                    'mainEntity' => array_map(static fn (array $item) => [
+                        '@type' => 'Question',
+                        'name' => $item['q'],
+                        'acceptedAnswer' => [
+                            '@type' => 'Answer',
+                            'text' => $item['a'],
+                        ],
+                    ], $faqs),
+                ];
+            }
         }
 
         return [
