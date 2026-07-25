@@ -469,4 +469,76 @@ HTML;
         $this->assertContains('111111111', $ids);
         $this->assertContains('222222222', $ids);
     }
+
+    public function test_update_return_status_posts_confirm_request_with_verify_status(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $detailHtml = <<<'HTML'
+<html><head><meta name="csrf-token" content="csrf-test"></head><body>
+Cancel Request:
+<select class="form-control my-3">
+  <option value="1">Confirm Cancel</option>
+  <option value="2">Request to Resend</option>
+</select>
+<cancel-request :item="{&quot;id&quot;:19378519,&quot;consignment_id&quot;:273921193,&quot;note&quot;:&quot;cancel&quot;,&quot;consignment&quot;:{&quot;id&quot;:273921193,&quot;cus_name&quot;:&quot;Asraf&quot;,&quot;cod_amount&quot;:720}}"></cancel-request>
+</body></html>
+HTML;
+
+        $pendingEmpty = '<html><head><meta name="csrf-token" content="csrf-test"></head><body></body></html>';
+
+        Http::fake(function ($request) use ($detailHtml, $pendingEmpty) {
+            $url = $request->url();
+            $method = $request->method();
+
+            if (str_contains($url, '/login') && $method === 'GET') {
+                return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+            }
+
+            if (str_contains($url, '/login') && $method === 'POST') {
+                return Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/; XSRF-TOKEN=token']);
+            }
+
+            if (str_contains($url, '/user/consignment/273921193') && $method === 'GET') {
+                return Http::response($detailHtml, 200);
+            }
+
+            if (str_contains($url, '/user/consignment/cancel-request/confirm-request') && $method === 'POST') {
+                $payload = $request->data();
+                if (($payload['item_id'] ?? null) !== '19378519') {
+                    return Http::response(['status' => false, 'message' => 'bad item_id'], 422);
+                }
+                if ((string) ($payload['verify_status'] ?? '') !== '1') {
+                    return Http::response(['status' => false, 'message' => 'bad verify_status'], 422);
+                }
+
+                return Http::response([
+                    'status' => true,
+                    'data' => ['verify_status' => 1],
+                ], 200);
+            }
+
+            if (str_contains($url, '/user/consignment/cancel-requests/show/0')) {
+                return Http::response($pendingEmpty, 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests/update-status', [
+                'action' => 'confirm_cancel',
+                'consignment_id' => '273921193',
+                'id' => '19378519',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.consignment_id', '273921193')
+            ->assertJsonPath('data.status', 'confirmed')
+            ->assertJsonPath('data.verify_status', 1);
+    }
 }

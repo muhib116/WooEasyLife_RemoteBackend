@@ -702,13 +702,15 @@ class SteadFastController extends Controller
             'action' => ['required', 'string', 'in:confirm_cancel,request_resend'],
             'consignment_id' => ['required', 'string', 'regex:/^\d{4,20}$/'],
             'id' => ['nullable', 'string', 'max:64'],
+            'username' => ['nullable', 'string', 'max:255'],
+            'password' => ['nullable', 'string', 'max:255'],
         ]);
 
         if ($validator->fails()) {
             return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
         }
 
-        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        $portalCredentials = $this->resolvePortalCredentialsForRequest($request);
         if ($portalCredentials === null) {
             return $this->errorResponse(
                 'Steadfast portal username/password are not configured. Add them in Config → Courier → Steadfast to confirm cancel or ask to resend.',

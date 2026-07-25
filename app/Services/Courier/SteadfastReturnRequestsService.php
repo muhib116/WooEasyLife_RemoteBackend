@@ -10,7 +10,9 @@ use RuntimeException;
  * Steadfast return / cancel-request hub service.
  *
  * Create + list prefer Packzy public API (Api-Key / Secret-Key).
- * Confirm cancel / request resend use merchant portal cancel-requests pages.
+ * Confirm cancel / request resend use merchant portal:
+ * POST /user/consignment/cancel-request/confirm-request
+ * FormData: item_id + verify_status (1=Confirm Cancel, 2=Request to Resend).
  */
 class SteadfastReturnRequestsService
 {
@@ -224,10 +226,6 @@ class SteadfastReturnRequestsService
         return $mode === 'quick' ? 'quick' : 'full';
     }
 
-    /**
-     * @param  array{username: string, password: string}  $portalCredentials
-     * @return array<string, mixed>
-     */
     public function updateStatus(
         string $action,
         array $portalCredentials,
@@ -256,12 +254,58 @@ class SteadfastReturnRequestsService
             array $cookies
         ) use ($action, $consignmentId, $remoteId, $portalCredentials) {
             $listPath = '/user/consignment/cancel-requests/show/0';
-            $page = $client->get($listPath, $host, $cookies, expectJson: false);
+            $detailPath = '/user/consignment/'.rawurlencode($consignmentId);
+
+            // Prefer consignment detail (Cancel Request select), then pending list.
+            $page = $client->get($detailPath, $host, $cookies, expectJson: false);
             $cookies = $client->absorbCookies($cookies, $page, $host, $portalCredentials);
-            $this->assertAuthenticatedHtml($client, $page->body(), $page->status(), 'cancel-requests');
+            if ($page->status() === 404 || $client->looksLikeLoginPage($page->body())) {
+                $page = $client->get($listPath, $host, $cookies, expectJson: false);
+                $cookies = $client->absorbCookies($cookies, $page, $host, $portalCredentials);
+            }
+            $this->assertAuthenticatedHtml($client, $page->body(), $page->status(), 'cancel-request');
 
             $csrf = $this->extractMetaCsrfToken($page->body())
                 ?? $this->extractInputValue($page->body(), '_token');
+
+            $itemId = $this->resolveCancelRequestItemId(
+                $client,
+                $host,
+                $cookies,
+                $portalCredentials,
+                $consignmentId,
+                $remoteId,
+                $page->body()
+            );
+
+            // Portal Vue cancel-request component posts:
+            // axios.post('/user/consignment/cancel-request/confirm-request', FormData{
+            //   item_id, verify_status: 1|2
+            // })
+            $verifyStatus = $action === 'confirm_cancel' ? '1' : '2';
+            $candidates = [];
+
+            if ($itemId !== '') {
+                $candidates[] = [
+                    'path' => '/user/consignment/cancel-request/confirm-request',
+                    'payload' => array_filter([
+                        '_token' => $csrf,
+                        'item_id' => $itemId,
+                        'verify_status' => $verifyStatus,
+                    ], static fn ($v) => $v !== null && $v !== ''),
+                    'referer' => $this->absoluteUrl($host, $detailPath),
+                ];
+                $candidates[] = [
+                    'path' => '/user/consignment/cancel-request/confirm-request',
+                    'payload' => array_filter([
+                        '_token' => $csrf,
+                        'item_id' => $itemId,
+                        'consignment_id' => $consignmentId,
+                        'verify_status' => $verifyStatus,
+                    ], static fn ($v) => $v !== null && $v !== ''),
+                    'referer' => $this->absoluteUrl($host, $detailPath),
+                ];
+            }
 
             $statusValue = $action === 'confirm_cancel' ? 'confirm_cancel' : 'request_to_resend';
             $discovered = $this->discoverCancelStatusCandidates(
@@ -270,54 +314,44 @@ class SteadfastReturnRequestsService
                 $csrf,
                 $action,
                 $statusValue,
-                $remoteId !== '' ? $remoteId : null
+                $itemId !== '' ? $itemId : ($remoteId !== '' ? $remoteId : null)
             );
+            foreach ($discovered as $row) {
+                $row['referer'] = $this->absoluteUrl($host, $listPath);
+                $candidates[] = $row;
+            }
 
-            // Known portal endpoints (Network capture still preferred when available).
-            $fallback = [
+            $candidates = array_merge($candidates, [
                 [
                     'path' => '/user/consignment/cancel-requests/change-status',
                     'payload' => array_filter([
                         '_token' => $csrf,
                         'consignment_id' => $consignmentId,
-                        'id' => $remoteId !== '' ? $remoteId : null,
-                        'status' => $statusValue,
-                        'action' => $action,
+                        'id' => $itemId !== '' ? $itemId : null,
+                        'status' => $verifyStatus,
+                        'verify_status' => $verifyStatus,
                     ], static fn ($v) => $v !== null && $v !== ''),
-                ],
-                [
-                    'path' => '/user/consignment/cancel-requests/change-status',
-                    'payload' => array_filter([
-                        '_token' => $csrf,
-                        'consignment_id' => $consignmentId,
-                        'status' => $action === 'confirm_cancel' ? 'confirmed' : 'resend_request',
-                    ], static fn ($v) => $v !== null && $v !== ''),
-                ],
-                [
-                    'path' => '/user/consignment/cancel-request/update',
-                    'payload' => array_filter([
-                        '_token' => $csrf,
-                        'consignment_id' => $consignmentId,
-                        'id' => $remoteId !== '' ? $remoteId : null,
-                        'request_status' => $statusValue,
-                        'status' => $statusValue,
-                    ], static fn ($v) => $v !== null && $v !== ''),
+                    'referer' => $this->absoluteUrl($host, $listPath),
                 ],
                 [
                     'path' => '/user/consignment/cancel-requests/update',
                     'payload' => array_filter([
                         '_token' => $csrf,
                         'consignment_id' => $consignmentId,
-                        'id' => $remoteId !== '' ? $remoteId : null,
-                        'status' => $action === 'confirm_cancel' ? 1 : 2,
-                        'type' => $action === 'confirm_cancel' ? 'confirm' : 'resend',
+                        'id' => $itemId !== '' ? $itemId : null,
+                        'status' => (int) $verifyStatus,
+                        'verify_status' => (int) $verifyStatus,
                     ], static fn ($v) => $v !== null && $v !== ''),
+                    'referer' => $this->absoluteUrl($host, $listPath),
                 ],
-            ];
+            ]);
 
-            $candidates = array_merge($discovered, $fallback);
             $lastError = 'Unable to update Steadfast cancel/return request status. '
                 .'Confirm portal login in Config → Courier → Steadfast, then try again.';
+            if ($itemId === '') {
+                $lastError = 'Could not find the SteadFast cancel-request item for this consignment. '
+                    .'Open the parcel on SteadFast, or Refresh return requests, then try again.';
+            }
 
             foreach ($candidates as $candidate) {
                 $path = (string) ($candidate['path'] ?? '');
@@ -326,12 +360,13 @@ class SteadfastReturnRequestsService
                     continue;
                 }
 
+                $referer = (string) ($candidate['referer'] ?? $this->absoluteUrl($host, $listPath));
                 $response = $client->postMultipart(
                     $path,
                     $payload,
                     $host,
                     $cookies,
-                    $this->absoluteUrl($host, $listPath)
+                    $referer
                 );
                 $cookies = $client->absorbCookies($cookies, $response, $host, $portalCredentials);
 
@@ -345,16 +380,21 @@ class SteadfastReturnRequestsService
 
                 $body = $response->json();
                 if (is_array($body)) {
+                    $data = is_array($body['data'] ?? null) ? $body['data'] : [];
+                    $returnedVerify = $data['verify_status'] ?? $body['verify_status'] ?? null;
                     $ok = ($body['status'] ?? null) === true
                         || (int) ($body['status'] ?? 0) === 1
                         || ($body['success'] ?? false) === true
-                        || (($body['status'] ?? null) === 'success');
+                        || (($body['status'] ?? null) === 'success')
+                        || (string) $returnedVerify === $verifyStatus
+                        || (int) $returnedVerify === (int) $verifyStatus;
                     if ($ok) {
                         return [
                             'consignment_id' => $consignmentId,
-                            'id' => $remoteId !== '' ? $remoteId : null,
+                            'id' => $itemId !== '' ? $itemId : ($remoteId !== '' ? $remoteId : null),
                             'status' => $action === 'confirm_cancel' ? 'confirmed' : 'resend_request',
                             'action' => $action,
+                            'verify_status' => (int) $verifyStatus,
                         ];
                     }
                     $message = trim((string) ($body['message'] ?? ''));
@@ -364,8 +404,6 @@ class SteadfastReturnRequestsService
                     continue;
                 }
 
-                // Only treat redirects / explicit success flashes as provisional wins,
-                // then verify the consignment left the pending cancel-requests tab.
                 $html = (string) $response->body();
                 $looksError = preg_match('/\b(error|failed|invalid|unauthorized|forbidden)\b/i', $html) === 1;
                 $looksSuccessFlash = preg_match('/\b(success|updated|confirmed|resend)\b/i', $html) === 1;
@@ -378,7 +416,7 @@ class SteadfastReturnRequestsService
 
                 $verify = $client->get($listPath, $host, $cookies, expectJson: false);
                 $cookies = $client->absorbCookies($cookies, $verify, $host, $portalCredentials);
-                $stillPending = str_contains($verify->body(), $consignmentId);
+                $stillPending = $this->pendingCancelRequestsContainConsignment($verify->body(), $consignmentId);
                 if ($stillPending) {
                     $lastError = 'SteadFast did not confirm the status change for this consignment. Try again from the portal or check credentials.';
                     continue;
@@ -386,14 +424,115 @@ class SteadfastReturnRequestsService
 
                 return [
                     'consignment_id' => $consignmentId,
-                    'id' => $remoteId !== '' ? $remoteId : null,
+                    'id' => $itemId !== '' ? $itemId : ($remoteId !== '' ? $remoteId : null),
                     'status' => $action === 'confirm_cancel' ? 'confirmed' : 'resend_request',
                     'action' => $action,
+                    'verify_status' => (int) $verifyStatus,
                 ];
             }
 
             throw new RuntimeException($lastError);
         });
+    }
+
+    /**
+     * Resolve SteadFast cancel-request row id (item_id) for confirm-request.
+     *
+     * @param  array{username: string, password: string}  $portalCredentials
+     * @param  array<string, string>  $cookies
+     */
+    private function resolveCancelRequestItemId(
+        SteadfastPortalSessionClient $client,
+        string $host,
+        array &$cookies,
+        array $portalCredentials,
+        string $consignmentId,
+        string $remoteId,
+        string $seedHtml = '',
+    ): string {
+        if ($remoteId !== '' && $remoteId !== $consignmentId && preg_match('/^\d+$/', $remoteId)) {
+            return $remoteId;
+        }
+
+        $fromSeed = $this->extractCancelRequestItemIdFromHtml($seedHtml, $consignmentId);
+        if ($fromSeed !== '') {
+            return $fromSeed;
+        }
+
+        foreach ([
+            '/user/consignment/'.rawurlencode($consignmentId),
+            '/user/consignment/cancel-requests/show/0',
+        ] as $path) {
+            $page = $client->get($path, $host, $cookies, expectJson: false);
+            $cookies = $client->absorbCookies($cookies, $page, $host, $portalCredentials);
+            if ($page->status() === 404 || $client->looksLikeLoginPage($page->body())) {
+                continue;
+            }
+            $found = $this->extractCancelRequestItemIdFromHtml($page->body(), $consignmentId);
+            if ($found !== '') {
+                return $found;
+            }
+        }
+
+        return '';
+    }
+
+    private function extractCancelRequestItemIdFromHtml(string $html, string $consignmentId): string
+    {
+        if ($html === '' || $consignmentId === '') {
+            return '';
+        }
+
+        if (preg_match_all('/<cancel-request\s+:item="([^"]+)"/i', $html, $itemMatches)) {
+            foreach ($itemMatches[1] as $encoded) {
+                $decoded = html_entity_decode($encoded, ENT_QUOTES | ENT_HTML5);
+                $payload = json_decode($decoded, true);
+                if (! is_array($payload)) {
+                    continue;
+                }
+                $consignment = is_array($payload['consignment'] ?? null) ? $payload['consignment'] : [];
+                $rowConsignment = (string) ($payload['consignment_id'] ?? $consignment['id'] ?? '');
+                if ($rowConsignment !== $consignmentId) {
+                    continue;
+                }
+                $id = trim((string) ($payload['id'] ?? ''));
+                if ($id !== '' && $id !== $consignmentId && preg_match('/^\d+$/', $id)) {
+                    return $id;
+                }
+            }
+        }
+
+        if (preg_match_all(
+            '/\{[^{}]{0,400}"id"\s*:\s*(\d+)[^{}]{0,400}"consignment_id"\s*:\s*"?'.preg_quote($consignmentId, '/').'"?[^{}]{0,200}\}/s',
+            $html,
+            $jsonMatches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($jsonMatches as $match) {
+                $id = (string) ($match[1] ?? '');
+                if ($id !== '' && $id !== $consignmentId) {
+                    return $id;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function pendingCancelRequestsContainConsignment(string $html, string $consignmentId): bool
+    {
+        if ($consignmentId === '' || $html === '') {
+            return false;
+        }
+
+        $rows = $this->parseCancelRequestRows($html, 'pending');
+        foreach ($rows as $row) {
+            if ((string) ($row['consignment_id'] ?? '') === $consignmentId) {
+                return true;
+            }
+        }
+
+        return str_contains($html, $consignmentId);
     }
 
     /**

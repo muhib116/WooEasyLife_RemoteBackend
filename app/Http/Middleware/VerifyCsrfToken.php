@@ -13,6 +13,9 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         'api/put-message',
+        'api/messenger/oauth/callback',
+        'api/messenger/oauth/select-page',
+        'api/webhooks/messenger',
         'fraud-stream',
         'deploy',
         'deploy/setup',

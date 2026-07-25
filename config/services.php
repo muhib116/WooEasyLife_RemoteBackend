@@ -63,6 +63,43 @@ return [
         ],
 
         /*
+        | Messenger Page OAuth for Woo Easy Life plugin one-click connect.
+        | Reuses FACEBOOK_CLIENT_ID/SECRET unless META_APP_* overrides are set.
+        */
+        'messenger' => [
+            'app_id' => env('META_APP_ID', env('FACEBOOK_CLIENT_ID')),
+            'app_secret' => env('META_APP_SECRET', env('FACEBOOK_CLIENT_SECRET')),
+            /*
+            | Messenger MUST use its own callback (/api/messenger/oauth/callback).
+            | Do NOT share FACEBOOK_REDIRECT_URI — that is the merchant-login callback
+            | and Facebook would never return to the Messenger OAuth handler.
+            */
+            'redirect' => env(
+                'META_MESSENGER_REDIRECT_URI',
+                env('APP_URL').'/api/messenger/oauth/callback'
+            ),
+            'graph_version' => env('FACEBOOK_GRAPH_VERSION', 'v21.0'),
+            'webhook_verify_token' => env('META_MESSENGER_WEBHOOK_VERIFY_TOKEN'),
+            'scopes' => env(
+                'META_MESSENGER_SCOPES',
+                'pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement'
+            ),
+
+            /*
+            | Direct connect (single-page mode): skip the Facebook login dialog and
+            | attach an already-issued Page token. Intended for development and for
+            | self-hosted hubs that only serve one Page, since every license that
+            | connects would share this Page. Keep disabled for multi-tenant SaaS.
+            */
+            'direct_connect' => filter_var(
+                env('META_MESSENGER_DIRECT_CONNECT', false),
+                FILTER_VALIDATE_BOOLEAN
+            ),
+            'page_id' => env('META_MESSENGER_PAGE_ID', env('FACEBOOK_PAGE_ID')),
+            'page_access_token' => env('META_MESSENGER_PAGE_ACCESS_TOKEN', env('FACEBOOK_PAGE_ACCESS_TOKEN')),
+        ],
+
+        /*
         | Public SEO courier-charge calculator rate sync.
         | Steadfast uses a public pricing API (no credentials).
         | Pathao merchant price-plan requires a CourierConfiguration for pathao_user_id.

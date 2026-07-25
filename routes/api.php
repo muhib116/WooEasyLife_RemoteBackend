@@ -11,6 +11,9 @@ use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\Data\DataController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Hub\HubController;
+use App\Http\Controllers\Messenger\MessengerConnectController;
+use App\Http\Controllers\Messenger\MessengerSendController;
+use App\Http\Controllers\Messenger\MessengerWebhookController;
 use App\Http\Controllers\OrderIntelligenceController;
 use App\Http\Controllers\Plugin\EmployeeController as PluginEmployeeController;
 use App\Http\Controllers\SmsController;
@@ -68,7 +71,14 @@ Route::prefix('api/webhooks')->group(function () {
     Route::post('/redx/sandbox', function (Request $request) {
         return app(WebhookHubController::class)->redx($request, 'sandbox');
     });
+
+    Route::get('/messenger', [MessengerWebhookController::class, 'verify']);
+    Route::post('/messenger', [MessengerWebhookController::class, 'receive']);
 });
+
+// Facebook OAuth callback + page picker (browser redirects; no plugin auth).
+Route::get('api/messenger/oauth/callback', [MessengerConnectController::class, 'oauthCallback']);
+Route::post('api/messenger/oauth/select-page', [MessengerConnectController::class, 'selectPage']);
 
 $pathaoDevCatalog = app()->environment('local')
     || filter_var(env('PATHAO_DEV_CATALOG', false), FILTER_VALIDATE_BOOLEAN);
@@ -129,6 +139,10 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             ->whereNumber('employee_id');
         Route::delete('employees/{employee_id}', [PluginEmployeeController::class, 'destroy'])
             ->whereNumber('employee_id');
+
+        Route::post('messenger/connect-url', [MessengerConnectController::class, 'connectUrl']);
+        Route::post('messenger/disconnect', [MessengerConnectController::class, 'disconnect']);
+        Route::post('messenger/send', [MessengerSendController::class, 'send']);
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);
