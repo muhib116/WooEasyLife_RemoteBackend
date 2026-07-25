@@ -39,6 +39,18 @@ const isEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('
                 >
                     <LinkedRichText :text="paragraph" :is-en="isEn" />
                 </p>
+                <ol
+                    v-if="section.list?.length"
+                    class="mt-1 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-300 sm:text-base"
+                >
+                    <li
+                        v-for="(item, lIndex) in section.list"
+                        :key="`list-${lIndex}`"
+                        class="pl-1"
+                    >
+                        <LinkedRichText :text="item" :is-en="isEn" />
+                    </li>
+                </ol>
                 <figure
                     v-for="(figure, fIndex) in section.figures || []"
                     :key="`${index}-fig-${fIndex}`"

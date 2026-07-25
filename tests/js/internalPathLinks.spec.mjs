@@ -50,4 +50,16 @@ const knownEn = linkifyInternalPaths('Read /en/facebook-page-cod-management next
 assert.ok(knownEn.some((s) => s.href === '/en/facebook-page-cod-management' && s.label === 'Facebook Page COD guide'));
 assert.equal(knownEn.some((s) => s.href === '/en'), false);
 
+// Bare `/` must NOT swallow BN “vs” separators (was rendering as “হোম” mid-word).
+const bnSlash = linkifyInternalPaths('ক্যানসেল/রিটার্ন/ব্যর্থ · হলুদ/লালে সিদ্ধান্ত', false);
+assert.equal(bnSlash.some((s) => s.type === 'link' && s.href === '/'), false);
+assert.ok(bnSlash.some((s) => s.type === 'text' && s.text.includes('ক্যানসেল/রিটার্ন')));
+assert.ok(bnSlash.some((s) => s.type === 'text' && s.text.includes('হলুদ/লালে')));
+
+// FAQ paths must become human labels, never raw slug dumps.
+const faqLink = linkifyInternalPaths('বিস্তারিত: /faq/success-rate-kom-hole-ki-korbo · হাব: /faq', false);
+assert.ok(faqLink.some((s) => s.href === '/faq/success-rate-kom-hole-ki-korbo' && s.label === 'রেট কম হলে কী করবেন'));
+assert.ok(faqLink.some((s) => s.href === '/faq' && s.label === 'FAQ হাব'));
+assert.equal(faqLink.some((s) => s.type === 'text' && s.text.includes('/faq/success-rate')), false);
+
 console.log('internalPathLinks.spec.mjs: ok');

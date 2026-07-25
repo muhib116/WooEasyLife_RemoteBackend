@@ -31,17 +31,17 @@ return [
         'heading' => 'Our founder',
         'layout' => 'founder_hero',
         'founder_name' => 'Muhibbullah Ansary',
-        'founder_title' => 'Founder & CEO, WPSaleHub',
+        'founder_title' => 'Founder & CEO, WPSaleHub · Creator of WooEasyLife',
         'founder_quote' => 'People’s time is the most valuable thing. Work that software can do should not be done by people.',
         'paragraphs' => [
-            'Muhibbullah Ansary is a software engineer, product builder, and automation enthusiast.',
+            'Muhibbullah Ansary is the owner and founder of WPSaleHub and the creator of WooEasyLife—a software engineer, product builder, and automation enthusiast.',
             'For several years he has worked on web applications, business automation, artificial intelligence, and modern SaaS platforms. His software development background and real experience across companies showed him something clear: many businesses still lose time, money, and productivity to unnecessary manual work.',
-            'He founded WPSaleHub to solve those real problems. His goal isn’t only to ship software—it’s to build an automation ecosystem that makes daily work easier, faster, and smarter for small businesses and larger organizations alike.',
+            'He founded WPSaleHub and built WooEasyLife to solve those real problems. His goal isn’t only to ship software—it’s to build an automation ecosystem that makes daily work easier, faster, and smarter for small businesses and larger organizations alike.',
         ],
         'figures' => [
             [
                 'src' => '/images/seo/about/founder-headshot.jpg',
-                'alt' => 'Muhibbullah Ansary — Founder & CEO, WPSaleHub',
+                'alt' => 'Muhibbullah Ansary — Founder & owner of WPSaleHub and WooEasyLife',
                 'caption' => null,
             ],
         ],
@@ -49,7 +49,7 @@ return [
     [
         'heading' => 'Our product — WooEasyLife',
         'paragraphs' => [
-            'WooEasyLife is one of our flagship products, built specifically for WooCommerce merchants.',
+            'WooEasyLife is one of our flagship products, built specifically for WooCommerce merchants. WPSaleHub builds and operates it under founder Muhibbullah Ansary.',
             'With it, merchants can manage multiple WooCommerce stores, verify fraud numbers and courier history, use courier automation, automate order workflows, review customer history, and finish everyday operations faster.',
             'WooEasyLife is a real example of our automation vision. Learn more: /en/bd-fraud-checker, /en/fake-order-protection, /en/courier-auto-entry, /en/facebook-page-cod-management, /en/woocommerce-bangladesh, and /pricing.',
             'For updates and tips, follow https://www.facebook.com/wooeasylife',

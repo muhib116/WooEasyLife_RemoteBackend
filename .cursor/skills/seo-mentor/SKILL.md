@@ -70,6 +70,8 @@ Do **not** clone courier-brand support FAQs (payment schedules, warehouse securi
 |------|-----|
 | Clone eCourier payment / warehouse / BOD / compensation FAQs | Wrong brand — navigational for *their* courier |
 | Dump 50+ thin FAQ pages | Mirrors their 60–140 word answers; dilutes authority |
+| Use `/` as BN “vs” separator in body copy | Linkify injects **হোম** → `হলুদহোমলালে` junk |
+| Show raw `/faq/...` slugs in UI | Must be labeled links (PHP + JS PATH_LABELS) |
 | Invent features | Only **Shipped** in `FEATURES.md` |
 | Link wooeasylife.com | Canonical is `app.wpsalehub.com` |
 | Competitor hate / fake #1 / AggregateRating fakes | Brand + trust rules |
@@ -171,12 +173,22 @@ Current intents (paths/CTA from inventory): success-rate reading, low-success de
 
 **Question page format (beat thin competitor FAQs):**
 
-1. Direct answer (2–3 lines — snippet bait)  
+1. Direct answer (2–4 sentences — snippet bait, human prose)  
 2. Why it matters in BD COD (৳ math)  
 3. How WooEasyLife does it (**Shipped** only)  
-4. Mini SOP (3–5 steps)  
-5. Related FAQs + tool CTA  
+4. Mini SOP as a **vertical `list`** (3–5 steps) — never one mashed paragraph  
+5. Related FAQs + tool CTA via `cluster_links` pills (not a raw path laundry list)  
 6. `FAQPage` + `BreadcrumbList` schema  
+
+**FAQ / marketing copy hygiene (mandatory — prevents “হোম” mid-word bugs):**
+
+| Do | Don't |
+|----|--------|
+| Use `বনাম` · `ও` · `,` between alternatives | Use bare `/` as a word separator (`ক্যানসেল/রিটার্ন`, `হলুদ/লালে`, `কল/OTP`) — linkify turns `/` into **হোম** |
+| Put paths only where a human label exists in `SeoPrerenderText::PATH_LABELS` **and** `resources/js/utils/internalPathLinks.js` `LABELS` | Dump raw slugs as visible text (`রেট কম: /faq/...`) |
+| Accordion answers: 2–4 full sentences + one labeled path CTA | Telegram stubs (`না। রেট = … লিঙ্ক: /faq/...`) |
+| Add every new `/faq/...` path to **both** PHP + JS label maps before publish | Ship a FAQ path with label only on one side (Vue shows raw slug) |
+| Related nav = `cluster_links` with Bangla labels | Duplicate related section that only lists paths |
 
 Add `/faq` + question URLs to sitemap with `lastmod`. Link hub from footer + fraud pillars. When live, flip inventory `status` to `live` and update **Current state**.
 

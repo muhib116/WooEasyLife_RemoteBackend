@@ -100,11 +100,15 @@ class MarketingSeoTest extends TestCase
         $this->assertStringContainsString('"@type":"FAQPage"', $hubHtml);
         $this->assertStringContainsString('"@type":"BreadcrumbList"', $hubHtml);
 
-        $question = $this->get('/faq/cod-return-loss-hisab');
+        $question = $this->get('/faq/courier-success-rate-kivabe-bujhbo');
         $question->assertOk();
         $qHtml = $question->getContent();
-        $this->assertStringContainsString('রিটার্ন লস', $qHtml);
-        $this->assertStringContainsString('/return-loss-calculator', $qHtml);
+        $this->assertStringContainsString('সাকসেস রেট', $qHtml);
+        $this->assertStringContainsString('<ol>', $qHtml);
+        $this->assertStringContainsString('href="/faq/success-rate-kom-hole-ki-korbo"', $qHtml);
+        $this->assertStringContainsString('রেট কম হলে কী করবেন', $qHtml);
+        $this->assertStringNotContainsString('হোমরিটার্ন', $qHtml);
+        $this->assertStringNotContainsString('হলুদহোম', $qHtml);
         $this->assertStringContainsString('"@type":"FAQPage"', $qHtml);
         $this->assertStringContainsString('href="/faq"', $qHtml);
 
@@ -529,14 +533,25 @@ class MarketingSeoTest extends TestCase
         $this->assertContains('https://www.linkedin.com/in/dev-muhib', $person['sameAs'] ?? []);
         $this->assertContains('https://www.facebook.com/muhib116', $person['sameAs'] ?? []);
         $this->assertContains('https://www.instagram.com/muhibbullah611/', $person['sameAs'] ?? []);
-        $this->assertSame('Founder & CEO, WPSaleHub', $person['jobTitle'] ?? null);
+        $this->assertSame('Founder & CEO, WPSaleHub · Creator of WooEasyLife', $person['jobTitle'] ?? null);
+        $this->assertStringContainsString('WooEasyLife', (string) ($person['description'] ?? ''));
+        $this->assertContains('WooEasyLife', $person['knowsAbout'] ?? []);
+        $this->assertIsArray($person['image'] ?? null);
+        $this->assertStringContainsString('founder-headshot', (string) ($person['image']['contentUrl'] ?? $person['image']['url'] ?? ''));
 
         $org = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Organization');
         $this->assertNotNull($org);
         $this->assertSame('WPSaleHub', $org['name'] ?? null);
         $this->assertNotNull($org['founder'] ?? null);
+        $this->assertNotNull($org['brand'] ?? null);
+        $this->assertContains('WooEasyLife', $org['alternateName'] ?? []);
         $this->assertContains('https://www.facebook.com/wooeasylife', $org['sameAs'] ?? []);
         $this->assertNotContains('https://www.linkedin.com/in/dev-muhib', $org['sameAs'] ?? []);
+
+        $brand = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Brand');
+        $this->assertNotNull($brand);
+        $this->assertSame('WooEasyLife', $brand['name'] ?? null);
+        $this->assertNotNull($brand['founder'] ?? null);
 
         $product = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Product');
         $this->assertNull($product, 'About must not emit bare Product (GSC Product enhancement errors)');
@@ -563,11 +578,12 @@ class MarketingSeoTest extends TestCase
         $bn->assertOk();
         $bn->assertSee('/images/seo/about/founder-headshot.jpg', false);
         $bn->assertSee('Muhibbullah Ansary', false);
-        $bn->assertSee('Founder & CEO, WPSaleHub', false);
+        $bn->assertSee('Founder & CEO, WPSaleHub · Creator of WooEasyLife', false);
         $bn->assertSee('dev.muhibbullah@gmail.com', false);
         $bn->assertSee('Automating Business. Empowering People.', false);
         $bn->assertSee('WPSaleHub হলো একটি automation-first technology company', false);
         $bn->assertSee('WooCommerce মার্চেন্টদের জন্য তৈরি', false);
+        $bn->assertSee('WooEasyLife বা WPSaleHub-এর owner কে?', false);
         $bn->assertDontSee('https:Bangla home', false);
         $bn->assertDontSee('/images/seo/about/founder-work.png', false);
         $bn->assertDontSee('/images/seo/about/founder-hero.png', false);
@@ -583,10 +599,11 @@ class MarketingSeoTest extends TestCase
         $en = $this->get('/en/about');
         $en->assertOk();
         $en->assertSee('Muhibbullah Ansary', false);
-        $en->assertSee('Founder & CEO, WPSaleHub', false);
+        $en->assertSee('Founder & CEO, WPSaleHub · Creator of WooEasyLife', false);
         $en->assertSee('/images/seo/about/founder-headshot.jpg', false);
         $en->assertSee('WooCommerce merchant solution', false);
         $en->assertSee('About WPSaleHub | WooEasyLife founder Muhibbullah Ansary', false);
+        $en->assertSee('Who owns WooEasyLife or WPSaleHub?', false);
         $en->assertSee('The fastest way is email', false);
         $en->assertDontSee('https:Bangla home', false);
         $en->assertDontSee('/images/seo/about/founder-work.png', false);
@@ -597,6 +614,11 @@ class MarketingSeoTest extends TestCase
         }
         $this->assertNotNull($firstEnAboutImg);
         $this->assertStringContainsString('founder-headshot.jpg', $firstEnAboutImg);
+
+        $llms = $this->get('/llms.txt');
+        $llms->assertOk();
+        $llms->assertSee('founder-headshot.jpg', false);
+        $llms->assertSee('Owner / Founder & CEO of WPSaleHub', false);
     }
 
     public function test_home_prerenders_h1_for_crawlers(): void

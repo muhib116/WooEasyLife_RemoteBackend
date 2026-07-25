@@ -15,15 +15,16 @@ class SeoPrerenderText
         '/en' => ['bn' => 'ইংরেজি হোম', 'en' => 'English home'],
         '/bd-fraud-checker' => ['bn' => 'ফ্রড চেকার', 'en' => 'BD Fraud Checker'],
         '/en/bd-fraud-checker' => ['bn' => 'ফ্রড চেকার (EN)', 'en' => 'BD Fraud Checker'],
-        '/faq' => ['bn' => 'FAQ', 'en' => 'FAQ'],
-        '/faq/courier-success-rate-kivabe-bujhbo' => ['bn' => 'সাকসেস রেট বোঝা', 'en' => 'Understand success rate'],
-        '/faq/success-rate-kom-hole-ki-korbo' => ['bn' => 'রেট কম হলে কী করব', 'en' => 'Low success rate next steps'],
-        '/faq/cod-order-otp-kokhon' => ['bn' => 'COD OTP কখন', 'en' => 'When to use COD OTP'],
+        '/faq' => ['bn' => 'FAQ হাব', 'en' => 'FAQ hub'],
+        '/faq/courier-success-rate-kivabe-bujhbo' => ['bn' => 'সাকসেস রেট কীভাবে বুঝবেন', 'en' => 'How to read success rate'],
+        '/faq/success-rate-kom-hole-ki-korbo' => ['bn' => 'রেট কম হলে কী করবেন', 'en' => 'What to do when rate is low'],
+        '/faq/cod-order-otp-kokhon' => ['bn' => 'COD-এ OTP কখন নেবেন', 'en' => 'When to use COD OTP'],
         '/faq/woocommerce-customer-blacklist' => ['bn' => 'কাস্টমার ব্ল্যাকলিস্ট', 'en' => 'Customer blacklist'],
         '/faq/duplicate-cod-order-block' => ['bn' => 'ডুপ্লিকেট অর্ডার ব্লক', 'en' => 'Duplicate order block'],
         '/faq/customer-delivery-history-check' => ['bn' => 'ডেলিভারি হিস্টোরি চেক', 'en' => 'Delivery history check'],
-        '/faq/customer-fraud-score-ki' => ['bn' => 'ফ্রড স্কোর কী', 'en' => 'What is fraud score'],
+        '/faq/customer-fraud-score-ki' => ['bn' => 'ফ্রড স্কোর কী', 'en' => 'What fraud score means'],
         '/faq/cod-return-loss-hisab' => ['bn' => 'রিটার্ন লস হিসাব', 'en' => 'Return loss math'],
+        '/blog/blacklist-customer-after-returns' => ['bn' => 'রিটার্নের পর ব্ল্যাকলিস্ট', 'en' => 'Blacklist after returns'],
         '/fake-order-protection' => ['bn' => 'ফেক অর্ডার প্রোটেকশন', 'en' => 'Fake Order Protection'],
         '/en/fake-order-protection' => ['bn' => 'ফেক অর্ডার প্রোটেকশন (EN)', 'en' => 'Fake Order Protection'],
         '/courier-auto-entry' => ['bn' => 'কুরিয়ার অটো এন্ট্রি', 'en' => 'Courier Auto Entry'],
@@ -154,8 +155,16 @@ class SeoPrerenderText
                 if ($pos === false) {
                     continue;
                 }
+                $absPos = $cursor + $pos;
+                if (! self::canMatchInternalPathAt($plain, $absPos, $path)) {
+                    continue;
+                }
                 $after = mb_substr($slice, $pos + mb_strlen($path), 1);
                 if ($after !== '' && preg_match('/[a-z0-9]/i', $after)) {
+                    continue;
+                }
+                $after2 = mb_substr($slice, $pos + mb_strlen($path) + 1, 1);
+                if ($after === '/' && $after2 !== '' && preg_match('/[a-z0-9]/i', $after2)) {
                     continue;
                 }
                 if ($bestPos === null || $pos < $bestPos || ($pos === $bestPos && mb_strlen($path) > mb_strlen((string) $best))) {
@@ -184,6 +193,30 @@ class SeoPrerenderText
         }
 
         return implode('', $parts);
+    }
+
+    /**
+     * Bare `/` must not match inside BN compounds (ক্যানসেল/রিটার্ন, হলুদ/লালে).
+     */
+    private static function canMatchInternalPathAt(string $plain, int $idx, string $path): bool
+    {
+        $prev = $idx > 0 ? mb_substr($plain, $idx - 1, 1) : '';
+        $next = mb_substr($plain, $idx + mb_strlen($path), 1);
+
+        if ($prev !== '' && preg_match('/[a-z0-9.:_-]/i', $prev)) {
+            return false;
+        }
+
+        if ($path === '/') {
+            if ($prev !== '' && preg_match('/\p{L}|\p{N}/u', $prev)) {
+                return false;
+            }
+            if ($next !== '' && preg_match('/\p{L}|\p{N}/u', $next)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static function latexToPlain(string $expr): string

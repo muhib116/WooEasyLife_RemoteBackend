@@ -443,6 +443,15 @@
                             <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($paragraph, $isEnPrerender) !!}</p>
                         @endif
                     @endforeach
+                    @if (! empty($section['list']) && is_array($section['list']))
+                        <ol>
+                            @foreach ($section['list'] as $item)
+                                @if (is_string($item) && $item !== '')
+                                    <li>{!! \App\Support\SeoPrerenderText::linkifyHtml($item, $isEnPrerender) !!}</li>
+                                @endif
+                            @endforeach
+                        </ol>
+                    @endif
                     @foreach (($section['figures'] ?? []) as $figure)
                         @if (! empty($figure['src']))
                             <figure>

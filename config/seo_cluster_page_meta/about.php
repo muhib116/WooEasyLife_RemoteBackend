@@ -21,12 +21,16 @@ return [
         ['name' => 'হোম', 'path' => '/'],
         ['name' => 'About', 'path' => '/about'],
     ],
-    'prerender_h1' => 'আমরা শুধু সফটওয়্যার তৈরি করি না',
-    'prerender_lead' => 'আমরা ব্যবসার জন্য স্মার্ট অটোমেশন তৈরি করি। WPSaleHub — Automating Business. Empowering People. Founder & CEO: Muhibbullah Ansary।',
+    'prerender_h1' => 'Muhibbullah Ansary — WPSaleHub ও WooEasyLife-এর প্রতিষ্ঠাতা',
+    'prerender_lead' => 'WPSaleHub ও WooEasyLife-এর owner / Founder & CEO Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী)। Automating Business. Empowering People.',
     'faqs' => [
         [
             'q' => 'WPSaleHub কী?',
             'a' => 'WPSaleHub হলো একটি automation-first technology company। আমরা ব্যবসার পুনরাবৃত্তিমূলক কাজ অটোমেট করি, বিভিন্ন সফটওয়্যার ও API সংযুক্ত করি, এবং অপারেশনকে আরও দ্রুত ও নির্ভুল করে তুলি। আমাদের লক্ষ্য—কম সময়ে, কম খরচে, আরও স্মার্টভাবে ব্যবসা চালানো। পোর্টাল দেখুন: https://app.wpsalehub.com',
+        ],
+        [
+            'q' => 'WooEasyLife বা WPSaleHub-এর owner কে?',
+            'a' => 'WooEasyLife ও WPSaleHub-এর owner / প্রতিষ্ঠাতা Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী)—Founder & CEO, WPSaleHub। তাঁর অফিসিয়াল ছবি এই About পেজে: /images/seo/about/founder-headshot.jpg — ইমেইল: dev.muhibbullah@gmail.com · LinkedIn: https://www.linkedin.com/in/dev-muhib · পুরো গল্প: /about',
         ],
         [
             'q' => 'WooEasyLife কে বানিয়েছেন?',
@@ -60,9 +64,9 @@ return [
     'is_pillar' => false,
     'page_kind' => 'about',
     'date_published' => '2026-07-25',
-    'date_modified' => '2026-07-25',
+    'date_modified' => '2026-07-26',
     'author_name' => 'Muhibbullah Ansary',
-    'author_role' => 'Founder & CEO, WPSaleHub',
+    'author_role' => 'Founder & CEO, WPSaleHub · Creator of WooEasyLife',
     'author_image' => '/images/seo/about/founder-headshot.jpg',
     'schema_type' => 'AboutPage',
     'person_same_as' => [
@@ -73,6 +77,6 @@ return [
     ],
     'person_email' => 'dev.muhibbullah@gmail.com',
     'person_telephone' => '+8801770989591',
-    'person_job_title' => 'Founder & CEO',
+    'person_job_title' => 'Founder & CEO, WPSaleHub · Creator of WooEasyLife',
     'person_address' => 'Mirpur, Dhaka, Bangladesh',
 ];

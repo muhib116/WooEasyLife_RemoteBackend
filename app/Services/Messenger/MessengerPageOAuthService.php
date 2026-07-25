@@ -56,7 +56,7 @@ class MessengerPageOAuthService
     {
         return trim((string) config(
             'services.messenger.scopes',
-            'pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement'
+            'pages_show_list,pages_messaging,pages_manage_metadata'
         ));
     }
 

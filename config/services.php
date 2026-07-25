@@ -80,9 +80,11 @@ return [
             ),
             'graph_version' => env('FACEBOOK_GRAPH_VERSION', 'v21.0'),
             'webhook_verify_token' => env('META_MESSENGER_WEBHOOK_VERIFY_TOKEN'),
+            // Messenger inbox needs list + messaging + webhook subscribe.
+            // pages_read_engagement is NOT required and is often Invalid Scopes on Messenger apps.
             'scopes' => env(
                 'META_MESSENGER_SCOPES',
-                'pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement'
+                'pages_show_list,pages_messaging,pages_manage_metadata'
             ),
             /*
             | Facebook Login for Business configuration ID (preferred).

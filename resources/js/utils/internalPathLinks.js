@@ -58,6 +58,16 @@ const LABELS = {
     '/pathao-fraud-check': { bn: 'Pathao ফ্রড চেক', en: 'Pathao fraud check' },
     '/steadfast-fraud-check': { bn: 'Steadfast ফ্রড চেক', en: 'Steadfast fraud check' },
     '/redx-fraud-check': { bn: 'RedX ফ্রড চেক', en: 'RedX fraud check' },
+    '/faq': { bn: 'FAQ হাব', en: 'FAQ hub' },
+    '/faq/courier-success-rate-kivabe-bujhbo': { bn: 'সাকসেস রেট কীভাবে বুঝবেন', en: 'How to read success rate' },
+    '/faq/success-rate-kom-hole-ki-korbo': { bn: 'রেট কম হলে কী করবেন', en: 'What to do when rate is low' },
+    '/faq/cod-order-otp-kokhon': { bn: 'COD-এ OTP কখন নেবেন', en: 'When to use COD OTP' },
+    '/faq/woocommerce-customer-blacklist': { bn: 'কাস্টমার ব্ল্যাকলিস্ট', en: 'Customer blacklist' },
+    '/faq/duplicate-cod-order-block': { bn: 'ডুপ্লিকেট অর্ডার ব্লক', en: 'Duplicate order block' },
+    '/faq/customer-delivery-history-check': { bn: 'ডেলিভারি হিস্টোরি চেক', en: 'Delivery history check' },
+    '/faq/customer-fraud-score-ki': { bn: 'ফ্রড স্কোর কী', en: 'What fraud score means' },
+    '/faq/cod-return-loss-hisab': { bn: 'রিটার্ন লস হিসাব', en: 'Return loss math' },
+    '/blog/blacklist-customer-after-returns': { bn: 'রিটার্নের পর ব্ল্যাকলিস্ট', en: 'Blacklist after returns' },
 };
 
 const KNOWN_PATHS = Object.keys(LABELS).sort((a, b) => b.length - a.length);
@@ -81,12 +91,26 @@ export function labelForInternalPath(path, isEn = false) {
 /**
  * True when an internal path may start at idx (not mid-URL / mid-token).
  * Prevents `https://…` from matching `/` as Bangla/English home.
+ * Also blocks bare `/` inside BN compounds like ক্যানসেল/রিটার্ন or হলুদ/লাল.
  */
-function canMatchInternalPathAt(raw, idx) {
-    if (idx === 0) return true;
+function canMatchInternalPathAt(raw, idx, path) {
+    if (idx === 0) {
+        if (path === '/') {
+            const next = raw[idx + 1] || '';
+            // Bare home `/` needs a non-letter/digit on the right (space, ·, punct, end).
+            return !next || !/\p{L}|\p{N}/u.test(next);
+        }
+        return true;
+    }
     const prev = raw[idx - 1];
-    // Colon/letter/digit/dot/underscore/hyphen → inside URL or slug
+    // Latin URL/slug chars → inside absolute URL or longer token
     if (/[a-z0-9.:_-]/i.test(prev)) return false;
+    if (path === '/') {
+        // Unicode letter/digit on either side → slash is a separator, not home.
+        if (/\p{L}|\p{N}/u.test(prev)) return false;
+        const next = raw[idx + 1] || '';
+        if (next && /\p{L}|\p{N}/u.test(next)) return false;
+    }
     return true;
 }
 
@@ -125,7 +149,7 @@ function linkifyKnownPathsInPlainText(raw, isEn = false) {
         while (from < raw.length) {
             const idx = raw.indexOf(path, from);
             if (idx < 0) break;
-            if (!canMatchInternalPathAt(raw, idx)) {
+            if (!canMatchInternalPathAt(raw, idx, path)) {
                 from = idx + path.length;
                 continue;
             }
