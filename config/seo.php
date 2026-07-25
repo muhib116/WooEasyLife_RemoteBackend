@@ -61,7 +61,7 @@ return [
         'founder_name' => 'Muhibbullah Ansary',
         'founder_job_title' => 'Founder & CEO',
         'founder_email' => 'dev.muhibbullah@gmail.com',
-        'founder_image' => '/images/seo/about/founder-portrait.png',
+        'founder_image' => '/images/seo/about/founder-headshot.jpg',
         'founder_url_path' => '/about',
         'founder_same_as' => [
             'https://www.linkedin.com/in/dev-muhib',

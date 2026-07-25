@@ -466,7 +466,7 @@ class MarketingSeoTest extends TestCase
         $this->assertNotNull($person);
         $this->assertSame('Muhibbullah Ansary', $person['name'] ?? null);
         $this->assertStringContainsString(
-            'founder-portrait',
+            'founder-headshot',
             (string) (is_array($person['image'] ?? null) ? ($person['image']['url'] ?? '') : ($person['image'] ?? ''))
         );
         $this->assertContains('https://www.linkedin.com/in/dev-muhib', $person['sameAs'] ?? []);
@@ -493,18 +493,19 @@ class MarketingSeoTest extends TestCase
         $this->assertNull($graph->first(fn (array $node) => ($node['@id'] ?? null) === ($seo['canonical'] ?? '').'#article'));
         $this->assertSame('+8801770989591', $person['telephone'] ?? null);
         $this->assertIsArray($person['image'] ?? null);
-        $this->assertStringContainsString('founder-portrait', (string) ($person['image']['url'] ?? ''));
+        $this->assertStringContainsString('founder-headshot', (string) ($person['image']['url'] ?? ''));
 
         $crumb = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'BreadcrumbList');
         $this->assertNotNull($crumb, 'About should keep BreadcrumbList');
 
         $this->assertSame(1200, (int) ($seo['og_image_width'] ?? 0));
         $this->assertSame(630, (int) ($seo['og_image_height'] ?? 0));
-        $this->assertStringContainsString('founder-hero-og.jpg', (string) ($seo['og_image'] ?? ''));
+        $this->assertStringContainsString('founder-headshot-og.jpg', (string) ($seo['og_image'] ?? ''));
 
         $bn = $this->get('/about');
         $bn->assertOk();
         $bn->assertSee('/images/seo/about/founder-hero.png', false);
+        $bn->assertSee('/images/seo/about/founder-headshot.jpg', false);
         $bn->assertSee('Muhibbullah Ansary', false);
         $bn->assertSee('Founder & CEO, WPSaleHub', false);
         $bn->assertSee('dev.muhibbullah@gmail.com', false);
@@ -517,7 +518,7 @@ class MarketingSeoTest extends TestCase
         $en->assertOk();
         $en->assertSee('Muhibbullah Ansary', false);
         $en->assertSee('Founder & CEO, WPSaleHub', false);
-        $en->assertSee('/images/seo/about/founder-portrait.png', false);
+        $en->assertSee('/images/seo/about/founder-headshot.jpg', false);
         $en->assertSee('WooCommerce merchant solution', false);
         $en->assertSee('About WPSaleHub | WooEasyLife founder Muhibbullah Ansary', false);
         $en->assertSee('The fastest way is email', false);

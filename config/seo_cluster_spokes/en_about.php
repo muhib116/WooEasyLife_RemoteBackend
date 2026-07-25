@@ -55,7 +55,7 @@ return [
         ],
         'figures' => [
             [
-                'src' => '/images/seo/about/founder-portrait.png',
+                'src' => '/images/seo/about/founder-headshot.jpg',
                 'alt' => 'Muhibbullah Ansary — Founder & CEO, WPSaleHub',
                 'caption' => null,
             ],

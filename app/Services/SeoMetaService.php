@@ -416,7 +416,7 @@ class SeoMetaService
         $productId = $this->absoluteUrl('/').'#product-wooeasylife';
         $founderName = (string) ($org['founder_name'] ?? 'Muhibbullah Ansary');
         $founderPersonId = $this->absoluteUrl('/').'#person-'.Str::slug($founderName);
-        $founderImagePath = (string) ($org['founder_image'] ?? '/images/seo/about/founder-portrait.png');
+        $founderImagePath = (string) ($org['founder_image'] ?? '/images/seo/about/founder-headshot.jpg');
         $founderUrl = $this->absoluteUrl((string) ($org['founder_url_path'] ?? '/about'));
         $founderSameAs = array_values(array_filter($org['founder_same_as'] ?? []));
         $productName = (string) ($productCfg['name'] ?? 'WooEasyLife');
@@ -440,8 +440,8 @@ class SeoMetaService
                 'url' => $this->absoluteUrl(
                     (string) ($config['author_image'] ?? $founderImagePath)
                 ),
-                'width' => 1024,
-                'height' => 1024,
+                'width' => 1200,
+                'height' => 1200,
             ],
             'jobTitle' => (string) (
                 $config['author_role']

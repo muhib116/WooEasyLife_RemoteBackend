@@ -29,7 +29,7 @@ const isPillar = computed(() => Boolean(props.seo?.is_pillar));
 const isAbout = computed(() => props.seo?.page_kind === 'about');
 const sections = computed(() => props.seo?.content_sections || []);
 const clusterLinks = computed(() => props.seo?.cluster_links || []);
-const founderPortrait = computed(() => props.seo?.author_image || '/images/seo/about/founder-portrait.png');
+const founderPortrait = computed(() => props.seo?.author_image || '/images/seo/about/founder-headshot.jpg');
 const founderName = computed(() => props.seo?.author_name || 'Muhibbullah Ansary');
 const founderRole = computed(() => props.seo?.author_role || 'Founder & CEO, WPSaleHub');
 
@@ -275,11 +275,12 @@ onUnmounted(() => {
                             <img
                                 :src="founderPortrait"
                                 :alt="`${founderName} — ${founderRole}`"
-                                class="relative z-[1] h-full w-full rounded-full object-contain drop-shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
-                                width="640"
-                                height="640"
+                                class="relative z-[1] h-full w-full rounded-full object-cover drop-shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+                                width="1200"
+                                height="1200"
                                 loading="eager"
                                 decoding="async"
+                                fetchpriority="high"
                             />
                         </div>
                         <div class="mt-5">
@@ -508,9 +509,9 @@ onUnmounted(() => {
                                         v-if="section.figures?.[0]?.src"
                                         :src="section.figures[0].src"
                                         :alt="section.figures[0].alt || `${section.founder_name || founderName}`"
-                                        class="relative z-[1] h-full w-full rounded-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]"
-                                        width="640"
-                                        height="640"
+                                        class="relative z-[1] h-full w-full rounded-full object-cover drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)]"
+                                        width="1200"
+                                        height="1200"
                                         loading="lazy"
                                         decoding="async"
                                     />

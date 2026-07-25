@@ -8,7 +8,7 @@ return [
     'canonical_path' => '/en/about',
     'html_lang' => 'en',
     'og_type' => 'website',
-    'og_image' => '/images/seo/about/founder-hero-og.jpg',
+    'og_image' => '/images/seo/about/founder-headshot-og.jpg',
     'og_image_width' => 1200,
     'og_image_height' => 630,
     'focus_keyword' => 'Muhibbullah Ansary WPSaleHub founder',
@@ -63,7 +63,7 @@ return [
     'date_modified' => '2026-07-25',
     'author_name' => 'Muhibbullah Ansary',
     'author_role' => 'Founder & CEO, WPSaleHub',
-    'author_image' => '/images/seo/about/founder-portrait.png',
+    'author_image' => '/images/seo/about/founder-headshot.jpg',
     'schema_type' => 'AboutPage',
     'person_same_as' => [
         'https://www.linkedin.com/in/dev-muhib',
