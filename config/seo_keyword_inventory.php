@@ -6,7 +6,7 @@
  * Rules:
  * - One indexable URL per distinct intent (synonyms expand the same URL).
  * - type=money|tool|pillar → already live commercial pages (blogs must soft-link, never steal head term).
- * - type=planned_faq → build under /faq after hub exists.
+ * - type=planned_faq + status=live → published under /faq/{slug}; status=planned = not built yet.
  * - type=planned_blog → Blog AI preferred topics (long-tail, not money head terms).
  * - type=planned_commercial → later feature landings (Shipped features only).
  * - status=live|planned|hold.
@@ -17,7 +17,7 @@
  */
 
 return [
-    'version' => '2026-07-25',
+    'version' => '2026-07-26',
     'domain' => 'https://app.wpsalehub.com',
 
     /*
@@ -250,13 +250,28 @@ return [
 
         /*
         |--------------------------------------------------------------------------
-        | Planned FAQ URLs (hub /faq first) — long-tail indexables
+        | FAQ hub + question URLs (LIVE)
         |--------------------------------------------------------------------------
         */
         [
             'cluster' => 'fraud_checker',
+            'type' => 'pillar',
+            'status' => 'live',
+            'path' => '/faq',
+            'slug' => 'faq',
+            'primary' => 'wooeasylife faq',
+            'secondary' => [
+                'fraud checker faq bangladesh',
+                'cod otp blacklist faq',
+                'কুরিয়ার ফ্রড faq',
+            ],
+            'cta' => '/bd-fraud-checker',
+            'notes' => 'FAQ hub — topic index for live planned_faq question URLs',
+        ],
+        [
+            'cluster' => 'fraud_checker',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/courier-success-rate-kivabe-bujhbo',
             'slug' => 'courier-success-rate-kivabe-bujhbo',
             'primary' => 'courier success rate কীভাবে বুঝব',
@@ -266,12 +281,12 @@ return [
                 'delivered vs cancelled ratio',
             ],
             'cta' => '/bd-courier-ratio-checker',
-            'notes' => 'After /faq hub exists',
+            'notes' => 'Live FAQ',
         ],
         [
             'cluster' => 'fraud_checker',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/success-rate-kom-hole-ki-korbo',
             'slug' => 'success-rate-kom-hole-ki-korbo',
             'primary' => 'success rate কম হলে কী করব',
@@ -285,7 +300,7 @@ return [
         [
             'cluster' => 'checkout_protection',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/cod-order-otp-kokhon',
             'slug' => 'cod-order-otp-kokhon',
             'primary' => 'cod order otp কখন',
@@ -299,7 +314,7 @@ return [
         [
             'cluster' => 'checkout_protection',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/woocommerce-customer-blacklist',
             'slug' => 'woocommerce-customer-blacklist',
             'primary' => 'woocommerce customer blacklist',
@@ -313,7 +328,7 @@ return [
         [
             'cluster' => 'fake_order',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/duplicate-cod-order-block',
             'slug' => 'duplicate-cod-order-block',
             'primary' => 'duplicate cod order block',
@@ -327,7 +342,7 @@ return [
         [
             'cluster' => 'fraud_checker',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/customer-delivery-history-check',
             'slug' => 'customer-delivery-history-check',
             'primary' => 'customer delivery history check',
@@ -341,7 +356,7 @@ return [
         [
             'cluster' => 'fraud_checker',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/customer-fraud-score-ki',
             'slug' => 'customer-fraud-score-ki',
             'primary' => 'customer fraud score কী',
@@ -355,7 +370,7 @@ return [
         [
             'cluster' => 'return_loss',
             'type' => 'planned_faq',
-            'status' => 'planned',
+            'status' => 'live',
             'path' => '/faq/cod-return-loss-hisab',
             'slug' => 'cod-return-loss-hisab',
             'primary' => 'cod return loss হিসাব',

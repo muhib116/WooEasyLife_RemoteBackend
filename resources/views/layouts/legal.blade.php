@@ -7,6 +7,9 @@
     @if (! empty($robots))
         <meta name="robots" content="{{ $robots }}">
     @endif
+    @if (! empty($canonicalUrl))
+        <link rel="canonical" href="{{ $canonicalUrl }}">
+    @endif
     <title>{{ $title ?? 'WPSaleHub' }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">

@@ -215,6 +215,76 @@ class MarketingSeoController extends Controller
         ])->withViewData(['seo' => $seoMeta]);
     }
 
+    public function faqHub(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->renderSeoPage(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            'faq',
+            'Seo/FaqHub',
+            'faq',
+        );
+    }
+
+    public function faqQuestion(
+        Request $request,
+        string $slug,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        $seoKey = $this->faqSeoKeyForSlug($slug);
+        if ($seoKey === null) {
+            abort(404);
+        }
+
+        return $this->renderSeoPage(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            $seoKey,
+            'Seo/FaqQuestion',
+            'faq',
+        );
+    }
+
+    /**
+     * Inventory-driven allowlist: only live planned_faq slugs.
+     */
+    private function faqSeoKeyForSlug(string $slug): ?string
+    {
+        $slug = trim($slug);
+        if ($slug === '' || ! preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
+            return null;
+        }
+
+        foreach (config('seo_keyword_inventory.entries', []) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if (($row['type'] ?? '') !== 'planned_faq') {
+                continue;
+            }
+            if (($row['status'] ?? '') !== 'live') {
+                continue;
+            }
+            if (($row['slug'] ?? '') !== $slug) {
+                continue;
+            }
+
+            return 'faq_'.str_replace('-', '_', $slug);
+        }
+
+        return null;
+    }
+
     public function keywordIntent(
         Request $request,
         string $seoKey,
@@ -252,14 +322,16 @@ class MarketingSeoController extends Controller
                 'বারবার ফেক আটকাতে Fake Order Protection (OTP, ব্ল্যাকলিস্ট) চালু রাখুন—তারপর কুরিয়ার অটো এন্ট্রি।',
             ],
             'bd_courier_ratio_checker' => [
-                'ফোন নম্বর দিয়ে সার্চ করুন।',
-                'ডেলিভারি সাকসেস রেট / রেশিও দেখুন।',
-                'কোয়ালিটি খারাপ হলে পার্সেল পাঠাবেন না।',
+                'অর্ডার থেকে মোবাইল নম্বর নিন (কনফার্মের আগে)।',
+                'নিচের Ratio Checker টুলে নম্বর দিয়ে সাকসেস রেট ও রিটার্ন রেশিও দেখুন।',
+                'সবুজ/উচ্চ রেট → কনফার্ম; হলুদ → কল/OTP; লাল → হোল্ড বা অগ্রিম চার্জ।',
+                'বারবার ফেক আটকাতে /fake-order-protection — কনফার্মের পর /courier-auto-entry।',
             ],
             'fake_order_check' => [
-                'নম্বর দিয়ে ফেক অর্ডার ঝুঁকি চেক করুন।',
-                'হিস্টোরি খারাপ হলে কনফার্ম করবেন না।',
-                'পূর্ণ সুরক্ষায় OTP + ব্লক যোগ করুন।',
+                'কাস্টমারের বাংলাদেশি মোবাইল নম্বর নিন।',
+                'নিচের Fake Order Check টুলে Pathao / Steadfast / RedX হিস্টোরি দেখুন।',
+                'সাকসেস রেট খারাপ হলে কনফার্ম করবেন না—কল, OTP বা হোল্ড।',
+                'পূর্ণ সুরক্ষায় /fake-order-protection চালু রাখুন; কনফার্মের পর /courier-auto-entry।',
             ],
             'courier_checker' => [
                 'অর্ডার/মেসেজ থেকে বাংলাদেশি মোবাইল নম্বর নিন (কনফার্ম বা কুরিয়ার বুকিংয়ের আগে)।',

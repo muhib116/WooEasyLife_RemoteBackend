@@ -104,6 +104,7 @@ class LegalController extends Controller
             'lead' => $lead,
             'metaDescription' => $metaDescription,
             'robots' => $robots,
+            'canonicalUrl' => url()->current(),
             'contactEmail' => 'dev.muhibbullah@gmail.com',
             'contactWebsite' => 'https://app.wpsalehub.com',
         ]);

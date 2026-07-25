@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, reactive, watch } from 'vue';
+import { computed, onMounted, reactive, watch } from 'vue';
 import { RANGE_SLIDER_CLASS, rangeTrackStyle } from '@/utils/rangeSlider';
 import { trackToolAction } from '@/utils/siteVisitors';
 
@@ -22,6 +22,27 @@ const model = reactive({
     zone: Object.keys(zones.value)[0] || 'dhaka',
     weight_kg: inputs.value.weight_kg?.default ?? 1,
     cod_amount: inputs.value.cod_amount?.default ?? 0,
+});
+
+onMounted(() => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    const q = new URLSearchParams(window.location.search);
+    const zone = q.get('zone');
+    if (zone && zones.value[zone]) {
+        model.zone = zone;
+    }
+    for (const key of ['weight_kg', 'cod_amount']) {
+        const raw = q.get(key);
+        if (raw === null || raw === '') {
+            continue;
+        }
+        const n = Number(raw);
+        if (Number.isFinite(n)) {
+            model[key] = n;
+        }
+    }
 });
 
 const toBnDigits = (value) =>
@@ -168,7 +189,7 @@ const ui = computed(() => (isEn.value
 </script>
 
 <template>
-    <section id="courier-charge" class="scroll-mt-24 border-y border-white/10 bg-[#111111] py-14 sm:py-20">
+    <section id="calculator" class="scroll-mt-24 border-y border-white/10 bg-[#111111] py-14 sm:py-20">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div v-if="showIntro" class="text-center">
                 <span class="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-300">

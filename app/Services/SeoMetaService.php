@@ -19,7 +19,8 @@ class SeoMetaService
     {
         $pages = config('seo.pages', []);
         $clusterPages = config('seo_cluster_pages', []);
-        $config = array_merge($pages[$page] ?? $clusterPages[$page] ?? [], $overrides);
+        $faqPages = config('seo_faq_pages', []);
+        $config = array_merge($pages[$page] ?? $clusterPages[$page] ?? $faqPages[$page] ?? [], $overrides);
 
         if ($config === []) {
             return [];
@@ -68,6 +69,9 @@ class SeoMetaService
             'breadcrumbs' => $this->normalizeBreadcrumbs($breadcrumbs),
             'prerender_h1' => $prerenderH1,
             'prerender_lead' => $prerenderLead,
+            // Crawlable phone checker in first HTML (not Vue-only).
+            'ssr_fraud_checker' => $this->shouldSsrFraudChecker($page, $config),
+            'ssr_calculator' => $this->ssrCalculatorType($page, $config),
             'content_sections' => $contentSections,
             'cluster_eyebrow' => $config['cluster_eyebrow'] ?? null,
             'cluster_links' => is_array($config['cluster_links'] ?? null) ? $config['cluster_links'] : [],
@@ -192,6 +196,7 @@ class SeoMetaService
             '- [Steadfast Fraud Check]('.$link('/steadfast-fraud-check').'): Steadfast-focused fraud history check.',
             '- [RedX Fraud Check]('.$link('/redx-fraud-check').'): RedX-focused fraud history check.',
             '- [Blog]('.$link('/blog').'): Seller guides on fake orders, fraud checks, and COD operations.',
+            '- [FAQ hub]('.$link('/faq').'): Fraud check, OTP, blacklist, and COD return-loss questions (Bangla).',
             '',
             '## Optional',
             '- [English home]('.$link('/en').'): English marketing entry.',
@@ -248,6 +253,57 @@ class SeoMetaService
     }
 
     /**
+     * Pages that ship an interactive phone checker should expose a real
+     * <form>/<input>/<button> in the first HTML response (Inertia shell gap).
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function shouldSsrFraudChecker(string $page, array $config): bool
+    {
+        if (array_key_exists('ssr_fraud_checker', $config)) {
+            return (bool) $config['ssr_fraud_checker'];
+        }
+
+        return in_array($page, [
+            'home',
+            'en_home',
+            'bd_fraud_checker',
+            'en_bd_fraud_checker',
+            'fake_customer_check',
+            'en_fake_customer_check',
+            'courier_checker',
+            'fake_order_check',
+            'bd_courier_ratio_checker',
+            'ki_vabe_fake_order_atkabo',
+            'en_ki_vabe_fake_order_atkabo',
+            'pathao_fraud_check',
+            'steadfast_fraud_check',
+            'redx_fraud_check',
+        ], true);
+    }
+
+    /**
+     * Calculator pages that need number inputs in first HTML.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function ssrCalculatorType(string $page, array $config): ?string
+    {
+        if (array_key_exists('ssr_calculator', $config)) {
+            $type = $config['ssr_calculator'];
+
+            return is_string($type) && $type !== '' ? $type : null;
+        }
+
+        return match ($page) {
+            'return_loss_calculator', 'en_return_loss_calculator' => 'return_loss',
+            'courier_charge_calculator', 'en_courier_charge_calculator' => 'courier_charge',
+            'ads_roas_calculator', 'en_ads_roas_calculator' => 'ads_roas',
+            default => null,
+        };
+    }
+
+    /**
      * @param  array<string, mixed>  $config
      * @return list<array{heading: string|null, paragraphs: list<string>, figures: list<array{src: string, alt: string, caption: string|null}>}>
      */
@@ -256,7 +312,10 @@ class SeoMetaService
         $fromConfig = $config['content_sections'] ?? null;
         $sections = is_array($fromConfig) && $fromConfig !== []
             ? $fromConfig
-            : (config('seo_content.'.$page, []) ?: config('seo_cluster_content.'.$page, []) ?: []);
+            : (config('seo_content.'.$page, [])
+                ?: config('seo_cluster_content.'.$page, [])
+                ?: config('seo_faq_content.'.$page, [])
+                ?: []);
 
         $normalized = [];
 
@@ -666,6 +725,65 @@ class SeoMetaService
                     ], $faqs),
                 ];
             }
+        }
+
+        // Money fraud tool: free WebApplication + HowTo (no AggregateRating / fake reviews).
+        $isFraudMoneyPage = in_array($page, ['bd_fraud_checker', 'en_bd_fraud_checker'], true)
+            || (($config['schema_web_application'] ?? false) === true);
+        if ($isFraudMoneyPage) {
+            $isEn = str_starts_with((string) ($config['html_lang'] ?? 'bn-BD'), 'en');
+            $graphs[] = [
+                '@type' => 'WebApplication',
+                '@id' => $canonical.'#webapp',
+                'name' => $isEn ? 'Courier Fraud Checker BD' : 'Courier Fraud Checker BD — ফ্রড চেকার',
+                'url' => $canonical,
+                'applicationCategory' => 'BusinessApplication',
+                'operatingSystem' => 'Web',
+                'browserRequirements' => 'Requires JavaScript for live results',
+                'offers' => [
+                    '@type' => 'Offer',
+                    'price' => '0',
+                    'priceCurrency' => 'BDT',
+                    'availability' => 'https://schema.org/InStock',
+                ],
+                'provider' => ['@id' => $orgId],
+                'description' => $description,
+            ];
+            $graphs[] = [
+                '@type' => 'HowTo',
+                '@id' => $canonical.'#howto',
+                'name' => $isEn
+                    ? 'How to check courier fraud history before COD confirm'
+                    : 'COD কনফার্মের আগে কুরিয়ার ফ্রড হিস্টোরি কীভাবে চেক করবেন',
+                'description' => $description,
+                'totalTime' => 'PT2M',
+                'step' => [
+                    [
+                        '@type' => 'HowToStep',
+                        'position' => 1,
+                        'name' => $isEn ? 'Enter mobile number' : 'মোবাইল নম্বর দিন',
+                        'text' => $isEn
+                            ? 'Enter a Bangladesh mobile number (01XXXXXXXXX) in the free checker.'
+                            : 'ফ্রি চেকারে বাংলাদেশি মোবাইল নম্বর (01XXXXXXXXX) দিন।',
+                    ],
+                    [
+                        '@type' => 'HowToStep',
+                        'position' => 2,
+                        'name' => $isEn ? 'Read success rate' : 'সাকসেস রেট পড়ুন',
+                        'text' => $isEn
+                            ? 'Review Pathao, Steadfast, and RedX delivery history and success rate.'
+                            : 'Pathao, Steadfast, RedX হিস্টোরি ও সাকসেস রেট দেখুন।',
+                    ],
+                    [
+                        '@type' => 'HowToStep',
+                        'position' => 3,
+                        'name' => $isEn ? 'Confirm, OTP, or block' : 'কনফার্ম, OTP বা ব্লক',
+                        'text' => $isEn
+                            ? 'Confirm green orders; use call/OTP or hold on yellow/red; enable OTP and blacklist for repeats.'
+                            : 'সবুজে কনফার্ম; হলুদ/লালে কল/OTP বা হোল্ড; বারবার ফেকের জন্য OTP ও ব্ল্যাকলিস্ট চালু রাখুন।',
+                    ],
+                ],
+            ];
         }
 
         return [

@@ -41,11 +41,11 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 
 ## Current state (keep honest)
 
-| Fact | Status (2026-07-25) |
+| Fact | Status (2026-07-26) |
 |------|---------------------|
 | Money URL | `/bd-fraud-checker` live (200) |
-| FAQ hub | `/faq` **404 — not built yet** → do Phase 1 before Phase 2 |
-| Inventory | 18 live money/tool/pillar · +1 live blog · 8 planned_faq · 5 planned_blog · 8 planned_commercial |
+| FAQ hub | `/faq` **live** + 8 inventory question URLs |
+| Inventory | live money/tool/pillar + FAQ hub · 8 live FAQ · 5 planned_blog · 8 planned_commercial |
 | Product docs | Plugin v1.5.3 · App v1.1.6 · `FEATURES.md` last analyzed 2026-07-23 |
 
 Update this table when `/faq` ships, major gaps close, or versions bump.
@@ -84,14 +84,12 @@ Do **not** clone courier-brand support FAQs (payment schedules, warehouse securi
 
 Do in order — stop when the day's budget is used:
 
-1. **P0 — `/bd-fraud-checker` SSR checker** above the fold (input+label+button in initial HTML) + result → OTP/blacklist/protection CTAs  
-2. **P0 — Deepen** `/bd-fraud-checker` + `/fake-customer-check` FAQs (BN) + keep FAQPage schema  
-3. **Internal links:** fraud ↔ COD ↔ calculators ↔ courier pillars ↔ `/pricing`  
-4. **Courier pillars:** Pathao / Steadfast / RedX FAQ blocks + links into money URL  
-5. **Build `/faq` hub** (BN) → publish inventory's 8 `planned_faq` URLs only  
-6. **GSC day-30:** keep/kill; next FAQs from real query gaps only  
-7. **Later:** `planned_commercial` landings (OTP, blacklist, abandoned, AI order) — after fraud cluster is strong  
-8. **Always available:** 1 theme/day social → live CTA; founder beat weekly
+1. **P0 — Deepen** `/bd-fraud-checker` + `/fake-customer-check` FAQs (BN) + keep FAQPage schema *(Result CTAs + SSR form + WebApplication/HowTo **shipped**)*  
+2. **Internal links:** fraud ↔ COD ↔ calculators ↔ courier pillars ↔ `/faq` ↔ `/pricing`  
+3. **Courier pillars:** Pathao / Steadfast / RedX FAQ blocks + links into money URL *(thin alias long-form **shipped**)*  
+4. **GSC day-30:** keep/kill; next FAQs from real query gaps only *(hub + first 8 FAQs **shipped**)*  
+5. **Later:** `planned_commercial` landings (OTP, blacklist, abandoned, AI order) — after fraud cluster is strong  
+6. **Always available:** 1 theme/day social → live CTA; founder beat weekly
 
 ---
 
@@ -141,10 +139,10 @@ Default: **(1) + (2)**. Validate FAQ shortlist in GSC before writing volume.
 
 | Priority | URL | Action |
 |----------|-----|--------|
-| **P0** | `/bd-fraud-checker` | SSR checker + result CTAs + WebApplication/HowTo — see **Gap scorecard** |
+| **P0** | `/bd-fraud-checker` | Deepen FAQs — SSR form, Result CTAs, WebApplication/HowTo **shipped** |
 | P0 | `/fake-customer-check` | “History ratio, not fraud verdict” honesty angle |
 | P0 | `/cod-return-reduction` | Attempt/return math → calculators |
-| P1 | `/pathao-fraud-check`, `/steadfast-fraud-check`, `/redx-fraud-check` | Courier-specific FAQs (rivals lack this) |
+| P1 | `/pathao-fraud-check`, `/steadfast-fraud-check`, `/redx-fraud-check` | Courier-specific FAQs — long-form content **shipped**; keep deepening |
 | P1 | `/blog/blacklist-customer-after-returns` | **Already live (200)** — link from fraud pillars (blocker vs courier “we won’t block”); refresh if thin |
 
 **Done when:** clear H1, FAQ schema intact, checker usable without JS-only shell, ≥3 links to pricing or free checker.
@@ -236,7 +234,7 @@ Quick reference (edit inventory, not this table):
 | `/pathao-fraud-check` etc. | {courier} fraud check | live pillar |
 | `/fake-order-protection` | woocommerce fake order protection | live money |
 | `/courier-auto-entry` | woocommerce courier integration bangladesh | live money |
-| `/faq/*` (8 planned) | long-tail FAQ intents | planned_faq |
+| `/faq` + `/faq/*` (8) | long-tail FAQ intents | live FAQ |
 | `/blog/*` planned topics | long-tail howto/case | planned_blog |
 | feature landings | OTP / blacklist / abandoned / AI order | planned_commercial |
 
@@ -405,14 +403,12 @@ No landing for: config flags, admin-only tools, Coming-soon nav, empty Flutter m
 
 ### Gap scorecard — `/bd-fraud-checker`
 
-Already **wins** on: title, H1, FAQ schema (~8 Qs), visible courier names, ~900-word **guide body** in HTML, hreflang, internal links to pillars.  
-**Does not yet win** on: interactive checker in initial HTML (see P0).
+Already **wins** on: title, H1, FAQ schema (~8 Qs), visible courier names, ~900-word **guide body** in HTML, hreflang, internal links to pillars, **SSR phone form** (`<form>`/`<input type="tel">`/`<button>` in `#seo-prerender`).  
 
 | Priority | Gap | Fix |
 |----------|-----|-----|
-| **P0** | No `<input>`/`<form>` in initial HTML — tool not SSR / not above fold | Phone checker above fold; SSR input+label+button |
-| **P0** | Result → next action weak | Low-score → CTAs: `/fake-order-protection`, OTP, blacklist, `/return-loss-calculator` |
-| P1 | Missing `WebApplication` + `HowTo` schema | Add both (free offer; 3 steps: enter 01… → read rate → confirm/OTP/block). No fake ratings |
+| ~~P0~~ | ~~Result → next action weak~~ | **Shipped:** post-check CTAs → protection, return-loss, guide, trial |
+| ~~P1~~ | ~~Missing `WebApplication` + `HowTo`~~ | **Shipped** (free offer; 3 steps). No fake ratings |
 | P1 | FAQ can add rival intents | +Qs: mobile-number check, blacklist/fake-customer, WordPress/Woo use (Shipped only) → FAQ ≥10 |
 | P2 | "blacklist" weak in body | Add blacklist + WooCommerce protection story in body, not only sidebar |
 | P2 | No exact-match domain vs fraudchecker.link | Brand cluster + external links to **tool URL** (not home) |
@@ -432,7 +428,7 @@ Update this skill — not only `FEATURES.md` — when:
 | Rival enters top 3 / audit run | Roster + Gap scorecard |
 | Our page changes (e.g. tool goes SSR) | **Remove closed gaps** from scorecard |
 | GSC winners/losers | Phase 1 priorities + Phase 5 |
-| `/faq` hub ships | Current state → live; Phase 2 done; flip FAQ inventory rows |
+| `/faq` hub ships | Current state → **live** (2026-07-26); first 8 FAQs live; next batch from GSC only |
 | Domain/brand change | Canonical CTA lines |
 | This review | Bump **Last reviewed** date |
 

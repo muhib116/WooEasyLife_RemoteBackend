@@ -198,6 +198,12 @@ Route::get('/courier-checker', [MarketingSeoController::class, 'keywordIntent'])
     ->defaults('seoKey', 'courier_checker')
     ->name('seo.courier-checker');
 
+Route::get('/faq', [MarketingSeoController::class, 'faqHub'])
+    ->name('seo.faq');
+Route::get('/faq/{slug}', [MarketingSeoController::class, 'faqQuestion'])
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
+    ->name('seo.faq.show');
+
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{slug}', [BlogController::class, 'show'])
     ->where('slug', '[a-z0-9\-]+')

@@ -167,7 +167,7 @@ const whoFor = [
                 </p>
                 <div class="mt-6 flex flex-wrap justify-center gap-3">
                     <a
-                        href="#ads-roas"
+                        href="#calculator"
                         class="inline-flex rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-sky-400"
                     >
                         Open calculator

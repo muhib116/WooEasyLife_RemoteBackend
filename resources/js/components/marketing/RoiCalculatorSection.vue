@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, reactive, watch } from 'vue';
+import { computed, onMounted, reactive, watch } from 'vue';
 import { RANGE_SLIDER_CLASS, rangeTrackStyle } from '@/utils/rangeSlider';
 import { trackToolAction } from '@/utils/siteVisitors';
 
@@ -25,6 +25,23 @@ const model = reactive({
     daily_orders: inputs.value.daily_orders?.default ?? 50,
     return_rate: inputs.value.return_rate?.default ?? 25,
     cost_per_return: inputs.value.cost_per_return?.default ?? 120,
+});
+
+onMounted(() => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    const q = new URLSearchParams(window.location.search);
+    for (const key of ['daily_orders', 'return_rate', 'cost_per_return']) {
+        const raw = q.get(key);
+        if (raw === null || raw === '') {
+            continue;
+        }
+        const n = Number(raw);
+        if (Number.isFinite(n)) {
+            model[key] = n;
+        }
+    }
 });
 
 let toolActionSent = false;
@@ -135,7 +152,7 @@ const titleClass = (accent) => {
 </script>
 
 <template>
-    <section id="roi" class="scroll-mt-24 border-y border-white/10 bg-[#111111] py-14 sm:py-20">
+    <section id="calculator" class="scroll-mt-24 border-y border-white/10 bg-[#111111] py-14 sm:py-20">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div v-if="showIntro" class="text-center">
                 <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">

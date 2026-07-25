@@ -114,7 +114,7 @@ const navLinks = computed(() => [
     { label: isEnLocale.value ? 'Pricing' : 'প্রাইসিং', href: pricingNavHref.value, key: 'pricing', anchor: props.activeNav === 'home' },
     { label: isEnLocale.value ? 'App' : 'অ্যাপ', href: homeAnchor('download-app'), key: 'app', anchor: true },
     { label: isEnLocale.value ? 'Downloads' : 'ডাউনলোড', href: homeAnchor('downloads'), key: 'downloads', anchor: true },
-    { label: 'FAQ', href: homeAnchor('faq'), key: 'faq', anchor: true },
+    { label: 'FAQ', href: '/faq', key: 'faq', anchor: false },
 ]);
 
 const closeToolsMenu = () => {

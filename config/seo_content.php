@@ -1586,4 +1586,293 @@ return array (
       ),
     ),
   ),
+  'fake_order_check' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'Fake Order Check BD কী — দ্রুত উত্তর',
+      'paragraphs' => 
+      array (
+        0 => 'Fake order check মানে অর্ডার কনফার্ম বা কুরিয়ার বুকিংয়ের আগে মোবাইল নম্বর দিয়ে কুরিয়ার ডেলিভারি হিস্টোরি, সাকসেস রেট ও রিটার্ন প্যাটার্ন দেখে ফেক/ঝুঁকিপূর্ণ অর্ডার চিহ্নিত করা। BD COD ও Facebook/WooCommerce সেলারদের জন্য এটি সবচেয়ে দ্রুত গেটকিপার।',
+        1 => 'এই পেজে অ্যাকাউন্ট ছাড়াই ফ্রি চেক চালান। পূর্ণ টুল UI: /bd-fraud-checker। কাস্টমার-ফোকাস: /fake-customer-check। নম্বর-চেক অ্যাঙ্গেল: /courier-checker। ধাপে ধাপে: /ki-vabe-fake-order-atkabo।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/fraud-layers.jpg',
+          'alt' => 'কুরিয়ার হিস্টোরি চেক ও ফেক অর্ডার ফিল্টার',
+          'caption' => 'নম্বর চেক → সাকসেস রেট → কনফার্ম বা হোল্ড',
+        ),
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'কেন Fake Order Check দরকার',
+      'paragraphs' => 
+      array (
+        0 => 'ভুল নম্বর, মজার অর্ডার বা বারবার-রিফিউজ কাস্টমার পার্সেল পাঠালে রিটার্ন ফি ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে শিপ করলে লাভ কেটে যায়।',
+        1 => 'টুল সিগন্যাল দেয়—অন্ধ অটো-শিপ করে না। সিদ্ধান্ত আপনার। মাসিক লস: /return-loss-calculator। COD প্লেবুক: /cod-return-reduction।',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'কীভাবে চেক করবেন',
+      'paragraphs' => 
+      array (
+        0 => '১) 01XXXXXXXXX নম্বর নিন। ২) নিচের ফ্রি টুলে দিন। ৩) Pathao/Steadfast/RedX হিস্টোরি পড়ুন। ৪) সবুজ কনফার্ম; হলুদ কল/OTP; লাল হোল্ড বা অগ্রিম চার্জ।',
+        1 => 'জোন রুল: /customer-verification। প্রোটেকশন: /fake-order-protection। অটো এন্ট্রি: /courier-auto-entry।',
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'Fake Order Check vs BD Fraud Checker vs Courier Checker',
+      'paragraphs' => 
+      array (
+        0 => 'ইঞ্জিন একই; সার্চ ইন্টেন্ট আলাদা। এই পেজ “fake order check” কিওয়ার্ডে। /bd-fraud-checker পূর্ণ টুল ল্যান্ডিং। /courier-checker “courier number check online” অ্যাঙ্গেল।',
+        1 => 'স্ট্যাক: চেক → /fake-order-protection → কনফার্ম → /courier-auto-entry → /woocommerce-notifications।',
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'শুধু চেক যথেষ্ট নয়',
+      'paragraphs' => 
+      array (
+        0 => 'বারবার ফেক আটকাতে OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট লাগে (/fake-order-protection)। অ্যাড ROAS পরিষ্কার রাখতে: /ads-roas-calculator।',
+        1 => 'ট্রায়াল: /pricing। তুলনা: /fraudbd-alternative।',
+      ),
+    ),
+    5 => 
+    array (
+      'heading' => 'এআই সারাংশ',
+      'paragraphs' => 
+      array (
+        0 => 'WooEasyLife Fake Order Check মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি দেখিয়ে COD কনফার্মের আগে ফেক অর্ডার ঝুঁকি কমায়—ফ্রি। এখনই নিচে চেক করুন বা /bd-fraud-checker খুলুন।',
+      ),
+    ),
+  ),
+  'bd_courier_ratio_checker' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'BD Courier Ratio Checker কী',
+      'paragraphs' => 
+      array (
+        0 => 'BD Courier Order Ratio Checker মোবাইল নম্বর দিয়ে ডেলিভারি সাকসেস রেট বনাম রিটার্ন/ক্যানসেল রেশিও দেখায়—কাস্টমার কোয়ালিটি বোঝার জন্য। Pathao, Steadfast, RedX সিগন্যাল একসাথে।',
+        1 => 'ফ্রি চেক এই পেজে। পূর্ণ টুল: /bd-fraud-checker। Fake customer অ্যাঙ্গেল: /fake-customer-check।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/fraud-layers.jpg',
+          'alt' => 'কুরিয়ার হিস্টোরি চেক ও ফেক অর্ডার ফিল্টার',
+          'caption' => 'নম্বর চেক → সাকসেস রেট → কনফার্ম বা হোল্ড',
+        ),
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'সাকসেস রেশিও কীভাবে পড়বেন',
+      'paragraphs' => 
+      array (
+        0 => 'উচ্চ সাকসেস = সাধারণত নিরাপদ কনফার্ম। কম সাকসেস/বারবার রিটার্ন = কল, OTP বা হোল্ড। এক খারাপ রেকর্ড মানেই সবসময় ফেক নয়।',
+        1 => 'বিস্তারিত জোন: /customer-verification। লস মাপুন: /return-loss-calculator।',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'কীভাবে অনলাইনে চেক করবেন',
+      'paragraphs' => 
+      array (
+        0 => 'নম্বর দিন → রেশিও ও হিস্টোরি দেখুন → সিদ্ধান্ত নিন। কুরিয়ার-নির্দিষ্ট ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+        1 => 'কনফার্মের পর: /courier-auto-entry। প্রোটেকশন: /fake-order-protection।',
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'Ratio Checker vs Fraud Checker',
+      'paragraphs' => 
+      array (
+        0 => 'একই ইঞ্জিন। এই পেজ “order ratio / success rate” সার্চে ফোকাস। /bd-fraud-checker পূর্ণ গাইড+টুল। /courier-checker নম্বর-চেক অ্যাঙ্গেল।',
+        1 => 'গাইড: /ki-vabe-fake-order-atkabo। COD: /cod-return-reduction।',
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'এআই সারাংশ',
+      'paragraphs' => 
+      array (
+        0 => 'BD Courier Ratio Checker ফ্রি মোবাইল চেক দিয়ে সাকসেস রেট দেখায়—কম রেটে অন্ধ শিপ করবেন না। শুরু: নিচের টুল বা /bd-fraud-checker।',
+      ),
+    ),
+  ),
+  'pathao_fraud_check' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'Pathao Fraud Check BD — দ্রুত উত্তর',
+      'paragraphs' => 
+      array (
+        0 => 'Pathao fraud check মানে কাস্টমারের মোবাইল নম্বর দিয়ে Pathao সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি যাচাই করা। COD কনফার্মের আগে ঝুঁকি দেখে ফেক অর্ডার কমান।',
+        1 => 'এই পেজে ফ্রি চেক চালান। পূর্ণ টুল: /bd-fraud-checker। API/অটো বুকিং গাইড: /pathao-courier-guide।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/fraud-layers.jpg',
+          'alt' => 'কুরিয়ার হিস্টোরি চেক ও ফেক অর্ডার ফিল্টার',
+          'caption' => 'নম্বর চেক → সাকসেস রেট → কনফার্ম বা হোল্ড',
+        ),
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'শুধু Pathao নাকি অন্য কুরিয়ারও?',
+      'paragraphs' => 
+      array (
+        0 => 'একই টুলে Pathao, Steadfast, RedX রেকর্ড একসাথে দেখা যায়—এক নম্বরে একাধিক সিগন্যাল। এই পেজ “Pathao fraud check” সার্চ ইন্টেন্টে ফোকাস।',
+        1 => 'অন্য ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'কীভাবে ব্যবহার করবেন',
+      'paragraphs' => 
+      array (
+        0 => 'নম্বর দিন → হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ কনফার্ম, হলুদ কল/OTP, লাল হোল্ড। জোন: /customer-verification।',
+        1 => 'কনফার্মের পর Pathao বুকিং: /pathao-courier-guide বা /courier-auto-entry।',
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'চেকের পর প্রোটেকশন',
+      'paragraphs' => 
+      array (
+        0 => 'OTP/ব্ল্যাকলিস্ট: /fake-order-protection। রিটার্ন লস: /return-loss-calculator। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
+        1 => 'ট্রায়াল: /pricing।',
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'এআই সারাংশ',
+      'paragraphs' => 
+      array (
+        0 => 'WooEasyLife Pathao Fraud Check ফ্রি নম্বর চেক দিয়ে হিস্টোরি দেখায়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন।',
+      ),
+    ),
+  ),
+  'steadfast_fraud_check' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'Steadfast Fraud Check BD — দ্রুত উত্তর',
+      'paragraphs' => 
+      array (
+        0 => 'Steadfast fraud check মানে কাস্টমারের মোবাইল নম্বর দিয়ে Steadfast সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি যাচাই করা। COD কনফার্মের আগে ঝুঁকি দেখে ফেক অর্ডার কমান।',
+        1 => 'এই পেজে ফ্রি চেক চালান। পূর্ণ টুল: /bd-fraud-checker। API/অটো বুকিং গাইড: /steadfast-integration।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/fraud-layers.jpg',
+          'alt' => 'কুরিয়ার হিস্টোরি চেক ও ফেক অর্ডার ফিল্টার',
+          'caption' => 'নম্বর চেক → সাকসেস রেট → কনফার্ম বা হোল্ড',
+        ),
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'শুধু Steadfast নাকি অন্য কুরিয়ারও?',
+      'paragraphs' => 
+      array (
+        0 => 'একই টুলে Pathao, Steadfast, RedX রেকর্ড একসাথে দেখা যায়—এক নম্বরে একাধিক সিগন্যাল। এই পেজ “Steadfast fraud check” সার্চ ইন্টেন্টে ফোকাস।',
+        1 => 'অন্য ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'কীভাবে ব্যবহার করবেন',
+      'paragraphs' => 
+      array (
+        0 => 'নম্বর দিন → হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ কনফার্ম, হলুদ কল/OTP, লাল হোল্ড। জোন: /customer-verification।',
+        1 => 'কনফার্মের পর Steadfast বুকিং: /steadfast-integration বা /courier-auto-entry।',
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'চেকের পর প্রোটেকশন',
+      'paragraphs' => 
+      array (
+        0 => 'OTP/ব্ল্যাকলিস্ট: /fake-order-protection। রিটার্ন লস: /return-loss-calculator। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
+        1 => 'ট্রায়াল: /pricing।',
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'এআই সারাংশ',
+      'paragraphs' => 
+      array (
+        0 => 'WooEasyLife Steadfast Fraud Check ফ্রি নম্বর চেক দিয়ে হিস্টোরি দেখায়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন।',
+      ),
+    ),
+  ),
+  'redx_fraud_check' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'RedX Fraud Check BD — দ্রুত উত্তর',
+      'paragraphs' => 
+      array (
+        0 => 'RedX fraud check মানে কাস্টমারের মোবাইল নম্বর দিয়ে RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি যাচাই করা। COD কনফার্মের আগে ঝুঁকি দেখে ফেক অর্ডার কমান।',
+        1 => 'এই পেজে ফ্রি চেক চালান। পূর্ণ টুল: /bd-fraud-checker। API/অটো বুকিং গাইড: /redx-courier-guide।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/fraud-layers.jpg',
+          'alt' => 'কুরিয়ার হিস্টোরি চেক ও ফেক অর্ডার ফিল্টার',
+          'caption' => 'নম্বর চেক → সাকসেস রেট → কনফার্ম বা হোল্ড',
+        ),
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'শুধু RedX নাকি অন্য কুরিয়ারও?',
+      'paragraphs' => 
+      array (
+        0 => 'একই টুলে Pathao, Steadfast, RedX রেকর্ড একসাথে দেখা যায়—এক নম্বরে একাধিক সিগন্যাল। এই পেজ “RedX fraud check” সার্চ ইন্টেন্টে ফোকাস।',
+        1 => 'অন্য ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'কীভাবে ব্যবহার করবেন',
+      'paragraphs' => 
+      array (
+        0 => 'নম্বর দিন → হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ কনফার্ম, হলুদ কল/OTP, লাল হোল্ড। জোন: /customer-verification।',
+        1 => 'কনফার্মের পর RedX বুকিং: /redx-courier-guide বা /courier-auto-entry।',
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'চেকের পর প্রোটেকশন',
+      'paragraphs' => 
+      array (
+        0 => 'OTP/ব্ল্যাকলিস্ট: /fake-order-protection। রিটার্ন লস: /return-loss-calculator। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
+        1 => 'ট্রায়াল: /pricing।',
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'এআই সারাংশ',
+      'paragraphs' => 
+      array (
+        0 => 'WooEasyLife RedX Fraud Check ফ্রি নম্বর চেক দিয়ে হিস্টোরি দেখায়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন।',
+      ),
+    ),
+  ),
 );

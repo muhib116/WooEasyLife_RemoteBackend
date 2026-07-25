@@ -1,8 +1,10 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { trackSearch } from '@/utils/metaPixel';
 import { trackToolAction } from '@/utils/siteVisitors';
+import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 
 const props = defineProps({
     fraudCheck: {
@@ -39,6 +41,11 @@ const copy = computed(() => (isEn.value
         user: 'User',
         noFraudNotes: 'No Steadfast fraud notes found for this number.',
         courierDeliveryLine: (confirmed, cancel) => `${confirmed} delivered · ${cancel} returns`,
+        nextStepsTitle: 'Next steps after this check',
+        nextProtection: 'Fake Order Protection (OTP / blacklist)',
+        nextLoss: 'Return Loss Calculator',
+        nextGuide: 'How to stop fake orders',
+        nextPricing: 'Start free trial',
     }
     : {
         invalidPhone: 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)',
@@ -64,7 +71,18 @@ const copy = computed(() => (isEn.value
         user: 'ইউজার',
         noFraudNotes: 'এই নম্বরের জন্য Steadfast-এ কোনো ফ্রড নোট পাওয়া যায়নি।',
         courierDeliveryLine: (confirmed, cancel) => `${confirmed} ডেলিভারি · ${cancel} রিটার্ন`,
+        nextStepsTitle: 'চেকের পর পরবর্তী ধাপ',
+        nextProtection: 'ফেক অর্ডার প্রোটেকশন (OTP / ব্ল্যাকলিস্ট)',
+        nextLoss: 'রিটার্ন লস ক্যালকুলেটর',
+        nextGuide: 'কিভাবে ফেক অর্ডার আটকাবো',
+        nextPricing: 'ফ্রি ট্রায়াল শুরু করুন',
     }));
+
+const protectionHref = computed(() => (isEn.value ? '/en/fake-order-protection' : '/fake-order-protection'));
+const lossHref = computed(() => (isEn.value ? '/en/return-loss-calculator' : '/return-loss-calculator'));
+const guideHref = computed(() => (isEn.value ? '/en/ki-vabe-fake-order-atkabo' : '/ki-vabe-fake-order-atkabo'));
+const trialHref = computed(() => primaryCtaUrl());
+const trialLabel = computed(() => primaryCtaLabel() || copy.value.nextPricing);
 
 const phone = ref('');
 const isLoading = ref(false);
@@ -216,6 +234,20 @@ const handleSearch = async () => {
         isLoading.value = false;
     }
 };
+
+onMounted(() => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    const queryPhone = new URLSearchParams(window.location.search).get('phone');
+    if (! queryPhone) {
+        return;
+    }
+
+    phone.value = queryPhone;
+    handleSearch();
+});
 </script>
 
 <template>
@@ -486,6 +518,36 @@ const handleSearch = async () => {
                         >
                             {{ copy.noFraudNotes }}
                         </p>
+                    </div>
+
+                    <div class="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+                        <p class="text-sm font-semibold text-amber-100">{{ copy.nextStepsTitle }}</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <Link
+                                :href="protectionHref"
+                                class="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
+                            >
+                                {{ copy.nextProtection }}
+                            </Link>
+                            <Link
+                                :href="lossHref"
+                                class="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
+                            >
+                                {{ copy.nextLoss }}
+                            </Link>
+                            <Link
+                                :href="guideHref"
+                                class="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
+                            >
+                                {{ copy.nextGuide }}
+                            </Link>
+                            <a
+                                :href="trialHref"
+                                class="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-black hover:bg-amber-400"
+                            >
+                                {{ trialLabel }}
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -200,6 +200,83 @@
             line-height: 1.5;
             color: #94a3b8;
         }
+
+        #seo-prerender .ssr-fraud-checker {
+            margin: 1.25rem 0 1.5rem;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0.75rem;
+            background: #141414;
+        }
+
+        #seo-prerender .ssr-fraud-checker h2 {
+            margin: 0 0 0.35rem;
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        #seo-prerender .ssr-fraud-checker .ssr-fraud-hint {
+            margin: 0 0 0.85rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        #seo-prerender .ssr-fraud-checker form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        #seo-prerender .ssr-fraud-checker label {
+            flex: 1 1 12rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        #seo-prerender .ssr-fraud-checker input[type="tel"] {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0.65rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            padding: 0.8rem 0.9rem;
+            font-size: 1rem;
+        }
+
+        #seo-prerender .ssr-fraud-checker button {
+            border: 0;
+            border-radius: 0.65rem;
+            background: linear-gradient(90deg, #f59e0b, #eab308);
+            color: #000;
+            font-weight: 700;
+            font-size: 0.875rem;
+            padding: 0.85rem 1.15rem;
+            cursor: pointer;
+        }
+
+        #seo-prerender .ssr-calc-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+            gap: 0.75rem;
+            align-items: end;
+        }
+
+        #seo-prerender .ssr-calc-form input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0.65rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            padding: 0.8rem 0.9rem;
+            font-size: 1rem;
+        }
     </style>
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead
@@ -238,6 +315,109 @@
             <h1>{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</h1>
             @if (! empty($seo['prerender_lead'] ?? $seo['description'] ?? null))
                 <p>{{ $seo['prerender_lead'] ?? $seo['description'] }}</p>
+            @endif
+            @if (! empty($seo['ssr_fraud_checker']))
+                @php
+                    $ssrFormAction = (string) ($seo['canonical_path'] ?? '/bd-fraud-checker');
+                    if ($ssrFormAction === '') {
+                        $ssrFormAction = '/bd-fraud-checker';
+                    }
+                @endphp
+                <div class="ssr-fraud-checker" id="ssr-fraud-check">
+                    <h2>{{ $isEnPrerender ? 'Free courier fraud check' : 'ফ্রি কুরিয়ার ফ্রড চেক' }}</h2>
+                    <p class="ssr-fraud-hint">
+                        {{ $isEnPrerender
+                            ? 'Enter a Bangladesh mobile number to see Pathao, Steadfast, and RedX delivery history before you confirm COD.'
+                            : 'বাংলাদেশি মোবাইল নম্বর দিন — Pathao, Steadfast, RedX হিস্টোরি ও সাকসেস রেট দেখে COD কনফার্ম করুন।' }}
+                    </p>
+                    <form method="get" action="{{ $ssrFormAction }}#fraud-check" role="search" aria-label="{{ $isEnPrerender ? 'Courier fraud checker' : 'কুরিয়ার ফ্রড চেকার' }}">
+                        <label for="ssr-fraud-phone">
+                            {{ $isEnPrerender ? 'Mobile number' : 'মোবাইল নম্বর' }}
+                            <input
+                                id="ssr-fraud-phone"
+                                name="phone"
+                                type="tel"
+                                inputmode="numeric"
+                                maxlength="14"
+                                placeholder="017XXXXXXXX"
+                                autocomplete="tel"
+                                required
+                                value="{{ request()->query('phone') }}"
+                            />
+                        </label>
+                        <button type="submit">
+                            {{ $isEnPrerender ? 'Check fraud' : 'ফ্রড চেক করুন' }}
+                        </button>
+                    </form>
+                </div>
+            @endif
+            @if (! empty($seo['ssr_calculator']))
+                @php
+                    $calcType = (string) $seo['ssr_calculator'];
+                    $calcAction = (string) ($seo['canonical_path'] ?? '/');
+                    $q = request()->query();
+                @endphp
+                <div class="ssr-fraud-checker" id="ssr-calculator">
+                    <h2>
+                        @if ($calcType === 'return_loss')
+                            {{ $isEnPrerender ? 'Return loss calculator' : 'রিটার্ন লস ক্যালকুলেটর' }}
+                        @elseif ($calcType === 'courier_charge')
+                            {{ $isEnPrerender ? 'Courier charge calculator' : 'কুরিয়ার চার্জ ক্যালকুলেটর' }}
+                        @else
+                            {{ $isEnPrerender ? 'Ads ROAS calculator' : 'Ads ROAS ক্যালকুলেটর' }}
+                        @endif
+                    </h2>
+                    <p class="ssr-fraud-hint">
+                        {{ $isEnPrerender
+                            ? 'Enter your numbers below — the interactive calculator loads after the page opens.'
+                            : 'নিচে সংখ্যা দিন — পেজ খুললে ইন্টারঅ্যাকটিভ ক্যালকুলেটর চালু হবে।' }}
+                    </p>
+                    <form method="get" action="{{ $calcAction }}#calculator" class="ssr-calc-form">
+                        @if ($calcType === 'return_loss')
+                            <label for="ssr-daily-orders">
+                                {{ $isEnPrerender ? 'Daily orders' : 'দৈনিক অর্ডার' }}
+                                <input id="ssr-daily-orders" name="daily_orders" type="number" min="1" max="5000" value="{{ $q['daily_orders'] ?? 50 }}" required />
+                            </label>
+                            <label for="ssr-return-rate">
+                                {{ $isEnPrerender ? 'Return rate %' : 'রিটার্ন রেট %' }}
+                                <input id="ssr-return-rate" name="return_rate" type="number" min="0" max="100" value="{{ $q['return_rate'] ?? 25 }}" required />
+                            </label>
+                            <label for="ssr-cost-per-return">
+                                {{ $isEnPrerender ? 'Cost per return (৳)' : 'প্রতি রিটার্ন খরচ (৳)' }}
+                                <input id="ssr-cost-per-return" name="cost_per_return" type="number" min="0" max="5000" value="{{ $q['cost_per_return'] ?? 120 }}" required />
+                            </label>
+                        @elseif ($calcType === 'courier_charge')
+                            <label for="ssr-weight-kg">
+                                {{ $isEnPrerender ? 'Weight (kg)' : 'ওজন (কেজি)' }}
+                                <input id="ssr-weight-kg" name="weight_kg" type="number" min="0.1" max="50" step="0.1" value="{{ $q['weight_kg'] ?? 1 }}" required />
+                            </label>
+                            <label for="ssr-cod-amount">
+                                {{ $isEnPrerender ? 'COD amount (৳)' : 'COD অ্যামাউন্ট (৳)' }}
+                                <input id="ssr-cod-amount" name="cod_amount" type="number" min="0" max="200000" value="{{ $q['cod_amount'] ?? 0 }}" />
+                            </label>
+                        @else
+                            <label for="ssr-ad-spend">
+                                {{ $isEnPrerender ? 'Ad spend (৳)' : 'অ্যাড স্পেন্ড (৳)' }}
+                                <input id="ssr-ad-spend" name="ad_spend" type="number" min="0" value="{{ $q['ad_spend'] ?? 50000 }}" required />
+                            </label>
+                            <label for="ssr-pixel-purchases">
+                                {{ $isEnPrerender ? 'Pixel purchases' : 'Pixel Purchase' }}
+                                <input id="ssr-pixel-purchases" name="pixel_purchases" type="number" min="0" value="{{ $q['pixel_purchases'] ?? 200 }}" required />
+                            </label>
+                            <label for="ssr-fake-rate">
+                                {{ $isEnPrerender ? 'Fake/cancel %' : 'ফেক/ক্যানসেল %' }}
+                                <input id="ssr-fake-rate" name="fake_cancel_rate" type="number" min="0" max="100" value="{{ $q['fake_cancel_rate'] ?? 30 }}" required />
+                            </label>
+                            <label for="ssr-aov">
+                                {{ $isEnPrerender ? 'AOV (৳)' : 'AOV (৳)' }}
+                                <input id="ssr-aov" name="aov" type="number" min="0" value="{{ $q['aov'] ?? 1200 }}" required />
+                            </label>
+                        @endif
+                        <button type="submit">
+                            {{ $isEnPrerender ? 'Calculate' : 'হিসাব করুন' }}
+                        </button>
+                    </form>
+                </div>
             @endif
             @if (($seo['page_kind'] ?? null) === 'about' && ! empty($seo['author_image']))
                 <figure>
@@ -314,6 +494,17 @@
             <section style="max-width:48rem;margin:0 auto;padding:1.5rem 1rem;color:#e2e8f0;background:#0a0a0a;font-family:system-ui,sans-serif">
                 <p style="font-size:1.25rem;font-weight:700;color:#fff">{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</p>
                 <p>{{ $seo['prerender_lead'] ?? $seo['description'] ?? '' }}</p>
+                @if (! empty($seo['ssr_fraud_checker']))
+                    <form method="get" action="{{ $seo['canonical_path'] ?? '/bd-fraud-checker' }}#fraud-check" style="margin:1rem 0;display:flex;flex-wrap:wrap;gap:0.75rem">
+                        <label for="ssr-fraud-phone-noscript" style="flex:1 1 12rem;color:#e2e8f0;font-size:0.875rem">
+                            {{ $isEnPrerender ? 'Mobile number' : 'মোবাইল নম্বর' }}
+                            <input id="ssr-fraud-phone-noscript" name="phone" type="tel" inputmode="numeric" maxlength="14" placeholder="017XXXXXXXX" required style="display:block;width:100%;margin-top:0.35rem;padding:0.75rem;border-radius:0.5rem;border:1px solid #334155;background:#111;color:#fff" />
+                        </label>
+                        <button type="submit" style="padding:0.85rem 1.1rem;border:0;border-radius:0.5rem;background:#f59e0b;color:#000;font-weight:700">
+                            {{ $isEnPrerender ? 'Check fraud' : 'ফ্রড চেক করুন' }}
+                        </button>
+                    </form>
+                @endif
                 <p><a href="/bd-fraud-checker" style="color:#fbbf24">ফ্রি ফ্রড চেক</a> · <a href="/pricing" style="color:#fbbf24">প্রাইসিং</a></p>
             </section>
         </noscript>

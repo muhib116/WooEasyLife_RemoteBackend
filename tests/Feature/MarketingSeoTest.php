@@ -51,7 +51,64 @@ class MarketingSeoTest extends TestCase
             ->has('fraudCheck')
             ->has('seo')
             ->where('seo.canonical_path', '/bd-fraud-checker')
+            ->where('seo.ssr_fraud_checker', true)
         );
+    }
+
+    public function test_bd_fraud_checker_ssr_exposes_phone_form_in_initial_html(): void
+    {
+        $response = $this->get('/bd-fraud-checker');
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $this->assertStringContainsString('id="seo-prerender"', $html);
+        $this->assertStringContainsString('id="ssr-fraud-phone"', $html);
+        $this->assertStringContainsString('name="phone"', $html);
+        $this->assertStringContainsString('type="tel"', $html);
+        $this->assertStringContainsString('for="ssr-fraud-phone"', $html);
+        $this->assertMatchesRegularExpression('/<button[^>]*type="submit"[^>]*>/i', $html);
+        $this->assertStringContainsString('Pathao', $html);
+        $this->assertStringContainsString('Steadfast', $html);
+        $this->assertStringContainsString('RedX', $html);
+        $this->assertStringContainsString('"@type":"WebApplication"', $html);
+        $this->assertStringContainsString('"@type":"HowTo"', $html);
+        $this->assertStringContainsString('"price":"0"', $html);
+        $this->assertStringNotContainsString('aggregateRating', $html);
+    }
+
+    public function test_return_loss_calculator_ssr_exposes_number_inputs(): void
+    {
+        $response = $this->get('/return-loss-calculator');
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $this->assertStringContainsString('id="ssr-calculator"', $html);
+        $this->assertStringContainsString('name="daily_orders"', $html);
+        $this->assertStringContainsString('type="number"', $html);
+        $this->assertStringContainsString('name="return_rate"', $html);
+    }
+
+    public function test_faq_hub_and_question_pages_render(): void
+    {
+        $hub = $this->get('/faq');
+        $hub->assertOk();
+        $hubHtml = $hub->getContent();
+        $this->assertStringContainsString('id="seo-prerender"', $hubHtml);
+        $this->assertStringContainsString('FAQ', $hubHtml);
+        $this->assertStringContainsString('href="/faq/courier-success-rate-kivabe-bujhbo"', $hubHtml);
+        $this->assertStringContainsString('"@type":"FAQPage"', $hubHtml);
+        $this->assertStringContainsString('"@type":"BreadcrumbList"', $hubHtml);
+
+        $question = $this->get('/faq/cod-return-loss-hisab');
+        $question->assertOk();
+        $qHtml = $question->getContent();
+        $this->assertStringContainsString('রিটার্ন লস', $qHtml);
+        $this->assertStringContainsString('/return-loss-calculator', $qHtml);
+        $this->assertStringContainsString('"@type":"FAQPage"', $qHtml);
+        $this->assertStringContainsString('href="/faq"', $qHtml);
+
+        $this->get('/faq/not-a-real-slug')->assertNotFound();
     }
 
     public function test_fake_order_protection_page_renders(): void
@@ -687,6 +744,9 @@ class MarketingSeoTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
         $response->assertSee('/bd-fraud-checker', false);
+        $response->assertSee('/faq', false);
+        $response->assertSee('/faq/courier-success-rate-kivabe-bujhbo', false);
+        $response->assertSee('/faq/cod-return-loss-hisab', false);
         $response->assertSee('/ki-vabe-fake-order-atkabo', false);
         $response->assertSee('/fake-customer-check', false);
         $response->assertSee('/en/fake-customer-check', false);
@@ -821,6 +881,11 @@ class MarketingSeoTest extends TestCase
             'en_facebook_ads_for_woocommerce',
             'fake_customer_check',
             'courier_checker',
+            'fake_order_check',
+            'bd_courier_ratio_checker',
+            'pathao_fraud_check',
+            'steadfast_fraud_check',
+            'redx_fraud_check',
             'ki_vabe_fake_order_atkabo',
             'en_ki_vabe_fake_order_atkabo',
             'en_fake_customer_check',

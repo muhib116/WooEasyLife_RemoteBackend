@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, reactive, watch } from 'vue';
+import { computed, onMounted, reactive, watch } from 'vue';
 import { RANGE_SLIDER_CLASS, rangeTrackStyle } from '@/utils/rangeSlider';
 import { trackToolAction } from '@/utils/siteVisitors';
 
@@ -20,6 +20,23 @@ const model = reactive({
     pixel_purchases: inputs.value.pixel_purchases?.default ?? 200,
     fake_cancel_rate: inputs.value.fake_cancel_rate?.default ?? 30,
     aov: inputs.value.aov?.default ?? 1200,
+});
+
+onMounted(() => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    const q = new URLSearchParams(window.location.search);
+    for (const key of ['ad_spend', 'pixel_purchases', 'fake_cancel_rate', 'aov']) {
+        const raw = q.get(key);
+        if (raw === null || raw === '') {
+            continue;
+        }
+        const n = Number(raw);
+        if (Number.isFinite(n)) {
+            model[key] = n;
+        }
+    }
 });
 
 let toolActionSent = false;
@@ -109,7 +126,7 @@ const copy = computed(() => (isEn.value
 </script>
 
 <template>
-    <section id="ads-roas" class="scroll-mt-24 border-y border-white/10 bg-[#111111] py-14 sm:py-20">
+    <section id="calculator" class="scroll-mt-24 border-y border-white/10 bg-[#111111] py-14 sm:py-20">
         <div class="mx-auto max-w-6xl px-4 lg:px-8">
             <div v-if="showIntro" class="text-center">
                 <span class="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-300">
