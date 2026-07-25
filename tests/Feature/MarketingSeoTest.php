@@ -114,6 +114,42 @@ class MarketingSeoTest extends TestCase
         $fakeCustomerCheck->assertSee('/faq/customer-fraud-score-ki', false);
     }
 
+    public function test_courier_fraud_pages_are_differentiated_and_linked(): void
+    {
+        $pages = [
+            '/pathao-fraud-check' => ['Pathao', '/pathao-courier-guide'],
+            '/steadfast-fraud-check' => ['Steadfast', '/steadfast-integration'],
+            '/redx-fraud-check' => ['RedX', '/redx-courier-guide'],
+        ];
+
+        $sharedFaqLinks = [
+            '/faq',
+            '/faq/courier-success-rate-kivabe-bujhbo',
+            '/faq/success-rate-kom-hole-ki-korbo',
+            '/faq/customer-delivery-history-check',
+            '/bd-fraud-checker',
+            '/return-loss-calculator',
+            '/pricing',
+        ];
+
+        foreach ($pages as $path => [$courier, $apiGuide]) {
+            $response = $this->get($path);
+            $response->assertOk();
+            $html = $response->getContent();
+
+            $response->assertSee($courier, false);
+            $this->assertStringContainsString('href="'.$apiGuide.'"', $html, "{$path} should link its courier API guide");
+
+            foreach ($sharedFaqLinks as $link) {
+                $this->assertStringContainsString(
+                    'href="'.$link.'"',
+                    $html,
+                    "Expected {$path} to link to {$link}"
+                );
+            }
+        }
+    }
+
     public function test_return_loss_calculator_ssr_exposes_number_inputs(): void
     {
         $response = $this->get('/return-loss-calculator');

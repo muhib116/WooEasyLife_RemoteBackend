@@ -771,19 +771,27 @@ return [
             'faqs' => [
                 [
                     'q' => 'Pathao fraud check কীভাবে কাজ করে?',
-                    'a' => 'কাস্টমারের মোবাইল নম্বর দিলে WooEasyLife Pathao সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখায়। সাকসেস রেট কম হলে কনফার্মের আগে কল/OTP বা হোল্ড নিন। পূর্ণ টুল: /bd-fraud-checker।',
+                    'a' => 'কাস্টমারের মোবাইল নম্বর দিলে WooEasyLife Pathao সহ সাপোর্টেড কুরিয়ারের আগের ডেলিভারি, রিটার্ন ও ক্যানসেল হিস্টোরি দেখায়। এটি একটি risk signal—নিশ্চিত fraud verdict নয়। সাকসেস রেট কম হলে কনফার্মের আগে কল/OTP বা হোল্ড নিন। রেট পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo। পূর্ণ টুল: /bd-fraud-checker।',
                 ],
                 [
                     'q' => 'শুধু Pathao দেখা যায় নাকি অন্য কুরিয়ারও?',
-                    'a' => 'একই টুলে Pathao, Steadfast, RedX রেকর্ড একসাথে। এই পেজ Pathao সার্চ ইন্টেন্টে ফোকাস। অন্য: /steadfast-fraud-check, /redx-fraud-check। API গাইড: /pathao-courier-guide।',
+                    'a' => 'একই টুলে Pathao, Steadfast ও RedX রেকর্ড একসাথে আসে—এক নম্বরে একাধিক কুরিয়ার সিগন্যাল। এই পেজ Pathao সার্চ ইন্টেন্টে ফোকাস। অন্য কুরিয়ার: /steadfast-fraud-check ও /redx-fraud-check। হিস্টোরি কীভাবে আসে: /faq/customer-delivery-history-check। API/বুকিং গাইড: /pathao-courier-guide।',
                 ],
                 [
-                    'q' => 'এটি কি ফ্রি?',
-                    'a' => 'হ্যাঁ—অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক। OTP/ব্ল্যাকলিস্ট চাইলে /fake-order-protection ও /pricing।',
+                    'q' => 'Pathao fraud check কি ফ্রি? অ্যাকাউন্ট লাগে?',
+                    'a' => 'হ্যাঁ—এই পেজ বা /bd-fraud-checker-এ অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়, তাই ঝুঁকি ছাড়াই workflow টেস্ট করা যায়। বেশি volume, checkout OTP, duplicate block ও blacklist automation চাইলে /pricing থেকে প্ল্যান বা ট্রায়াল নিন।',
+                ],
+                [
+                    'q' => 'Pathao সাকসেস রেট কম হলে কী করব?',
+                    'a' => 'কম রেট দেখলেই “ফেক” ধরে নেবেন না—আগে ফোন-কনফার্ম, ঠিকানা যাচাই ও প্রয়োজনে OTP বা অগ্রিম চার্জ নিন; যাচাই না হলে হোল্ড রাখুন ও অর্ডার নোটে কারণ লিখুন। ধাপে ধাপে SOP: /faq/success-rate-kom-hole-ki-korbo। জোন রুল: /customer-verification।',
                 ],
                 [
                     'q' => 'চেকের পর কী করব?',
-                    'a' => 'সবুজে কনফার্ম করে /courier-auto-entry; হলুদ/লালে /customer-verification রুল। লস: /return-loss-calculator। গাইড: /ki-vabe-fake-order-atkabo।',
+                    'a' => 'সবুজ হলে কনফার্ম করে /courier-auto-entry দিয়ে বুকিং করুন। বারবার ঝুঁকি আটকাতে OTP (/faq/cod-order-otp-kokhon), duplicate block (/faq/duplicate-cod-order-block) ও blacklist (/faq/woocommerce-customer-blacklist) চালু করুন—সব ফিচার /fake-order-protection-এ। মাসিক লস: /return-loss-calculator ও /faq/cod-return-loss-hisab।',
+                ],
+                [
+                    'q' => 'সব প্রশ্ন কোথায় পাব?',
+                    'a' => 'ফ্রড চেক, OTP, blacklist ও COD রিটার্ন সংক্রান্ত সব প্রশ্ন এক জায়গায়: /faq। পূর্ণ বাংলা গাইড: /ki-vabe-fake-order-atkabo।',
                 ],
             ],
         ],
@@ -803,19 +811,23 @@ return [
             'faqs' => [
                 [
                     'q' => 'Steadfast fraud check কীভাবে কাজ করে?',
-                    'a' => 'মোবাইল নম্বর ইনপুট করলে Steadfast সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন রেকর্ড দেখা যায়। কম সাকসেসে অন্ধ শিপ করবেন না। পূর্ণ টুল: /bd-fraud-checker।',
+                    'a' => 'মোবাইল নম্বর দিলে Steadfast সহ সাপোর্টেড কুরিয়ারের আগের ডেলিভারি ও রিটার্ন রেকর্ড দেখা যায়। এটি risk signal—নিশ্চিত fraud verdict নয়। কম সাকসেসে অন্ধ শিপ করবেন না; আগে যাচাই করুন। রেট পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo। পূর্ণ টুল: /bd-fraud-checker।',
                 ],
                 [
                     'q' => 'Pathao ও Steadfast দুটোই কি চেক করা যায়?',
-                    'a' => 'হ্যাঁ—একই BD fraud checker টুলে একাধিক কুরিয়ার। Pathao ফোকাস: /pathao-fraud-check। RedX: /redx-fraud-check। API: /steadfast-integration।',
+                    'a' => 'হ্যাঁ—একই BD fraud checker টুলে এক নম্বরে একাধিক কুরিয়ার সিগন্যাল আসে। Pathao ফোকাস: /pathao-fraud-check। RedX: /redx-fraud-check। এক নম্বরে একাধিক হিস্টোরি কীভাবে আসে: /faq/customer-delivery-history-check। Steadfast API/বুকিং: /steadfast-integration।',
                 ],
                 [
-                    'q' => 'ফ্রি কিভাবে চেক করব?',
-                    'a' => 'এই পেজে বা /bd-fraud-checker দিয়ে নম্বর চেক করুন—অ্যাকাউন্ট লাগে না। প্রোটেকশন: /fake-order-protection।',
+                    'q' => 'Steadfast চেক কি ফ্রি? অ্যাকাউন্ট লাগে?',
+                    'a' => 'হ্যাঁ—এই পেজ বা /bd-fraud-checker-এ অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। বেশি volume ও automated protection (checkout OTP, duplicate block, blacklist) চাইলে /pricing থেকে প্ল্যান বা ট্রায়াল নিন। ফিচার তালিকা: /fake-order-protection।',
+                ],
+                [
+                    'q' => 'Steadfast সাকসেস রেট কম হলে কী করব?',
+                    'a' => 'একটি খারাপ রেকর্ড মানেই সবসময় ফেক নয়—ঠিকানা বা এলাকা সমস্যাও হতে পারে। আগে ফোন-কনফার্ম, ঠিকানা যাচাই ও প্রয়োজনে OTP/অগ্রিম চার্জ নিন, নাহলে হোল্ড। করণীয় SOP: /faq/success-rate-kom-hole-ki-korbo। জোন রুল: /customer-verification।',
                 ],
                 [
                     'q' => 'চেকের পর কী করব?',
-                    'a' => 'কনফার্ম হলে /courier-auto-entry; ঝুঁকিতে /customer-verification। লস: /return-loss-calculator। গাইড: /ki-vabe-fake-order-atkabo।',
+                    'a' => 'কনফার্ম হলে /courier-auto-entry দিয়ে বুকিং করুন। বারবার ঝুঁকি আটকাতে OTP (/faq/cod-order-otp-kokhon), duplicate block (/faq/duplicate-cod-order-block) ও blacklist (/faq/woocommerce-customer-blacklist)। মাসিক লস: /return-loss-calculator ও /faq/cod-return-loss-hisab। সব প্রশ্ন: /faq।',
                 ],
             ],
         ],
@@ -835,19 +847,23 @@ return [
             'faqs' => [
                 [
                     'q' => 'RedX fraud check কীভাবে কাজ করে?',
-                    'a' => 'কাস্টমারের ফোন নম্বর দিলে RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখা যায়। সাকসেস রেট দিয়ে কনফার্ম/হোল্ড সিদ্ধান্ত নিন। পূর্ণ টুল: /bd-fraud-checker।',
+                    'a' => 'কাস্টমারের ফোন নম্বর দিলে RedX সহ সাপোর্টেড কুরিয়ারের আগের ডেলিভারি ও রিটার্ন হিস্টোরি দেখা যায়। এটি risk signal—চূড়ান্ত fraud verdict নয়। সাকসেস রেট দিয়ে কনফার্ম/হোল্ড সিদ্ধান্ত নিন। রেট পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo। পূর্ণ টুল: /bd-fraud-checker।',
                 ],
                 [
                     'q' => 'অন্যান্য কুরিয়ারও কি একসাথে দেখা যায়?',
-                    'a' => 'হ্যাঁ—Pathao, Steadfast ও RedX একই টুলে। Pathao: /pathao-fraud-check। Steadfast: /steadfast-fraud-check। API: /redx-courier-guide।',
+                    'a' => 'হ্যাঁ—Pathao, Steadfast ও RedX একই টুলে, এক নম্বরে একাধিক সিগন্যাল। Pathao ফোকাস: /pathao-fraud-check। Steadfast ফোকাস: /steadfast-fraud-check। এক নম্বরে একাধিক হিস্টোরি: /faq/customer-delivery-history-check। RedX API/বুকিং: /redx-courier-guide।',
                 ],
                 [
-                    'q' => 'এটি কি ফ্রি?',
-                    'a' => 'হ্যাঁ—ল্যান্ডিংয়ে অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক। ট্রায়াল: /pricing। প্রোটেকশন: /fake-order-protection।',
+                    'q' => 'RedX চেক কি ফ্রি? অ্যাকাউন্ট লাগে?',
+                    'a' => 'হ্যাঁ—এই ল্যান্ডিং বা /bd-fraud-checker-এ অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। বেশি volume, checkout OTP, duplicate block ও blacklist automation চাইলে /pricing থেকে প্ল্যান বা ট্রায়াল নিন। ফিচার: /fake-order-protection।',
+                ],
+                [
+                    'q' => 'RedX সাকসেস রেট কম হলে কী করব?',
+                    'a' => 'অন্ধ শিপ করবেন না—আগে ফোন-কনফার্ম, ঠিকানা যাচাই ও প্রয়োজনে OTP বা অগ্রিম চার্জ নিন, নাহলে হোল্ড রাখুন। একটি পুরোনো রিটার্নকে চূড়ান্ত verdict বানাবেন না। করণীয় SOP: /faq/success-rate-kom-hole-ki-korbo। জোন রুল: /customer-verification।',
                 ],
                 [
                     'q' => 'চেকের পর কী করব?',
-                    'a' => 'কনফার্ম → /courier-auto-entry; ঝুঁকি → /customer-verification। লস: /return-loss-calculator। গাইড: /ki-vabe-fake-order-atkabo।',
+                    'a' => 'কনফার্ম হলে /courier-auto-entry দিয়ে বুকিং করুন। বারবার ঝুঁকি আটকাতে OTP (/faq/cod-order-otp-kokhon), duplicate block (/faq/duplicate-cod-order-block) ও blacklist (/faq/woocommerce-customer-blacklist)। মাসিক লস: /return-loss-calculator ও /faq/cod-return-loss-hisab। সব প্রশ্ন: /faq।',
                 ],
             ],
         ],

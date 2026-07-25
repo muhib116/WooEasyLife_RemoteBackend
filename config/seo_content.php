@@ -1729,37 +1729,46 @@ return array (
     ),
     1 => 
     array (
-      'heading' => 'শুধু Pathao নাকি অন্য কুরিয়ারও?',
+      'heading' => 'Pathao হিস্টোরি কীভাবে পড়বেন',
       'paragraphs' => 
       array (
-        0 => 'একই টুলে Pathao, Steadfast, RedX রেকর্ড একসাথে দেখা যায়—এক নম্বরে একাধিক সিগন্যাল। এই পেজ “Pathao fraud check” সার্চ ইন্টেন্টে ফোকাস।',
-        1 => 'অন্য ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+        0 => 'Pathao বাংলাদেশে ঢাকা ও বড় শহরে ব্যাপকভাবে ব্যবহৃত COD কুরিয়ার। নম্বর চেক করলে দেখবেন—এই কাস্টমার আগে কতগুলো Pathao পার্সেল সফলভাবে নিয়েছেন, আর কতগুলো রিটার্ন বা ক্যানসেল হয়েছে। এটি একটি behavioral signal, নিশ্চিত “fraud verdict” নয়।',
+        1 => 'সাকসেস রেট কীভাবে ব্যাখ্যা করবেন, sample size কেন গুরুত্বপূর্ণ—বিস্তারিত: /faq/courier-success-rate-kivabe-bujhbo। এক নম্বরে একাধিক কুরিয়ার সিগন্যাল কীভাবে আসে: /faq/customer-delivery-history-check।',
       ),
     ),
     2 => 
     array (
-      'heading' => 'কীভাবে ব্যবহার করবেন',
+      'heading' => 'কীভাবে ব্যবহার করবেন (Pathao ফ্লো)',
       'paragraphs' => 
       array (
-        0 => 'নম্বর দিন → হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ কনফার্ম, হলুদ কল/OTP, লাল হোল্ড। জোন: /customer-verification।',
-        1 => 'কনফার্মের পর Pathao বুকিং: /pathao-courier-guide বা /courier-auto-entry।',
+        0 => 'নম্বর দিন → Pathao সহ সব কুরিয়ারের হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ হলে কনফার্ম, হলুদ হলে কল/OTP, লাল হলে হোল্ড বা অগ্রিম চার্জ। শুধু একটি পুরোনো Pathao রিটার্ন দেখে চূড়ান্ত সিদ্ধান্ত নেবেন না—জোন রুল: /customer-verification।',
+        1 => 'কম সাকসেস রেটে ধাপে ধাপে করণীয়: /faq/success-rate-kom-hole-ki-korbo। কনফার্মের পর Pathao বুকিং: /pathao-courier-guide বা /courier-auto-entry।',
       ),
     ),
     3 => 
     array (
-      'heading' => 'চেকের পর প্রোটেকশন',
+      'heading' => 'চেকের পর প্রোটেকশন ও লস হিসাব',
       'paragraphs' => 
       array (
-        0 => 'OTP/ব্ল্যাকলিস্ট: /fake-order-protection। রিটার্ন লস: /return-loss-calculator। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
-        1 => 'ট্রায়াল: /pricing।',
+        0 => 'শুধু চেক যথেষ্ট নয়—বারবার একই ঝুঁকি আটকাতে checkout OTP (/faq/cod-order-otp-kokhon), duplicate order block (/faq/duplicate-cod-order-block) ও customer blacklist (/faq/woocommerce-customer-blacklist) যোগ করুন। সব ফিচার: /fake-order-protection।',
+        1 => 'Pathao রিটার্নে মাসে কত ৳ যাচ্ছে দেখুন /return-loss-calculator-এ; হিসাবের সূত্র: /faq/cod-return-loss-hisab। ফিচার ও প্ল্যান: /pricing। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
       ),
     ),
     4 => 
     array (
+      'heading' => 'অন্য কুরিয়ার ও সব প্রশ্ন',
+      'paragraphs' => 
+      array (
+        0 => 'একই টুলে Steadfast ও RedX রেকর্ডও দেখা যায়—Steadfast ফোকাস: /steadfast-fraud-check, RedX ফোকাস: /redx-fraud-check।',
+        1 => 'ফ্রড চেক, OTP, blacklist ও COD রিটার্ন সংক্রান্ত সব প্রশ্ন এক জায়গায়: /faq।',
+      ),
+    ),
+    5 => 
+    array (
       'heading' => 'এআই সারাংশ',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife Pathao Fraud Check ফ্রি নম্বর চেক দিয়ে হিস্টোরি দেখায়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন।',
+        0 => 'WooEasyLife Pathao Fraud Check ফ্রি নম্বর চেক দিয়ে Pathao সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখায়—এটি risk signal, চূড়ান্ত fraud verdict নয়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন। সব প্রশ্ন: /faq।',
       ),
     ),
   ),
@@ -1785,37 +1794,46 @@ return array (
     ),
     1 => 
     array (
-      'heading' => 'শুধু Steadfast নাকি অন্য কুরিয়ারও?',
+      'heading' => 'Steadfast হিস্টোরি কীভাবে পড়বেন',
       'paragraphs' => 
       array (
-        0 => 'একই টুলে Pathao, Steadfast, RedX রেকর্ড একসাথে দেখা যায়—এক নম্বরে একাধিক সিগন্যাল। এই পেজ “Steadfast fraud check” সার্চ ইন্টেন্টে ফোকাস।',
-        1 => 'অন্য ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+        0 => 'Steadfast বাংলাদেশে COD সেলারদের অন্যতম জনপ্রিয় কুরিয়ার, বিশেষত সারা দেশে ডেলিভারির জন্য। নম্বর চেক করলে দেখা যায়—এই কাস্টমার Steadfast সহ অন্যান্য কুরিয়ারে আগে কত পার্সেল সফলভাবে নিয়েছেন, কত রিটার্ন/ক্যানসেল করেছেন। মনে রাখুন, এটি risk signal—চূড়ান্ত “fraud verdict” নয়।',
+        1 => 'রেশিও ও সাকসেস রেট পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo। এক নম্বরে একাধিক কুরিয়ার হিস্টোরি: /faq/customer-delivery-history-check।',
       ),
     ),
     2 => 
     array (
-      'heading' => 'কীভাবে ব্যবহার করবেন',
+      'heading' => 'কীভাবে ব্যবহার করবেন (Steadfast ফ্লো)',
       'paragraphs' => 
       array (
-        0 => 'নম্বর দিন → হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ কনফার্ম, হলুদ কল/OTP, লাল হোল্ড। জোন: /customer-verification।',
-        1 => 'কনফার্মের পর Steadfast বুকিং: /steadfast-integration বা /courier-auto-entry।',
+        0 => 'নম্বর দিন → Steadfast সহ সব কুরিয়ারের হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ হলে কনফার্ম, হলুদ হলে কল/OTP, লাল হলে হোল্ড বা অগ্রিম চার্জ। একটি খারাপ রেকর্ড মানেই সবসময় ফেক নয়—ঠিকানা বা এলাকা সমস্যাও হতে পারে। জোন রুল: /customer-verification।',
+        1 => 'কম সাকসেসে করণীয়: /faq/success-rate-kom-hole-ki-korbo। কনফার্মের পর Steadfast বুকিং: /steadfast-integration বা /courier-auto-entry।',
       ),
     ),
     3 => 
     array (
-      'heading' => 'চেকের পর প্রোটেকশন',
+      'heading' => 'চেকের পর প্রোটেকশন ও লস হিসাব',
       'paragraphs' => 
       array (
-        0 => 'OTP/ব্ল্যাকলিস্ট: /fake-order-protection। রিটার্ন লস: /return-loss-calculator। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
-        1 => 'ট্রায়াল: /pricing।',
+        0 => 'একই ঝুঁকি বারবার আটকাতে checkout OTP (/faq/cod-order-otp-kokhon), duplicate order block (/faq/duplicate-cod-order-block) ও customer blacklist (/faq/woocommerce-customer-blacklist) দরকার। সব ফিচার: /fake-order-protection।',
+        1 => 'Steadfast রিটার্নে মাসিক ক্ষতি দেখুন /return-loss-calculator-এ; সূত্র: /faq/cod-return-loss-hisab। প্ল্যান: /pricing। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
       ),
     ),
     4 => 
     array (
+      'heading' => 'অন্য কুরিয়ার ও সব প্রশ্ন',
+      'paragraphs' => 
+      array (
+        0 => 'একই টুলে Pathao ও RedX রেকর্ডও দেখা যায়—Pathao ফোকাস: /pathao-fraud-check, RedX ফোকাস: /redx-fraud-check।',
+        1 => 'ফ্রড চেক, OTP, blacklist ও COD রিটার্ন সংক্রান্ত সব প্রশ্ন: /faq।',
+      ),
+    ),
+    5 => 
+    array (
       'heading' => 'এআই সারাংশ',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife Steadfast Fraud Check ফ্রি নম্বর চেক দিয়ে হিস্টোরি দেখায়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন।',
+        0 => 'WooEasyLife Steadfast Fraud Check ফ্রি নম্বর চেক দিয়ে Steadfast সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখায়—risk signal, চূড়ান্ত verdict নয়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন। সব প্রশ্ন: /faq।',
       ),
     ),
   ),
@@ -1841,37 +1859,46 @@ return array (
     ),
     1 => 
     array (
-      'heading' => 'শুধু RedX নাকি অন্য কুরিয়ারও?',
+      'heading' => 'RedX হিস্টোরি কীভাবে পড়বেন',
       'paragraphs' => 
       array (
-        0 => 'একই টুলে Pathao, Steadfast, RedX রেকর্ড একসাথে দেখা যায়—এক নম্বরে একাধিক সিগন্যাল। এই পেজ “RedX fraud check” সার্চ ইন্টেন্টে ফোকাস।',
-        1 => 'অন্য ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check।',
+        0 => 'RedX বাংলাদেশে ঢাকা ও ঢাকার বাইরে বহু COD সেলারের ব্যবহৃত কুরিয়ার। নম্বর চেক করলে দেখা যায়—এই কাস্টমার RedX সহ অন্যান্য কুরিয়ারে আগে কত পার্সেল সফলভাবে নিয়েছেন, কত রিটার্ন/ক্যানসেল করেছেন। এটি behavioral risk signal, নিশ্চিত “fraud verdict” নয়।',
+        1 => 'সাকসেস রেট ও রেশিও পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo। এক নম্বরে একাধিক কুরিয়ার হিস্টোরি: /faq/customer-delivery-history-check।',
       ),
     ),
     2 => 
     array (
-      'heading' => 'কীভাবে ব্যবহার করবেন',
+      'heading' => 'কীভাবে ব্যবহার করবেন (RedX ফ্লো)',
       'paragraphs' => 
       array (
-        0 => 'নম্বর দিন → হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ কনফার্ম, হলুদ কল/OTP, লাল হোল্ড। জোন: /customer-verification।',
-        1 => 'কনফার্মের পর RedX বুকিং: /redx-courier-guide বা /courier-auto-entry।',
+        0 => 'নম্বর দিন → RedX সহ সব কুরিয়ারের হিস্টোরি ও সাকসেস রেট পড়ুন → সবুজ হলে কনফার্ম, হলুদ হলে কল/OTP, লাল হলে হোল্ড বা অগ্রিম চার্জ। শুধু একটি পুরোনো RedX রিটার্ন দেখে চূড়ান্ত সিদ্ধান্ত নেবেন না। জোন রুল: /customer-verification।',
+        1 => 'কম সাকসেসে করণীয়: /faq/success-rate-kom-hole-ki-korbo। কনফার্মের পর RedX বুকিং: /redx-courier-guide বা /courier-auto-entry।',
       ),
     ),
     3 => 
     array (
-      'heading' => 'চেকের পর প্রোটেকশন',
+      'heading' => 'চেকের পর প্রোটেকশন ও লস হিসাব',
       'paragraphs' => 
       array (
-        0 => 'OTP/ব্ল্যাকলিস্ট: /fake-order-protection। রিটার্ন লস: /return-loss-calculator। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
-        1 => 'ট্রায়াল: /pricing।',
+        0 => 'বারবার একই ঝুঁকি আটকাতে checkout OTP (/faq/cod-order-otp-kokhon), duplicate order block (/faq/duplicate-cod-order-block) ও customer blacklist (/faq/woocommerce-customer-blacklist) যোগ করুন। সব ফিচার: /fake-order-protection।',
+        1 => 'RedX রিটার্নে মাসিক ক্ষতি দেখুন /return-loss-calculator-এ; সূত্র: /faq/cod-return-loss-hisab। প্ল্যান: /pricing। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
       ),
     ),
     4 => 
     array (
+      'heading' => 'অন্য কুরিয়ার ও সব প্রশ্ন',
+      'paragraphs' => 
+      array (
+        0 => 'একই টুলে Pathao ও Steadfast রেকর্ডও দেখা যায়—Pathao ফোকাস: /pathao-fraud-check, Steadfast ফোকাস: /steadfast-fraud-check।',
+        1 => 'ফ্রড চেক, OTP, blacklist ও COD রিটার্ন সংক্রান্ত সব প্রশ্ন: /faq।',
+      ),
+    ),
+    5 => 
+    array (
       'heading' => 'এআই সারাংশ',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife RedX Fraud Check ফ্রি নম্বর চেক দিয়ে হিস্টোরি দেখায়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন।',
+        0 => 'WooEasyLife RedX Fraud Check ফ্রি নম্বর চেক দিয়ে RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখায়—risk signal, চূড়ান্ত verdict নয়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন। সব প্রশ্ন: /faq।',
       ),
     ),
   ),
