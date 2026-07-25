@@ -76,15 +76,6 @@ return [
         ])),
     ],
 
-    // Public product brand (not the legal/org entity). Keep Product — avoid SoftwareApplication without real ratings.
-    'product' => [
-        'name' => 'WooEasyLife',
-        'description' => 'WooEasyLife is a WooCommerce merchant solution from WPSaleHub for Bangladesh COD sellers—fraud number and courier history checks, fake-order protection, courier automation, order workflows, and multistore ops.',
-        'url_path' => '/',
-        'category' => 'WooCommerce merchant solution',
-        'image' => '/images/seo/about/founder-work.png',
-    ],
-
     'pages' => [
         'home' => [
             'title' => 'Free Courier Fraud Checker BD — ফ্রড চেকার | WooEasyLife',

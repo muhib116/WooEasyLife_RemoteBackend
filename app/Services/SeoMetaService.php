@@ -408,19 +408,15 @@ class SeoMetaService
         string $page = '',
     ): array {
         $org = config('seo.organization', []);
-        $productCfg = config('seo.product', []);
         $siteName = (string) config('seo.site_name', 'WooEasyLife');
         $logo = $this->absoluteUrl('/apple-touch-icon.png');
         $sameAs = $this->sameAsLinks();
         $orgId = $this->absoluteUrl('/').'#organization';
-        $productId = $this->absoluteUrl('/').'#product-wooeasylife';
         $founderName = (string) ($org['founder_name'] ?? 'Muhibbullah Ansary');
         $founderPersonId = $this->absoluteUrl('/').'#person-'.Str::slug($founderName);
         $founderImagePath = (string) ($org['founder_image'] ?? '/images/seo/about/founder-headshot.jpg');
         $founderUrl = $this->absoluteUrl((string) ($org['founder_url_path'] ?? '/about'));
         $founderSameAs = array_values(array_filter($org['founder_same_as'] ?? []));
-        $productName = (string) ($productCfg['name'] ?? 'WooEasyLife');
-        $productImagePath = (string) ($productCfg['image'] ?? $founderImagePath);
         $isAboutPage = ($config['page_kind'] ?? null) === 'about'
             || (string) ($config['schema_type'] ?? '') === 'AboutPage';
         if ($isAboutPage) {
@@ -482,27 +478,6 @@ class SeoMetaService
             'sameAs' => $sameAs !== [] ? $sameAs : null,
         ], static fn ($value) => $value !== null);
 
-        // Product snippets need offers/reviews — omit bare Product on About to avoid GSC
-        // "URL is on Google, but has issues" enhancement warnings.
-        $product = null;
-        if (! $isAboutPage) {
-            $product = array_filter([
-                '@type' => 'Product',
-                '@id' => $productId,
-                'name' => $productName,
-                'description' => $productCfg['description'] ?? $description,
-                'url' => $this->absoluteUrl((string) ($productCfg['url_path'] ?? '/')),
-                'image' => $this->absoluteUrl($productImagePath),
-                'category' => $productCfg['category'] ?? 'WooCommerce merchant solution',
-                'brand' => [
-                    '@type' => 'Organization',
-                    '@id' => $orgId,
-                    'name' => $org['name'] ?? 'WPSaleHub',
-                ],
-                'manufacturer' => ['@id' => $orgId],
-            ], static fn ($value) => $value !== null);
-        }
-
         $ogImageWidth = (int) ($config['og_image_width'] ?? config('seo.og_image_width', 1200));
         $ogImageHeight = (int) ($config['og_image_height'] ?? config('seo.og_image_height', 630));
 
@@ -543,15 +518,12 @@ class SeoMetaService
             'name' => $siteName,
             'url' => $this->absoluteUrl('/'),
             'publisher' => ['@id' => $orgId],
-            'about' => $isAboutPage
-                ? ['@id' => $orgId]
-                : ['@id' => $productId],
+            'about' => ['@id' => $orgId],
             'inLanguage' => (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD')),
         ], static fn ($value) => $value !== null);
 
         $graphs = array_values(array_filter([
             $organization,
-            $product,
             $founderPerson,
             $website,
             $webPage,

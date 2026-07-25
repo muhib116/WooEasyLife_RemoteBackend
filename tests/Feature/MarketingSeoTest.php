@@ -648,19 +648,18 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('content="1234567890"', false);
     }
 
-    public function test_home_json_ld_omits_software_application_without_ratings(): void
+    public function test_home_json_ld_omits_ineligible_product_and_software_schema(): void
     {
         $response = $this->get('/');
 
         $response->assertOk();
         $html = $response->getContent();
-        // Google requires aggregateRating/review for SoftwareApplication; we omit it
-        // rather than invent ratings (Semrush flagged / and /en as invalid).
+        // Product and SoftwareApplication rich results require real commercial
+        // eligibility data. Do not invent offers, reviews, or ratings.
         $this->assertStringNotContainsString('"@type":"SoftwareApplication"', $html);
+        $this->assertStringNotContainsString('"@type":"Product"', $html);
         $this->assertStringContainsString('"@type":"Organization"', $html);
         $this->assertStringContainsString('"name":"WPSaleHub"', $html);
-        $this->assertStringContainsString('"@type":"Product"', $html);
-        $this->assertStringContainsString('"name":"WooEasyLife"', $html);
         $this->assertStringContainsString('"@type":"Person"', $html);
         $this->assertStringContainsString('Muhibbullah Ansary', $html);
         $this->assertStringContainsString('"@type":"WebPage"', $html);
