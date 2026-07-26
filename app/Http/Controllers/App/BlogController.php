@@ -55,13 +55,16 @@ class BlogController extends Controller
             throw new NotFoundHttpException;
         }
 
+        $isEn = (($post['locale'] ?? 'bn') === 'en');
+        $htmlLang = $isEn ? 'en' : 'bn-BD';
+        $postPath = '/blog/'.$post['slug'];
+
         $seoTitle = trim((string) ($post['meta_title'] ?? ''));
         if ($seoTitle === '') {
-            $seoTitle = $post['title'].' | WooEasyLife ব্লগ';
+            $seoTitle = $isEn
+                ? $post['title'].' | WooEasyLife Blog'
+                : $post['title'].' | WooEasyLife ব্লগ';
         }
-
-        $postPath = '/blog/'.$post['slug'];
-        $htmlLang = (($post['locale'] ?? 'bn') === 'en') ? 'en' : 'bn-BD';
 
         $seoOverrides = [
             'title' => $seoTitle,
@@ -75,6 +78,9 @@ class BlogController extends Controller
                 $htmlLang => $postPath,
                 'x-default' => $postPath,
             ],
+            // Never inherit BN blog hub long-form (Semrush hreflang language mismatch on EN posts).
+            'content_sections' => [],
+            'cluster_links' => [],
             'prerender_h1' => $post['title'],
             'prerender_lead' => $post['description'],
             'og_type' => 'article',
@@ -84,11 +90,17 @@ class BlogController extends Controller
             'date_modified' => $post['date_modified'] ?? ($post['date_published'] ?? ($post['date'] ?: null)),
             'focus_keyword' => $post['focus_keyword'] ?? null,
             'faqs' => $this->resolveFaqs($post),
-            'breadcrumbs' => [
-                ['name' => 'হোম', 'path' => '/'],
-                ['name' => 'ব্লগ', 'path' => '/blog'],
-                ['name' => $post['title'], 'path' => $postPath],
-            ],
+            'breadcrumbs' => $isEn
+                ? [
+                    ['name' => 'Home', 'path' => '/en'],
+                    ['name' => 'Blog', 'path' => '/en/blog'],
+                    ['name' => $post['title'], 'path' => $postPath],
+                ]
+                : [
+                    ['name' => 'হোম', 'path' => '/'],
+                    ['name' => 'ব্লগ', 'path' => '/blog'],
+                    ['name' => $post['title'], 'path' => $postPath],
+                ],
         ];
 
         if (! empty($post['og_image'])) {

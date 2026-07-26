@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\BlogPost;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -797,6 +800,51 @@ class MarketingSeoTest extends TestCase
         $this->get('/pathao-fraud-check')->assertOk();
         $this->get('/steadfast-fraud-check')->assertOk();
         $this->get('/redx-fraud-check')->assertOk();
+    }
+
+    public function test_english_blog_post_does_not_inherit_bn_blog_hub_prerender(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-hreflang-'.uniqid().'@example.com',
+            'phone' => '01700000111',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        BlogPost::create([
+            'title' => 'COD Fraud Checker Monthly Savings EN',
+            'slug' => 'cod-fraud-checker-monthly-savings-en',
+            'locale' => 'en',
+            'status' => 'published',
+            'meta_description' => 'English guide on monthly COD savings from fraud checks in Bangladesh.',
+            'body_html' => '<p>English sellers can cut monthly COD return loss with courier history checks before confirm.</p>',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $response = $this->get('/blog/cod-fraud-checker-monthly-savings-en');
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('hreflang="x-default"', false);
+        $response->assertDontSee('hreflang="bn-BD"', false);
+        $response->assertDontSee('hreflang="en" href="'.url('/en/blog').'"', false);
+        $this->assertStringContainsString('lang="en"', $html);
+        // BN blog hub long-form must never pollute EN post prerender (Semrush hreflang mismatch).
+        $this->assertStringNotContainsString('WooEasyLife ব্লগ বাংলাদেশি WooCommerce', $html);
+        $this->assertStringNotContainsString('এই ব্লগে কী ধরনের গাইড পাবেন', $html);
+        $this->assertStringNotContainsString('ব্লগ, FAQ হাব ও টুল একসাথে', $html);
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Blog/Show')
+            ->where('seo.html_lang', 'en')
+            ->where('seo.canonical_path', '/blog/cod-fraud-checker-monthly-savings-en')
+            ->where('seo.content_sections', [])
+        );
     }
 
     public function test_english_hreflang_pages(): void

@@ -261,6 +261,7 @@ Rotate in **Feature launch** or **App** (multi-store / call ID) when a scan find
 - **Every sitemap URL must have ≥1 internal `<a href>`** (marketing + blog via `sitemapNavLinks`) — Semrush “Orphaned sitemap pages”  
 - SSR critical interactive UI on money tool pages  
 - Real hreflang (bn-BD / en / x-default → correct URLs — never all three to one URL)
+- Blog posts calling `forPage('blog_index', …)` must pass explicit `content_sections` / `hreflang_paths` (empty `[]` is fine) — never inherit BN hub long-form onto EN posts (Semrush “hreflang language mismatch”)
 
 ### Phase 5 — Day-30 review
 

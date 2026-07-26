@@ -313,13 +313,15 @@ class SeoMetaService
      */
     private function contentSectionsFor(string $page, array $config): array
     {
-        $fromConfig = $config['content_sections'] ?? null;
-        $sections = is_array($fromConfig) && $fromConfig !== []
-            ? $fromConfig
-            : (config('seo_content.'.$page, [])
+        // Explicit override (including []) wins — blog posts must not inherit blog_index long-form.
+        if (array_key_exists('content_sections', $config)) {
+            $sections = is_array($config['content_sections']) ? $config['content_sections'] : [];
+        } else {
+            $sections = config('seo_content.'.$page, [])
                 ?: config('seo_cluster_content.'.$page, [])
                 ?: config('seo_faq_content.'.$page, [])
-                ?: []);
+                ?: [];
+        }
 
         $normalized = [];
 
