@@ -11,6 +11,7 @@ use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\Data\DataController;
 use App\Http\Controllers\FraudCheckController;
 use App\Http\Controllers\Hub\HubController;
+use App\Http\Controllers\Messenger\MessengerAttachmentController;
 use App\Http\Controllers\Messenger\MessengerConnectController;
 use App\Http\Controllers\Messenger\MessengerSendController;
 use App\Http\Controllers\Messenger\MessengerWebhookController;
@@ -143,6 +144,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::post('messenger/connect-url', [MessengerConnectController::class, 'connectUrl']);
         Route::post('messenger/disconnect', [MessengerConnectController::class, 'disconnect']);
         Route::post('messenger/send', [MessengerSendController::class, 'send']);
+        Route::post('messenger/upload-attachment', [MessengerAttachmentController::class, 'upload']);
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);

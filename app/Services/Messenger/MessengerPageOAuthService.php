@@ -209,10 +209,108 @@ class MessengerPageOAuthService
     }
 
     /**
+     * Upload a local media file to Meta's Attachment Upload API.
+     *
+     * Returns a reusable Meta attachment_id that can be sent without Meta
+     * needing to fetch the store's WordPress URL (works for local HTTP too).
+     *
+     * @return array{ok:bool, attachment_id?:string, error?:string, http_status?:int}
+     */
+    public function uploadAttachment(
+        MessengerPageConnection $connection,
+        string $type,
+        string $absolutePath,
+        string $filename,
+        string $mime = ''
+    ): array {
+        $pageToken = (string) $connection->page_access_token;
+        $type = strtolower(trim($type));
+        $allowed = ['image', 'audio', 'video', 'file'];
+        if (! in_array($type, $allowed, true)) {
+            $type = 'file';
+        }
+
+        if ($pageToken === '' || $absolutePath === '' || ! is_readable($absolutePath)) {
+            return ['ok' => false, 'error' => 'Missing page token or unreadable media file.'];
+        }
+
+        $filename = $filename !== '' ? $filename : basename($absolutePath);
+        $contents = @file_get_contents($absolutePath);
+        if ($contents === false || $contents === '') {
+            return ['ok' => false, 'error' => 'Could not read media file.'];
+        }
+
+        $message = json_encode([
+            'attachment' => [
+                'type' => $type,
+                'payload' => ['is_reusable' => true],
+            ],
+        ], JSON_UNESCAPED_SLASHES);
+
+        try {
+            $request = Http::timeout(90)
+                ->withToken($pageToken)
+                ->attach(
+                    'filedata',
+                    $contents,
+                    $filename,
+                    $mime !== '' ? ['Content-Type' => $mime] : []
+                );
+
+            $response = $request->post(
+                'https://graph.facebook.com/' . $this->graphVersion() . '/me/message_attachments',
+                ['message' => $message]
+            );
+        } catch (\Throwable $exception) {
+            Log::error('Messenger attachment upload exception', [
+                'page_id' => $connection->page_id,
+                'type' => $type,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return ['ok' => false, 'error' => $exception->getMessage()];
+        }
+
+        if (! $response->successful()) {
+            $fbMessage = (string) (
+                $response->json('error.message')
+                ?? $response->body()
+            );
+
+            Log::warning('Messenger attachment upload failed', [
+                'page_id' => $connection->page_id,
+                'type' => $type,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return [
+                'ok' => false,
+                'error' => $fbMessage !== '' ? $fbMessage : 'Facebook rejected the media upload.',
+                'http_status' => $response->status(),
+            ];
+        }
+
+        $attachmentId = (string) ($response->json('attachment_id') ?? '');
+        if ($attachmentId === '') {
+            return ['ok' => false, 'error' => 'Facebook did not return an attachment_id.'];
+        }
+
+        return [
+            'ok' => true,
+            'attachment_id' => $attachmentId,
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
      * Send a text (or attachment) reply via the Page's messaging API.
      *
+     * Meta rejects payloads that include both text and attachment. When both are
+     * provided we send the attachment first, then the text as a follow-up.
+     *
      * @param  array<string, mixed>  $options
-     * @return array{ok:bool, mid?:string, error?:string, http_status?:int}
+     * @return array{ok:bool, mid?:string, secondary_mid?:string, error?:string, http_status?:int}
      */
     public function sendMessage(
         MessengerPageConnection $connection,
@@ -228,9 +326,60 @@ class MessengerPageOAuthService
             return ['ok' => false, 'error' => 'Missing recipient or page token.'];
         }
 
-        if ($text === '' && empty($options['attachment'])) {
+        $hasAttachment = ! empty($options['attachment']) && is_array($options['attachment']);
+
+        if ($text === '' && ! $hasAttachment) {
             return ['ok' => false, 'error' => 'Message body is empty.'];
         }
+
+        // Split caption + media into two Graph calls.
+        if ($text !== '' && $hasAttachment) {
+            $attachmentOptions = $options;
+            unset($attachmentOptions['attachment']); // re-set below
+            $attachmentOptions['attachment'] = $options['attachment'];
+
+            $first = $this->sendMessageOnce($connection, $psid, '', $attachmentOptions);
+            if (empty($first['ok'])) {
+                return $first;
+            }
+
+            $textOptions = $options;
+            unset($textOptions['attachment'], $textOptions['reply_to_mid']);
+
+            $second = $this->sendMessageOnce($connection, $psid, $text, $textOptions);
+            if (empty($second['ok'])) {
+                return [
+                    'ok' => true,
+                    'mid' => (string) ($first['mid'] ?? ''),
+                    'secondary_mid' => '',
+                    'warning' => (string) ($second['error'] ?? 'Caption failed after media was sent.'),
+                    'http_status' => (int) ($first['http_status'] ?? 200),
+                ];
+            }
+
+            return [
+                'ok' => true,
+                'mid' => (string) ($first['mid'] ?? ''),
+                'secondary_mid' => (string) ($second['mid'] ?? ''),
+                'http_status' => (int) ($second['http_status'] ?? 200),
+            ];
+        }
+
+        return $this->sendMessageOnce($connection, $psid, $text, $options);
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return array{ok:bool, mid?:string, error?:string, http_status?:int}
+     */
+    private function sendMessageOnce(
+        MessengerPageConnection $connection,
+        string $psid,
+        string $text,
+        array $options = []
+    ): array {
+        $pageToken = (string) $connection->page_access_token;
+        $text = trim($text);
 
         $message = [];
         if ($text !== '') {
@@ -240,11 +389,25 @@ class MessengerPageOAuthService
             $message['attachment'] = $options['attachment'];
         }
 
+        if ($message === []) {
+            return ['ok' => false, 'error' => 'Message body is empty.'];
+        }
+
         $payload = [
             'recipient' => ['id' => $psid],
             'messaging_type' => (string) ($options['messaging_type'] ?? 'RESPONSE'),
             'message' => $message,
         ];
+
+        // Meta's Send API expects reply_to as a sibling of `message`, not nested inside it.
+        $replyToMid = trim((string) ($options['reply_to_mid'] ?? ''));
+        if ($replyToMid !== ''
+            && ! str_starts_with($replyToMid, 'out_')
+            && ! str_starts_with($replyToMid, 'evt_')
+            && ! str_starts_with($replyToMid, 'postback_')
+        ) {
+            $payload['reply_to'] = ['mid' => $replyToMid];
+        }
 
         if (! empty($options['tag'])) {
             $payload['tag'] = (string) $options['tag'];

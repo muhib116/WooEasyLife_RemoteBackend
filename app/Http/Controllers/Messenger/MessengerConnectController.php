@@ -43,7 +43,7 @@ class MessengerConnectController extends Controller
 
         $returnUrl = trim((string) $request->input('return_url', ''));
         if ($returnUrl === '' && $siteUrl !== '') {
-            $returnUrl = $siteUrl . '/wp-admin/admin.php?page=woo-easy-life#/config/messenger?connected=1';
+            $returnUrl = $siteUrl . '/wp-admin/admin.php?page=woo-easy-life#/messenger?connected=1';
         }
 
         $context = [
@@ -218,7 +218,7 @@ class MessengerConnectController extends Controller
         if (! $ok && $error !== '') {
             $parts = explode('#', $returnUrl, 2);
             $base = $parts[0];
-            $hash = $parts[1] ?? 'config/messenger';
+            $hash = $parts[1] ?? 'messenger';
             // Put the error inside the Vue hash query so the SPA can read it.
             $hash .= (str_contains($hash, '?') ? '&' : '?') . 'messenger_error=' . rawurlencode($error);
             $returnUrl = $base . '#' . $hash;

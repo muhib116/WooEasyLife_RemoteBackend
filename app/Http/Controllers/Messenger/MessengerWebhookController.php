@@ -223,6 +223,11 @@ class MessengerWebhookController extends Controller
         $type = 'text';
         $text = (string) ($message['text'] ?? '');
         $attachments = [];
+        $replyToMid = '';
+
+        if (! empty($message['reply_to']['mid'])) {
+            $replyToMid = (string) $message['reply_to']['mid'];
+        }
 
         if (! empty($message['attachments']) && is_array($message['attachments'])) {
             foreach ($message['attachments'] as $attachment) {
@@ -236,7 +241,8 @@ class MessengerWebhookController extends Controller
                 $type = (string) ($attachment['type'] ?? 'file');
             }
             if ($text === '' && $attachments !== []) {
-                $text = '[' . $type . ']';
+                // Keep body empty — UI renders the attachment. Preview is set on the WP side.
+                $text = '';
             }
         }
 
@@ -261,6 +267,7 @@ class MessengerWebhookController extends Controller
                 'type' => $type,
                 'text' => $text,
                 'attachments' => $attachments,
+                'reply_to_mid' => $replyToMid,
                 'is_echo' => false,
                 'referral' => $referral,
             ],
