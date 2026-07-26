@@ -873,7 +873,7 @@ return [
             'description' => 'WooEasyLife ব্লগ — বাংলাদেশি WooCommerce সেলারদের জন্য ফেক অর্ডার কমানো, কুরিয়ার হিস্টোরি চেক ও রিটার্ন লস কমানোর গাইড।',
             'canonical_path' => '/blog',
             'prerender_h1' => 'ব্লগ — ফেক অর্ডার, ফ্রড চেক ও COD টিপস',
-            'prerender_lead' => 'বাংলাদেশি COD সেলারদের জন্য প্র্যাকটিক্যাল গাইড ও টিপস।',
+            'prerender_lead' => 'বাংলাদেশি WooCommerce ও Facebook পেজ COD সেলারদের জন্য প্র্যাকটিক্যাল গাইড হাব — ফেক অর্ডার, কুরিয়ার হিস্টোরি, রিটার্ন লস, OTP ও ব্ল্যাকলিস্ট ওয়ার্কফ্লো। টুল চাইলে /bd-fraud-checker; প্রশ্ন চাইলে /faq।',
             'hreflang_paths' => [
                 'bn-BD' => '/blog',
                 'en' => '/en/blog',
@@ -883,7 +883,24 @@ return [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'ব্লগ', 'path' => '/blog'],
             ],
-            'faqs' => [],
+            'faqs' => [
+                [
+                    'q' => 'এই ব্লগ কাকে জন্য?',
+                    'a' => 'বাংলাদেশি COD সেলার—WooCommerce স্টোর ও Facebook পেজ—যারা ফেক অর্ডার, রিটার্ন লস ও কুরিয়ার হিস্টোরি নিয়ে প্র্যাকটিক্যাল গাইড চান। টুল সরাসরি চালাতে /bd-fraud-checker বা /fake-customer-check; প্ল্যান: /pricing।',
+                ],
+                [
+                    'q' => 'ব্লগ না পড়ে শুধু টুল ব্যবহার করা যায়?',
+                    'a' => 'হ্যাঁ। ফ্রি নম্বর চেক: /bd-fraud-checker। প্রোটেকশন ফিচার: /fake-order-protection। মাসিক লস হিসাব: /return-loss-calculator। ছোট প্রশ্ন-উত্তর: /faq। ব্লগ গভীর ব্যাখ্যার জন্য।',
+                ],
+                [
+                    'q' => 'বাংলা ও ইংরেজি ব্লগ আলাদা কেন?',
+                    'a' => 'লোকাল SERP ও রিডারদের জন্য বাংলা প্রাইমারি (/blog); ইংরেজি মিরর /en/blog। একই থিম, আলাদা ভাষা—hreflang দিয়ে জোড়া।',
+                ],
+                [
+                    'q' => 'রিটার্নের পর ব্ল্যাকলিস্ট নিয়ে কোথায় পড়ব?',
+                    'a' => 'ব্লগ পোস্ট: /blog/blacklist-customer-after-returns। FAQ: /faq/woocommerce-customer-blacklist। ফুল প্রোটেকশন স্ট্যাক: /fake-order-protection।',
+                ],
+            ],
         ],
 
         'en_home' => [
@@ -1087,7 +1104,7 @@ return [
             'canonical_path' => '/en/blog',
             'html_lang' => 'en',
             'prerender_h1' => 'Blog — COD Fraud & Operations Guides',
-            'prerender_lead' => 'Practical English guides for Bangladesh WooCommerce COD sellers.',
+            'prerender_lead' => 'Practical English guide hub for Bangladesh WooCommerce and Facebook page COD sellers — fake orders, courier history, return-loss math, OTP, and blacklist workflows. Prefer tools? Use /en/bd-fraud-checker. Prefer Q&A? Start at /faq.',
             'hreflang_paths' => [
                 'bn-BD' => '/blog',
                 'en' => '/en/blog',
@@ -1097,7 +1114,24 @@ return [
                 ['name' => 'Home', 'path' => '/en'],
                 ['name' => 'Blog', 'path' => '/en/blog'],
             ],
-            'faqs' => [],
+            'faqs' => [
+                [
+                    'q' => 'Who is this blog for?',
+                    'a' => 'Bangladesh COD sellers on WooCommerce and Facebook pages who want practical guides on fake orders, return loss, and courier history. Run tools on /en/bd-fraud-checker or /en/fake-customer-check; plans: /pricing.',
+                ],
+                [
+                    'q' => 'Can I use the tools without reading a post?',
+                    'a' => 'Yes. Free phone check: /en/bd-fraud-checker. Protection stack: /en/fake-order-protection. Monthly loss math: /en/return-loss-calculator. Short Q&A: /faq. The blog is for deeper explainers.',
+                ],
+                [
+                    'q' => 'Why are Bangla and English blogs separate?',
+                    'a' => 'Bangla is primary for local SERP (/blog); English is the mirror at /en/blog. Same themes, different language—paired with hreflang.',
+                ],
+                [
+                    'q' => 'Where do I read about blacklisting after returns?',
+                    'a' => 'Blog post: /blog/blacklist-customer-after-returns. FAQ: /faq/woocommerce-customer-blacklist. Full protection stack: /en/fake-order-protection.',
+                ],
+            ],
         ],
 
         'en_fake_order_protection' => [

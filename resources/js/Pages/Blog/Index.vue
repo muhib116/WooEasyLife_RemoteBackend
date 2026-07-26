@@ -15,6 +15,7 @@ const props = defineProps({
 });
 
 const isEn = computed(() => props.locale === 'en');
+const faqs = computed(() => props.seo?.faqs || []);
 
 const formatDate = (value) => {
     if (!value) return '';
@@ -87,6 +88,24 @@ const formatDate = (value) => {
                 <p v-if="!posts.length" class="text-center text-sm text-slate-400">
                     {{ isEn ? 'No posts yet.' : 'এখনো কোনো পোস্ট নেই।' }}
                 </p>
+            </div>
+        </section>
+
+        <section v-if="faqs.length" id="faq" class="scroll-mt-24 border-t border-white/10 bg-[#111111] px-4 py-12 lg:px-8">
+            <div class="mx-auto max-w-3xl">
+                <h2 class="text-2xl font-bold text-white">
+                    {{ isEn ? 'Blog FAQ' : 'ব্লগ FAQ' }}
+                </h2>
+                <dl class="mt-8 space-y-6">
+                    <div
+                        v-for="(item, i) in faqs"
+                        :key="i"
+                        class="border-b border-white/10 pb-6 last:border-0"
+                    >
+                        <dt class="text-base font-semibold text-white">{{ item.q }}</dt>
+                        <dd class="mt-2 text-sm leading-relaxed text-slate-400">{{ item.a }}</dd>
+                    </div>
+                </dl>
             </div>
         </section>
     </MarketingLayout>

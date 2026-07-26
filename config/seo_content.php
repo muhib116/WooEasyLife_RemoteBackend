@@ -1902,4 +1902,98 @@ return array (
       ),
     ),
   ),
+  'blog_index' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'দ্রুত উত্তর',
+      'paragraphs' => 
+      array (
+        0 => 'WooEasyLife ব্লগ বাংলাদেশি WooCommerce ও Facebook পেজ COD সেলারদের জন্য প্র্যাকটিক্যাল গাইড হাব। এখানে ফেক অর্ডার কমানো, কুরিয়ার হিস্টোরি পড়া, রিটার্ন লস হিসাব, OTP ও ব্ল্যাকলিস্ট ওয়ার্কফ্লো নিয়ে ধাপে ধাপে লেখা থাকে। টুল চালাতে চান হলে সরাসরি /bd-fraud-checker বা /fake-customer-check ব্যবহার করুন; প্রশ্ন-উত্তর চাইলে /faq। ইংরেজি মিরর: /en/blog।',
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'এই ব্লগে কী ধরনের গাইড পাবেন',
+      'paragraphs' => 
+      array (
+        0 => 'প্রতিটি পোস্ট একটি অপারেশন সমস্যা সমাধানের দিকে যায়—ফেক অর্ডার লস হিসাব, ফ্রি ফ্রড চেকার ROI, Pathao / Steadfast / RedX হিস্টোরি পড়া, রিটার্ন রেট কমানো, কুরিয়ার অটো এন্ট্রি সময় সেভিংস, Facebook পেজ COD নিয়ম, OTP কখন বাধ্যতামূলক, আর রিটার্নের পর কাস্টমার ব্ল্যাকলিস্ট। লক্ষ্য হলো শুধু তত্ত্ব নয়—স্টোরে আজই প্রয়োগযোগ্য চেকলিস্ট।',
+        1 => 'ব্লগ পোস্টগুলো মানি-পেজের হেড টার্ম চুরি করে না। বরং /fake-order-protection, /courier-auto-entry, /return-loss-calculator ও কুরিয়ার গাইডগুলোর দিকে স্পষ্ট ইন্টারনাল লিংক দেয় যাতে আপনি পড়েই টুলে যেতে পারেন। ফাউন্ডার কনটেক্সট চাইলে /about।',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'কোন টপিক দিয়ে শুরু করবেন',
+      'paragraphs' => 
+      array (
+        0 => 'নতুন স্টোর হলে আগে ফেক অর্ডার ও কুরিয়ার রেশিও বোঝার পোস্ট পড়ুন, তারপর একবার ফ্রি নম্বর চেক চালান /bd-fraud-checker বা /fake-customer-check-এ। রিটার্ন চার্জ বেশি মনে হলে মাসিক ক্ষতি দেখুন /return-loss-calculator-এ; হিসাবের সূত্র FAQ: /faq/cod-return-loss-hisab।',
+        1 => 'অর্ডার ভলিউম বাড়লে মাল্টি-লেয়ার সুরক্ষা লাগে—চেকআউট OTP (/faq/cod-order-otp-kokhon), ডুপ্লিকেট ব্লক (/faq/duplicate-cod-order-block) ও ব্ল্যাকলিস্ট (/faq/woocommerce-customer-blacklist বা /blog/blacklist-customer-after-returns)। সাকসেস রেট পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo; কম রেটে করণীয়: /faq/success-rate-kom-hole-ki-korbo।',
+        2 => 'কুরিয়ার-স্পেসিফিক গাইড চাইলে /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check পড়ুন। কনফার্মের পর বুকিং স্পিড চাইলে /courier-auto-entry। প্ল্যান তুলনা: /pricing।',
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'ব্লগ, FAQ হাব ও টুল একসাথে কীভাবে ব্যবহার করবেন',
+      'paragraphs' => 
+      array (
+        0 => 'ব্লগ = গভীর ব্যাখ্যা ও কেস স্টাইল গাইড। FAQ হাব (/faq) = ছোট প্রশ্ন-উত্তর। টুল পেজ = সরাসরি অ্যাকশন (চেক, ক্যালকুলেটর, অটো এন্ট্রি)। একই টপিক তিন জায়গায় থাকতে পারে, কিন্তু ভূমিকা আলাদা—তাই ডুপ্লিকেট ল্যান্ডিং বানানো হয় না।',
+        1 => 'উদাহরণ: ফেক অর্ডার থিমে পড়ুন /ki-vabe-fake-order-atkabo বা ব্লগের ফেক-অর্ডার পোস্ট, প্রশ্ন করুন /faq-এ, আর প্রোটেকশন ফিচার চালু করতে যান /fake-order-protection। Ads বা Facebook পেজ অপস চাইলে /facebook-ads-for-woocommerce ও /facebook-page-cod-management।',
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'এআই সারাংশ',
+      'paragraphs' => 
+      array (
+        0 => 'WooEasyLife ব্লগ (/blog) COD সেলারদের জন্য ফেক অর্ডার, ফ্রড চেক ও রিটার্ন লস গাইড হাব। পোস্ট পড়ে টুলে যান: /bd-fraud-checker, /faq, /pricing। ইংরেজি: /en/blog। ফাউন্ডার: /about।',
+      ),
+    ),
+  ),
+  'en_blog_index' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'Quick answer',
+      'paragraphs' => 
+      array (
+        0 => 'The WooEasyLife English blog is a practical guide hub for Bangladesh WooCommerce and Facebook page COD sellers. Find posts on fake-order loss, courier history ratios, return-loss math, OTP and blacklist workflows, and courier automation. Prefer tools first? Use /en/bd-fraud-checker or /en/fake-customer-check. Prefer Q&A? Start at /faq. Bangla mirror: /blog.',
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'What kinds of guides you will find',
+      'paragraphs' => 
+      array (
+        0 => 'Posts focus on operations problems you can fix this week—reading Pathao, Steadfast, and RedX delivery history, cutting return rates, estimating monthly COD losses, saving time with courier auto-entry, Facebook page COD rules, when OTP is mandatory, and blacklisting after repeated returns. The goal is checklist content, not theory.',
+        1 => 'Blog posts do not steal money-page head terms. They soft-link live tools such as /en/fake-order-protection, /en/courier-auto-entry, /en/return-loss-calculator, and courier guides so you can move from reading to action. Founder context: /en/about.',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'Where to start',
+      'paragraphs' => 
+      array (
+        0 => 'New stores should learn fake-order and courier-ratio basics first, then run a free phone check on /en/bd-fraud-checker or /en/fake-customer-check. If return fees hurt, estimate monthly loss on /en/return-loss-calculator and read the FAQ formula at /faq/cod-return-loss-hisab.',
+        1 => 'As volume grows, add multi-layer protection—checkout OTP (/faq/cod-order-otp-kokhon), duplicate order block (/faq/duplicate-cod-order-block), and customer blacklist (/faq/woocommerce-customer-blacklist). How to read success rate: /faq/courier-success-rate-kivabe-bujhbo. What to do when the rate is low: /faq/success-rate-kom-hole-ki-korbo.',
+        2 => 'Courier-focused landing pages: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check. After confirm, speed booking with /en/courier-auto-entry. Compare plans on /pricing.',
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'How blog, FAQ hub, and tools work together',
+      'paragraphs' => 
+      array (
+        0 => 'Blog = deeper explainers. FAQ hub (/faq) = short answers. Tool pages = immediate action (checks, calculators, auto-entry). The same theme can appear in all three places with different jobs—so we do not ship duplicate thin landings.',
+        1 => 'Example fake-order path: read /en/ki-vabe-fake-order-atkabo or a related blog post, skim /faq, then enable protection on /en/fake-order-protection. Ads and page ops: /en/facebook-ads-for-woocommerce and /en/facebook-page-cod-management.',
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'AI summary',
+      'paragraphs' => 
+      array (
+        0 => 'WooEasyLife English blog (/en/blog) is a COD fraud and operations guide hub. After reading, use /en/bd-fraud-checker, /faq, and /pricing. Bangla blog: /blog. Founder: /en/about.',
+      ),
+    ),
+  ),
 );

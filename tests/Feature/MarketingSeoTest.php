@@ -984,6 +984,8 @@ class MarketingSeoTest extends TestCase
             'ki_vabe_fake_order_atkabo',
             'en_ki_vabe_fake_order_atkabo',
             'en_fake_customer_check',
+            'blog_index',
+            'en_blog_index',
         ];
 
         $seoService = app(\App\Services\SeoMetaService::class);
