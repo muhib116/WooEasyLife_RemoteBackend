@@ -59,11 +59,17 @@ class BlogController extends Controller
         $htmlLang = $isEn ? 'en' : 'bn-BD';
         $postPath = '/blog/'.$post['slug'];
 
+        $brandSuffix = $isEn ? ' | WooEasyLife Blog' : ' | WooEasyLife ব্লগ';
+        $h1 = (string) $post['title'];
+
         $seoTitle = trim((string) ($post['meta_title'] ?? ''));
         if ($seoTitle === '') {
-            $seoTitle = $isEn
-                ? $post['title'].' | WooEasyLife Blog'
-                : $post['title'].' | WooEasyLife ব্লগ';
+            $seoTitle = $h1.$brandSuffix;
+        }
+
+        // Keep <title> distinct from the visible <h1> (Semrush "duplicate H1 and title").
+        if ($this->normalizeForCompare($seoTitle) === $this->normalizeForCompare($h1)) {
+            $seoTitle = $h1.$brandSuffix;
         }
 
         $seoOverrides = [
@@ -81,7 +87,7 @@ class BlogController extends Controller
             // Never inherit BN blog hub long-form (Semrush hreflang language mismatch on EN posts).
             'content_sections' => [],
             'cluster_links' => [],
-            'prerender_h1' => $post['title'],
+            'prerender_h1' => $h1,
             'prerender_lead' => $post['description'],
             'og_type' => 'article',
             'author_name' => $post['author_name'] ?? config('blog_ai.author_name', 'Muhibbullah Ansary'),
@@ -130,6 +136,11 @@ class BlogController extends Controller
             ],
             'whatsappUrl' => WhatsappLink::url($whatsapp),
         ])->withViewData(['seo' => $seoMeta]);
+    }
+
+    private function normalizeForCompare(string $value): string
+    {
+        return preg_replace('/\s+/u', ' ', trim(mb_strtolower($value))) ?? trim(mb_strtolower($value));
     }
 
     /**

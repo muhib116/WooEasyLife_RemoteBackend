@@ -847,6 +847,52 @@ class MarketingSeoTest extends TestCase
         );
     }
 
+    public function test_blog_post_title_differs_from_h1_when_meta_title_matches(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-dupe-'.uniqid().'@example.com',
+            'phone' => '01700000112',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        BlogPost::create([
+            'title' => 'ফেক অর্ডার কীভাবে কমাবেন? WooCommerce মার্চেন্টদের জন্য সম্পূর্ণ গাইড',
+            'slug' => 'fake-order-reduction-guide',
+            'locale' => 'bn',
+            'status' => 'published',
+            // Merchant set meta_title identical to the title (Semrush duplicate H1/title cause).
+            'meta_title' => 'ফেক অর্ডার কীভাবে কমাবেন? WooCommerce মার্চেন্টদের জন্য সম্পূর্ণ গাইড',
+            'meta_description' => 'ফেক অর্ডার কমানোর কার্যকর কৌশল WooCommerce সেলারদের জন্য।',
+            'body_html' => '<p>অর্ডার কনফার্মের আগে কুরিয়ার হিস্টোরি যাচাই করুন।</p>',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $response = $this->get('/blog/fake-order-reduction-guide');
+        $response->assertOk();
+        $html = $response->getContent();
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Blog/Show')
+            ->where('seo.title', fn ($title) => $title !== $page->toArray()['props']['seo']['prerender_h1'])
+            ->where('seo.title', 'ফেক অর্ডার কীভাবে কমাবেন? WooCommerce মার্চেন্টদের জন্য সম্পূর্ণ গাইড | WooEasyLife ব্লগ')
+            ->where('seo.prerender_h1', 'ফেক অর্ডার কীভাবে কমাবেন? WooCommerce মার্চেন্টদের জন্য সম্পূর্ণ গাইড')
+        );
+
+        $this->assertStringContainsString(
+            '<title inertia>ফেক অর্ডার কীভাবে কমাবেন? WooCommerce মার্চেন্টদের জন্য সম্পূর্ণ গাইড | WooEasyLife ব্লগ</title>',
+            $html
+        );
+        $this->assertStringContainsString(
+            '<h1>ফেক অর্ডার কীভাবে কমাবেন? WooCommerce মার্চেন্টদের জন্য সম্পূর্ণ গাইড</h1>',
+            $html
+        );
+    }
+
     public function test_english_hreflang_pages(): void
     {
         $home = $this->get('/en');
