@@ -458,6 +458,37 @@ class MarketingSeoTest extends TestCase
             count($pillar['content_sections'] ?? []),
             'Pillar must include all 30 guide parts (+ intro/quick sections)'
         );
+
+        $aiFlagged = [
+            'ki_vabe_fake_order_atkabo',
+            'redx_courier_guide',
+            'woocommerce_bangladesh',
+        ];
+        $seoService = app(\App\Services\SeoMetaService::class);
+        foreach ($aiFlagged as $page) {
+            $seo = $seoService->forPage($page);
+            $headings = collect($seo['content_sections'] ?? [])->pluck('heading')->map(fn ($h) => (string) $h);
+            $this->assertTrue(
+                $headings->contains(fn ($h) => str_contains($h, 'দ্রুত') || str_contains(strtolower($h), 'quick')),
+                "{$page} needs a visible quick-answer section for Semrush AI content checks"
+            );
+            $listItems = collect($seo['content_sections'] ?? [])->sum(fn ($s) => count($s['list'] ?? []));
+            $this->assertGreaterThanOrEqual(
+                4,
+                $listItems,
+                "{$page} needs extractable takeaway bullets for AI content optimization"
+            );
+        }
+    }
+
+    public function test_keyword_intent_suppresses_duplicate_longform_dump(): void
+    {
+        $this->get('/ki-vabe-fake-order-atkabo')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Seo/KeywordIntent')
+                ->has('seo.content_sections')
+            );
     }
 
     public function test_english_woocommerce_bangladesh_cluster_pages_render(): void
@@ -507,6 +538,19 @@ class MarketingSeoTest extends TestCase
         $toc = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'ItemList');
         $this->assertNotNull($toc, 'Pillar should emit ItemList TOC JSON-LD');
         $this->assertGreaterThanOrEqual(30, (int) ($toc['numberOfItems'] ?? 0));
+
+        $firstToc = $toc['itemListElement'][0] ?? null;
+        $this->assertIsArray($firstToc);
+        $this->assertStringContainsString('অংশ ১/৩০', (string) ($firstToc['name'] ?? ''));
+        $this->assertStringEndsWith('#guide-section-1', (string) ($firstToc['url'] ?? ''));
+        // Quick-answer must stay out of TOC positions so Vue #guide-section-1 stays on part 1.
+        foreach ($toc['itemListElement'] as $item) {
+            $name = mb_strtolower((string) ($item['name'] ?? ''));
+            $this->assertFalse(
+                str_contains($name, 'দ্রুত') || str_contains($name, 'quick'),
+                'Quick-answer sections must not occupy ItemList TOC anchors'
+            );
+        }
 
         $headings = collect($pillar['content_sections'] ?? [])->pluck('heading');
         $this->assertTrue($headings->contains(fn ($h) => str_contains((string) $h, 'দ্রুত')));
@@ -1015,6 +1059,9 @@ class MarketingSeoTest extends TestCase
             $parts[] = (string) ($section['heading'] ?? '');
             foreach ($section['paragraphs'] ?? [] as $paragraph) {
                 $parts[] = (string) $paragraph;
+            }
+            foreach ($section['list'] ?? [] as $item) {
+                $parts[] = (string) $item;
             }
         }
 

@@ -97,7 +97,12 @@ const localeMirrorLabel = computed(() => {
 <template>
     <SeoHead :seo="seo" />
 
-    <MarketingLayout :can-login="canLogin" :whatsapp-url="whatsappUrl" active-nav="fraud-check">
+    <MarketingLayout
+        :can-login="canLogin"
+        :whatsapp-url="whatsappUrl"
+        active-nav="fraud-check"
+        suppress-seo-content-sections
+    >
         <section class="border-b border-white/10 px-4 py-12 sm:py-16 lg:px-8">
             <div class="mx-auto max-w-3xl">
                 <SeoBreadcrumbs :items="seo?.breadcrumbs || []" />

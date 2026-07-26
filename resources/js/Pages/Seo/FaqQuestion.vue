@@ -27,7 +27,7 @@ const toolHref = computed(() => props.seo?.pillar_path || '/bd-fraud-checker');
 </script>
 
 <template>
-    <MarketingLayout :can-login="canLogin" :whatsapp-url="whatsappUrl" active-nav="faq">
+    <MarketingLayout :can-login="canLogin" :whatsapp-url="whatsappUrl" active-nav="faq" suppress-seo-content-sections>
         <SeoHead :seo="seo" />
 
         <section class="border-b border-white/10 bg-[#0a0a0a] px-4 pb-10 pt-10 lg:px-8">

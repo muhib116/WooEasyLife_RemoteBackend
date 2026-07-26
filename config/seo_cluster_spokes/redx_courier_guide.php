@@ -10,6 +10,13 @@ return array (
       1 => 'RedX-unique: hub coverage ও merchant panel credential flow আলাদা হতে পারে; area mapping ও COD line item স্পষ্ট রাখুন। ইংরেজি: /en/redx-courier-guide। BN হাব: /woocommerce-bangladesh।',
       2 => 'আগে /bd-fraud-checker ও /fake-order-protection; দৈনন্দিন বুকিং /courier-auto-entry। Steadfast: /steadfast-integration। Pathao: /pathao-courier-guide।',
     ),
+    'list' =>
+    array (
+      0 => 'RedX API credentials WooEasyLife Courier Settings-এ পেস্ট করুন এবং connection test পাস করুন।',
+      1 => 'City/zone/area ম্যাপিং ঠিক না হলে বুকিং ফেল করে—একটি লো-COD টেস্ট পার্সেল দিয়ে শেষ পর্যন্ত যাচাই করুন।',
+      2 => 'শুধু ভেরিফায়েড/সবুজ অর্ডারে RedX অটো বা বাল্ক বুকিং চালান; আগে /bd-fraud-checker।',
+      3 => 'ট্র্যাকিং SMS/WhatsApp: /woocommerce-notifications; মাসিক RTS লস: /return-loss-calculator।',
+    ),
   ),
   1 =>
   array (
@@ -107,6 +114,14 @@ return array (
       0 => 'Auth error: credentials rotate, panel API toggle off/on। area error: fix mapping table, call customer once। stuck “processing”: RedX support ticket with consignment ID। COD mismatch: reconcile Woo totals before rebook—not third duplicate API call।',
       1 => 'Compare Steadfast/Pathao setup if stuck pattern similar—/steadfast-integration, /pathao-courier-guide। trial /pricing। EN mirror /en/redx-courier-guide।',
       2 => 'Checklist: RedX creds ✓ → mapping ✓ → test parcel ✓ → fraud ✓ → notifications ✓ → bulk confirmed only ✓ → monthly /return-loss-calculator review ✓।',
+    ),
+  ),
+  9 =>
+  array (
+    'heading' => 'এআই সারাংশ',
+    'paragraphs' =>
+    array (
+      0 => 'WooEasyLife RedX Courier Guide: RedX merchant API কানেক্ট → area/COD ম্যাপিং → টেস্ট পার্সেল → শুধু ভেরিফায়েড অর্ডারে single/bulk বুকিং → ট্র্যাকিং নোটিফিকেশন। ফ্রড লেয়ার ছাড়া অটো-শিপ করবেন না। শুরু: /bd-fraud-checker, দৈনন্দিন: /courier-auto-entry, হাব: /woocommerce-bangladesh।',
     ),
   ),
 );

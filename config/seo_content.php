@@ -1186,6 +1186,14 @@ return array (
         0 => 'বাংলাদেশে COD ও Facebook/WooCommerce সেলারদের সবচেয়ে সাধারণ প্রশ্ন: কিভাবে ফেক অর্ডার আটকাবো? উত্তর এক টুলে থেমে যায় না—প্রথমে মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি চেক, তারপর OTP/কল, তারপর ব্ল্যাকলিস্ট, শেষে শুধু ভেরিফায়েড অর্ডারে কুরিয়ার এন্ট্রি।',
         1 => 'এই গাইডে ধাপে ধাপে পুরো স্ট্যাক দেখবেন। ফ্রি চেক: /bd-fraud-checker বা /fake-customer-check। পূর্ণ প্রোটেকশন: /fake-order-protection। ইংরেজি মিরর: /en/ki-vabe-fake-order-atkabo।',
       ),
+      'list' => 
+      array (
+        0 => 'কনফার্মের আগে নম্বর চেক করুন—Pathao/Steadfast/RedX হিস্টোরি ও সাকসেস রেট (/bd-fraud-checker)।',
+        1 => 'হলুদ/লাল জোনে কল বা চেকআউট OTP বাধ্যতামূলক করুন (/customer-verification)।',
+        2 => 'ডুপ্লিকেট অর্ডার ব্লক ও বারবার রিটার্ন নম্বর ব্ল্যাকলিস্ট চালু রাখুন (/fake-order-protection)।',
+        3 => 'শুধু কনফার্মড অর্ডারে কুরিয়ার অটো এন্ট্রি দিন (/courier-auto-entry)।',
+        4 => 'মাসিক লস ও ROAS মাপুন: /return-loss-calculator, /ads-roas-calculator।',
+      ),
       'figures' => 
       array (
         0 => 

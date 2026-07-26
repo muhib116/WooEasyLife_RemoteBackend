@@ -11,6 +11,13 @@ return [
             'বাংলাদেশে WooCommerce সফল করতে COD রিস্ক, ফেক অর্ডার, কুরিয়ার API, OTP, SMS/WhatsApp, Meta CAPI ও GA4 একসাথে চালান—এই ৩০ পর্বের হাব গাইডে ধাপে ধাপে সব আছে।',
             'শুরু: ফ্রি /bd-fraud-checker → /fake-order-protection → /courier-auto-entry। লস মাপতে /return-loss-calculator। ইংরেজি: /en/woocommerce-bangladesh।',
         ],
+        'list' => [
+            'প্রথমে কুরিয়ার হিস্টোরি দিয়ে ফেক/ঝুঁকিপূর্ণ COD অর্ডার ফিল্টার করুন (/bd-fraud-checker)।',
+            'OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে একই লস বারবার আসা বন্ধ করুন (/fake-order-protection)।',
+            'কনফার্মের পর Pathao/Steadfast/RedX অটো এন্ট্রি চালু করুন (/courier-auto-entry)।',
+            'SMS/WhatsApp ট্র্যাকিং ও Meta/GA4 ইভেন্ট পরিষ্কার রাখুন যাতে ROAS ও RTS হিসাব সত্য থাকে।',
+            'মাসিক রিটার্ন লস মাপুন (/return-loss-calculator) এবং প্ল্যান নিন (/pricing)।',
+        ],
     ],
     [
         'heading' => 'অংশ ১/৩০ — ল্যান্ডস্কেপ ও লক্ষ্য',
@@ -345,6 +352,12 @@ return [
                 'alt' => 'Quarterly WooCommerce system audit checklist',
                 'caption' => 'ত্রৈমাসিক অডিট: API, ডাটাবেজ, সিকিউরিটি, ফিনান্স—৪টি স্তর',
             ],
+        ],
+    ],
+    [
+        'heading' => 'এআই সারাংশ',
+        'paragraphs' => [
+            'WooCommerce Bangladesh গাইড (২০২৬): COD রিস্ক ম্যাথ → ফ্রড চেক → OTP/ব্ল্যাকলিস্ট → কুরিয়ার API অটো এন্ট্রি → নোটিফিকেশন → Meta/GA4 → স্কেল। এক হাব থেকে স্পোক: /steadfast-integration, /pathao-courier-guide, /redx-courier-guide, /customer-verification, /cod-return-reduction। টুল স্টার্ট: /bd-fraud-checker। প্ল্যান: /pricing।',
         ],
     ],
 ];

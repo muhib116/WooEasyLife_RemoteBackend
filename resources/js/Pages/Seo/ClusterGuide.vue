@@ -36,19 +36,23 @@ const founderRole = computed(() => props.seo?.author_role || 'Founder & CEO, WPS
 const isRedundantStubSection = (section) => {
     if (!section) return true;
     const heading = String(section.heading || '').trim();
-    const headingLc = heading.toLowerCase();
-    if (headingLc.includes('দ্রুত') || headingLc.includes('quick')) return true;
-
     const paras = (section.paragraphs || []).map((p) => String(p || '').trim()).filter(Boolean);
+    const list = (section.list || []).map((item) => String(item || '').trim()).filter(Boolean);
 
-    // BN stub that only repeated the landscape title / tagline
+    // Keep "দ্রুত উত্তর / Quick answer" — Semrush AI content checks need that TL;DR visible.
+    // Only drop the old landscape stub that repeated the chapter title with almost no body.
     if (/ভূমিকা এবং দেশের ই-কমার্স ল্যান্ডস্কেপ/i.test(heading)) {
-        const joined = paras.join(' ');
+        const joined = [...paras, ...list].join(' ');
         if (joined.length < 160) return true;
         if (paras.some((p) => p.startsWith(heading.slice(0, 18)) || /^ভূমিকা এবং/.test(p))) return true;
     }
 
     return false;
+};
+
+const isQuickAnswerSection = (section) => {
+    const heading = String(section?.heading || '').toLowerCase();
+    return heading.includes('দ্রুত') || heading.includes('quick');
 };
 
 const extractPart = (heading = '') => {
@@ -59,39 +63,52 @@ const extractPart = (heading = '') => {
     return Number(m[1] || m[2]);
 };
 
-const bodySections = computed(() => sections.value
-    .filter((s) => !isRedundantStubSection(s))
-    .map((s, idx) => {
-        const part = extractPart(s.heading);
-        const paragraphs = (s.paragraphs || []).filter((p) => {
-            const t = String(p || '').trim();
-            // Drop truncated next-chapter title leaks: "পার্ট ২: … ("
-            if (/^(?:পার্ট|অংশ|Part)\s*\d+/i.test(t) && t.endsWith('(')) return false;
-            return t.length > 0;
+const bodySections = computed(() => {
+    let tocPosition = 0;
+
+    return sections.value
+        .filter((s) => !isRedundantStubSection(s))
+        .map((s, idx) => {
+            const part = extractPart(s.heading);
+            const isQuickAnswer = isQuickAnswerSection(s);
+            // Keep ItemList JSON-LD anchors in sync (SeoMetaService skips quick answers).
+            let id = 'guide-section-quick';
+            if (!isQuickAnswer) {
+                tocPosition += 1;
+                id = `guide-section-${tocPosition}`;
+            }
+            const paragraphs = (s.paragraphs || []).filter((p) => {
+                const t = String(p || '').trim();
+                // Drop truncated next-chapter title leaks: "পার্ট ২: … ("
+                if (/^(?:পার্ট|অংশ|Part)\s*\d+/i.test(t) && t.endsWith('(')) return false;
+                return t.length > 0;
+            });
+            const figuresForBlocks = s.layout === 'founder_hero' ? [] : (s.figures || []);
+            // About pages are hand-written prose: keep paragraphs verbatim.
+            // buildContentBlocks joins paragraphs (for pasted ASCII diagrams) and
+            // would glue sentences together without spaces.
+            const blocks = isAbout.value
+                ? injectFigureBlocks(
+                    paragraphs.map((p) => ({ type: 'paragraph', text: String(p).trim() })),
+                    figuresForBlocks,
+                )
+                : buildContentBlocks(paragraphs, figuresForBlocks);
+            return {
+                ...s,
+                paragraphs,
+                list: (s.list || []).map((item) => String(item || '').trim()).filter(Boolean),
+                id,
+                part,
+                blocks,
+                tone: idx % 3,
+                isQuickAnswer,
+                layout: s.layout || null,
+                founder_name: s.founder_name || null,
+                founder_title: s.founder_title || null,
+                founder_quote: s.founder_quote || null,
+            };
         });
-        const figuresForBlocks = s.layout === 'founder_hero' ? [] : (s.figures || []);
-        // About pages are hand-written prose: keep paragraphs verbatim.
-        // buildContentBlocks joins paragraphs (for pasted ASCII diagrams) and
-        // would glue sentences together without spaces.
-        const blocks = isAbout.value
-            ? injectFigureBlocks(
-                paragraphs.map((p) => ({ type: 'paragraph', text: String(p).trim() })),
-                figuresForBlocks,
-            )
-            : buildContentBlocks(paragraphs, figuresForBlocks);
-        return {
-            ...s,
-            paragraphs,
-            id: `guide-section-${idx + 1}`,
-            part,
-            blocks,
-            tone: idx % 3,
-            layout: s.layout || null,
-            founder_name: s.founder_name || null,
-            founder_title: s.founder_title || null,
-            founder_quote: s.founder_quote || null,
-        };
-    }));
+});
 
 const tocItems = computed(() => bodySections.value
     .filter((s) => s.heading)
@@ -571,25 +588,27 @@ onUnmounted(() => {
                             :id="section.id"
                             class="cluster-chapter relative scroll-mt-36 rounded-2xl border border-white/10 bg-[#111]/80 p-4 pl-14 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-sm sm:scroll-mt-32 sm:p-7 sm:pl-16"
                             :class="{
-                                'border-amber-400/20': section.tone === 0,
-                                'border-emerald-400/15': section.tone === 1,
-                                'border-sky-400/15': section.tone === 2,
+                                'border-amber-400/35 bg-gradient-to-br from-amber-500/[0.08] via-[#111]/95 to-[#0a0a0a]': section.isQuickAnswer,
+                                'border-amber-400/20': !section.isQuickAnswer && section.tone === 0,
+                                'border-emerald-400/15': !section.isQuickAnswer && section.tone === 1,
+                                'border-sky-400/15': !section.isQuickAnswer && section.tone === 2,
                             }"
                         >
                             <div
                                 class="absolute left-3 top-4 flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-bold sm:left-4 sm:top-6 sm:h-9 sm:w-9 sm:text-xs"
                                 :class="{
-                                    'border-amber-400/40 bg-amber-500/15 text-amber-200': section.tone === 0,
-                                    'border-emerald-400/40 bg-emerald-500/15 text-emerald-200': section.tone === 1,
-                                    'border-sky-400/40 bg-sky-500/15 text-sky-200': section.tone === 2,
+                                    'border-amber-400/40 bg-amber-500/15 text-amber-200': section.tone === 0 || section.isQuickAnswer,
+                                    'border-emerald-400/40 bg-emerald-500/15 text-emerald-200': !section.isQuickAnswer && section.tone === 1,
+                                    'border-sky-400/40 bg-sky-500/15 text-sky-200': !section.isQuickAnswer && section.tone === 2,
                                 }"
                             >
-                                {{ section.part || String(si + 1).padStart(2, '0') }}
+                                {{ section.isQuickAnswer ? (isEn ? 'QA' : 'দ্রুত') : (section.part || String(si + 1).padStart(2, '0')) }}
                             </div>
 
                             <h2
                                 v-if="section.heading"
                                 class="break-words text-lg font-bold leading-snug text-white sm:text-xl"
+                                :class="section.isQuickAnswer ? 'text-amber-100' : ''"
                             >
                                 {{ section.heading }}
                             </h2>
@@ -600,6 +619,19 @@ onUnmounted(() => {
                                 :is-en="isEn"
                                 lead-first
                             />
+
+                            <ol
+                                v-if="section.list?.length"
+                                class="mt-4 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-300 sm:text-base"
+                            >
+                                <li
+                                    v-for="(item, lIndex) in section.list"
+                                    :key="`${section.id}-list-${lIndex}`"
+                                    class="pl-1"
+                                >
+                                    <LinkedRichText :text="item" :is-en="isEn" />
+                                </li>
+                            </ol>
                         </article>
                     </template>
                 </div>
