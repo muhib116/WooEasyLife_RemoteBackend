@@ -471,7 +471,7 @@
                     @endforeach
                 @endforeach
             @endif
-            {{-- Full sitemap link list so crawlers never see orphaned sitemap URLs --}}
+            {{-- Full sitemap link list (marketing + blog) so crawlers never see orphaned sitemap URLs --}}
             <nav aria-label="Site pages">
                 <ul>
                     @foreach (\App\Support\SeoPrerenderText::sitemapNavLinks($isEnPrerender) as $navLink)

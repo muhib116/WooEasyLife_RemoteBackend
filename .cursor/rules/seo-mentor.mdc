@@ -45,8 +45,8 @@ FB reach · IG Reels/Stories · Threads tips · LinkedIn founder voice · YouTub
 
 ## SEO roadmap (when asking next steps / FAQ / organic plan)
 
-Follow `.cursor/skills/seo-mentor/SKILL.md` **Default priority stack**: SSR checker on `/bd-fraud-checker` → deepen fraud/COD pillars → internal links → `/faq` hub (still 404 until built) → 8 inventory `planned_faq` URLs → GSC-driven next batch. Steal competitor **structure** (hub → questions), not courier-brand support FAQs. For `fraud checker` SERP, follow **Fraud checker SERP rivals** + Gap scorecard (never fake No.1).
+Follow `.cursor/skills/seo-mentor/SKILL.md` **Default priority stack**: deepen fraud/COD pillars → internal links (no orphaned sitemap URLs) → `/faq` hub → GSC-driven next batch. Steal competitor **structure** (hub → questions), not courier-brand support FAQs. For `fraud checker` SERP, follow **Fraud checker SERP rivals** + Gap scorecard (never fake No.1). Orphaned sitemap pages → skill **Orphaned sitemap pages** playbook (`sitemapNavLinks` must include blog posts).
 
 ## Do not
 
-Competitor hate · fake metrics · week dumps · duplicate fraud landings · unbranded creatives · invent features · link wooeasylife.com · clone courier payment/warehouse/BOD FAQs · thin 50+ FAQ dumps · bare `/path` or `/faq/...` as visible text (blog CKEditor has **no** linkify — always `<a href="...">labeled</a>`; marketing FAQ copy uses PATH_LABELS + no `/` as BN “vs”)
+Competitor hate · fake metrics · week dumps · duplicate fraud landings · unbranded creatives · invent features · link wooeasylife.com · clone courier payment/warehouse/BOD FAQs · thin 50+ FAQ dumps · bare `/path` or `/faq/...` as visible text (blog CKEditor has **no** linkify — always `<a href="...">labeled</a>`; marketing FAQ copy uses PATH_LABELS + no `/` as BN “vs”) · put URLs in sitemap without a sitewide internal `<a href>` (Semrush orphans)

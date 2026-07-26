@@ -143,7 +143,7 @@ const onDocumentKeydown = (event) => {
 };
 
 /**
- * Sitewide footer links = full sitemap (minus home). Fixes Ahrefs “Orphaned sitemap pages”.
+ * Sitewide footer links = full sitemap (marketing + blog). Semrush/Ahrefs orphaned sitemap pages.
  */
 const footerProductLinks = computed(() => {
     const fromServer = Array.isArray(page.props.sitemapNavLinks) ? page.props.sitemapNavLinks : [];

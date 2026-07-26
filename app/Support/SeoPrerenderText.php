@@ -77,7 +77,8 @@ class SeoPrerenderText
     ];
 
     /**
-     * Every sitemap marketing URL as internal links (Ahrefs: avoid orphaned sitemap pages).
+     * Every sitemap URL as internal links (Semrush/Ahrefs: avoid orphaned sitemap pages).
+     * Includes config marketing paths + published blog posts (same source as SitemapController).
      *
      * @return list<array{href: string, label: string}>
      */
@@ -85,16 +86,67 @@ class SeoPrerenderText
     {
         $lang = $isEn ? 'en' : 'bn';
         $links = [];
+        $seen = [];
 
         foreach (config('seo.sitemap.paths', []) as $item) {
             $path = (string) ($item['path'] ?? '');
-            if ($path === '' || $path === '/') {
+            if ($path === '' || $path === '/' || isset($seen[$path])) {
                 continue;
             }
 
+            $seen[$path] = true;
             $links[] = [
                 'href' => $path,
                 'label' => self::PATH_LABELS[$path][$lang] ?? ltrim($path, '/'),
+            ];
+        }
+
+        foreach (self::blogSitemapNavLinks() as $blogLink) {
+            $path = (string) ($blogLink['href'] ?? '');
+            if ($path === '' || isset($seen[$path])) {
+                continue;
+            }
+
+            $seen[$path] = true;
+            $links[] = $blogLink;
+        }
+
+        return $links;
+    }
+
+    /**
+     * Published blog posts that appear in /sitemap.xml — must also be linked sitewide.
+     *
+     * @return list<array{href: string, label: string}>
+     */
+    public static function blogSitemapNavLinks(): array
+    {
+        try {
+            $posts = app(\App\Services\BlogService::class)->all();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $links = [];
+        foreach ($posts as $post) {
+            $slug = trim((string) ($post['slug'] ?? ''));
+            if ($slug === '' || ! preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/i', $slug)) {
+                continue;
+            }
+
+            $title = trim((string) ($post['title'] ?? ''));
+            if ($title === '') {
+                $title = str_replace('-', ' ', $slug);
+            }
+
+            // Keep footer labels readable; Semrush wants descriptive anchors, not raw slugs.
+            if (mb_strlen($title) > 72) {
+                $title = rtrim(mb_substr($title, 0, 69)).'…';
+            }
+
+            $links[] = [
+                'href' => '/blog/'.$slug,
+                'label' => $title,
             ];
         }
 

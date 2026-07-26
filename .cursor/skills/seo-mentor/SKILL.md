@@ -35,6 +35,7 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 | competitor audit + URL(s) | Run **Competitor re-audit protocol**; update roster if they enter top 3 |
 | new feature / update features / shipped | **Feature discovery → SEO opportunity loop** |
 | keywords / long-tails / new URLs | Inventory decision rule; write rows to inventory file |
+| orphaned sitemap / Semrush crawlability orphans | **Orphaned sitemap pages** playbook below — fix links, never only remove from sitemap |
 | review / upgrade this skill | **Skill self-maintenance** checklist |
 
 ---
@@ -113,6 +114,22 @@ blog posts                  →      same hubs (never orphan)
 **Ours:** tool/pillar → `/faq` (+ sections) → `/faq/{question}`
 
 **Internal linking rule:** every pillar → ≥2 tools + ≥2 blogs + 1 `/pricing` CTA. No orphan blogs. Prefer linking *to* `/bd-fraud-checker` (not only homepage) from all fraud-cluster pages.
+
+### Orphaned sitemap pages (Semrush / Ahrefs)
+
+**Definition:** URL is in `/sitemap.xml` but no other crawled page links to it with a real `<a href>`.
+
+**WooEasyLife gotcha:** Marketing paths are covered by `SeoPrerenderText::sitemapNavLinks()` (blade `#seo-prerender` + MarketingLayout footer “Site pages”). **Blog posts are appended to the same sitemap in `SitemapController`**, so they must also appear in `sitemapNavLinks()` via `blogSitemapNavLinks()` — Vue-only `/blog` cards are not enough for Semrush if the crawler under-counts Inertia links.
+
+**When Semrush flags orphans:**
+
+1. Confirm the URL is in `/sitemap.xml` and returns 200 (or 301 to a live URL).
+2. Prefer **link it** from sitewide nav (`sitemapNavLinks` / footer) and/or relevant pillar/FAQ/blog body with a **human label** (never bare `/blog/slug` as visible text in BN marketing copy).
+3. Remove from sitemap only if the page should not be indexed (draft, noindex, junk).
+4. Never invent a second duplicate blog landing to “fix” an orphan.
+5. After deploy: `optimize:clear` + Semrush re-crawl of `/` and `/blog`.
+
+**Code source of truth:** `App\Support\SeoPrerenderText::sitemapNavLinks()` · `App\Http\Controllers\App\SitemapController` · test `test_home_prerender_links_every_sitemap_blog_post`.
 
 **Content-type picker (one intent → one asset):**
 
@@ -229,6 +246,7 @@ Rotate in **Feature launch** or **App** (multi-store / call ID) when a scan find
 - No `-2` duplicate slugs  
 - GSC URL Inspection after publish  
 - Keep sitemap clean (no logout/dashboard junk)  
+- **Every sitemap URL must have ≥1 internal `<a href>`** (marketing + blog via `sitemapNavLinks`) — Semrush “Orphaned sitemap pages”  
 - SSR critical interactive UI on money tool pages  
 - Real hreflang (bn-BD / en / x-default → correct URLs — never all three to one URL)
 

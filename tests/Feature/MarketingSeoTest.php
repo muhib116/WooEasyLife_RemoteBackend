@@ -931,6 +931,42 @@ class MarketingSeoTest extends TestCase
         }
     }
 
+    public function test_home_prerender_links_every_sitemap_blog_post(): void
+    {
+        $blog = app(\App\Services\BlogService::class);
+        $posts = $blog->all();
+        $this->assertNotEmpty($posts, 'Need at least one published blog post to assert orphan prevention');
+
+        $response = $this->get('/');
+        $response->assertOk();
+        $html = $response->getContent();
+
+        foreach ($posts as $post) {
+            $slug = (string) ($post['slug'] ?? '');
+            if ($slug === '') {
+                continue;
+            }
+            $path = '/blog/'.$slug;
+            $this->assertStringContainsString(
+                'href="'.$path.'"',
+                $html,
+                "Orphan risk: sitemap blog {$path} missing from home internal links"
+            );
+        }
+
+        $navLinks = collect(\App\Support\SeoPrerenderText::sitemapNavLinks(false))->pluck('href');
+        foreach ($posts as $post) {
+            $slug = (string) ($post['slug'] ?? '');
+            if ($slug === '') {
+                continue;
+            }
+            $this->assertTrue(
+                $navLinks->contains('/blog/'.$slug),
+                'sitemapNavLinks (footer) must include /blog/'.$slug
+            );
+        }
+    }
+
     public function test_robots_includes_sitemap(): void
     {
         $response = $this->get('/robots.txt');
