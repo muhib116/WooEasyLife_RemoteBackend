@@ -207,6 +207,17 @@ class PackageCatalogFeatures
         if (! $explicit('parcel_note_history') && ($normalized['courier_automation'] ?? false)) {
             $normalized['parcel_note_history'] = true;
         }
+
+        // Packages saved before messenger_sales_agent existed: grant with create_order
+        // (Starter/Growth/Pro) or AI intelligence, without unlocking Free Trial.
+        if (! $explicit('messenger_sales_agent')
+            && (
+                ($normalized['create_order'] ?? false)
+                || ($normalized['ai_intelligence'] ?? false)
+            )
+        ) {
+            $normalized['messenger_sales_agent'] = true;
+        }
     }
 
     /**

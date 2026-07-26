@@ -77,6 +77,8 @@ Route::prefix('api/webhooks')->group(function () {
     Route::post('/messenger', [MessengerWebhookController::class, 'receive']);
 });
 
+Route::get('api/messenger/intent-packs', [MessengerWebhookController::class, 'intentPacks']);
+
 // Facebook OAuth callback + page picker (browser redirects; no plugin auth).
 Route::get('api/messenger/oauth/callback', [MessengerConnectController::class, 'oauthCallback']);
 Route::post('api/messenger/oauth/select-page', [MessengerConnectController::class, 'selectPage']);

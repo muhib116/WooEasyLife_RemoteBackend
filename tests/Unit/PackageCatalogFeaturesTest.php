@@ -129,6 +129,27 @@ class PackageCatalogFeaturesTest extends TestCase
         $this->assertFalse($normalized['create_order']);
         $this->assertTrue($normalized['call_and_status_log']);
         $this->assertTrue($normalized['parcel_note_history']);
+        $this->assertTrue($normalized['messenger_sales_agent']);
+    }
+
+    public function test_normalize_infers_messenger_sales_agent_from_create_order(): void
+    {
+        $normalized = PackageCatalogFeatures::normalize([
+            'create_order' => true,
+        ]);
+
+        $this->assertTrue($normalized['messenger_sales_agent']);
+    }
+
+    public function test_normalize_respects_explicit_messenger_sales_agent_false(): void
+    {
+        $normalized = PackageCatalogFeatures::normalize([
+            'create_order' => true,
+            'messenger_sales_agent' => false,
+        ]);
+
+        $this->assertTrue($normalized['create_order']);
+        $this->assertFalse($normalized['messenger_sales_agent']);
     }
 
     public function test_normalize_respects_explicit_parcel_note_history_false(): void

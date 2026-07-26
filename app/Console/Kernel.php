@@ -20,6 +20,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('subscriptions:check-alerts')->dailyAt('08:00');
         $schedule->command('subscriptions:notify')->dailyAt('08:05');
         $schedule->command('courier:retry-webhook-forwards')->everyMinute();
+        $schedule->command('messenger:retry-webhook-forwards')->everyMinute();
         $schedule->command('seo:weekly-report')
             ->weeklyOn(1, '09:00')
             ->timezone('Asia/Dhaka');

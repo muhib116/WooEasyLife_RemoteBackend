@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Messenger;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessMessengerInboundForward;
 use App\Models\MessengerPageConnection;
-use App\Services\Messenger\MessengerPageOAuthService;
-use App\Services\Messenger\WordPressMessengerForwarder;
+use App\Services\Messenger\MessengerAnonymizedIntentPacks;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -27,11 +27,8 @@ class MessengerWebhookController extends Controller
         return response('Forbidden', 403);
     }
 
-    public function receive(
-        Request $request,
-        WordPressMessengerForwarder $forwarder,
-        MessengerPageOAuthService $oauth
-    ) {
+    public function receive(Request $request)
+    {
         if (! $this->signatureValid($request)) {
             Log::warning('Messenger webhook signature rejected', [
                 'ip' => $request->ip(),
@@ -94,6 +91,7 @@ class MessengerWebhookController extends Controller
             $byPage[$event['page_id']][] = $event;
         }
 
+        $dispatched = 0;
         foreach ($byPage as $pageId => $pageEvents) {
             $connections = MessengerPageConnection::query()
                 ->connected()
@@ -106,20 +104,31 @@ class MessengerWebhookController extends Controller
                 continue;
             }
 
-            // Enrich sender profiles once per page using that page's token.
-            $enriched = $this->enrichSenderProfiles($oauth, $connections->first(), $pageEvents);
-
-            // Fan out to every license that has this Page connected.
+            // ACK Meta quickly: enrich + WP forward run after the response (or via queue workers).
             foreach ($connections as $connection) {
-                $forwarder->forwardInbound($connection, [
-                    'events' => $enriched,
-                ]);
+                ProcessMessengerInboundForward::dispatchAfterResponse(
+                    (int) $connection->id,
+                    $pageEvents
+                );
+                $dispatched++;
             }
         }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Webhook received successfully.',
+            'queued_forwards' => $dispatched,
+        ]);
+    }
+
+    /**
+     * Optional anonymized intent/guard packs for store sales agents (no PII).
+     */
+    public function intentPacks(MessengerAnonymizedIntentPacks $packs)
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => $packs->packs(),
         ]);
     }
 
@@ -155,51 +164,6 @@ class MessengerWebhookController extends Controller
         $expected = hash_hmac($algo, $request->getContent(), $secret);
 
         return hash_equals($expected, trim($hash));
-    }
-
-    /**
-     * Populate sender name + profile picture for each event (best-effort, cached per PSID).
-     *
-     * @param  array<int, array<string, mixed>>  $events
-     * @return array<int, array<string, mixed>>
-     */
-    private function enrichSenderProfiles(
-        MessengerPageOAuthService $oauth,
-        MessengerPageConnection $connection,
-        array $events
-    ): array {
-        $pageToken = (string) $connection->page_access_token;
-        if ($pageToken === '') {
-            return $events;
-        }
-
-        $cache = [];
-        foreach ($events as &$event) {
-            // Echoes are page→customer; don't burn Graph quota on profile lookups.
-            if (! empty($event['is_echo']) || ($event['event_type'] ?? '') === 'reaction') {
-                continue;
-            }
-
-            $psid = (string) ($event['psid'] ?? '');
-            if ($psid === '') {
-                continue;
-            }
-
-            if (! array_key_exists($psid, $cache)) {
-                $cache[$psid] = $oauth->fetchSenderProfile($psid, $pageToken);
-            }
-
-            $profile = $cache[$psid];
-            if (($profile['name'] ?? '') !== '' || ($profile['profile_pic'] ?? '') !== '') {
-                $event['sender_profile'] = [
-                    'name' => (string) ($profile['name'] ?? ''),
-                    'profile_pic' => (string) ($profile['profile_pic'] ?? ''),
-                ];
-            }
-        }
-        unset($event);
-
-        return $events;
     }
 
     /**
