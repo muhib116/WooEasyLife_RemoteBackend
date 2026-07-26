@@ -1,0 +1,9 @@
+# Local Messenger hub tunnel (does not replace ~/.cloudflared/config.yml).
+# Uses existing DNS: whatsapp.futureseedsbd.site → this machine → Laravel :8000
+tunnel: e2a97d07-f132-4be0-9796-aaaeae89bd65
+credentials-file: /Users/muhibbullah/.cloudflared/e2a97d07-f132-4be0-9796-aaaeae89bd65.json
+
+ingress:
+  - hostname: whatsapp.futureseedsbd.site
+    service: http://127.0.0.1:8000
+  - service: http_status:404
