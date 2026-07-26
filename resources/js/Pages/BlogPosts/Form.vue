@@ -843,10 +843,19 @@ const seoMinLinks = computed(() => Number(props.options?.seo?.min_internal_links
 
 const firstBodyParagraphText = (html) => {
     const source = String(html || '')
-        .replace(/<section\b[^>]*class=["'][^"']*(seo-quick-answer|seo-ai-summary)[^"']*["'][\s\S]*?<\/section>/giu, ' ');
-    const firstP = source.match(/<p\b[^>]*>(.*?)<\/p>/is);
-    if (firstP?.[1]) {
-        return stripHtml(firstP[1]).toLowerCase();
+        // Classed SEO blocks are inserted by Blog AI, but CKEditor may flatten
+        // them to a plain H2 followed by paragraphs. Support both shapes.
+        .replace(/<section\b[^>]*class=["'][^"']*(seo-quick-answer|seo-ai-summary)[^"']*["'][\s\S]*?<\/section>/giu, ' ')
+        .replace(/<h2\b[^>]*>[^<]*(Quick Answer|দ্রুত উত্তর)[^<]*<\/h2>[\s\S]*?(?=<h[1-6]\b|$)/giu, ' ')
+        // CKEditor wraps uploaded images in <figure><p><img ...></p></figure>.
+        // Image-only/caption figures are not article paragraphs.
+        .replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/giu, ' ');
+    const paragraphs = source.matchAll(/<p\b[^>]*>(.*?)<\/p>/gis);
+    for (const match of paragraphs) {
+        const text = stripHtml(match[1]).toLowerCase();
+        if (text) {
+            return text;
+        }
     }
     return stripHtml(source).toLowerCase().slice(0, 400);
 };

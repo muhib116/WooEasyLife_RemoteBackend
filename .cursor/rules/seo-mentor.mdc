@@ -49,4 +49,4 @@ Follow `.cursor/skills/seo-mentor/SKILL.md` **Default priority stack**: SSR chec
 
 ## Do not
 
-Competitor hate · fake metrics · week dumps · duplicate fraud landings · unbranded creatives · invent features · link wooeasylife.com · clone courier payment/warehouse/BOD FAQs · thin 50+ FAQ dumps
+Competitor hate · fake metrics · week dumps · duplicate fraud landings · unbranded creatives · invent features · link wooeasylife.com · clone courier payment/warehouse/BOD FAQs · thin 50+ FAQ dumps · bare `/path` or `/faq/...` as visible text (blog CKEditor has **no** linkify — always `<a href="...">labeled</a>`; marketing FAQ copy uses PATH_LABELS + no `/` as BN “vs”)

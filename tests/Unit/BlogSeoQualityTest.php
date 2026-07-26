@@ -234,6 +234,38 @@ HTML;
         $this->assertLessThanOrEqual(100, substr_count($padded, '<p>'));
     }
 
+    public function test_first_paragraph_skips_ck_editor_figures_and_plain_quick_answer(): void
+    {
+        $service = app(BlogSeoQuality::class);
+        $body = '<figure><p><img src="/cover.webp" alt="কাস্টমার ব্ল্যাকলিস্ট"></p></figure>'
+            .'<h2>দ্রুত উত্তর</h2>'
+            .'<p>এই উত্তরটি featured snippet-এর জন্য।</p>'
+            .'<p>আরও একটি দ্রুত উত্তর।</p>'
+            .'<h3>কাস্টমার ব্ল্যাকলিস্ট কিভাবে কাজ করে?</h3>'
+            .'<p>কাস্টমার ব্ল্যাকলিস্ট নিয়ে মূল আর্টিকেল এখানে শুরু।</p>';
+
+        $this->assertSame(
+            'কাস্টমার ব্ল্যাকলিস্ট নিয়ে মূল আর্টিকেল এখানে শুরু।',
+            $service->firstParagraphText($body),
+        );
+        $this->assertTrue(
+            $service->textContainsKeyword($service->firstParagraphText($body), 'কাস্টমার ব্ল্যাকলিস্ট')
+        );
+
+        $missingKeyword = str_replace(
+            'কাস্টমার ব্ল্যাকলিস্ট নিয়ে মূল আর্টিকেল এখানে শুরু।',
+            'মূল আর্টিকেল এখানে শুরু।',
+            $body,
+        );
+        $fixed = $service->ensureKeywordInFirstParagraph($missingKeyword, 'কাস্টমার ব্ল্যাকলিস্ট');
+
+        $this->assertTrue(
+            $service->textContainsKeyword($service->firstParagraphText($fixed), 'কাস্টমার ব্ল্যাকলিস্ট')
+        );
+        $this->assertStringContainsString('<figure><p><img', $fixed);
+        $this->assertSame(1, substr_count($fixed, 'নিয়ে এই গাইডে বাংলাদেশি সেলারদের ব্যবহারিক ধাপ'));
+    }
+
     public function test_deterministic_keyword_placement_for_bangla_focus(): void
     {
         $service = app(BlogSeoQuality::class);

@@ -13,7 +13,7 @@ description: >
 
 # WooEasyLife SEO Mentor Skill
 
-**Last reviewed:** 2026-07-25  
+**Last reviewed:** 2026-07-26
 **Rule (daily plan format):** `.cursor/rules/seo-mentor.mdc`  
 **Brand + creatives:** `.cursor/skills/wooeasylife-brand/SKILL.md`  
 **Features (claims only if Shipped):** `.cursor/skills/wooeasylife-brand/FEATURES.md`  
@@ -71,7 +71,8 @@ Do **not** clone courier-brand support FAQs (payment schedules, warehouse securi
 | Clone eCourier payment / warehouse / BOD / compensation FAQs | Wrong brand — navigational for *their* courier |
 | Dump 50+ thin FAQ pages | Mirrors their 60–140 word answers; dilutes authority |
 | Use `/` as BN “vs” separator in body copy | Linkify injects **হোম** → `হলুদহোমলালে` junk |
-| Show raw `/faq/...` slugs in UI | Must be labeled links (PHP + JS PATH_LABELS) |
+| Show raw `/path` or `/faq/...` as visible text | Must be **human-labeled** links (never dump bare permalinks in UI or drafts) |
+| Blog `body_html` (CKEditor): bare `/bd-fraud-checker` etc. | Blog has **NO linkify** — every internal URL must be `<a href="/path">বাংলা লেবেল</a>` |
 | Invent features | Only **Shipped** in `FEATURES.md` |
 | Link wooeasylife.com | Canonical is `app.wpsalehub.com` |
 | Competitor hate / fake #1 / AggregateRating fakes | Brand + trust rules |
@@ -189,6 +190,20 @@ Current intents (paths/CTA from inventory): success-rate reading, low-success de
 | Accordion answers: 2–4 full sentences + one labeled path CTA | Telegram stubs (`না। রেট = … লিঙ্ক: /faq/...`) |
 | Add every new `/faq/...` path to **both** PHP + JS label maps before publish | Ship a FAQ path with label only on one side (Vue shows raw slug) |
 | Related nav = `cluster_links` with Bangla labels | Duplicate related section that only lists paths |
+
+**Blog `body_html` hygiene (CKEditor — mandatory):**
+
+Blog posts are **final HTML**. `SeoPrerenderText` / `internalPathLinks.js` linkify **does not run** on blog bodies. Readers see whatever you type.
+
+| Do | Don't |
+|----|--------|
+| Every internal URL as `<a href="/path">মানুষের ভাষায় লেবেল</a>` | Bare paths as visible text (`শুরু: /bd-fraud-checker, সেটআপ: /pricing`) |
+| Bangla (or clear EN) anchor text: `ফ্রি কুরিয়ার ফ্রড চেকার`, `প্রাইসিং`, `FAQ হাব` | Anchor text that is only the slug (`/fake-order-protection`) |
+| Soft-link money pages with labels; keep post ≥ publish word gate with real sections | Pad with repeated slug laundry lists or duplicate AI fluff |
+| Before handoff: Ctrl+F for `href="/` and confirm each has a human label between tags; Ctrl+F for ` /` + path and remove bare leftovers | Assume “path in prose will become a nice link later” — it will not |
+
+Example — wrong: `শুরু: /bd-fraud-checker, প্ল্যান: /pricing`
+Example — right: `শুরু করতে দেখুন <a href="/bd-fraud-checker">ফ্রি কুরিয়ার ফ্রড চেকার</a>, প্ল্যান: <a href="/pricing">প্রাইসিং</a>`
 
 Add `/faq` + question URLs to sitemap with `lastmod`. Link hub from footer + fraud pillars. When live, flip inventory `status` to `live` and update **Current state**.
 

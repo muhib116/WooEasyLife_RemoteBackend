@@ -475,15 +475,29 @@ class BlogSeoQuality
 
     public function firstParagraphText(string $html): string
     {
-        // Skip Quick Answer / AI Summary blocks — keyword check targets the first content <p>.
+        // Skip classed SEO blocks. CKEditor can flatten a Quick Answer section
+        // into a plain H2 + paragraphs, so remove that shape through the next
+        // heading as well. Uploaded images are commonly wrapped in
+        // <figure><p><img></p></figure>; those are not content paragraphs.
         $content = preg_replace(
             '/<section\b[^>]*class=["\'][^"\']*(seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>/iu',
             '',
             $html,
         ) ?? $html;
+        $content = preg_replace(
+            '/<h2\b[^>]*>[^<]*(Quick Answer|দ্রুত উত্তর)[^<]*<\/h2>[\s\S]*?(?=<h[1-6]\b|$)/iu',
+            '',
+            $content,
+        ) ?? $content;
+        $content = preg_replace('/<figure\b[^>]*>[\s\S]*?<\/figure>/iu', '', $content) ?? $content;
 
-        if (preg_match('/<p\b[^>]*>(.*?)<\/p>/is', $content, $m)) {
-            return trim(html_entity_decode(strip_tags($m[1])));
+        if (preg_match_all('/<p\b[^>]*>(.*?)<\/p>/is', $content, $matches)) {
+            foreach ($matches[1] as $paragraph) {
+                $text = trim(html_entity_decode(strip_tags($paragraph)));
+                if ($text !== '') {
+                    return $text;
+                }
+            }
         }
 
         $plain = $this->plainText($content);
@@ -643,20 +657,24 @@ class BlogSeoQuality
         $sentence = e($kw).' নিয়ে এই গাইডে বাংলাদেশি সেলারদের ব্যবহারিক ধাপ আলোচনা করা হয়েছে। ';
         $done = false;
 
-        // Rewrite the first <p> that is not inside Quick Answer / AI Summary.
+        // Rewrite the first meaningful <p> that is not inside an SEO block or
+        // a CKEditor media figure. Never turn <p><img></p> into filler text.
         $updated = preg_replace_callback(
-            '/<section\b[^>]*class=["\'][^"\']*(?:seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>|<p\b[^>]*>.*?<\/p>/iu',
+            '/<section\b[^>]*class=["\'][^"\']*(?:seo-quick-answer|seo-ai-summary)[^"\']*["\'][\s\S]*?<\/section>|<h2\b[^>]*>[^<]*(?:Quick Answer|দ্রুত উত্তর)[^<]*<\/h2>[\s\S]*?(?=<h[1-6]\b|$)|<figure\b[^>]*>[\s\S]*?<\/figure>|<p\b[^>]*>.*?<\/p>/iu',
             function (array $m) use (&$done, $sentence): string {
                 if ($done) {
                     return $m[0];
                 }
-                if (preg_match('/seo-(?:quick-answer|ai-summary)/i', $m[0])) {
+                if (preg_match('/seo-(?:quick-answer|ai-summary)|<figure\b|(?:Quick Answer|দ্রুত উত্তর)/iu', $m[0])) {
+                    return $m[0];
+                }
+                $inner = trim(html_entity_decode(strip_tags($m[0])));
+                if ($inner === '') {
                     return $m[0];
                 }
                 $done = true;
-                $inner = trim(html_entity_decode(strip_tags($m[0])));
 
-                return '<p>'.$sentence.($inner !== '' ? e($inner) : '').'</p>';
+                return '<p>'.$sentence.e($inner).'</p>';
             },
             $bodyHtml,
         );
