@@ -247,6 +247,14 @@ class MessengerPageOAuthService
             ],
         ], JSON_UNESCAPED_SLASHES);
 
+        // Meta's ingest for video/large media routinely exceeds the default 30s
+        // max_execution_time. The HTTP client already waits up to 90s; lift the
+        // PHP ceiling so the worker is not fatally killed mid-upload (which the
+        // store then surfaces as a generic "Could not send message").
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(120);
+        }
+
         try {
             $request = Http::timeout(90)
                 ->withToken($pageToken)

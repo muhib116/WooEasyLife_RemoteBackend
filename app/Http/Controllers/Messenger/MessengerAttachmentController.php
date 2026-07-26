@@ -22,6 +22,13 @@ class MessengerAttachmentController extends Controller
         MessengerPageOAuthService $oauth,
         MessengerPageConnectionResolver $resolver
     ) {
+        // Video ingest to Meta can take well beyond the default 30s ceiling.
+        // Lift it so a slow upload is not fatally killed (surfacing to the store
+        // as a generic "Could not send message").
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(120);
+        }
+
         $accessToken = $accounts->resolveAccessToken($request);
         if (! $accessToken) {
             return $this->errorResponse('Unauthorized.', 401);

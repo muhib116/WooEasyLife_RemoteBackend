@@ -58,16 +58,25 @@ class MessengerWebhookController extends Controller
             }
 
             $pageId = (string) ($entry['id'] ?? '');
-            $messaging = is_array($entry['messaging'] ?? null) ? $entry['messaging'] : [];
+            // Primary inbox events + standby (handover protocol) can both carry reactions.
+            $buckets = [];
+            if (is_array($entry['messaging'] ?? null)) {
+                $buckets[] = $entry['messaging'];
+            }
+            if (is_array($entry['standby'] ?? null)) {
+                $buckets[] = $entry['standby'];
+            }
 
-            foreach ($messaging as $item) {
-                if (! is_array($item)) {
-                    continue;
-                }
+            foreach ($buckets as $messaging) {
+                foreach ($messaging as $item) {
+                    if (! is_array($item)) {
+                        continue;
+                    }
 
-                $normalized = $this->normalizeMessagingEvent($pageId, $item);
-                if ($normalized !== null) {
-                    $events[] = $normalized;
+                    $normalized = $this->normalizeMessagingEvent($pageId, $item);
+                    if ($normalized !== null) {
+                        $events[] = $normalized;
+                    }
                 }
             }
         }
@@ -205,11 +214,35 @@ class MessengerWebhookController extends Controller
 
         // Reactions arrive as a standalone webhook event, not as a message.
         $reaction = is_array($item['reaction'] ?? null) ? $item['reaction'] : null;
+        if ($reaction === null && is_array($item['message']['reaction'] ?? null)) {
+            // Rare nested shape some Graph payloads use.
+            $reaction = $item['message']['reaction'];
+        }
         if ($reaction !== null) {
-            $targetMid = trim((string) ($reaction['mid'] ?? ''));
+            $targetMid = trim((string) (
+                $reaction['mid']
+                ?? $reaction['message_id']
+                ?? $item['message']['mid']
+                ?? ''
+            ));
             if ($targetMid === '' || $senderId === '') {
+                Log::info('Messenger webhook: reaction ignored (missing mid/sender)', [
+                    'page_id' => $pageId,
+                    'sender_id' => $senderId,
+                    'reaction' => $reaction,
+                ]);
+
                 return null;
             }
+
+            Log::info('Messenger webhook: reaction event', [
+                'page_id' => $pageId !== '' ? $pageId : $recipientId,
+                'psid' => $senderId === $pageId ? $recipientId : $senderId,
+                'mid' => $targetMid,
+                'action' => (string) ($reaction['action'] ?? 'react'),
+                'reaction' => (string) ($reaction['reaction'] ?? 'other'),
+                'emoji' => (string) ($reaction['emoji'] ?? ''),
+            ]);
 
             return [
                 'page_id' => $pageId !== '' ? $pageId : $recipientId,
