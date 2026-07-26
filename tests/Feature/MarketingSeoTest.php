@@ -967,6 +967,26 @@ class MarketingSeoTest extends TestCase
         }
     }
 
+    public function test_ai_content_prerender_uses_semantic_hierarchy(): void
+    {
+        foreach (['/ki-vabe-fake-order-atkabo', '/woocommerce-bangladesh'] as $path) {
+            $html = $this->get($path)->assertOk()->getContent();
+            $this->assertMatchesRegularExpression('/id="seo-prerender"[^>]*>[\s\S]*<article>/', $html);
+            $this->assertMatchesRegularExpression('/id="seo-prerender"[^>]*>[\s\S]*<section>/', $html);
+            $this->assertStringContainsString('<h2>যা জানতে চান</h2>', $html);
+            $this->assertMatchesRegularExpression('/<h2>যা জানতে চান<\/h2>[\s\S]*<h3>/', $html);
+        }
+
+        $pillarHtml = $this->get('/woocommerce-bangladesh')->assertOk()->getContent();
+        $this->assertStringContainsString('<h2>গাইড পর্বসমূহ</h2>', $pillarHtml);
+        $this->assertMatchesRegularExpression('/<h2>গাইড পর্বসমূহ<\/h2>[\s\S]*<h3>অংশ ১\/৩০/', $pillarHtml);
+
+        $chunks = \App\Support\SeoPrerenderText::readableParagraphs(
+            str_repeat('এটি একটি পরীক্ষামূলক বাক্য যা যথেষ্ট লম্বা যাতে স্প্লিট হয়। ', 10)
+        );
+        $this->assertGreaterThan(1, count($chunks));
+    }
+
     public function test_robots_includes_sitemap(): void
     {
         $response = $this->get('/robots.txt');

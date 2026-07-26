@@ -131,6 +131,18 @@ blog posts                  →      same hubs (never orphan)
 
 **Code source of truth:** `App\Support\SeoPrerenderText::sitemapNavLinks()` · `App\Http\Controllers\App\SitemapController` · test `test_home_prerender_links_every_sitemap_blog_post`.
 
+### Content not optimized (Semrush AI Search)
+
+Semrush documents this as **three checks**: poor heading hierarchy, paragraphs that are too long, and low readability — especially on long pages. Our Site Audit often runs with **JS rendering disabled**, so it scores `#seo-prerender` HTML only (not Vue).
+
+**Fix pattern (do not invent a second landing):**
+
+1. Keep one H1; section titles H2; FAQ questions **H3** under an H2 FAQ label (never every FAQ as H2).
+2. Long pillar “অংশ N/৩০” chapters → H3 under an H2 “গাইড পর্বসমূহ”.
+3. Wrap long-form in `<article>` / `<section>`; keep lists for takeaways.
+4. Split long FAQ/body sentences via `SeoPrerenderText::readableParagraphs()` in prerender.
+5. Re-crawl after deploy; prefer enabling JS rendering in Semrush for Inertia sites when debugging.
+
 **Content-type picker (one intent → one asset):**
 
 | Intent shape | Asset | Inventory type |

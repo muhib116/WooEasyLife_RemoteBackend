@@ -153,6 +153,49 @@ class SeoPrerenderText
         return $links;
     }
 
+    /**
+     * Split long FAQ/body copy into shorter <p> chunks for Semrush AI "Content not optimized"
+     * (long paragraphs + readability) without changing source config strings.
+     *
+     * @return list<string>
+     */
+    public static function readableParagraphs(string $text, int $maxChars = 220): array
+    {
+        $plain = trim(self::plain($text));
+        if ($plain === '') {
+            return [];
+        }
+
+        if (mb_strlen($plain) <= $maxChars) {
+            return [$plain];
+        }
+
+        // Prefer Bangla danda / Latin sentence end, then em dash / semicolon.
+        $parts = preg_split('/(?<=[।?!;…]|\.(?=\s|$))\s+/u', $plain) ?: [$plain];
+        $parts = array_values(array_filter(array_map('trim', $parts), static fn (string $p): bool => $p !== ''));
+
+        if (count($parts) <= 1) {
+            return [$plain];
+        }
+
+        $chunks = [];
+        $buf = '';
+        foreach ($parts as $part) {
+            $candidate = $buf === '' ? $part : $buf.' '.$part;
+            if ($buf !== '' && mb_strlen($candidate) > $maxChars) {
+                $chunks[] = $buf;
+                $buf = $part;
+                continue;
+            }
+            $buf = $candidate;
+        }
+        if ($buf !== '') {
+            $chunks[] = $buf;
+        }
+
+        return $chunks !== [] ? $chunks : [$plain];
+    }
+
     public static function plain(string $text): string
     {
         $out = $text;

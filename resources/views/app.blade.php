@@ -167,6 +167,18 @@
             margin: 1.25rem 0 0.5rem;
         }
 
+        #seo-prerender h3 {
+            font-size: 1rem;
+            line-height: 1.4;
+            color: #e2e8f0;
+            margin: 1rem 0 0.4rem;
+        }
+
+        #seo-prerender article,
+        #seo-prerender section {
+            margin: 0 0 0.5rem;
+        }
+
         #seo-prerender p {
             margin: 0 0 1rem;
             line-height: 1.6;
@@ -434,42 +446,61 @@
                 </figure>
             @endif
             @if (! empty($seo['content_sections']) && is_array($seo['content_sections']))
-                @foreach ($seo['content_sections'] as $section)
-                    @if (! empty($section['heading']))
-                        <h2>{{ $section['heading'] }}</h2>
-                    @endif
-                    @foreach (($section['paragraphs'] ?? []) as $paragraph)
-                        @if (is_string($paragraph) && $paragraph !== '')
-                            <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($paragraph, $isEnPrerender) !!}</p>
+                <article>
+                    @php $openedGuideParts = false; @endphp
+                    @foreach ($seo['content_sections'] as $section)
+                        @php
+                            $sectionHeading = trim((string) ($section['heading'] ?? ''));
+                            $isGuidePart = (bool) preg_match('/(?:অংশ|part|পার্ট)\s*\d+\s*\/\s*(?:৩০|30)/iu', $sectionHeading);
+                        @endphp
+                        @if ($isGuidePart && ! $openedGuideParts)
+                            <h2>{{ $isEnPrerender ? 'Guide parts' : 'গাইড পর্বসমূহ' }}</h2>
+                            @php $openedGuideParts = true; @endphp
                         @endif
-                    @endforeach
-                    @if (! empty($section['list']) && is_array($section['list']))
-                        <ol>
-                            @foreach ($section['list'] as $item)
-                                @if (is_string($item) && $item !== '')
-                                    <li>{!! \App\Support\SeoPrerenderText::linkifyHtml($item, $isEnPrerender) !!}</li>
+                        <section>
+                            @if ($sectionHeading !== '')
+                                @if ($isGuidePart)
+                                    <h3>{{ $sectionHeading }}</h3>
+                                @else
+                                    <h2>{{ $sectionHeading }}</h2>
+                                @endif
+                            @endif
+                            @foreach (($section['paragraphs'] ?? []) as $paragraph)
+                                @if (is_string($paragraph) && $paragraph !== '')
+                                    @foreach (\App\Support\SeoPrerenderText::readableParagraphs($paragraph) as $readablePara)
+                                        <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($readablePara, $isEnPrerender) !!}</p>
+                                    @endforeach
                                 @endif
                             @endforeach
-                        </ol>
-                    @endif
-                    @foreach (($section['figures'] ?? []) as $figure)
-                        @if (! empty($figure['src']))
-                            <figure>
-                                <img
-                                    src="{{ $figure['src'] }}"
-                                    alt="{{ $figure['alt'] ?? ($figure['caption'] ?? 'Diagram') }}"
-                                    loading="lazy"
-                                    decoding="async"
-                                    width="1200"
-                                    height="675"
-                                />
-                                @if (! empty($figure['caption']))
-                                    <figcaption>{{ $figure['caption'] }}</figcaption>
+                            @if (! empty($section['list']) && is_array($section['list']))
+                                <ol>
+                                    @foreach ($section['list'] as $item)
+                                        @if (is_string($item) && $item !== '')
+                                            <li>{!! \App\Support\SeoPrerenderText::linkifyHtml($item, $isEnPrerender) !!}</li>
+                                        @endif
+                                    @endforeach
+                                </ol>
+                            @endif
+                            @foreach (($section['figures'] ?? []) as $figure)
+                                @if (! empty($figure['src']))
+                                    <figure>
+                                        <img
+                                            src="{{ $figure['src'] }}"
+                                            alt="{{ $figure['alt'] ?? ($figure['caption'] ?? 'Diagram') }}"
+                                            loading="lazy"
+                                            decoding="async"
+                                            width="1200"
+                                            height="675"
+                                        />
+                                        @if (! empty($figure['caption']))
+                                            <figcaption>{{ $figure['caption'] }}</figcaption>
+                                        @endif
+                                    </figure>
                                 @endif
-                            </figure>
-                        @endif
+                            @endforeach
+                        </section>
                     @endforeach
-                @endforeach
+                </article>
             @endif
             {{-- Full sitemap link list (marketing + blog) so crawlers never see orphaned sitemap URLs --}}
             <nav aria-label="Site pages">
@@ -480,23 +511,28 @@
                 </ul>
             </nav>
             @if (! empty($seo['cluster_links']) && is_array($seo['cluster_links']))
-                <ul>
-                    @foreach ($seo['cluster_links'] as $link)
-                        @if (! empty($link['path']) && ! empty($link['label']))
-                            <li><a href="{{ $link['path'] }}">{{ $link['label'] }}</a></li>
-                        @endif
-                    @endforeach
-                </ul>
+                <nav aria-label="{{ $isEnPrerender ? 'Related guides' : 'সম্পর্কিত গাইড' }}">
+                    <ul>
+                        @foreach ($seo['cluster_links'] as $link)
+                            @if (! empty($link['path']) && ! empty($link['label']))
+                                <li><a href="{{ $link['path'] }}">{{ $link['label'] }}</a></li>
+                            @endif
+                        @endforeach
+                    </ul>
+                </nav>
             @endif
             @if (! empty($seo['faqs']) && is_array($seo['faqs']))
-                <div>
+                <section>
+                    <h2>{{ $isEnPrerender ? 'FAQ' : 'যা জানতে চান' }}</h2>
                     @foreach ($seo['faqs'] as $faq)
                         @if (! empty($faq['q']) && ! empty($faq['a']))
-                            <h2>{{ $faq['q'] }}</h2>
-                            <p>{!! \App\Support\SeoPrerenderText::linkifyHtml((string) $faq['a'], $isEnPrerender) !!}</p>
+                            <h3>{{ $faq['q'] }}</h3>
+                            @foreach (\App\Support\SeoPrerenderText::readableParagraphs((string) $faq['a']) as $faqPara)
+                                <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($faqPara, $isEnPrerender) !!}</p>
+                            @endforeach
                         @endif
                     @endforeach
-                </div>
+                </section>
             @endif
         </section>
         <noscript>
