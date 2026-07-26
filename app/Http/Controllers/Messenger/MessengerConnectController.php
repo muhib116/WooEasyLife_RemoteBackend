@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Messenger;
 use App\Http\Controllers\Controller;
 use App\Models\Website;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Messenger\MessengerPageConnectionResolver;
 use App\Services\Messenger\MessengerPageOAuthService;
 use App\Services\Messenger\WordPressMessengerForwarder;
 use Illuminate\Http\RedirectResponse;
@@ -180,6 +181,26 @@ class MessengerConnectController extends Controller
         return $this->successResponse([
             'disconnected' => true,
         ], 'Facebook Page disconnected.');
+    }
+
+    /**
+     * Lightweight hub check so WordPress can stop showing "Connected" when the
+     * local pages table is ahead of messenger_page_connections for this license.
+     */
+    public function status(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $payload = $resolver->statusPayload($accessToken, $pageId);
+
+        return $this->successResponse($payload, $payload['connected'] ? 'Connected.' : 'Not connected.');
     }
 
     /**

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Messenger;
 
 use App\Http\Controllers\Controller;
-use App\Models\MessengerPageConnection;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Messenger\MessengerPageConnectionResolver;
 use App\Services\Messenger\MessengerPageOAuthService;
 use Illuminate\Http\Request;
 
@@ -19,7 +19,8 @@ class MessengerAttachmentController extends Controller
     public function upload(
         Request $request,
         CourierAccountService $accounts,
-        MessengerPageOAuthService $oauth
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
     ) {
         $accessToken = $accounts->resolveAccessToken($request);
         if (! $accessToken) {
@@ -56,16 +57,7 @@ class MessengerAttachmentController extends Controller
             );
         }
 
-        $query = MessengerPageConnection::query()
-            ->connected()
-            ->where('access_token_id', $accessToken->id);
-
-        if ($pageId !== '') {
-            $query->where('page_id', $pageId);
-        }
-
-        /** @var MessengerPageConnection|null $connection */
-        $connection = $query->orderByDesc('id')->first();
+        $connection = $resolver->resolve($accessToken, $pageId);
 
         if (! $connection) {
             return $this->errorResponse('No connected Facebook Page found for this license.', 404);

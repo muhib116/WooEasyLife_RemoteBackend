@@ -143,6 +143,8 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
 
         Route::post('messenger/connect-url', [MessengerConnectController::class, 'connectUrl']);
         Route::post('messenger/disconnect', [MessengerConnectController::class, 'disconnect']);
+        Route::get('messenger/status', [MessengerConnectController::class, 'status']);
+        Route::post('messenger/status', [MessengerConnectController::class, 'status']);
         Route::post('messenger/send', [MessengerSendController::class, 'send']);
         Route::post('messenger/sender-action', [MessengerSendController::class, 'senderAction']);
         Route::post('messenger/upload-attachment', [MessengerAttachmentController::class, 'upload']);

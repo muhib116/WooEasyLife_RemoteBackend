@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Messenger;
 
 use App\Http\Controllers\Controller;
-use App\Models\MessengerPageConnection;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Messenger\MessengerPageConnectionResolver;
 use App\Services\Messenger\MessengerPageOAuthService;
 use Illuminate\Http\Request;
 
@@ -13,7 +13,8 @@ class MessengerSendController extends Controller
     public function send(
         Request $request,
         CourierAccountService $accounts,
-        MessengerPageOAuthService $oauth
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
     ) {
         $accessToken = $accounts->resolveAccessToken($request);
         if (! $accessToken) {
@@ -62,16 +63,7 @@ class MessengerSendController extends Controller
             }
         }
 
-        $query = MessengerPageConnection::query()
-            ->connected()
-            ->where('access_token_id', $accessToken->id);
-
-        if ($pageId !== '') {
-            $query->where('page_id', $pageId);
-        }
-
-        /** @var MessengerPageConnection|null $connection */
-        $connection = $query->orderByDesc('id')->first();
+        $connection = $resolver->resolve($accessToken, $pageId);
 
         if (! $connection) {
             return $this->errorResponse('No connected Facebook Page found for this license.', 404);
@@ -129,7 +121,8 @@ class MessengerSendController extends Controller
     public function senderAction(
         Request $request,
         CourierAccountService $accounts,
-        MessengerPageOAuthService $oauth
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
     ) {
         $accessToken = $accounts->resolveAccessToken($request);
         if (! $accessToken) {
@@ -148,16 +141,7 @@ class MessengerSendController extends Controller
             return $this->errorResponse('Invalid sender action.', 422);
         }
 
-        $query = MessengerPageConnection::query()
-            ->connected()
-            ->where('access_token_id', $accessToken->id);
-
-        if ($pageId !== '') {
-            $query->where('page_id', $pageId);
-        }
-
-        /** @var MessengerPageConnection|null $connection */
-        $connection = $query->orderByDesc('id')->first();
+        $connection = $resolver->resolve($accessToken, $pageId);
 
         if (! $connection) {
             return $this->errorResponse('No connected Facebook Page found for this license.', 404);

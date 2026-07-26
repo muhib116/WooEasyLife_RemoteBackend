@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AccessToken;
+use App\Models\MessengerPageConnection;
 use App\Models\User;
 use App\Models\UserPackage;
 use Illuminate\Support\Carbon;
@@ -78,6 +79,18 @@ class LicenseProvisioningService
                 UserPackage::query()
                     ->whereKey($userPackage->id)
                     ->update(['website_id' => $website->id]);
+            }
+
+            // Keep Messenger Page bindings alive across license re-issue for the same website.
+            if ($website?->id) {
+                MessengerPageConnection::query()
+                    ->where('website_id', $website->id)
+                    ->where('status', 'connected')
+                    ->where('access_token_id', '!=', $accessToken->id)
+                    ->update([
+                        'access_token_id' => $accessToken->id,
+                        'website_id' => $website->id,
+                    ]);
             }
 
             return [
