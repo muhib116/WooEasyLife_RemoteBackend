@@ -71,12 +71,33 @@ class MessengerAttachmentController extends Controller
             return $this->errorResponse('No connected Facebook Page found for this license.', 404);
         }
 
+        // Prefer the MIME the store sent us. Laravel's getMimeType() sniffs file
+        // content, which reports audio-only MP4/MOV voice notes as "video/mp4" and
+        // causes Meta to reject them (#100). The store already resolved the real type.
+        $clientMime = trim((string) $request->input('mime', ''));
+        $allowedMimes = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'video/mp4', 'video/quicktime', 'video/webm',
+            'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/aac',
+            'audio/ogg', 'audio/webm', 'audio/wav', 'audio/x-wav',
+            'application/pdf',
+        ];
+        $mime = in_array($clientMime, $allowedMimes, true)
+            ? $clientMime
+            : (string) ($file->getMimeType() ?: '');
+
+        // Defense in depth: even if the store omitted mime, never hand Meta a
+        // video/* Content-Type for an attachment declared as audio (voice notes).
+        if ($type === 'audio' && in_array($mime, ['video/mp4', 'video/quicktime', ''], true)) {
+            $mime = 'audio/mp4';
+        }
+
         $result = $oauth->uploadAttachment(
             $connection,
             $type,
             $file->getRealPath(),
             (string) $file->getClientOriginalName(),
-            (string) ($file->getMimeType() ?: '')
+            $mime
         );
 
         if (empty($result['ok'])) {

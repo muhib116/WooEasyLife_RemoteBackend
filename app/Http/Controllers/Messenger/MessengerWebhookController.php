@@ -166,6 +166,11 @@ class MessengerWebhookController extends Controller
 
         $cache = [];
         foreach ($events as &$event) {
+            // Echoes are page→customer; don't burn Graph quota on profile lookups.
+            if (! empty($event['is_echo']) || ($event['event_type'] ?? '') === 'reaction') {
+                continue;
+            }
+
             $psid = (string) ($event['psid'] ?? '');
             if ($psid === '') {
                 continue;
@@ -196,13 +201,90 @@ class MessengerWebhookController extends Controller
     {
         $senderId = (string) ($item['sender']['id'] ?? '');
         $recipientId = (string) ($item['recipient']['id'] ?? '');
+        $message = is_array($item['message'] ?? null) ? $item['message'] : null;
 
-        // Echo / page-as-sender — ignore.
+        // Reactions arrive as a standalone webhook event, not as a message.
+        $reaction = is_array($item['reaction'] ?? null) ? $item['reaction'] : null;
+        if ($reaction !== null) {
+            $targetMid = trim((string) ($reaction['mid'] ?? ''));
+            if ($targetMid === '' || $senderId === '') {
+                return null;
+            }
+
+            return [
+                'page_id' => $pageId !== '' ? $pageId : $recipientId,
+                'psid' => $senderId === $pageId ? $recipientId : $senderId,
+                'event_type' => 'reaction',
+                'is_echo' => false,
+                'sender_profile' => [
+                    'name' => '',
+                    'profile_pic' => '',
+                ],
+                'reaction' => [
+                    'mid' => $targetMid,
+                    'action' => (string) ($reaction['action'] ?? 'react'),
+                    'reaction' => (string) ($reaction['reaction'] ?? 'other'),
+                    'emoji' => (string) ($reaction['emoji'] ?? ''),
+                ],
+            ];
+        }
+
+        // Page-sent echoes: sender is the Page, recipient is the customer PSID.
+        // We forward these so WordPress can replace temporary local media URLs
+        // with Facebook CDN URLs (same display path as inbound customer media).
+        $isEcho = is_array($message) && ! empty($message['is_echo']);
+        if ($isEcho) {
+            if ($recipientId === '' || $pageId === '') {
+                return null;
+            }
+
+            $type = 'text';
+            $text = (string) ($message['text'] ?? '');
+            $attachments = [];
+            $replyToMid = '';
+
+            if (! empty($message['reply_to']['mid'])) {
+                $replyToMid = (string) $message['reply_to']['mid'];
+            }
+
+            if (! empty($message['attachments']) && is_array($message['attachments'])) {
+                foreach ($message['attachments'] as $attachment) {
+                    if (! is_array($attachment)) {
+                        continue;
+                    }
+                    $attachments[] = [
+                        'type' => (string) ($attachment['type'] ?? 'file'),
+                        'url' => (string) ($attachment['payload']['url'] ?? ''),
+                    ];
+                    $type = (string) ($attachment['type'] ?? 'file');
+                }
+            }
+
+            return [
+                'page_id' => $pageId,
+                'psid' => $recipientId,
+                'is_echo' => true,
+                'sender_profile' => [
+                    'name' => '',
+                    'profile_pic' => '',
+                ],
+                'message' => [
+                    'mid' => (string) ($message['mid'] ?? ('echo_' . md5(json_encode($item)))),
+                    'type' => $type,
+                    'text' => $text,
+                    'attachments' => $attachments,
+                    'reply_to_mid' => $replyToMid,
+                    'is_echo' => true,
+                    'referral' => null,
+                ],
+            ];
+        }
+
+        // Echo / page-as-sender without is_echo payload — ignore.
         if ($senderId === '' || $senderId === $pageId) {
             return null;
         }
 
-        $message = is_array($item['message'] ?? null) ? $item['message'] : null;
         if ($message === null) {
             // Still store postbacks as text for inbox visibility.
             if (isset($item['postback']['payload'])) {
@@ -214,10 +296,6 @@ class MessengerWebhookController extends Controller
             } else {
                 return null;
             }
-        }
-
-        if (! empty($message['is_echo'])) {
-            return null;
         }
 
         $type = 'text';

@@ -121,4 +121,57 @@ class MessengerSendController extends Controller
             'psid' => $psid,
         ], 'Message sent.');
     }
+
+    /**
+     * Forward a sender_action (typing_on/typing_off/mark_seen) to Meta so the
+     * customer sees the "typing…" indicator while an operator composes a reply.
+     */
+    public function senderAction(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $psid = trim((string) $request->input('psid', ''));
+        $action = strtolower(trim((string) $request->input('action', 'typing_on')));
+
+        if ($psid === '') {
+            return $this->errorResponse('psid is required.', 422);
+        }
+
+        if (! in_array($action, ['mark_seen', 'typing_on', 'typing_off'], true)) {
+            return $this->errorResponse('Invalid sender action.', 422);
+        }
+
+        $query = MessengerPageConnection::query()
+            ->connected()
+            ->where('access_token_id', $accessToken->id);
+
+        if ($pageId !== '') {
+            $query->where('page_id', $pageId);
+        }
+
+        /** @var MessengerPageConnection|null $connection */
+        $connection = $query->orderByDesc('id')->first();
+
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->sendSenderAction($connection, $psid, $action);
+
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to send sender action.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse(['action' => $action], 'ok');
+    }
 }

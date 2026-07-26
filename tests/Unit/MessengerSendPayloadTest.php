@@ -152,4 +152,39 @@ class MessengerSendPayloadTest extends TestCase
         $this->assertFalse($result['ok']);
         Http::assertNothingSent();
     }
+
+    public function test_sender_action_posts_only_recipient_and_action(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['recipient_id' => 'PSID123'], 200),
+        ]);
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->sendSenderAction($this->connection(), 'PSID123', 'typing_on');
+
+        $this->assertTrue($result['ok']);
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+            $this->assertSame('typing_on', $body['sender_action'] ?? null);
+            $this->assertSame('PSID123', $body['recipient']['id'] ?? null);
+            // Sender actions must not carry a message payload.
+            $this->assertArrayNotHasKey('message', $body);
+
+            return true;
+        });
+    }
+
+    public function test_sender_action_normalizes_unknown_action_to_typing_on(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['recipient_id' => 'PSID123'], 200),
+        ]);
+
+        $service = app(MessengerPageOAuthService::class);
+        $service->sendSenderAction($this->connection(), 'PSID123', 'dance');
+
+        Http::assertSent(function ($request) {
+            return ($request->data()['sender_action'] ?? null) === 'typing_on';
+        });
+    }
 }

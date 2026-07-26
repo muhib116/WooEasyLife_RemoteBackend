@@ -369,6 +369,54 @@ class MessengerPageOAuthService
     }
 
     /**
+     * Send a sender_action (mark_seen, typing_on, typing_off) to a recipient.
+     * Meta requires these to be sent on their own request with only the recipient.
+     *
+     * @return array{ok:bool, error?:string, http_status?:int}
+     */
+    public function sendSenderAction(
+        MessengerPageConnection $connection,
+        string $psid,
+        string $action
+    ): array {
+        $psid = trim($psid);
+        $pageToken = (string) $connection->page_access_token;
+        $action = strtolower(trim($action));
+
+        if (! in_array($action, ['mark_seen', 'typing_on', 'typing_off'], true)) {
+            $action = 'typing_on';
+        }
+
+        if ($psid === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing recipient or page token.'];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withToken($pageToken)
+                ->post(
+                    'https://graph.facebook.com/' . $this->graphVersion() . '/me/messages',
+                    [
+                        'recipient' => ['id' => $psid],
+                        'sender_action' => $action,
+                    ]
+                );
+        } catch (\Throwable $exception) {
+            return ['ok' => false, 'error' => $exception->getMessage()];
+        }
+
+        if (! $response->successful()) {
+            return [
+                'ok' => false,
+                'error' => (string) ($response->json('error.message') ?? 'Failed to send sender action.'),
+                'http_status' => $response->status(),
+            ];
+        }
+
+        return ['ok' => true, 'http_status' => $response->status()];
+    }
+
+    /**
      * @param  array<string, mixed>  $options
      * @return array{ok:bool, mid?:string, error?:string, http_status?:int}
      */
@@ -651,7 +699,7 @@ class MessengerPageOAuthService
                 ->post(
                     'https://graph.facebook.com/' . $this->graphVersion() . '/' . $connection->page_id . '/subscribed_apps',
                     [
-                        'subscribed_fields' => 'messages,messaging_postbacks,messaging_optins,message_deliveries,message_reads,messaging_referrals',
+                        'subscribed_fields' => 'messages,message_echoes,message_reactions,messaging_postbacks,messaging_optins,message_deliveries,message_reads,messaging_referrals',
                         'access_token' => $connection->page_access_token,
                     ]
                 );
