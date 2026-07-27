@@ -147,6 +147,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::post('messenger/disconnect', [MessengerConnectController::class, 'disconnect']);
         Route::get('messenger/status', [MessengerConnectController::class, 'status']);
         Route::post('messenger/status', [MessengerConnectController::class, 'status']);
+        Route::post('messenger/sync-history', [MessengerConnectController::class, 'syncHistory']);
         Route::post('messenger/send', [MessengerSendController::class, 'send']);
         Route::post('messenger/sender-action', [MessengerSendController::class, 'senderAction']);
         Route::post('messenger/delete-message', [MessengerSendController::class, 'deleteMessage']);

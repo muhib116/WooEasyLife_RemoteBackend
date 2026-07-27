@@ -66,7 +66,7 @@ class WordPressMessengerForwarder
             $endpoint = rtrim($candidate, '/') . '/wp-json/wooeasylife/v1/' . ltrim($route, '/');
 
             try {
-                $response = Http::timeout(20)
+                $response = Http::timeout(! empty($payload['source']) && $payload['source'] === 'history_sync' ? 90 : 20)
                     ->withHeaders([
                         'Content-Type' => 'application/json',
                         'X-WEL-Internal-Token' => $signature,

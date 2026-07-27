@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Messenger;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncMessengerConversationHistory;
 use App\Models\Website;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Messenger\MessengerConversationHistorySync;
 use App\Services\Messenger\MessengerPageConnectionResolver;
 use App\Services\Messenger\MessengerPageOAuthService;
 use App\Services\Messenger\WordPressMessengerForwarder;
@@ -63,10 +65,12 @@ class MessengerConnectController extends Controller
             }
 
             $forwarder->notifyPageConnected($connection);
+            $this->queueHistorySync($connection);
 
             return $this->successResponse([
                 'connected' => true,
                 'hub_ready' => true,
+                'history_sync_queued' => true,
                 'page' => [
                     'page_id' => $connection->page_id,
                     'page_name' => $connection->page_name,
@@ -217,11 +221,56 @@ class MessengerConnectController extends Controller
         try {
             $connection = $oauth->persistConnection($context, $page, $userToken);
             $forwarder->notifyPageConnected($connection);
+            $this->queueHistorySync($connection);
         } catch (\Throwable $exception) {
             return $this->redirectWithReturn($context, false, $exception->getMessage());
         }
 
         return $this->redirectWithReturn($context, true);
+    }
+
+    /**
+     * Import recent Messenger threads from Graph into the connected store.
+     * Runs synchronously so local installs without a queue worker still get history.
+     */
+    public function syncHistory(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageConnectionResolver $resolver,
+        MessengerConversationHistorySync $sync
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('Connect a Facebook Page first.', 409);
+        }
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+
+        $result = $sync->sync($connection, [
+            'max_conversations' => (int) $request->input('max_conversations', 25),
+            'max_messages_per_conversation' => (int) $request->input('max_messages', 40),
+        ]);
+
+        $ok = ! empty($result['ok']);
+
+        return $this->successResponse($result, (string) ($result['message'] ?? ($ok ? 'Synced.' : 'Sync failed.')), $ok ? 200 : 422);
+    }
+
+    private function queueHistorySync($connection): void
+    {
+        try {
+            SyncMessengerConversationHistory::dispatch((int) $connection->id);
+        } catch (\Throwable $exception) {
+            // Non-fatal: WP can still call /messenger/sync-history after connect.
+        }
     }
 
     /**
