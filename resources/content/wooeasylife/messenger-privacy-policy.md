@@ -13,6 +13,8 @@ By connecting a Facebook Page or interacting with a Page that uses the Service, 
 
 For the WooEasyLife Android mobile app, see the separate [mobile app Privacy Policy](https://app.wpsalehub.com/wooeasylife/app/privacy-policy).
 
+Related: [Messenger Terms of Service](https://app.wpsalehub.com/wooeasylife/messenger/terms-of-service).
+
 ## 2. Who we are / contact
 
 **Service provider / platform operator:**  

@@ -327,6 +327,8 @@ Route::prefix('wooeasylife/app')->name('wooeasylife.app.')->group(function () {
 Route::prefix('wooeasylife/messenger')->name('wooeasylife.messenger.')->group(function () {
     Route::get('/privacy-policy', [LegalController::class, 'messengerPrivacyPolicy'])
         ->name('privacy-policy');
+    Route::get('/terms-of-service', [LegalController::class, 'messengerTermsOfService'])
+        ->name('terms-of-service');
 });
 
 Route::prefix('woodnutsbolts')->name('woodnutsbolts.')->group(function () {

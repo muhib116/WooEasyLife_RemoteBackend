@@ -57,6 +57,22 @@ class LegalController extends Controller
         );
     }
 
+    public function messengerTermsOfService(): View
+    {
+        return $this->legalPage(
+            markdownPath: 'content/wooeasylife/messenger-terms-of-service.md',
+            view: 'legal.terms-of-service',
+            title: 'Woo Easy Life Messenger Terms of Service | WPSaleHub',
+            effectiveDate: 'July 27, 2026',
+            lastUpdated: 'July 27, 2026',
+            brandName: 'Woo Easy Life',
+            brandMark: 'WE',
+            appId: 'Facebook Messenger App',
+            lead: 'Rules for connecting Facebook Pages and using Woo Easy Life Messenger features, including Meta policy compliance and merchant responsibilities.',
+            metaDescription: 'Terms of Service for the Woo Easy Life Facebook Messenger app used by WooCommerce merchants.',
+        );
+    }
+
     public function woodnutsboltsPrivacyPolicy(): View
     {
         return $this->legalPage(
