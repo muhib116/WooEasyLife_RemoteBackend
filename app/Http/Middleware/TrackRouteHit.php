@@ -13,54 +13,67 @@ use Symfony\Component\HttpFoundation\Response;
 class TrackRouteHit
 {
     use \App\Traits\Util;
+
     /**
      * Handle an incoming request.
+     *
+     * API / plugin traffic skips the sync route_hits write (hot path).
+     * Web analytics still record after the response is sent to the client.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-
         $error = null;
         $response = null;
 
         try {
-            // $response->status();
             $response = $next($request);
         } catch (\Throwable $e) {
-            $error = $e->getMessage(); // Capture error
+            $error = $e->getMessage();
             $response = response()->json(['error' => 'Server Error'], 500);
         }
 
-        try {
-            $userId = Auth::id() ?? null;
-            // $group = $request->route()?->getAction('prefix') ?? null;
-            $path = $request->path();
-            $domain = $this->getRequestDomain();
-            $status = $response->getStatusCode();
-            $date = Carbon::today()->toDateString();
-
-            RouteHit::updateOrInsert(
-                [
-                    // 'group'   => $group,
-                    'path'    => $path,
-                    'domain'  => $domain,
-                    'status'  => $status,
-                    'created_at'    => $date,
-                ],
-                [
-                    'user_id' => $userId,
-                    'hit_count' => DB::raw('hit_count + 1'),
-                    'updated_at' => now(),
-                    'error' => $error,
-                ]
-            );
-            // dd($rec);
-        } catch (\Throwable $e) {
-            // dd($e->getMessage());
-            // Optional: log failure to insert/update
+        if ($this->shouldSkipTracking($request)) {
+            return $response;
         }
 
+        $userId = Auth::id() ?? null;
+        $path = $request->path();
+        $domain = $this->getRequestDomain();
+        $status = $response->getStatusCode();
+        $date = Carbon::today()->toDateString();
+
+        // Defer DB write until after the response is sent (web only).
+        dispatch(function () use ($userId, $path, $domain, $status, $date, $error) {
+            try {
+                RouteHit::updateOrInsert(
+                    [
+                        'path' => $path,
+                        'domain' => $domain,
+                        'status' => $status,
+                        'created_at' => $date,
+                    ],
+                    [
+                        'user_id' => $userId,
+                        'hit_count' => DB::raw('hit_count + 1'),
+                        'updated_at' => now(),
+                        'error' => $error,
+                    ]
+                );
+            } catch (\Throwable) {
+                // Optional: analytics must never break the request.
+            }
+        })->afterResponse();
+
         return $response;
+    }
+
+    private function shouldSkipTracking(Request $request): bool
+    {
+        // Plugin + public JSON APIs: never pay analytics write cost on the hot path.
+        return $request->is('api', 'api/*')
+            || $request->is('public/*')
+            || $request->is('api/webhooks/*');
     }
 }

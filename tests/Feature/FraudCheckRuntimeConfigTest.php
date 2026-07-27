@@ -18,10 +18,7 @@ function createRuntimeConfigAdmin(): User
 }
 
 beforeEach(function () {
-    $ref = new ReflectionClass(FraudCheckRuntimeConfig::class);
-    $prop = $ref->getProperty('originalDefaults');
-    $prop->setAccessible(true);
-    $prop->setValue(null, null);
+    FraudCheckRuntimeConfig::clearMemoForTests();
 
     PlatformSetting::query()
         ->where('key', 'like', 'order_intelligence.fraud_check.%')

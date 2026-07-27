@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Hub;
 
 use App\Http\Controllers\Controller;
 use App\LogHelper;
-use App\Models\AccessToken;
 use App\Models\PackageUseHistory;
 use App\Models\TransactionHistory;
 use App\Models\User;
 use App\Models\UserPackage;
+use App\Services\ApiAccessTokenResolver;
 use App\Services\DomainNormalizer;
 use App\Traits\Transaction;
 use Illuminate\Http\Request;
@@ -35,7 +35,7 @@ class HubController extends Controller
 
         $user = User::find(Auth::id());
         $token = $request->bearerToken();
-        $accessToken = AccessToken::findToken($token);
+        $accessToken = app(ApiAccessTokenResolver::class)->resolve($token, $request);
 
         if (! $accessToken || ! $accessToken->status) {
             LogHelper::saveLog('Order limit over', 'Invalid or disabled license token');
@@ -53,9 +53,19 @@ class HubController extends Controller
             return $this->errorResponse('Invalid domain', 401);
         }
 
-        $package = UserPackage::where('user_id', $user->id)
+        $normalizedTokenDomain = $domainNormalizer->normalize($accessToken->domain);
+        $packageQuery = UserPackage::query()
+            ->where('user_id', $user->id)
             ->where('is_active', true)
-            ->orderBy('id', 'asc')
+            ->orderBy('id', 'asc');
+        if ($normalizedTokenDomain) {
+            $domainNormalizer->constrainMatchingDomain(
+                $packageQuery,
+                'domain',
+                $normalizedTokenDomain
+            );
+        }
+        $package = $packageQuery
             ->get()
             ->first(fn (UserPackage $userPackage) => $domainNormalizer->matches(
                 $userPackage->domain,

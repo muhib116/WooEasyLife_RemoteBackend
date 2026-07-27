@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\UserBusiness;
 use App\Models\UserPackage;
 use App\Models\Website;
+use App\Services\ApiAccessTokenResolver;
 use App\Services\DomainNormalizer;
 use App\Services\MerchantSetupService;
 use App\Services\PackagePaymentService;
@@ -80,7 +81,7 @@ class UserController extends Controller
     public function getUser(Request $request)
     {
         $token = $request->bearerToken();
-        $accessToken = AccessToken::findToken($token);
+        $accessToken = app(ApiAccessTokenResolver::class)->resolve($token, $request);
         if (!$accessToken) {
             return $this->errorResponse('Invalid Token', 401);
         }
@@ -99,8 +100,17 @@ class UserController extends Controller
             $domainNormalizer = app(DomainNormalizer::class);
             $alertService = app(SubscriptionAlertService::class);
 
-            $smsBalances = SmsBalance::query()
-                ->where('user_id', $user->id)
+            $normalizedTokenDomain = $domainNormalizer->normalize($accessToken->domain);
+
+            $smsBalanceQuery = SmsBalance::query()->where('user_id', $user->id);
+            if ($normalizedTokenDomain) {
+                $domainNormalizer->constrainMatchingDomain(
+                    $smsBalanceQuery,
+                    'domain',
+                    $normalizedTokenDomain
+                );
+            }
+            $smsBalances = $smsBalanceQuery
                 ->get()
                 ->filter(fn (SmsBalance $balance) => $domainNormalizer->matches(
                     $balance->domain,
@@ -108,8 +118,17 @@ class UserController extends Controller
                 ));
             $smsBalance = $smsBalances->sum('amount');
 
-            $userPackage = UserPackage::where('user_id', $accessToken->tokenable_id)
-                ->where('is_active', true)
+            $userPackageQuery = UserPackage::query()
+                ->where('user_id', $accessToken->tokenable_id)
+                ->where('is_active', true);
+            if ($normalizedTokenDomain) {
+                $domainNormalizer->constrainMatchingDomain(
+                    $userPackageQuery,
+                    'domain',
+                    $normalizedTokenDomain
+                );
+            }
+            $userPackage = $userPackageQuery
                 ->get()
                 ->filter(fn (UserPackage $package) => $domainNormalizer->matches(
                     $package->domain,

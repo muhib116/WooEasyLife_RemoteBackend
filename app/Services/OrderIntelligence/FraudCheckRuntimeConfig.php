@@ -16,6 +16,10 @@ class FraudCheckRuntimeConfig
      */
     private static ?array $originalDefaults = null;
 
+    private static bool $overridesApplied = false;
+
+    private static ?bool $tableReady = null;
+
     /**
      * @var array<string, array{type: string, options?: list<string>, min?: int, max?: int, label: string, help: string}>
      */
@@ -71,15 +75,34 @@ class FraudCheckRuntimeConfig
 
     public function applyOverrides(): void
     {
+        // Idempotent within one PHP lifecycle (boot may be followed by snapshot/update).
+        if (self::$overridesApplied) {
+            return;
+        }
+
         $this->captureOriginalDefaults();
 
         if (! $this->tableReady()) {
+            self::$overridesApplied = true;
+
             return;
         }
 
         foreach ($this->storedOverrides() as $field => $value) {
             Config::set($this->configKey($field), $value);
         }
+
+        self::$overridesApplied = true;
+    }
+
+    /**
+     * Reset request/process memo (tests / admin after DB wipe).
+     */
+    public static function clearMemoForTests(): void
+    {
+        self::$overridesApplied = false;
+        self::$tableReady = null;
+        self::$originalDefaults = null;
     }
 
     /**
@@ -318,10 +341,16 @@ class FraudCheckRuntimeConfig
 
     private function tableReady(): bool
     {
-        try {
-            return Schema::hasTable('platform_settings');
-        } catch (\Throwable) {
-            return false;
+        if (self::$tableReady !== null) {
+            return self::$tableReady;
         }
+
+        try {
+            self::$tableReady = Schema::hasTable('platform_settings');
+        } catch (\Throwable) {
+            self::$tableReady = false;
+        }
+
+        return self::$tableReady;
     }
 }

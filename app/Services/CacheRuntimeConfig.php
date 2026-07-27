@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Admin-selectable default cache store (database|redis|file).
- * Stored in platform_settings; applied early via AppServiceProvider + middleware.
+ * Stored in platform_settings; applied early via AppServiceProvider::boot.
  */
 class CacheRuntimeConfig
 {
@@ -24,13 +24,33 @@ class CacheRuntimeConfig
 
     private static ?string $envDefault = null;
 
+    private static bool $overridesApplied = false;
+
+    private static ?bool $tableReady = null;
+
     public function applyOverrides(): void
     {
+        // Idempotent within one PHP lifecycle (boot may be followed by snapshot/update).
+        if (self::$overridesApplied) {
+            return;
+        }
+
         $this->captureEnvDefault();
 
         $driver = $this->effectiveDriver();
         Config::set(self::CONFIG_KEY, $driver);
         $this->forgetResolvedCache();
+        self::$overridesApplied = true;
+    }
+
+    /**
+     * Reset request/process memo (tests / admin after DB wipe).
+     */
+    public static function clearMemoForTests(): void
+    {
+        self::$overridesApplied = false;
+        self::$tableReady = null;
+        self::$envDefault = null;
     }
 
     /**
@@ -101,6 +121,7 @@ class CacheRuntimeConfig
 
         Config::set(self::CONFIG_KEY, $driver);
         $this->forgetResolvedCache();
+        self::$overridesApplied = true;
 
         return $this->snapshot();
     }
@@ -124,6 +145,7 @@ class CacheRuntimeConfig
         $driver = $this->envDefault();
         Config::set(self::CONFIG_KEY, $driver);
         $this->forgetResolvedCache();
+        self::$overridesApplied = true;
 
         return $this->snapshot();
     }
@@ -219,10 +241,16 @@ class CacheRuntimeConfig
 
     private function tableReady(): bool
     {
-        try {
-            return Schema::hasTable('platform_settings');
-        } catch (\Throwable) {
-            return false;
+        if (self::$tableReady !== null) {
+            return self::$tableReady;
         }
+
+        try {
+            self::$tableReady = Schema::hasTable('platform_settings');
+        } catch (\Throwable) {
+            self::$tableReady = false;
+        }
+
+        return self::$tableReady;
     }
 }

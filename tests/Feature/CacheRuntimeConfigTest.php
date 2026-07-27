@@ -15,10 +15,7 @@ class CacheRuntimeConfigTest extends TestCase
     {
         parent::setUp();
 
-        $ref = new ReflectionClass(CacheRuntimeConfig::class);
-        $prop = $ref->getProperty('envDefault');
-        $prop->setAccessible(true);
-        $prop->setValue(null, null);
+        CacheRuntimeConfig::clearMemoForTests();
 
         PlatformSetting::query()->where('key', CacheRuntimeConfig::SETTING_KEY)->delete();
     }

@@ -33,12 +33,11 @@ class Kernel extends HttpKernel
         'web' => [
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \App\Http\Middleware\ApplyCacheRuntimeConfig::class,
+            // Cache/fraud runtime overrides load once in AppServiceProvider::boot (avoid per-request DB).
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\ApplyFraudCheckRuntimeConfig::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ],
@@ -46,11 +45,10 @@ class Kernel extends HttpKernel
         'api' => [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\ForceJsonResponse::class,
-            \App\Http\Middleware\ApplyCacheRuntimeConfig::class,
+            // Cache/fraud runtime overrides load once in AppServiceProvider::boot (avoid per-request DB).
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \Illuminate\Http\Middleware\HandleCors::class,
-            \App\Http\Middleware\ApplyFraudCheckRuntimeConfig::class,
         ],
     ];
 

@@ -2,14 +2,18 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\AccessToken;
 use App\Models\User;
+use App\Services\ApiAccessTokenResolver;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class CustomAuthMiddleware
 {
+    public function __construct(
+        private ApiAccessTokenResolver $tokens,
+    ) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $token = $request->bearerToken();
@@ -18,7 +22,7 @@ class CustomAuthMiddleware
             return response()->json(['message' => 'Token not found'], 401);
         }
 
-        $tokenData = AccessToken::findToken($token);
+        $tokenData = $this->tokens->resolve($token, $request);
 
         if (! $tokenData) {
             return response()->json(['message' => 'Invalid token'], 401);
