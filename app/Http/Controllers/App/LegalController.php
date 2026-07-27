@@ -41,6 +41,22 @@ class LegalController extends Controller
         );
     }
 
+    public function messengerPrivacyPolicy(): View
+    {
+        return $this->legalPage(
+            markdownPath: 'content/wooeasylife/messenger-privacy-policy.md',
+            view: 'legal.privacy-policy',
+            title: 'Woo Easy Life Messenger Privacy Policy | WPSaleHub',
+            effectiveDate: 'July 27, 2026',
+            lastUpdated: 'July 27, 2026',
+            brandName: 'Woo Easy Life',
+            brandMark: 'WE',
+            appId: 'Facebook Messenger App',
+            lead: 'How WPSaleHub processes Facebook Page and Messenger Platform data for Woo Easy Life merchants, including data deletion instructions for Meta App Review.',
+            metaDescription: 'Privacy policy for the Woo Easy Life Facebook Messenger app: Platform data use, storage, sharing, and user data deletion.',
+        );
+    }
+
     public function woodnutsboltsPrivacyPolicy(): View
     {
         return $this->legalPage(

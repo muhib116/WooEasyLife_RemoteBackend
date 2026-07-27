@@ -78,6 +78,7 @@ class SeoPrerenderText
         '/en/blog' => ['bn' => 'ব্লগ (EN)', 'en' => 'Blog'],
         '/wooeasylife/app/privacy-policy' => ['bn' => 'প্রাইভেসি পলিসি', 'en' => 'Privacy Policy'],
         '/wooeasylife/app/terms-of-service' => ['bn' => 'টার্মস অফ সার্ভিস', 'en' => 'Terms of Service'],
+        '/wooeasylife/messenger/privacy-policy' => ['bn' => 'মেসেঞ্জার প্রাইভেসি পলিসি', 'en' => 'Messenger Privacy Policy'],
     ];
 
     /**

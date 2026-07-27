@@ -324,6 +324,11 @@ Route::prefix('wooeasylife/app')->name('wooeasylife.app.')->group(function () {
         ->name('terms-of-service');
 });
 
+Route::prefix('wooeasylife/messenger')->name('wooeasylife.messenger.')->group(function () {
+    Route::get('/privacy-policy', [LegalController::class, 'messengerPrivacyPolicy'])
+        ->name('privacy-policy');
+});
+
 Route::prefix('woodnutsbolts')->name('woodnutsbolts.')->group(function () {
     Route::get('/privacy-policy', [LegalController::class, 'woodnutsboltsPrivacyPolicy'])
         ->name('privacy-policy');
