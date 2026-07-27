@@ -46,6 +46,8 @@ class BlogProductBriefBuilder
             'author_name' => config('blog_ai.author_name'),
             'location' => config('landing.location', 'ঢাকা, বাংলাদেশ'),
             'footer_tagline' => config('landing.footer_tagline'),
+            'product_truth' => config('blog_ai.product_truth', []),
+            'preferred_feature_themes' => array_values(config('blog_ai.preferred_feature_themes', [])),
             'hero' => [
                 'badge' => $hero['badge'] ?? null,
                 'headline' => $hero['headline'] ?? null,
@@ -63,6 +65,9 @@ class BlogProductBriefBuilder
             ],
             'rules' => [
                 'Do not invent prices, merchant counts, courier brand partnerships, or guarantees not listed here.',
+                'Obey product_truth.hero_claims and product_truth.do_not_claim strictly (FEATURES.md sync).',
+                'SteadFast Return Requests / Notifications / stuck scan are Shipped; Pathao/RedX do NOT have that hub.',
+                'Messenger human inbox is Shipped; soft-mention AI Semi only; never Meta AI Bot or unlocked AI Full for all.',
                 'Target Bangladesh WooCommerce / COD sellers only.',
                 'Write primarily in Bangla (bn). Use a Latin SEO slug.',
                 'Soft-promote WooEasyLife; prioritize helpful education over hard sell.',
@@ -72,10 +77,12 @@ class BlogProductBriefBuilder
                 'Include a soft CTA to the cluster primary_path (and /pricing when natural).',
                 'Rank SEO tools: every post MUST internally link cluster must_link_paths first, using high-intent keyword anchors from seo_tools (never generic “এখানে ক্লিক”).',
                 'When natural, also link 1 related free tool (return-loss / courier-charge / ads-roas / fraud checker) so tool pages gain topical authority.',
+                'Courier / SteadFast posts should soft-link /steadfast-integration for return/stuck intents.',
                 'Focus keyword should match search intent for the primary tool when the cluster is tool-led (fraud_checker, return_loss, courier_charge, facebook_ads).',
                 'Voice: Messenger-style Bangla seller talk. Prefer short paragraphs over listicles. Ban corporate/AI fluff (see voice_dont).',
                 'Never open sections with “আজকের ডিজিটাল যুগে”, “গুরুত্বপূর্ণ বিষয় হলো”, or English “In today’s digital age”.',
                 'Do not start every section with the focus keyword; place it naturally once in first paragraph + one H2.',
+                'Prefer preferred_feature_themes when picking cold-start topics (Courier hub / Messenger launches).',
             ],
         ];
 

@@ -123,6 +123,40 @@ class MarketingSeoController extends Controller
         );
     }
 
+    public function steadfastReturnHub(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->renderSeoPage(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            'steadfast_return_hub',
+            'Seo/SteadfastReturnHub',
+            'features',
+        );
+    }
+
+    public function woocommerceFacebookMessenger(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->renderSeoPage(
+            $request,
+            $landing,
+            $seo,
+            $landingSettings,
+            'woocommerce_facebook_messenger',
+            'Seo/WoocommerceFacebookMessenger',
+            'features',
+        );
+    }
+
     public function fraudBdAlternative(
         Request $request,
         LandingPageService $landing,

@@ -139,6 +139,32 @@ class BlogSmartTopicPicker
             // ignore
         }
 
+        // P0 feature launches (Courier hub / Messenger) — boost above generic inventory.
+        foreach (config('blog_ai.preferred_feature_themes', []) as $theme) {
+            if (! is_array($theme)) {
+                continue;
+            }
+            $cluster = trim((string) ($theme['cluster'] ?? ''));
+            $seed = trim((string) ($theme['seed'] ?? ''));
+            if ($cluster === '' || $seed === '') {
+                continue;
+            }
+            if ($explicitCluster !== '' && $explicitCluster !== $cluster) {
+                continue;
+            }
+            $candidates[] = [
+                'seed_topic' => $seed,
+                'keyword' => $seed,
+                'cluster' => $cluster,
+                'reason' => 'preferred_feature_theme',
+                'bucket' => null,
+                'opportunity_score' => (float) ($theme['priority'] ?? 90) / 4.0, // ~22–25
+                'target_slug' => null,
+                'impressions' => 0,
+                'source' => 'feature_theme',
+            ];
+        }
+
         $preferGsc = (bool) config('blog_ai.auto.prefer_gsc', true);
         $hasGsc = collect($candidates)->contains(fn (array $c) => ($c['source'] ?? '') === 'gsc');
 
@@ -311,6 +337,12 @@ class BlogSmartTopicPicker
         $score += min(25, ((int) ($candidate['impressions'] ?? 0)) / 30);
         if (($candidate['source'] ?? '') === 'gsc') {
             $score += 40;
+        }
+        if (($candidate['source'] ?? '') === 'feature_theme') {
+            $score += 22;
+        }
+        if (($candidate['source'] ?? '') === 'inventory') {
+            $score += 8;
         }
 
         return $score;

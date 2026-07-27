@@ -106,6 +106,24 @@ class EnglishMarketingController extends Controller
         return $this->page($request, $landing, $seo, $landingSettings, 'en_courier_auto_entry', 'Seo/EnCourierAutoEntry');
     }
 
+    public function steadfastReturnHub(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->page($request, $landing, $seo, $landingSettings, 'en_steadfast_return_hub', 'Seo/EnSteadfastReturnHub');
+    }
+
+    public function woocommerceFacebookMessenger(
+        Request $request,
+        LandingPageService $landing,
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return $this->page($request, $landing, $seo, $landingSettings, 'en_woocommerce_facebook_messenger', 'Seo/EnWoocommerceFacebookMessenger');
+    }
+
     public function fraudBdAlternative(
         Request $request,
         LandingPageService $landing,

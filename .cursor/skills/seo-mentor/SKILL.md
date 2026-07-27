@@ -13,7 +13,7 @@ description: >
 
 # WooEasyLife SEO Mentor Skill
 
-**Last reviewed:** 2026-07-26
+**Last reviewed:** 2026-07-27
 **Rule (daily plan format):** `.cursor/rules/seo-mentor.mdc`  
 **Brand + creatives:** `.cursor/skills/wooeasylife-brand/SKILL.md`  
 **Features (claims only if Shipped):** `.cursor/skills/wooeasylife-brand/FEATURES.md`  
@@ -42,12 +42,12 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 
 ## Current state (keep honest)
 
-| Fact | Status (2026-07-26) |
+| Fact | Status (2026-07-27) |
 |------|---------------------|
 | Money URL | `/bd-fraud-checker` live (200) |
 | FAQ hub | `/faq` **live** + 8 inventory question URLs |
-| Inventory | live money/tool/pillar + FAQ hub · 8 live FAQ · 5 planned_blog · 8 planned_commercial |
-| Product docs | Plugin v1.5.3 · App v1.1.6 · `FEATURES.md` last analyzed 2026-07-23 |
+| Inventory | live money/tool/pillar + FAQ hub · 8 live FAQ · `/steadfast-return-hub` + `/woocommerce-facebook-messenger` live · planned courier/messenger FAQs+blogs · remaining planned_commercial |
+| Product docs | Plugin **v1.5.4** · App v1.1.6 · `FEATURES.md` last analyzed **2026-07-27** (Courier hub + Messenger) |
 
 Update this table when `/faq` ships, major gaps close, or versions bump.
 
@@ -106,6 +106,8 @@ Money tools / pillars              Topic hubs                 Question URLs
 /fake-order-protection      →      /faq  (sections)    →      inventory slugs only
 /cod-return-reduction       →      fraud | fake-order | COD | courier | app
 /courier-auto-entry         →
+/steadfast-return-hub      →      SteadFast Return/Notifications/stuck
+/woocommerce-facebook-messenger →  Page Messenger inbox (WP admin)
 /return-loss-calculator     →      cross-link tools
 blog posts                  →      same hubs (never orphan)
 ```

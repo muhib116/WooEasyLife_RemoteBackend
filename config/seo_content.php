@@ -2004,4 +2004,316 @@ return array (
       ),
     ),
   ),
+  'steadfast_return_hub' =>
+  array (
+    0 =>
+    array (
+      'heading' => 'দ্রুত উত্তর',
+      'paragraphs' =>
+      array (
+        0 => 'রাইডার SteadFast-এ cancel বা return request পাঠালে সেটা WooEasyLife-এর Courier → Return Requests-এও আসে। Decide খুলে কল করুন, call log রাখুন, তারপর Confirm cancel বা Ask to resend করুন—প্রতিবার পোর্টালে Change Status করতে যাওয়া লাগে না।',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-before-after.jpg',
+          'alt' => 'SteadFast Cancellation Requests Change Status বনাম WooEasyLife Return Requests Decide',
+          'caption' => 'আগে: পোর্টালে Change Status · এখন: প্লাগইনে Decide',
+        ),
+      ),
+    ),
+    1 =>
+    array (
+      'heading' => 'আসলে দিনের শেষে কী বিরক্তিকর ছিল',
+      'paragraphs' =>
+      array (
+        0 => 'COD স্টোরে পার্সেল বুক হওয়ার পরও কাজ থেমে যায় না। রাইডার নোট দেয়—কাস্টমার ফোন ধরেননি, ঠিকানা খুঁজে পাচ্ছেন না, বা বলছেন আর নিবেন না। SteadFast Cancellation Requests কিউ ভরে ওঠে। Pending খুলে Change Status, আবার পরেরটা। দিনে কয়েক ডজন হলে শুধু স্ক্রিন ঘোরাতেই ঘণ্টা চলে যায়।',
+        1 => 'একটা সাধারণ সকাল: আটটা Pending। একটাতে পার্সেল নিবে না। আরেকটাতে ফোন রিসিভ হয়নি। তৃতীয়টাতে ঠিকানা পাচ্ছেন না। প্রতিটার জন্য আলাদা ক্লিক, তারপর অর্ডার নম্বর খুঁজে WooCommerce-এ ফিরে আসা—এই টানাটানিটাই Return Hub কমাতে চায়।',
+        2 => 'বুকিং প্লাগইন দরকার। কিন্তু বুকিংয়ের পরে cancel request পোর্টালেই ফেলে রাখলে রিটার্ন চার্জ আর স্টাফ সময় দুটোই বাড়ে। এই হাব সেই পরের ধাপ।',
+      ),
+    ),
+    2 =>
+    array (
+      'heading' => 'একটা বাস্তব উদাহরণ—নোট থেকে সিদ্ধান্ত',
+      'paragraphs' =>
+      array (
+        0 => 'ধরুন অর্ডার #411। রাইডার নোট: কাস্টমার পার্সেল নিবে না, মার্চেন্ট অবগত। আগে পোর্টালে গিয়ে Change Status চাপতেন। এখন Return Requests → Pending → Decide—একই নোট History-তে।',
+        1 => 'চাইলে আগে রাইডারকে Call করে নিশ্চিত করুন—সত্যিই রিফিউজ, নাকি শুধু ফোন ধরেননি। call log সেভ থাকে। আর একবার সুযোগ দিতে চাইলে Save the sale মেসেজ দিয়ে Dial বা WhatsApp।',
+        2 => 'পরিস্থিতি পরিষ্কার হলে Confirm cancel; ঠিকানা বা সময়ের সমস্যা মনে হলে Ask to resend। AI সাজেশন থাকলে দেখুন—কিন্তু নোট পড়ে নিজেই সিদ্ধান্ত নিন। দিনে দশটা এমন কেস হলে পোর্টালে যাওয়া আর রুটিন থাকে না।',
+      ),
+    ),
+    3 =>
+    array (
+      'heading' => 'প্লাগইনে ঢুকলে কী দেখবেন',
+      'paragraphs' =>
+      array (
+        0 => 'Return Requests-এ Pending, Confirmed, Resend Request, Cancelled, Resent—পোর্টালের মতোই চেনা ট্যাব। তারিখ ফিল্টার, Refresh, CSV আছে। Pending সারিতে Decide চাপলে Steadfast parcel notes মডাল খোলে।',
+        1 => 'Pending মানে সিদ্ধান্ত বাকি। Confirmed মানে cancel/return নিশ্চিত। Resend Request মানে আপনি Ask to resend দিয়েছেন। Cancelled ও Resent হিস্ট্রির জন্য। নতুন স্টাফকে বলুন: পোর্টালে Change Status শিখেছো; এখন একই সিদ্ধান্ত Decide-এ।',
+        2 => 'মডালে consignment, অর্ডার লিংক, History, Details, Edit parcel একসাথে। Cancellation request pending থাকলে Confirm cancel ও Ask to resend সামনে থাকে। Assigned rider থেকে Call ও call log—অর্ডার কনটেক্সট এক স্ক্রিনে।',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-requests-queue.jpg',
+          'alt' => 'WooEasyLife Return Requests Pending কিউ এবং Decide বাটন',
+          'caption' => 'Pending ট্যাব → Decide চাপুন',
+        ),
+        1 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-decide-modal.jpg',
+          'alt' => 'Decide মডালে Rider Call, Confirm cancel এবং Ask to resend',
+          'caption' => 'Call + Confirm cancel + Ask to resend—এক মডালে',
+        ),
+      ),
+    ),
+    4 =>
+    array (
+      'heading' => 'দিনের কাজ কীভাবে চালাবেন',
+      'paragraphs' =>
+      array (
+        0 => 'আগে /steadfast-integration দিয়ে API কানেক্ট করুন এবং /courier-auto-entry চালু রাখুন। তারপর Courier → Return Requests → Refresh।',
+        1 => 'Pending → Decide → নোট পড়ুন → প্রয়োজনে রাইডার কল → সেভযোগ্য হলে কাস্টমারকে Dial/WhatsApp → Confirm cancel বা Ask to resend। Notifications ও Scan stuck দিয়ে কয়েকদিন নিস্তব্ধ পার্সেল ধরুন।',
+        2 => 'প্রথম কয়েকদিন টিমকে বলুন: নতুন cancel request এলে আগে প্লাগইনের Pending দেখো। অভ্যাস পাল্টে গেলে পোর্টাল ওপেন কমে যায়।',
+      ),
+      'list' =>
+      array (
+        0 => 'API কানেক্ট + অটো এন্ট্রি চালু',
+        1 => 'Return Requests সিঙ্ক → Pending',
+        2 => 'Decide → নোট → প্রয়োজনে কল',
+        3 => 'Confirm cancel বা Ask to resend',
+        4 => 'Notifications / stuck স্ক্যান ফলো-আপ',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-full-flow.jpg',
+          'alt' => 'ফ্রড চেক থেকে Return Hub Decide পর্যন্ত সম্পূর্ণ ফ্লো',
+          'caption' => 'ফ্রড → অটো এন্ট্রি → Return Requests → Decide → Notifications',
+        ),
+      ),
+    ),
+    5 =>
+    array (
+      'heading' => 'রাইডার কল আর call log কেন জরুরি',
+      'paragraphs' =>
+      array (
+        0 => 'সব cancel request মানেই অর্ডার শেষ নয়। কল না করে Confirm cancel চাপলে সেভযোগ্য অর্ডার হারাতে পারেন।',
+        1 => 'মডালে রাইডারের নম্বর রেডি থাকে। Call দিয়ে নোট মিলিয়ে দেখুন; কল হিস্ট্রি অর্ডারে থাকে—পরের স্টাফ বুঝতে পারে কে কখন কল করেছে। ছোট টিমে ডুপ্লিকেট কল কমাতে এটাই সবচেয়ে কাজে লাগে।',
+      ),
+    ),
+    6 =>
+    array (
+      'heading' => 'AI সাজেশন আর Save the sale (অপশনাল)',
+      'paragraphs' =>
+      array (
+        0 => 'AI প্যাকেজ থাকলে মডালে সাজেশন আসতে পারে—Confirm cancel নাকি Ask to resend বেশি মানায়, যেমন মত পরিবর্তন বা ফোনে না পাওয়া। এটা গাইড; চূড়ান্ত ক্লিক আপনার।',
+        1 => 'Save the sale ব্লকে কাস্টমারকে কী বলবেন তার ড্রাফট থাকে—Dial বা WhatsApp। অনেক স্টাফ Confirm জানেন, কিন্তু কী লিখবেন ভেবে আটকে যান; এই ব্লক সেই ফাঁকা জায়গা ভরে।',
+        2 => 'AI না থাকলেও মানব বাটন কাজ করে। সাজেশন ভুল লাগলে উপেক্ষা করুন। Meta AI Bot বা সব প্ল্যানে ফ্রি ফুল AI দাবি করি না।',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-ai-save-sale.jpg',
+          'alt' => 'AI Decide সাজেশন এবং Save the sale Dial WhatsApp ড্রাফট',
+          'caption' => 'অপশনাল AI সাজেশন + Save the sale মেসেজ',
+        ),
+      ),
+    ),
+    7 =>
+    array (
+      'heading' => 'Notifications, stuck, আর অটো এন্ট্রির পার্থক্য',
+      'paragraphs' =>
+      array (
+        0 => 'Notifications-এ portal আপডেট ও cancel সিগন্যাল এক জায়গায়। Scan stuck প্রায় তিন দিন নিস্তব্ধ পার্সেল ধরে—আগে ধরলে কল বা return ফ্লো তাড়াতাড়ি শুরু হয়। Stuck মানেই cancel নয়।',
+        1 => '/courier-auto-entry = কনফার্ম হলে পার্সেল তৈরি। Return Hub = বুকিংয়ের পর Decide, কল, stuck। অটো এন্ট্রি রাস্তায় তোলে; এই হাব রাস্তায় সমস্যা হলে সিদ্ধান্ত নেয়। দুটোই লাগে।',
+      ),
+    ),
+    8 =>
+    array (
+      'heading' => 'কার জন্য—এবং কী দাবি করি না',
+      'paragraphs' =>
+      array (
+        0 => 'SteadFast বেশি ব্যবহার করা COD স্টোর, ছোট টিম, এজেন্সি—যারা প্রতিদিন Cancellation Requests হ্যান্ডেল করেন। Pathao/RedX প্রধান হলে জেনে রাখুন: এই Return Hub আজ SteadFast-কেন্দ্রিক; তাদের বুকিং /courier-auto-entry দিয়ে চলে।',
+        1 => 'Add Fund বা Bulk Print-এর মতো সব SteadFast টুল এখানে দাবি করি না—দাবিটা cancel/return Decide ফ্লো নিয়ে। সেটআপ বিস্তারিত /steadfast-integration-এ; ট্রায়াল /pricing।',
+      ),
+    ),
+    9 =>
+    array (
+      'heading' => 'যে ভুলগুলো এড়িয়ে চলুন',
+      'paragraphs' =>
+      array (
+        0 => 'প্লাগইন Pending উপেক্ষা করে শুধু পোর্টালে থাকা। নোট না পড়ে Confirm cancel। কল লগ না রাখা। AI সাজেশনকে বাধ্যতামূলক ভাবা।',
+        1 => 'আরও একটা: খারাপ নম্বর অন্ধ বুক করে cancel কিউ ফোলানো। কনফার্মের আগে /bd-fraud-checker বা /fake-customer-check; বারবার ফেক আটকাতে /fake-order-protection। মাসে লস দেখতে /return-loss-calculator।',
+      ),
+    ),
+    10 =>
+    array (
+      'heading' => 'শুরু করার ছোট চেকলিস্ট',
+      'paragraphs' =>
+      array (
+        0 => '/pricing → /steadfast-integration → /courier-auto-entry চালু → Return Requests-এ একটা Pending-এ Decide প্র্যাকটিস। AI থাকলে Save the saleও টেস্ট করুন—না থাকলেও Confirm/Resend চলবে।',
+        1 => 'সারাংশ: cancel request এলে প্লাগইনে দেখুন, প্রয়োজনে কল করুন, তারপর Confirm cancel বা Ask to resend—পোর্টালে প্রতিবার Change Status না করে। ইংরেজি: /en/steadfast-return-hub।',
+      ),
+    ),
+  ),
+  'en_steadfast_return_hub' =>
+  array (
+    0 =>
+    array (
+      'heading' => 'Quick answer',
+      'paragraphs' =>
+      array (
+        0 => 'When a rider sends a SteadFast cancel or return request, it also lands in WooEasyLife under Courier → Return Requests. Open Decide, call if needed, keep a call log, then Confirm cancel or Ask to resend—without Change Status on every portal row.',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-before-after.jpg',
+          'alt' => 'SteadFast portal Change Status versus WooEasyLife Return Requests Decide',
+          'caption' => 'Before: portal Change Status · Now: Decide in the plugin',
+        ),
+      ),
+    ),
+    1 =>
+    array (
+      'heading' => 'What made the workday annoying',
+      'paragraphs' =>
+      array (
+        0 => 'Booking a COD parcel is not the end of the job. Riders leave notes—customer not answering, address unclear, or they will not take the parcel. Cancellation Requests fills up. Pending, Change Status, repeat. A few dozen a day and the team burns hours in the portal.',
+        1 => 'Picture a morning with eight Pending items: will not take the parcel, phone never answered, cannot find the address. Each needs a click, then you hunt the order back in WooCommerce. That friction is what the Return Hub shrinks.',
+        2 => 'Booking plugins matter. But leaving cancel requests only on the portal still burns return fees and staff time. This hub is the after-booking layer.',
+      ),
+    ),
+    2 =>
+    array (
+      'heading' => 'A real walkthrough—from note to decision',
+      'paragraphs' =>
+      array (
+        0 => 'Say order #411. Rider note: customer will not take the parcel, merchant aware. On the portal you would hit Change Status. Now open Return Requests → Pending → Decide—same note in History.',
+        1 => 'Optionally Call the rider first—true refuse, or just a missed phone? The call log stays on the order. Want one more chance with the customer? Use Save the sale to Dial or WhatsApp.',
+        2 => 'When it is clear, Confirm cancel. If it looks like address or timing, Ask to resend. If AI suggests changed mind, still read the note and decide yourself. Ten cases a day stop feeling like a portal marathon.',
+      ),
+    ),
+    3 =>
+    array (
+      'heading' => 'What you see inside the plugin',
+      'paragraphs' =>
+      array (
+        0 => 'Return Requests mirrors familiar tabs: Pending, Confirmed, Resend Request, Cancelled, Resent—plus date filter, Refresh, and CSV. Tap Decide on Pending to open Steadfast parcel notes.',
+        1 => 'Pending means a decision is still owed. Confirmed locks cancel or return. Resend Request means you asked the courier to try again. Cancelled and Resent are history. Tell new staff: Change Status on the portal becomes Decide here.',
+        2 => 'The modal keeps consignment, order link, History, Details, and Edit parcel together. Confirm cancel and Ask to resend sit up front when a cancellation is pending. Call the assigned rider and keep the call log—order context on one screen.',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-requests-queue.jpg',
+          'alt' => 'WooEasyLife Return Requests Pending queue with Decide button',
+          'caption' => 'Pending tab → tap Decide',
+        ),
+        1 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-decide-modal.jpg',
+          'alt' => 'Decide modal with Rider Call, Confirm cancel, and Ask to resend',
+          'caption' => 'Call + Confirm cancel + Ask to resend in one modal',
+        ),
+      ),
+    ),
+    4 =>
+    array (
+      'heading' => 'How to run the day',
+      'paragraphs' =>
+      array (
+        0 => 'Connect the API with /en/steadfast-integration and keep /en/courier-auto-entry on. Then Courier → Return Requests → Refresh.',
+        1 => 'Pending → Decide → read the note → call the rider if needed → Dial/WhatsApp the customer if worth saving → Confirm cancel or Ask to resend. Use Notifications and Scan stuck for parcels quiet about three days.',
+        2 => 'For the first few days, tell the team: new cancel request? Check plugin Pending first. Once the habit sticks, portal opens drop.',
+      ),
+      'list' =>
+      array (
+        0 => 'Connect API and keep auto-entry on',
+        1 => 'Sync Return Requests → open Pending',
+        2 => 'Decide → notes → call if needed',
+        3 => 'Confirm cancel or Ask to resend',
+        4 => 'Follow up with Notifications / stuck scan',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-full-flow.jpg',
+          'alt' => 'Full flow from fraud check to Return Hub Decide and notifications',
+          'caption' => 'Fraud → auto-entry → Return Requests → Decide → Notifications',
+        ),
+      ),
+    ),
+    5 =>
+    array (
+      'heading' => 'Why rider call and call log matter',
+      'paragraphs' =>
+      array (
+        0 => 'Not every cancel request means the sale is dead. Confirming cancel without a quick call can kill a recoverable order.',
+        1 => 'The modal keeps the rider number ready. Call, compare with the note, and leave a trail so the next teammate knows who already called. Small teams feel the duplicate-call tax most.',
+      ),
+    ),
+    6 =>
+    array (
+      'heading' => 'AI suggestion and Save the sale (optional)',
+      'paragraphs' =>
+      array (
+        0 => 'With an AI package, the modal may suggest Confirm cancel or Ask to resend—for example changed mind or unreachable. It is guidance; you still click.',
+        1 => 'Save the sale drafts what to tell the customer by Dial or WhatsApp. Many staff know how to Confirm but freeze on what to write—this fills that gap.',
+        2 => 'Human buttons still work without AI. Ignore a bad suggestion. We do not claim a Meta AI Bot or free full AI on every plan.',
+      ),
+      'figures' =>
+      array (
+        0 =>
+        array (
+          'src' => '/images/seo/cluster/steadfast-return-ai-save-sale.jpg',
+          'alt' => 'Optional AI Decide suggestion and Save the sale Dial WhatsApp draft',
+          'caption' => 'Optional AI suggestion + Save the sale message',
+        ),
+      ),
+    ),
+    7 =>
+    array (
+      'heading' => 'Notifications, stuck, and how this differs from auto-entry',
+      'paragraphs' =>
+      array (
+        0 => 'Notifications gathers portal updates and cancel signals. Scan stuck finds parcels quiet about three days so you follow up sooner. Stuck does not always mean cancel.',
+        1 => '/en/courier-auto-entry creates the parcel after confirm. This hub handles after-booking Decide, calls, and stuck. Auto-entry puts the parcel on the road; the Return Hub decides when the road gets messy. You need both.',
+      ),
+    ),
+    8 =>
+    array (
+      'heading' => 'Who it helps—and what we do not claim',
+      'paragraphs' =>
+      array (
+        0 => 'SteadFast-heavy COD stores, small teams, and agencies clearing Cancellation Requests daily. Pathao/RedX-heavy? This Return Hub is SteadFast-centric today; their booking still goes through /en/courier-auto-entry.',
+        1 => 'We do not claim every SteadFast portal tool (Add Fund, Bulk Print, and so on)—only the cancel/return Decide workflow. Deep setup stays on /en/steadfast-integration. Trial: /pricing.',
+      ),
+    ),
+    9 =>
+    array (
+      'heading' => 'Mistakes to skip',
+      'paragraphs' =>
+      array (
+        0 => 'Ignoring plugin Pending while living in the portal. Confirming cancel without reading notes. Skipping call logs. Treating AI as mandatory.',
+        1 => 'Also: blind-booking risky numbers and flooding the cancel queue. Check history on /en/bd-fraud-checker or /en/fake-customer-check first; keep /en/fake-order-protection on for repeats. Review monthly loss on /en/return-loss-calculator.',
+      ),
+    ),
+    10 =>
+    array (
+      'heading' => 'Getting-started checklist',
+      'paragraphs' =>
+      array (
+        0 => '/pricing → /en/steadfast-integration → keep /en/courier-auto-entry on → practice Decide on one Pending item. Try Save the sale if you have AI—Confirm/Resend still work without it.',
+        1 => 'One line: when a cancel request arrives, see it in the plugin, call if needed, then Confirm cancel or Ask to resend—without Change Status on every item. Bangla: /steadfast-return-hub.',
+      ),
+    ),
+  ),
 );

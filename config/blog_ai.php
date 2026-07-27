@@ -249,8 +249,9 @@ return [
         'fraud_checker' => 'ফ্রড চেকার / Courier history',
         'return_loss' => 'রিটার্ন লস ক্যালকুলেটর',
         'checkout_protection' => 'চেকআউট সুরক্ষা / OTP & block',
-        'courier' => 'কুরিয়ার / অটো এন্ট্রি',
+        'courier' => 'কুরিয়ার / অটো এন্ট্রি + SteadFast হাব',
         'courier_charge' => 'কুরিয়ার চার্জ ক্যালকুলেটর',
+        'messenger' => 'Facebook Messenger ইনবক্স',
         'missing_order' => 'হারানো অর্ডার / Missing order',
         'facebook_ads' => 'Facebook Ads / Pixel / ROAS',
         'ai_orders' => 'AI অর্ডার / Message & image to order',
@@ -303,6 +304,96 @@ return [
             'title' => 'কুরিয়ার অটো এন্ট্রি',
             'priority' => 80,
             'keywords' => ['কুরিয়ার অটো এন্ট্রি', 'Pathao Steadfast RedX অটো', 'পার্সেল অটো এন্ট্রি', 'পার্সেল নোট হিস্ট্রি', 'steadfast parcel note'],
+        ],
+        [
+            'path' => '/steadfast-integration',
+            'title' => 'Steadfast Integration',
+            'priority' => 78,
+            'keywords' => [
+                'steadfast woocommerce plugin',
+                'steadfast return request',
+                'steadfast ask to return',
+                'stuck parcel steadfast',
+                'steadfast portal notifications',
+                'SteadFast ইন্টিগ্রেশন',
+            ],
+        ],
+        [
+            'path' => '/steadfast-return-hub',
+            'title' => 'SteadFast Return Hub',
+            'priority' => 82,
+            'keywords' => [
+                'steadfast return request',
+                'steadfast ask to return',
+                'stuck parcel',
+                'steadfast notifications',
+                'রিটার্ন রিকোয়েস্ট',
+            ],
+        ],
+        [
+            'path' => '/woocommerce-facebook-messenger',
+            'title' => 'Facebook Messenger ইনবক্স',
+            'priority' => 76,
+            'keywords' => [
+                'woocommerce facebook messenger',
+                'messenger inbox',
+                'facebook page chat wordpress',
+                'মেসেঞ্জার ইনবক্স',
+            ],
+        ],
+        [
+            'path' => '/pricing',
+            'title' => 'প্রাইসিং / ট্রায়াল',
+            'priority' => 70,
+            'keywords' => ['WooEasyLife প্রাইসিং', 'ফ্রি ট্রায়াল', 'messenger inbox plugin'],
+        ],
+    ],
+
+    /*
+    | Shipped product truth for Blog AI (keep in sync with FEATURES.md).
+    | Injected into every product_brief — writers must not invent beyond this.
+    */
+    'product_truth' => [
+        'version' => 'plugin-1.5.4',
+        'hero_claims' => [
+            'BD fraud / courier history check before confirm',
+            'Fake-order protection: OTP, duplicate block, blacklist',
+            'Courier auto-entry + webhooks: Pathao, SteadFast, RedX',
+            'SteadFast Courier hub: Return Requests (Ask to return → Decide cancel/resend) + Notifications + stuck-parcel scan (courier_automation; portal login)',
+            'Facebook Messenger inbox in WP admin: Page connect, chat, media/voice, lead labels (NURTURE etc.)',
+            'Missing order recovery, AI order from image/text, mobile app, SMS, Meta Pixel/CAPI',
+        ],
+        'courier_hub' => [
+            'partners_with_hub' => ['steadfast'],
+            'return_statuses' => ['pending', 'confirmed', 'resend_request', 'cancelled', 'resent'],
+            'features' => [
+                'Ask to return from order',
+                'Decide: confirm cancel or ask resend',
+                'Portal notifications cache (deliveries, rider notes, cancellation requests)',
+                'Scan stuck parcels (~3 days quiet by default)',
+                'Parcel notes history + rider-callback (SteadFast)',
+            ],
+            'package' => 'courier_automation',
+        ],
+        'messenger' => [
+            'human_inbox' => true,
+            'single_page_v1' => true,
+            'lead_labels' => ['new', 'engaged', 'qualified', 'negotiation', 'nurture', 'converted', 'lost', 'spam'],
+            'media' => ['text', 'image', 'video', 'voice', 'pdf', 'reply_to', 'reactions', 'typing'],
+            'sales_agent' => [
+                'modes' => ['off', 'ai_semi', 'ai_full'],
+                'public_claim' => 'AI Semi suggestions are OK to soft-mention when package allows; treat as beta',
+                'ai_full_gate' => 'Readiness ≥80% + merchant unlock + confidence — never claim unlocked for all',
+                'package' => 'messenger_sales_agent and/or ai_intelligence',
+            ],
+        ],
+        'do_not_claim' => [
+            'Meta AI Bot as a separate live product',
+            'AI Full auto-reply as default for all merchants',
+            'Pathao or RedX Return Requests / portal Notifications hub (SteadFast only)',
+            'Multi-Page Messenger inbox (single Page v1)',
+            'Paperfly auto-entry as shipped',
+            'Fake #1 / fake AggregateRating / wooeasylife.com CTAs',
         ],
     ],
 
@@ -360,17 +451,41 @@ return [
             'angle_hint' => 'চেকআউট OTP ও ব্লক দিয়ে ফেক কাস্টমার আটকানো',
         ],
         'courier' => [
-            'primary_path' => '/courier-auto-entry',
-            'seo_pages' => ['courier_auto_entry', 'courier_charge_calculator'],
-            'related_paths' => ['/courier-charge-calculator', '/bd-fraud-checker', '/return-loss-calculator', '/pricing'],
-            'must_link_paths' => ['/courier-auto-entry', '/courier-charge-calculator'],
-            'claims' => [
-                'Pathao, Steadfast, RedX অটো পার্সেল এন্ট্রি',
-                'কুরিয়ার চার্জ ক্যালকুলেটর দিয়ে রেট তুলনা',
-                'অর্ডার কনফার্ম → কুরিয়ার এন্ট্রি স্বয়ংক্রিয়',
-                'Steadfast পার্সেল নোট হিস্ট্রি দেখা ও মার্চেন্ট নোট আপডেট',
+            'primary_path' => '/steadfast-integration',
+            'seo_pages' => ['steadfast_integration', 'steadfast_return_hub', 'courier_auto_entry', 'courier_charge_calculator'],
+            'related_paths' => [
+                '/steadfast-return-hub',
+                '/courier-auto-entry',
+                '/courier-charge-calculator',
+                '/steadfast-fraud-check',
+                '/bd-fraud-checker',
+                '/return-loss-calculator',
+                '/pricing',
             ],
-            'angle_hint' => 'কুরিয়ার অটো এন্ট্রি + পার্সেল নোট হিস্ট্রি + চার্জ হিসাব — COD অপারেশন দ্রুত',
+            'must_link_paths' => ['/steadfast-integration', '/steadfast-return-hub', '/courier-auto-entry'],
+            'claims' => [
+                'Pathao, SteadFast, RedX অটো পার্সেল এন্ট্রি + ওয়েবহুক',
+                'SteadFast Courier হাব: Return Requests (Ask to return → Decide cancel/resend)',
+                'SteadFast Notifications: portal নোট ক্যাশ + stuck parcel স্ক্যান (~৩ দিন)',
+                'SteadFast পার্সেল নোট হিস্ট্রি ও রাইডার কলব্যাক',
+                'কুরিয়ার চার্জ ক্যালকুলেটর দিয়ে রেট তুলনা',
+                'অর্ডার কনফার্ম → কুরিয়ার এন্ট্রি স্বয়ংক্রিয় (ফ্রড চেকের পর)',
+            ],
+            'angle_hint' => 'SteadFast ইন্টিগ্রেশন + Return/Stuck হাব + মাল্টি-কুরিয়ার অটো এন্ট্রি — COD অপস',
+        ],
+        'messenger' => [
+            'primary_path' => '/woocommerce-facebook-messenger',
+            'seo_pages' => ['woocommerce_facebook_messenger', 'pricing', 'home'],
+            'related_paths' => ['/woocommerce-facebook-messenger', '/pricing', '/fake-order-protection', '/bd-fraud-checker', '/courier-auto-entry'],
+            'must_link_paths' => ['/woocommerce-facebook-messenger', '/pricing'],
+            'claims' => [
+                'WordPress অ্যাডমিনে Facebook Page Messenger ইনবক্স (কানেক্ট/ডিসকানেক্ট)',
+                'টেক্সট · ইমেজ · ভয়েস · রিপ্লাই · টাইপিং — মানব ইনবক্স',
+                'Lead labels: new → nurture → converted (ম্যানুয়াল ওভাররাইড)',
+                'থ্রেড থেকে WooCommerce অর্ডার লিংক (Sales Agent path; admin_approval ডিফল্ট)',
+                'AI Semi: সাজেশন ড্রাফট (প্যাকেজ-গেটেড, beta) — AI Full সবার জন্য আনলক নয়',
+            ],
+            'angle_hint' => 'মেসেঞ্জার ইনবক্স → অর্ডার — BD Facebook পেজ COD সেলার; স্টোরফ্রন্ট চ্যাট বাবল নয়',
         ],
         'courier_charge' => [
             'primary_path' => '/courier-charge-calculator',
@@ -515,7 +630,16 @@ return [
         'fake_order' => ['ফেক অর্ডার', 'fake order', 'fake-order', 'পার্সেল রিটার্ন', 'cod fraud', 'অর্ডার আটকা'],
         'fraud_checker' => ['ফ্রড চেকার', 'fraud checker', 'কুরিয়ার হিস্টোরি', 'courier history', 'pathao fraud', 'steadfast fraud', 'redx fraud', 'সাকসেস রেট', 'courier ratio', 'fraudbd'],
         'checkout_protection' => ['চেকআউট ওটিপি', 'checkout otp', 'otp', 'ডুপ্লিকেট অর্ডার', 'ব্ল্যাকলিস্ট', 'duplicate order', 'fake customer block'],
-        'courier' => ['কুরিয়ার অটো', 'courier auto', 'অটো এন্ট্রি', 'auto entry', 'pathao entry', 'redx entry', 'পার্সেল এন্ট্রি', 'পার্সেল নোট', 'parcel note', 'parcel note history', 'steadfast note'],
+        'courier' => [
+            'কুরিয়ার অটো', 'courier auto', 'অটো এন্ট্রি', 'auto entry', 'pathao entry', 'redx entry',
+            'পার্সেল এন্ট্রি', 'পার্সেল নোট', 'parcel note', 'parcel note history', 'steadfast note',
+            'steadfast return', 'ask to return', 'return request', 'stuck parcel', 'রিটার্ন রিকোয়েস্ট',
+            'পার্সেল আটকে', 'steadfast integration', 'courier notification',
+        ],
+        'messenger' => [
+            'messenger inbox', 'facebook messenger', 'মেসেঞ্জার ইনবক্স', 'মেসেঞ্জার থেকে অর্ডার',
+            'facebook page chat', 'messenger woocommerce', 'nurture lead', 'ai semi', 'মেসেঞ্জার অর্ডার',
+        ],
         'missing_order' => ['হারানো অর্ডার', 'missing order', 'মিসিং অর্ডার', 'abandoned checkout', 'অসম্পূর্ণ অর্ডার'],
         'facebook_ads' => ['facebook ads', 'ফেসবুক অ্যাড', 'facebook pixel', 'পিক্সেল', 'meta ads', 'purchase event', 'roas', 'ads roas', 'ফেক purchase'],
         'ai_orders' => ['ai order', 'মেসেজ থেকে অর্ডার', 'screenshot থেকে অর্ডার', 'image to order', 'মেসেজ অর্ডার'],
@@ -544,7 +668,13 @@ return [
         'checkout_protection' => ['চেকআউট OTP', 'ডুপ্লিকেট অর্ডার ব্লক', 'fake customer block'],
         'courier' => [
             'Steadfast Integration', 'Pathao Integration', 'RedX Integration', 'Auto Courier Entry',
-            'Courier Tracking', 'Courier History', 'কুরিয়ার অটো এন্ট্রি', 'পার্সেল নোট হিস্ট্রি', 'steadfast parcel note',
+            'Courier Tracking', 'কুরিয়ার অটো এন্ট্রি', 'পার্সেল নোট হিস্ট্রি', 'steadfast parcel note',
+            'steadfast return request', 'steadfast ask to return', 'stuck parcel steadfast',
+            'SteadFast রিটার্ন রিকোয়েস্ট', 'পার্সেল আটকে গেছে', 'steadfast portal notification',
+        ],
+        'messenger' => [
+            'WooCommerce Facebook Messenger inbox', 'মেসেঞ্জার থেকে অর্ডার', 'facebook page messenger wordpress',
+            'messenger order woocommerce bangladesh', 'Facebook Page chat WooCommerce',
         ],
         'courier_charge' => ['কুরিয়ার চার্জ', 'pathao ডেলিভারি চার্জ', 'steadfast প্রাইসিং'],
         'missing_order' => ['হারানো অর্ডার', 'missing order WooCommerce', 'abandoned checkout'],
@@ -622,6 +752,32 @@ return [
             'anchor_hints' => ['কুরিয়ার অটো এন্ট্রি', 'Pathao Steadfast RedX'],
         ],
         [
+            'path' => '/steadfast-return-hub',
+            'title' => 'SteadFast Return Hub',
+            'anchor_hints' => ['SteadFast Return Hub', 'return request', 'stuck parcel', 'Ask to return'],
+        ],
+        [
+            'path' => '/woocommerce-facebook-messenger',
+            'title' => 'Facebook Messenger ইনবক্স',
+            'anchor_hints' => ['Messenger ইনবক্স', 'facebook page chat', 'woocommerce messenger'],
+        ],
+        [
+            'path' => '/steadfast-integration',
+            'title' => 'Steadfast Integration',
+            'anchor_hints' => [
+                'Steadfast ইন্টিগ্রেশন',
+                'steadfast return request',
+                'Ask to return',
+                'stuck parcel',
+                'SteadFast WooCommerce plugin',
+            ],
+        ],
+        [
+            'path' => '/en/steadfast-integration',
+            'title' => 'Steadfast Integration (EN)',
+            'anchor_hints' => ['Steadfast integration', 'SteadFast return requests', 'stuck parcel scan'],
+        ],
+        [
             'path' => '/pathao-fraud-check',
             'title' => 'Pathao Fraud Check',
             'anchor_hints' => ['Pathao fraud check', 'Pathao হিস্টোরি'],
@@ -662,6 +818,32 @@ return [
             'আজকের ডিজিটাল যুগে / কম্প্রিহেনসিভ স্ট্র্যাটেজি / গেমচেঞ্জার / সিমলেস',
             'In today\'s digital age / It is important to note / In conclusion / Let\'s dive in',
             'প্রতিটি H2-কে লিস্টিকল বানানো বা সারফার-স্টাইল ফিলার',
+            'Meta AI Bot / unlocked AI Full for everyone / Pathao-RedX return hub as live / Paperfly auto-entry',
+            'wooeasylife.com links or fake No.1 / AggregateRating',
+        ],
+    ],
+
+    /*
+    | Preferred inventory blog themes for Auto / smart picker (P0 feature launches).
+    */
+    'preferred_feature_themes' => [
+        [
+            'cluster' => 'courier',
+            'seed' => 'SteadFast return request Decide workflow',
+            'cta' => '/steadfast-integration',
+            'priority' => 100,
+        ],
+        [
+            'cluster' => 'courier',
+            'seed' => 'SteadFast stuck parcel notification scan',
+            'cta' => '/steadfast-integration',
+            'priority' => 95,
+        ],
+        [
+            'cluster' => 'messenger',
+            'seed' => 'WooCommerce Facebook Messenger inbox Bangladesh',
+            'cta' => '/pricing',
+            'priority' => 80,
         ],
     ],
 

@@ -425,6 +425,67 @@ class MessengerPageOAuthService
     }
 
     /**
+     * Delete (unsend) a page-sent Messenger message for everyone.
+     * Meta Graph: DELETE /{message-id}
+     *
+     * @return array{ok:bool, error?:string, http_status?:int}
+     */
+    public function deleteMessage(
+        MessengerPageConnection $connection,
+        string $mid
+    ): array {
+        $mid = trim($mid);
+        $pageToken = (string) $connection->page_access_token;
+
+        if ($mid === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing message id or page token.', 'http_status' => 422];
+        }
+
+        // Local synthetic ids are never Graph-deletable.
+        if (str_starts_with($mid, 'out_')
+            || str_starts_with($mid, 'evt_')
+            || str_starts_with($mid, 'postback_')
+            || str_starts_with($mid, 'echo_')
+        ) {
+            return ['ok' => false, 'error' => 'This message cannot be deleted on Facebook.', 'http_status' => 422];
+        }
+
+        try {
+            $response = Http::timeout(25)
+                ->withToken($pageToken)
+                ->delete(
+                    'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($mid)
+                );
+        } catch (\Throwable $exception) {
+            return ['ok' => false, 'error' => $exception->getMessage()];
+        }
+
+        if (! $response->successful()) {
+            $graphError = (string) ($response->json('error.message') ?? '');
+            $code = (int) ($response->json('error.code') ?? 0);
+            // Already gone on Facebook — treat as success so local inbox can catch up.
+            if ($response->status() === 404
+                || $code === 100
+                || stripos($graphError, 'does not exist') !== false
+                || stripos($graphError, 'unsupported delete') !== false
+            ) {
+                // code 100 can also mean permission; only soft-succeed on clear missing-object wording.
+                if ($response->status() === 404 || stripos($graphError, 'does not exist') !== false) {
+                    return ['ok' => true, 'http_status' => 200];
+                }
+            }
+
+            return [
+                'ok' => false,
+                'error' => $graphError !== '' ? $graphError : 'Failed to delete Messenger message.',
+                'http_status' => $response->status(),
+            ];
+        }
+
+        return ['ok' => true, 'http_status' => $response->status()];
+    }
+
+    /**
      * @param  array<string, mixed>  $options
      * @return array{ok:bool, mid?:string, error?:string, http_status?:int}
      */
@@ -443,6 +504,40 @@ class MessengerPageOAuthService
         }
         if (! empty($options['attachment']) && is_array($options['attachment'])) {
             $message['attachment'] = $options['attachment'];
+        }
+
+        // Messenger quick replies (tap chips under the bubble).
+        if (! empty($options['quick_replies']) && is_array($options['quick_replies']) && $text !== '') {
+            $quickReplies = [];
+            foreach ($options['quick_replies'] as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $title = trim((string) ($row['title'] ?? ''));
+                $payload = trim((string) ($row['payload'] ?? $title));
+                $contentType = strtolower(trim((string) ($row['content_type'] ?? 'text')));
+                if ($title === '' || $contentType !== 'text') {
+                    continue;
+                }
+                // Meta: title max 20 characters.
+                if (mb_strlen($title) > 20) {
+                    $title = mb_substr($title, 0, 20);
+                }
+                if (strlen($payload) > 1000) {
+                    $payload = substr($payload, 0, 1000);
+                }
+                $quickReplies[] = [
+                    'content_type' => 'text',
+                    'title' => $title,
+                    'payload' => $payload !== '' ? $payload : $title,
+                ];
+                if (count($quickReplies) >= 13) {
+                    break;
+                }
+            }
+            if ($quickReplies !== []) {
+                $message['quick_replies'] = $quickReplies;
+            }
         }
 
         if ($message === []) {

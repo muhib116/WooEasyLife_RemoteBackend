@@ -285,8 +285,8 @@ return array (
   ),
   'steadfast_integration' => 
   array (
-    'title' => 'Steadfast Integration গাইড ২০২৬ — API ও অটো বুকিং',
-    'description' => 'Steadfast API Key/Secret দিয়ে WooCommerce ১-ক্লিক ও বাল্ক বুকিং, ট্র্যাকিং সিঙ্ক এবং ফ্রড-সেফ অটো এন্ট্রি সেটআপ।',
+    'title' => 'Steadfast Integration ২০২৬ — API, Return Request ও Stuck Parcel',
+    'description' => 'Steadfast WooCommerce API বুকিং, Ask to return / Decide, portal notifications ও stuck parcel স্ক্যান—ফ্রড চেকের পর অটো এন্ট্রি।',
     'canonical_path' => '/steadfast-integration',
     'html_lang' => 'bn-BD',
     'og_type' => 'article',
@@ -314,8 +314,8 @@ return array (
         'path' => '/steadfast-integration',
       ),
     ),
-    'prerender_h1' => 'Steadfast Integration — WooCommerce API, বাল্ক বুকিং ও ট্র্যাকিং',
-    'prerender_lead' => 'ম্যানুয়াল কপি-পেস্ট ছাড়াই Steadfast-এ পার্সেল এন্ট্রি, ট্র্যাকিং আইডি ও রিটার্ন সিঙ্ক—ফ্রড ফিল্টারের পর।',
+    'prerender_h1' => 'Steadfast Integration — API বুকিং, Return Requests ও Notifications',
+    'prerender_lead' => 'ম্যানুয়াল প্যানেল ছাড়াই Steadfast বুকিং, Ask to return → Decide, stuck parcel স্ক্যান ও portal নোট—ফ্রড ফিল্টারের পর।',
     'faqs' => 
     array (
       0 => 
@@ -330,23 +330,33 @@ return array (
       ),
       2 => 
       array (
+        'q' => 'SteadFast return request কীভাবে করব?',
+        'a' => 'WooEasyLife অর্ডার থেকে Ask to return → Courier হাবের Return Requests-এ Pending দেখুন → Decide দিয়ে Confirm cancel বা Resend request। অফিসিয়াল বুকিং প্লাগইনে এই Decide UI নেই। প্যাকেজ: courier_automation; SteadFast portal login লাগে।',
+      ),
+      3 => 
+      array (
+        'q' => 'Stuck parcel হলে কী করব?',
+        'a' => 'Courier → Notifications-এ Scan stuck চালান (ডিফল্ট ~৩ দিন আপডেট নেই)। অ্যালার্ট থেকে অর্ডার/নোট খুলে রাইডার বা Decide ফ্লো নিন। Portal delivery notesও একই ট্যাবে ক্যাশ হয়।',
+      ),
+      4 => 
+      array (
         'q' => 'বুকিংয়ের আগে ফ্রড চেক লাগে কি?',
         'a' => 'হ্যাঁ—অটো বুকিং ভেরিফিকেশনের বিকল্প নয়। /bd-fraud-checker দিয়ে হিস্টোরি দেখুন; হলুদ/লালে /customer-verification ও /fake-order-protection। লস মাপুন: /return-loss-calculator।',
       ),
-      3 => 
+      5 => 
       array (
         'q' => 'ট্র্যাকিং নোটিফিকেশন কীভাবে যাবে?',
         'a' => 'বুকিংয়ের পর ট্র্যাকিং আইডি সেভ হলে /woocommerce-notifications দিয়ে In Transit ও Out for Delivery মেসেজ পাঠান—রিটার্ন কমায়।',
       ),
-      4 => 
+      6 => 
       array (
         'q' => 'এই পেজ কোন ক্লাস্টারের অংশ?',
         'a' => '/woocommerce-bangladesh হাবের কুরিয়ার স্পোক। তুলনা: /pathao-courier-guide, /redx-courier-guide। ইংরেজি: /en/steadfast-integration।',
       ),
-      5 => 
+      7 => 
       array (
         'q' => 'কীভাবে শুরু করব?',
-        'a' => 'প্রথমে /bd-fraud-checker ফ্রি টেস্ট, তারপর /pricing থেকে ট্রায়াল, WooCommerce ও Steadfast কানেক্ট, /fake-order-protection চালু, এক টেস্ট পার্সেল যাচাই।',
+        'a' => 'প্রথমে /bd-fraud-checker ফ্রি টেস্ট, তারপর /pricing থেকে ট্রায়াল, WooCommerce ও Steadfast কানেক্ট (API + portal), /fake-order-protection চালু, এক টেস্ট পার্সেল ও এক Return Request Decide যাচাই।',
       ),
     ),
     'cluster_eyebrow' => 'কুরিয়ার · Steadfast',
@@ -425,8 +435,8 @@ return array (
   ),
   'en_steadfast_integration' => 
   array (
-    'title' => 'Steadfast Integration Guide 2026 — API & Auto Booking',
-    'description' => 'Connect Steadfast API Key/Secret to WooCommerce: one-click and bulk parcel booking, tracking sync, and fraud-safe auto entry for Bangladesh COD.',
+    'title' => 'Steadfast Integration 2026 — API, Return Requests & Stuck Parcels',
+    'description' => 'Connect SteadFast to WooCommerce: API booking, Ask to return / Decide, portal notifications, and stuck-parcel scan—after fraud filters.',
     'canonical_path' => '/en/steadfast-integration',
     'html_lang' => 'en',
     'og_type' => 'article',
@@ -454,8 +464,8 @@ return array (
         'path' => '/en/steadfast-integration',
       ),
     ),
-    'prerender_h1' => 'Steadfast Integration — WooCommerce API, Bulk Booking & Tracking',
-    'prerender_lead' => 'Book Steadfast parcels from WooCommerce without copy-paste—after fraud filters, with tracking IDs saved on the order.',
+    'prerender_h1' => 'Steadfast Integration — API Booking, Return Requests & Notifications',
+    'prerender_lead' => 'Book SteadFast from WooCommerce, then manage Ask to return → Decide and stuck parcels without living in the portal—after fraud filters.',
     'faqs' => 
     array (
       0 => 
@@ -470,23 +480,33 @@ return array (
       ),
       2 => 
       array (
+        'q' => 'How do SteadFast return requests work in WooEasyLife?',
+        'a' => 'From an order, Ask to return → open Courier → Return Requests (Pending) → Decide Confirm cancel or Resend. Official booking plugins lack this Decide UI. Needs courier_automation + SteadFast portal login.',
+      ),
+      3 => 
+      array (
+        'q' => 'What should I do about a stuck SteadFast parcel?',
+        'a' => 'Open Courier → Notifications → Scan stuck (~3 days without updates by default). Open the linked order/notes and follow up or Decide. Portal delivery notes also cache in the same tab.',
+      ),
+      4 => 
+      array (
         'q' => 'Should I fraud-check before auto-booking?',
         'a' => 'Yes. Use /en/bd-fraud-checker; for yellow/red apply /en/customer-verification and /en/fake-order-protection. Measure loss with /en/return-loss-calculator.',
       ),
-      3 => 
+      5 => 
       array (
         'q' => 'How do tracking notifications work?',
         'a' => 'After booking, send In Transit and Out for Delivery via /en/woocommerce-notifications to cut “customer unavailable” returns.',
       ),
-      4 => 
+      6 => 
       array (
         'q' => 'Is this part of a topic cluster?',
         'a' => 'Yes—a courier spoke under /en/woocommerce-bangladesh. Compare /en/pathao-courier-guide and /en/redx-courier-guide. Bangla: /steadfast-integration.',
       ),
-      5 => 
+      7 => 
       array (
         'q' => 'How do I start with WooEasyLife?',
-        'a' => 'Test /en/bd-fraud-checker free, then start from /pricing, connect WooCommerce + Steadfast, enable /en/fake-order-protection, and validate one test parcel.',
+        'a' => 'Test /en/bd-fraud-checker free, then start from /pricing, connect WooCommerce + SteadFast (API + portal), enable /en/fake-order-protection, and validate one parcel plus one Return Request Decide.',
       ),
     ),
     'cluster_eyebrow' => 'Courier · Steadfast',

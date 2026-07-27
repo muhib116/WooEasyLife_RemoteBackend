@@ -62,4 +62,12 @@ assert.ok(faqLink.some((s) => s.href === '/faq/success-rate-kom-hole-ki-korbo' &
 assert.ok(faqLink.some((s) => s.href === '/faq' && s.label === 'FAQ হাব'));
 assert.equal(faqLink.some((s) => s.type === 'text' && s.text.includes('/faq/success-rate')), false);
 
+const returnHub = linkifyInternalPaths(
+    'ইংরেজি: /en/steadfast-return-hub। বাংলা: /steadfast-return-hub।',
+    false,
+);
+assert.ok(returnHub.some((s) => s.href === '/en/steadfast-return-hub' && s.label === 'ইংরেজি Return Hub (app.wpsalehub.com/en/steadfast-return-hub)'));
+assert.ok(returnHub.some((s) => s.href === '/steadfast-return-hub' && s.label === 'বাংলা Return Hub (app.wpsalehub.com/steadfast-return-hub)'));
+assert.equal(returnHub.some((s) => s.type === 'text' && s.text.includes('/en/steadfast')), false);
+
 console.log('internalPathLinks.spec.mjs: ok');

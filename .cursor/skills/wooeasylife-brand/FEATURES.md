@@ -1,8 +1,8 @@
 # WooEasyLife — Living Feature Inventory
 
-**Last analyzed:** 2026-07-23  
+**Last analyzed:** 2026-07-27  
 **Sources (re-scan when features change):**
-- Plugin: `/Users/muhibbullah/Desktop/wp/wordpress/wp-content/plugins/woo-easy-life` (v1.5.3)
+- Plugin: `/Users/muhibbullah/Desktop/wp/wordpress/wp-content/plugins/woo-easy-life` (v1.5.4)
 - App: `/Users/muhibbullah/Desktop/App/WooEasyLife` (Flutter v1.1.6+)
 - Backend packages: `WooEasyLife_RemoteBackend` / WPSaleHub gating keys
 
@@ -15,11 +15,13 @@
 1. BD **fraud / courier history check** (phone) before confirm  
 2. **Fake-order protection:** OTP, duplicate block, blacklist (phone/email/IP/device), daily limits, BD-IP option  
 3. **Courier auto-entry + status sync:** Pathao, Steadfast, RedX (+ webhooks)  
-4. **Missing / abandoned order recovery** → create WooCommerce order  
-5. **AI order from image/text** + address Fix with AI (OpenAI)  
-6. **Mobile app:** multi-store, push, call ID / inbound match, approve on the go  
-7. **SMS** status + bulk; **Meta Pixel + CAPI**  
-8. **Team / employees** + performance; invoices / POS stickers (package-gated)
+4. **SteadFast courier hub (newer):** Return Requests (ask-to-return → Decide cancel/resend) + portal Notifications + stuck-parcel scan *(package: `courier_automation`; needs SteadFast portal login)*  
+5. **Facebook Messenger inbox (newer):** Page connect, chat, media/voice, lead labels — inside WP admin  
+6. **Missing / abandoned order recovery** → create WooCommerce order  
+7. **AI order from image/text** + address Fix with AI (OpenAI)  
+8. **Mobile app:** multi-store, push, call ID / inbound match, approve on the go  
+9. **SMS** status + bulk; **Meta Pixel + CAPI**  
+10. **Team / employees** + performance; invoices / POS stickers (package-gated)
 
 **Founder personal brand:** Muhibbullah · `dev.muhibbullah@gmail.com` · WooEasyLife  
 
@@ -36,10 +38,33 @@ Enhanced order list · details modal · bulk/quick status · custom COD statuses
 ### Fraud / protection
 Phone fraud checker (gated) · delivery history on order · customer behavior / fraud score · blacklist CRUD + CSV · daily order limit · duplicate same-cart block · checkout validation · checkout OTP · IP/phone/email/device block · BD-IP-only · Store API parity · Fake Order status
 
-### Courier
-Steadfast · Pathao · RedX — send, bulk entry, refresh, webhooks · inline consignment edit · Steadfast parcel notes history (newer) · Steadfast ask-to-return · RedX in-app track · Pathao AI location enrich · rider-callback push (Steadfast, newer)
+### Courier (core — Pathao / SteadFast / RedX)
+Send · bulk entry · status refresh · webhooks · inline consignment edit · Pathao AI location enrich · RedX in-app track
 
-### AI / automation
+### Courier hub (newer — SteadFast-only ops)
+Top-nav **Courier** (`courier_automation`):
+- **Return Requests** — statuses: pending → confirmed / resend_request / cancelled / resent; Decide confirm-cancel or ask-resend; CSV export; auto-sync + manual refresh  
+- **Notifications** — cached SteadFast portal updates (deliveries, rider notes, cancellation requests); Open SteadFast; **Scan stuck** (default ~3 days quiet)  
+- Parcel notes history + rider-callback push · Ask to return from order (`parcel_note_history` and/or `courier_automation`)  
+- Decide modal: assigned rider **Call** + rider **call log**; optional **AI Decide** suggestion + **Save the sale** customer Dial/WhatsApp script when `ai_intelligence` (+ OpenAI key)  
+- Optional weekly AI insights when `ai_intelligence` + OpenAI key  
+
+**Caveat:** Pathao/RedX do **not** have Return Requests or portal notification sync (schema stubs only).
+
+### Messenger (newer — Facebook Page inbox)
+Top-nav **Messenger**:
+- Connect / disconnect one FB Page (tokens on WPSaleHub; WP holds local threads)  
+- Human inbox: All/Unread, search, lead labels (`new` · `engaged` · `qualified` · `negotiation` · **`nurture`** · `converted` · `lost` · `spam`)  
+- Thread: text · image · video · voice · PDF · reply-to · reactions · typing / mark_seen  
+- Contact pane: profile, phone extract, linked WC order, per-thread AI on/off  
+- Media upload + send via hub (`messenger/upload-attachment`, `messenger/send`)
+
+### Messenger Sales Agent (shipped in UI — treat as beta in public copy)
+Modes: **Off** · **AI Semi** (suggest drafts) · **AI Full** (locked until readiness ≥ 80% + merchant unlock + confidence gate)  
+Catalog/KB · learning queue · needs-attention · agent→WC order (`admin_approval` default or `auto_create`)  
+Package: `messenger_sales_agent` and/or `ai_intelligence`
+
+### AI / automation (non-Messenger)
 AI Order from Image · AI Order from Text · address enrich · status SMS · bulk SMS + recharge · new-order sound/toast · Missing Orders / abandoned cart (gated) · Meta Pixel + CAPI (+ CartFlows hooks)
 
 ### Mobile link
@@ -52,7 +77,7 @@ License · subscription/tokens · employees + performance report · dashboard (s
 DB migration · indexing · backup/snapshots · status logs · dark mode · URL replacer · remote license update
 
 ### Package keys (gating)
-`fake_order_protection` · `fraud_customer_checker` · `customer_delivery_history` · `customer_behavior` · `customer_blacklist` · `courier_automation` · `parcel_note_history` · `missing_orders` · `order_cloning` · `label_and_pos_sticker_print` · `custom_status_management` · `employee_management` · `app_connect`
+`fake_order_protection` · `fraud_customer_checker` · `customer_delivery_history` · `customer_behavior` · `customer_blacklist` · `courier_automation` · `parcel_note_history` · `missing_orders` · `order_cloning` · `label_and_pos_sticker_print` · `custom_status_management` · `employee_management` · `app_connect` · `ai_intelligence` · `messenger_sales_agent`
 
 ---
 
@@ -67,11 +92,16 @@ Orders inbox · DSP / stuck / follow-up filters · create/clone · AI fill · fr
 ### Couriers in app settings
 Steadfast · RedX · Pathao · **Paperfly** (settings list; live assign/refresh evidenced for Steadfast/RedX/Pathao — do not over-claim Paperfly auto-entry until confirmed)
 
+**Note:** Courier Return Requests hub + Messenger inbox are **WP admin** surfaces (v1.5.4) — do not claim full parity in the Flutter app until scanned again.
+
 ---
 
 ## Do NOT claim (yet)
 
-- **Meta AI Bot** — Coming soon in plugin nav  
+- **Meta AI Bot** as a separate product — do not confuse with Messenger Sales Agent (AI Semi/Full)  
+- AI Full auto-reply as default / unlocked for all merchants (gated by readiness + unlock)  
+- Pathao / RedX **Return Requests** or **portal Notifications** inbox (SteadFast only today)  
+- Multi-Page Messenger inbox (single connected Page for v1)  
 - AI call-summary as a product feature (config key only)  
 - Extra unnamed couriers beyond Steadfast / Pathao / RedX (Paperfly = settings-only until assign shipped)  
 - iOS as primary ship target  

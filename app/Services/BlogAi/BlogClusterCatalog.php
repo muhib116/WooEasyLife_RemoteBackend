@@ -21,6 +21,9 @@ class BlogClusterCatalog
     public function labels(bool $activeOnly = true): array
     {
         $out = [];
+        foreach (config('blog_ai.clusters', []) as $key => $label) {
+            $out[(string) $key] = (string) $label;
+        }
         foreach ($this->rows($activeOnly) as $row) {
             $out[$row['key']] = $row['label'];
         }
@@ -49,13 +52,17 @@ class BlogClusterCatalog
      */
     public function seedQueries(string $key): array
     {
+        $configSeeds = config('blog_ai.cluster_seed_queries.'.$key, []);
+        $configSeeds = is_array($configSeeds)
+            ? array_values(array_filter(array_map('strval', $configSeeds)))
+            : [];
+
         $row = $this->row($key);
-        if ($row !== null) {
-            $base = array_values(array_filter(array_map('strval', $row['seed_queries'] ?? [])));
-        } else {
-            $fallback = config('blog_ai.cluster_seed_queries.'.$key, []);
-            $base = is_array($fallback) ? array_values(array_filter(array_map('strval', $fallback))) : [];
-        }
+        $dbSeeds = is_array($row)
+            ? array_values(array_filter(array_map('strval', $row['seed_queries'] ?? [])))
+            : [];
+
+        $base = array_values(array_unique(array_merge($configSeeds, $dbSeeds)));
 
         // Merge curated SEO inventory seeds (keywords/slugs roadmap) without dropping DB/config seeds.
         try {
@@ -68,26 +75,35 @@ class BlogClusterCatalog
     }
 
     /**
-     * Landing map for a cluster (DB first, then config).
+     * Landing map for a cluster.
+     * Config forces product-truth paths/claims; admin angle_hint and other extras stay from DB.
      *
      * @return array<string, mixed>
      */
     public function landing(string $key): array
     {
+        $config = config('blog_ai.cluster_landing.'.$key, []);
+        $config = is_array($config) ? $config : [];
+
         $row = $this->row($key);
-        $landing = is_array($row['landing_json'] ?? null) ? $row['landing_json'] : null;
-        if (is_array($landing) && $landing !== []) {
-            return $landing;
+        $db = is_array($row['landing_json'] ?? null) ? $row['landing_json'] : [];
+
+        if ($config === [] && $db === []) {
+            $general = config('blog_ai.cluster_landing.general', []);
+
+            return is_array($general) ? $general : [];
         }
 
-        $fallback = config('blog_ai.cluster_landing.'.$key);
-        if (is_array($fallback) && $fallback !== []) {
-            return $fallback;
+        $merged = array_replace_recursive($config, $db);
+
+        // Deployed product truth — always refresh these from config when present.
+        foreach (['primary_path', 'claims', 'must_link_paths', 'related_paths', 'seo_pages'] as $field) {
+            if (array_key_exists($field, $config)) {
+                $merged[$field] = $config[$field];
+            }
         }
 
-        $general = config('blog_ai.cluster_landing.general', []);
-
-        return is_array($general) ? $general : [];
+        return $merged;
     }
 
     /**
@@ -95,15 +111,15 @@ class BlogClusterCatalog
      */
     public function detectNeedles(string $key): array
     {
+        $config = config('blog_ai.cluster_detect_needles.'.$key, []);
+        $config = is_array($config) ? array_values(array_filter(array_map('strval', $config))) : [];
+
         $row = $this->row($key);
-        $needles = is_array($row['detect_needles'] ?? null) ? $row['detect_needles'] : [];
-        if ($needles !== []) {
-            return array_values(array_filter(array_map('strval', $needles)));
-        }
+        $db = is_array($row['detect_needles'] ?? null)
+            ? array_values(array_filter(array_map('strval', $row['detect_needles'])))
+            : [];
 
-        $fallback = config('blog_ai.cluster_detect_needles.'.$key, []);
-
-        return is_array($fallback) ? array_values(array_filter(array_map('strval', $fallback))) : [];
+        return array_values(array_unique(array_merge($config, $db)));
     }
 
     /**
@@ -112,6 +128,12 @@ class BlogClusterCatalog
     public function detectNeedlesMap(bool $activeOnly = true): array
     {
         $out = [];
+        foreach (array_keys(config('blog_ai.cluster_detect_needles', []) ?: []) as $key) {
+            $needles = $this->detectNeedles((string) $key);
+            if ($needles !== []) {
+                $out[(string) $key] = $needles;
+            }
+        }
         foreach ($this->rows($activeOnly) as $row) {
             $needles = $this->detectNeedles($row['key']);
             if ($needles !== []) {

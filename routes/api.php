@@ -149,6 +149,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::post('messenger/status', [MessengerConnectController::class, 'status']);
         Route::post('messenger/send', [MessengerSendController::class, 'send']);
         Route::post('messenger/sender-action', [MessengerSendController::class, 'senderAction']);
+        Route::post('messenger/delete-message', [MessengerSendController::class, 'deleteMessage']);
         Route::post('messenger/upload-attachment', [MessengerAttachmentController::class, 'upload']);
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {

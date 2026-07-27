@@ -91,21 +91,41 @@ return array (
   ),
   7 =>
   array (
-    'heading' => 'Troubleshooting Steadfast API bookings',
+    'heading' => 'SteadFast Return Requests — ask to return and Decide',
     'paragraphs' =>
     array (
-      0 => 'Connection test fails: re-copy API Key and Secret from Settings → API Integration, confirm API access is enabled on the merchant account, and check for trailing spaces. Auth errors after a key rotation require updating WooEasyLife settings immediately.',
-      1 => 'Booking fails on area/city: fix checkout field mapping or ask the customer for a clearer address before retry. Duplicate consignments: do not spam “send to Steadfast” on the same order—check whether a tracking ID already exists. COD mismatch: reconcile cart totals and shipping lines, then rebook once.',
-      2 => 'Still stuck? Compare Pathao setup on /en/pathao-courier-guide or RedX on /en/redx-courier-guide. Ops overview: /en/courier-auto-entry. Start a trial from /pricing when you are ready to run Steadfast in production.',
+      0 => 'The official SteadFast WordPress plugin focuses on booking, tracking, and balance. Developer SDKs expose return-request APIs, but Bangladesh merchants need a WP workflow: Ask to return → Pending list → Confirm cancel or Resend—without living in the SteadFast portal. WooEasyLife’s Courier hub ships that Decide flow for SteadFast (package: courier_automation; portal login required).',
+      1 => 'Statuses: pending → confirmed / resend_request / cancelled / resent. Create from the order, sync into the hub, then Decide on pending rows. CSV export and refresh keep the list aligned with the portal.',
+      2 => 'Pathao/RedX do not have this Return Requests hub yet—keep their booking/webhooks on /en/pathao-courier-guide and /en/redx-courier-guide. Measure return cost on /en/return-loss-calculator.',
     ),
   ),
   8 =>
   array (
+    'heading' => 'Courier Notifications and stuck-parcel scan',
+    'paragraphs' =>
+    array (
+      0 => 'SteadFast portal delivery notes, rider messages, and cancellation requests cache into the Notifications tab so staff do not tab-hop for every update. Open SteadFast jumps to the portal when needed.',
+      1 => 'Stuck scan flags consignments with no note/update for ~3 days (configurable), deep-links the WooCommerce order, and supports Decide/notes from the same surface. Hourly cron plus manual Scan stuck.',
+      2 => 'Portal notification sync is SteadFast-only today. Parcel notes history and rider callbacks sit in the same ops stack. Daily booking loop: /en/courier-auto-entry.',
+    ),
+  ),
+  9 =>
+  array (
+    'heading' => 'Troubleshooting Steadfast API bookings',
+    'paragraphs' =>
+    array (
+      0 => 'Connection test fails: re-copy API Key and Secret from Settings → API Integration, confirm API access is enabled on the merchant account, and check for trailing spaces. Auth errors after a key rotation require updating WooEasyLife settings immediately.',
+      1 => 'Return/Notifications empty: save SteadFast portal email/password in Courier Settings (API keys alone are not enough for scrape features). Booking fails on area/city: fix checkout mapping. Duplicate consignments: do not spam send on the same order.',
+      2 => 'Still stuck? Compare Pathao on /en/pathao-courier-guide or RedX on /en/redx-courier-guide. Ops overview: /en/courier-auto-entry. Start a trial from /pricing.',
+    ),
+  ),
+  10 =>
+  array (
     'heading' => 'Next steps and related Steadfast resources',
     'paragraphs' =>
     array (
-      0 => 'Checklist: Steadfast API Key + Secret saved → connection test green → warehouse mapped → one test parcel OK → fraud layers on → notifications on → bulk enabled for confirmed orders only.',
-      1 => 'Keep reading: /en/courier-auto-entry for daily workflow, /en/woocommerce-notifications for tracking SMS/WhatsApp, /en/cod-return-reduction for RTS control, and /en/woocommerce-bangladesh for the full 30-part system. Bangla mirror: /steadfast-integration.',
+      0 => 'Checklist: SteadFast API Key + Secret → portal login → connection test green → warehouse mapped → test parcel OK → fraud layers on → one Return Request Decide test → Notifications refresh → bulk for confirmed orders only.',
+      1 => 'Keep reading: /en/courier-auto-entry, /en/woocommerce-notifications, /en/cod-return-reduction, /en/woocommerce-bangladesh. Bangla mirror: /steadfast-integration.',
     ),
   ),
 );

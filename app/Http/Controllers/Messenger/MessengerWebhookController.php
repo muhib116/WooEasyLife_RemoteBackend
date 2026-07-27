@@ -285,9 +285,18 @@ class MessengerWebhookController extends Controller
         if ($message === null) {
             // Still store postbacks as text for inbox visibility.
             if (isset($item['postback']['payload'])) {
+                $payload = (string) $item['postback']['payload'];
+                $title = trim((string) ($item['postback']['title'] ?? ''));
+                if ($payload === 'WEL_ORDER_CONFIRM') {
+                    $payload = 'কনফার্ম';
+                } elseif ($payload === 'WEL_ORDER_EDIT') {
+                    $payload = 'ঠিক নেই';
+                } elseif ($title !== '') {
+                    $payload = $title;
+                }
                 $message = [
                     'mid' => 'postback_' . md5(json_encode($item)),
-                    'text' => (string) $item['postback']['payload'],
+                    'text' => $payload,
                     'type' => 'postback',
                 ];
             } else {
@@ -299,6 +308,19 @@ class MessengerWebhookController extends Controller
         $text = (string) ($message['text'] ?? '');
         $attachments = [];
         $replyToMid = '';
+
+        // Normalize order-confirm quick-reply payloads so WordPress confirm parser stays stable.
+        $qrPayload = trim((string) ($message['quick_reply']['payload'] ?? ''));
+        if ($qrPayload === 'WEL_ORDER_CONFIRM') {
+            $text = 'কনফার্ম';
+            $type = 'quick_reply';
+        } elseif ($qrPayload === 'WEL_ORDER_EDIT') {
+            $text = 'ঠিক নেই';
+            $type = 'quick_reply';
+        } elseif ($qrPayload !== '' && $text === '') {
+            $text = $qrPayload;
+            $type = 'quick_reply';
+        }
 
         if (! empty($message['reply_to']['mid'])) {
             $replyToMid = (string) $message['reply_to']['mid'];

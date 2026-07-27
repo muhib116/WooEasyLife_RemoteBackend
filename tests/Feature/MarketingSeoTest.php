@@ -375,6 +375,77 @@ class MarketingSeoTest extends TestCase
         );
     }
 
+    public function test_steadfast_return_hub_page_renders(): void
+    {
+        $response = $this->get('/steadfast-return-hub');
+
+        $response->assertOk();
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/steadfast-return-hub', false);
+        // SSR long-form in #seo-prerender (not Vue-only)
+        $response->assertSee('id="seo-prerender"', false);
+        $response->assertSee('Confirm cancel', false);
+        $response->assertSee('Ask to resend', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/SteadfastReturnHub')
+            ->where('seo.canonical_path', '/steadfast-return-hub')
+            ->has('seo.faqs')
+            ->has('seo.content_sections')
+        );
+
+        $sections = config('seo_content.steadfast_return_hub', []);
+        $this->assertGreaterThanOrEqual(10, count($sections));
+    }
+
+    public function test_english_steadfast_return_hub_page_renders(): void
+    {
+        $response = $this->get('/en/steadfast-return-hub');
+
+        $response->assertOk();
+        $response->assertSee('SteadFast Return', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('/steadfast-return-hub', false);
+        $response->assertSee('id="seo-prerender"', false);
+        $response->assertSee('Confirm cancel', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnSteadfastReturnHub')
+            ->where('seo.canonical_path', '/en/steadfast-return-hub')
+            ->where('seo.html_lang', 'en')
+            ->has('seo.faqs')
+            ->has('seo.content_sections')
+        );
+    }
+
+    public function test_woocommerce_facebook_messenger_page_renders(): void
+    {
+        $response = $this->get('/woocommerce-facebook-messenger');
+
+        $response->assertOk();
+        $response->assertSee('hreflang="en"', false);
+        $response->assertSee('/en/woocommerce-facebook-messenger', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/WoocommerceFacebookMessenger')
+            ->where('seo.canonical_path', '/woocommerce-facebook-messenger')
+            ->has('seo.faqs')
+        );
+    }
+
+    public function test_english_woocommerce_facebook_messenger_page_renders(): void
+    {
+        $response = $this->get('/en/woocommerce-facebook-messenger');
+
+        $response->assertOk();
+        $response->assertSee('Messenger', false);
+        $response->assertSee('lang="en"', false);
+        $response->assertSee('/woocommerce-facebook-messenger', false);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Seo/EnWoocommerceFacebookMessenger')
+            ->where('seo.canonical_path', '/en/woocommerce-facebook-messenger')
+            ->where('seo.html_lang', 'en')
+            ->has('seo.faqs')
+        );
+    }
+
     public function test_fraudbd_alternative_page_renders(): void
     {
         $response = $this->get('/fraudbd-alternative');
@@ -912,6 +983,8 @@ class MarketingSeoTest extends TestCase
         $this->get('/en/return-loss-calculator')->assertOk();
         $this->get('/en/ads-roas-calculator')->assertOk();
         $this->get('/en/courier-auto-entry')->assertOk();
+        $this->get('/en/steadfast-return-hub')->assertOk();
+        $this->get('/en/woocommerce-facebook-messenger')->assertOk();
         $this->get('/en/woocommerce-bangladesh')->assertOk();
         $this->get('/en/steadfast-integration')->assertOk();
         $this->get('/en/customer-verification')->assertOk();

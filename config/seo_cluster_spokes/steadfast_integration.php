@@ -71,11 +71,11 @@ return array (
   ),
   6 =>
   array (
-    'heading' => 'বুকিংয়ের আগে ফ্রড চেক — Steadfast অটomation নিরাপদ রাখা',
+    'heading' => 'বুকিংয়ের আগে ফ্রড চেক — Steadfast automation নিরাপদ রাখা',
     'paragraphs' =>
     array (
       0 => 'Steadfast API শক্তিশালী টুল, কিন্তু ভেরিফিকেশনের বিকল্প নয়। কুরিয়ার সাকসেস রেট দেখুন /bd-fraud-checker দিয়ে: সবুজ জোন (৮০–১০০%) দ্রুত কনফার্ম; হলুদ (৫০–৭৯%) কল বা OTP; লাল (৫০%-এর নিচে) অগ্রিম ডেলিভারি চার্জ বা hold—/fake-order-protection ও /customer-verification।',
-      1 => '১০টি হাই-রিস্ক COD “Steadfast connected” বলে পাঠালে reverse fee, প্যাকেজিং ও অ্যাড CPA মিলিয়ে অনেক সফল ডেলিভারির লাভ মুছে যেতে পারে। মনtras: পরিষ্কার অর্ডারে অটো বুক; ঝুঁকিতে ধীর।',
+      1 => '১০টি হাই-রিস্ক COD “Steadfast connected” বলে পাঠালে reverse fee, প্যাকেজিং ও অ্যাড CPA মিলিয়ে অনেক সফল ডেলিভারির লাভ মুছে যেতে পারে। মন্ত্র: পরিষ্কার অর্ডারে অটো বুক; ঝুঁকিতে ধীর।',
       2 => 'COD গাণিতিক ও মাল্টি-লেয়ার প্রটেকশন /woocommerce-bangladesh হাবে। মাসিক লস /return-loss-calculator দিয়ে মাপুন।',
     ),
     'figures' =>
@@ -90,12 +90,32 @@ return array (
   ),
   7 =>
   array (
+    'heading' => 'SteadFast Return Requests — Ask to return ও Decide ওয়ার্কফ্লো',
+    'paragraphs' =>
+    array (
+      0 => 'অফিসিয়াল SteadFast WooCommerce প্লাগইন মূলত বুকিং/ট্র্যাক/ব্যালেন্স করে। রিটার্ন রিকোয়েস্ট API ডেভেলপার প্যাকেজে আছে, কিন্তু BD মার্চেন্টদের দৈনন্দিন চাহিদা হলো: প্যানেল না খুলেই Ask to return → Pending তালিকা → Confirm cancel বা Resend request। WooEasyLife Courier হাবে এই Decide ফ্লো SteadFast-এর জন্য শিপড (প্যাকেজ: courier_automation; portal login লাগে)।',
+      1 => 'স্ট্যাটাস: pending → confirmed / resend_request / cancelled / resent। অর্ডার থেকে Ask to return করলে রিকোয়েস্ট লোকাল টেবিলে ও হাব সিঙ্কে যায়; Pending-এ Decide দিয়ে ক্যানসেল কনফার্ম বা কুরিয়ারকে রিসেন্ড চাইতে পারেন। CSV এক্সপোর্ট ও রিফ্রেশ দিয়ে পোর্টাল আপডেট ধরা যায়।',
+      2 => 'Pathao/RedX-এ এখনো একই Return Requests হাব নেই—সেগুলোতে বুকিং/ওয়েবহুক চালু রাখুন (/pathao-courier-guide, /redx-courier-guide)। রিটার্ন লস মাপুন /return-loss-calculator দিয়ে।',
+    ),
+  ),
+  8 =>
+  array (
+    'heading' => 'Courier Notifications ও stuck parcel স্ক্যান',
+    'paragraphs' =>
+    array (
+      0 => 'SteadFast পোর্টালের ডেলিভারি নোট, রাইডার মেসেজ ও ক্যানসেলেশন রিকোয়েস্ট WooEasyLife Notifications ট্যাবে ক্যাশ হয়—আলাদা ট্যাবে লগইন না করেও “সময় স্বল্পতায় আজ ডেলিভারি হয়নি” বা delivered আপডেট দেখা যায়। Open SteadFast বাটন দিয়ে পোর্টালে ঝাঁপ দেওয়া যায়।',
+      1 => 'Stuck scan: কয়েকদিন (ডিফল্ট ~৩) নোট/আপডেট না থাকলে “Stuck parcel” অ্যালার্ট তৈরি হয় এবং লিংকড WooCommerce অর্ডারে Decide/নোট মোডাল খোলা যায়। ঘণ্টায় ক্রন + ম্যানুয়াল Scan stuck—আটকে-পড়া COD পার্সেল আগে ধরা যায়।',
+      2 => 'পোর্টাল নোটিফিকেশন সিঙ্ক আজকে SteadFast-only। Parcel notes history ও rider-callback একই SteadFast অপস স্ট্যাকে। দৈনন্দিন বুকিং ফ্লো: /courier-auto-entry।',
+    ),
+  ),
+  9 =>
+  array (
     'heading' => 'Steadfast API troubleshooting ও পরবর্তী পদক্ষেপ',
     'paragraphs' =>
     array (
       0 => 'Connection fail: API Key/Secret পুনরায় কপি করুন, merchant API enable আছে কিনা দেখুন, extra space সরান। Auth error password/key change-এর পর WooEasyLife settings আপডেট করুন। Booking fail on area: checkout-এ city/zone/area mapping ঠিক করুন বা কাস্টমার থেকে স্পষ্ট ঠিকানা নিন।',
-      1 => 'COD mismatch: কার্ট টোটাল, shipping line ও প্রমised delivery charge মিলিয়ে একবার reconcile করে rebook করুন। Pathao/RedX প্যাটার্ন তুলনা: /pathao-courier-guide, /redx-courier-guide।',
-      2 => 'চেকলিস্ট: Steadfast credentials ✓ → connection test green ✓ → warehouse mapped ✓ → টেস্ট পার্সেল OK ✓ → fraud layers ✓ → notifications ✓ → শুধু কনফার্মড অর্ডারে bulk ✓। ইংরেজি: /en/steadfast-integration।',
+      1 => 'Return/Notifications কাজ না করলে SteadFast portal email/password Courier Settings-এ সেভ আছে কিনা দেখুন (শুধু API key যথেষ্ট নয়)। COD mismatch: কার্ট টোটাল ও ডেলিভারি চার্জ মিলিয়ে rebook করুন। তুলনা: /pathao-courier-guide, /redx-courier-guide।',
+      2 => 'চেকলিস্ট: Steadfast API ✓ → portal login ✓ → connection test ✓ → টেস্ট পার্সেল ✓ → fraud layers ✓ → Return Requests Decide টেস্ট ✓ → Notifications refresh ✓ → /pricing ট্রায়াল। ইংরেজি: /en/steadfast-integration।',
     ),
   ),
 );

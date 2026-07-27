@@ -45,7 +45,8 @@ class BlogImageAgent
         'fake_order' => ['Fraud Check', 'Courier History', 'Checkout OTP', 'Blacklist'],
         'fraud_checker' => ['Fraud Checker', 'Courier History', 'Success Rate', 'Smart Dashboard'],
         'checkout_protection' => ['Checkout OTP', 'Duplicate Block', 'Blacklist', 'Fraud Check'],
-        'courier' => ['Auto Courier', 'Pathao / Steadfast / RedX', 'Smart Dashboard', 'Save Time'],
+        'courier' => ['Auto Courier', 'Return Requests', 'Stuck Scan', 'SteadFast Hub'],
+        'messenger' => ['Messenger Inbox', 'Page Chat', 'Lead Labels', 'Order Link'],
         'missing_order' => ['Missing Order', 'Recover Orders', 'Smart Dashboard', 'One-click Call'],
         'facebook_ads' => ['Pixel Protection', 'Confirm Purchase', 'Less Fake Events', 'More Profit'],
         'ai_orders' => ['Message to Order', 'Image to Order', 'Smart Dashboard', 'Save Time'],
@@ -75,8 +76,12 @@ class BlogImageAgent
             'sub' => 'Protect every COD order',
         ],
         'courier' => [
-            'lines' => ['Manual courier', 'entry wasting hours?', 'Automate it'],
-            'sub' => 'Pathao · Steadfast · RedX auto entry',
+            'lines' => ['SteadFast returns', 'stuck parcels?', 'Manage in WP'],
+            'sub' => 'Ask to return · Decide · Scan stuck',
+        ],
+        'messenger' => [
+            'lines' => ['Facebook Page', 'chat in WordPress?', 'Inbox → order'],
+            'sub' => 'Messenger inbox for BD COD sellers',
         ],
         'missing_order' => [
             'lines' => ['Missing orders', 'costing sales?', 'Recover them'],

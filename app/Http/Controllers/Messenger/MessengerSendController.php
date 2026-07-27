@@ -98,6 +98,11 @@ class MessengerSendController extends Controller
             $options['reply_to_mid'] = $replyToMid;
         }
 
+        $quickReplies = $request->input('quick_replies', []);
+        if (is_array($quickReplies) && $quickReplies !== []) {
+            $options['quick_replies'] = $quickReplies;
+        }
+
         $result = $oauth->sendMessage($connection, $psid, $text, $options);
 
         if (empty($result['ok'])) {
@@ -157,5 +162,47 @@ class MessengerSendController extends Controller
         }
 
         return $this->successResponse(['action' => $action], 'ok');
+    }
+
+    /**
+     * Unsend a page-sent message on Facebook (removes it for the customer too).
+     */
+    public function deleteMessage(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $mid = trim((string) $request->input('mid', $request->input('message_id', '')));
+
+        if ($mid === '') {
+            return $this->errorResponse('mid is required.', 422);
+        }
+
+        $connection = $resolver->resolve($accessToken, $pageId);
+
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->deleteMessage($connection, $mid);
+
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to delete Messenger message.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse([
+            'mid' => $mid,
+            'page_id' => $connection->page_id,
+        ], 'Message deleted.');
     }
 }

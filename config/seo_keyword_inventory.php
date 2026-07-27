@@ -17,7 +17,7 @@
  */
 
 return [
-    'version' => '2026-07-26',
+    'version' => '2026-07-27',
     'domain' => 'https://app.wpsalehub.com',
 
     /*
@@ -96,7 +96,13 @@ return [
             'path' => '/steadfast-fraud-check',
             'slug' => 'steadfast-fraud-check',
             'primary' => 'steadfast fraud check',
-            'secondary' => ['steadfast customer check', 'steadfast courier ratio', 'steadfast হিস্টোরি'],
+            'secondary' => [
+                'steadfast customer check',
+                'steadfast courier ratio',
+                'steadfast হিস্টোরি',
+                'steadfast stuck parcel',
+                'steadfast return request',
+            ],
             'cta' => '/steadfast-fraud-check',
         ],
         [
@@ -202,8 +208,15 @@ return [
             'path' => '/steadfast-integration',
             'slug' => 'steadfast-integration',
             'primary' => 'steadfast woocommerce plugin',
-            'secondary' => ['steadfast wordpress plugin', 'steadfast integration'],
+            'secondary' => [
+                'steadfast wordpress plugin',
+                'steadfast integration',
+                'steadfast ask to return',
+                'steadfast parcel notes',
+                'steadfast courier notifications',
+            ],
             'cta' => '/steadfast-integration',
+            'notes' => 'SERP head: steadfast woocommerce plugin — keep ranking on THIS URL. Soft-link product landing /steadfast-return-hub for Return/Notifications/stuck (do not steal plugin head term onto return hub).',
         ],
         [
             'cluster' => 'courier',
@@ -382,6 +395,51 @@ return [
             'cta' => '/return-loss-calculator',
         ],
 
+        // —— Feature launches (v1.5.4) — planned FAQ; publish only after GSC/budget; deepen existing pillars first ——
+        [
+            'cluster' => 'courier',
+            'type' => 'planned_faq',
+            'status' => 'planned',
+            'path' => '/faq/steadfast-return-request-kivabe',
+            'slug' => 'steadfast-return-request-kivabe',
+            'primary' => 'steadfast return request কীভাবে করব',
+            'secondary' => [
+                'steadfast ask to return',
+                'পার্সেল রিটার্ন রিকোয়েস্ট confirm',
+                'steadfast resend request',
+            ],
+            'cta' => '/steadfast-return-hub',
+            'notes' => 'P0 feature FAQ. Demand: MEDIUM-LOW exact, HIGH adjacency via steadfast plugin SERP. Soft-link from /steadfast-integration + /steadfast-return-hub. Shipped: SteadFast Return Requests hub — do not invent Pathao/RedX return FAQ',
+        ],
+        [
+            'cluster' => 'courier',
+            'type' => 'planned_faq',
+            'status' => 'planned',
+            'path' => '/faq/steadfast-stuck-parcel-ki-korbo',
+            'slug' => 'steadfast-stuck-parcel-ki-korbo',
+            'primary' => 'steadfast stuck parcel হলে কী করব',
+            'secondary' => [
+                'পার্সেল আটকে গেছে',
+                'courier notification no update',
+            ],
+            'cta' => '/steadfast-return-hub',
+            'notes' => 'P0 feature FAQ. Gap vs official SteadFast plugin (no stuck UI). CTA /steadfast-return-hub + /steadfast-integration. Shipped: stuck scan + Notifications (SteadFast-only)',
+        ],
+        [
+            'cluster' => 'messenger',
+            'type' => 'planned_faq',
+            'status' => 'planned',
+            'path' => '/faq/woocommerce-messenger-inbox-ki',
+            'slug' => 'woocommerce-messenger-inbox-ki',
+            'primary' => 'woocommerce messenger inbox কী',
+            'secondary' => [
+                'facebook page chat wordpress',
+                'messenger থেকে woocommerce অর্ডার',
+            ],
+            'cta' => '/woocommerce-facebook-messenger',
+            'notes' => 'P1 feature FAQ. BD long-tail vs ManyChat/Chatfuel (global HIGH). Position: WP admin inbox→WC order, not storefront chat bubble. Soft-mention AI Semi; never Meta AI Bot',
+        ],
+
         /*
         |--------------------------------------------------------------------------
         | Planned blog topics (Blog AI — long-tail, not money head terms)
@@ -443,6 +501,55 @@ return [
             'secondary' => ['manual parcel entry vs auto', 'woocommerce courier webhook'],
             'cta' => '/courier-auto-entry',
             'article_type' => 'case_study',
+        ],
+        [
+            'cluster' => 'courier',
+            'type' => 'planned_blog',
+            'status' => 'planned',
+            'path' => '/blog/steadfast-return-request-decide-workflow',
+            'slug' => 'steadfast-return-request-decide-workflow',
+            'primary' => 'SteadFast রিটার্ন রিকোয়েস্ট কীভাবে কনফার্ম বা রিসেন্ড করবেন',
+            'secondary' => [
+                'steadfast ask to return',
+                'steadfast cancel parcel request',
+                'steadfast resend request',
+                'কুরিয়ার রিটার্ন রিকোয়েস্ট WooCommerce',
+            ],
+            'cta' => '/steadfast-return-hub',
+            'article_type' => 'howto',
+            'notes' => 'P0 blog. Feature: SteadFast Return Requests hub (v1.5.4). Soft-link /steadfast-integration for plugin SERP; product CTA /steadfast-return-hub',
+        ],
+        [
+            'cluster' => 'courier',
+            'type' => 'planned_blog',
+            'status' => 'planned',
+            'path' => '/blog/steadfast-stuck-parcel-notification',
+            'slug' => 'steadfast-stuck-parcel-notification',
+            'primary' => 'SteadFast পার্সেল আটকে গেলে কী করবেন',
+            'secondary' => [
+                'stuck parcel steadfast',
+                '৩ দিন আপডেট নেই পার্সেল',
+                'steadfast portal notifications',
+            ],
+            'cta' => '/steadfast-return-hub',
+            'article_type' => 'howto',
+            'notes' => 'P0 blog. Feature: Courier Notifications + stuck scan (SteadFast-only). Chatbots cite portal/terms only—no WP stuck hub rivals',
+        ],
+        [
+            'cluster' => 'messenger',
+            'type' => 'planned_blog',
+            'status' => 'planned',
+            'path' => '/blog/woocommerce-facebook-messenger-inbox',
+            'slug' => 'woocommerce-facebook-messenger-inbox',
+            'primary' => 'WooCommerce Facebook Messenger ইনবক্স',
+            'secondary' => [
+                'facebook page messenger wordpress plugin',
+                'messenger থেকে অর্ডার নেওয়া',
+                'woocommerce messenger chat',
+            ],
+            'cta' => '/woocommerce-facebook-messenger',
+            'article_type' => 'howto',
+            'notes' => 'P1 blog. Feature: Messenger human inbox (v1.5.4). SERP rivals: Webkul/ManyChat/Chatfuel. Win: COD page seller inbox + order link—not website widget. Soft AI Semi only',
         ],
         [
             'cluster' => 'return_loss',
@@ -548,6 +655,38 @@ return [
             'secondary' => ['order page courier history', 'delivery history on order'],
             'cta' => '/bd-fraud-checker',
             'notes' => 'Shipped: customer_delivery_history',
+        ],
+        [
+            'cluster' => 'courier',
+            'type' => 'money',
+            'status' => 'live',
+            'path' => '/steadfast-return-hub',
+            'slug' => 'steadfast-return-hub',
+            'primary' => 'steadfast return request woocommerce',
+            'secondary' => [
+                'steadfast ask to return',
+                'steadfast stuck parcel',
+                'steadfast courier notifications',
+                'steadfast cancellation request',
+                'steadfast cancel request confirm',
+                'steadfast resend request',
+                'rider cancel request woocommerce',
+                'পার্সেল রিটার্ন রিকোয়েস্ট',
+                'রাইডার ক্যান্সেল রিকোয়েস্ট',
+            ],
+            'cta' => '/steadfast-return-hub',
+            'notes' => 'Product landing for Return Requests + Notifications + stuck (v1.5.4). Soft-link /steadfast-integration for plugin SERP head term — do not cannibalize steadfast woocommerce plugin',
+        ],
+        [
+            'cluster' => 'messenger',
+            'type' => 'money',
+            'status' => 'live',
+            'path' => '/woocommerce-facebook-messenger',
+            'slug' => 'woocommerce-facebook-messenger',
+            'primary' => 'woocommerce facebook messenger plugin bangladesh',
+            'secondary' => ['facebook page inbox wordpress', 'messenger order woocommerce', 'woocommerce messenger inbox'],
+            'cta' => '/woocommerce-facebook-messenger',
+            'notes' => 'Live product landing. Shipped: human inbox (v1.5.4). Never AI Full / Meta AI Bot. Prefer long-tail vs ManyChat head terms',
         ],
     ],
 ];

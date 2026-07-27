@@ -705,6 +705,108 @@ return [
             ],
         ],
 
+        'steadfast_return_hub' => [
+            'title' => 'SteadFast Return Hub — Cancel Request প্লাগইনেই হ্যান্ডেল | WooEasyLife',
+            'description' => 'রাইডার cancel request এলে SteadFast পোর্টালে প্রতিবার Change Status না করে WooEasyLife Return Requests থেকে Decide করুন—রাইডার কল, call log, Confirm cancel বা Ask to resend এক মডালে।',
+            'canonical_path' => '/steadfast-return-hub',
+            'prerender_h1' => 'SteadFast Return Hub — cancel request আর পোর্টালে ঘোরাতে হবে না',
+            'prerender_lead' => 'রাইডার cancel request প্লাগইনেই আসে। Decide খুলে কল করুন, তারপর Confirm cancel বা Ask to resend—দৈনন্দিন Cancellation Requests Change Status বাদ।',
+            'hreflang_paths' => [
+                'bn-BD' => '/steadfast-return-hub',
+                'en' => '/en/steadfast-return-hub',
+                'x-default' => '/steadfast-return-hub',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'হোম', 'path' => '/'],
+                ['name' => 'SteadFast Return Hub', 'path' => '/steadfast-return-hub'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'SteadFast-এ গিয়ে আর cancel request হ্যান্ডেল করতে হবে?',
+                    'a' => 'দৈনন্দিন Confirm cancel বা Ask to resend-এর জন্য সাধারণত না। রাইডার যখন SteadFast-এ cancel বা return request পাঠায়, সেটা WooEasyLife-এর Courier → Return Requests-এ সিঙ্ক হয়। Pending থেকে Decide খুলেই সিদ্ধান্ত নিতে পারেন। সিঙ্কের জন্য API বা পোর্টাল লগইন একবার সেট করতে হয়—কিন্তু প্রতিটা আইটেমে steadfast.com.bd-এর Cancellation Requests পেজে গিয়ে Change Status চাপতে হয় না। বিরল পোর্টাল টুল লাগলে Open SteadFast দিয়ে যাওয়া যায়। সেটআপ গাইড: /steadfast-integration।',
+                ],
+                [
+                    'q' => 'Decide মডালে কী কী আছে?',
+                    'a' => 'এক স্ক্রিনে consignment, WooCommerce অর্ডার লিংক, রাইডার নোটের History, Details ও প্রয়োজনে Edit parcel থাকে। Cancellation request pending থাকলে সামনে দুটো মূল বাটন: Confirm cancel এবং Ask to resend। Assigned rider কার্ড থেকে Call করা যায়; history আইকনে rider call log দেখা যায়। অর্ডার বাঁচানোর সুযোগ থাকলে কাস্টমার Dial/WhatsApp সেকশনও একই মডালে। AI প্যাকেজ থাকলে সাজেশন ও Save the sale মেসেজ ড্রাফট আসতে পারে—না থাকলেও মানব বাটনগুলো কাজ করে।',
+                ],
+                [
+                    'q' => 'রাইডারকে কল আর কল লগ কি রাখা যায়?',
+                    'a' => 'হ্যাঁ। সব cancel request মানেই অর্ডার শেষ নয়—কখনো রাইডার তাড়াহুড়ো করে নোট দিয়েছেন। Decide মডালে রাইডারের নাম ও নম্বর দেখে Call করুন, নোট মিলিয়ে নিন। কলের হিস্ট্রি অর্ডারে সেভ থাকে, তাই সকালে একজন কল করেছে জেনে বিকেলে অন্যজন আবার একই রাইডারকে ডুপ্লিকেট কল করে না। ছোট টিমে এই লগ সবচেয়ে কাজে লাগে। মোবাইল থেকে কাজ চালাতে চাইলে /woocommerce-mobile-app দেখুন।',
+                ],
+                [
+                    'q' => 'AI সাজেশন কি বাধ্যতামূলক?',
+                    'a' => 'না। AI থাকলে রাইডার নোট পড়ে Confirm cancel নাকি Ask to resend বেশি মানায় বলে দিতে পারে—যেমন মত পরিবর্তন বা ফোনে না পাওয়া—সাথে একটা নিশ্চয়তার ইঙ্গিত। এটা শুধু গাইড; চূড়ান্ত ক্লিক সবসময় আপনার। AI প্যাকেজ বা OpenAI key না থাকলেও Confirm cancel ও Ask to resend বাটন চলে। সাজেশন ভুল লাগলে উপেক্ষা করে নিজে Decide করুন। আমরা Meta AI Bot বা সব প্ল্যানে ফ্রি ফুল AI দাবি করি না।',
+                ],
+                [
+                    'q' => 'Pending, Confirmed, Resend Request মানে কী?',
+                    'a' => 'Pending মানে সিদ্ধান্ত এখনো বাকি—রাইডার বা কুরিয়ার cancel/return চেয়েছে, আপনি এখনো Confirm বা Resend করেননি। আগে পোর্টালে এখানেই সবচেয়ে বেশি সময় যেত; প্লাগইনে এই ট্যাবকে প্রাইমারি কিউ ভাবা ভালো। Confirmed মানে cancel বা return নিশ্চিত। Resend Request মানে আপনি Ask to resend দিয়েছেন—কুরিয়ার আবার চেষ্টা বা রিসেন্ড পথে। Cancelled ও Resent হিস্ট্রি/অডিটের জন্য। CSV এক্সপোর্ট দিয়ে অপস বা অ্যাকাউন্টস রিপোর্ট বের করা যায়। ট্যাব নামগুলো SteadFast পোর্টালের সাথে মিলিয়ে রাখা হয়েছে যাতে টিম ট্রেনিং সহজ হয়।',
+                ],
+                [
+                    'q' => 'Stuck parcel স্ক্যান কী করে?',
+                    'a' => 'Notifications ট্যাবে SteadFast portal আপডেট, রাইডার নোট ও cancel সিগন্যাল এক জায়গায় আসে। Scan stuck সাধারণত প্রায় তিন দিন নিস্তব্ধ পার্সেল ধরে—অনেক বুকিং-only প্লাগইনে এই কিউ থাকে না। Stuck মানেই সবসময় cancel নয়; কখনো রাইডার ব্যস্ত, কখনো এলাকায় নেটওয়ার্ক সমস্যা। আগে ধরলে কল বা return ফ্লো তাড়াতাড়ি শুরু করা যায়; দেরি হলে কাস্টমার নিজেই রাগ করে রিফিউজ করতে পারেন। সাপ্তাহিক অভ্যাস হিসেবে stuck স্ক্যান রাখুন। মাসিক রিটার্ন লস মাপতে: /return-loss-calculator।',
+                ],
+                [
+                    'q' => 'Pathao/RedX-এও কি একই হাব আছে?',
+                    'a' => 'না। এই Return Hub আজ SteadFast-কেন্দ্রিক—Cancellation Requests সিঙ্ক ও Decide ফ্লো SteadFast cancel/return request-এর জন্য। Pathao বা RedX প্রধান কুরিয়ার হলে তাদের বুকিং এখনও /courier-auto-entry দিয়ে চলে, কিন্তু একই “Return Requests Decide” হাব Pathao/RedX-এর জন্য এখানে দাবি করি না। ভবিষ্যতে কী যোগ হবে সেটা আলাদা ঘোষণা—এই পেজে শুধু যা শিপড তাই বলি।',
+                ],
+                [
+                    'q' => 'অটো এন্ট্রি আর এই পেজের পার্থক্য?',
+                    'a' => 'অটো এন্ট্রি (/courier-auto-entry) মানে অর্ডার কনফার্ম হলে পার্সেল তৈরি—নাম, ফোন, ঠিকানা, COD অ্যামাউন্ট কুরিয়ারে এন্ট্রি। Return Hub মানে বুকিংয়ের পরের কাজ: রাইডার cancel/return request সিঙ্ক, Decide, রাইডার কল, Notifications, stuck স্ক্যান। সহজ উপমা: অটো এন্ট্রি পার্সেল রাস্তায় তোলে; Return Hub রাস্তায় সমস্যা হলে সিদ্ধান্ত নেয়। শুধু বুকিং অটো করে রিটার্ন কিউ পোর্টালে ফেলে রাখলে আবার সময় নষ্ট হয়—তাই দুটোই লাগে।',
+                ],
+                [
+                    'q' => 'কীভাবে শুরু করব?',
+                    'a' => 'প্রথমে /pricing থেকে ট্রায়াল বা প্ল্যান নিন। তারপর /steadfast-integration দিয়ে API কানেক্ট করুন এবং /courier-auto-entry চালু রাখুন যাতে consignment অর্ডারে থাকে। Courier → Return Requests খুলে Refresh দিন; একটা Pending-এ Decide প্র্যাকটিস করুন—নোট পড়ুন, প্রয়োজনে রাইডার কল, শেষে Confirm cancel বা Ask to resend। কনফার্মের আগে নম্বর যাচাই করতে /bd-fraud-checker ও বারবার ফেক আটকাতে /fake-order-protection দেখুন। মাস শেষে লস মাপতে /return-loss-calculator।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন কোথায়?',
+                    'a' => 'একই ফিচারের ইংরেজি পেজ: /en/steadfast-return-hub — সেখানেও Quick answer, Decide ওয়ার্কফ্লো, rider call, optional AI ও stuck scan আছে; শুধু ভাষা ইংরেজি। বাংলা প্রাইমারি পেজ: /steadfast-return-hub। টিমে কেউ ইংরেজি পছন্দ করলে EN লিংক শেয়ার করুন; BN ও EN দুটোই মিরর হিসেবে রাখা হয়।',
+                ],
+            ],
+        ],
+
+        'woocommerce_facebook_messenger' => [
+            'title' => 'WooCommerce Facebook Messenger ইনবক্স — Page Chat WP Admin | WooEasyLife',
+            'description' => 'Facebook Page Messenger ইনবক্স WordPress অ্যাডমিনে: টেক্সট/ইমেজ/ভয়েস, lead labels, অর্ডার পাথ। BD পেজ COD সেলার — স্টোরফ্রন্ট চ্যাট বাবল নয়। AI Semi beta/গেটেড।',
+            'canonical_path' => '/woocommerce-facebook-messenger',
+            'prerender_h1' => 'WooCommerce Facebook Messenger ইনবক্স — Page chat WP অ্যাডমিনে',
+            'prerender_lead' => 'Page মেসেঞ্জার চ্যাট WordPress অ্যাডমিনে — lead labels, মিডিয়া রিপ্লাই, অর্ডার পাথ। মানব ইনবক্স; AI Full সবার জন্য আনলক নয়।',
+            'hreflang_paths' => [
+                'bn-BD' => '/woocommerce-facebook-messenger',
+                'en' => '/en/woocommerce-facebook-messenger',
+                'x-default' => '/woocommerce-facebook-messenger',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'হোম', 'path' => '/'],
+                ['name' => 'Facebook Messenger ইনবক্স', 'path' => '/woocommerce-facebook-messenger'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'এটা কি ওয়েবসাইট চ্যাট বাবল?',
+                    'a' => 'না — Facebook Page Messenger ইনবক্স WordPress/WooEasyLife অ্যাডমিনে। ManyChat-স্টাইল স্টোরফ্রন্ট উইজেট নয়।',
+                ],
+                [
+                    'q' => 'কয়টা Page কানেক্ট করা যায়?',
+                    'a' => 'v1-এ এক কানেক্টেড Page। মাল্টি-Page ইনবক্স এই পেজের দাবি নয়।',
+                ],
+                [
+                    'q' => 'AI Bot আছে কি?',
+                    'a' => 'মানব ইনবক্স শিপড। AI Semi (সাজেশন ড্রাফট) প্যাকেজ-গেটেড beta। AI Full বা আলাদা “Meta AI Bot” লাইভ দাবি করবেন না।',
+                ],
+                [
+                    'q' => 'মেসেঞ্জার অর্ডারের পর কী করব?',
+                    'a' => 'মোবাইল নম্বর /bd-fraud-checker দিয়ে চেক করুন; নিরাপদ হলে কনফার্ম → /courier-auto-entry। বারবার ফেক: /fake-order-protection।',
+                ],
+                [
+                    'q' => 'কীভাবে শুরু করব?',
+                    'a' => '/pricing থেকে ট্রায়াল, Messenger ট্যাবে Page কানেক্ট, তারপর ইনবক্স চালু। পেজ COD গাইড: /facebook-page-cod-management।',
+                ],
+                [
+                    'q' => 'ইংরেজি ভার্সন আছে কি?',
+                    'a' => 'হ্যাঁ — /en/woocommerce-facebook-messenger। বাংলা: /woocommerce-facebook-messenger।',
+                ],
+            ],
+        ],
+
         'fraudbd_alternative' => [
             'title' => 'FraudBD Alternative — WooEasyLife BD Fraud Checker + WooCommerce',
             'description' => 'FraudBD বা শুধু-টুল ফ্রড চেকারের বিকল্প খুঁজছেন? WooEasyLife-এ ফ্রি BD fraud checker ছাড়াও ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও মোবাইল অ্যাপ একসাথে।',
@@ -1254,6 +1356,110 @@ return [
             ],
         ],
 
+        'en_steadfast_return_hub' => [
+            'title' => 'SteadFast Return Hub — Handle Cancel Requests in WooCommerce | WooEasyLife',
+            'description' => 'When a rider sends a SteadFast cancel request, Decide in WooEasyLife Return Requests—call the rider, keep a call log, Confirm cancel or Ask to resend—without daily portal Change Status.',
+            'canonical_path' => '/en/steadfast-return-hub',
+            'html_lang' => 'en',
+            'prerender_h1' => 'SteadFast Return Hub — stop living in the cancel portal',
+            'prerender_lead' => 'Rider cancel requests land in the plugin. Open Decide, call if needed, then Confirm cancel or Ask to resend—without Change Status on every Cancellation Request.',
+            'hreflang_paths' => [
+                'bn-BD' => '/steadfast-return-hub',
+                'en' => '/en/steadfast-return-hub',
+                'x-default' => '/steadfast-return-hub',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'SteadFast Return Hub', 'path' => '/en/steadfast-return-hub'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'Do I still need the SteadFast website for cancel requests?',
+                    'a' => 'For everyday Confirm cancel or Ask to resend, usually no. When a rider submits a cancel or return request on SteadFast, it syncs into WooEasyLife under Courier → Return Requests. Open Pending → Decide and finish the decision there. You still connect API or portal login once for sync—but you should not need steadfast.com.bd Cancellation Requests Change Status on every row. Open SteadFast remains for rare portal-only tools. Setup guide: /en/steadfast-integration.',
+                ],
+                [
+                    'q' => 'What is inside the Decide modal?',
+                    'a' => 'One screen holds the consignment, a WooCommerce order link, History for rider notes, Details, and Edit parcel when something needs fixing. When a cancellation request is pending, Confirm cancel and Ask to resend sit up front. The assigned rider card lets you Call; history keeps the rider call log. If the order might still convert, customer Dial/WhatsApp lives in the same modal. With an AI package you may also see a suggestion and Save the sale draft—human buttons still work without AI.',
+                ],
+                [
+                    'q' => 'Can I call the rider and keep a log?',
+                    'a' => 'Yes. Not every cancel request means the sale is dead—sometimes the rider rushed the note. From Decide, call the rider, compare with the note, and leave a trail on the order so the next teammate knows who already called. Small teams feel this most: morning call, afternoon duplicate call to the same rider. With a log, that waste stops. For on-the-go ops, see /en/woocommerce-mobile-app.',
+                ],
+                [
+                    'q' => 'Is AI required?',
+                    'a' => 'No. When AI is available it can suggest Confirm cancel or Ask to resend from the rider note—for example changed mind or unreachable—with a confidence hint. That is guidance only; you still click. Without an AI package or OpenAI key, Confirm cancel and Ask to resend still work. If the suggestion feels wrong, ignore it and Decide yourself. We do not claim a Meta AI Bot or free full AI on every plan.',
+                ],
+                [
+                    'q' => 'What do Pending, Confirmed, and Resend Request mean?',
+                    'a' => 'Pending means a decision is still owed—the rider or courier asked to cancel or return and you have not Confirmed or Resent yet. That used to eat portal time; treat Pending as the primary queue in the plugin. Confirmed means cancel or return is locked. Resend Request means you asked the courier to try again. Cancelled and Resent are for history and audit. CSV export helps ops or accounting. Tab names match the SteadFast portal so training stays familiar: Change Status there becomes Decide here.',
+                ],
+                [
+                    'q' => 'What does stuck parcel scan do?',
+                    'a' => 'Notifications gathers SteadFast portal updates, rider notes, and cancel signals in one place. Scan stuck usually finds parcels quiet for about three days—something many booking-only plugins never surface. Stuck does not always mean cancel; sometimes the rider is busy or the area has network issues. Catching early means call or return-request sooner; late contact often turns into customer refusal. Make stuck scan a weekly habit. Measure monthly return loss on /en/return-loss-calculator.',
+                ],
+                [
+                    'q' => 'Do Pathao or RedX have the same hub?',
+                    'a' => 'No. This Return Hub is SteadFast-centric today—sync and Decide are built around SteadFast cancel and return requests. If you mainly run Pathao or RedX, booking still goes through /en/courier-auto-entry, but we do not claim the same Return Requests Decide hub for those couriers on this page. Anything future ships with a separate announcement—here we only describe what is live.',
+                ],
+                [
+                    'q' => 'How is this different from auto-entry?',
+                    'a' => 'Courier auto-entry (/en/courier-auto-entry) creates the parcel after confirm—name, phone, address, COD amount into the courier. The Return Hub is the after-booking layer: sync cancel/return requests, Decide, rider calls, Notifications, stuck scan. Simple picture: auto-entry puts the parcel on the road; the Return Hub decides when the road gets messy. Automate only booking and you just move the bottleneck to the portal—so you need both.',
+                ],
+                [
+                    'q' => 'How do I start?',
+                    'a' => 'Start with a trial or plan on /pricing. Connect the API with /en/steadfast-integration and keep /en/courier-auto-entry on so consignments sit on orders. Open Courier → Return Requests, Refresh, and practice Decide on one Pending item—read the note, call the rider if needed, then Confirm cancel or Ask to resend. Before you scale confirms, check numbers on /en/bd-fraud-checker and keep /en/fake-order-protection on for repeats. Baseline monthly loss with /en/return-loss-calculator.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes. Bangla primary page: /steadfast-return-hub — same product story (Quick answer, Decide workflow, rider call, optional AI, stuck scan) for Bangladesh COD operators. English mirror: /en/steadfast-return-hub. Share whichever locale your staff reads; both stay maintained as parallel content, not a thin machine dump.',
+                ],
+            ],
+        ],
+
+        'en_woocommerce_facebook_messenger' => [
+            'title' => 'WooCommerce Facebook Messenger Inbox — Page Chat in WP Admin | WooEasyLife',
+            'description' => 'Facebook Page Messenger inbox in WordPress admin: text/image/voice, lead labels, order path. For BD page COD sellers — not a storefront chat bubble. AI Semi is beta/gated.',
+            'canonical_path' => '/en/woocommerce-facebook-messenger',
+            'html_lang' => 'en',
+            'prerender_h1' => 'WooCommerce Facebook Messenger inbox — Page chat in WP admin',
+            'prerender_lead' => 'Page Messenger chats in WordPress admin — lead labels, media replies, order path. Human inbox; AI Full is not unlocked for everyone.',
+            'hreflang_paths' => [
+                'bn-BD' => '/woocommerce-facebook-messenger',
+                'en' => '/en/woocommerce-facebook-messenger',
+                'x-default' => '/woocommerce-facebook-messenger',
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Home', 'path' => '/en'],
+                ['name' => 'Facebook Messenger inbox', 'path' => '/en/woocommerce-facebook-messenger'],
+            ],
+            'faqs' => [
+                [
+                    'q' => 'Is this a website chat bubble?',
+                    'a' => 'No — Facebook Page Messenger inbox inside WordPress/WooEasyLife admin. Not a ManyChat-style storefront widget.',
+                ],
+                [
+                    'q' => 'How many Pages can I connect?',
+                    'a' => 'One connected Page in v1. Multi-page inbox is not a claim on this page.',
+                ],
+                [
+                    'q' => 'Is there an AI bot?',
+                    'a' => 'Human inbox is shipped. AI Semi (suggestion drafts) is package-gated beta. Do not claim AI Full or a separate “Meta AI Bot” as live.',
+                ],
+                [
+                    'q' => 'What after a Messenger order?',
+                    'a' => 'Check the mobile on /en/bd-fraud-checker; if safe, confirm → /en/courier-auto-entry. Repeats: /en/fake-order-protection.',
+                ],
+                [
+                    'q' => 'How do I start?',
+                    'a' => 'Trial on /pricing, connect the Page in Messenger, then run the inbox. Page COD guide: /en/facebook-page-cod-management.',
+                ],
+                [
+                    'q' => 'Is there a Bangla version?',
+                    'a' => 'Yes — /woocommerce-facebook-messenger. English: /en/woocommerce-facebook-messenger.',
+                ],
+            ],
+        ],
+
         'en_return_loss_calculator' => [
             'title' => 'Return Loss Calculator — How Much Can You Save Monthly? | WooEasyLife',
             'description' => 'Free COD return loss calculator. Enter daily orders, return/cancel rate, and cost per return to estimate monthly return loss and savings — for Bangladesh WooCommerce & Facebook sellers.',
@@ -1496,6 +1702,8 @@ return [
             ['path' => '/courier-charge-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/ads-roas-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/courier-auto-entry', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/steadfast-return-hub', 'priority' => '0.85', 'changefreq' => 'monthly'],
+            ['path' => '/woocommerce-facebook-messenger', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/fraudbd-alternative', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/pathao-fraud-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/steadfast-fraud-check', 'priority' => '0.9', 'changefreq' => 'weekly'],
@@ -1510,6 +1718,8 @@ return [
             ['path' => '/en/courier-charge-calculator', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['path' => '/en/fraudbd-alternative', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/en/courier-auto-entry', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/steadfast-return-hub', 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['path' => '/en/woocommerce-facebook-messenger', 'priority' => '0.8', 'changefreq' => 'monthly'],
             ['path' => '/woocommerce-bangladesh', 'priority' => '0.95', 'changefreq' => 'weekly'],
             ['path' => '/steadfast-integration', 'priority' => '0.85', 'changefreq' => 'monthly'],
             ['path' => '/pathao-courier-guide', 'priority' => '0.85', 'changefreq' => 'monthly'],

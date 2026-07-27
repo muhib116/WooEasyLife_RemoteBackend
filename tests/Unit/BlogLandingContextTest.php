@@ -17,6 +17,8 @@ class BlogLandingContextTest extends TestCase
         $this->assertSame('fake_order', $svc->detectCluster('কিভাবে ফেক অর্ডার আটকাবো COD'));
         $this->assertSame('fraud_checker', $svc->detectCluster('pathao fraud check courier history'));
         $this->assertSame('courier', $svc->detectCluster('কুরিয়ার অটো এন্ট্রি Pathao'));
+        $this->assertSame('courier', $svc->detectCluster('steadfast return request ask to return'));
+        $this->assertSame('messenger', $svc->detectCluster('woocommerce facebook messenger inbox'));
         $this->assertSame('return_loss', $svc->detectCluster('রিটার্ন লস ক্যালকুলেটর মাসিক'));
         $this->assertSame('courier_charge', $svc->detectCluster('কুরিয়ার চার্জ ক্যালকুলেটর pathao চার্জ'));
         $this->assertSame('facebook_ads', $svc->detectCluster('Facebook Ads ROAS ফেক purchase'));
@@ -52,8 +54,8 @@ class BlogLandingContextTest extends TestCase
 
         $this->assertSame('courier', $resolved['cluster']);
         $this->assertSame('explicit', $resolved['source']);
-        $this->assertSame('/courier-auto-entry', $resolved['landing']['primary_path']);
-        $this->assertContains('/courier-charge-calculator', $resolved['landing']['must_link_paths']);
+        $this->assertSame('/steadfast-integration', $resolved['landing']['primary_path']);
+        $this->assertContains('/courier-auto-entry', $resolved['landing']['must_link_paths']);
     }
 
     public function test_resolve_cluster_keeps_explicit_general(): void
@@ -88,7 +90,7 @@ class BlogLandingContextTest extends TestCase
 
         $this->assertSame('courier', $resolved['cluster']);
         $this->assertSame('learning_idea', $resolved['source']);
-        $this->assertSame('/courier-auto-entry', $resolved['landing']['primary_path']);
+        $this->assertSame('/steadfast-integration', $resolved['landing']['primary_path']);
     }
 
     public function test_product_brief_includes_cluster_landing_pages(): void
@@ -103,6 +105,23 @@ class BlogLandingContextTest extends TestCase
         $this->assertNotEmpty($brief['cluster_landing']['pages'][0]['h1']);
         $this->assertNotEmpty($brief['seo_tools']);
         $this->assertTrue(collect($brief['seo_tools'])->contains(fn ($t) => ($t['path'] ?? null) === '/return-loss-calculator'));
+    }
+
+    public function test_product_brief_includes_product_truth_for_courier_and_messenger(): void
+    {
+        $courier = app(BlogProductBriefBuilder::class)->build('courier');
+        $this->assertArrayHasKey('product_truth', $courier);
+        $this->assertSame('plugin-1.5.4', $courier['product_truth']['version'] ?? null);
+        $this->assertContains('steadfast', $courier['product_truth']['courier_hub']['partners_with_hub'] ?? []);
+        $this->assertSame('/steadfast-integration', $courier['cluster_landing']['primary_path']);
+        $this->assertContains('/steadfast-integration', $courier['cluster_landing']['must_link_paths']);
+        $this->assertNotEmpty($courier['preferred_feature_themes']);
+
+        $messenger = app(BlogProductBriefBuilder::class)->build('messenger');
+        $this->assertTrue((bool) ($messenger['product_truth']['messenger']['human_inbox'] ?? false));
+        $this->assertSame('/woocommerce-facebook-messenger', $messenger['cluster_landing']['primary_path']);
+        $doNot = $messenger['product_truth']['do_not_claim'] ?? [];
+        $this->assertTrue(collect($doNot)->contains(fn ($line) => str_contains((string) $line, 'Meta AI Bot')));
     }
 
     public function test_filter_valid_links_injects_required_cluster_landing_path(): void

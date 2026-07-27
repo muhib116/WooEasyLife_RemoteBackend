@@ -187,4 +187,60 @@ class MessengerSendPayloadTest extends TestCase
             return ($request->data()['sender_action'] ?? null) === 'typing_on';
         });
     }
+
+    public function test_quick_replies_are_attached_to_text_message(): void
+    {
+        $this->fakeGraph();
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->sendMessage($this->connection(), 'PSID123', 'Order summary', [
+            'quick_replies' => [
+                ['title' => 'কনফার্ম', 'payload' => 'WEL_ORDER_CONFIRM'],
+                ['title' => 'ঠিক নেই', 'payload' => 'WEL_ORDER_EDIT'],
+                ['title' => '', 'payload' => 'SKIP'],
+            ],
+        ]);
+
+        $this->assertTrue($result['ok']);
+
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+            $replies = $body['message']['quick_replies'] ?? null;
+            $this->assertIsArray($replies);
+            $this->assertCount(2, $replies);
+            $this->assertSame('text', $replies[0]['content_type']);
+            $this->assertSame('কনফার্ম', $replies[0]['title']);
+            $this->assertSame('WEL_ORDER_CONFIRM', $replies[0]['payload']);
+            $this->assertSame('ঠিক নেই', $replies[1]['title']);
+
+            return true;
+        });
+    }
+
+    public function test_delete_message_issues_graph_delete(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['success' => true], 200),
+        ]);
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->deleteMessage($this->connection(), 'm_realMetaMid123');
+
+        $this->assertTrue($result['ok']);
+        Http::assertSent(function ($request) {
+            return $request->method() === 'DELETE'
+                && str_contains($request->url(), '/m_realMetaMid123');
+        });
+    }
+
+    public function test_delete_message_rejects_synthetic_mids(): void
+    {
+        Http::fake();
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->deleteMessage($this->connection(), 'out_local');
+
+        $this->assertFalse($result['ok']);
+        Http::assertNothingSent();
+    }
 }

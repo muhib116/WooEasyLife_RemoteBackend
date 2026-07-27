@@ -134,6 +134,10 @@ Route::get('/ads-roas-calculator', [MarketingSeoController::class, 'adsRoasCalcu
     ->name('seo.ads-roas-calculator');
 Route::get('/courier-auto-entry', [MarketingSeoController::class, 'courierAutoEntry'])
     ->name('seo.courier-auto-entry');
+Route::get('/steadfast-return-hub', [MarketingSeoController::class, 'steadfastReturnHub'])
+    ->name('seo.steadfast-return-hub');
+Route::get('/woocommerce-facebook-messenger', [MarketingSeoController::class, 'woocommerceFacebookMessenger'])
+    ->name('seo.woocommerce-facebook-messenger');
 Route::get('/fraudbd-alternative', [MarketingSeoController::class, 'fraudBdAlternative'])
     ->name('seo.fraudbd-alternative');
 Route::redirect('/fraud-bd-alternative', '/fraudbd-alternative', 301);
@@ -229,6 +233,10 @@ Route::prefix('en')->name('seo.en.')->group(function () {
         ->name('return-loss-calculator');
     Route::get('/courier-auto-entry', [EnglishMarketingController::class, 'courierAutoEntry'])
         ->name('courier-auto-entry');
+    Route::get('/steadfast-return-hub', [EnglishMarketingController::class, 'steadfastReturnHub'])
+        ->name('steadfast-return-hub');
+    Route::get('/woocommerce-facebook-messenger', [EnglishMarketingController::class, 'woocommerceFacebookMessenger'])
+        ->name('woocommerce-facebook-messenger');
     Route::get('/ads-roas-calculator', [EnglishMarketingController::class, 'adsRoasCalculator'])
         ->name('ads-roas-calculator');
     Route::get('/courier-charge-calculator', [EnglishMarketingController::class, 'courierChargeCalculator'])
