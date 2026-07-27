@@ -765,11 +765,11 @@ return [
         ],
 
         'woocommerce_facebook_messenger' => [
-            'title' => 'WooCommerce Facebook Messenger ইনবক্স — Page Chat WP Admin | WooEasyLife',
-            'description' => 'Facebook Page Messenger ইনবক্স WordPress অ্যাডমিনে: টেক্সট/ইমেজ/ভয়েস, lead labels, অর্ডার পাথ। BD পেজ COD সেলার — স্টোরফ্রন্ট চ্যাট বাবল নয়। AI Semi beta/গেটেড।',
+            'title' => 'WooCommerce Facebook Messenger ইনবক্স — Page চ্যাট WP অ্যাডমিনে | WooEasyLife',
+            'description' => 'Facebook Page মেসেঞ্জার WordPress অ্যাডমিনে পড়ুন: Unread, lead labels, টেক্সট/ইমেজ/ভয়েস। স্টোরফ্রন্ট চ্যাট বাবল নয়। অপশনাল AI Semi; অর্ডারের আগে ফ্রড চেক।',
             'canonical_path' => '/woocommerce-facebook-messenger',
-            'prerender_h1' => 'WooCommerce Facebook Messenger ইনবক্স — Page chat WP অ্যাডমিনে',
-            'prerender_lead' => 'Page মেসেঞ্জার চ্যাট WordPress অ্যাডমিনে — lead labels, মিডিয়া রিপ্লাই, অর্ডার পাথ। মানব ইনবক্স; AI Full সবার জন্য আনলক নয়।',
+            'prerender_h1' => 'Facebook Page মেসেঞ্জার — WordPress অ্যাডমিনে ইনবক্স',
+            'prerender_lead' => 'পেজ COD অর্ডারের চ্যাট Meta অ্যাপে হারিয়ে না গিয়ে WP অ্যাডমিনে পড়ুন—লেবেল, রিপ্লাই, তারপর ফ্রড চেক করে কনফার্ম।',
             'hreflang_paths' => [
                 'bn-BD' => '/woocommerce-facebook-messenger',
                 'en' => '/en/woocommerce-facebook-messenger',
@@ -781,28 +781,44 @@ return [
             ],
             'faqs' => [
                 [
-                    'q' => 'এটা কি ওয়েবসাইট চ্যাট বাবল?',
-                    'a' => 'না — Facebook Page Messenger ইনবক্স WordPress/WooEasyLife অ্যাডমিনে। ManyChat-স্টাইল স্টোরফ্রন্ট উইজেট নয়।',
+                    'q' => 'এটা কি ওয়েবসাইটের Messenger চ্যাট বাবল?',
+                    'a' => 'না। এটা Facebook Page-এর মেসেঞ্জার কথোপকথন WooEasyLife / WordPress অ্যাডমিনে আনার ইনবক্স। কাস্টমার সাইটের কোণায় যে উইজেট দেখে মেসেজ পাঠায়—সেই ManyChat বা Chat Buttons স্টাইল স্টোরফ্রন্ট বাবল নয়। বাবল লাগালেও উত্তর সাধারণত Meta Inbox-এ যায়; এখানে লক্ষ্য হলো অপস—Unread, লেবেল, রিপ্লাই, অর্ডার পাথ এক জায়গায়। বাবল চাইলে অন্য ক্যাটাগরির প্লাগইন দেখুন; পেজ COD অপস চাইলে এই পেজ।',
                 ],
                 [
-                    'q' => 'কয়টা Page কানেক্ট করা যায়?',
-                    'a' => 'v1-এ এক কানেক্টেড Page। মাল্টি-Page ইনবক্স এই পেজের দাবি নয়।',
+                    'q' => 'কয়টা Facebook Page কানেক্ট করা যায়?',
+                    'a' => 'v1-এ একবারে একটা কানেক্টেড Page। Sync দিয়ে কানেক্ট করুন, Disconnect দিয়ে সরান—টোকেন হাবে থাকে, থ্রেড লোকাল WP-তে। মাল্টি-Page এক ইনবক্সে মিলিয়ে দেখানো এই পেজের দাবি নয়। বেশিরভাগ ছোট COD স্টোরের এক মেইন পেজ থাকে; একাধিক পেজ থাকলে আলাদা ওয়ার্কফ্লো বা পরের রিলিজের অপেক্ষা রাখুন। এখনকার ফোকাস: এক পেজের Unread খালি করা এবং সেই থ্রেড থেকে ফোন→ফ্রড চেক→WooCommerce কনফার্ম।',
                 ],
                 [
-                    'q' => 'AI Bot আছে কি?',
-                    'a' => 'মানব ইনবক্স শিপড। AI Semi (সাজেশন ড্রাফট) প্যাকেজ-গেটেড beta। AI Full বা আলাদা “Meta AI Bot” লাইভ দাবি করবেন না।',
+                    'q' => 'Lead label কী কী—কখন ব্যবহার করব?',
+                    'a' => 'থ্রেডে NEW, ENGAGED, QUALIFIED, NURTURE সহ negotiation, converted, lost, spam লাগাতে পারেন। নতুন ইনকোয়ারি NEW; দাম/স্টক নিয়ে কথা চললে ENGAGED; নাম–ফোন–ঠিকানা পেলে QUALIFIED; পরে ফলো-আপ NURTURE। রঙ আলাদা, তাই টিম Excel ছাড়াই গরম লিড দেখে। AI থাকলে কখনো funnel ইঙ্গিত দেয়—চূড়ান্ত লেবেল ম্যানুয়াল ওভাররাইডে আপনার। লেবেল ছাড়া শিফট হ্যান্ডঅফে ডুপ্লিকেট রিপ্লাই ও হারানো লিড বাড়ে।',
                 ],
                 [
-                    'q' => 'মেসেঞ্জার অর্ডারের পর কী করব?',
-                    'a' => 'মোবাইল নম্বর /bd-fraud-checker দিয়ে চেক করুন; নিরাপদ হলে কনফার্ম → /courier-auto-entry। বারবার ফেক: /fake-order-protection।',
+                    'q' => 'AI Bot বা AI Full কি সবার জন্য চালু?',
+                    'a' => 'না। শিপড কোর মানব ইনবক্স—টেক্সট/ইমেজ/ভয়েস রিপ্লাই। AI Semi (সাজেশন ড্রাফট) প্যাকেজ-গেটেড beta—ড্রাফট এডিট করে আপনি পাঠান, অটো-পাঠ নয়। AI Full লকড থাকে; readiness প্রায় ৮০%+ ও Unlock ছাড়া চালু হয় না, থাকলেও confidence ও human handoff মেনে চলে। আলাদা “Meta AI Bot” প্রোডাক্ট হিসেবে দাবি করি না। Off মোডে শুধু মানুষ; নতুন টিমকে প্রথমে Off/Semi দিয়ে শেখান।',
+                ],
+                [
+                    'q' => 'Needs attention আর Learning কী করে?',
+                    'a' => 'Needs attention কিউতে low confidence handoff, মিসিং লিড ফিল্ড বা কোয়ান্টিটি জমে—Open chat দিয়ে মানুষ সামলায় যাতে লিড মরে না যায়। Learning-এ AI ড্রাফট বনাম আপনার আসল রিপ্লাই Approve/Reject করে সোর্স অফ ট্রুথ শক্ত হয়; Send & teach একই লুপ। গিয়ার ব্যাজ মানে অপেক্ষমাণ কাজ আছে—প্রতিদিন কিউ খালি করা অভ্যাস রাখুন, না হলে Semi-র ভুল প্যাটার্ন জমে।',
+                ],
+                [
+                    'q' => 'Product Knowledge কেন দরকার?',
+                    'a' => 'Sales Agent শুধু যে SKU আপনি Products ট্যাবে সিলেক্ট করবেন সেগুলো নিয়ে কথা বলতে/বিক্রি করতে পারে। Knowledge-এ অ্যালিয়াস, পিচ, FAQ ও forbidden claims থাকলে ভুয়া গ্যারান্টি বা ভুল দাম কম হয়। Policy খালি রেখে Semi চালালে খালি বা অনিরাপদ উত্তর আসতে পারে—আগে ডেলিভারি/COD/রিটার্ন নোট অনুমোদন করুন। Knowledge আপডেট না করলে নতুন অফার নিয়ে এজেন্ট পুরনো কথা বলে।',
+                ],
+                [
+                    'q' => 'মেসেঞ্জার থেকে অর্ডার নেওয়ার পর কী করব?',
+                    'a' => 'ফোন নম্বর বের হলেই /bd-fraud-checker বা /fake-customer-check দিয়ে হিস্টোরি দেখুন—সাকসেস রেট ও রিটার্ন প্যাটার্ন সিগন্যাল। নিরাপদ মনে হলে WooCommerce-এ কনফার্ম করুন; /courier-auto-entry চালু থাকলে পার্সেল এন্ট্রি সহজ। বারবার ফেক বা ডুপ্লিকেট আটকাতে /fake-order-protection। শুধু চ্যাট অটোমেট করে ফ্রড স্কিপ করলে রিটার্ন চার্জ বাড়ে। পেজ অপস গাইড: /facebook-page-cod-management। লেবেল converted দিয়ে টিম জানবে থ্রেড শেষ।',
+                ],
+                [
+                    'q' => 'ManyChat বা Chatcat-এর সাথে তুলনা?',
+                    'a' => 'ManyChat কমেন্ট-টু-ডিএম ও মার্কেটিং ফ্লোতে গ্লোবালি শক্তিশালী; Chatcat-ধরনের টুল পেজ অর্ডার অটোমেশনের আলাদা SaaS। WooEasyLife অন্য লেনে: ইতিমধ্যে WooCommerce চালানো BD COD সেলারদের Page ইনবক্স WP অ্যাডমিনে রাখা, lead label, অপশনাল Semi, তারপর একই স্ট্যাকের ফ্রড চেক ও কুরিয়ার অটো এন্ট্রি। প্রতিযোগীকে গালি দিই না—ইনটেন্ট আলাদা। স্টোরফ্রন্ট বাবল খুঁজলে অন্য প্লাগইন; অপস ইনবক্স চাইলে এই পেজ।',
                 ],
                 [
                     'q' => 'কীভাবে শুরু করব?',
-                    'a' => '/pricing থেকে ট্রায়াল, Messenger ট্যাবে Page কানেক্ট, তারপর ইনবক্স চালু। পেজ COD গাইড: /facebook-page-cod-management।',
+                    'a' => 'প্রথমে /pricing থেকে ট্রায়াল বা প্ল্যান নিন। প্লাগইনে Messenger ট্যাব খুলে Page Sync করুন। Unread-এ একটা টেস্ট থ্রেডে রিপ্লাই ও লেবেল দিন। ফোন পেলে /bd-fraud-checker চালান। Sales Agent চাইলে আগে store policy ও Product Knowledge ভরে Semi চালু করুন—Full তড়াহুড়ো নয়; Messenger→অর্ডার Admin approval রেখে শিখুন। পেজ COD বিস্তারিত: /facebook-page-cod-management।',
                 ],
                 [
-                    'q' => 'ইংরেজি ভার্সন আছে কি?',
-                    'a' => 'হ্যাঁ — /en/woocommerce-facebook-messenger। বাংলা: /woocommerce-facebook-messenger।',
+                    'q' => 'ইংরেজি ভার্সন কোথায়?',
+                    'a' => 'একই ফিচারের ইংরেজি পেজ: /en/woocommerce-facebook-messenger — সেখানেও Quick answer, inbox UI, labels, optional Semi, Needs attention ও COD stack ব্যাখ্যা আছে; শুধু ভাষা ইংরেজি। বাংলা প্রাইমারি পেজ: /woocommerce-facebook-messenger। টিমে কেউ ইংরেজি পছন্দ করলে EN লিংক শেয়ার করুন; SEO ও অপস কপির জন্য BN ও EN দুটোই মিরর হিসেবে রক্ষণাবেক্ষণ করা হয়।',
                 ],
             ],
         ],
@@ -1418,11 +1434,11 @@ return [
 
         'en_woocommerce_facebook_messenger' => [
             'title' => 'WooCommerce Facebook Messenger Inbox — Page Chat in WP Admin | WooEasyLife',
-            'description' => 'Facebook Page Messenger inbox in WordPress admin: text/image/voice, lead labels, order path. For BD page COD sellers — not a storefront chat bubble. AI Semi is beta/gated.',
+            'description' => 'Run your Facebook Page Messenger inbox in WordPress admin: Unread, lead labels, text/image/voice. Not a storefront chat bubble. Optional AI Semi; fraud-check before confirm.',
             'canonical_path' => '/en/woocommerce-facebook-messenger',
             'html_lang' => 'en',
-            'prerender_h1' => 'WooCommerce Facebook Messenger inbox — Page chat in WP admin',
-            'prerender_lead' => 'Page Messenger chats in WordPress admin — lead labels, media replies, order path. Human inbox; AI Full is not unlocked for everyone.',
+            'prerender_h1' => 'Facebook Page Messenger — inbox inside WordPress admin',
+            'prerender_lead' => 'Stop losing Page COD chats between Meta Inbox and WooCommerce—reply, label, fraud-check, then confirm from WP admin.',
             'hreflang_paths' => [
                 'bn-BD' => '/woocommerce-facebook-messenger',
                 'en' => '/en/woocommerce-facebook-messenger',
@@ -1434,28 +1450,44 @@ return [
             ],
             'faqs' => [
                 [
-                    'q' => 'Is this a website chat bubble?',
-                    'a' => 'No — Facebook Page Messenger inbox inside WordPress/WooEasyLife admin. Not a ManyChat-style storefront widget.',
+                    'q' => 'Is this a website Messenger chat bubble?',
+                    'a' => 'No. It is your Facebook Page Messenger conversations inside WooEasyLife / WordPress admin. Not a ManyChat- or Chat Buttons-style storefront widget in the site corner. Bubbles still drop replies in Meta Inbox; this page is for ops—Unread, labels, replies, and the path toward WooCommerce orders in one place. Want a bubble? That is a different plugin category. Want page COD ops beside WooCommerce? This page.',
                 ],
                 [
-                    'q' => 'How many Pages can I connect?',
-                    'a' => 'One connected Page in v1. Multi-page inbox is not a claim on this page.',
+                    'q' => 'How many Facebook Pages can I connect?',
+                    'a' => 'One connected Page in v1. Sync to connect, Disconnect to remove—tokens live in the hub, threads stay local in WordPress. A merged multi-Page inbox is not a claim on this page. Most small COD stores run one main selling Page; if you have several, use a separate workflow or wait for a later release. Today’s focus is clearing Unread on that one Page, then phone → fraud check → WooCommerce confirm.',
                 ],
                 [
-                    'q' => 'Is there an AI bot?',
-                    'a' => 'Human inbox is shipped. AI Semi (suggestion drafts) is package-gated beta. Do not claim AI Full or a separate “Meta AI Bot” as live.',
+                    'q' => 'What are lead labels and when do I use them?',
+                    'a' => 'Tag threads NEW, ENGAGED, QUALIFIED, NURTURE, plus negotiation, converted, lost, spam. Fresh asks stay NEW; price/stock talk is ENGAGED; name–phone–address ready is QUALIFIED; later follow-ups NURTURE. Colors make heat visible without a spreadsheet. If AI hints a funnel stage, you still override manually. Without labels, shift handoffs duplicate replies and drop leads.',
                 ],
                 [
-                    'q' => 'What after a Messenger order?',
-                    'a' => 'Check the mobile on /en/bd-fraud-checker; if safe, confirm → /en/courier-auto-entry. Repeats: /en/fake-order-protection.',
+                    'q' => 'Is there an AI bot or unlocked AI Full?',
+                    'a' => 'The shipped core is the human inbox—text, image, and voice replies. AI Semi (suggestion drafts) is package-gated beta—you edit and send; it does not auto-blast. AI Full stays locked until readiness (about 80%+) and Unlock; even then confidence and human handoffs apply. We do not sell a separate Meta AI Bot product. Off mode is humans only—onboard new staff on Off or Semi first.',
+                ],
+                [
+                    'q' => 'What do Needs attention and Learning do?',
+                    'a' => 'Needs attention queues low-confidence handoffs, missing lead fields, or missing quantity so leads do not die in chat—Open chat and reply as a human. Learning lets you Approve or Reject AI drafts against real human replies to harden the source of truth; Send & teach is the same loop. The gear badge means work is waiting—clear that queue daily or Semi learns bad patterns.',
+                ],
+                [
+                    'q' => 'Why bother with Product Knowledge?',
+                    'a' => 'The Sales Agent may only discuss or sell SKUs you tick under Products. Knowledge holds aliases, pitches, FAQs, and forbidden claims so it does not invent guarantees or wrong prices. Empty policy plus Semi invites empty or unsafe answers—approve delivery, COD, and return notes first. If you change offers without updating Knowledge, the agent keeps pitching the old story.',
+                ],
+                [
+                    'q' => 'What should I do after a Messenger order?',
+                    'a' => 'Once you have a mobile, check history on /en/bd-fraud-checker or /en/fake-customer-check for success and return patterns. If it looks safe, confirm in WooCommerce and keep /en/courier-auto-entry on so the parcel books without panel hopping. For repeats and checkout abuse, keep /en/fake-order-protection on. Automating chat while skipping fraud checks only grows return fees. Mark the thread converted so the team knows it is done. Page COD guide: /en/facebook-page-cod-management.',
+                ],
+                [
+                    'q' => 'How does this compare to ManyChat or Chatcat?',
+                    'a' => 'ManyChat is globally strong at comment-to-DM and marketing flows; Chatcat-class tools are separate page-order SaaS. WooEasyLife sits in another lane: BD COD sellers already on WooCommerce who want the Page inbox in WP admin, lead labels, optional Semi, then the same fraud-check and courier auto-entry stack. Different intent—no competitor hate. If you only need a storefront bubble, that is another plugin category; if you need ops inbox beside WooCommerce, this page is the fit.',
                 ],
                 [
                     'q' => 'How do I start?',
-                    'a' => 'Trial on /pricing, connect the Page in Messenger, then run the inbox. Page COD guide: /en/facebook-page-cod-management.',
+                    'a' => 'Start with a trial or plan on /pricing. Open Messenger in the plugin and Sync one Page. Practice a reply and a label on Unread. When a phone appears, run /en/bd-fraud-checker. If you want Sales Agent, fill store policy and Product Knowledge before turning on Semi—do not rush Full; keep Messenger→order on Admin approval while you learn. More page COD context: /en/facebook-page-cod-management.',
                 ],
                 [
                     'q' => 'Is there a Bangla version?',
-                    'a' => 'Yes — /woocommerce-facebook-messenger. English: /en/woocommerce-facebook-messenger.',
+                    'a' => 'Yes. The Bangla primary page is /woocommerce-facebook-messenger—same product story: Quick answer, inbox UI, labels, optional Semi, Needs attention, and the COD stack, written for Bangladesh page sellers. This English URL (/en/woocommerce-facebook-messenger) is the mirror. Share whichever locale your staff actually reads; both stay maintained as parallel content, not a thin dump.',
                 ],
             ],
         ],

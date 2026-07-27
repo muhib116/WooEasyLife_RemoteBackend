@@ -423,11 +423,18 @@ class MarketingSeoTest extends TestCase
         $response->assertOk();
         $response->assertSee('hreflang="en"', false);
         $response->assertSee('/en/woocommerce-facebook-messenger', false);
+        $response->assertSee('id="seo-prerender"', false);
+        $response->assertSee('messenger-vs-bubble.jpg', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/WoocommerceFacebookMessenger')
             ->where('seo.canonical_path', '/woocommerce-facebook-messenger')
             ->has('seo.faqs')
+            ->has('seo.content_sections')
         );
+
+        $sections = config('seo_content.woocommerce_facebook_messenger', []);
+        $this->assertGreaterThanOrEqual(10, count($sections));
+        $this->assertGreaterThanOrEqual(8, count(config('seo.pages.woocommerce_facebook_messenger.faqs', [])));
     }
 
     public function test_english_woocommerce_facebook_messenger_page_renders(): void
@@ -438,11 +445,14 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('Messenger', false);
         $response->assertSee('lang="en"', false);
         $response->assertSee('/woocommerce-facebook-messenger', false);
+        $response->assertSee('id="seo-prerender"', false);
+        $response->assertSee('messenger-cod-flow.jpg', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/EnWoocommerceFacebookMessenger')
             ->where('seo.canonical_path', '/en/woocommerce-facebook-messenger')
             ->where('seo.html_lang', 'en')
             ->has('seo.faqs')
+            ->has('seo.content_sections')
         );
     }
 

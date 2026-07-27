@@ -1,7 +1,5 @@
 <?php
 
-/** Long-form SEO landing content (tool + keyword intent pages). */
-
 return array (
   'home' => 
   array (
@@ -2004,18 +2002,18 @@ return array (
       ),
     ),
   ),
-  'steadfast_return_hub' =>
+  'steadfast_return_hub' => 
   array (
-    0 =>
+    0 => 
     array (
       'heading' => 'দ্রুত উত্তর',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'রাইডার SteadFast-এ cancel বা return request পাঠালে সেটা WooEasyLife-এর Courier → Return Requests-এও আসে। Decide খুলে কল করুন, call log রাখুন, তারপর Confirm cancel বা Ask to resend করুন—প্রতিবার পোর্টালে Change Status করতে যাওয়া লাগে না।',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-before-after.jpg',
           'alt' => 'SteadFast Cancellation Requests Change Status বনাম WooEasyLife Return Requests Decide',
@@ -2023,44 +2021,44 @@ return array (
         ),
       ),
     ),
-    1 =>
+    1 => 
     array (
       'heading' => 'আসলে দিনের শেষে কী বিরক্তিকর ছিল',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'COD স্টোরে পার্সেল বুক হওয়ার পরও কাজ থেমে যায় না। রাইডার নোট দেয়—কাস্টমার ফোন ধরেননি, ঠিকানা খুঁজে পাচ্ছেন না, বা বলছেন আর নিবেন না। SteadFast Cancellation Requests কিউ ভরে ওঠে। Pending খুলে Change Status, আবার পরেরটা। দিনে কয়েক ডজন হলে শুধু স্ক্রিন ঘোরাতেই ঘণ্টা চলে যায়।',
         1 => 'একটা সাধারণ সকাল: আটটা Pending। একটাতে পার্সেল নিবে না। আরেকটাতে ফোন রিসিভ হয়নি। তৃতীয়টাতে ঠিকানা পাচ্ছেন না। প্রতিটার জন্য আলাদা ক্লিক, তারপর অর্ডার নম্বর খুঁজে WooCommerce-এ ফিরে আসা—এই টানাটানিটাই Return Hub কমাতে চায়।',
         2 => 'বুকিং প্লাগইন দরকার। কিন্তু বুকিংয়ের পরে cancel request পোর্টালেই ফেলে রাখলে রিটার্ন চার্জ আর স্টাফ সময় দুটোই বাড়ে। এই হাব সেই পরের ধাপ।',
       ),
     ),
-    2 =>
+    2 => 
     array (
       'heading' => 'একটা বাস্তব উদাহরণ—নোট থেকে সিদ্ধান্ত',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'ধরুন অর্ডার #411। রাইডার নোট: কাস্টমার পার্সেল নিবে না, মার্চেন্ট অবগত। আগে পোর্টালে গিয়ে Change Status চাপতেন। এখন Return Requests → Pending → Decide—একই নোট History-তে।',
         1 => 'চাইলে আগে রাইডারকে Call করে নিশ্চিত করুন—সত্যিই রিফিউজ, নাকি শুধু ফোন ধরেননি। call log সেভ থাকে। আর একবার সুযোগ দিতে চাইলে Save the sale মেসেজ দিয়ে Dial বা WhatsApp।',
         2 => 'পরিস্থিতি পরিষ্কার হলে Confirm cancel; ঠিকানা বা সময়ের সমস্যা মনে হলে Ask to resend। AI সাজেশন থাকলে দেখুন—কিন্তু নোট পড়ে নিজেই সিদ্ধান্ত নিন। দিনে দশটা এমন কেস হলে পোর্টালে যাওয়া আর রুটিন থাকে না।',
       ),
     ),
-    3 =>
+    3 => 
     array (
       'heading' => 'প্লাগইনে ঢুকলে কী দেখবেন',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Return Requests-এ Pending, Confirmed, Resend Request, Cancelled, Resent—পোর্টালের মতোই চেনা ট্যাব। তারিখ ফিল্টার, Refresh, CSV আছে। Pending সারিতে Decide চাপলে Steadfast parcel notes মডাল খোলে।',
         1 => 'Pending মানে সিদ্ধান্ত বাকি। Confirmed মানে cancel/return নিশ্চিত। Resend Request মানে আপনি Ask to resend দিয়েছেন। Cancelled ও Resent হিস্ট্রির জন্য। নতুন স্টাফকে বলুন: পোর্টালে Change Status শিখেছো; এখন একই সিদ্ধান্ত Decide-এ।',
         2 => 'মডালে consignment, অর্ডার লিংক, History, Details, Edit parcel একসাথে। Cancellation request pending থাকলে Confirm cancel ও Ask to resend সামনে থাকে। Assigned rider থেকে Call ও call log—অর্ডার কনটেক্সট এক স্ক্রিনে।',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-requests-queue.jpg',
           'alt' => 'WooEasyLife Return Requests Pending কিউ এবং Decide বাটন',
           'caption' => 'Pending ট্যাব → Decide চাপুন',
         ),
-        1 =>
+        1 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-decide-modal.jpg',
           'alt' => 'Decide মডালে Rider Call, Confirm cancel এবং Ask to resend',
@@ -2068,16 +2066,16 @@ return array (
         ),
       ),
     ),
-    4 =>
+    4 => 
     array (
       'heading' => 'দিনের কাজ কীভাবে চালাবেন',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'আগে /steadfast-integration দিয়ে API কানেক্ট করুন এবং /courier-auto-entry চালু রাখুন। তারপর Courier → Return Requests → Refresh।',
         1 => 'Pending → Decide → নোট পড়ুন → প্রয়োজনে রাইডার কল → সেভযোগ্য হলে কাস্টমারকে Dial/WhatsApp → Confirm cancel বা Ask to resend। Notifications ও Scan stuck দিয়ে কয়েকদিন নিস্তব্ধ পার্সেল ধরুন।',
         2 => 'প্রথম কয়েকদিন টিমকে বলুন: নতুন cancel request এলে আগে প্লাগইনের Pending দেখো। অভ্যাস পাল্টে গেলে পোর্টাল ওপেন কমে যায়।',
       ),
-      'list' =>
+      'list' => 
       array (
         0 => 'API কানেক্ট + অটো এন্ট্রি চালু',
         1 => 'Return Requests সিঙ্ক → Pending',
@@ -2085,9 +2083,9 @@ return array (
         3 => 'Confirm cancel বা Ask to resend',
         4 => 'Notifications / stuck স্ক্যান ফলো-আপ',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-full-flow.jpg',
           'alt' => 'ফ্রড চেক থেকে Return Hub Decide পর্যন্ত সম্পূর্ণ ফ্লো',
@@ -2095,27 +2093,27 @@ return array (
         ),
       ),
     ),
-    5 =>
+    5 => 
     array (
       'heading' => 'রাইডার কল আর call log কেন জরুরি',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'সব cancel request মানেই অর্ডার শেষ নয়। কল না করে Confirm cancel চাপলে সেভযোগ্য অর্ডার হারাতে পারেন।',
         1 => 'মডালে রাইডারের নম্বর রেডি থাকে। Call দিয়ে নোট মিলিয়ে দেখুন; কল হিস্ট্রি অর্ডারে থাকে—পরের স্টাফ বুঝতে পারে কে কখন কল করেছে। ছোট টিমে ডুপ্লিকেট কল কমাতে এটাই সবচেয়ে কাজে লাগে।',
       ),
     ),
-    6 =>
+    6 => 
     array (
       'heading' => 'AI সাজেশন আর Save the sale (অপশনাল)',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'AI প্যাকেজ থাকলে মডালে সাজেশন আসতে পারে—Confirm cancel নাকি Ask to resend বেশি মানায়, যেমন মত পরিবর্তন বা ফোনে না পাওয়া। এটা গাইড; চূড়ান্ত ক্লিক আপনার।',
         1 => 'Save the sale ব্লকে কাস্টমারকে কী বলবেন তার ড্রাফট থাকে—Dial বা WhatsApp। অনেক স্টাফ Confirm জানেন, কিন্তু কী লিখবেন ভেবে আটকে যান; এই ব্লক সেই ফাঁকা জায়গা ভরে।',
         2 => 'AI না থাকলেও মানব বাটন কাজ করে। সাজেশন ভুল লাগলে উপেক্ষা করুন। Meta AI Bot বা সব প্ল্যানে ফ্রি ফুল AI দাবি করি না।',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-ai-save-sale.jpg',
           'alt' => 'AI Decide সাজেশন এবং Save the sale Dial WhatsApp ড্রাফট',
@@ -2123,55 +2121,55 @@ return array (
         ),
       ),
     ),
-    7 =>
+    7 => 
     array (
       'heading' => 'Notifications, stuck, আর অটো এন্ট্রির পার্থক্য',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Notifications-এ portal আপডেট ও cancel সিগন্যাল এক জায়গায়। Scan stuck প্রায় তিন দিন নিস্তব্ধ পার্সেল ধরে—আগে ধরলে কল বা return ফ্লো তাড়াতাড়ি শুরু হয়। Stuck মানেই cancel নয়।',
         1 => '/courier-auto-entry = কনফার্ম হলে পার্সেল তৈরি। Return Hub = বুকিংয়ের পর Decide, কল, stuck। অটো এন্ট্রি রাস্তায় তোলে; এই হাব রাস্তায় সমস্যা হলে সিদ্ধান্ত নেয়। দুটোই লাগে।',
       ),
     ),
-    8 =>
+    8 => 
     array (
       'heading' => 'কার জন্য—এবং কী দাবি করি না',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'SteadFast বেশি ব্যবহার করা COD স্টোর, ছোট টিম, এজেন্সি—যারা প্রতিদিন Cancellation Requests হ্যান্ডেল করেন। Pathao/RedX প্রধান হলে জেনে রাখুন: এই Return Hub আজ SteadFast-কেন্দ্রিক; তাদের বুকিং /courier-auto-entry দিয়ে চলে।',
         1 => 'Add Fund বা Bulk Print-এর মতো সব SteadFast টুল এখানে দাবি করি না—দাবিটা cancel/return Decide ফ্লো নিয়ে। সেটআপ বিস্তারিত /steadfast-integration-এ; ট্রায়াল /pricing।',
       ),
     ),
-    9 =>
+    9 => 
     array (
       'heading' => 'যে ভুলগুলো এড়িয়ে চলুন',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'প্লাগইন Pending উপেক্ষা করে শুধু পোর্টালে থাকা। নোট না পড়ে Confirm cancel। কল লগ না রাখা। AI সাজেশনকে বাধ্যতামূলক ভাবা।',
         1 => 'আরও একটা: খারাপ নম্বর অন্ধ বুক করে cancel কিউ ফোলানো। কনফার্মের আগে /bd-fraud-checker বা /fake-customer-check; বারবার ফেক আটকাতে /fake-order-protection। মাসে লস দেখতে /return-loss-calculator।',
       ),
     ),
-    10 =>
+    10 => 
     array (
       'heading' => 'শুরু করার ছোট চেকলিস্ট',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => '/pricing → /steadfast-integration → /courier-auto-entry চালু → Return Requests-এ একটা Pending-এ Decide প্র্যাকটিস। AI থাকলে Save the saleও টেস্ট করুন—না থাকলেও Confirm/Resend চলবে।',
         1 => 'সারাংশ: cancel request এলে প্লাগইনে দেখুন, প্রয়োজনে কল করুন, তারপর Confirm cancel বা Ask to resend—পোর্টালে প্রতিবার Change Status না করে। ইংরেজি: /en/steadfast-return-hub।',
       ),
     ),
   ),
-  'en_steadfast_return_hub' =>
+  'en_steadfast_return_hub' => 
   array (
-    0 =>
+    0 => 
     array (
       'heading' => 'Quick answer',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'When a rider sends a SteadFast cancel or return request, it also lands in WooEasyLife under Courier → Return Requests. Open Decide, call if needed, keep a call log, then Confirm cancel or Ask to resend—without Change Status on every portal row.',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-before-after.jpg',
           'alt' => 'SteadFast portal Change Status versus WooEasyLife Return Requests Decide',
@@ -2179,44 +2177,44 @@ return array (
         ),
       ),
     ),
-    1 =>
+    1 => 
     array (
       'heading' => 'What made the workday annoying',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Booking a COD parcel is not the end of the job. Riders leave notes—customer not answering, address unclear, or they will not take the parcel. Cancellation Requests fills up. Pending, Change Status, repeat. A few dozen a day and the team burns hours in the portal.',
         1 => 'Picture a morning with eight Pending items: will not take the parcel, phone never answered, cannot find the address. Each needs a click, then you hunt the order back in WooCommerce. That friction is what the Return Hub shrinks.',
         2 => 'Booking plugins matter. But leaving cancel requests only on the portal still burns return fees and staff time. This hub is the after-booking layer.',
       ),
     ),
-    2 =>
+    2 => 
     array (
       'heading' => 'A real walkthrough—from note to decision',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Say order #411. Rider note: customer will not take the parcel, merchant aware. On the portal you would hit Change Status. Now open Return Requests → Pending → Decide—same note in History.',
         1 => 'Optionally Call the rider first—true refuse, or just a missed phone? The call log stays on the order. Want one more chance with the customer? Use Save the sale to Dial or WhatsApp.',
         2 => 'When it is clear, Confirm cancel. If it looks like address or timing, Ask to resend. If AI suggests changed mind, still read the note and decide yourself. Ten cases a day stop feeling like a portal marathon.',
       ),
     ),
-    3 =>
+    3 => 
     array (
       'heading' => 'What you see inside the plugin',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Return Requests mirrors familiar tabs: Pending, Confirmed, Resend Request, Cancelled, Resent—plus date filter, Refresh, and CSV. Tap Decide on Pending to open Steadfast parcel notes.',
         1 => 'Pending means a decision is still owed. Confirmed locks cancel or return. Resend Request means you asked the courier to try again. Cancelled and Resent are history. Tell new staff: Change Status on the portal becomes Decide here.',
         2 => 'The modal keeps consignment, order link, History, Details, and Edit parcel together. Confirm cancel and Ask to resend sit up front when a cancellation is pending. Call the assigned rider and keep the call log—order context on one screen.',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-requests-queue.jpg',
           'alt' => 'WooEasyLife Return Requests Pending queue with Decide button',
           'caption' => 'Pending tab → tap Decide',
         ),
-        1 =>
+        1 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-decide-modal.jpg',
           'alt' => 'Decide modal with Rider Call, Confirm cancel, and Ask to resend',
@@ -2224,16 +2222,16 @@ return array (
         ),
       ),
     ),
-    4 =>
+    4 => 
     array (
       'heading' => 'How to run the day',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Connect the API with /en/steadfast-integration and keep /en/courier-auto-entry on. Then Courier → Return Requests → Refresh.',
         1 => 'Pending → Decide → read the note → call the rider if needed → Dial/WhatsApp the customer if worth saving → Confirm cancel or Ask to resend. Use Notifications and Scan stuck for parcels quiet about three days.',
         2 => 'For the first few days, tell the team: new cancel request? Check plugin Pending first. Once the habit sticks, portal opens drop.',
       ),
-      'list' =>
+      'list' => 
       array (
         0 => 'Connect API and keep auto-entry on',
         1 => 'Sync Return Requests → open Pending',
@@ -2241,9 +2239,9 @@ return array (
         3 => 'Confirm cancel or Ask to resend',
         4 => 'Follow up with Notifications / stuck scan',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-full-flow.jpg',
           'alt' => 'Full flow from fraud check to Return Hub Decide and notifications',
@@ -2251,27 +2249,27 @@ return array (
         ),
       ),
     ),
-    5 =>
+    5 => 
     array (
       'heading' => 'Why rider call and call log matter',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Not every cancel request means the sale is dead. Confirming cancel without a quick call can kill a recoverable order.',
         1 => 'The modal keeps the rider number ready. Call, compare with the note, and leave a trail so the next teammate knows who already called. Small teams feel the duplicate-call tax most.',
       ),
     ),
-    6 =>
+    6 => 
     array (
       'heading' => 'AI suggestion and Save the sale (optional)',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'With an AI package, the modal may suggest Confirm cancel or Ask to resend—for example changed mind or unreachable. It is guidance; you still click.',
         1 => 'Save the sale drafts what to tell the customer by Dial or WhatsApp. Many staff know how to Confirm but freeze on what to write—this fills that gap.',
         2 => 'Human buttons still work without AI. Ignore a bad suggestion. We do not claim a Meta AI Bot or free full AI on every plan.',
       ),
-      'figures' =>
+      'figures' => 
       array (
-        0 =>
+        0 => 
         array (
           'src' => '/images/seo/cluster/steadfast-return-ai-save-sale.jpg',
           'alt' => 'Optional AI Decide suggestion and Save the sale Dial WhatsApp draft',
@@ -2279,40 +2277,414 @@ return array (
         ),
       ),
     ),
-    7 =>
+    7 => 
     array (
       'heading' => 'Notifications, stuck, and how this differs from auto-entry',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Notifications gathers portal updates and cancel signals. Scan stuck finds parcels quiet about three days so you follow up sooner. Stuck does not always mean cancel.',
         1 => '/en/courier-auto-entry creates the parcel after confirm. This hub handles after-booking Decide, calls, and stuck. Auto-entry puts the parcel on the road; the Return Hub decides when the road gets messy. You need both.',
       ),
     ),
-    8 =>
+    8 => 
     array (
       'heading' => 'Who it helps—and what we do not claim',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'SteadFast-heavy COD stores, small teams, and agencies clearing Cancellation Requests daily. Pathao/RedX-heavy? This Return Hub is SteadFast-centric today; their booking still goes through /en/courier-auto-entry.',
         1 => 'We do not claim every SteadFast portal tool (Add Fund, Bulk Print, and so on)—only the cancel/return Decide workflow. Deep setup stays on /en/steadfast-integration. Trial: /pricing.',
       ),
     ),
-    9 =>
+    9 => 
     array (
       'heading' => 'Mistakes to skip',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => 'Ignoring plugin Pending while living in the portal. Confirming cancel without reading notes. Skipping call logs. Treating AI as mandatory.',
         1 => 'Also: blind-booking risky numbers and flooding the cancel queue. Check history on /en/bd-fraud-checker or /en/fake-customer-check first; keep /en/fake-order-protection on for repeats. Review monthly loss on /en/return-loss-calculator.',
       ),
     ),
-    10 =>
+    10 => 
     array (
       'heading' => 'Getting-started checklist',
-      'paragraphs' =>
+      'paragraphs' => 
       array (
         0 => '/pricing → /en/steadfast-integration → keep /en/courier-auto-entry on → practice Decide on one Pending item. Try Save the sale if you have AI—Confirm/Resend still work without it.',
         1 => 'One line: when a cancel request arrives, see it in the plugin, call if needed, then Confirm cancel or Ask to resend—without Change Status on every item. Bangla: /steadfast-return-hub.',
+      ),
+    ),
+  ),
+  'woocommerce_facebook_messenger' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'দ্রুত উত্তর',
+      'paragraphs' => 
+      array (
+        0 => 'বাংলাদেশি Facebook পেজ COD সেলারদের অর্ডারের বেশিরভাগ কথা মেসেঞ্জারে হয়। WooEasyLife সেই Page মেসেঞ্জার চ্যাট WordPress অ্যাডমিনে আনে—ওয়েবসাইটের কোণায় চ্যাট বাবল নয়, ManyChat-স্টাইল স্টোরফ্রন্ট উইজেটও নয়। Sync দিয়ে একটা Page কানেক্ট করুন; All/Unread কিউ, lead labels, টেক্সট–ইমেজ–ভয়েস রিপ্লাই, তারপর অর্ডার কনফার্মের আগে ফ্রড চেক।',
+        1 => 'মানব ইনবক্সই মূল শিপড ফিচার। AI Semi থাকলে সাজেশন ড্রাফট আসতে পারে—পাঠাবেন আপনি। AI Full সবার জন্য আনলক নয়; Meta AI Bot বলে বিজ্ঞাপন দিই না। শুরু: /pricing। পেজ COD গাইড: /facebook-page-cod-management।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-vs-bubble.jpg',
+          'alt' => 'স্টোরফ্রন্ট চ্যাট বাবল বনাম WooEasyLife WordPress Messenger ইনবক্স',
+          'caption' => 'চ্যাট বাবল নয় — Page ইনবক্স WP অ্যাডমিনে',
+        ),
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'দিনের শেষে কী বিরক্তিকর ছিল',
+      'paragraphs' => 
+      array (
+        0 => 'সকালে ফোন খুলে Meta Business Suite Inbox—নতুন মেসেজের পাহাড়। কেউ দাম জিজ্ঞেস করছে, কেউ ঠিকানা দিচ্ছে, কেউ শুধু “অর্ডার করব” লিখে রেখেছে। এক ট্যাবে চ্যাট, আরেক ট্যাবে WooCommerce অর্ডার, এক্সেলে কে hot lead সেটা আলাদা নোট। মাঝে একটা মেসেজ হারালে সেল হারায়।',
+        1 => 'অনেকে সমাধান হিসেবে ওয়েবসাইটে Messenger বাবল লাগান। কাস্টমার সাইট থেকে মেসেজ পাঠাতে পারে—কিন্তু আপনি আবারও Meta ইনবক্সেই ফিরে যান। অর্ডার তৈরি, ফ্রড চেক, কুরিয়ার এন্ট্রি আলাদা জানালায়। বাবল সুবিধা দেয় কাস্টমারকে; আপনার অপস জট কমায় না।',
+        2 => 'ManyChat বা পেজ-অর্ডার বট টুল আলাদা SaaS—ফ্লো আর কমেন্ট-টু-ডিএম শক্তিশালী। কিন্তু যারা ইতিমধ্যে WooCommerce চালান, তাদের দরকার ইনবক্স যেন স্টোরের পাশেই থাকে: লেবেল, ফোন নম্বর, কনফার্ম, তারপর একই প্লাগইনে কুরিয়ার। এই পেজ সেই ফাঁক ভরতে চায়।',
+        3 => 'আরেকটা বাস্তব ব্যথা: রাতে একজন স্টাফ রিপ্লাই দিয়েছে, সকালে অন্যজন একই কাস্টমারকে আবার জিজ্ঞেস করছে “নাম কী?”—লেবেল ও lead ফিল্ড না থাকলে এমন ডুপ্লিকেট স্বাভাবিক। ইনবক্সে লেবেল আর ফোন ফিল্ড থাকলে পরের শিফট বোঝে আগে কী হয়েছে।',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'একটা বাস্তব সকাল—মেসেজ থেকে কনফার্ম',
+      'paragraphs' => 
+      array (
+        0 => 'ধরুন Unread-এ তিনটা নতুন থ্রেড। একটিতে কাস্টমার লিখেছে প্রোডাক্ট আছে কি। আপনি টেক্সট বা ভয়েস দিয়ে উত্তর দিলেন, লেবেল NEW থেকে ENGAGED করলেন। আরেকজন নাম–মোবাইল–ঠিকানা দিয়েছে—QUALIFIED। তৃতীয়জন শুধু ঘুরে বেড়াচ্ছে—NURTURE রাখলেন, পরে ফলো-আপ।',
+        1 => 'QUALIFIED থ্রেডে ফোন নম্বর কন্টাক্ট পেনে দেখা যায়। কনফার্মের আগে /bd-fraud-checker বা /fake-customer-check দিয়ে হিস্টোরি দেখুন। নিরাপদ মনে হলে WooCommerce-এ অর্ডার কনফার্ম; /courier-auto-entry চালু থাকলে পার্সেল এন্ট্রি সহজ হয়। বারবার ফেক আটকাতে /fake-order-protection।',
+        2 => 'এই রাউন্ডট্রিপে আলাদা Facebook অ্যাপ আর Excel লেবেল লাগে না—ইনবক্স, লেবেল, রিপ্লাই এক জায়গায়। কুরিয়ার রিটার্ন আলাদা গল্প; SteadFast cancel request হলে /steadfast-return-hub।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-thread-composer.jpg',
+          'alt' => 'Messenger থ্রেডে টেক্সট ইমেজ ভয়েস কম্পোজার',
+          'caption' => 'টেক্সট · অ্যাটাচ · ভয়েস — এক কম্পোজারে',
+        ),
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'ইনবক্সে ঢুকলে কী দেখবেন',
+      'paragraphs' => 
+      array (
+        0 => 'বাম পাশে কথোপকথন তালিকা: Search, All আর Unread ট্যাব। Unread ব্যাজে কতটা বাকি চোখে পড়ে—ব্যস্ত সকালে আগে এখানেই কাজ শুরু করুন। মাঝে চ্যাট উইন্ডো; ডানে কন্টাক্ট/লিড প্যানেল।',
+        1 => 'প্রতি থ্রেডে lead label লাগাতে পারেন—NEW, ENGAGED, QUALIFIED, NURTURE, সাথে negotiation, converted, lost, spam। রঙ আলাদা, তাই টিম এক নজরে বোঝে কোনটা গরম। ম্যানুয়াল ওভাররাইড আছে; AI থাকলে কখনো funnel সিগন্যালও দেখায়, কিন্তু চূড়ান্ত লেবেল আপনার।',
+        2 => 'উপরে Sync ও Disconnect। v1-এ এক কানেক্টেড Page—মাল্টি-Page ইনবক্স এই পেজের দাবি নয়। টোকেন হাবে; লোকাল থ্রেড WP-তে। Page বদলাতে Disconnect করে নতুন Sync।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-inbox-labels.jpg',
+          'alt' => 'Messenger All Unread ট্যাব এবং NEW ENGAGED QUALIFIED NURTURE লেবেল',
+          'caption' => 'Unread কিউ + lead labels',
+        ),
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'কন্টাক্ট প্যান আর lead ফিল্ড',
+      'paragraphs' => 
+      array (
+        0 => 'ডান পাশে প্রোফাইল, Connected স্ট্যাটাস, প্রয়োজনে per-thread AI on/off। চ্যাট থেকে ফোন নম্বর তোলা থাকলে Sales lead ফিল্ডে দেখা যায়—নাম, ঠিকানা, প্রোডাক্ট, কোয়ান্টিটি খালি থাকলে মনে করিয়ে দেয় কী সংগ্রহ করতে হবে।',
+        1 => 'Lead status (যেমন ENGAGED) আর “needs_human” ধরনের নোট মানে এখনো মানুষের নজর দরকার। Copy PMID বা Delete conversation অ্যাডমিন টুল আছে—ডিলিট সাবধানে। ছোট টিমে একজন রিপ্লাই করে, আরেকজন লেবেল/ফিল্ড পূরণ করে—একই স্ক্রিনে।',
+        2 => 'Messenger থেকে WooCommerce অর্ডার বানানোর পথে Sales Agent থাকলেও ডিফল্ট Admin approval রাখাই নিরাপদ—অটো অর্ডার ভুলে চালু করবেন না যতক্ষণ টিম রেডি না। Payment COD ও shipping WooCommerce থেকে auto-pick সেট করা থাকলে Approve সহজ হয়।',
+      ),
+    ),
+    5 => 
+    array (
+      'heading' => 'দিনের কাজ—ছোট চেকলিস্ট',
+      'paragraphs' => 
+      array (
+        0 => 'Unread খুলুন। নোট পড়ে রিপ্লাই দিন—টেক্সট, ছবি বা ভয়েস। লেবেল আপডেট করুন। ফোন পেলে ফ্রড চেক। সেফ হলে কনফার্ম + অটো এন্ট্রি। সন্ধ্যায় NURTURE লিস্টে এক রাউন্ড ফলো-আপ।',
+      ),
+      'list' => 
+      array (
+        0 => 'Page Sync আছে কি চেক করুন (এক পেজ)',
+        1 => 'Unread প্রথমে খালি করুন',
+        2 => 'লেবেল: NEW → ENGAGED → QUALIFIED / NURTURE',
+        3 => 'মোবাইল /bd-fraud-checker দিয়ে যাচাই',
+        4 => 'কনফার্ম → /courier-auto-entry; প্রোটেকশন /fake-order-protection',
+      ),
+    ),
+    6 => 
+    array (
+      'heading' => 'Messenger Sales Agent—অপশনাল, সৎ কথা',
+      'paragraphs' => 
+      array (
+        0 => 'Sales Agent মোডালে Automation: Off, AI Semi, আর AI Full (লকড)। Off মানে পুরো মানব ইনবক্স—এটাই অনেক স্টোরের শুরু। Semi মানে কাস্টমার মেসেজ পড়ে ২–৩টা ড্রাফট সাজেশন; আপনি এডিট করে পাঠান বা উপেক্ষা করুন।',
+        1 => 'Full আনলক করতে সাধারণত readiness ~৮০%+ ও Unlock চেক লাগে। Full থাকলেও confidence থ্রেশহোল্ড ও human handoff মেনে চলে—চোখ বন্ধ অটো-রিপ্লাই নয়। OpenAI কানেক্ট থাকলে সাজেশন ভালো হয়; না থাকলেও মানব চ্যাট চলে।',
+        2 => 'কন্ট্রোলে দেখবেন: auto-reply confidence স্লাইডার, নিচে থ্রেশহোল্ডে short hold মেসেজ, Order confirmation ডিফল্ট Admin approval, payment COD, shipping WooCommerce থেকে auto-pick, human রিপ্লাইয়ের পর কত মিনিটে AI আবার ধরবে। Save controls চাপতে ভুলবেন না।',
+        3 => 'Approved store policy-তে ডেলিভারি/COD/টাইমিং, প্যাকেজ গাইড, কমন FAQ, হেল্পলাইন ও WhatsApp নম্বর—এজেন্ট নিজে থেকে গল্প বানিয়ে বলে না; আপনি যা অনুমোদন করবেন তাই। Meta AI Bot বা “সব প্ল্যানে ফ্রি ফুল AI” দাবি করি না।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-ai-modes.jpg',
+          'alt' => 'AI Off Semi এবং Full locked মোড',
+          'caption' => 'Off · Semi · Full (locked) — আপনি নিয়ন্ত্রণ রাখেন',
+        ),
+        1 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-suggestions-teach.jpg',
+          'alt' => 'AI reply suggestions এবং Send and teach',
+          'caption' => 'সাজেশন দেখে পাঠান; ভুল হলে শেখান',
+        ),
+      ),
+    ),
+    7 => 
+    array (
+      'heading' => 'Needs attention, Learning, Product Knowledge',
+      'paragraphs' => 
+      array (
+        0 => 'Needs attention কিউতে আসে যা একা আটকে যায়: low confidence handoff, লিড ফিল্ড মিসিং, কোয়ান্টিটি মিসিং। Open chat & reply দিয়ে মানুষ সামলায়—Dismiss শুধু তখনই যখন সত্যিই দরকার নেই। গিয়ার ব্যাজ মানে অপেক্ষমাণ হ্যান্ডঅফ বা নলেজ গ্যাপ।',
+        1 => 'Learning ট্যাবে AI ড্রাফট বনাম মানুষের আসল রিপ্লাই Approve/Reject—সোর্স অফ ট্রুথ পরিষ্কার হয়। থ্রেডে থাম্বস ডাউন “Bad AI reply → Learning” একই লুপ। Send & teach বা Use in composer দিয়ে দ্রুত ঠিক করা যায়।',
+        2 => 'Products ট্যাবে WooCommerce ক্যাটালগ থেকে যে SKU এজেন্ট আলোচনা/বিক্রি করতে পারবে সেগুলো টিক দিন। Knowledge-এ অ্যালিয়াস, সেলস পিচ, FAQ, আর forbidden claims—যেমন ভুয়া গ্যারান্টি বলা যাবে না। শুধু সিলেক্টেড প্রোডাক্ট; পুরো স্টোর অন্ধ নয়।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-needs-attention.jpg',
+          'alt' => 'Messenger Sales Agent Needs attention human handoff কিউ',
+          'caption' => 'Low confidence ও মিসিং ফিল্ড — Needs attention',
+        ),
+      ),
+    ),
+    8 => 
+    array (
+      'heading' => 'মেসেঞ্জারের পর COD স্ট্যাক',
+      'paragraphs' => 
+      array (
+        0 => 'ইনবক্স অর্ডার এনে দেয়; খারাপ নম্বর আটকায় না। তাই কনফার্মের আগে /bd-fraud-checker। রিপিট ফেক /fake-order-protection। নিরাপদ অর্ডার /courier-auto-entry। মাসিক লস /return-loss-calculator। পেজ অপস গাইড /facebook-page-cod-management। পূর্ণ হাব /woocommerce-bangladesh।',
+        1 => 'শুধু চ্যাট অটোমেট করে ফ্রড স্কিপ করলে রিটার্ন বাড়বে—ইনবক্স ম্যাজিক নয়, অপসের প্রথম ধাপ।',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-cod-flow.jpg',
+          'alt' => 'Messenger থেকে ফ্রড চেক কনফার্ম কুরিয়ার অটো এন্ট্রি ফ্লো',
+          'caption' => 'ইনবক্স → ফ্রড চেক → কনফার্ম → অটো এন্ট্রি',
+        ),
+      ),
+    ),
+    9 => 
+    array (
+      'heading' => 'কার জন্য—এবং কী দাবি করি না',
+      'paragraphs' => 
+      array (
+        0 => 'এক Facebook Page COD সেলার, ছোট টিম, WooCommerce স্টোর যারা মেসেঞ্জার থেকে অর্ডার নেন এবং WP অ্যাডমিনেই ইনবক্স চান।',
+        1 => 'দাবি করি না: স্টোরফ্রন্ট চ্যাট বাবল; মাল্টি-Page ইনবক্স; আনলকড AI Full সবার জন্য; আলাদা Meta AI Bot; Flutter অ্যাপে পূর্ণ Messenger প্যারিটি। ManyChat/Chatcat-কে গালি দিই না—শুধু বলি আমাদের জায়গা WC-নেটিভ ইনবক্স + COD স্ট্যাক।',
+        2 => 'ট্রায়াল /pricing। ইংরেজি /en/woocommerce-facebook-messenger।',
+      ),
+    ),
+    10 => 
+    array (
+      'heading' => 'যে ভুলগুলো এড়াবেন',
+      'paragraphs' => 
+      array (
+        0 => 'মেসেঞ্জার অর্ডার অন্ধ কনফার্ম। বাবল প্লাগইনকে এই ইনবক্স ভেবে কেনা। AI Full/Meta AI Bot লাইভ বলে অ্যাড। Unread না দেখে শুধু All স্ক্রল। Needs attention কিউ উপেক্ষা। লেবেল ছাড়াই টিম হ্যান্ডঅফ।',
+        1 => 'Policy/Knowledge খালি রেখে Semi চালু করলে এজেন্ট ফাঁকা কথা বলতে পারে—আগে ডেলিভারি/COD নোট ও প্রোডাক্ট Knowledge অনুমোদন করুন।',
+      ),
+    ),
+    11 => 
+    array (
+      'heading' => 'শুরু করার চেকলিস্ট',
+      'paragraphs' => 
+      array (
+        0 => '/pricing থেকে ট্রায়াল। প্লাগইনে Messenger → Page Sync। Unread-এ টেস্ট রিপ্লাই ও লেবেল। ফোন পেলে /bd-fraud-checker। চাইলে Sales Agent-এ Semi + policy/Knowledge—Full তড়াহুড়ো নয়। অর্ডার কনফার্ম Admin approval রেখে শুরু করুন।',
+        1 => 'সারাংশ: Page মেসেজ WP অ্যাডমিনে পড়ুন, লেবেল দিন, প্রয়োজনে Semi সাজেশন ব্যবহার করুন, ফ্রড চেক করে কনফার্ম করুন—বাবল বা আলাদা বট ড্যাশবোর্ডে হারিয়ে না গিয়ে।',
+      ),
+    ),
+  ),
+  'en_woocommerce_facebook_messenger' => 
+  array (
+    0 => 
+    array (
+      'heading' => 'Quick answer',
+      'paragraphs' => 
+      array (
+        0 => 'Most Bangladesh Facebook Page COD sales happen in Messenger. WooEasyLife brings that Page inbox into WordPress admin—not a corner chat bubble, not a ManyChat-style storefront widget. Sync one Page; work All/Unread, lead labels, text/image/voice replies, then fraud-check before you confirm.',
+        1 => 'The human inbox is the shipped core. AI Semi may draft suggestions—you still send. AI Full is not unlocked for everyone; we do not advertise a Meta AI Bot. Start: /pricing. Page COD guide: /en/facebook-page-cod-management.',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-vs-bubble.jpg',
+          'alt' => 'Storefront chat bubble versus WooEasyLife WordPress Messenger inbox',
+          'caption' => 'Not a chat bubble — Page inbox in WP admin',
+        ),
+      ),
+    ),
+    1 => 
+    array (
+      'heading' => 'What made the workday annoying',
+      'paragraphs' => 
+      array (
+        0 => 'Morning opens on Meta Business Suite Inbox—a pile of new threads. Price questions, half addresses, “I will order” with no phone. Chat in one tab, WooCommerce in another, hot leads in a spreadsheet. One missed reply and the sale is gone.',
+        1 => 'A website Messenger bubble helps visitors start a chat—but you still answer in Meta Inbox. Order create, fraud check, and courier entry stay elsewhere. Bubbles help shoppers; they rarely shrink your ops mess.',
+        2 => 'ManyChat and page-order bots are strong at flows and comment-to-DM. If you already run WooCommerce, you need the inbox beside the store: labels, phone, confirm, then courier in the same plugin family. That is the gap this page fills.',
+        3 => 'Another real pain: night shift replies, morning shift asks the same customer for their name again—without labels and lead fields that duplicate is normal. Labels plus a captured phone tell the next person what already happened.',
+      ),
+    ),
+    2 => 
+    array (
+      'heading' => 'A real morning—from message to confirm',
+      'paragraphs' => 
+      array (
+        0 => 'Three Unread threads. One asks if a product is available—you reply by text or voice and move NEW → ENGAGED. Another sends name, mobile, address—QUALIFIED. A browser stays in NURTURE for later follow-up.',
+        1 => 'On the QUALIFIED thread, check the phone on /en/bd-fraud-checker or /en/fake-customer-check before confirm. If safe, confirm in WooCommerce; keep /en/courier-auto-entry on. Repeats: /en/fake-order-protection.',
+        2 => 'No separate Facebook app dance for daily replies. Courier returns are a different story—SteadFast cancel requests live on /en/steadfast-return-hub.',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-thread-composer.jpg',
+          'alt' => 'Messenger thread composer with text image and voice',
+          'caption' => 'Text · attach · voice in one composer',
+        ),
+      ),
+    ),
+    3 => 
+    array (
+      'heading' => 'What you see in the inbox',
+      'paragraphs' => 
+      array (
+        0 => 'Left: conversation list with Search, All, and Unread. Unread badges show what still needs eyes—start there on busy mornings. Center: the thread. Right: contact and lead pane.',
+        1 => 'Lead labels—NEW, ENGAGED, QUALIFIED, NURTURE, plus negotiation, converted, lost, spam—color the queue so the team sees heat at a glance. Manual override always wins; AI may hint at funnel state, you decide the label.',
+        2 => 'Sync and Disconnect sit up top. v1 is one connected Page—multi-Page inbox is not a claim here. Tokens live on the hub; threads stay local in WP.',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-inbox-labels.jpg',
+          'alt' => 'Messenger All Unread tabs and NEW ENGAGED QUALIFIED NURTURE labels',
+          'caption' => 'Unread queue + lead labels',
+        ),
+      ),
+    ),
+    4 => 
+    array (
+      'heading' => 'Contact pane and lead fields',
+      'paragraphs' => 
+      array (
+        0 => 'The right pane shows profile, Connected status, and optional per-thread AI on/off. Phones extracted from chat land in sales lead fields—missing name, address, product, or quantity tell you what to collect next.',
+        1 => 'Lead status such as ENGAGED with a needs_human note means a person should jump in. Copy PMID and Delete conversation exist for admins—delete carefully. Small teams can split reply vs label/field work on one screen.',
+        2 => 'Even with Sales Agent available, keep Messenger→WooCommerce orders on Admin approval until the team is ready. COD payment and shipping auto-pick from WooCommerce make approved creates smoother.',
+      ),
+    ),
+    5 => 
+    array (
+      'heading' => 'How to run the day',
+      'paragraphs' => 
+      array (
+        0 => 'Clear Unread first. Reply with text, image, or voice. Update labels. Fraud-check phones. Confirm safe orders and let auto-entry book. Sweep NURTURE once in the evening.',
+      ),
+      'list' => 
+      array (
+        0 => 'Confirm Page Sync (one Page)',
+        1 => 'Empty Unread first',
+        2 => 'Labels: NEW → ENGAGED → QUALIFIED / NURTURE',
+        3 => 'Verify mobiles on /en/bd-fraud-checker',
+        4 => 'Confirm → /en/courier-auto-entry; protection /en/fake-order-protection',
+      ),
+    ),
+    6 => 
+    array (
+      'heading' => 'Messenger Sales Agent—optional, honest',
+      'paragraphs' => 
+      array (
+        0 => 'Automation modes: Off, AI Semi, and AI Full (locked). Off is a pure human inbox—fine for most starts. Semi drafts two or three replies from the latest message; you edit, send, or ignore.',
+        1 => 'Full unlock usually needs readiness around 80%+ and the Unlock checkbox. Even then confidence thresholds and human handoffs still apply—not blind auto-reply. OpenAI helps suggestions; human chat works without it.',
+        2 => 'Controls include the confidence slider, optional hold message below threshold, order confirmation defaulting to Admin approval, COD payment, shipping auto-pick from WooCommerce, and resume-after-human minutes. Save controls when you change them.',
+        3 => 'Approved store policy covers delivery/COD/timing, package guidance, common FAQs, helpline and WhatsApp—the agent should not invent rules. We do not claim a Meta AI Bot or free Full AI on every plan.',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-ai-modes.jpg',
+          'alt' => 'AI Off Semi and Full locked modes',
+          'caption' => 'Off · Semi · Full (locked) — you stay in control',
+        ),
+        1 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-suggestions-teach.jpg',
+          'alt' => 'AI reply suggestions and Send and teach',
+          'caption' => 'Review suggestions; teach when wrong',
+        ),
+      ),
+    ),
+    7 => 
+    array (
+      'heading' => 'Needs attention, Learning, Product Knowledge',
+      'paragraphs' => 
+      array (
+        0 => 'Needs attention catches what automation should not finish alone: low-confidence handoffs, missing lead fields, missing quantity. Open chat & reply; dismiss only when it is truly noise. The gear badge means waiting handoffs or knowledge gaps.',
+        1 => 'Learning compares AI drafts to real human replies—Approve or Reject to harden the source of truth. Thumbs-down “Bad AI reply → Learning” feeds the same loop. Send & teach or Use in composer speeds fixes.',
+        2 => 'Products lets you tick which WooCommerce SKUs the agent may discuss or sell. Knowledge holds aliases, pitches, FAQs, and forbidden claims so the agent does not invent guarantees. Scoped catalog—not the whole store blindly.',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-needs-attention.jpg',
+          'alt' => 'Messenger Sales Agent Needs attention human handoff queue',
+          'caption' => 'Low confidence and missing fields — Needs attention',
+        ),
+      ),
+    ),
+    8 => 
+    array (
+      'heading' => 'The COD stack after Messenger',
+      'paragraphs' => 
+      array (
+        0 => 'Inbox brings the conversation; it does not block bad numbers. Before confirm: /en/bd-fraud-checker. Repeats: /en/fake-order-protection. Safe orders: /en/courier-auto-entry. Monthly loss: /en/return-loss-calculator. Page ops: /en/facebook-page-cod-management. Hub: /en/woocommerce-bangladesh.',
+        1 => 'Automating chat while skipping fraud checks only grows returns—the inbox is step one of ops, not magic.',
+      ),
+      'figures' => 
+      array (
+        0 => 
+        array (
+          'src' => '/images/seo/cluster/messenger-cod-flow.jpg',
+          'alt' => 'Flow from Messenger to fraud check confirm and courier auto-entry',
+          'caption' => 'Inbox → fraud check → confirm → auto-entry',
+        ),
+      ),
+    ),
+    9 => 
+    array (
+      'heading' => 'Who it helps—and what we do not claim',
+      'paragraphs' => 
+      array (
+        0 => 'Single-Page COD sellers, small teams, and WooCommerce stores that take Messenger orders and want the inbox in WP admin.',
+        1 => 'We do not claim a storefront chat bubble, multi-Page inbox, unlocked AI Full for everyone, a separate Meta AI Bot, or full Flutter Messenger parity. We do not trash ManyChat or Chatcat—we say our lane is a WC-native inbox plus the COD stack.',
+        2 => 'Trial: /pricing. Bangla: /woocommerce-facebook-messenger.',
+      ),
+    ),
+    10 => 
+    array (
+      'heading' => 'Mistakes to skip',
+      'paragraphs' => 
+      array (
+        0 => 'Confirming Messenger orders blind. Buying a bubble plugin thinking it is this inbox. Ads that promise AI Full or a Meta AI Bot. Ignoring Unread. Leaving Needs attention to rot. Handing off without labels.',
+        1 => 'Turning on Semi with empty policy/Knowledge invites empty answers—approve delivery/COD notes and product Knowledge first.',
+      ),
+    ),
+    11 => 
+    array (
+      'heading' => 'Getting-started checklist',
+      'paragraphs' => 
+      array (
+        0 => 'Trial on /pricing. Messenger → Page Sync. Test reply and labels on Unread. Fraud-check phones on /en/bd-fraud-checker. Optionally enable Semi with policy/Knowledge—do not rush Full. Keep Messenger→order on Admin approval while you learn.',
+        1 => 'One line: read Page messages in WP admin, label them, use Semi drafts if you want, fraud-check, then confirm—without getting lost in a bubble or a separate bot dashboard.',
       ),
     ),
   ),
