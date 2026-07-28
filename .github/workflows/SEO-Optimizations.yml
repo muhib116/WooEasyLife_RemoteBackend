@@ -28,6 +28,9 @@ jobs:
           npm install
           npm run build
           npm run build:ssr
+          chmod +x scripts/preserve-remote-vite-assets.sh
+          VITE_ASSET_PRESERVE_URL="https://app.wpsalehub.com" \
+            ./scripts/preserve-remote-vite-assets.sh public/build
 
       - name: 📦 Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
@@ -39,6 +42,14 @@ jobs:
           port: 21
           username: ${{ secrets.APP_FTP_USERNAME }}
           password: ${{ secrets.APP_FTP_PASSWORD }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
 
       - name: 🧹 Migrate + clear Laravel caches on server
         continue-on-error: true

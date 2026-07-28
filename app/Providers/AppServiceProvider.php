@@ -6,7 +6,6 @@ use App\Services\BlogAi\BlogAiRuntimeConfig;
 use App\Services\CacheRuntimeConfig;
 use App\Services\OrderIntelligence\FraudCheckRuntimeConfig;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -27,7 +26,9 @@ class AppServiceProvider extends ServiceProvider
         // MySQL utf8mb4 index limit (1000 bytes on older MariaDB/MySQL)
         Schema::defaultStringLength(191);
 
-        Vite::prefetch(3);
+        // Do not Vite::prefetch() sitewide. Prefetch dumps hundreds of admin/auth
+        // chunk URLs into every marketing HTML response; Semrush then flags those
+        // URLs as "broken JS/CSS" after each hashed deploy removes the prior build.
 
         try {
             $this->app->make(FraudCheckRuntimeConfig::class)->applyOverrides();

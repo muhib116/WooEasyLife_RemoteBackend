@@ -27,6 +27,9 @@ jobs:
         run: |
           npm install
           npm run build
+          chmod +x scripts/preserve-remote-vite-assets.sh
+          VITE_ASSET_PRESERVE_URL="https://app.wpsalehub.com" \
+            ./scripts/preserve-remote-vite-assets.sh public/build
 
       # - name: Installing Composer dependencies
         # run: composer install --no-dev --optimize-autoloader --no-interaction
@@ -38,3 +41,11 @@ jobs:
           port: 21
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
