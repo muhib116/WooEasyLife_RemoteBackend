@@ -31,6 +31,9 @@ jobs:
           test -f public/build/manifest.json
           echo "Vite manifest entries: $(php -r 'echo count(json_decode(file_get_contents("public/build/manifest.json"), true));')"
           ls public/build/assets | wc -l
+          chmod +x scripts/preserve-remote-vite-assets.sh
+          VITE_ASSET_PRESERVE_URL="https://app.wpsalehub.com" \
+            ./scripts/preserve-remote-vite-assets.sh public/build
 
       - name: Installing Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
@@ -44,6 +47,14 @@ jobs:
           password: ${{ secrets.APP_FTP_PASSWORD }}
           # public/build is gitignored but created above — FTP sync uploads the working tree.
           log-level: standard
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
 
       - name: 🧹 Clear Laravel caches on server
         continue-on-error: true

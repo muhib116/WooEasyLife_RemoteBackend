@@ -16,8 +16,14 @@ trap 'rm -f "${TMP}"' EXIT
 
 if ! curl -fsSL --max-time 90 -A 'WooEasyLife-DeployPreserve/1.0' \
   "${BASE_URL}/build/manifest.json" -o "${TMP}"; then
-  echo "preserve-vite: no remote manifest at ${BASE_URL}/build/manifest.json — skip"
-  exit 0
+  if [[ "${ALLOW_PRESERVE_SKIP:-}" == "1" ]]; then
+    echo "preserve-vite: WARN no remote manifest — ALLOW_PRESERVE_SKIP=1, continuing"
+    exit 0
+  fi
+  echo "preserve-vite: ERROR could not fetch ${BASE_URL}/build/manifest.json"
+  echo "preserve-vite: refusing FTP sync that would delete prior hashed assets"
+  echo "preserve-vite: set ALLOW_PRESERVE_SKIP=1 only for first-time empty deploys"
+  exit 1
 fi
 
 python3 - "${TMP}" "${ASSETS_DIR}" "${BASE_URL}" <<'PY'
@@ -30,6 +36,7 @@ import urllib.request
 manifest_path, assets_dir, base = sys.argv[1:4]
 base = base.rstrip("/")
 ua = "WooEasyLife-DeployPreserve/1.0"
+allow_skip = os.environ.get("ALLOW_PRESERVE_SKIP") == "1"
 
 with open(manifest_path, encoding="utf-8") as handle:
     data = json.load(handle)
@@ -84,4 +91,11 @@ print(
     f"preserve-vite: downloaded={downloaded} skipped_existing={skipped} "
     f"failed={failed} remote_files={len(files)}"
 )
+
+if failed > 0 and not allow_skip:
+    print(
+        "preserve-vite: ERROR partial download — refusing FTP sync that would "
+        "delete still-live hashes. Set ALLOW_PRESERVE_SKIP=1 to override."
+    )
+    sys.exit(1)
 PY
