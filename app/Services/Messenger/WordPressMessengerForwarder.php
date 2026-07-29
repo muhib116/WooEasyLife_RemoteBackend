@@ -48,6 +48,17 @@ class WordPressMessengerForwarder
     }
 
     /**
+     * Forward Page feed/comment events to WP comments/inbound (HMAC).
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function forwardCommentsInbound(MessengerPageConnection $connection, array $payload): array
+    {
+        return $this->forward($connection, $payload, 'comments/inbound');
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
@@ -120,6 +131,7 @@ class WordPressMessengerForwarder
                 $lastResult = [
                     'success' => false,
                     'message' => 'forward_exception',
+                    'error' => $exception->getMessage(),
                 ];
             }
         }

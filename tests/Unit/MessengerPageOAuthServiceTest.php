@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\Messenger\MessengerPageOAuthService;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class MessengerPageOAuthServiceTest extends TestCase
@@ -205,6 +206,94 @@ class MessengerPageOAuthServiceTest extends TestCase
         $this->assertSame('Retry User', $profile['name']);
         $this->assertSame('https://cdn.example.com/retry-user.jpg', $profile['profile_pic']);
         $this->assertSame('', $profile['gender']);
+    }
+
+    public function test_hide_comment_uses_query_is_hidden_and_treats_already_hidden_as_ok(): void
+    {
+        config()->set('services.messenger.graph_version', 'v21.0');
+
+        Http::fake([
+            'graph.facebook.com/v21.0/111_222*' => function ($request) {
+                if ($request->method() === 'GET') {
+                    return Http::response([
+                        'can_hide' => true,
+                        'is_hidden' => true,
+                        'can_remove' => true,
+                    ], 200);
+                }
+
+                return Http::response(['success' => true], 200);
+            },
+        ]);
+
+        $connection = new \App\Models\MessengerPageConnection();
+        $connection->page_id = '111';
+        $connection->page_access_token = 'PAGE_TOKEN';
+
+        $result = app(MessengerPageOAuthService::class)->hideComment($connection, '111_222', true);
+
+        $this->assertTrue($result['ok']);
+        $this->assertTrue(!empty($result['already']));
+        Http::assertSentCount(1);
+    }
+
+    public function test_hide_comment_rejects_when_can_hide_false(): void
+    {
+        config()->set('services.messenger.graph_version', 'v21.0');
+
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'can_hide' => false,
+                'is_hidden' => false,
+                'can_remove' => true,
+            ], 200),
+        ]);
+
+        $connection = new \App\Models\MessengerPageConnection();
+        $connection->page_id = '111';
+        $connection->page_access_token = 'PAGE_TOKEN';
+
+        $result = app(MessengerPageOAuthService::class)->hideComment($connection, '111_222', true);
+
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString('can_hide=false', (string) ($result['error'] ?? ''));
+        Http::assertSentCount(1);
+    }
+
+    public function test_hide_comment_retries_multipart_after_unknown_error(): void
+    {
+        config()->set('services.messenger.graph_version', 'v21.0');
+
+        $calls = 0;
+        Http::fake(function ($request) use (&$calls) {
+            $calls++;
+            if ($request->method() === 'GET') {
+                return Http::response([
+                    'can_hide' => true,
+                    'is_hidden' => false,
+                ], 200);
+            }
+            if ($calls === 2) {
+                return Http::response([
+                    'error' => [
+                        'message' => 'An unknown error occurred',
+                        'type' => 'OAuthException',
+                        'code' => 1,
+                    ],
+                ], 500);
+            }
+
+            return Http::response(['success' => true], 200);
+        });
+
+        $connection = new \App\Models\MessengerPageConnection();
+        $connection->page_id = '111';
+        $connection->page_access_token = 'PAGE_TOKEN';
+
+        $result = app(MessengerPageOAuthService::class)->hideComment($connection, '111_222', true);
+
+        $this->assertTrue($result['ok']);
+        $this->assertGreaterThanOrEqual(3, $calls);
     }
 
     /**

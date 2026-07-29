@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Messenger;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessCommentsInboundForward;
 use App\Jobs\ProcessMessengerInboundForward;
 use App\Models\MessengerPageConnection;
 use App\Services\Messenger\MessengerAnonymizedIntentPacks;
@@ -51,6 +52,7 @@ class MessengerWebhookController extends Controller
         $channel = $object === 'instagram' ? 'instagram' : 'messenger';
         $entries = is_array($payload['entry'] ?? null) ? $payload['entry'] : [];
         $events = [];
+        $commentEvents = [];
 
         foreach ($entries as $entry) {
             if (! is_array($entry)) {
@@ -82,71 +84,123 @@ class MessengerWebhookController extends Controller
                     }
                 }
             }
-        }
 
-        if ($events === []) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'No actionable Messenger events.',
-            ]);
-        }
-
-        // Group by lookup key: page_id for Messenger, IG business account id for Instagram.
-        $byLookup = [];
-        foreach ($events as $event) {
-            $lookup = $channel === 'instagram'
-                ? (string) ($event['instagram_business_account_id'] ?? '')
-                : (string) ($event['page_id'] ?? '');
-            if ($lookup === '') {
-                continue;
+            // Facebook Page feed comments (object=page only).
+            if ($channel === 'messenger' && is_array($entry['changes'] ?? null)) {
+                foreach ($entry['changes'] as $change) {
+                    if (! is_array($change)) {
+                        continue;
+                    }
+                    $normalizedComment = $this->normalizeFeedCommentChange($pageId, $change);
+                    if ($normalizedComment !== null) {
+                        $commentEvents[] = $normalizedComment;
+                    }
+                }
             }
-            $byLookup[$lookup][] = $event;
         }
 
         $dispatched = 0;
-        foreach ($byLookup as $lookupId => $pageEvents) {
-            $connections = $channel === 'instagram'
-                ? MessengerPageConnection::query()
-                    ->connected()
-                    ->where('instagram_business_account_id', $lookupId)
-                    ->orderByDesc('id')
-                    ->get()
-                : MessengerPageConnection::query()
+        $dispatchedComments = 0;
+
+        if ($events !== []) {
+            // Group by lookup key: page_id for Messenger, IG business account id for Instagram.
+            $byLookup = [];
+            foreach ($events as $event) {
+                $lookup = $channel === 'instagram'
+                    ? (string) ($event['instagram_business_account_id'] ?? '')
+                    : (string) ($event['page_id'] ?? '');
+                if ($lookup === '') {
+                    continue;
+                }
+                $byLookup[$lookup][] = $event;
+            }
+
+            foreach ($byLookup as $lookupId => $pageEvents) {
+                $connections = $channel === 'instagram'
+                    ? MessengerPageConnection::query()
+                        ->connected()
+                        ->where('instagram_business_account_id', $lookupId)
+                        ->orderByDesc('id')
+                        ->get()
+                    : MessengerPageConnection::query()
+                        ->connected()
+                        ->where('page_id', $lookupId)
+                        ->orderByDesc('id')
+                        ->get();
+
+                if ($connections->isEmpty()) {
+                    Log::info('Messenger webhook: no connected page', [
+                        'channel' => $channel,
+                        'lookup_id' => $lookupId,
+                    ]);
+                    continue;
+                }
+
+                foreach ($connections as $connection) {
+                    // Ensure WP always gets Facebook page_id even for Instagram webhooks.
+                    $forwardEvents = array_map(static function (array $event) use ($connection, $channel) {
+                        $event['page_id'] = (string) $connection->page_id;
+                        $event['channel'] = $channel;
+                        unset($event['instagram_business_account_id']);
+
+                        return $event;
+                    }, $pageEvents);
+
+                    ProcessMessengerInboundForward::dispatchAfterResponse(
+                        (int) $connection->id,
+                        $forwardEvents
+                    );
+                    $dispatched++;
+                }
+            }
+        }
+
+        if ($commentEvents !== []) {
+            $byPage = [];
+            foreach ($commentEvents as $event) {
+                $pid = (string) ($event['page_id'] ?? '');
+                if ($pid === '') {
+                    continue;
+                }
+                $byPage[$pid][] = $event;
+            }
+
+            foreach ($byPage as $lookupId => $pageComments) {
+                $connections = MessengerPageConnection::query()
                     ->connected()
                     ->where('page_id', $lookupId)
                     ->orderByDesc('id')
                     ->get();
 
-            if ($connections->isEmpty()) {
-                Log::info('Messenger webhook: no connected page', [
-                    'channel' => $channel,
-                    'lookup_id' => $lookupId,
-                ]);
-                continue;
+                if ($connections->isEmpty()) {
+                    Log::info('Comments webhook: no connected page', [
+                        'page_id' => $lookupId,
+                    ]);
+                    continue;
+                }
+
+                foreach ($connections as $connection) {
+                    ProcessCommentsInboundForward::dispatchAfterResponse(
+                        (int) $connection->id,
+                        $pageComments
+                    );
+                    $dispatchedComments++;
+                }
             }
+        }
 
-            foreach ($connections as $connection) {
-                // Ensure WP always gets Facebook page_id even for Instagram webhooks.
-                $forwardEvents = array_map(static function (array $event) use ($connection, $channel) {
-                    $event['page_id'] = (string) $connection->page_id;
-                    $event['channel'] = $channel;
-                    unset($event['instagram_business_account_id']);
-
-                    return $event;
-                }, $pageEvents);
-
-                ProcessMessengerInboundForward::dispatchAfterResponse(
-                    (int) $connection->id,
-                    $forwardEvents
-                );
-                $dispatched++;
-            }
+        if ($dispatched === 0 && $dispatchedComments === 0) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No actionable Messenger/comment events.',
+            ]);
         }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Webhook received successfully.',
             'queued_forwards' => $dispatched,
+            'queued_comment_forwards' => $dispatchedComments,
             'channel' => $channel,
         ]);
     }
@@ -434,5 +488,76 @@ class MessengerWebhookController extends Controller
         }
 
         return $event;
+    }
+
+    /**
+     * Normalize Meta Page feed webhook `changes[]` items into comment events.
+     *
+     * @param  array<string, mixed>  $change
+     * @return array<string, mixed>|null
+     */
+    public function normalizeFeedCommentChange(string $pageId, array $change): ?array
+    {
+        $field = strtolower(trim((string) ($change['field'] ?? '')));
+        if ($field !== 'feed') {
+            return null;
+        }
+
+        $value = is_array($change['value'] ?? null) ? $change['value'] : [];
+        $item = strtolower(trim((string) ($value['item'] ?? '')));
+        $verb = strtolower(trim((string) ($value['verb'] ?? '')));
+
+        // Focus on comment create/edit/remove; ignore status/photo/etc.
+        if (! in_array($item, ['comment', 'reply'], true)) {
+            return null;
+        }
+        if (! in_array($verb, ['add', 'edited', 'edit', 'remove', 'hide', 'unhide'], true)) {
+            return null;
+        }
+
+        $commentId = trim((string) ($value['comment_id'] ?? ''));
+        if ($commentId === '') {
+            return null;
+        }
+
+        $from = is_array($value['from'] ?? null) ? $value['from'] : [];
+        $fromId = trim((string) ($from['id'] ?? ''));
+        $fromName = trim((string) ($from['name'] ?? ''));
+
+        // Ignore Page's own comments (echoes) when from.id matches the Page.
+        if ($fromId !== '' && $pageId !== '' && hash_equals($pageId, $fromId)) {
+            return null;
+        }
+
+        $postId = trim((string) ($value['post_id'] ?? ($value['parent_id'] ?? '')));
+        // parent_id may be the post OR a parent comment for nested replies.
+        $parentId = trim((string) ($value['parent_id'] ?? ''));
+        if ($parentId === $postId) {
+            $parentId = '';
+        }
+
+        $message = trim((string) ($value['message'] ?? ''));
+        $createdTime = trim((string) ($value['created_time'] ?? ''));
+        if ($createdTime !== '' && is_numeric($createdTime)) {
+            $createdTime = gmdate('c', (int) $createdTime);
+        }
+
+        $permalink = trim((string) ($value['post']['permalink_url'] ?? ($value['permalink_url'] ?? '')));
+
+        return [
+            'event_type' => 'comment',
+            'source' => 'facebook_comment',
+            'page_id' => $pageId,
+            'post_id' => $postId,
+            'comment_id' => $commentId,
+            'parent_id' => $parentId,
+            'from_id' => $fromId,
+            'from_name' => $fromName,
+            'message' => $message,
+            'created_time' => $createdTime,
+            'verb' => $verb === 'edit' ? 'edited' : $verb,
+            'item' => $item,
+            'permalink' => $permalink,
+        ];
     }
 }

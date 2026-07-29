@@ -84,7 +84,7 @@ return [
             // pages_read_engagement is NOT required and is often Invalid Scopes on Messenger apps.
             'scopes' => env(
                 'META_MESSENGER_SCOPES',
-                'pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,instagram_basic,instagram_manage_messages'
+                'pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,pages_manage_engagement,pages_read_user_content,instagram_basic,instagram_manage_messages'
             ),
             /*
             | Facebook Login for Business configuration ID (preferred).

@@ -148,9 +148,16 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::get('messenger/status', [MessengerConnectController::class, 'status']);
         Route::post('messenger/status', [MessengerConnectController::class, 'status']);
         Route::post('messenger/sync-history', [MessengerConnectController::class, 'syncHistory']);
+        Route::post('messenger/sync-comments-history', [MessengerConnectController::class, 'syncCommentsHistory']);
         Route::post('messenger/send', [MessengerSendController::class, 'send']);
         Route::post('messenger/sender-action', [MessengerSendController::class, 'senderAction']);
         Route::post('messenger/delete-message', [MessengerSendController::class, 'deleteMessage']);
+        Route::post('messenger/comment-reply', [MessengerSendController::class, 'commentReply']);
+        Route::post('messenger/comment-private-reply', [MessengerSendController::class, 'commentPrivateReply']);
+        Route::post('messenger/comment-hide', [MessengerSendController::class, 'commentHide']);
+        Route::post('messenger/comment-delete', [MessengerSendController::class, 'commentDelete']);
+        Route::post('messenger/comment-meta', [MessengerSendController::class, 'commentMeta']);
+        Route::post('messenger/comment-post-meta', [MessengerSendController::class, 'commentPostMeta']);
         Route::post('messenger/upload-attachment', [MessengerAttachmentController::class, 'upload']);
         Route::post('messenger/refresh-profiles', [MessengerConnectController::class, 'refreshProfiles']);
 

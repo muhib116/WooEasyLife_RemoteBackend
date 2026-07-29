@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SyncMessengerConversationHistory;
 use App\Models\Website;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Messenger\MessengerCommentsHistorySync;
 use App\Services\Messenger\MessengerConversationHistorySync;
 use App\Services\Messenger\MessengerPageConnectionResolver;
 use App\Services\Messenger\MessengerPageOAuthService;
@@ -49,12 +50,18 @@ class MessengerConnectController extends Controller
             $returnUrl = $siteUrl . '/wp-admin/admin.php?page=woo-easy-life#/messenger?connected=1';
         }
 
+        $authType = trim((string) $request->input('auth_type', ''));
+        if ($authType === '' && $request->boolean('force_rerequest')) {
+            $authType = 'rerequest';
+        }
+
         $context = [
             'access_token_id' => (int) $accessToken->id,
             'user_id' => (int) ($accessToken->tokenable_id ?? 0),
             'website_id' => $accessToken->website_id,
             'site_url' => $siteUrl,
             'return_url' => $returnUrl,
+            'auth_type' => $authType,
         ];
 
         if ($oauth->directConnectEnabled()) {
@@ -263,6 +270,44 @@ class MessengerConnectController extends Controller
         $ok = ! empty($result['ok']);
 
         return $this->successResponse($result, (string) ($result['message'] ?? ($ok ? 'Synced.' : 'Sync failed.')), $ok ? 200 : 422);
+    }
+
+    /**
+     * Import recent Page post comments from Graph into the connected store.
+     */
+    public function syncCommentsHistory(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageConnectionResolver $resolver,
+        MessengerCommentsHistorySync $sync
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('Connect a Facebook Page first.', 409);
+        }
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+
+        $result = $sync->sync($connection, [
+            'max_posts' => (int) $request->input('max_posts', 20),
+            'max_comments_per_post' => (int) $request->input('max_comments_per_post', 40),
+        ]);
+
+        $ok = ! empty($result['ok']);
+
+        return $this->successResponse(
+            $result,
+            (string) ($result['message'] ?? ($ok ? 'Comments synced.' : 'Comments sync failed.')),
+            $ok ? 200 : 422
+        );
     }
 
     private function queueHistorySync($connection): void

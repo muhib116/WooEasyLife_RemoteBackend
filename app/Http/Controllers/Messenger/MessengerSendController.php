@@ -218,4 +218,263 @@ class MessengerSendController extends Controller
             'page_id' => $connection->page_id,
         ], 'Message deleted.');
     }
+
+    /**
+     * Public reply under a Facebook Page comment.
+     */
+    public function commentReply(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $commentId = trim((string) $request->input('comment_id', ''));
+        $text = trim((string) $request->input('text', $request->input('message', '')));
+
+        if ($commentId === '') {
+            return $this->errorResponse('comment_id is required.', 422);
+        }
+        if ($text === '') {
+            return $this->errorResponse('Reply text is required.', 422);
+        }
+
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->replyToComment($connection, $commentId, $text);
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to reply to comment.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse([
+            'id' => (string) ($result['id'] ?? ''),
+            'page_id' => $connection->page_id,
+            'comment_id' => $commentId,
+        ], 'Comment reply sent.');
+    }
+
+    /**
+     * Private Reply on a comment (opens/sends Messenger DM).
+     */
+    public function commentPrivateReply(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $commentId = trim((string) $request->input('comment_id', ''));
+        $text = trim((string) $request->input('text', $request->input('message', '')));
+
+        if ($commentId === '') {
+            return $this->errorResponse('comment_id is required.', 422);
+        }
+        if ($text === '') {
+            return $this->errorResponse('Private reply text is required.', 422);
+        }
+
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->privateReplyToComment($connection, $commentId, $text);
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to send private reply.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse([
+            'id' => (string) ($result['id'] ?? ''),
+            'page_id' => $connection->page_id,
+            'comment_id' => $commentId,
+            'recipient_id' => (string) ($result['recipient_id'] ?? ''),
+        ], 'Private reply sent.');
+    }
+
+    /**
+     * Hide a Facebook Page comment (is_hidden=true).
+     */
+    public function commentHide(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $commentId = trim((string) $request->input('comment_id', ''));
+        $hidden = filter_var($request->input('hidden', true), FILTER_VALIDATE_BOOLEAN);
+
+        if ($commentId === '') {
+            return $this->errorResponse('comment_id is required.', 422);
+        }
+
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->hideComment($connection, $commentId, $hidden);
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to hide comment.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse([
+            'page_id' => $connection->page_id,
+            'comment_id' => $commentId,
+            'hidden' => $hidden,
+        ], $hidden ? 'Comment hidden on Facebook.' : 'Comment unhidden on Facebook.');
+    }
+
+    /**
+     * Delete a Facebook Page comment (Graph DELETE).
+     */
+    public function commentDelete(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $commentId = trim((string) $request->input('comment_id', ''));
+
+        if ($commentId === '') {
+            return $this->errorResponse('comment_id is required.', 422);
+        }
+
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->deleteComment($connection, $commentId);
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to delete comment.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse([
+            'page_id' => $connection->page_id,
+            'comment_id' => $commentId,
+            'deleted' => true,
+        ], 'Comment deleted on Facebook.');
+    }
+
+    /**
+     * Lookup commenter name/id for a Page comment.
+     */
+    public function commentMeta(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $commentId = trim((string) $request->input('comment_id', ''));
+
+        if ($commentId === '') {
+            return $this->errorResponse('comment_id is required.', 422);
+        }
+
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->fetchCommentMeta($connection, $commentId);
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to load comment.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse([
+            'page_id' => $connection->page_id,
+            'comment_id' => $commentId,
+            'from_id' => (string) ($result['from_id'] ?? ''),
+            'from_name' => (string) ($result['from_name'] ?? ''),
+            'message' => (string) ($result['message'] ?? ''),
+        ], 'Comment loaded.');
+    }
+
+    public function commentPostMeta(
+        Request $request,
+        CourierAccountService $accounts,
+        MessengerPageOAuthService $oauth,
+        MessengerPageConnectionResolver $resolver
+    ) {
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $postId = trim((string) $request->input('post_id', ''));
+
+        if ($postId === '') {
+            return $this->errorResponse('post_id is required.', 422);
+        }
+
+        $connection = $resolver->resolve($accessToken, $pageId);
+        if (! $connection) {
+            return $this->errorResponse('No connected Facebook Page found for this license.', 404);
+        }
+
+        $result = $oauth->fetchPostMeta($connection, $postId);
+        if (empty($result['ok'])) {
+            return $this->errorResponse(
+                (string) ($result['error'] ?? 'Failed to load post.'),
+                (int) ($result['http_status'] ?? 422)
+            );
+        }
+
+        return $this->successResponse([
+            'page_id' => $connection->page_id,
+            'post_id' => (string) ($result['post_id'] ?? $postId),
+            'message' => (string) ($result['message'] ?? ''),
+            'story' => (string) ($result['story'] ?? ''),
+            'permalink' => (string) ($result['permalink'] ?? ''),
+            'picture_url' => (string) ($result['picture_url'] ?? ''),
+            'created_time' => (string) ($result['created_time'] ?? ''),
+        ], 'Post loaded.');
+    }
 }

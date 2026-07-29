@@ -629,6 +629,387 @@ class MessengerPageOAuthService
     }
 
     /**
+     * Public reply under a Page comment: POST /{comment-id}/comments
+     *
+     * @return array{ok:bool, id?:string, error?:string, http_status?:int}
+     */
+    public function replyToComment(MessengerPageConnection $connection, string $commentId, string $message): array
+    {
+        $commentId = trim($commentId);
+        $message = trim($message);
+        $pageToken = (string) $connection->page_access_token;
+
+        if ($commentId === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing comment id or page token.'];
+        }
+        if ($message === '') {
+            return ['ok' => false, 'error' => 'Reply message is empty.'];
+        }
+
+        $url = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($commentId) . '/comments';
+        $response = Http::asForm()->timeout(30)->post($url, [
+            'message' => $message,
+            'access_token' => $pageToken,
+        ]);
+
+        if (! $response->successful()) {
+            $error = (string) (
+                $response->json('error.message')
+                ?: $response->json('error.error_user_msg')
+                ?: ('Facebook comment reply failed (HTTP ' . $response->status() . ').')
+            );
+
+            return [
+                'ok' => false,
+                'error' => $error,
+                'http_status' => $response->status(),
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'id' => (string) ($response->json('id') ?? ''),
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
+     * Private Reply on a comment → Messenger DM: POST /{comment-id}/private_replies
+     *
+     * @return array{ok:bool, id?:string, recipient_id?:string, error?:string, http_status?:int}
+     */
+    public function privateReplyToComment(MessengerPageConnection $connection, string $commentId, string $message): array
+    {
+        $commentId = trim($commentId);
+        $message = trim($message);
+        $pageToken = (string) $connection->page_access_token;
+
+        if ($commentId === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing comment id or page token.'];
+        }
+        if ($message === '') {
+            return ['ok' => false, 'error' => 'Private reply message is empty.'];
+        }
+
+        // Resolve commenter Page-scoped id before send (needed for WP Messenger seed).
+        $recipientId = '';
+        $commentUrl = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($commentId);
+        $commentRes = Http::timeout(20)->get($commentUrl, [
+            'fields' => 'from{id,name}',
+            'access_token' => $pageToken,
+        ]);
+        if ($commentRes->successful()) {
+            $recipientId = trim((string) ($commentRes->json('from.id') ?? ''));
+        }
+
+        $url = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($commentId) . '/private_replies';
+        $response = Http::asForm()->timeout(30)->post($url, [
+            'message' => $message,
+            'access_token' => $pageToken,
+        ]);
+
+        if (! $response->successful()) {
+            $error = (string) (
+                $response->json('error.message')
+                ?: $response->json('error.error_user_msg')
+                ?: ('Facebook private reply failed (HTTP ' . $response->status() . ').')
+            );
+
+            return [
+                'ok' => false,
+                'error' => $error,
+                'http_status' => $response->status(),
+                'recipient_id' => $recipientId,
+            ];
+        }
+
+        $messageId = (string) ($response->json('id') ?? '');
+
+        // Best-effort: confirm recipient from the outbound message "to" field.
+        if ($messageId !== '') {
+            $msgRes = Http::timeout(20)->get(
+                'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($messageId),
+                [
+                    'fields' => 'to{id},from{id}',
+                    'access_token' => $pageToken,
+                ]
+            );
+            if ($msgRes->successful()) {
+                $toId = trim((string) ($msgRes->json('to.data.0.id') ?? $msgRes->json('to.id') ?? ''));
+                if ($toId !== '') {
+                    $recipientId = $toId;
+                }
+            }
+        }
+
+        return [
+            'ok' => true,
+            'id' => $messageId,
+            'recipient_id' => $recipientId,
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
+     * Hide (or unhide) a Page comment: POST /{comment-id}?is_hidden=…
+     *
+     * Meta documents query-string is_hidden; multipart form is a fallback.
+     * Preflight can_hide / is_hidden avoids opaque "An unknown error occurred".
+     *
+     * @return array{ok:bool, error?:string, http_status?:int, can_hide?:bool, already?:bool}
+     */
+    public function hideComment(MessengerPageConnection $connection, string $commentId, bool $hidden = true): array
+    {
+        $commentId = trim($commentId);
+        $pageToken = (string) $connection->page_access_token;
+
+        if ($commentId === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing comment id or page token.'];
+        }
+
+        $baseUrl = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($commentId);
+
+        $meta = Http::timeout(20)->get($baseUrl, [
+            'fields' => 'can_hide,is_hidden,can_remove',
+            'access_token' => $pageToken,
+        ]);
+
+        if ($meta->successful()) {
+            $alreadyHidden = filter_var($meta->json('is_hidden'), FILTER_VALIDATE_BOOLEAN);
+            if ($alreadyHidden === $hidden) {
+                return [
+                    'ok' => true,
+                    'http_status' => $meta->status(),
+                    'already' => true,
+                    'can_hide' => filter_var($meta->json('can_hide'), FILTER_VALIDATE_BOOLEAN),
+                ];
+            }
+
+            $canHide = $meta->json('can_hide');
+            if ($hidden && $canHide === false) {
+                return [
+                    'ok' => false,
+                    'error' => 'Facebook will not allow hiding this comment (can_hide=false). '
+                        . 'Use Delete, or reconnect the Page with pages_manage_engagement / MODERATE.',
+                    'http_status' => 422,
+                    'can_hide' => false,
+                ];
+            }
+        }
+
+        // Official format: POST /{comment-id}?is_hidden=true (token in body too).
+        $response = Http::asForm()->timeout(30)->post(
+            $baseUrl . '?' . http_build_query([
+                'is_hidden' => $hidden ? 'true' : 'false',
+            ]),
+            [
+                'is_hidden' => $hidden ? 'true' : 'false',
+                'access_token' => $pageToken,
+            ]
+        );
+
+        // Fallback: multipart (curl -F) when Graph returns opaque code 1.
+        if (! $response->successful()) {
+            $code = (int) ($response->json('error.code') ?? 0);
+            $msg = strtolower((string) ($response->json('error.message') ?? ''));
+            $retryable = $code === 1 || str_contains($msg, 'unknown error');
+            if ($retryable) {
+                $response = Http::asMultipart()->timeout(30)->post($baseUrl, [
+                    'is_hidden' => $hidden ? 'true' : 'false',
+                    'access_token' => $pageToken,
+                ]);
+            }
+        }
+
+        if (! $response->successful()) {
+            return [
+                'ok' => false,
+                'error' => $this->formatCommentHideError($response, $hidden),
+                'http_status' => $response->status(),
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Http\Client\Response  $response
+     */
+    protected function formatCommentHideError($response, bool $hidden): string
+    {
+        $message = (string) (
+            $response->json('error.message')
+            ?: $response->json('error.error_user_msg')
+            ?: ('Facebook ' . ($hidden ? 'hide' : 'unhide') . ' comment failed (HTTP ' . $response->status() . ').')
+        );
+        $code = (int) ($response->json('error.code') ?? 0);
+        $type = trim((string) ($response->json('error.type') ?? ''));
+
+        $hint = '';
+        if ($code === 1 || stripos($message, 'unknown error') !== false) {
+            $hint = ' Reconnect the Page with pages_manage_engagement, confirm the comment still exists, then retry — or use Delete.';
+        } elseif ($code === 200 || $code === 10 || $code === 210) {
+            $hint = ' Page token needs MODERATE / pages_manage_engagement — use Reconnect.';
+        } elseif ($code === 100) {
+            $hint = ' Comment id may be invalid or already removed.';
+        }
+
+        $prefix = $code > 0 ? "(#{$code}) " : '';
+        if ($type !== '' && stripos($message, $type) === false) {
+            $prefix = "{$prefix}[{$type}] ";
+        }
+
+        return trim($prefix . $message . $hint);
+    }
+
+    /**
+     * Delete a Page comment: DELETE /{comment-id}.
+     *
+     * @return array{ok:bool, error?:string, http_status?:int}
+     */
+    public function deleteComment(MessengerPageConnection $connection, string $commentId): array
+    {
+        $commentId = trim($commentId);
+        $pageToken = (string) $connection->page_access_token;
+
+        if ($commentId === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing comment id or page token.'];
+        }
+
+        $url = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($commentId);
+        $response = Http::timeout(30)->delete($url, [
+            'access_token' => $pageToken,
+        ]);
+
+        if (! $response->successful()) {
+            $error = (string) (
+                $response->json('error.message')
+                ?: $response->json('error.error_user_msg')
+                ?: ('Facebook delete comment failed (HTTP ' . $response->status() . ').')
+            );
+
+            return [
+                'ok' => false,
+                'error' => $error,
+                'http_status' => $response->status(),
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
+     * Fetch commenter identity for a stored comment id.
+     *
+     * @return array{ok:bool, from_id?:string, from_name?:string, message?:string, error?:string, http_status?:int}
+     */
+    public function fetchCommentMeta(MessengerPageConnection $connection, string $commentId): array
+    {
+        $commentId = trim($commentId);
+        $pageToken = (string) $connection->page_access_token;
+
+        if ($commentId === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing comment id or page token.'];
+        }
+
+        $url = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($commentId);
+        $response = Http::timeout(20)->get($url, [
+            'fields' => 'from{id,name},message',
+            'access_token' => $pageToken,
+        ]);
+
+        if (! $response->successful()) {
+            $error = (string) (
+                $response->json('error.message')
+                ?: $response->json('error.error_user_msg')
+                ?: ('Facebook comment lookup failed (HTTP ' . $response->status() . ').')
+            );
+
+            return [
+                'ok' => false,
+                'error' => $error,
+                'http_status' => $response->status(),
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'from_id' => trim((string) ($response->json('from.id') ?? '')),
+            'from_name' => trim((string) ($response->json('from.name') ?? '')),
+            'message' => trim((string) ($response->json('message') ?? '')),
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
+     * Fetch Page post preview fields for Comments inbox context.
+     *
+     * @return array{ok:bool, post_id?:string, message?:string, story?:string, permalink?:string, picture_url?:string, created_time?:string, error?:string, http_status?:int}
+     */
+    public function fetchPostMeta(MessengerPageConnection $connection, string $postId): array
+    {
+        $postId = trim($postId);
+        $pageToken = (string) $connection->page_access_token;
+
+        if ($postId === '' || $pageToken === '') {
+            return ['ok' => false, 'error' => 'Missing post id or page token.'];
+        }
+
+        $url = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($postId);
+        $response = Http::timeout(20)->get($url, [
+            'fields' => 'id,message,story,permalink_url,full_picture,picture,created_time,attachments{media,title,description,type,url}',
+            'access_token' => $pageToken,
+        ]);
+
+        if (! $response->successful()) {
+            $error = (string) (
+                $response->json('error.message')
+                ?: $response->json('error.error_user_msg')
+                ?: ('Facebook post lookup failed (HTTP ' . $response->status() . ').')
+            );
+
+            return [
+                'ok' => false,
+                'error' => $error,
+                'http_status' => $response->status(),
+            ];
+        }
+
+        $picture = trim((string) ($response->json('full_picture') ?? ''));
+        if ($picture === '') {
+            $picture = trim((string) ($response->json('picture') ?? ''));
+        }
+        if ($picture === '') {
+            $attachments = $response->json('attachments.data');
+            if (is_array($attachments) && isset($attachments[0]) && is_array($attachments[0])) {
+                $media = $attachments[0]['media']['image']['src']
+                    ?? $attachments[0]['media']['source']
+                    ?? null;
+                if (is_string($media) && trim($media) !== '') {
+                    $picture = trim($media);
+                }
+            }
+        }
+
+        return [
+            'ok' => true,
+            'post_id' => trim((string) ($response->json('id') ?? $postId)),
+            'message' => trim((string) ($response->json('message') ?? '')),
+            'story' => trim((string) ($response->json('story') ?? '')),
+            'permalink' => trim((string) ($response->json('permalink_url') ?? '')),
+            'picture_url' => $picture,
+            'created_time' => trim((string) ($response->json('created_time') ?? '')),
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
      * Send a text (or attachment) reply via the Page's messaging API.
      *
      * Meta rejects payloads that include both text and attachment. When both are
@@ -948,6 +1329,12 @@ class MessengerPageOAuthService
             $params['scope'] = $this->scopes();
         }
 
+        // Force Meta to re-prompt when adding new scopes (e.g. comments engagement).
+        $authType = trim((string) ($context['auth_type'] ?? ''));
+        if ($authType !== '') {
+            $params['auth_type'] = $authType;
+        }
+
         return 'https://www.facebook.com/' . $this->graphVersion() . '/dialog/oauth?' . http_build_query($params);
     }
 
@@ -1137,7 +1524,7 @@ class MessengerPageOAuthService
                 ->post(
                     'https://graph.facebook.com/' . $this->graphVersion() . '/' . $connection->page_id . '/subscribed_apps',
                     [
-                        'subscribed_fields' => 'messages,message_echoes,message_reactions,messaging_postbacks,messaging_optins,message_deliveries,message_reads,messaging_referrals',
+                        'subscribed_fields' => 'messages,message_echoes,message_reactions,messaging_postbacks,messaging_optins,message_deliveries,message_reads,messaging_referrals,feed',
                         'access_token' => $connection->page_access_token,
                     ]
                 );
