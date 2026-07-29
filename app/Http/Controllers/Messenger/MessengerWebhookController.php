@@ -38,14 +38,17 @@ class MessengerWebhookController extends Controller
         }
 
         $payload = $request->all();
+        $object = strtolower(trim((string) ($payload['object'] ?? '')));
 
-        if (($payload['object'] ?? '') !== 'page') {
+        // Messenger = "page"; Instagram Messaging = "instagram".
+        if (! in_array($object, ['page', 'instagram'], true)) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Ignored non-page webhook.',
+                'message' => 'Ignored non-messaging webhook.',
             ]);
         }
 
+        $channel = $object === 'instagram' ? 'instagram' : 'messenger';
         $entries = is_array($payload['entry'] ?? null) ? $payload['entry'] : [];
         $events = [];
 
@@ -54,8 +57,11 @@ class MessengerWebhookController extends Controller
                 continue;
             }
 
-            $pageId = (string) ($entry['id'] ?? '');
-            // Primary inbox events + standby (handover protocol) can both carry reactions.
+            $entryId = (string) ($entry['id'] ?? '');
+            // Page webhooks: entry.id = Facebook Page ID.
+            // Instagram webhooks: entry.id = Instagram Business Account ID (map → page later).
+            $pageId = $channel === 'messenger' ? $entryId : '';
+
             $buckets = [];
             if (is_array($entry['messaging'] ?? null)) {
                 $buckets[] = $entry['messaging'];
@@ -70,7 +76,7 @@ class MessengerWebhookController extends Controller
                         continue;
                     }
 
-                    $normalized = $this->normalizeMessagingEvent($pageId, $item);
+                    $normalized = $this->normalizeMessagingEvent($pageId, $item, $channel, $entryId);
                     if ($normalized !== null) {
                         $events[] = $normalized;
                     }
@@ -85,30 +91,53 @@ class MessengerWebhookController extends Controller
             ]);
         }
 
-        // Group by page_id for forwarding.
-        $byPage = [];
+        // Group by lookup key: page_id for Messenger, IG business account id for Instagram.
+        $byLookup = [];
         foreach ($events as $event) {
-            $byPage[$event['page_id']][] = $event;
+            $lookup = $channel === 'instagram'
+                ? (string) ($event['instagram_business_account_id'] ?? '')
+                : (string) ($event['page_id'] ?? '');
+            if ($lookup === '') {
+                continue;
+            }
+            $byLookup[$lookup][] = $event;
         }
 
         $dispatched = 0;
-        foreach ($byPage as $pageId => $pageEvents) {
-            $connections = MessengerPageConnection::query()
-                ->connected()
-                ->where('page_id', $pageId)
-                ->orderByDesc('id')
-                ->get();
+        foreach ($byLookup as $lookupId => $pageEvents) {
+            $connections = $channel === 'instagram'
+                ? MessengerPageConnection::query()
+                    ->connected()
+                    ->where('instagram_business_account_id', $lookupId)
+                    ->orderByDesc('id')
+                    ->get()
+                : MessengerPageConnection::query()
+                    ->connected()
+                    ->where('page_id', $lookupId)
+                    ->orderByDesc('id')
+                    ->get();
 
             if ($connections->isEmpty()) {
-                Log::info('Messenger webhook: no connected page', ['page_id' => $pageId]);
+                Log::info('Messenger webhook: no connected page', [
+                    'channel' => $channel,
+                    'lookup_id' => $lookupId,
+                ]);
                 continue;
             }
 
-            // ACK Meta quickly: enrich + WP forward run after the response (or via queue workers).
             foreach ($connections as $connection) {
+                // Ensure WP always gets Facebook page_id even for Instagram webhooks.
+                $forwardEvents = array_map(static function (array $event) use ($connection, $channel) {
+                    $event['page_id'] = (string) $connection->page_id;
+                    $event['channel'] = $channel;
+                    unset($event['instagram_business_account_id']);
+
+                    return $event;
+                }, $pageEvents);
+
                 ProcessMessengerInboundForward::dispatchAfterResponse(
                     (int) $connection->id,
-                    $pageEvents
+                    $forwardEvents
                 );
                 $dispatched++;
             }
@@ -118,6 +147,7 @@ class MessengerWebhookController extends Controller
             'status' => 'success',
             'message' => 'Webhook received successfully.',
             'queued_forwards' => $dispatched,
+            'channel' => $channel,
         ]);
     }
 
@@ -168,13 +198,19 @@ class MessengerWebhookController extends Controller
 
     /**
      * @param  array<string, mixed>  $item
+     * @param  'messenger'|'instagram'  $channel
      * @return array<string, mixed>|null
      */
-    private function normalizeMessagingEvent(string $pageId, array $item): ?array
-    {
+    private function normalizeMessagingEvent(
+        string $pageId,
+        array $item,
+        string $channel = 'messenger',
+        string $entryId = ''
+    ): ?array {
         $senderId = (string) ($item['sender']['id'] ?? '');
         $recipientId = (string) ($item['recipient']['id'] ?? '');
         $message = is_array($item['message'] ?? null) ? $item['message'] : null;
+        $resolvedPageId = $pageId !== '' ? $pageId : ($channel === 'messenger' ? $recipientId : '');
 
         // Reactions arrive as a standalone webhook event, not as a message.
         $reaction = is_array($item['reaction'] ?? null) ? $item['reaction'] : null;
@@ -191,7 +227,8 @@ class MessengerWebhookController extends Controller
             ));
             if ($targetMid === '' || $senderId === '') {
                 Log::info('Messenger webhook: reaction ignored (missing mid/sender)', [
-                    'page_id' => $pageId,
+                    'page_id' => $resolvedPageId,
+                    'channel' => $channel,
                     'sender_id' => $senderId,
                     'reaction' => $reaction,
                 ]);
@@ -199,18 +236,18 @@ class MessengerWebhookController extends Controller
                 return null;
             }
 
-            Log::info('Messenger webhook: reaction event', [
-                'page_id' => $pageId !== '' ? $pageId : $recipientId,
-                'psid' => $senderId === $pageId ? $recipientId : $senderId,
-                'mid' => $targetMid,
-                'action' => (string) ($reaction['action'] ?? 'react'),
-                'reaction' => (string) ($reaction['reaction'] ?? 'other'),
-                'emoji' => (string) ($reaction['emoji'] ?? ''),
-            ]);
+            $psid = ($resolvedPageId !== '' && $senderId === $resolvedPageId)
+                ? $recipientId
+                : $senderId;
+            // Instagram: business account id is in entry / recipient, never treat as customer.
+            if ($channel === 'instagram' && $entryId !== '' && $senderId === $entryId) {
+                $psid = $recipientId;
+            }
 
-            return [
-                'page_id' => $pageId !== '' ? $pageId : $recipientId,
-                'psid' => $senderId === $pageId ? $recipientId : $senderId,
+            $event = [
+                'page_id' => $resolvedPageId,
+                'psid' => $psid,
+                'channel' => $channel,
                 'event_type' => 'reaction',
                 'is_echo' => false,
                 'sender_profile' => [
@@ -224,6 +261,11 @@ class MessengerWebhookController extends Controller
                     'emoji' => (string) ($reaction['emoji'] ?? ''),
                 ],
             ];
+            if ($channel === 'instagram' && $entryId !== '') {
+                $event['instagram_business_account_id'] = $entryId;
+            }
+
+            return $event;
         }
 
         // Page-sent echoes: sender is the Page, recipient is the customer PSID.
@@ -231,7 +273,10 @@ class MessengerWebhookController extends Controller
         // with Facebook CDN URLs (same display path as inbound customer media).
         $isEcho = is_array($message) && ! empty($message['is_echo']);
         if ($isEcho) {
-            if ($recipientId === '' || $pageId === '') {
+            if ($recipientId === '') {
+                return null;
+            }
+            if ($channel === 'messenger' && $pageId === '') {
                 return null;
             }
 
@@ -257,9 +302,10 @@ class MessengerWebhookController extends Controller
                 }
             }
 
-            return [
-                'page_id' => $pageId,
+            $event = [
+                'page_id' => $resolvedPageId,
                 'psid' => $recipientId,
+                'channel' => $channel,
                 'is_echo' => true,
                 'sender_profile' => [
                     'name' => '',
@@ -275,10 +321,21 @@ class MessengerWebhookController extends Controller
                     'referral' => null,
                 ],
             ];
+            if ($channel === 'instagram' && $entryId !== '') {
+                $event['instagram_business_account_id'] = $entryId;
+            }
+
+            return $event;
         }
 
         // Echo / page-as-sender without is_echo payload — ignore.
-        if ($senderId === '' || $senderId === $pageId) {
+        if ($senderId === '') {
+            return null;
+        }
+        if ($channel === 'messenger' && $senderId === $pageId) {
+            return null;
+        }
+        if ($channel === 'instagram' && $entryId !== '' && $senderId === $entryId) {
             return null;
         }
 
@@ -351,9 +408,10 @@ class MessengerWebhookController extends Controller
             ];
         }
 
-        return [
-            'page_id' => $pageId !== '' ? $pageId : $recipientId,
+        $event = [
+            'page_id' => $resolvedPageId,
             'psid' => $senderId,
+            'channel' => $channel,
             'is_echo' => false,
             'sender_profile' => [
                 'name' => '',
@@ -369,5 +427,10 @@ class MessengerWebhookController extends Controller
                 'referral' => $referral,
             ],
         ];
+        if ($channel === 'instagram' && $entryId !== '') {
+            $event['instagram_business_account_id'] = $entryId;
+        }
+
+        return $event;
     }
 }

@@ -158,36 +158,76 @@ class MessengerPageOAuthService
     }
 
     /**
-     * @return array{name:string,profile_pic:string}
+     * Linked Instagram professional account for a Facebook Page (if any).
+     *
+     * Prefer Page access token; fall back to user token via /me/accounts when the
+     * Page token lacks pages_read_engagement / Instagram scopes.
+     *
+     * @return array{id:string,username:string}
      */
-    public function fetchSenderProfile(string $psid, string $pageAccessToken): array
-    {
-        $fallback = ['name' => '', 'profile_pic' => ''];
-        $psid = trim($psid);
-        if ($psid === '' || $pageAccessToken === '') {
+    public function fetchPageInstagramAccount(
+        string $pageId,
+        string $pageAccessToken,
+        string $userAccessToken = ''
+    ): array {
+        $fallback = ['id' => '', 'username' => ''];
+        $pageId = trim($pageId);
+        $pageAccessToken = trim($pageAccessToken);
+        $userAccessToken = trim($userAccessToken);
+        if ($pageId === '') {
             return $fallback;
         }
 
-        $cacheKey = 'messenger.psid.' . $psid;
-        $cached = Cache::get($cacheKey);
-        if (is_array($cached)) {
-            return [
-                'name' => (string) ($cached['name'] ?? ''),
-                'profile_pic' => (string) ($cached['profile_pic'] ?? ''),
-            ];
+        if ($pageAccessToken !== '') {
+            try {
+                $response = Http::timeout(20)->get(
+                    'https://graph.facebook.com/' . $this->graphVersion() . '/' . $pageId,
+                    [
+                        'fields' => 'instagram_business_account{id,username}',
+                        'access_token' => $pageAccessToken,
+                    ]
+                );
+
+                if ($response->successful()) {
+                    $ig = $response->json('instagram_business_account');
+                    if (is_array($ig)) {
+                        $id = trim((string) ($ig['id'] ?? ''));
+                        $username = trim((string) ($ig['username'] ?? ''));
+                        if ($id !== '' || $username !== '') {
+                            return ['id' => $id, 'username' => $username];
+                        }
+                    }
+                } else {
+                    Log::info('Messenger IG account lookup via page token failed', [
+                        'page_id' => $pageId,
+                        'status' => $response->status(),
+                        'body' => $response->body(),
+                    ]);
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Messenger IG account lookup exception', [
+                    'page_id' => $pageId,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        if ($userAccessToken === '') {
+            return $fallback;
         }
 
         try {
-            $response = Http::timeout(15)->get(
-                'https://graph.facebook.com/' . $this->graphVersion() . '/' . $psid,
+            $response = Http::timeout(25)->get(
+                'https://graph.facebook.com/' . $this->graphVersion() . '/me/accounts',
                 [
-                    'fields' => 'name,profile_pic',
-                    'access_token' => $pageAccessToken,
+                    'fields' => 'id,instagram_business_account{id,username}',
+                    'access_token' => $userAccessToken,
+                    'limit' => 100,
                 ]
             );
         } catch (\Throwable $exception) {
-            Log::warning('Messenger sender profile exception', [
-                'psid' => $psid,
+            Log::warning('Messenger IG account /me/accounts exception', [
+                'page_id' => $pageId,
                 'message' => $exception->getMessage(),
             ]);
 
@@ -195,17 +235,170 @@ class MessengerPageOAuthService
         }
 
         if (! $response->successful()) {
+            Log::info('Messenger IG account /me/accounts failed', [
+                'page_id' => $pageId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
             return $fallback;
         }
 
+        $rows = $response->json('data');
+        if (! is_array($rows)) {
+            return $fallback;
+        }
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if (trim((string) ($row['id'] ?? '')) !== $pageId) {
+                continue;
+            }
+            $ig = is_array($row['instagram_business_account'] ?? null)
+                ? $row['instagram_business_account']
+                : [];
+
+            return [
+                'id' => trim((string) ($ig['id'] ?? '')),
+                'username' => trim((string) ($ig['username'] ?? '')),
+            ];
+        }
+
+        return $fallback;
+    }
+
+    /**
+     * Persist / refresh Instagram linkage on an existing Page connection.
+     *
+     * @return array{id:string,username:string,changed:bool}
+     */
+    public function syncInstagramLinkage(MessengerPageConnection $connection, bool $force = false): array
+    {
+        $existingId = trim((string) ($connection->instagram_business_account_id ?? ''));
+        $existingUsername = trim((string) ($connection->instagram_username ?? ''));
+
+        if (! $force && $existingId !== '') {
+            return [
+                'id' => $existingId,
+                'username' => $existingUsername,
+                'changed' => false,
+            ];
+        }
+
+        $ig = $this->fetchPageInstagramAccount(
+            (string) $connection->page_id,
+            (string) $connection->page_access_token,
+            (string) ($connection->user_access_token ?? '')
+        );
+
+        $changed = ($ig['id'] !== $existingId) || ($ig['username'] !== $existingUsername);
+        if ($changed) {
+            $connection->instagram_business_account_id = $ig['id'] !== '' ? $ig['id'] : null;
+            $connection->instagram_username = $ig['username'] !== '' ? $ig['username'] : null;
+            $connection->save();
+        }
+
+        return [
+            'id' => $ig['id'],
+            'username' => $ig['username'],
+            'changed' => $changed,
+        ];
+    }
+
+    /**
+     * @param  'messenger'|'instagram'  $channel
+     * @return array{name:string,profile_pic:string,username:string}
+     */
+    public function fetchSenderProfile(
+        string $psid,
+        string $pageAccessToken,
+        string $channel = 'messenger'
+    ): array {
+        $fallback = ['name' => '', 'profile_pic' => '', 'username' => ''];
+        $psid = trim($psid);
+        $channel = $channel === 'instagram' ? 'instagram' : 'messenger';
+        if ($psid === '' || $pageAccessToken === '') {
+            return $fallback;
+        }
+
+        $cacheKey = 'messenger.psid.' . $channel . '.' . $psid;
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return [
+                'name' => (string) ($cached['name'] ?? ''),
+                'profile_pic' => (string) ($cached['profile_pic'] ?? ''),
+                'username' => (string) ($cached['username'] ?? ''),
+            ];
+        }
+
+        $fields = $channel === 'instagram'
+            ? 'name,username,profile_pic'
+            : 'name,profile_pic';
+
+        try {
+            $response = Http::timeout(15)->get(
+                'https://graph.facebook.com/' . $this->graphVersion() . '/' . $psid,
+                [
+                    'fields' => $fields,
+                    'access_token' => $pageAccessToken,
+                ]
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('Messenger sender profile exception', [
+                'psid' => $psid,
+                'channel' => $channel,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $fallback;
+        }
+
+        if (! $response->successful()) {
+            Log::info('Messenger sender profile failed', [
+                'psid' => $psid,
+                'channel' => $channel,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return $fallback;
+        }
+
+        $username = trim((string) ($response->json('username') ?? ''));
+        $name = trim((string) ($response->json('name') ?? ''));
+        if ($name === '' && $username !== '') {
+            $name = $username;
+        }
+        $profilePic = trim((string) ($response->json('profile_pic') ?? ''));
+        if ($profilePic === '' && $channel === 'instagram' && $username !== '') {
+            $profilePic = $this->instagramPublicAvatarUrl($username);
+        }
+
         $profile = [
-            'name' => trim((string) ($response->json('name') ?? '')),
-            'profile_pic' => (string) ($response->json('profile_pic') ?? ''),
+            'name' => $name,
+            'profile_pic' => $profilePic,
+            'username' => $username,
         ];
 
         Cache::put($cacheKey, $profile, now()->addHours(12));
 
         return $profile;
+    }
+
+    /**
+     * Best-effort public Instagram avatar when Graph User Profile is unavailable
+     * (common before Advanced Access approval).
+     */
+    public function instagramPublicAvatarUrl(string $username): string
+    {
+        $username = ltrim(trim($username), '@');
+        if ($username === '' || ! preg_match('/^[A-Za-z0-9._]{1,30}$/', $username)) {
+            return '';
+        }
+
+        return 'https://unavatar.io/instagram/' . rawurlencode($username);
     }
 
     /**
@@ -689,7 +882,7 @@ class MessengerPageOAuthService
         $response = Http::timeout(25)->get(
             'https://graph.facebook.com/' . $this->graphVersion() . '/me/accounts',
             [
-                'fields' => 'id,name,access_token,picture{url}',
+                'fields' => 'id,name,access_token,picture{url},instagram_business_account{id,username}',
                 'access_token' => $userAccessToken,
                 'limit' => 100,
             ]
@@ -728,11 +921,17 @@ class MessengerPageOAuthService
                 $picture = (string) $row['picture']['url'];
             }
 
+            $ig = is_array($row['instagram_business_account'] ?? null)
+                ? $row['instagram_business_account']
+                : [];
+
             $pages[] = [
                 'id' => $id,
                 'name' => (string) ($row['name'] ?? 'Facebook Page'),
                 'access_token' => $token,
                 'picture' => $picture,
+                'instagram_business_account_id' => trim((string) ($ig['id'] ?? '')),
+                'instagram_username' => trim((string) ($ig['username'] ?? '')),
             ];
         }
 
@@ -768,6 +967,18 @@ class MessengerPageOAuthService
                 'disconnected_at' => $now,
             ]);
 
+        $ig = $this->fetchPageInstagramAccount(
+            (string) $page['id'],
+            (string) $page['access_token'],
+            $userAccessToken
+        );
+        if ($ig['id'] === '' && ! empty($page['instagram_business_account_id'])) {
+            $ig = [
+                'id' => trim((string) $page['instagram_business_account_id']),
+                'username' => trim((string) ($page['instagram_username'] ?? '')),
+            ];
+        }
+
         $connection = MessengerPageConnection::query()->updateOrCreate(
             [
                 'access_token_id' => $accessTokenId,
@@ -780,6 +991,8 @@ class MessengerPageOAuthService
                 'page_picture' => $page['picture'] ?? null,
                 'page_access_token' => $page['access_token'],
                 'user_access_token' => $userAccessToken,
+                'instagram_business_account_id' => $ig['id'] !== '' ? $ig['id'] : null,
+                'instagram_username' => $ig['username'] !== '' ? $ig['username'] : null,
                 'scopes' => array_values(array_filter(array_map('trim', explode(',', $this->scopes())))),
                 'status' => 'connected',
                 'site_url' => rtrim((string) ($context['site_url'] ?? ''), '/'),

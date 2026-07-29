@@ -257,6 +257,7 @@ class MessengerConnectController extends Controller
         $result = $sync->sync($connection, [
             'max_conversations' => (int) $request->input('max_conversations', 25),
             'max_messages_per_conversation' => (int) $request->input('max_messages', 40),
+            'channel' => (string) $request->input('channel', 'messenger'),
         ]);
 
         $ok = ! empty($result['ok']);

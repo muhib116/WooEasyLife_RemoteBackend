@@ -19,7 +19,11 @@ class MessengerConversationHistorySync
     }
 
     /**
-     * @param  array{max_conversations?:int,max_messages_per_conversation?:int}  $options
+     * @param  array{
+     *   max_conversations?:int,
+     *   max_messages_per_conversation?:int,
+     *   channel?:string
+     * }  $options
      * @return array<string, mixed>
      */
     public function sync(MessengerPageConnection $connection, array $options = []): array
@@ -36,10 +40,33 @@ class MessengerConversationHistorySync
             ];
         }
 
+        $channel = strtolower(trim((string) ($options['channel'] ?? 'messenger')));
+        if (! in_array($channel, ['messenger', 'instagram'], true)) {
+            $channel = 'messenger';
+        }
+        $platform = $channel === 'instagram' ? 'instagram' : 'messenger';
+        $label = $channel === 'instagram' ? 'Instagram' : 'Messenger';
+
+        $igAccountId = trim((string) ($connection->instagram_business_account_id ?? ''));
+        if ($channel === 'instagram' && $igAccountId === '') {
+            try {
+                $this->oauth->syncInstagramLinkage($connection, true);
+                $connection->refresh();
+                $igAccountId = trim((string) ($connection->instagram_business_account_id ?? ''));
+            } catch (\Throwable) {
+                // Continue — Graph may still return IG conversations for the Page.
+            }
+        }
+
+        $businessIds = array_values(array_filter(array_unique([
+            $pageId,
+            $igAccountId,
+        ])));
+
         $maxConversations = max(1, min(50, (int) ($options['max_conversations'] ?? 25)));
         $maxMessages = max(1, min(100, (int) ($options['max_messages_per_conversation'] ?? 40)));
 
-        $list = $this->fetchConversations($pageId, $token, $maxConversations);
+        $list = $this->fetchConversations($pageId, $token, $maxConversations, $platform);
         if (! empty($list['error'])) {
             return [
                 'ok' => false,
@@ -47,6 +74,7 @@ class MessengerConversationHistorySync
                 'conversations' => 0,
                 'messages' => 0,
                 'forwarded' => 0,
+                'channel' => $channel,
             ];
         }
 
@@ -61,7 +89,7 @@ class MessengerConversationHistorySync
                 continue;
             }
 
-            $psid = $this->resolveCustomerPsid($conversation, $pageId);
+            $psid = $this->resolveCustomerPsid($conversation, $businessIds);
             if ($psid === '') {
                 continue;
             }
@@ -73,7 +101,14 @@ class MessengerConversationHistorySync
 
             $events = [];
             foreach ($messages as $message) {
-                $event = $this->normalizeHistoryMessage($pageId, $psid, $participantName, $message);
+                $event = $this->normalizeHistoryMessage(
+                    $pageId,
+                    $psid,
+                    $participantName,
+                    $message,
+                    $channel,
+                    $businessIds
+                );
                 if ($event === null) {
                     continue;
                 }
@@ -87,17 +122,31 @@ class MessengerConversationHistorySync
 
             // Enrich this thread's inbound profile once (best effort).
             if (! array_key_exists($psid, $profileCache)) {
-                $profileCache[$psid] = $this->oauth->fetchSenderProfile($psid, $token);
+                $profileCache[$psid] = $this->oauth->fetchSenderProfile($psid, $token, $channel);
             }
             $profile = $profileCache[$psid];
-            if (($profile['name'] ?? '') !== '' || ($profile['profile_pic'] ?? '') !== '') {
+            $profileName = (string) ($profile['name'] ?? '');
+            $profilePic = (string) ($profile['profile_pic'] ?? '');
+            $profileUsername = (string) ($profile['username'] ?? '');
+            if ($profileName === '' && $participantName !== '') {
+                $profileName = $participantName;
+            }
+            if ($profilePic === '' && $channel === 'instagram') {
+                $profilePic = $this->oauth->instagramPublicAvatarUrl(
+                    $profileUsername !== '' ? $profileUsername : $participantName
+                );
+            }
+            if ($profileName !== '' || $profilePic !== '') {
                 foreach ($events as &$event) {
                     if (! empty($event['is_echo'])) {
                         continue;
                     }
                     $event['sender_profile'] = [
-                        'name' => (string) ($profile['name'] ?? ($event['sender_profile']['name'] ?? '')),
-                        'profile_pic' => (string) ($profile['profile_pic'] ?? ''),
+                        'name' => $profileName !== ''
+                            ? $profileName
+                            : (string) ($event['sender_profile']['name'] ?? ''),
+                        'profile_pic' => $profilePic,
+                        'username' => $profileUsername,
                     ];
                 }
                 unset($event);
@@ -113,6 +162,7 @@ class MessengerConversationHistorySync
                 } else {
                     Log::warning('Messenger history sync forward failed', [
                         'page_id' => $pageId,
+                        'channel' => $channel,
                         'conversation_id' => $conversationId,
                         'chunk_size' => count($chunk),
                         'result' => $result,
@@ -124,10 +174,11 @@ class MessengerConversationHistorySync
         if ($messageCount === 0) {
             return [
                 'ok' => true,
-                'message' => 'No Messenger conversations found to import.',
+                'message' => "No {$label} conversations found to import.",
                 'conversations' => count($conversations),
                 'messages' => 0,
                 'forwarded' => 0,
+                'channel' => $channel,
             ];
         }
 
@@ -136,31 +187,36 @@ class MessengerConversationHistorySync
             'message' => $forwarded > 0
                 ? (
                     $forwarded < $messageCount
-                        ? 'Imported Messenger history with some forwarding gaps.'
-                        : 'Imported Messenger conversation history.'
+                        ? "Imported {$label} history with some forwarding gaps."
+                        : "Imported {$label} conversation history."
                 )
                 : 'Fetched history but could not reach WordPress.',
             'conversations' => count($conversations),
             'messages' => $messageCount,
             'forwarded' => $forwarded,
             'partial' => $forwarded > 0 && $forwarded < $messageCount,
+            'channel' => $channel,
         ];
     }
 
     /**
+     * @param  'messenger'|'instagram'  $platform
      * @return array{rows?:array<int, array<string, mixed>>, error?:string}
      */
-    private function fetchConversations(string $pageId, string $token, int $limit): array
+    private function fetchConversations(string $pageId, string $token, int $limit, string $platform = 'messenger'): array
     {
         $url = 'https://graph.facebook.com/' . $this->oauth->graphVersion() . '/' . $pageId . '/conversations';
         $rows = [];
         $after = null;
         $firstError = '';
+        $fields = $platform === 'instagram'
+            ? 'id,updated_time,participants{id,username,name}'
+            : 'id,updated_time,participants{id,name}';
 
         while (count($rows) < $limit) {
             $query = [
-                'platform' => 'messenger',
-                'fields' => 'id,updated_time,participants{id,name}',
+                'platform' => $platform,
+                'fields' => $fields,
                 'limit' => min(25, $limit - count($rows)),
                 'access_token' => $token,
             ];
@@ -181,6 +237,7 @@ class MessengerConversationHistorySync
 
                 Log::warning('Messenger conversations list failed', [
                     'page_id' => $pageId,
+                    'platform' => $platform,
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
@@ -244,20 +301,23 @@ class MessengerConversationHistorySync
 
     /**
      * @param  array<string, mixed>  $conversation
+     * @param  array<int, string>  $businessIds  Page ID and/or IG business account ID to skip
      */
-    private function resolveCustomerPsid(array $conversation, string $pageId): string
+    private function resolveCustomerPsid(array $conversation, array $businessIds): string
     {
         $participants = $conversation['participants']['data'] ?? null;
         if (! is_array($participants)) {
             return '';
         }
 
+        $skip = array_fill_keys(array_filter(array_map('strval', $businessIds)), true);
+
         foreach ($participants as $participant) {
             if (! is_array($participant)) {
                 continue;
             }
             $id = trim((string) ($participant['id'] ?? ''));
-            if ($id !== '' && $id !== $pageId) {
+            if ($id !== '' && ! isset($skip[$id])) {
                 return $id;
             }
         }
@@ -280,7 +340,12 @@ class MessengerConversationHistorySync
                 continue;
             }
             if (trim((string) ($participant['id'] ?? '')) === $psid) {
-                return trim((string) ($participant['name'] ?? ''));
+                $name = trim((string) ($participant['name'] ?? ''));
+                if ($name !== '') {
+                    return $name;
+                }
+
+                return trim((string) ($participant['username'] ?? ''));
             }
         }
 
@@ -289,13 +354,17 @@ class MessengerConversationHistorySync
 
     /**
      * @param  array<string, mixed>  $message
+     * @param  'messenger'|'instagram'  $channel
+     * @param  array<int, string>  $businessIds
      * @return array<string, mixed>|null
      */
     private function normalizeHistoryMessage(
         string $pageId,
         string $psid,
         string $participantName,
-        array $message
+        array $message,
+        string $channel = 'messenger',
+        array $businessIds = []
     ): ?array {
         $mid = trim((string) ($message['id'] ?? ''));
         if ($mid === '') {
@@ -303,8 +372,9 @@ class MessengerConversationHistorySync
         }
 
         $fromId = trim((string) ($message['from']['id'] ?? ''));
+        $skip = array_fill_keys(array_filter(array_map('strval', $businessIds ?: [$pageId])), true);
         // Missing `from` still belongs to this thread — treat as customer inbound.
-        $isEcho = $fromId !== '' && $fromId === $pageId;
+        $isEcho = $fromId !== '' && isset($skip[$fromId]);
         $text = trim((string) ($message['message'] ?? ''));
         $createdTime = trim((string) ($message['created_time'] ?? ''));
         $attachments = $this->normalizeAttachments($message);
@@ -331,6 +401,7 @@ class MessengerConversationHistorySync
         return [
             'page_id' => $pageId,
             'psid' => $psid,
+            'channel' => $channel === 'instagram' ? 'instagram' : 'messenger',
             'is_echo' => $isEcho,
             'source' => 'history_sync',
             'created_time' => $createdTime,

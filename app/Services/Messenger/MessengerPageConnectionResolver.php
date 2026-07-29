@@ -59,7 +59,15 @@ class MessengerPageConnectionResolver
     }
 
     /**
-     * @return array{connected:bool,page_id:?string,page_name:?string,page_picture:?string}
+     * @return array{
+     *   connected:bool,
+     *   page_id:?string,
+     *   page_name:?string,
+     *   page_picture:?string,
+     *   instagram_linked?:bool,
+     *   instagram_business_account_id?:string,
+     *   instagram_username?:string
+     * }
      */
     public function statusPayload(AccessToken $accessToken, string $pageId = ''): array
     {
@@ -71,14 +79,36 @@ class MessengerPageConnectionResolver
                 'page_id' => null,
                 'page_name' => null,
                 'page_picture' => null,
+                'instagram_linked' => false,
+                'instagram_business_account_id' => '',
+                'instagram_username' => '',
             ];
         }
+
+        // Backfill IG account id for older connections (needed to route object=instagram webhooks).
+        if (trim((string) ($connection->instagram_business_account_id ?? '')) === '') {
+            try {
+                app(MessengerPageOAuthService::class)->syncInstagramLinkage($connection, true);
+                $connection = $connection->fresh() ?: $connection;
+            } catch (\Throwable $exception) {
+                Log::info('messenger.instagram_linkage_status_backfill_failed', [
+                    'page_id' => $connection->page_id,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $igAccountId = trim((string) ($connection->instagram_business_account_id ?? ''));
+        $igUsername = trim((string) ($connection->instagram_username ?? ''));
 
         return [
             'connected' => true,
             'page_id' => (string) $connection->page_id,
             'page_name' => (string) ($connection->page_name ?? ''),
             'page_picture' => (string) ($connection->page_picture ?? ''),
+            'instagram_linked' => $igAccountId !== '' || $igUsername !== '',
+            'instagram_business_account_id' => $igAccountId,
+            'instagram_username' => $igUsername,
         ];
     }
 

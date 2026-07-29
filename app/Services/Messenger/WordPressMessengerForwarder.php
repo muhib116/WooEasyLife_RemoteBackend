@@ -16,13 +16,23 @@ class WordPressMessengerForwarder
      */
     public function notifyPageConnected(MessengerPageConnection $connection, array $payload = []): array
     {
+        $igAccountId = trim((string) ($connection->instagram_business_account_id ?? ''));
+        $igUsername = trim((string) ($connection->instagram_username ?? ''));
+        $instagramLinked = $igAccountId !== '' || $igUsername !== '';
+
         $body = array_merge([
             'page_id' => $connection->page_id,
             'page_name' => $connection->page_name,
             'page_picture' => $connection->page_picture,
-            'meta' => [
+            'instagram_linked' => $instagramLinked,
+            'instagram_business_account_id' => $igAccountId,
+            'instagram_username' => $igUsername,
+            'meta' => array_filter([
                 'connected_at' => optional($connection->connected_at)->toDateTimeString(),
-            ],
+                'instagram_business_account_id' => $igAccountId !== '' ? $igAccountId : null,
+                'instagram_username' => $igUsername !== '' ? $igUsername : null,
+                'instagram_linked' => $instagramLinked ? true : null,
+            ], static fn ($v) => $v !== null && $v !== ''),
         ], $payload);
 
         return $this->forward($connection, $body, 'messenger/page-connected');

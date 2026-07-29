@@ -37,14 +37,34 @@ class MessengerInboundEnricher
             }
 
             if (! array_key_exists($psid, $cache)) {
-                $cache[$psid] = $this->oauth->fetchSenderProfile($psid, $pageToken);
+                $channel = (($event['channel'] ?? '') === 'instagram') ? 'instagram' : 'messenger';
+                $cache[$psid] = $this->oauth->fetchSenderProfile($psid, $pageToken, $channel);
             }
 
             $profile = $cache[$psid];
-            if (($profile['name'] ?? '') !== '' || ($profile['profile_pic'] ?? '') !== '') {
+            $existing = is_array($event['sender_profile'] ?? null) ? $event['sender_profile'] : [];
+            $name = (string) ($profile['name'] ?? '');
+            $pic = (string) ($profile['profile_pic'] ?? '');
+            $username = (string) ($profile['username'] ?? '');
+            if ($name === '' && $username !== '') {
+                $name = $username;
+            }
+            if ($name === '') {
+                $name = (string) ($existing['name'] ?? '');
+            }
+            if ($pic === '' && (($event['channel'] ?? '') === 'instagram')) {
+                $hint = $username !== '' ? $username : (string) ($existing['name'] ?? '');
+                $pic = $this->oauth->instagramPublicAvatarUrl($hint);
+            }
+            if ($pic === '') {
+                $pic = (string) ($existing['profile_pic'] ?? '');
+            }
+
+            if ($name !== '' || $pic !== '') {
                 $event['sender_profile'] = [
-                    'name' => (string) ($profile['name'] ?? ''),
-                    'profile_pic' => (string) ($profile['profile_pic'] ?? ''),
+                    'name' => $name,
+                    'profile_pic' => $pic,
+                    'username' => $username,
                 ];
             }
         }

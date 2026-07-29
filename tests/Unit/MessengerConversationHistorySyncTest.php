@@ -94,8 +94,44 @@ class MessengerConversationHistorySyncTest extends TestCase
                     ['id' => 'user_999', 'name' => 'Buyer'],
                 ],
             ],
-        ], 'page_123']);
+        ], ['page_123']]);
 
         $this->assertSame('user_999', $psid);
+    }
+
+    public function test_normalize_history_sets_instagram_channel(): void
+    {
+        $event = $this->invoke($this->service(), 'normalizeHistoryMessage', [
+            'page_123',
+            'igsid_456',
+            'hulk__1829',
+            [
+                'id' => 'm_ig',
+                'message' => 'Price koto',
+                'from' => ['id' => 'igsid_456'],
+                'created_time' => '2026-07-27T10:01:00+0000',
+            ],
+            'instagram',
+            ['page_123', 'ig_biz_1'],
+        ]);
+
+        $this->assertIsArray($event);
+        $this->assertSame('instagram', $event['channel']);
+        $this->assertFalse($event['is_echo']);
+        $this->assertSame('hulk__1829', $event['sender_profile']['name']);
+    }
+
+    public function test_resolve_customer_psid_skips_instagram_business_id(): void
+    {
+        $psid = $this->invoke($this->service(), 'resolveCustomerPsid', [[
+            'participants' => [
+                'data' => [
+                    ['id' => 'ig_biz_1', 'username' => 'halalfabric'],
+                    ['id' => 'igsid_999', 'username' => 'hulk__1829'],
+                ],
+            ],
+        ], ['page_123', 'ig_biz_1']]);
+
+        $this->assertSame('igsid_999', $psid);
     }
 }
