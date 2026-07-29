@@ -305,6 +305,7 @@ class MessengerConnectController extends Controller
      */
     public function refreshProfiles(
         Request $request,
+        CourierAccountService $accounts,
         MessengerPageConnectionResolver $resolver,
         MessengerPageOAuthService $oauth
     ) {
@@ -315,7 +316,13 @@ class MessengerConnectController extends Controller
             'channel' => 'nullable|string|in:messenger,instagram',
         ]);
 
-        $connection = $resolver->resolveForSite($request);
+        $accessToken = $accounts->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Unauthorized.', 401);
+        }
+
+        $pageId = trim((string) $request->input('page_id', ''));
+        $connection = $resolver->resolve($accessToken, $pageId);
         if (! $connection) {
             return $this->errorResponse('Page not connected.', 404);
         }
