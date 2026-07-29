@@ -309,14 +309,14 @@ class MessengerPageOAuthService
 
     /**
      * @param  'messenger'|'instagram'  $channel
-     * @return array{name:string,profile_pic:string,username:string}
+     * @return array{name:string,profile_pic:string,username:string,gender:string}
      */
     public function fetchSenderProfile(
         string $psid,
         string $pageAccessToken,
         string $channel = 'messenger'
     ): array {
-        $fallback = ['name' => '', 'profile_pic' => '', 'username' => ''];
+        $fallback = ['name' => '', 'profile_pic' => '', 'username' => '', 'gender' => ''];
         $psid = trim($psid);
         $channel = $channel === 'instagram' ? 'instagram' : 'messenger';
         if ($psid === '' || $pageAccessToken === '') {
@@ -330,12 +330,15 @@ class MessengerPageOAuthService
                 'name' => (string) ($cached['name'] ?? ''),
                 'profile_pic' => (string) ($cached['profile_pic'] ?? ''),
                 'username' => (string) ($cached['username'] ?? ''),
+                'gender' => $this->normalizeSenderGender($cached['gender'] ?? ''),
             ];
         }
 
+        // Messenger User Profile supports gender with pages_user_gender.
+        // Instagram User Profile typically has no gender field.
         $fields = $channel === 'instagram'
             ? 'name,username,profile_pic'
-            : 'name,profile_pic';
+            : 'name,profile_pic,gender';
 
         try {
             $response = Http::timeout(15)->get(
@@ -375,16 +378,36 @@ class MessengerPageOAuthService
         if ($profilePic === '' && $channel === 'instagram' && $username !== '') {
             $profilePic = $this->instagramPublicAvatarUrl($username);
         }
+        $gender = $channel === 'messenger'
+            ? $this->normalizeSenderGender($response->json('gender') ?? '')
+            : '';
 
         $profile = [
             'name' => $name,
             'profile_pic' => $profilePic,
             'username' => $username,
+            'gender' => $gender,
         ];
 
         Cache::put($cacheKey, $profile, now()->addHours(12));
 
         return $profile;
+    }
+
+    /**
+     * Normalize Meta User Profile gender to male|female|''.
+     */
+    public function normalizeSenderGender(mixed $raw): string
+    {
+        $value = strtolower(trim((string) $raw));
+        if (in_array($value, ['male', 'm', 'man', 'boy'], true)) {
+            return 'male';
+        }
+        if (in_array($value, ['female', 'f', 'woman', 'girl'], true)) {
+            return 'female';
+        }
+
+        return '';
     }
 
     /**

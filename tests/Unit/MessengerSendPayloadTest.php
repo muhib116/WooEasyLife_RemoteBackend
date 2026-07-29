@@ -217,6 +217,55 @@ class MessengerSendPayloadTest extends TestCase
         });
     }
 
+    public function test_generic_template_attachment_is_preserved_in_graph_body(): void
+    {
+        $this->fakeGraph();
+
+        $template = [
+            'type' => 'template',
+            'payload' => [
+                'template_type' => 'generic',
+                'elements' => [
+                    [
+                        'title' => 'Daily Care Oil',
+                        'image_url' => 'https://cdn.example.com/oil.jpg',
+                        'subtitle' => '৳ 450',
+                        'buttons' => [
+                            [
+                                'type' => 'postback',
+                                'title' => 'নিতে চাই',
+                                'payload' => 'WEL_PRODUCT_SELECT:42',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->sendMessage($this->connection(), 'PSID123', '', [
+            'attachment' => $template,
+        ]);
+
+        $this->assertTrue($result['ok']);
+
+        Http::assertSent(function ($request) use ($template) {
+            $body = $request->data();
+            $attachment = $body['message']['attachment'] ?? null;
+            $this->assertIsArray($attachment);
+            $this->assertSame('template', $attachment['type'] ?? null);
+            $this->assertSame('generic', $attachment['payload']['template_type'] ?? null);
+            $this->assertSame(
+                'WEL_PRODUCT_SELECT:42',
+                $attachment['payload']['elements'][0]['buttons'][0]['payload'] ?? null
+            );
+            $this->assertSame($template['payload']['elements'][0]['image_url'], $attachment['payload']['elements'][0]['image_url'] ?? null);
+            $this->assertArrayNotHasKey('text', $body['message'] ?? []);
+
+            return true;
+        });
+    }
+
     public function test_delete_message_issues_graph_delete(): void
     {
         Http::fake([

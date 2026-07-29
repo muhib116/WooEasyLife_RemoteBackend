@@ -54,6 +54,80 @@ class MessengerPageOAuthServiceTest extends TestCase
         $this->assertArrayNotHasKey('override_default_response_type', $query);
     }
 
+    public function test_normalize_sender_gender(): void
+    {
+        $oauth = app(MessengerPageOAuthService::class);
+
+        $this->assertSame('male', $oauth->normalizeSenderGender('male'));
+        $this->assertSame('male', $oauth->normalizeSenderGender('Male'));
+        $this->assertSame('female', $oauth->normalizeSenderGender('female'));
+        $this->assertSame('female', $oauth->normalizeSenderGender('F'));
+        $this->assertSame('', $oauth->normalizeSenderGender('unknown'));
+        $this->assertSame('', $oauth->normalizeSenderGender(null));
+    }
+
+    public function test_fetch_sender_profile_requests_gender_for_messenger(): void
+    {
+        config()->set('services.messenger.graph_version', 'v21.0');
+        \Illuminate\Support\Facades\Cache::flush();
+        \Illuminate\Support\Facades\Http::fake([
+            'graph.facebook.com/*' => \Illuminate\Support\Facades\Http::response([
+                'name' => 'Sadia Khan',
+                'profile_pic' => 'https://cdn.example.com/sadia.jpg',
+                'gender' => 'female',
+            ], 200),
+        ]);
+
+        $profile = app(MessengerPageOAuthService::class)->fetchSenderProfile(
+            'PSID123',
+            'PAGE_TOKEN',
+            'messenger'
+        );
+
+        $this->assertSame('Sadia Khan', $profile['name']);
+        $this->assertSame('https://cdn.example.com/sadia.jpg', $profile['profile_pic']);
+        $this->assertSame('female', $profile['gender']);
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            $data = $request->data();
+
+            return str_contains($request->url(), '/PSID123')
+                && str_contains((string) ($data['fields'] ?? ''), 'gender')
+                && str_contains((string) ($data['fields'] ?? ''), 'profile_pic');
+        });
+    }
+
+    public function test_fetch_sender_profile_omits_gender_field_for_instagram(): void
+    {
+        config()->set('services.messenger.graph_version', 'v21.0');
+        \Illuminate\Support\Facades\Cache::flush();
+        \Illuminate\Support\Facades\Http::fake([
+            'graph.facebook.com/*' => \Illuminate\Support\Facades\Http::response([
+                'name' => 'shop_customer',
+                'username' => 'shop_customer',
+                'profile_pic' => 'https://cdn.example.com/ig.jpg',
+            ], 200),
+        ]);
+
+        $profile = app(MessengerPageOAuthService::class)->fetchSenderProfile(
+            'IGSID123',
+            'PAGE_TOKEN',
+            'instagram'
+        );
+
+        $this->assertSame('shop_customer', $profile['name']);
+        $this->assertSame('', $profile['gender']);
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            $data = $request->data();
+            $fields = (string) ($data['fields'] ?? '');
+
+            return str_contains($request->url(), '/IGSID123')
+                && str_contains($fields, 'username')
+                && ! str_contains($fields, 'gender');
+        });
+    }
+
     /**
      * @return array<string, string>
      */

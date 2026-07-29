@@ -344,12 +344,11 @@ class MessengerWebhookController extends Controller
             if (isset($item['postback']['payload'])) {
                 $payload = (string) $item['postback']['payload'];
                 $title = trim((string) ($item['postback']['title'] ?? ''));
-                if ($payload === 'WEL_ORDER_CONFIRM') {
-                    $payload = 'কনফার্ম';
-                } elseif ($payload === 'WEL_ORDER_EDIT') {
-                    $payload = 'ঠিক নেই';
-                } elseif ($title !== '') {
-                    $payload = $title;
+                // Keep structured WEL payloads intact for WordPress (product lock / order confirm).
+                if (! preg_match('/^WEL_(?:PRODUCT_SELECT:\d+|ORDER_CONFIRM|ORDER_EDIT)$/i', $payload)) {
+                    if ($title !== '') {
+                        $payload = $title;
+                    }
                 }
                 $message = [
                     'mid' => 'postback_' . md5(json_encode($item)),
@@ -366,13 +365,16 @@ class MessengerWebhookController extends Controller
         $attachments = [];
         $replyToMid = '';
 
-        // Normalize order-confirm quick-reply payloads so WordPress confirm parser stays stable.
+        // Normalize order-confirm / product-select quick-reply payloads for WordPress.
         $qrPayload = trim((string) ($message['quick_reply']['payload'] ?? ''));
         if ($qrPayload === 'WEL_ORDER_CONFIRM') {
             $text = 'কনফার্ম';
             $type = 'quick_reply';
         } elseif ($qrPayload === 'WEL_ORDER_EDIT') {
             $text = 'ঠিক নেই';
+            $type = 'quick_reply';
+        } elseif (preg_match('/^WEL_PRODUCT_SELECT:\d+$/i', $qrPayload)) {
+            $text = $qrPayload;
             $type = 'quick_reply';
         } elseif ($qrPayload !== '' && $text === '') {
             $text = $qrPayload;

@@ -30,20 +30,28 @@ class MessengerSendController extends Controller
         $attachmentUrl = trim((string) $request->input('attachment.url', ''));
         // Meta attachment_id from /messenger/upload-attachment (preferred for local/HTTP sites).
         $metaAttachmentId = trim((string) $request->input('attachment.attachment_id', ''));
+        $templatePayload = $request->input('attachment.payload');
 
         if ($psid === '') {
             return $this->errorResponse('psid is required.', 422);
         }
 
-        $hasMetaId = $attachmentType !== '' && $metaAttachmentId !== '';
-        $hasUrl = $attachmentType !== '' && $attachmentUrl !== '';
-        $hasAttachment = $hasMetaId || $hasUrl;
+        $hasTemplate = $attachmentType === 'template' && is_array($templatePayload);
+        $hasMetaId = $attachmentType !== '' && $metaAttachmentId !== '' && ! $hasTemplate;
+        $hasUrl = $attachmentType !== '' && $attachmentUrl !== '' && ! $hasTemplate;
+        $hasAttachment = $hasMetaId || $hasUrl || $hasTemplate;
 
         if ($text === '' && ! $hasAttachment) {
             return $this->errorResponse('Message text or attachment is required.', 422);
         }
 
-        if ($hasAttachment) {
+        if ($hasTemplate) {
+            $templateType = strtolower(trim((string) ($templatePayload['template_type'] ?? '')));
+            $elements = is_array($templatePayload['elements'] ?? null) ? $templatePayload['elements'] : [];
+            if ($templateType !== 'generic' || $elements === []) {
+                return $this->errorResponse('Generic template requires template_type=generic and elements.', 422);
+            }
+        } elseif ($hasAttachment) {
             $allowedTypes = ['image', 'audio', 'video', 'file'];
             if (! in_array($attachmentType, $allowedTypes, true)) {
                 $attachmentType = 'file';
@@ -74,7 +82,12 @@ class MessengerSendController extends Controller
             $options['tag'] = $tag;
         }
 
-        if ($hasAttachment) {
+        if ($hasTemplate) {
+            $options['attachment'] = [
+                'type' => 'template',
+                'payload' => $templatePayload,
+            ];
+        } elseif ($hasAttachment) {
             if ($hasMetaId) {
                 $options['attachment'] = [
                     'type' => $attachmentType,

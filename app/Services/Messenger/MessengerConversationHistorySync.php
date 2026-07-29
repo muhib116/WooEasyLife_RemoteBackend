@@ -128,6 +128,7 @@ class MessengerConversationHistorySync
             $profileName = (string) ($profile['name'] ?? '');
             $profilePic = (string) ($profile['profile_pic'] ?? '');
             $profileUsername = (string) ($profile['username'] ?? '');
+            $profileGender = $this->oauth->normalizeSenderGender($profile['gender'] ?? '');
             if ($profileName === '' && $participantName !== '') {
                 $profileName = $participantName;
             }
@@ -136,7 +137,7 @@ class MessengerConversationHistorySync
                     $profileUsername !== '' ? $profileUsername : $participantName
                 );
             }
-            if ($profileName !== '' || $profilePic !== '') {
+            if ($profileName !== '' || $profilePic !== '' || $profileGender !== '') {
                 foreach ($events as &$event) {
                     if (! empty($event['is_echo'])) {
                         continue;
@@ -147,6 +148,7 @@ class MessengerConversationHistorySync
                             : (string) ($event['sender_profile']['name'] ?? ''),
                         'profile_pic' => $profilePic,
                         'username' => $profileUsername,
+                        'gender' => $profileGender,
                     ];
                 }
                 unset($event);

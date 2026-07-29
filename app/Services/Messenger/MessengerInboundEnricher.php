@@ -46,6 +46,7 @@ class MessengerInboundEnricher
             $name = (string) ($profile['name'] ?? '');
             $pic = (string) ($profile['profile_pic'] ?? '');
             $username = (string) ($profile['username'] ?? '');
+            $gender = $this->oauth->normalizeSenderGender($profile['gender'] ?? '');
             if ($name === '' && $username !== '') {
                 $name = $username;
             }
@@ -59,12 +60,16 @@ class MessengerInboundEnricher
             if ($pic === '') {
                 $pic = (string) ($existing['profile_pic'] ?? '');
             }
+            if ($gender === '') {
+                $gender = $this->oauth->normalizeSenderGender($existing['gender'] ?? '');
+            }
 
-            if ($name !== '' || $pic !== '') {
+            if ($name !== '' || $pic !== '' || $gender !== '') {
                 $event['sender_profile'] = [
                     'name' => $name,
                     'profile_pic' => $pic,
                     'username' => $username,
+                    'gender' => $gender,
                 ];
             }
         }
