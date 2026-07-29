@@ -375,6 +375,9 @@ class MessengerPageOAuthService
             $name = $username;
         }
         $profilePic = trim((string) ($response->json('profile_pic') ?? ''));
+        if ($profilePic === '') {
+            $profilePic = $this->fetchSenderProfilePictureUrl($psid, $pageAccessToken);
+        }
         if ($profilePic === '' && $channel === 'instagram' && $username !== '') {
             $profilePic = $this->instagramPublicAvatarUrl($username);
         }
@@ -422,6 +425,37 @@ class MessengerPageOAuthService
         }
 
         return 'https://unavatar.io/instagram/' . rawurlencode($username);
+    }
+
+    /**
+     * Fallback profile picture endpoint when profile_pic is missing
+     * from Graph User Profile payload.
+     */
+    private function fetchSenderProfilePictureUrl(string $psid, string $pageAccessToken): string
+    {
+        try {
+            $response = Http::timeout(15)->get(
+                'https://graph.facebook.com/' . $this->graphVersion() . '/' . $psid . '/picture',
+                [
+                    'redirect' => 'false',
+                    'width' => 96,
+                    'height' => 96,
+                    'access_token' => $pageAccessToken,
+                ]
+            );
+        } catch (\Throwable $exception) {
+            Log::info('Messenger sender picture fallback exception', [
+                'psid' => $psid,
+                'message' => $exception->getMessage(),
+            ]);
+            return '';
+        }
+
+        if (! $response->successful()) {
+            return '';
+        }
+
+        return trim((string) ($response->json('data.url') ?? ''));
     }
 
     /**

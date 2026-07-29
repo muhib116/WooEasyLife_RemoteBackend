@@ -128,6 +128,46 @@ class MessengerPageOAuthServiceTest extends TestCase
         });
     }
 
+    public function test_fetch_sender_profile_falls_back_to_picture_endpoint(): void
+    {
+        config()->set('services.messenger.graph_version', 'v21.0');
+        \Illuminate\Support\Facades\Cache::flush();
+        \Illuminate\Support\Facades\Http::fake(function ($request) {
+            $url = $request->url();
+            if (str_contains($url, '/PSIDPIC/picture')) {
+                return \Illuminate\Support\Facades\Http::response([
+                    'data' => [
+                        'url' => 'https://cdn.example.com/fallback-pic.jpg',
+                        'is_silhouette' => false,
+                    ],
+                ], 200);
+            }
+
+            if (str_contains($url, '/PSIDPIC')) {
+                return \Illuminate\Support\Facades\Http::response([
+                    'name' => 'Picture Fallback User',
+                    'profile_pic' => '',
+                    'gender' => 'male',
+                ], 200);
+            }
+
+            return \Illuminate\Support\Facades\Http::response([], 404);
+        });
+
+        $profile = app(MessengerPageOAuthService::class)->fetchSenderProfile(
+            'PSIDPIC',
+            'PAGE_TOKEN',
+            'messenger'
+        );
+
+        $this->assertSame('https://cdn.example.com/fallback-pic.jpg', $profile['profile_pic']);
+        $this->assertSame('male', $profile['gender']);
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/PSIDPIC/picture');
+        });
+    }
+
     /**
      * @return array<string, string>
      */
