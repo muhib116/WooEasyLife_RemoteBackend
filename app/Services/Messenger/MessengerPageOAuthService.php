@@ -326,11 +326,39 @@ class MessengerPageOAuthService
         $cacheKey = 'messenger.psid.' . $channel . '.' . $psid;
         $cached = Cache::get($cacheKey);
         if (is_array($cached)) {
+            $name = (string) ($cached['name'] ?? '');
+            $profilePic = (string) ($cached['profile_pic'] ?? '');
+            $username = (string) ($cached['username'] ?? '');
+            $gender = $this->normalizeSenderGender($cached['gender'] ?? '');
+
+            // If we previously cached an empty avatar for Messenger, retry once
+            // without the gender field (gender permission/feature missing can
+            // make the whole request fail).
+            if ($channel === 'messenger' && $profilePic === '') {
+                $noGenderProfilePicFields = 'name,profile_pic';
+                try {
+                    $retry = Http::timeout(15)->get(
+                        'https://graph.facebook.com/' . $this->graphVersion() . '/' . $psid,
+                        [
+                            'fields' => $noGenderProfilePicFields,
+                            'access_token' => $pageAccessToken,
+                        ]
+                    );
+
+                    if ($retry->successful()) {
+                        $name = trim((string) ($retry->json('name') ?? $name));
+                        $profilePic = trim((string) ($retry->json('profile_pic') ?? ''));
+                    }
+                } catch (\Throwable $exception) {
+                    // Best-effort only; fall back to cached empty avatar.
+                }
+            }
+
             return [
-                'name' => (string) ($cached['name'] ?? ''),
-                'profile_pic' => (string) ($cached['profile_pic'] ?? ''),
-                'username' => (string) ($cached['username'] ?? ''),
-                'gender' => $this->normalizeSenderGender($cached['gender'] ?? ''),
+                'name' => $name,
+                'profile_pic' => $profilePic,
+                'username' => $username,
+                'gender' => $gender,
             ];
         }
 
@@ -339,6 +367,9 @@ class MessengerPageOAuthService
         $fields = $channel === 'instagram'
             ? 'name,username,profile_pic'
             : 'name,profile_pic,gender';
+        $noGenderFields = $channel === 'messenger'
+            ? 'name,profile_pic'
+            : '';
 
         try {
             $response = Http::timeout(15)->get(
@@ -359,6 +390,42 @@ class MessengerPageOAuthService
         }
 
         if (! $response->successful()) {
+            if ($channel === 'messenger' && $noGenderFields !== '') {
+                // Retry without gender to avoid avatar failing due to missing
+                // pages_user_gender feature/permission.
+                try {
+                    $retry = Http::timeout(15)->get(
+                        'https://graph.facebook.com/' . $this->graphVersion() . '/' . $psid,
+                        [
+                            'fields' => $noGenderFields,
+                            'access_token' => $pageAccessToken,
+                        ]
+                    );
+
+                    if ($retry->successful()) {
+                        $username = trim((string) ($response->json('username') ?? ''));
+                        $name = trim((string) ($retry->json('name') ?? ''));
+                        $profilePic = trim((string) ($retry->json('profile_pic') ?? ''));
+
+                        if ($profilePic === '') {
+                            $profilePic = $this->fetchSenderProfilePictureUrl($psid, $pageAccessToken);
+                        }
+
+                        $profile = [
+                            'name' => $name,
+                            'profile_pic' => $profilePic,
+                            'username' => $username,
+                            'gender' => '',
+                        ];
+
+                        Cache::put($cacheKey, $profile, now()->addHours(12));
+                        return $profile;
+                    }
+                } catch (\Throwable $exception) {
+                    // Continue to failure logging below.
+                }
+            }
+
             Log::info('Messenger sender profile failed', [
                 'psid' => $psid,
                 'channel' => $channel,

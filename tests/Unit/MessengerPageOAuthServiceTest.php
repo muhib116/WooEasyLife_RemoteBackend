@@ -168,6 +168,45 @@ class MessengerPageOAuthServiceTest extends TestCase
         });
     }
 
+    public function test_fetch_sender_profile_retries_without_gender_when_first_call_fails(): void
+    {
+        config()->set('services.messenger.graph_version', 'v21.0');
+        \Illuminate\Support\Facades\Cache::flush();
+
+        \Illuminate\Support\Facades\Http::fake(function ($request) {
+            $url = $request->url();
+            $fields = (string) ($request->data()['fields'] ?? '');
+
+            if (str_contains($url, '/PSIDRETRY') && str_contains($fields, 'gender')) {
+                return \Illuminate\Support\Facades\Http::response([
+                    'error' => [
+                        'message' => 'Missing permission for gender',
+                        'code' => 200,
+                    ],
+                ], 400);
+            }
+
+            if (str_contains($url, '/PSIDRETRY') && $fields === 'name,profile_pic') {
+                return \Illuminate\Support\Facades\Http::response([
+                    'name' => 'Retry User',
+                    'profile_pic' => 'https://cdn.example.com/retry-user.jpg',
+                ], 200);
+            }
+
+            return \Illuminate\Support\Facades\Http::response([], 404);
+        });
+
+        $profile = app(MessengerPageOAuthService::class)->fetchSenderProfile(
+            'PSIDRETRY',
+            'PAGE_TOKEN',
+            'messenger'
+        );
+
+        $this->assertSame('Retry User', $profile['name']);
+        $this->assertSame('https://cdn.example.com/retry-user.jpg', $profile['profile_pic']);
+        $this->assertSame('', $profile['gender']);
+    }
+
     /**
      * @return array<string, string>
      */
