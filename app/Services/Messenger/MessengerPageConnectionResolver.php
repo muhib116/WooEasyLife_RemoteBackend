@@ -53,11 +53,6 @@ class MessengerPageConnectionResolver
         return null;
     }
 
-    public function hasConnection(AccessToken $accessToken, string $pageId = ''): bool
-    {
-        return $this->resolve($accessToken, $pageId, true) !== null;
-    }
-
     /**
      * @return array{
      *   connected:bool,

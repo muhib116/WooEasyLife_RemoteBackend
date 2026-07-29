@@ -660,8 +660,6 @@ class MessengerPageOAuthService
         // Split caption + media into two Graph calls.
         if ($text !== '' && $hasAttachment) {
             $attachmentOptions = $options;
-            unset($attachmentOptions['attachment']); // re-set below
-            $attachmentOptions['attachment'] = $options['attachment'];
 
             $first = $this->sendMessageOnce($connection, $psid, '', $attachmentOptions);
             if (empty($first['ok'])) {

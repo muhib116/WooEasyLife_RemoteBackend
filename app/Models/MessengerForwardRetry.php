@@ -8,8 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MessengerForwardRetry extends Model
 {
     protected $fillable = [
-        'webhook_event_id',
-        'connection_id',
+        'messenger_page_connection_id',
+        'page_id',
+        'fingerprint',
         'payload',
         'attempts',
         'max_attempts',
@@ -25,13 +26,8 @@ class MessengerForwardRetry extends Model
         'last_attempt_at' => 'datetime',
     ];
 
-    public function webhookEvent(): BelongsTo
-    {
-        return $this->belongsTo(MessengerWebhookEvent::class, 'webhook_event_id');
-    }
-
     public function connection(): BelongsTo
     {
-        return $this->belongsTo(MessengerPageConnection::class, 'connection_id');
+        return $this->belongsTo(MessengerPageConnection::class, 'messenger_page_connection_id');
     }
 }
