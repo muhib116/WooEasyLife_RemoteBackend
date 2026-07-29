@@ -152,6 +152,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::post('messenger/sender-action', [MessengerSendController::class, 'senderAction']);
         Route::post('messenger/delete-message', [MessengerSendController::class, 'deleteMessage']);
         Route::post('messenger/upload-attachment', [MessengerAttachmentController::class, 'upload']);
+        Route::post('messenger/refresh-profiles', [MessengerConnectController::class, 'refreshProfiles']);
 
         Route::group(['as' => 'courier.', 'prefix' => 'courier'], function () {
             Route::post('/list', [ConfigurationController::class, 'getList']);

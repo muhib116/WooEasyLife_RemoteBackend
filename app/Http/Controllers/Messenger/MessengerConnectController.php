@@ -298,6 +298,50 @@ class MessengerConnectController extends Controller
         return redirect()->away($returnUrl);
     }
 
+    /**
+     * Batch-refresh sender profiles for a list of PSIDs.
+     * Returns profile_pic (and gender) so the WP plugin can backfill contacts
+     * whose avatar was not populated before the /{psid}/picture fallback was added.
+     */
+    public function refreshProfiles(
+        Request $request,
+        MessengerPageConnectionResolver $resolver,
+        MessengerPageOAuthService $oauth
+    ) {
+        $request->validate([
+            'page_id' => 'required|string',
+            'psids'   => 'required|array|max:50',
+            'psids.*' => 'string|max:64',
+            'channel' => 'nullable|string|in:messenger,instagram',
+        ]);
+
+        $connection = $resolver->resolveForSite($request);
+        if (! $connection) {
+            return $this->errorResponse('Page not connected.', 404);
+        }
+
+        $channel = $request->input('channel', 'messenger');
+        $profiles = [];
+
+        foreach ($request->input('psids', []) as $psid) {
+            $psid = trim((string) $psid);
+            if ($psid === '') {
+                continue;
+            }
+            $profile = $oauth->fetchSenderProfile($psid, $connection->page_access_token, $channel);
+            $profiles[$psid] = [
+                'profile_pic' => $profile['profile_pic'] ?? '',
+                'gender'      => $profile['gender'] ?? '',
+                'name'        => $profile['name'] ?? '',
+            ];
+        }
+
+        return response()->json([
+            'ok'       => true,
+            'profiles' => $profiles,
+        ]);
+    }
+
     private function redirectHomeWithError(string $message): RedirectResponse
     {
         return redirect('/')->with('error', $message);
