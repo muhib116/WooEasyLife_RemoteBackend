@@ -167,7 +167,8 @@ it('includes connect_url in maintenance ga_status payload', function () {
         ->assertOk()
         ->assertJsonPath('ga_status.can_connect', true)
         ->assertJsonPath('ga_status.connect_url', route('maintenance.ga.connect', absolute: false))
-        ->assertJsonPath('ga_status.property_id_save_url', route('maintenance.ga.property', absolute: false));
+        ->assertJsonPath('ga_status.property_id_save_url', route('maintenance.ga.property', absolute: false))
+        ->assertJsonPath('ga_status.measurement_save_url', route('maintenance.ga.measurement', absolute: false));
 });
 
 it('saves ga property id from admin endpoint and prefers database over env', function () {
@@ -184,6 +185,49 @@ it('saves ga property id from admin endpoint and prefers database over env', fun
     expect(app(\App\Services\Seo\GaCredentialStore::class)->getPropertyId())->toBe('987654321')
         ->and(app(\App\Services\Seo\GoogleAnalyticsClient::class)->propertyId())->toBe('987654321')
         ->and(app(\App\Services\Seo\GoogleAnalyticsClient::class)->propertyIdSource())->toBe('database');
+});
+
+it('saves public measurement id from admin and can disable gtag', function () {
+    $admin = createGaOAuthAdmin();
+    config(['seo.ga.measurement_id' => 'G-ENVDEFAULT1']);
+
+    $this->actingAs($admin)
+        ->putJson(route('maintenance.ga.measurement'), [
+            'measurement_id' => 'G-V3TDVR7ED9',
+            'enabled' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonPath('ga_status.measurement_id', 'G-V3TDVR7ED9')
+        ->assertJsonPath('ga_status.measurement_id_source', 'database')
+        ->assertJsonPath('ga_status.measurement_enabled', true)
+        ->assertJsonPath('ga_status.public_gtag_active', true);
+
+    expect(app(\App\Services\Seo\GoogleAnalyticsClient::class)->publicMeasurementId())->toBe('G-V3TDVR7ED9');
+
+    $this->actingAs($admin)
+        ->putJson(route('maintenance.ga.measurement'), [
+            'measurement_id' => 'G-V3TDVR7ED9',
+            'enabled' => false,
+        ])
+        ->assertOk()
+        ->assertJsonPath('ga_status.measurement_enabled', false)
+        ->assertJsonPath('ga_status.public_gtag_active', false)
+        ->assertJsonPath('ga_status.measurement_id', 'G-V3TDVR7ED9');
+
+    expect(app(\App\Services\Seo\GoogleAnalyticsClient::class)->publicMeasurementId())->toBeNull()
+        ->and(app(\App\Services\Seo\GoogleAnalyticsClient::class)->configuredMeasurementId())->toBe('G-V3TDVR7ED9');
+});
+
+it('rejects invalid public measurement id from admin', function () {
+    $admin = createGaOAuthAdmin();
+
+    $this->actingAs($admin)
+        ->putJson(route('maintenance.ga.measurement'), [
+            'measurement_id' => 'not-a-measurement-id',
+            'enabled' => true,
+        ])
+        ->assertStatus(422);
 });
 
 it('returns ga realtime snapshot for dashboard viewers', function () {

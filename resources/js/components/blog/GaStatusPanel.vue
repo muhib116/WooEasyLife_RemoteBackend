@@ -53,6 +53,61 @@
             </div>
         </div>
 
+        <div
+            v-if="canEditMeasurement"
+            class="space-y-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600"
+        >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <label class="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    Public gtag Measurement ID
+                    <span
+                        v-if="measurementSource"
+                        class="ml-1 rounded bg-slate-100 px-1 py-0.5 text-[10px] uppercase dark:bg-slate-700"
+                    >{{ measurementSource }}</span>
+                </label>
+                <span
+                    class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    :class="publicGtagActive
+                        ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                        : 'bg-slate-500/15 text-slate-700 dark:text-slate-300'"
+                >
+                    {{ publicGtagActive ? 'Live on site' : 'Not injecting' }}
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                Controls the visitor-facing <code class="text-[10px]">gtag.js</code> snippet (separate from API Property ID).
+            </p>
+            <label class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+                <input
+                    v-model="measurementEnabled"
+                    type="checkbox"
+                    class="rounded border-slate-300"
+                    :disabled="disabled || savingMeasurement"
+                >
+                Enable public Google Analytics tag
+            </label>
+            <div class="flex flex-wrap gap-2">
+                <input
+                    v-model="measurementDraft"
+                    type="text"
+                    class="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-900"
+                    placeholder="G-V3TDVR7ED9"
+                    :disabled="disabled || savingMeasurement"
+                    @keyup.enter="saveMeasurement"
+                >
+                <Button
+                    label="Save"
+                    icon="pi pi-check"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    :loading="savingMeasurement"
+                    :disabled="disabled || savingMeasurement || !measurementDirty"
+                    @click="saveMeasurement"
+                />
+            </div>
+        </div>
+
         <dl class="grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs">
             <div
                 v-for="row in rows"
@@ -142,12 +197,23 @@ const toast = useToast();
 const confirm = useConfirm();
 const disconnecting = ref(false);
 const savingProperty = ref(false);
+const savingMeasurement = ref(false);
 const propertyDraft = ref(props.data?.property_id || '');
+const measurementDraft = ref(props.data?.measurement_id || '');
+const measurementEnabled = ref(props.data?.measurement_enabled !== false);
 
 watch(
     () => props.data?.property_id,
     (next) => {
         propertyDraft.value = next || '';
+    },
+);
+
+watch(
+    () => [props.data?.measurement_id, props.data?.measurement_enabled],
+    ([id, enabled]) => {
+        measurementDraft.value = id || '';
+        measurementEnabled.value = enabled !== false;
     },
 );
 
@@ -162,6 +228,16 @@ const canEditProperty = computed(() => Boolean(propertySaveUrl.value));
 const propertyDirty = computed(
     () => String(propertyDraft.value || '').trim() !== String(props.data?.property_id || '').trim(),
 );
+
+const measurementSaveUrl = computed(() => props.data?.measurement_save_url || null);
+const measurementSource = computed(() => props.data?.measurement_id_source || null);
+const canEditMeasurement = computed(() => Boolean(measurementSaveUrl.value));
+const publicGtagActive = computed(() => Boolean(props.data?.public_gtag_active));
+const measurementDirty = computed(() => {
+    const idChanged = String(measurementDraft.value || '').trim() !== String(props.data?.measurement_id || '').trim();
+    const enabledChanged = Boolean(measurementEnabled.value) !== (props.data?.measurement_enabled !== false);
+    return idChanged || enabledChanged;
+});
 
 const yesNo = (ok) => (ok ? 'set' : 'missing');
 
@@ -225,6 +301,41 @@ const saveProperty = async () => {
         });
     } finally {
         savingProperty.value = false;
+    }
+};
+
+const saveMeasurement = async () => {
+    if (!measurementSaveUrl.value || savingMeasurement.value || !measurementDirty.value) {
+        return;
+    }
+
+    savingMeasurement.value = true;
+    try {
+        const { data } = await axios.put(measurementSaveUrl.value, {
+            measurement_id: measurementDraft.value,
+            enabled: measurementEnabled.value,
+        });
+        toast.add({
+            severity: 'success',
+            summary: 'Public gtag',
+            detail: data?.message || 'Measurement ID saved.',
+            life: 4000,
+            group: 'br',
+        });
+        emit('updated', data?.ga_status || null);
+        if (!data?.ga_status) {
+            window.location.reload();
+        }
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Save failed',
+            detail: error?.response?.data?.message || 'Could not save Measurement ID.',
+            life: 6000,
+            group: 'br',
+        });
+    } finally {
+        savingMeasurement.value = false;
     }
 };
 

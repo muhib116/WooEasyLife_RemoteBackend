@@ -605,6 +605,11 @@ class SystemMaintenanceController extends Controller
             'refresh_token_source' => null,
             'property_id_source' => null,
             'property_id_save_url' => null,
+            'measurement_id' => null,
+            'measurement_id_source' => null,
+            'measurement_enabled' => true,
+            'measurement_save_url' => null,
+            'public_gtag_active' => false,
         ];
         try {
             $gaStatus = app(GoogleAnalyticsClient::class)->configurationStatus();

@@ -41,7 +41,12 @@ class GoogleAnalyticsClient
      *     disconnect_url: string|null,
      *     refresh_token_source: string|null,
      *     property_id_source: string|null,
-     *     property_id_save_url: string|null
+     *     property_id_save_url: string|null,
+     *     measurement_id: string|null,
+     *     measurement_id_source: string|null,
+     *     measurement_enabled: bool,
+     *     measurement_save_url: string|null,
+     *     public_gtag_active: bool
      * }
      */
     public function configurationStatus(): array
@@ -52,6 +57,7 @@ class GoogleAnalyticsClient
             && filled($this->clientSecret());
         $hasStatic = filled(config('seo.ga.access_token'));
         $canConnect = filled($this->clientId()) && filled($this->clientSecret());
+        $measurementId = $this->configuredMeasurementId();
 
         return [
             'property_id' => $this->propertyId(),
@@ -70,6 +76,11 @@ class GoogleAnalyticsClient
             'refresh_token_source' => $this->refreshTokenSource(),
             'property_id_source' => $this->propertyIdSource(),
             'property_id_save_url' => route('maintenance.ga.property', absolute: false),
+            'measurement_id' => $measurementId,
+            'measurement_id_source' => $this->publicMeasurementIdSource(),
+            'measurement_enabled' => $this->publicMeasurementEnabled(),
+            'measurement_save_url' => route('maintenance.ga.measurement', absolute: false),
+            'public_gtag_active' => filled($measurementId) && $this->publicMeasurementEnabled(),
         ];
     }
 
@@ -95,6 +106,92 @@ class GoogleAnalyticsClient
         }
 
         return null;
+    }
+
+    /**
+     * Configured Measurement ID for admin UI (DB preferred, then env) — ignores enabled toggle.
+     */
+    public function configuredMeasurementId(): ?string
+    {
+        $stored = $this->credentials->getMeasurementId();
+        if (filled($stored)) {
+            return $stored;
+        }
+
+        return $this->credentials->normalizeMeasurementId((string) config('seo.ga.measurement_id', ''));
+    }
+
+    /**
+     * Measurement ID used by public gtag.js (null when disabled or unset).
+     */
+    public function publicMeasurementId(): ?string
+    {
+        if (! $this->publicMeasurementEnabled()) {
+            return null;
+        }
+
+        return $this->configuredMeasurementId();
+    }
+
+    public function publicMeasurementIdSource(): ?string
+    {
+        if ($this->credentials->hasStoredMeasurementId()) {
+            return 'database';
+        }
+
+        if ($this->credentials->normalizeMeasurementId((string) config('seo.ga.measurement_id', '')) !== null) {
+            return 'env';
+        }
+
+        return null;
+    }
+
+    /**
+     * Admin can force off. Default on when unset (env/default Measurement ID may still apply).
+     */
+    public function publicMeasurementEnabled(): bool
+    {
+        $override = $this->credentials->getMeasurementEnabled();
+
+        return $override ?? true;
+    }
+
+    /**
+     * @return array{measurement_id: string|null, enabled: bool, error: string|null}
+     */
+    public function resolvePublicMeasurementInput(?string $raw, mixed $enabled = null): array
+    {
+        $raw = trim((string) $raw);
+        $enabledBool = $enabled === null
+            ? $this->publicMeasurementEnabled()
+            : filter_var($enabled, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        if ($enabledBool === null) {
+            $enabledBool = $this->publicMeasurementEnabled();
+        }
+
+        if ($raw === '') {
+            return [
+                'measurement_id' => null,
+                'enabled' => $enabledBool,
+                'error' => null,
+            ];
+        }
+
+        $normalized = $this->credentials->normalizeMeasurementId($raw);
+        if ($normalized === null) {
+            return [
+                'measurement_id' => null,
+                'enabled' => $enabledBool,
+                'error' => 'Enter a valid GA4 Measurement ID (e.g. G-V3TDVR7ED9).',
+            ];
+        }
+
+        return [
+            'measurement_id' => $normalized,
+            'enabled' => $enabledBool,
+            'error' => null,
+        ];
     }
 
     /**

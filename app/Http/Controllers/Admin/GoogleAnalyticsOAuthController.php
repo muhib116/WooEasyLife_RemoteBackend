@@ -243,6 +243,69 @@ class GoogleAnalyticsOAuthController extends Controller
             ->with('success', $message);
     }
 
+    public function updateMeasurement(
+        Request $request,
+        GoogleAnalyticsClient $ga,
+        GaCredentialStore $store,
+    ): RedirectResponse|\Illuminate\Http\JsonResponse {
+        $validated = $request->validate([
+            'measurement_id' => ['nullable', 'string', 'max:32'],
+            'enabled' => ['nullable'],
+        ]);
+
+        $resolved = $ga->resolvePublicMeasurementInput(
+            $validated['measurement_id'] ?? null,
+            array_key_exists('enabled', $validated) ? $validated['enabled'] : true,
+        );
+
+        if ($resolved['error'] !== null) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $resolved['error']], 422);
+            }
+
+            return redirect()->back()->with('error', $resolved['error']);
+        }
+
+        try {
+            $store->putMeasurementId($resolved['measurement_id']);
+            $store->putMeasurementEnabled($resolved['enabled']);
+        } catch (\Throwable $e) {
+            Log::error('GA measurement ID save failed', ['message' => $e->getMessage()]);
+            $message = 'Could not save public Measurement ID. Check logs and try again.';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 500);
+            }
+
+            return redirect()->back()->with('error', $message);
+        }
+
+        Log::info('GA public measurement updated', [
+            'user_id' => $request->user()?->id,
+            'measurement_id' => $ga->publicMeasurementId(),
+            'enabled' => $ga->publicMeasurementEnabled(),
+            'source' => $ga->publicMeasurementIdSource(),
+        ]);
+
+        $status = $ga->configurationStatus();
+        if (! $resolved['enabled']) {
+            $message = 'Public gtag disabled. Site will not load Google Analytics.';
+        } elseif ($resolved['measurement_id'] === null) {
+            $message = 'Cleared saved Measurement ID — falling back to SEO_GA_MEASUREMENT_ID / config default when enabled.';
+        } else {
+            $message = 'Public Measurement ID saved ('.$resolved['measurement_id'].').';
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'ga_status' => $status,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
     public function disconnect(
         Request $request,
         GoogleAnalyticsClient $ga,

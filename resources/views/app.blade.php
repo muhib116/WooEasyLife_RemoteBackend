@@ -61,6 +61,25 @@
         @endif
     @endisset
 
+    @php
+        $gaMeasurementId = '';
+        try {
+            $gaMeasurementId = (string) (app(\App\Services\Seo\GoogleAnalyticsClient::class)->publicMeasurementId() ?? '');
+        } catch (\Throwable) {
+            $gaMeasurementId = trim((string) config('seo.ga.measurement_id', ''));
+        }
+    @endphp
+    @if ($gaMeasurementId !== '')
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaMeasurementId }}"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', @json($gaMeasurementId));
+        </script>
+    @endif
+
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">

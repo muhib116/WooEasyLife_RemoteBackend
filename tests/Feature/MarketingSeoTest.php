@@ -1236,6 +1236,58 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/sitemap.xml', false);
     }
 
+    public function test_home_includes_ga4_gtag_when_measurement_id_configured(): void
+    {
+        config(['seo.ga.measurement_id' => 'G-V3TDVR7ED9']);
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementId();
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementEnabled();
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('https://www.googletagmanager.com/gtag/js?id=G-V3TDVR7ED9', false);
+        $response->assertSee("gtag('config', \"G-V3TDVR7ED9\")", false);
+    }
+
+    public function test_home_omits_ga4_gtag_when_measurement_id_empty(): void
+    {
+        config(['seo.ga.measurement_id' => '']);
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementId();
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementEnabled();
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertDontSee('googletagmanager.com/gtag/js', false);
+    }
+
+    public function test_home_omits_ga4_gtag_when_admin_disables_public_tag(): void
+    {
+        config(['seo.ga.measurement_id' => 'G-V3TDVR7ED9']);
+        $store = app(\App\Services\Seo\GaCredentialStore::class);
+        $store->putMeasurementId('G-V3TDVR7ED9');
+        $store->putMeasurementEnabled(false);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertDontSee('googletagmanager.com/gtag/js', false);
+    }
+
+    public function test_home_prefers_admin_saved_measurement_id_over_env(): void
+    {
+        config(['seo.ga.measurement_id' => 'G-ENVDEFAULT1']);
+        $store = app(\App\Services\Seo\GaCredentialStore::class);
+        $store->putMeasurementId('G-V3TDVR7ED9');
+        $store->putMeasurementEnabled(true);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('https://www.googletagmanager.com/gtag/js?id=G-V3TDVR7ED9', false);
+        $response->assertDontSee('G-ENVDEFAULT1', false);
+    }
+
     public function test_llms_txt_is_public_and_follows_spec(): void
     {
         $response = $this->get('/llms.txt');

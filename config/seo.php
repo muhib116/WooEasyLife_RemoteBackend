@@ -42,6 +42,8 @@ return [
     'ga' => [
         // GA4 property ID (numeric), e.g. 123456789 — Admin → Property settings.
         'property_id' => env('SEO_GA_PROPERTY_ID'),
+        // GA4 Measurement ID for public gtag.js (Admin → Data streams → Web).
+        'measurement_id' => env('SEO_GA_MEASUREMENT_ID', 'G-V3TDVR7ED9'),
         /*
         | OAuth (preferred): reuse Google Cloud OAuth client + a refresh token
         | with scope https://www.googleapis.com/auth/analytics.readonly

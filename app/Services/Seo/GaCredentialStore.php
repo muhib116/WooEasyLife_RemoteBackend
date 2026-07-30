@@ -9,13 +9,19 @@ use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 /**
- * Persists GA4 OAuth refresh token + property ID outside .env (PlatformSetting).
+ * Persists GA4 OAuth refresh token, property ID, and public gtag settings outside .env (PlatformSetting).
  */
 class GaCredentialStore
 {
     public const REFRESH_TOKEN_KEY = 'seo.ga.refresh_token';
 
     public const PROPERTY_ID_KEY = 'seo.ga.property_id';
+
+    /** Public site gtag.js Measurement ID (G-XXXX). */
+    public const MEASUREMENT_ID_KEY = 'seo.ga.measurement_id';
+
+    /** When set to "0", public gtag is off even if env has a Measurement ID. */
+    public const MEASUREMENT_ENABLED_KEY = 'seo.ga.measurement_enabled';
 
     public function getRefreshToken(): ?string
     {
@@ -163,6 +169,109 @@ class GaCredentialStore
         }
 
         return $id;
+    }
+
+    public function getMeasurementId(): ?string
+    {
+        if (! $this->tableReady()) {
+            return null;
+        }
+
+        $row = PlatformSetting::query()->where('key', self::MEASUREMENT_ID_KEY)->first();
+        if (! $row || ! is_string($row->value)) {
+            return null;
+        }
+
+        return $this->normalizeMeasurementId($row->value);
+    }
+
+    public function putMeasurementId(?string $measurementId): void
+    {
+        if (! $this->tableReady()) {
+            throw new \RuntimeException('platform_settings table is missing — run migrations.');
+        }
+
+        $normalized = $measurementId === null || trim($measurementId) === ''
+            ? null
+            : $this->normalizeMeasurementId($measurementId);
+
+        if ($normalized === null) {
+            PlatformSetting::query()->where('key', self::MEASUREMENT_ID_KEY)->delete();
+
+            return;
+        }
+
+        PlatformSetting::query()->updateOrCreate(
+            ['key' => self::MEASUREMENT_ID_KEY],
+            ['value' => $normalized],
+        );
+    }
+
+    public function clearMeasurementId(): void
+    {
+        if (! $this->tableReady()) {
+            return;
+        }
+
+        PlatformSetting::query()->where('key', self::MEASUREMENT_ID_KEY)->delete();
+    }
+
+    public function hasStoredMeasurementId(): bool
+    {
+        return filled($this->getMeasurementId());
+    }
+
+    /**
+     * null = no admin override (env default applies when enabled).
+     * true/false = explicit admin choice.
+     */
+    public function getMeasurementEnabled(): ?bool
+    {
+        if (! $this->tableReady()) {
+            return null;
+        }
+
+        $row = PlatformSetting::query()->where('key', self::MEASUREMENT_ENABLED_KEY)->first();
+        if (! $row || ! is_string($row->value)) {
+            return null;
+        }
+
+        $value = strtolower(trim($row->value));
+        if ($value === '1' || $value === 'true' || $value === 'yes' || $value === 'on') {
+            return true;
+        }
+        if ($value === '0' || $value === 'false' || $value === 'no' || $value === 'off') {
+            return false;
+        }
+
+        return null;
+    }
+
+    public function putMeasurementEnabled(?bool $enabled): void
+    {
+        if (! $this->tableReady()) {
+            throw new \RuntimeException('platform_settings table is missing — run migrations.');
+        }
+
+        if ($enabled === null) {
+            PlatformSetting::query()->where('key', self::MEASUREMENT_ENABLED_KEY)->delete();
+
+            return;
+        }
+
+        PlatformSetting::query()->updateOrCreate(
+            ['key' => self::MEASUREMENT_ENABLED_KEY],
+            ['value' => $enabled ? '1' : '0'],
+        );
+    }
+
+    public function clearMeasurementEnabled(): void
+    {
+        if (! $this->tableReady()) {
+            return;
+        }
+
+        PlatformSetting::query()->where('key', self::MEASUREMENT_ENABLED_KEY)->delete();
     }
 
     private function tableReady(): bool
