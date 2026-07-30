@@ -348,11 +348,21 @@ class MessengerWebhookController extends Controller
                     if (! is_array($attachment)) {
                         continue;
                     }
-                    $attachments[] = [
-                        'type' => (string) ($attachment['type'] ?? 'file'),
-                        'url' => (string) ($attachment['payload']['url'] ?? ''),
+                    $attType = strtolower(trim((string) ($attachment['type'] ?? 'file')));
+                    $attUrl = (string) ($attachment['payload']['url'] ?? '');
+                    $stickerId = $attachment['payload']['sticker_id'] ?? null;
+                    if ($stickerId !== null && $stickerId !== '' && ($attType === '' || $attType === 'file')) {
+                        $attType = 'image';
+                    }
+                    $row = [
+                        'type' => $attType !== '' ? $attType : 'file',
+                        'url' => $attUrl,
                     ];
-                    $type = (string) ($attachment['type'] ?? 'file');
+                    if ($stickerId !== null && $stickerId !== '') {
+                        $row['sticker_id'] = (string) $stickerId;
+                    }
+                    $attachments[] = $row;
+                    $type = $row['type'];
                 }
             }
 
@@ -439,22 +449,33 @@ class MessengerWebhookController extends Controller
             $replyToMid = (string) $message['reply_to']['mid'];
         }
 
-        if (! empty($message['attachments']) && is_array($message['attachments'])) {
-            foreach ($message['attachments'] as $attachment) {
-                if (! is_array($attachment)) {
-                    continue;
+            if (! empty($message['attachments']) && is_array($message['attachments'])) {
+                foreach ($message['attachments'] as $attachment) {
+                    if (! is_array($attachment)) {
+                        continue;
+                    }
+                    $attType = strtolower(trim((string) ($attachment['type'] ?? 'file')));
+                    $attUrl = (string) ($attachment['payload']['url'] ?? '');
+                    $stickerId = $attachment['payload']['sticker_id'] ?? null;
+                    // Facebook stickers arrive as type=image with sticker_id (classic like = 369239263222822).
+                    if ($stickerId !== null && $stickerId !== '' && ($attType === '' || $attType === 'file')) {
+                        $attType = 'image';
+                    }
+                    $row = [
+                        'type' => $attType !== '' ? $attType : 'file',
+                        'url' => $attUrl,
+                    ];
+                    if ($stickerId !== null && $stickerId !== '') {
+                        $row['sticker_id'] = is_numeric($stickerId) ? (string) $stickerId : (string) $stickerId;
+                    }
+                    $attachments[] = $row;
+                    $type = $row['type'];
                 }
-                $attachments[] = [
-                    'type' => (string) ($attachment['type'] ?? 'file'),
-                    'url' => (string) ($attachment['payload']['url'] ?? ''),
-                ];
-                $type = (string) ($attachment['type'] ?? 'file');
+                if ($text === '' && $attachments !== []) {
+                    // Keep body empty — UI renders the attachment. Preview is set on the WP side.
+                    $text = '';
+                }
             }
-            if ($text === '' && $attachments !== []) {
-                // Keep body empty — UI renders the attachment. Preview is set on the WP side.
-                $text = '';
-            }
-        }
 
         $referral = null;
         if (isset($item['referral']) && is_array($item['referral'])) {
