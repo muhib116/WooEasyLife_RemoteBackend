@@ -14,8 +14,8 @@ description: >
 
 | Surface | Path |
 |---------|------|
-| WP plugin | `/Users/muhibbullah/Desktop/wp/wordpress/wp-content/plugins/woo-easy-life` |
-| Flutter app | `/Users/muhibbullah/Desktop/App/WooEasyLife` |
+| WP plugin | `$WOOEASYLIFE_PLUGIN` — local checkout of `woo-easy-life` |
+| Flutter app | `$WOOEASYLIFE_APP` — local checkout of Flutter `WooEasyLife` |
 | Feature inventory | `.cursor/skills/wooeasylife-brand/FEATURES.md` |
 
 **When user introduces a new feature:** analyze those repos → update `FEATURES.md` → use the new feature in the next day's social/SEO plan. Never invent features.
@@ -63,8 +63,8 @@ Never ship a generic teal/flat graphic without logo. Prefer founder-visible crea
 
 ## Asset paths
 
-Base: `.cursor/skills/wooeasylife-brand/assets/`  
-Absolute: `/Users/muhibbullah/Desktop/project/WooEasyLife_RemoteBackend/.cursor/skills/wooeasylife-brand/assets/`
+Base (repo-relative): `.cursor/skills/wooeasylife-brand/assets/`  
+For tools that need absolute paths, resolve that directory from the repository root.
 
 | File | Use |
 |------|-----|

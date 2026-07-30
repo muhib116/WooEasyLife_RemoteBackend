@@ -2,9 +2,9 @@
 
 **Last analyzed:** 2026-07-27  
 **Sources (re-scan when features change):**
-- Plugin: `/Users/muhibbullah/Desktop/wp/wordpress/wp-content/plugins/woo-easy-life` (v1.5.4)
-- App: `/Users/muhibbullah/Desktop/App/WooEasyLife` (Flutter v1.1.6+)
-- Backend packages: `WooEasyLife_RemoteBackend` / WPSaleHub gating keys
+- Plugin: `$WOOEASYLIFE_PLUGIN` — local checkout of `woo-easy-life` (v1.5.4)
+- App: `$WOOEASYLIFE_APP` — local checkout of Flutter `WooEasyLife` (v1.1.6+)
+- Backend packages: this repo (`WooEasyLife_RemoteBackend`) / WPSaleHub gating keys
 
 **Rule:** Marketing, SEO mentor posts, and creatives may only claim features listed here as **Shipped**. Never claim **Coming soon** as live.
 

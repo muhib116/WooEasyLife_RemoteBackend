@@ -332,8 +332,8 @@ Before insert: confirm Shipped in `FEATURES.md`, BD demand (Suggest `gl=bd` and/
 
 | Surface | Path |
 |---------|------|
-| WP plugin | `/Users/muhibbullah/Desktop/wp/wordpress/wp-content/plugins/woo-easy-life` |
-| Flutter app | `/Users/muhibbullah/Desktop/App/WooEasyLife` |
+| WP plugin | `$WOOEASYLIFE_PLUGIN` — local checkout of `woo-easy-life` |
+| Flutter app | `$WOOEASYLIFE_APP` — local checkout of Flutter `WooEasyLife` |
 | Backend (this repo) | package/gating keys, routes, `config/seo*` |
 
 **Run when:** user says “new feature / feature update / shipped / update features”, a release goes out, OR no scan in ~30 days.

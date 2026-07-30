@@ -15,8 +15,8 @@ Do **not** use wooeasylife.com in posts or CTAs.
 **SEO strategy + FAQ roadmap:** `.cursor/skills/seo-mentor/SKILL.md` (read for next steps, FAQ IA, competitive playbook, phased organic plan)  
 **Keyword / slug inventory:** `config/seo_keyword_inventory.php` (Blog AI + mentor source of truth for paths/keywords)  
 **Code to re-scan on new features:**  
-- Plugin `/Users/muhibbullah/Desktop/wp/wordpress/wp-content/plugins/woo-easy-life`  
-- App `/Users/muhibbullah/Desktop/App/WooEasyLife`
+- Plugin `$WOOEASYLIFE_PLUGIN` (local checkout of the `woo-easy-life` WordPress plugin)  
+- App `$WOOEASYLIFE_APP` (local checkout of the Flutter `WooEasyLife` app)
 
 ## New feature workflow
 
