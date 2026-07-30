@@ -14,6 +14,8 @@ Do **not** use wooeasylife.com in posts or CTAs.
 **Features (source of truth):** `.cursor/skills/wooeasylife-brand/FEATURES.md`  
 **SEO strategy + FAQ roadmap:** `.cursor/skills/seo-mentor/SKILL.md` (read for next steps, FAQ IA, competitive playbook, phased organic plan)  
 **Keyword / slug inventory:** `config/seo_keyword_inventory.php` (Blog AI + mentor source of truth for paths/keywords)  
+**Authority cluster lock calendar:** `config/seo_authority_calendar.php` (Step 6 — daily theme while SteadFast campaign active)  
+**Sunday metrics (Step 9):** `config/seo_authority_metrics.php` · `php artisan seo:weekly-report`  
 **Code to re-scan on new features:**  
 - Plugin `/Users/muhibbullah/Desktop/wp/wordpress/wp-content/plugins/woo-easy-life`  
 - App `/Users/muhibbullah/Desktop/App/WooEasyLife`
@@ -30,11 +32,11 @@ Never claim unlisted or “Coming soon” features (e.g. Meta AI Bot) as live.
 
 ## Today's plan response
 
-1. Day theme (incl. Personal brand / Feature launch).
-2. Checklist 30–90 min.
-3. Posts: FB → IG → Threads → LinkedIn (BN primary).
-4. Live CTAs only on `https://app.wpsalehub.com/...` (pillars, tools, pricing, home).
-5. Video script if needed.
+1. Day theme (incl. Personal brand / Feature launch). **If authority cluster is active**, resolve `config/seo_authority_calendar.php` via `App\Support\SeoAuthorityCalendar::resolve()` (Asia/Dhaka) and use that day's `theme` + `cta` — do not hop Mon SteadFast → Tue Messenger → Wed AI.
+2. Checklist 30–90 min (prefer calendar `checklist[]`; on **Sunday** use Step 9 `metrics_checklist` + run `seo:weekly-report`).
+3. Posts: FB → IG → Threads → LinkedIn (BN primary); Short hook from calendar `short_hook` when set. **Sunday:** metrics note can replace a full creative dump — still one SteadFast CTA.
+4. Live CTAs only on `https://app.wpsalehub.com/...` (calendar `cta` first, then pillar/tools/pricing/home).
+5. Video script if needed (cluster: Long + Shorts that answer one question each — Week 4 heavy).
 6. Always branded 1:1 + 9:16 images via brand skill.
 7. ≥1 Muhibbullah byline/face beat; email only for trust/collab CTAs.
 8. End: Done when + কালকের প্ল্যান চাই।
@@ -45,8 +47,8 @@ FB reach · IG Reels/Stories · Threads tips · LinkedIn founder voice · YouTub
 
 ## SEO roadmap (when asking next steps / FAQ / organic plan)
 
-Follow `.cursor/skills/seo-mentor/SKILL.md` **Default priority stack**: deepen fraud/COD pillars → internal links (no orphaned sitemap URLs) → `/faq` hub → GSC-driven next batch. Steal competitor **structure** (hub → questions), not courier-brand support FAQs. For `fraud checker` SERP, follow **Fraud checker SERP rivals** + Gap scorecard (never fake No.1). Orphaned sitemap pages → skill **Orphaned sitemap pages** playbook (`sitemapNavLinks` must include blog posts).
+Follow `.cursor/skills/seo-mentor/SKILL.md` **Default priority stack** + **Courier pillar authority playbook** (90-day: One Topic → One Authority → Then Expand). Active campaign default: SteadFast → `/steadfast-fraud-check`; free-tool CTA `/bd-fraud-checker`. Deepen active pillar cluster (3k–5k pillar, supporting pages, deep FAQs, closed-loop links) before expanding to Pathao / Fake Order / Fraud Checker BD. Steal competitor **structure** (hub → questions), not courier-brand support FAQs. For `fraud checker` SERP, follow **Fraud checker SERP rivals** + Gap scorecard (never fake No.1). Orphaned sitemap pages → skill **Orphaned sitemap pages** playbook (`sitemapNavLinks` must include blog posts).
 
 ## Do not
 
-Competitor hate · fake metrics · week dumps · duplicate fraud landings · unbranded creatives · invent features · link wooeasylife.com · clone courier payment/warehouse/BOD FAQs · thin 50+ FAQ dumps · bare `/path` or `/faq/...` as visible text (blog CKEditor has **no** linkify — always `<a href="...">labeled</a>`; marketing FAQ copy uses PATH_LABELS + no `/` as BN “vs”) · put URLs in sitemap without a sitewide internal `<a href>` (Semrush orphans)
+Competitor hate · fake metrics · week dumps · duplicate fraud landings · unbranded creatives · invent features · link wooeasylife.com · clone courier payment/warehouse/BOD FAQs · thin 50+ FAQ dumps (deep 600–1000w cluster FAQs OK) · theme-hop mid-cluster · expand next courier category before Step 10 win · claim tool guarantees fake/genuine · bare `/path` or `/faq/...` as visible text (blog CKEditor has **no** linkify — always `<a href="...">labeled</a>`; marketing FAQ copy uses PATH_LABELS + no `/` as BN “vs”) · put URLs in sitemap without a sitewide internal `<a href>` (Semrush orphans)

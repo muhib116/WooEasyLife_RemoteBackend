@@ -17,13 +17,14 @@ return [
                 'এখানে WooEasyLife নিয়ে সেলারদের সবচেয়ে বেশি জিজ্ঞাসিত প্রশ্নগুলো টপিক অনুযায়ী সাজানো আছে। কুরিয়ার সাপোর্টের পেমেন্ট বা ওয়ারহাউস FAQ নয়—ফোকাস ফ্রড চেক, ফেক অর্ডার সুরক্ষা, COD রিটার্ন লস, কুরিয়ার অটো এন্ট্রি ও মোবাইল অ্যাপ।',
                 'প্রতিটি প্রশ্নের আলাদা পেজ আছে: সরাসরি উত্তর, BD COD-এর ৳ প্রসঙ্গ, WooEasyLife-এ কীভাবে কাজ করে (শুধু শিপড ফিচার), আর ছোট SOP। টুল শুরু করতে পারেন /bd-fraud-checker বা /fake-order-protection থেকে; ট্রায়াল /pricing।',
                 'নতুন সেলার হলে আগে ফ্রড চেক ও সাকসেস রেট বোঝার প্রশ্নগুলো পড়ুন। তারপর OTP, ব্ল্যাকলিস্ট ও রিটার্ন লস হিসাব—এই ক্রমে পড়লে ওয়ার্কফ্লো পরিষ্কার থাকে।',
+                'SteadFast ক্লাস্টার লুপ: গাইড /steadfast-fraud-check → FAQ ইনডেক্স /blog/steadfast-fraud-check-faq → টুল /bd-fraud-checker → কেস /blog/steadfast-fraud-check-case-study → ক্যালকুলেটর /return-loss-calculator → আবার গাইড।',
             ],
         ],
         [
             'heading' => '১) ফ্রড ও কাস্টমার চেক',
             'paragraphs' => [
                 'অর্ডার কনফার্মের আগে মোবাইল নম্বর দিয়ে Pathao, Steadfast ও RedX-এর হিস্টোরি আর সাকসেস রেট দেখুন। কোন রেট “ভালো”, কম হলে কী করবেন, হিস্টোরি কীভাবে পড়বেন আর ফ্রড স্কোর মানে কী—এসব প্রশ্নের উত্তর নিচের FAQ লিংকে।',
-                'ফ্রি টুল: /bd-fraud-checker · /fake-customer-check · /bd-courier-ratio-checker। চেক শুধু সিগন্যাল দেয়—অন্ধ অটো-শিপ করে না; সিদ্ধান্ত আপনার।',
+                'ফ্রি টুল: /bd-fraud-checker · /fake-customer-check · /bd-courier-ratio-checker। SteadFast ফোকাস পিলার: /steadfast-fraud-check। চেক শুধু সিগন্যাল দেয়—অন্ধ অটো-শিপ করে না; সিদ্ধান্ত আপনার।',
             ],
         ],
         [
@@ -95,13 +96,21 @@ return [
                 'delivered বনাম রিটার্ন বা ক্যানসেল অনুপাত পড়ুন—শুধু একটা স্ক্রিনশট নয়, প্যাটার্ন দেখুন।',
                 'সবুজ বা উচ্চ রেট হলে কনফার্ম করুন; হলুদ বা লাল জোনে /faq/success-rate-kom-hole-ki-korbo অনুসরণ করুন।',
                 'নোট লিখে রাখুন এবং টিমকে একই SOP দিন।',
+                'SteadFast অর্ডারে পিলার ফ্লো মিলান: /steadfast-fraud-check।',
             ],
         ],
         [
             'heading' => 'সাধারণ ভুল',
             'paragraphs' => [
                 'শুধু এক কুরিয়ারের প্যানেল দেখে সিদ্ধান্ত নেওয়া; লাল জোন দেখেও “একবার ট্রাই”; রেট ভালো দেখে OTP বা নোট বন্ধ করে দেওয়া—এগুলো মাসের লস বাড়ায়।',
-                'সঠিক অভ্যাস: প্রতি সন্দেহজনক অর্ডারে চেক → নোট → একই SOP।',
+                'সঠিক অভ্যাস: প্রতি সন্দেহজনক অর্ডারে চেক → নোট → একই SOP। ক্লাস্টার ভুল তালিকা: /blog/steadfast-fraud-check-common-mistakes।',
+            ],
+        ],
+        [
+            'heading' => 'SteadFast ক্লাস্টার লিংক',
+            'paragraphs' => [
+                'SteadFast ফোকাস গাইড: /steadfast-fraud-check। Delivery Ratio ব্লগ: /blog/steadfast-delivery-ratio-ki। কখন ভেরিফাই: /faq/prottek-customer-verify-korbo-ki · /blog/kokhon-customer-verify-korbo।',
+                'কত ডেলিভারি “ভালো” তা জাদু সংখ্যা নয়—ভলিউম কম হলে শতাংশ অস্থির। ৭০%+ প্রায়শই ভালো সিগন্যাল, কিন্তু মোট অর্ডার, সাম্প্রতিক রিটার্ন ও টিকেট সাইজ একসাথে দেখুন। ফোন কনফার্ম গ্যারান্টি নয়: /faq/phone-confirm-delivery-guarantee-ki।',
             ],
         ],
         [
@@ -154,12 +163,13 @@ return [
             'paragraphs' => [
                 'সবুজ বা উচ্চ রেট: দ্রুত কনফার্ম করে অটো এন্ট্রি। হলুদ বা মাঝারি: কল বা কন্ডিশনাল OTP, ঠিকানা যাচাই, তারপর approve। লাল বা খুব কম সাকসেস: অগ্রিম ছাড়া শিপ করবেন না—হোল্ড বা বাতিল, নোট লিখে রাখুন।',
                 'OTP কখন নেবেন: /faq/cod-order-otp-kokhon। জোন গাইড: /customer-verification।',
+                'SteadFast পিলার ফ্লো: /steadfast-fraud-check। কখন প্রত্যেককে ভেরিফাই: /faq/prottek-customer-verify-korbo-ki। ফেক চিনা: /faq/fake-order-chinhe-fela-jay-ki।',
             ],
         ],
         [
             'heading' => 'পরবর্তী ধাপ',
             'paragraphs' => [
-                'রেট কীভাবে বুঝবেন: /faq/courier-success-rate-kivabe-bujhbo। OTP কখন: /faq/cod-order-otp-kokhon। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo। হাব: /faq।',
+                'রেট কীভাবে বুঝবেন: /faq/courier-success-rate-kivabe-bujhbo। OTP কখন: /faq/cod-order-otp-kokhon। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo। কেস: /blog/steadfast-fraud-check-case-study। হাব: /faq।',
             ],
         ],
     ],
@@ -359,12 +369,20 @@ return [
             'paragraphs' => [
                 'শুধু সর্বশেষ একটা অর্ডার নয়—বারবার রিটার্ন বা ক্যানসেল প্যাটার্ন দেখুন। নতুন নম্বরে হিস্টোরি কম থাকতে পারে; তখন OTP বা কল নিরাপদ।',
                 'কম রেট হলে: /faq/success-rate-kom-hole-ki-korbo। স্কোর আলাদা সিগন্যাল: /faq/customer-fraud-score-ki।',
+                'কুরিয়ার হিস্টোরি মানেই নম্বরের পার্সেল সিভি—জাতীয় পরিচয় নয়। গভীর ব্যাখ্যা: /blog/steadfast-customer-history-ki। খালি হিস্টোরি: /faq/history-na-thakle-ki-korbo।',
+            ],
+        ],
+        [
+            'heading' => 'SteadFast ওয়ার্কফ্লো',
+            'paragraphs' => [
+                'SteadFast অর্ডারে আগে /steadfast-fraud-check বা /bd-fraud-checker চালান, তারপর কনফার্ম ও /courier-auto-entry। বুকিংয়ের পর cancel বা return: /steadfast-return-hub · /faq/steadfast-return-request-kivabe।',
+                'ফোন কনফার্ম একা যথেষ্ট নয়: /faq/phone-confirm-delivery-guarantee-ki। টুল গ্যারান্টি নয়: /faq/wooeasylife-fraud-predict-kore-ki।',
             ],
         ],
         [
             'heading' => 'পরবর্তী ধাপ',
             'paragraphs' => [
-                'কম রেট: /faq/success-rate-kom-hole-ki-korbo। স্কোর: /faq/customer-fraud-score-ki। হাব: /faq।',
+                'কম রেট: /faq/success-rate-kom-hole-ki-korbo। স্কোর: /faq/customer-fraud-score-ki। পিলার: /steadfast-fraud-check। হাব: /faq।',
             ],
         ],
     ],
@@ -409,13 +427,13 @@ return [
             'heading' => 'স্কোর কম হলে কী করবেন',
             'paragraphs' => [
                 'অন্ধ ক্যানসেল নয়। কল করুন, ঠিকানা যাচাই করুন, প্রয়োজনে OTP নিন। বারবার একই নম্বর খারাপ হলে ব্ল্যাকলিস্ট: /faq/woocommerce-customer-blacklist।',
-                'কম রেট SOP: /faq/success-rate-kom-hole-ki-korbo।',
+                'কম রেট SOP: /faq/success-rate-kom-hole-ki-korbo। WooEasyLife কি ফ্রড predict করে? না: /faq/wooeasylife-fraud-predict-kore-ki। SteadFast পিলার: /steadfast-fraud-check।',
             ],
         ],
         [
             'heading' => 'পরবর্তী ধাপ',
             'paragraphs' => [
-                'হিস্টোরি চেক: /faq/customer-delivery-history-check। সাকসেস রেট: /faq/courier-success-rate-kivabe-bujhbo। হাব: /faq।',
+                'হিস্টোরি চেক: /faq/customer-delivery-history-check। সাকসেস রেট: /faq/courier-success-rate-kivabe-bujhbo। Fake customer: /fake-customer-check। হাব: /faq।',
             ],
         ],
     ],
@@ -470,4 +488,4 @@ return [
             ],
         ],
     ],
-];
+] + require __DIR__.'/seo_faq_spokes/step3_new_faqs.php';

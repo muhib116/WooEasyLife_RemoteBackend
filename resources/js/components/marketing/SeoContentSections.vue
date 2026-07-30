@@ -3,15 +3,45 @@ import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
-defineProps({
+const props = defineProps({
     sections: {
         type: Array,
         default: () => [],
+    },
+    /** Match SeoMetaService ItemList anchors (#guide-section-N), skipping quick/AI stubs. */
+    useGuideAnchors: {
+        type: Boolean,
+        default: false,
     },
 });
 
 const page = usePage();
 const isEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('en'));
+
+const isSkippedForGuideToc = (heading) => {
+    const h = String(heading || '').trim();
+    if (!h) return true;
+    const lower = h.toLowerCase();
+    if (h.includes('দ্রুত') || lower.includes('quick')) return true;
+    if (h.includes('এআই সারাংশ') || lower.includes('ai summary')) return true;
+    return false;
+};
+
+const normalizedSections = computed(() => {
+    let tocPosition = 0;
+    return (props.sections || []).map((section, index) => {
+        let id = `seo-section-${index + 1}`;
+        if (props.useGuideAnchors) {
+            if (isSkippedForGuideToc(section?.heading)) {
+                id = index === 0 ? 'guide-section-quick' : `guide-section-skip-${index + 1}`;
+            } else {
+                tocPosition += 1;
+                id = `guide-section-${tocPosition}`;
+            }
+        }
+        return { section, id };
+    });
+});
 </script>
 
 <template>
@@ -22,9 +52,10 @@ const isEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('
     >
         <div class="mx-auto max-w-3xl space-y-10">
             <article
-                v-for="(section, index) in sections"
-                :key="section.heading || index"
-                class="space-y-3"
+                v-for="{ section, id } in normalizedSections"
+                :id="id"
+                :key="id"
+                class="scroll-mt-28 space-y-3"
             >
                 <h2
                     v-if="section.heading"
@@ -53,7 +84,7 @@ const isEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('
                 </ol>
                 <figure
                     v-for="(figure, fIndex) in section.figures || []"
-                    :key="`${index}-fig-${fIndex}`"
+                    :key="`${id}-fig-${fIndex}`"
                     class="overflow-hidden rounded-xl border border-white/10 bg-white/5"
                 >
                     <img

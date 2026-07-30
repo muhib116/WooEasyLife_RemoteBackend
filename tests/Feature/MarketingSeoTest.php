@@ -883,6 +883,66 @@ class MarketingSeoTest extends TestCase
         $this->get('/redx-fraud-check')->assertOk();
     }
 
+    public function test_steadfast_fraud_check_pillar_is_seo_complete(): void
+    {
+        $seoService = app(\App\Services\SeoMetaService::class);
+        $pillar = $seoService->forPage('steadfast_fraud_check');
+        $graph = collect($pillar['json_ld']['@graph'] ?? []);
+
+        $this->assertTrue((bool) ($pillar['is_pillar'] ?? false));
+        $this->assertSame('Muhibbullah Ansary', $pillar['author_name'] ?? null);
+        $this->assertNotEmpty($pillar['last_updated_label'] ?? null);
+        $this->assertNotEmpty($pillar['honesty_line'] ?? null);
+        $this->assertNotEmpty($pillar['external_links'] ?? []);
+        $this->assertIsArray($pillar['trust_signals'] ?? null);
+        $this->assertNotEmpty($pillar['trust_signals']['examples'] ?? []);
+        $this->assertNotEmpty($pillar['trust_signals']['cannot_do'] ?? []);
+        $this->assertNotEmpty($pillar['trust_signals']['decision_tips'] ?? []);
+
+        $article = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Article');
+        $this->assertNotNull($article, 'SteadFast pillar should emit Article JSON-LD');
+        $this->assertSame('2026-07-30', $article['datePublished'] ?? null);
+        $this->assertSame('2026-07-30', $article['dateModified'] ?? null);
+        $this->assertSame('SteadFast Fraud Check', $article['articleSection'] ?? null);
+
+        $faq = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'FAQPage');
+        $this->assertNotNull($faq, 'SteadFast pillar should emit FAQPage JSON-LD');
+        $faqBlob = json_encode($faq, JSON_UNESCAPED_UNICODE);
+        $this->assertStringContainsString('better-informed decision', (string) $faqBlob);
+        $this->assertStringContainsString('does not guarantee', (string) $faqBlob);
+
+        $toc = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'ItemList');
+        $this->assertNotNull($toc, 'SteadFast pillar should emit ItemList TOC JSON-LD');
+        $this->assertGreaterThanOrEqual(8, (int) ($toc['numberOfItems'] ?? 0));
+        $firstToc = $toc['itemListElement'][0] ?? null;
+        $this->assertIsArray($firstToc);
+        $this->assertStringEndsWith('#guide-section-1', (string) ($firstToc['url'] ?? ''));
+
+        $response = $this->get('/steadfast-fraud-check');
+        $response->assertOk();
+        $response->assertSee('"@type":"Article"', false);
+        $response->assertSee('datePublished', false);
+        $response->assertSee('better-informed decision', false);
+        $response->assertSee('https://steadfast.com.bd/pricing', false);
+        $response->assertSee('/images/seo/cluster/fraud-layers.jpg', false);
+        $response->assertSee('/images/seo/cluster/cod-loss-math.jpg', false);
+        $response->assertSee($pillar['faqs'][0]['q'] ?? 'missing-faq', false);
+        $response->assertDontSee('aggregateRating', false);
+        $response->assertDontSee('AggregateRating', false);
+        $response->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('Seo/CourierIntent')
+            ->where('seo.canonical_path', '/steadfast-fraud-check')
+            ->where('seo.is_pillar', true)
+            ->where('seo.author_name', 'Muhibbullah Ansary')
+            ->has('seo.external_links')
+            ->has('seo.honesty_line')
+            ->has('seo.last_updated_label')
+            ->has('seo.trust_signals.examples')
+            ->has('seo.trust_signals.cannot_do')
+            ->has('seo.trust_signals.decision_tips')
+        );
+    }
+
     public function test_english_blog_post_does_not_inherit_bn_blog_hub_prerender(): void
     {
         $admin = User::create([

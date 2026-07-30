@@ -71,7 +71,21 @@ const LABELS = {
     '/faq/customer-delivery-history-check': { bn: 'ডেলিভারি হিস্টোরি চেক', en: 'Delivery history check' },
     '/faq/customer-fraud-score-ki': { bn: 'ফ্রড স্কোর কী', en: 'What fraud score means' },
     '/faq/cod-return-loss-hisab': { bn: 'রিটার্ন লস হিসাব', en: 'Return loss math' },
+    '/faq/phone-confirm-delivery-guarantee-ki': { bn: 'ফোন কনফার্ম গ্যারান্টি?', en: 'Does phone confirm guarantee delivery?' },
+    '/faq/history-na-thakle-ki-korbo': { bn: 'হিস্টোরি না থাকলে', en: 'What if no history' },
+    '/faq/prottek-customer-verify-korbo-ki': { bn: 'প্রত্যেককে ভেরিফাই?', en: 'Verify every customer?' },
+    '/faq/wooeasylife-fraud-predict-kore-ki': { bn: 'ফ্রড predict করে কি?', en: 'Does WooEasyLife predict fraud?' },
+    '/faq/fake-order-chinhe-fela-jay-ki': { bn: 'ফেক অর্ডার চিনা যায়?', en: 'Can you identify fake orders?' },
+    '/faq/steadfast-return-request-kivabe': { bn: 'SteadFast Return Request', en: 'SteadFast return request' },
+    '/faq/steadfast-stuck-parcel-ki-korbo': { bn: 'SteadFast Stuck Parcel', en: 'SteadFast stuck parcel' },
     '/blog/blacklist-customer-after-returns': { bn: 'রিটার্নের পর ব্ল্যাকলিস্ট', en: 'Blacklist after returns' },
+    '/blog/steadfast-customer-history-ki': { bn: 'Customer History কী', en: 'What is customer history' },
+    '/blog/steadfast-delivery-ratio-ki': { bn: 'Delivery Ratio কী', en: 'What is delivery ratio' },
+    '/blog/steadfast-return-komano': { bn: 'SteadFast রিটার্ন কমানো', en: 'Reduce SteadFast returns' },
+    '/blog/kokhon-customer-verify-korbo': { bn: 'কখন কাস্টমার ভেরিফাই', en: 'When to verify customers' },
+    '/blog/steadfast-fraud-check-case-study': { bn: 'SteadFast Fraud Check কেস', en: 'SteadFast fraud check case study' },
+    '/blog/steadfast-fraud-check-common-mistakes': { bn: 'SteadFast চেক সাধারণ ভুল', en: 'SteadFast check common mistakes' },
+    '/blog/steadfast-fraud-check-faq': { bn: 'SteadFast Fraud Check FAQ', en: 'SteadFast fraud check FAQ' },
 };
 
 const KNOWN_PATHS = Object.keys(LABELS).sort((a, b) => b.length - a.length);

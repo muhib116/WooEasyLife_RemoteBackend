@@ -98,16 +98,16 @@ const playbook = [
         linkLabel: 'BD Fraud Checker',
     },
     {
+        title: 'SteadFast গাইড পড়ুন',
+        body: 'হিস্টোরি, রেশিও ও রিটার্ন কমানোর পিলার ফ্লো—সিগন্যাল, গ্যারান্টি নয়।',
+        href: '/steadfast-fraud-check',
+        linkLabel: 'SteadFast Fraud Check',
+    },
+    {
         title: 'প্রোটেকশন চালু করুন',
         body: 'OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে একই ঝুঁকি বারবার আসা কমান।',
         href: '/fake-order-protection',
         linkLabel: 'ফেক অর্ডার প্রোটেকশন',
-    },
-    {
-        title: 'আসল ROAS দেখুন',
-        body: 'ফেক Purchase বাদ দিয়ে রিপোর্টেড vs আসল Ads ROAS তুলনা করুন।',
-        href: '/ads-roas-calculator',
-        linkLabel: 'Ads ROAS ক্যালকুলেটর',
     },
 ];
 
@@ -127,12 +127,15 @@ const whoFor = [
 ];
 
 const relatedLinks = [
-    { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
+    { href: '/steadfast-fraud-check', label: 'SteadFast Fraud Check গাইড' },
+    { href: '/blog/steadfast-fraud-check-case-study', label: 'SteadFast কেস স্টাডি' },
     { href: '/bd-fraud-checker', label: 'BD Fraud Checker' },
+    { href: '/faq', label: 'FAQ হাব' },
     { href: '/fake-order-protection', label: 'ফেক অর্ডার প্রোটেকশন' },
     { href: '/ads-roas-calculator', label: 'Ads ROAS ক্যালকুলেটর' },
     { href: '/courier-charge-calculator', label: 'কুরিয়ার চার্জ ক্যালকুলেটর' },
     { href: '/courier-auto-entry', label: 'কুরিয়ার অটো এন্ট্রি' },
+    { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
     { href: '/pricing', label: 'প্রাইসিং' },
     { href: '/en/return-loss-calculator', label: 'English version' },
 ];
