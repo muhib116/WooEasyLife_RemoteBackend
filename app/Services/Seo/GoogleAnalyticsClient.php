@@ -464,34 +464,40 @@ class GoogleAnalyticsClient
             }
 
             // Two calls only: headline active users + top pages (countries omitted to save quota).
+            // Realtime schema is a subset of Core Reporting — use unifiedScreenName (page title),
+            // not pagePath / unifiedPagePathScreen (those return HTTP 400).
             $activePayload = $this->runRealtimeReport([
                 'metrics' => [['name' => 'activeUsers']],
             ]);
             $activeUsers = (int) ($activePayload['rows'][0]['metricValues'][0]['value'] ?? 0);
 
-            $pagesPayload = $this->runRealtimeReport([
-                'dimensions' => [['name' => 'unifiedPagePathScreen']],
-                'metrics' => [['name' => 'activeUsers']],
-                'limit' => 8,
-                'orderBys' => [[
-                    'metric' => ['metricName' => 'activeUsers'],
-                    'desc' => true,
-                ]],
-            ]);
-
             $pages = [];
-            foreach ($pagesPayload['rows'] ?? [] as $row) {
-                if (! is_array($row)) {
-                    continue;
+            try {
+                $pagesPayload = $this->runRealtimeReport([
+                    'dimensions' => [['name' => 'unifiedScreenName']],
+                    'metrics' => [['name' => 'activeUsers']],
+                    'limit' => 8,
+                    'orderBys' => [[
+                        'metric' => ['metricName' => 'activeUsers'],
+                        'desc' => true,
+                    ]],
+                ]);
+
+                foreach ($pagesPayload['rows'] ?? [] as $row) {
+                    if (! is_array($row)) {
+                        continue;
+                    }
+                    $path = trim((string) ($row['dimensionValues'][0]['value'] ?? ''));
+                    if ($path === '') {
+                        continue;
+                    }
+                    $pages[] = [
+                        'path' => $path,
+                        'users' => (int) ($row['metricValues'][0]['value'] ?? 0),
+                    ];
                 }
-                $path = trim((string) ($row['dimensionValues'][0]['value'] ?? ''));
-                if ($path === '') {
-                    continue;
-                }
-                $pages[] = [
-                    'path' => $path,
-                    'users' => (int) ($row['metricValues'][0]['value'] ?? 0),
-                ];
+            } catch (\Throwable $pagesError) {
+                Log::warning('GA realtime top pages failed', ['message' => $pagesError->getMessage()]);
             }
 
             $snapshot = [
@@ -701,7 +707,7 @@ class GoogleAnalyticsClient
         }
 
         if (str_contains($raw, '403') || str_contains($raw, 'permission')) {
-            return 'No access to this GA4 property. Reconnect with the GA property-owner Google account, and confirm Property ID 546780272.';
+            return 'No access to this GA4 property. Reconnect with the GA property-owner Google account, and confirm the numeric Property ID.';
         }
 
         if (str_contains($raw, '404') || str_contains($raw, 'not found')) {
@@ -712,8 +718,13 @@ class GoogleAnalyticsClient
             return 'Google Analytics rate limit hit. Wait a minute and retry.';
         }
 
-        if (str_contains($raw, '400')) {
-            return 'Google Analytics rejected the request (bad Property ID or API body). Confirm Property ID and Probe GA API.';
+        if (
+            str_contains($raw, '400')
+            || str_contains($raw, 'invalid argument')
+            || str_contains($raw, 'invalid_argument')
+            || str_contains($raw, 'do not support dimension')
+        ) {
+            return 'Google Analytics rejected the realtime query. Confirm Property ID, then Probe GA API under SEO & Learning.';
         }
 
         return 'Google Analytics temporarily unavailable. Open SEO & Learning → Probe GA API, confirm Data API is enabled, then refresh Live traffic.';

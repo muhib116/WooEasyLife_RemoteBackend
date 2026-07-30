@@ -89,7 +89,7 @@
                 class="mt-4"
             >
                 <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Top pages
+                    Top pages (titles)
                 </p>
                 <ul class="mt-2 space-y-1.5">
                     <li

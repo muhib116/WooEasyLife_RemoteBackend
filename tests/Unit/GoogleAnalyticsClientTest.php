@@ -241,8 +241,51 @@ class GoogleAnalyticsClientTest extends TestCase
         $this->assertNull($snapshot['error']);
 
         Http::assertSent(function ($request) {
-            return str_contains($request->url(), ':runRealtimeReport');
+            if (! str_contains($request->url(), ':runRealtimeReport')) {
+                return false;
+            }
+            $body = $request->data();
+            if (! is_array($body) || ! isset($body['dimensions'])) {
+                return true; // activeUsers-only call
+            }
+
+            return ($body['dimensions'][0]['name'] ?? null) === 'unifiedScreenName';
         });
+    }
+
+    public function test_realtime_snapshot_keeps_active_users_when_pages_call_fails(): void
+    {
+        config([
+            'seo.ga.property_id' => '123456789',
+            'seo.ga.access_token' => 'ya29.static',
+            'seo.ga.refresh_token' => null,
+            'seo.ga.client_id' => null,
+            'seo.ga.client_secret' => null,
+        ]);
+
+        Cache::flush();
+
+        Http::fake([
+            'analyticsdata.googleapis.com/v1beta/properties/*' => Http::sequence()
+                ->push([
+                    'rows' => [[
+                        'metricValues' => [['value' => '3']],
+                    ]],
+                ], 200)
+                ->push([
+                    'error' => [
+                        'message' => 'Realtime reports do not support dimension unifiedPagePathScreen',
+                        'status' => 'INVALID_ARGUMENT',
+                    ],
+                ], 400),
+        ]);
+
+        $snapshot = app(GoogleAnalyticsClient::class)->realtimeSnapshot(force: true);
+
+        $this->assertTrue($snapshot['ready']);
+        $this->assertSame(3, $snapshot['active_users']);
+        $this->assertSame([], $snapshot['pages']);
+        $this->assertNull($snapshot['error']);
     }
 
     public function test_realtime_snapshot_reports_not_ready_when_unconfigured(): void

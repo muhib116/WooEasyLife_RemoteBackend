@@ -297,7 +297,7 @@ Minimum on pillar: ≥2 tools + ≥2 blogs/FAQs + 1 `/pricing` + free checker. N
 | 3 | Case + return math + Return Hub | case study, `/return-loss-calculator`, return FAQs |
 | 4 | Loop reinforce + YouTube scripts | FAQ index, Long/Shorts outlines, soft `/fake-customer-check` |
 
-**Lock window (current):** `lock_start_date` = **2026-07-27** (Mon) → **4 weeks** through **2026-08-23**. After that: SteadFast **maintenance** until Step 10 win — do **not** auto-start Pathao.
+**Lock window (current):** `lock_start_date` = **2026-07-27** (Mon) → **4 weeks** inclusive through **2026-08-23** (Sun) — 28 days (Jul 27–Aug 2, Aug 3–9, Aug 10–16, Aug 17–23). Code: `start->addWeeks(4)->subDay()`. **2026-08-24** = first maintenance day. After that: SteadFast **maintenance** until Step 10 win — do **not** auto-start Pathao.
 
 Daily mentor plan still = 1 theme/day, but the theme comes from the calendar day (`theme`, `cta`, `checklist`, `short_hook`). Feature-launch exceptions only if Shipped **and** SteadFast/fraud-cluster adjacent.
 

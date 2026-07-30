@@ -1236,6 +1236,40 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('/sitemap.xml', false);
     }
 
+    public function test_robots_disallows_authenticated_admin_and_portal_paths(): void
+    {
+        $response = $this->get('/robots.txt');
+
+        $response->assertOk();
+        $body = $response->getContent();
+
+        foreach ([
+            '/dashboard',
+            '/portal',
+            '/muhib',
+            '/marchent',
+            '/blog-posts',
+            '/visitors',
+            '/maintenance',
+            '/profile',
+            '/forgot-password',
+            '/reset-password',
+            '/telescope',
+            '/deploy',
+        ] as $path) {
+            $this->assertStringContainsString('Disallow: '.$path, $body);
+        }
+
+        // Public marketing URLs must remain crawlable (no blanket Disallow: /).
+        $this->assertStringNotContainsString("Disallow: /\n", $body."\n");
+        foreach (['/blog', '/pricing', '/bd-fraud-checker', '/faq'] as $publicPath) {
+            $this->assertDoesNotMatchRegularExpression(
+                '/^Disallow:\s*'.preg_quote($publicPath, '/').'\s*$/m',
+                $body
+            );
+        }
+    }
+
     public function test_home_includes_ga4_gtag_when_measurement_id_configured(): void
     {
         config(['seo.ga.measurement_id' => 'G-V3TDVR7ED9']);
