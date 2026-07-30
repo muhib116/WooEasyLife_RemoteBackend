@@ -690,18 +690,32 @@ class GoogleAnalyticsClient
             return 'Google Analytics auth expired. Reconnect under SEO & Learning.';
         }
 
+        if (
+            str_contains($raw, 'service_disabled')
+            || str_contains($raw, 'accessnotconfigured')
+            || str_contains($raw, 'has not been used')
+            || str_contains($raw, 'api has not been used')
+            || (str_contains($raw, 'analyticsdata') && str_contains($raw, 'disabled'))
+        ) {
+            return 'Enable Google Analytics Data API in Google Cloud (project WPSaleHub), wait 1–2 minutes, then Probe again.';
+        }
+
         if (str_contains($raw, '403') || str_contains($raw, 'permission')) {
-            return 'No access to this GA4 property. Check SEO_GA_PROPERTY_ID and Google account permissions.';
+            return 'No access to this GA4 property. Reconnect with the GA property-owner Google account, and confirm Property ID 546780272.';
         }
 
         if (str_contains($raw, '404') || str_contains($raw, 'not found')) {
-            return 'GA4 property not found. Check SEO_GA_PROPERTY_ID.';
+            return 'GA4 property not found. Check the numeric Property ID under SEO & Learning.';
         }
 
         if (str_contains($raw, '429') || str_contains($raw, 'quota') || str_contains($raw, 'rate')) {
             return 'Google Analytics rate limit hit. Wait a minute and retry.';
         }
 
-        return 'Google Analytics temporarily unavailable.';
+        if (str_contains($raw, '400')) {
+            return 'Google Analytics rejected the request (bad Property ID or API body). Confirm Property ID and Probe GA API.';
+        }
+
+        return 'Google Analytics temporarily unavailable. Open SEO & Learning → Probe GA API, confirm Data API is enabled, then refresh Live traffic.';
     }
 }

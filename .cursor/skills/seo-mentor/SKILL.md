@@ -719,7 +719,7 @@ Update this skill — not only `FEATURES.md` — when:
 | Rival enters top 3 / audit run | Roster + Gap scorecard |
 | Our page changes (e.g. tool goes SSR) | **Remove closed gaps** from scorecard |
 | GSC winners/losers | Phase 1 priorities + Phase 5 + Step 9 |
-| `/faq` hub ships | Current state → **live** (2026-07-26); first 8 FAQs live; next batch from GSC only |
+| `/faq` hub ships | Current state → **live** (2026-07-30); first 8 FAQs live; next batch from GSC only |
 | Active cluster changes / Step 10 win | Update **Active campaign** pillar URL + expand-order pointer + `seo_authority_calendar.php` |
 | Cluster lock calendar shipped / dates shift | `config/seo_authority_calendar.php` + Step 6 lock window + Current state |
 | Pillar hits 3k–5k authority draft shipped | Note in Current state; close thin-alias gap for that courier |

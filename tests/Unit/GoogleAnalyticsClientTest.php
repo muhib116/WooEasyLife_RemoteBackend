@@ -328,6 +328,38 @@ class GoogleAnalyticsClientTest extends TestCase
         $this->assertNotNull($snapshot['error']);
         $this->assertStringNotContainsString('PERMISSION_DENIED', $snapshot['error']);
         $this->assertStringNotContainsString('property 999', $snapshot['error']);
-        $this->assertStringContainsString('SEO_GA_PROPERTY_ID', $snapshot['error']);
+        $this->assertStringContainsString('No access to this GA4 property', $snapshot['error']);
+    }
+
+    public function test_realtime_maps_service_disabled_to_enable_api_hint(): void
+    {
+        config([
+            'seo.ga.property_id' => '123456789',
+            'seo.ga.access_token' => 'ya29.static',
+            'seo.ga.refresh_token' => null,
+            'seo.ga.client_id' => null,
+            'seo.ga.client_secret' => null,
+        ]);
+
+        Cache::flush();
+
+        Http::fake([
+            'analyticsdata.googleapis.com/v1beta/properties/*' => Http::response([
+                'error' => [
+                    'message' => 'Google Analytics Data API has not been used in project 123 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/analyticsdata.googleapis.com/overview?project=123 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.',
+                    'status' => 'PERMISSION_DENIED',
+                    'details' => [[
+                        '@type' => 'type.googleapis.com/google.rpc.ErrorInfo',
+                        'reason' => 'SERVICE_DISABLED',
+                    ]],
+                ],
+            ], 403),
+        ]);
+
+        $snapshot = app(GoogleAnalyticsClient::class)->realtimeSnapshot(force: true);
+
+        $this->assertNotNull($snapshot['error']);
+        $this->assertStringContainsString('Enable Google Analytics Data API', $snapshot['error']);
+        $this->assertStringNotContainsString('SERVICE_DISABLED', $snapshot['error']);
     }
 }
