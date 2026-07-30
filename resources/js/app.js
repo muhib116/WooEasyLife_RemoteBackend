@@ -71,6 +71,14 @@ createInertiaApp({
             if (typeof window.fbq === 'function') {
                 window.fbq('track', 'PageView');
             }
+
+            if (typeof window.gtag === 'function') {
+                window.gtag('event', 'page_view', {
+                    page_path: event.detail.page.url,
+                    page_location: window.location.href,
+                    page_title: document.title,
+                });
+            }
         });
 
         router.on('finish', () => {

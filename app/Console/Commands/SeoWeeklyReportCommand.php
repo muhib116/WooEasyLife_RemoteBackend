@@ -62,10 +62,13 @@ class SeoWeeklyReportCommand extends Command
         $lines[] = '## Google Search Console';
         $lines[] = $this->fetchGscSnapshot($gsc);
         $lines[] = '';
-        $lines[] = '## Manual checklist';
-        $lines[] = '- Review GSC → Performance → Queries (ফ্রড চেকার, BD fraud checker)';
+        $lines[] = \App\Support\SeoAuthorityMetrics::reportMarkdown();
+        $lines[] = '';
+        $lines[] = '## Manual checklist (sitewide)';
+        $lines[] = '- Review GSC → Performance → Queries (ফ্রড চেকার, BD fraud checker, SteadFast)';
         $lines[] = '- Request indexing for new URLs if needed';
         $lines[] = '- Confirm APP_URL is production HTTPS';
+        $lines[] = '- Authority Sunday SOP: see Step 9 section above (cluster only — no Pathao expand)';
 
         $dir = storage_path('app/seo');
         File::ensureDirectoryExists($dir);
@@ -117,9 +120,60 @@ class SeoWeeklyReportCommand extends Command
                 $out[] = "- {$q} — clicks {$clicks}, impressions {$impr}, pos {$pos}";
             }
 
+            $cluster = $this->fetchClusterPageSnapshot($gsc);
+            if ($cluster !== '') {
+                $out[] = '';
+                $out[] = $cluster;
+            }
+
             return implode("\n", $out);
         } catch (\Throwable $e) {
             return 'GSC request failed: '.$e->getMessage();
         }
+    }
+
+    private function fetchClusterPageSnapshot(GoogleSearchConsoleClient $gsc): string
+    {
+        $paths = \App\Support\SeoAuthorityMetrics::trackedPaths();
+        if ($paths === []) {
+            return '';
+        }
+
+        try {
+            $payload = $gsc->searchAnalytics([
+                'startDate' => now()->subDays(28)->toDateString(),
+                'endDate' => now()->subDay()->toDateString(),
+                'dimensions' => ['page'],
+                'rowLimit' => 50,
+            ]);
+        } catch (\Throwable) {
+            return '';
+        }
+
+        $want = array_fill_keys($paths, true);
+        $matched = [];
+        foreach ($payload['rows'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $page = (string) ($row['keys'][0] ?? '');
+            $path = parse_url($page, PHP_URL_PATH) ?: '';
+            if ($path === '' || ! isset($want[$path])) {
+                continue;
+            }
+            $matched[] = sprintf(
+                '- `%s` — clicks %s, impressions %s, pos %s',
+                $path,
+                $row['clicks'] ?? 0,
+                $row['impressions'] ?? 0,
+                isset($row['position']) ? round((float) $row['position'], 1) : '—'
+            );
+        }
+
+        if ($matched === []) {
+            return 'Cluster pages (live GSC): no rows matched tracked SteadFast paths yet.';
+        }
+
+        return "Cluster pages (live GSC, tracked):\n".implode("\n", $matched);
     }
 }

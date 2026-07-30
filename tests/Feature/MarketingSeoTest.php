@@ -883,6 +883,66 @@ class MarketingSeoTest extends TestCase
         $this->get('/redx-fraud-check')->assertOk();
     }
 
+    public function test_steadfast_fraud_check_pillar_is_seo_complete(): void
+    {
+        $seoService = app(\App\Services\SeoMetaService::class);
+        $pillar = $seoService->forPage('steadfast_fraud_check');
+        $graph = collect($pillar['json_ld']['@graph'] ?? []);
+
+        $this->assertTrue((bool) ($pillar['is_pillar'] ?? false));
+        $this->assertSame('Muhibbullah Ansary', $pillar['author_name'] ?? null);
+        $this->assertNotEmpty($pillar['last_updated_label'] ?? null);
+        $this->assertNotEmpty($pillar['honesty_line'] ?? null);
+        $this->assertNotEmpty($pillar['external_links'] ?? []);
+        $this->assertIsArray($pillar['trust_signals'] ?? null);
+        $this->assertNotEmpty($pillar['trust_signals']['examples'] ?? []);
+        $this->assertNotEmpty($pillar['trust_signals']['cannot_do'] ?? []);
+        $this->assertNotEmpty($pillar['trust_signals']['decision_tips'] ?? []);
+
+        $article = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Article');
+        $this->assertNotNull($article, 'SteadFast pillar should emit Article JSON-LD');
+        $this->assertSame('2026-07-30', $article['datePublished'] ?? null);
+        $this->assertSame('2026-07-30', $article['dateModified'] ?? null);
+        $this->assertSame('SteadFast Fraud Check', $article['articleSection'] ?? null);
+
+        $faq = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'FAQPage');
+        $this->assertNotNull($faq, 'SteadFast pillar should emit FAQPage JSON-LD');
+        $faqBlob = json_encode($faq, JSON_UNESCAPED_UNICODE);
+        $this->assertStringContainsString('better-informed decision', (string) $faqBlob);
+        $this->assertStringContainsString('does not guarantee', (string) $faqBlob);
+
+        $toc = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'ItemList');
+        $this->assertNotNull($toc, 'SteadFast pillar should emit ItemList TOC JSON-LD');
+        $this->assertGreaterThanOrEqual(8, (int) ($toc['numberOfItems'] ?? 0));
+        $firstToc = $toc['itemListElement'][0] ?? null;
+        $this->assertIsArray($firstToc);
+        $this->assertStringEndsWith('#guide-section-1', (string) ($firstToc['url'] ?? ''));
+
+        $response = $this->get('/steadfast-fraud-check');
+        $response->assertOk();
+        $response->assertSee('"@type":"Article"', false);
+        $response->assertSee('datePublished', false);
+        $response->assertSee('better-informed decision', false);
+        $response->assertSee('https://steadfast.com.bd/pricing', false);
+        $response->assertSee('/images/seo/cluster/fraud-layers.jpg', false);
+        $response->assertSee('/images/seo/cluster/cod-loss-math.jpg', false);
+        $response->assertSee($pillar['faqs'][0]['q'] ?? 'missing-faq', false);
+        $response->assertDontSee('aggregateRating', false);
+        $response->assertDontSee('AggregateRating', false);
+        $response->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('Seo/CourierIntent')
+            ->where('seo.canonical_path', '/steadfast-fraud-check')
+            ->where('seo.is_pillar', true)
+            ->where('seo.author_name', 'Muhibbullah Ansary')
+            ->has('seo.external_links')
+            ->has('seo.honesty_line')
+            ->has('seo.last_updated_label')
+            ->has('seo.trust_signals.examples')
+            ->has('seo.trust_signals.cannot_do')
+            ->has('seo.trust_signals.decision_tips')
+        );
+    }
+
     public function test_english_blog_post_does_not_inherit_bn_blog_hub_prerender(): void
     {
         $admin = User::create([
@@ -1174,6 +1234,58 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('Disallow: /woodnutsbolts/terms-of-service', false);
         $response->assertSee('Sitemap:', false);
         $response->assertSee('/sitemap.xml', false);
+    }
+
+    public function test_home_includes_ga4_gtag_when_measurement_id_configured(): void
+    {
+        config(['seo.ga.measurement_id' => 'G-V3TDVR7ED9']);
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementId();
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementEnabled();
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('https://www.googletagmanager.com/gtag/js?id=G-V3TDVR7ED9', false);
+        $response->assertSee("gtag('config', \"G-V3TDVR7ED9\")", false);
+    }
+
+    public function test_home_omits_ga4_gtag_when_measurement_id_empty(): void
+    {
+        config(['seo.ga.measurement_id' => '']);
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementId();
+        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementEnabled();
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertDontSee('googletagmanager.com/gtag/js', false);
+    }
+
+    public function test_home_omits_ga4_gtag_when_admin_disables_public_tag(): void
+    {
+        config(['seo.ga.measurement_id' => 'G-V3TDVR7ED9']);
+        $store = app(\App\Services\Seo\GaCredentialStore::class);
+        $store->putMeasurementId('G-V3TDVR7ED9');
+        $store->putMeasurementEnabled(false);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertDontSee('googletagmanager.com/gtag/js', false);
+    }
+
+    public function test_home_prefers_admin_saved_measurement_id_over_env(): void
+    {
+        config(['seo.ga.measurement_id' => 'G-ENVDEFAULT1']);
+        $store = app(\App\Services\Seo\GaCredentialStore::class);
+        $store->putMeasurementId('G-V3TDVR7ED9');
+        $store->putMeasurementEnabled(true);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('https://www.googletagmanager.com/gtag/js?id=G-V3TDVR7ED9', false);
+        $response->assertDontSee('G-ENVDEFAULT1', false);
     }
 
     public function test_llms_txt_is_public_and_follows_spec(): void

@@ -28,6 +28,7 @@ const ctaLabel = computed(() => primaryCtaLabel());
 const h1 = computed(() => props.headline || props.seo?.prerender_h1 || 'WooEasyLife');
 const leadText = computed(() => props.lead || props.seo?.prerender_lead || '');
 const contentSections = computed(() => props.seo?.content_sections || []);
+const clusterLinks = computed(() => props.seo?.cluster_links || []);
 const isEn = computed(() => String(props.seo?.html_lang || '').startsWith('en'));
 
 const copy = computed(() => {
@@ -111,6 +112,12 @@ const localeMirrorLabel = computed(() => {
                     {{ h1 }}
                 </h1>
                 <p class="mt-4 text-base text-slate-300 sm:text-lg">{{ leadText }}</p>
+                <p
+                    v-if="seo?.honesty_line"
+                    class="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs leading-relaxed text-amber-100/90 sm:text-sm"
+                >
+                    {{ seo.honesty_line }}
+                </p>
             </div>
         </section>
 
@@ -138,6 +145,22 @@ const localeMirrorLabel = computed(() => {
         </section>
 
         <SeoContentSections :sections="contentSections" />
+
+        <section v-if="clusterLinks.length" class="border-t border-white/10 px-4 py-8 lg:px-8">
+            <div class="mx-auto max-w-3xl">
+                <h2 class="text-lg font-bold text-white">{{ isEn ? 'Related' : 'সম্পর্কিত' }}</h2>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <Link
+                        v-for="link in clusterLinks"
+                        :key="link.path"
+                        :href="link.path"
+                        class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-white/10"
+                    >
+                        {{ link.label }}
+                    </Link>
+                </div>
+            </div>
+        </section>
 
         <section class="border-t border-white/10 px-4 py-10 lg:px-8">
             <div class="mx-auto flex max-w-3xl flex-wrap gap-3">

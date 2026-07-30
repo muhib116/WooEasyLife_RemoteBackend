@@ -83,6 +83,14 @@ class SeoMetaService
             'author_name' => $config['author_name'] ?? null,
             'author_role' => $config['author_role'] ?? null,
             'author_image' => $config['author_image'] ?? null,
+            'last_updated_label' => $config['last_updated_label'] ?? null,
+            'date_published' => $config['date_published'] ?? null,
+            'date_modified' => $config['date_modified'] ?? null,
+            'honesty_line' => $config['honesty_line'] ?? null,
+            'video_youtube_id' => $config['video_youtube_id'] ?? null,
+            'video_title' => $config['video_title'] ?? null,
+            'external_links' => is_array($config['external_links'] ?? null) ? $config['external_links'] : [],
+            'trust_signals' => is_array($config['trust_signals'] ?? null) ? $config['trust_signals'] : null,
             'json_ld' => $this->buildJsonLd(
                 $title,
                 $description,
@@ -712,7 +720,7 @@ class SeoMetaService
                 }
 
                 if (! empty($config['is_pillar'])) {
-                    $article['articleSection'] = 'WooCommerce Bangladesh';
+                    $article['articleSection'] = (string) ($config['article_section'] ?? 'WooCommerce Bangladesh');
                 }
 
                 $graphs[] = array_filter($article, static fn ($value) => $value !== null);
@@ -727,7 +735,12 @@ class SeoMetaService
                         continue;
                     }
                     $lower = mb_strtolower($heading);
-                    if (str_contains($lower, 'দ্রুত') || str_contains($lower, 'quick')) {
+                    if (
+                        str_contains($lower, 'দ্রুত')
+                        || str_contains($lower, 'quick')
+                        || str_contains($heading, 'এআই সারাংশ')
+                        || str_contains($lower, 'ai summary')
+                    ) {
                         continue;
                     }
                     $tocItems[] = [
@@ -747,6 +760,21 @@ class SeoMetaService
                         'itemListElement' => $tocItems,
                     ];
                 }
+            }
+
+            $youtubeId = trim((string) ($config['video_youtube_id'] ?? ''));
+            if ($youtubeId !== '' && preg_match('/^[A-Za-z0-9_-]{6,}$/', $youtubeId)) {
+                $videoTitle = (string) ($config['video_title'] ?? $title);
+                $graphs[] = [
+                    '@type' => 'VideoObject',
+                    '@id' => $canonical.'#video',
+                    'name' => $videoTitle,
+                    'description' => $description,
+                    'thumbnailUrl' => ['https://i.ytimg.com/vi/'.$youtubeId.'/hqdefault.jpg'],
+                    'uploadDate' => (string) ($config['date_modified'] ?? $config['date_published'] ?? '2026-07-30'),
+                    'embedUrl' => 'https://www.youtube.com/embed/'.$youtubeId,
+                    'contentUrl' => 'https://www.youtube.com/watch?v='.$youtubeId,
+                ];
             }
         }
 

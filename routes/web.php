@@ -419,6 +419,9 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::put('/ga/property', [GoogleAnalyticsOAuthController::class, 'updateProperty'])
             ->middleware('throttle:20,1')
             ->name('ga.property');
+        Route::put('/ga/measurement', [GoogleAnalyticsOAuthController::class, 'updateMeasurement'])
+            ->middleware('throttle:20,1')
+            ->name('ga.measurement');
     });
 
     Route::group(['as' => 'webhooks.', 'prefix' => 'webhooks'], function () {

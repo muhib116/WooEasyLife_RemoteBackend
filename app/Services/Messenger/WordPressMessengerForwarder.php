@@ -87,7 +87,10 @@ class WordPressMessengerForwarder
             $endpoint = rtrim($candidate, '/') . '/wp-json/wooeasylife/v1/' . ltrim($route, '/');
 
             try {
-                $response = Http::timeout(! empty($payload['source']) && $payload['source'] === 'history_sync' ? 90 : 20)
+                // History backfills (DM + comment) need a longer WP timeout than live webhooks.
+                $source = (string) ($payload['source'] ?? '');
+                $isHistorySync = in_array($source, ['history_sync', 'facebook_comment_history'], true);
+                $response = Http::timeout($isHistorySync ? 90 : 20)
                     ->withHeaders([
                         'Content-Type' => 'application/json',
                         'X-WEL-Internal-Token' => $signature,

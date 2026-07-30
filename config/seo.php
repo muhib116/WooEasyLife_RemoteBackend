@@ -42,6 +42,8 @@ return [
     'ga' => [
         // GA4 property ID (numeric), e.g. 123456789 — Admin → Property settings.
         'property_id' => env('SEO_GA_PROPERTY_ID'),
+        // GA4 Measurement ID for public gtag.js (Admin → Data streams → Web).
+        'measurement_id' => env('SEO_GA_MEASUREMENT_ID', 'G-V3TDVR7ED9'),
         /*
         | OAuth (preferred): reuse Google Cloud OAuth client + a refresh token
         | with scope https://www.googleapis.com/auth/analytics.readonly
@@ -159,6 +161,7 @@ return [
             'canonical_path' => '/bd-fraud-checker',
             'prerender_h1' => 'Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার',
             'prerender_lead' => 'কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি, ডেলিভারি সাকসেস রেট ও রিটার্ন রেকর্ড তাৎক্ষণিক দেখুন। অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন — Pathao, Steadfast, RedX।',
+            'honesty_line' => 'This tool helps you make a better-informed decision. It does not guarantee that an order is fake or genuine.',
             'hreflang_paths' => [
                 'bn-BD' => '/bd-fraud-checker',
                 'en' => '/en/bd-fraud-checker',
@@ -168,10 +171,19 @@ return [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'Courier Fraud Checker BD', 'path' => '/bd-fraud-checker'],
             ],
+            'cluster_links' => [
+                ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
+                ['path' => '/blog/steadfast-fraud-check-faq', 'label' => 'SteadFast FAQ ইনডেক্স'],
+                ['path' => '/return-loss-calculator', 'label' => 'রিটার্ন লস ক্যালকুলেটর'],
+                ['path' => '/fake-customer-check', 'label' => 'Fake Customer Check'],
+                ['path' => '/faq', 'label' => 'FAQ হাব'],
+                ['path' => '/pricing', 'label' => 'প্রাইসিং'],
+            ],
             'faqs' => [
                 [
                     'q' => 'Courier Fraud Checker BD কীভাবে কাজ করে?',
-                    'a' => 'কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের আগের ডেলিভারি, রিটার্ন ও ক্যানসেল হিস্টোরি একসাথে দেখায়। এটি কোনো ব্যক্তিকে নিশ্চিতভাবে “ফ্রড” ঘোষণা করে না; অর্ডার কনফার্মের আগে সিদ্ধান্ত নেওয়ার জন্য আচরণগত সিগন্যাল দেয়। ধাপে ধাপে দেখুন: /faq/customer-delivery-history-check। সব FAQ: /faq।',
+                    'a' => 'কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের আগের ডেলিভারি, রিটার্ন ও ক্যানসেল হিস্টোরি একসাথে দেখায়। এটি কোনো ব্যক্তিকে নিশ্চিতভাবে “ফ্রড” ঘোষণা করে না; অর্ডার কনফার্মের আগে সিদ্ধান্ত নেওয়ার জন্য আচরণগত সিগন্যাল দেয়। SteadFast ফোকাস গাইড: /steadfast-fraud-check। ধাপে ধাপে: /faq/customer-delivery-history-check। সব FAQ: /faq।',
                 ],
                 [
                     'q' => 'Fake order check কি ফ্রি?',
@@ -179,7 +191,7 @@ return [
                 ],
                 [
                     'q' => 'কোন কোন কুরিয়ার চেক করা যায়?',
-                    'a' => 'Pathao, Steadfast, RedX সহ WooEasyLife-এ সাপোর্টেড প্রধান কুরিয়ারগুলোর ডেলিভারি ও রিটার্ন রেকর্ড এক নম্বরে দেখা যায়। প্রতিটি কুরিয়ারের ডেটা আলাদা সিগন্যাল; তাই শুধু একটি রেকর্ড নয়, সম্মিলিত সাকসেস রেট ও সাম্প্রতিক প্যাটার্ন দেখুন। ব্যাখ্যা: /faq/courier-success-rate-kivabe-bujhbo।',
+                    'a' => 'Pathao, Steadfast, RedX সহ WooEasyLife-এ সাপোর্টেড প্রধান কুরিয়ারগুলোর ডেলিভারি ও রিটার্ন রেকর্ড এক নম্বরে দেখা যায়। প্রতিটি কুরিয়ারের ডেটা আলাদা সিগন্যাল; তাই শুধু একটি রেকর্ড নয়, সম্মিলিত সাকসেস রেট ও সাম্প্রতিক প্যাটার্ন দেখুন। SteadFast পিলার: /steadfast-fraud-check। ব্যাখ্যা: /faq/courier-success-rate-kivabe-bujhbo।',
                 ],
                 [
                     'q' => 'শুধু চেক করলেই কি যথেষ্ট?',
@@ -187,7 +199,7 @@ return [
                 ],
                 [
                     'q' => 'সাকসেস রেট কম হলে কী করব?',
-                    'a' => 'কম সাকসেস রেট দেখলেই সঙ্গে সঙ্গে “ফেক” বলবেন না। আগে ফোন-কনফার্ম ও ঠিকানা যাচাই করুন; ব্যাখ্যা অস্পষ্ট হলে OTP বা অগ্রিম ডেলিভারি চার্জ নিন, নাহলে অর্ডার হোল্ড করুন। বারবার রিটার্ন ও যাচাই ব্যর্থ হলে নোটসহ ব্ল্যাকলিস্ট বিবেচনা করুন। পূর্ণ SOP: /faq/success-rate-kom-hole-ki-korbo।',
+                    'a' => 'কম সাকসেস রেট দেখলেই সঙ্গে সঙ্গে “ফেক” বলবেন না। আগে ফোন-কনফার্ম ও ঠিকানা যাচাই করুন; ব্যাখ্যা অস্পষ্ট হলে OTP বা অগ্রিম ডেলিভারি চার্জ নিন, নাহলে অর্ডার হোল্ড করুন। বারবার রিটার্ন ও যাচাই ব্যর্থ হলে নোটসহ ব্ল্যাকলিস্ট বিবেচনা করুন। পূর্ণ SOP: /faq/success-rate-kom-hole-ki-korbo। কেস উদাহরণ: /blog/steadfast-fraud-check-case-study।',
                 ],
                 [
                     'q' => 'কখন COD অর্ডার কনফার্ম না করাই ভালো?',
@@ -199,11 +211,11 @@ return [
                 ],
                 [
                     'q' => 'রিটার্ন লস কমাতে আর কী দেখব?',
-                    'a' => '/return-loss-calculator-এ দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ দিয়ে মাসিক COD ক্ষতি হিসাব করুন। হিসাবের সূত্র ও করণীয়: /faq/cod-return-loss-hisab। Facebook Pixel-এ ফেক Purchase থাকলে /ads-roas-calculator দিয়ে পরিষ্কার ROAS দেখুন।',
+                    'a' => '/return-loss-calculator-এ দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ দিয়ে মাসিক COD ক্ষতি হিসাব করুন। হিসাবের সূত্র ও করণীয়: /faq/cod-return-loss-hisab। SteadFast ক্লাস্টার কেস: /blog/steadfast-fraud-check-case-study। Facebook Pixel-এ ফেক Purchase থাকলে /ads-roas-calculator দিয়ে পরিষ্কার ROAS দেখুন।',
                 ],
                 [
                     'q' => 'ইংরেজি পেজ আছে কি?',
-                    'a' => 'হ্যাঁ — ইংরেজি: /en/bd-fraud-checker। ধাপে ধাপে বাংলা গাইড: /ki-vabe-fake-order-atkabo।',
+                    'a' => 'হ্যাঁ — ইংরেজি: /en/bd-fraud-checker। ধাপে ধাপে বাংলা গাইড: /ki-vabe-fake-order-atkabo। SteadFast পিলার: /steadfast-fraud-check।',
                 ],
             ],
         ],
@@ -282,10 +294,18 @@ return [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'রিটার্ন লস ক্যালকুলেটর', 'path' => '/return-loss-calculator'],
             ],
+            'cluster_links' => [
+                ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
+                ['path' => '/bd-fraud-checker', 'label' => 'ফ্রি BD Fraud Checker'],
+                ['path' => '/faq', 'label' => 'FAQ হাব'],
+                ['path' => '/fake-order-protection', 'label' => 'ফেক অর্ডার প্রোটেকশন'],
+                ['path' => '/pricing', 'label' => 'প্রাইসিং'],
+            ],
             'faqs' => [
                 [
                     'q' => 'রিটার্ন লস ক্যালকুলেটর কী?',
-                    'a' => 'এটি একটি ফ্রি টুল যেখানে দৈনিক অর্ডার সংখ্যা, রিটার্ন/ক্যানসেল রেট ও প্রতি রিটার্নের গড় খরচ দিয়ে মাসিক রিটার্ন লস ও সম্ভাব্য সাশ্রয় হিসাব করা যায়।',
+                    'a' => 'এটি একটি ফ্রি টুল যেখানে দৈনিক অর্ডার সংখ্যা, রিটার্ন/ক্যানসেল রেট ও প্রতি রিটার্নের গড় খরচ দিয়ে মাসিক রিটার্ন লস ও সম্ভাব্য সাশ্রয় হিসাব করা যায়। SteadFast ক্লাস্টার কেস উদাহরণ: /blog/steadfast-fraud-check-case-study।',
                 ],
                 [
                     'q' => 'প্রতি রিটার্নে গড় খরচে কী কী ধরব?',
@@ -293,11 +313,11 @@ return [
                 ],
                 [
                     'q' => 'হিসাব কীভাবে কাজ করে?',
-                    'a' => 'মাসিক অর্ডার ≈ দৈনিক অর্ডার × ৩০। মাসিক রিটার্ন ≈ মাসিক অর্ডার × রিটার্ন রেট। মাসিক লস ≈ মাসিক রিটার্ন × প্রতি রিটার্নের খরচ।',
+                    'a' => 'মাসিক অর্ডার ≈ দৈনিক অর্ডার × ৩০। মাসিক রিটার্ন ≈ মাসিক অর্ডার × রিটার্ন রেট। মাসিক লস ≈ মাসিক রিটার্ন × প্রতি রিটার্নের খরচ। সূত্র FAQ: /faq/cod-return-loss-hisab।',
                 ],
                 [
                     'q' => 'WooEasyLife কীভাবে রিটার্ন লস কমায়?',
-                    'a' => 'অর্ডার কনফার্মের আগে কুরিয়ার হিস্টোরি/ফ্রড চেক, চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে ঝুঁকিপূর্ণ অর্ডার আটকায় — কম ফেক পার্সেল মানে কম রিটার্ন লস।',
+                    'a' => 'অর্ডার কনফার্মের আগে কুরিয়ার হিস্টোরি/ফ্রড চেক, চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে ঝুঁকিপূর্ণ অর্ডার আটকায় — কম ফেক পার্সেল মানে কম রিটার্ন লস। পিলার ফ্লো: /steadfast-fraud-check।',
                 ],
                 [
                     'q' => 'হিসাব কি আনুমানিক?',
@@ -305,7 +325,7 @@ return [
                 ],
                 [
                     'q' => 'ফ্রি ফ্রড চেক কোথায় করব?',
-                    'a' => '/bd-fraud-checker পেজে মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি চেক করুন। পূর্ণ প্রোটেকশন: /fake-order-protection ও /pricing।',
+                    'a' => '/bd-fraud-checker পেজে মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি চেক করুন। SteadFast ফোকাস গাইড: /steadfast-fraud-check। পূর্ণ প্রোটেকশন: /fake-order-protection ও /pricing।',
                 ],
                 [
                     'q' => 'রিটার্ন লস আর Ads ROAS-এর সম্পর্ক কী?',
@@ -481,6 +501,7 @@ return [
             'og_image' => '/images/seo/cluster/fraud-layers.jpg',
             'prerender_h1' => 'Fake Customer Check — অর্ডার কনফার্মের আগে কাস্টমার যাচাই',
             'prerender_lead' => 'মোবাইল নম্বর দিয়ে Pathao/Steadfast/RedX হিস্টোরি দেখুন—সবুজ হলে কনফার্ম, হলুদ/লালে কল বা হোল্ড। ফ্রি চেক, অ্যাকাউন্ট লাগে না।',
+            'honesty_line' => 'This tool helps you make a better-informed decision. It does not guarantee that an order is fake or genuine.',
             'hreflang_paths' => [
                 'bn-BD' => '/fake-customer-check',
                 'en' => '/en/fake-customer-check',
@@ -490,10 +511,18 @@ return [
                 ['name' => 'হোম', 'path' => '/'],
                 ['name' => 'Fake Customer Check', 'path' => '/fake-customer-check'],
             ],
+            'cluster_links' => [
+                ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
+                ['path' => '/bd-fraud-checker', 'label' => 'ফ্রি BD Fraud Checker'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
+                ['path' => '/return-loss-calculator', 'label' => 'রিটার্ন লস ক্যালকুলেটর'],
+                ['path' => '/faq', 'label' => 'FAQ হাব'],
+                ['path' => '/pricing', 'label' => 'প্রাইসিং'],
+            ],
             'faqs' => [
                 [
                     'q' => 'Fake customer check কী?',
-                    'a' => 'Fake customer check মানে অর্ডার কনফার্ম বা পার্সেল বুকিংয়ের আগে কাস্টমারের মোবাইল নম্বর দিয়ে আগের কুরিয়ার ডেলিভারি সাকসেস, রিটার্ন ও ক্যানসেল হিস্টোরি দেখা। এটি কোনো আইনি বা চূড়ান্ত “fraud verdict” নয়—ডেটা-ভিত্তিক risk signal, যার সঙ্গে কল, ঠিকানা ও OTP যাচাই মিলিয়ে সিদ্ধান্ত নিতে হয়। পূর্ণ checker: /bd-fraud-checker। Fraud score ব্যাখ্যা: /faq/customer-fraud-score-ki।',
+                    'a' => 'Fake customer check মানে অর্ডার কনফার্ম বা পার্সেল বুকিংয়ের আগে কাস্টমারের মোবাইল নম্বর দিয়ে আগের কুরিয়ার ডেলিভারি সাকসেস, রিটার্ন ও ক্যানসেল হিস্টোরি দেখা। এটি কোনো আইনি বা চূড়ান্ত “fraud verdict” নয়—ডেটা-ভিত্তিক risk signal, যার সঙ্গে কল, ঠিকানা ও OTP যাচাই মিলিয়ে সিদ্ধান্ত নিতে হয়। পূর্ণ checker: /bd-fraud-checker। SteadFast পিলার: /steadfast-fraud-check। Fraud score ব্যাখ্যা: /faq/customer-fraud-score-ki।',
                 ],
                 [
                     'q' => 'এটি কি ফ্রি? অ্যাকাউন্ট লাগে?',
@@ -505,7 +534,7 @@ return [
                 ],
                 [
                     'q' => 'Fake customer check আর BD Fraud Checker আলাদা?',
-                    'a' => 'মূল ইঞ্জিন একই—কুরিয়ার হিস্টোরি দিয়ে কাস্টমার কোয়ালিটি যাচাই। এই পেজ “কনফার্মের আগে কাস্টমার যাচাই / fake customer check” কিওয়ার্ড ও ওয়ার্কফ্লোতে ফোকাস করে; /bd-fraud-checker পূর্ণ Courier Fraud Checker BD টুল UI ও বিস্তারিত গাইড। দুটোই ফ্রি চেক দেয়। পরবর্তী ধাপ: /fake-order-protection, /courier-auto-entry ও /ki-vabe-fake-order-atkabo।',
+                    'a' => 'মূল ইঞ্জিন একই—কুরিয়ার হিস্টোরি দিয়ে কাস্টমার কোয়ালিটি যাচাই। এই পেজ “কনফার্মের আগে কাস্টমার যাচাই / fake customer check” কিওয়ার্ড ও ওয়ার্কফ্লোতে ফোকাস করে; /bd-fraud-checker পূর্ণ Courier Fraud Checker BD টুল UI ও বিস্তারিত গাইড। দুটোই ফ্রি চেক দেয়। SteadFast ফোকাস: /steadfast-fraud-check। পরবর্তী ধাপ: /fake-order-protection, /courier-auto-entry ও /ki-vabe-fake-order-atkabo।',
                 ],
                 [
                     'q' => 'শুধু চেক করলেই কি ফেক অর্ডার বন্ধ?',
@@ -517,7 +546,7 @@ return [
                 ],
                 [
                     'q' => 'রিটার্ন লস ও Ads ROAS কীভাবে মাপব?',
-                    'a' => 'মাসিক রিটার্ন খরচ মাপতে /return-loss-calculator-এ দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ দিন; সূত্র ও উদাহরণ: /faq/cod-return-loss-hisab। ফেক Purchase ROAS ফোলালে /ads-roas-calculator দিয়ে পরিষ্কার হিসাব দেখুন। সব সংশ্লিষ্ট প্রশ্ন: /faq।',
+                    'a' => 'মাসিক রিটার্ন খরচ মাপতে /return-loss-calculator-এ দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ দিন; সূত্র ও উদাহরণ: /faq/cod-return-loss-hisab। কেস স্টাডি: /blog/steadfast-fraud-check-case-study। ফেক Purchase ROAS ফোলালে /ads-roas-calculator দিয়ে পরিষ্কার হিসাব দেখুন। সব সংশ্লিষ্ট প্রশ্ন: /faq।',
                 ],
                 [
                     'q' => 'ইংরেজি ভার্সন আছে কি?',
@@ -915,37 +944,140 @@ return [
         ],
 
         'steadfast_fraud_check' => [
-            'title' => 'Steadfast Fraud Check BD ২০২৬ — ফ্রি হিস্টোরি',
-            'description' => 'Steadfast fraud check BD: মোবাইল নম্বর দিয়ে Steadfast সহ Pathao/RedX হিস্টোরি ফ্রি চেক করুন—COD ফেক অর্ডার কমান।',
+            'title' => 'SteadFast Fraud Check (বাংলা) — WooCommerce Complete Guide ২০২৬',
+            'description' => 'SteadFast Fraud Check সম্পূর্ণ গাইড: কী, কেন শিপের আগে চেক, রিটার্নের কারণ, হিস্টোরি পড়া, WooEasyLife ফ্লো, ভুল ও ফ্রি টুল—COD সেলারদের জন্য।',
             'canonical_path' => '/steadfast-fraud-check',
             'og_type' => 'article',
             'og_image' => '/images/seo/cluster/fraud-layers.jpg',
-            'prerender_h1' => 'Steadfast Fraud Check বাংলাদেশ',
-            'prerender_lead' => 'ফোন নম্বর দিয়ে Steadfast কুরিয়ার হিস্টোরি যাচাই করুন। অর্ডার কনফার্মের আগে ফেক অর্ডারের ঝুঁকি কমান।',
+            'prerender_h1' => 'SteadFast Fraud Check (বাংলা) — Complete Guide for WooCommerce Merchants',
+            'prerender_lead' => 'মোবাইল নম্বর দিয়ে SteadFast সহ কুরিয়ার হিস্টোরি যাচাই করুন। COD কনফার্মের আগে রিটার্ন ঝুঁকি কমান—risk signal, চূড়ান্ত fraud verdict নয়। শেষ হালনাগাদ: ৩০ জুলাই ২০২৬।',
+            'is_pillar' => true,
+            'article_section' => 'SteadFast Fraud Check',
+            'date_published' => '2026-07-30',
+            'date_modified' => '2026-07-30',
+            'last_updated_label' => '৩০ জুলাই ২০২৬',
+            'author_name' => 'Muhibbullah Ansary',
+            'author_role' => 'Founder & CEO, WPSaleHub',
+            'author_image' => '/images/seo/about/founder-headshot.jpg',
+            'honesty_line' => 'This tool helps you make a better-informed decision. It does not guarantee that an order is fake or genuine.',
+            // Step 4 YouTube deferred — set ID after publish to enable iframe + VideoObject.
+            'video_youtube_id' => null,
+            'video_title' => 'SteadFast Fraud Check Complete Guide (বাংলা)',
+            'external_links' => [
+                ['href' => 'https://steadfast.com.bd/pricing', 'label' => 'SteadFast অফিসিয়াল প্রাইসিং'],
+                ['href' => 'https://steadfast.com.bd/terms-and-condition', 'label' => 'SteadFast Terms & Conditions'],
+                ['href' => 'https://steadfast.com.bd/contact', 'label' => 'SteadFast কন্টাক্ট / হটলাইন'],
+            ],
+            'trust_signals' => [
+                'examples' => [
+                    [
+                        'title' => 'উদাহরণ A — সবুজ নম্বর',
+                        'body' => 'টিকেট ৳১,১৫০। নম্বরে ১৪ ডেলিভারি, ১ রিটার্ন (পুরোনো)। ঠিকানা পরিষ্কার। সিদ্ধান্ত: দ্রুত কনফার্ম → অটো এন্ট্রি। টুল “জেনুইন প্রমাণিত” বলেনি—হিস্টোরি ভালো সিগন্যাল দিয়েছে।',
+                    ],
+                    [
+                        'title' => 'উদাহরণ B — হলুদ নম্বর',
+                        'body' => 'টিকেট ৳২,৮০০। সাকসেস ~৬০%, সাম্প্রতিক ২ রিটার্ন। সিদ্ধান্ত: কল + ঠিকানা মিলানো; প্রয়োজনে OTP/অগ্রিম। অন্ধ শিপ নয়।',
+                    ],
+                    [
+                        'title' => 'উদাহরণ C — খালি হিস্টোরি',
+                        'body' => 'নতুন সিম, রেকর্ড নেই। মানেই ফেক নয়। সিদ্ধান্ত: স্ট্যান্ডার্ড কনফার্ম; হাই-টিকেট হলে OTP বা হোল্ড নীতি। অটো-ব্লক করবেন না।',
+                    ],
+                ],
+                'cannot_do' => [
+                    'জাতীয় পরিচয় / NID যাচাই করে না',
+                    'ব্যাংক বা MFS লেনদেন দেখে না',
+                    'ফেক বা জেনুইন বলে গ্যারান্টি দেয় না',
+                    'অ্যাডস কোয়ালিটি বা ভুল প্রোডাক্ট পেজ ঠিক করে না',
+                    'অন্ধ অটো-শিপ বা অটো-ব্লক চালায় না—সিদ্ধান্ত আপনার',
+                ],
+                'decision_tips' => [
+                    'রেট = সিগন্যাল, verdict নয়—প্যাটার্ন ও টিকেট সাইজ একসাথে দেখুন',
+                    'ফোন কনফার্ম একা ডেলিভারি গ্যারান্টি নয়',
+                    'সন্দেহে হোল্ড—এক দিন দেরি < এক রিটার্ন লস',
+                    'স্টাফ নোটে history OK / yellow / hold লিখে রাখুন',
+                    'No.1 / ১০০% ফেক ধরার দাবি বিশ্বাস করবেন না (আমরাও করি না)',
+                ],
+                'mistakes' => [
+                    'এক পুরোনো রিটার্ন = চিরকাল ব্লক',
+                    'শুধু SteadFast প্যানেল স্ক্রিনশটে নির্ভর',
+                    'টুলকে গ্যারান্টি ভাবা',
+                    'অ্যাডস বাড়ানো, ভেরিফিকেশন স্কিপ',
+                ],
+                'mistakes_cta' => [
+                    'path' => '/blog/steadfast-fraud-check-common-mistakes',
+                    'label' => 'সাধারণ ভুলগুলো পড়ুন',
+                ],
+            ],
+            'cluster_links' => [
+                ['path' => '/bd-fraud-checker', 'label' => 'ফ্রি BD Fraud Checker'],
+                ['path' => '/fake-customer-check', 'label' => 'Fake Customer Check'],
+                ['path' => '/steadfast-integration', 'label' => 'SteadFast API ইন্টিগ্রেশন'],
+                ['path' => '/steadfast-return-hub', 'label' => 'SteadFast Return Hub'],
+                ['path' => '/courier-auto-entry', 'label' => 'কুরিয়ার অটো এন্ট্রি'],
+                ['path' => '/return-loss-calculator', 'label' => 'রিটার্ন লস ক্যালকুলেটর'],
+                ['path' => '/fake-order-protection', 'label' => 'ফেক অর্ডার প্রোটেকশন'],
+                ['path' => '/faq', 'label' => 'FAQ হাব'],
+                ['path' => '/pricing', 'label' => 'প্রাইসিং'],
+                ['path' => '/pathao-fraud-check', 'label' => 'Pathao Fraud Check'],
+                ['path' => '/redx-fraud-check', 'label' => 'RedX Fraud Check'],
+                ['path' => '/about', 'label' => 'ফাউন্ডার Muhibbullah'],
+                ['path' => '/blog/steadfast-customer-history-ki', 'label' => 'Customer History কী'],
+                ['path' => '/blog/steadfast-delivery-ratio-ki', 'label' => 'Delivery Ratio কী'],
+                ['path' => '/blog/steadfast-return-komano', 'label' => 'রিটার্ন কমানো'],
+                ['path' => '/blog/kokhon-customer-verify-korbo', 'label' => 'কখন ভেরিফাই'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'কেস স্টাডি'],
+                ['path' => '/blog/steadfast-fraud-check-common-mistakes', 'label' => 'সাধারণ ভুল'],
+                ['path' => '/blog/steadfast-fraud-check-faq', 'label' => 'SteadFast FAQ ইনডেক্স'],
+                ['path' => '/faq/phone-confirm-delivery-guarantee-ki', 'label' => 'ফোন কনফার্ম গ্যারান্টি?'],
+                ['path' => '/faq/history-na-thakle-ki-korbo', 'label' => 'হিস্টোরি না থাকলে'],
+                ['path' => '/faq/fake-order-chinhe-fela-jay-ki', 'label' => 'ফেক অর্ডার চিনা'],
+                ['path' => '/faq/wooeasylife-fraud-predict-kore-ki', 'label' => 'Predict করে কি?'],
+                ['path' => '/faq/steadfast-return-request-kivabe', 'label' => 'Return Request FAQ'],
+            ],
             'breadcrumbs' => [
                 ['name' => 'হোম', 'path' => '/'],
-                ['name' => 'Steadfast Fraud Check', 'path' => '/steadfast-fraud-check'],
+                ['name' => 'SteadFast Fraud Check', 'path' => '/steadfast-fraud-check'],
             ],
             'faqs' => [
                 [
-                    'q' => 'Steadfast fraud check কীভাবে কাজ করে?',
-                    'a' => 'মোবাইল নম্বর দিলে Steadfast সহ সাপোর্টেড কুরিয়ারের আগের ডেলিভারি ও রিটার্ন রেকর্ড দেখা যায়। এটি risk signal—নিশ্চিত fraud verdict নয়। কম সাকসেসে অন্ধ শিপ করবেন না; আগে যাচাই করুন। রেট পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo। পূর্ণ টুল: /bd-fraud-checker।',
+                    'q' => 'SteadFast Fraud Check কীভাবে কাজ করে?',
+                    'a' => 'মোবাইল নম্বর দিলে SteadFast সহ সাপোর্টেড কুরিয়ারের আগের ডেলিভারি ও রিটার্ন রেকর্ড দেখা যায়। এটি risk signal—নিশ্চিত fraud verdict নয়। টুল better-informed decision দেয়; অর্ডার ফেক বা জেনুইন বলে গ্যারান্টি করে না। রেট পড়ার নিয়ম: /faq/courier-success-rate-kivabe-bujhbo। পূর্ণ টুল: /bd-fraud-checker।',
                 ],
                 [
-                    'q' => 'Pathao ও Steadfast দুটোই কি চেক করা যায়?',
-                    'a' => 'হ্যাঁ—একই BD fraud checker টুলে এক নম্বরে একাধিক কুরিয়ার সিগন্যাল আসে। Pathao ফোকাস: /pathao-fraud-check। RedX: /redx-fraud-check। এক নম্বরে একাধিক হিস্টোরি কীভাবে আসে: /faq/customer-delivery-history-check। Steadfast API/বুকিং: /steadfast-integration।',
+                    'q' => 'শিপিংয়ের আগে কেন চেক করব?',
+                    'a' => 'একটি অপ্রয়োজনীয় রিটার্নে ডেলিভারি চার্জ, রিটার্ন চার্জ, প্যাকেজিং ও অ্যাডস খরচের অংশ একসাথে লস হয়—প্রায়ই মার্জিনের চেয়ে বেশি। ফোন কনফার্ম দরকারি কিন্তু একা যথেষ্ট নয়। মাসিক লস মাপুন: /return-loss-calculator। সূত্র: /faq/cod-return-loss-hisab।',
                 ],
                 [
-                    'q' => 'Steadfast চেক কি ফ্রি? অ্যাকাউন্ট লাগে?',
+                    'q' => 'Pathao ও SteadFast দুটোই কি চেক করা যায়?',
+                    'a' => 'হ্যাঁ—একই BD fraud checker টুলে এক নম্বরে একাধিক কুরিয়ার সিগন্যাল আসে। Pathao ফোকাস: /pathao-fraud-check। RedX: /redx-fraud-check। এক নম্বরে একাধিক হিস্টোরি: /faq/customer-delivery-history-check। SteadFast API/বুকিং: /steadfast-integration।',
+                ],
+                [
+                    'q' => 'SteadFast চেক কি ফ্রি? অ্যাকাউন্ট লাগে?',
                     'a' => 'হ্যাঁ—এই পেজ বা /bd-fraud-checker-এ অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। বেশি volume ও automated protection (checkout OTP, duplicate block, blacklist) চাইলে /pricing থেকে প্ল্যান বা ট্রায়াল নিন। ফিচার তালিকা: /fake-order-protection।',
                 ],
                 [
-                    'q' => 'Steadfast সাকসেস রেট কম হলে কী করব?',
-                    'a' => 'একটি খারাপ রেকর্ড মানেই সবসময় ফেক নয়—ঠিকানা বা এলাকা সমস্যাও হতে পারে। আগে ফোন-কনফার্ম, ঠিকানা যাচাই ও প্রয়োজনে OTP/অগ্রিম চার্জ নিন, নাহলে হোল্ড। করণীয় SOP: /faq/success-rate-kom-hole-ki-korbo। জোন রুল: /customer-verification।',
+                    'q' => 'সাকসেস রেট কম হলে কী করব?',
+                    'a' => 'একটি খারাপ রেকর্ড মানেই সবসময় ফেক নয়—ঠিকানা বা এলাকা সমস্যাও হতে পারে। আগে ফোন-কনফার্ম, ঠিকানা যাচাই ও প্রয়োজনে OTP বা অগ্রিম চার্জ নিন, নাহলে হোল্ড। করণীয় SOP: /faq/success-rate-kom-hole-ki-korbo। জোন রুল: /customer-verification।',
+                ],
+                [
+                    'q' => 'হিস্টোরি না থাকলে কী করব?',
+                    'a' => 'নতুন নম্বর মানেই ফেক নয়। স্ট্যান্ডার্ড কনফার্ম, ঠিকানা যাচাই ও ঝুঁকি নীতি প্রয়োগ করুন—অটো-রিজেক্ট নয়। হাই-টিকেট হলে OTP বা ছোট অগ্রিম বিবেচনা করুন। হিস্টোরি ব্যাখ্যা: /faq/customer-delivery-history-check। Fake customer কোণ: /fake-customer-check।',
+                ],
+                [
+                    'q' => 'ফোন কনফার্ম কি ডেলিভারি গ্যারান্টি দেয়?',
+                    'a' => 'না। কাস্টমার ফোনে “নিবো” বলেও রাইডার পৌঁছালে ফোন বন্ধ বা রিফিউজ করতে পারেন। কনফার্ম + হিস্টোরি + প্রয়োজনে OTP/অগ্রিম একসাথে ব্যবহার করুন। OTP কখন: /faq/cod-order-otp-kokhon।',
+                ],
+                [
+                    'q' => 'WooEasyLife কি ফ্রড predict বা গ্যারান্টি করে?',
+                    'a' => 'না। This tool helps you make a better-informed decision. It does not guarantee that an order is fake or genuine. হিস্টোরি ও সুরক্ষা টুল সিদ্ধান্তকে তথ্যসমৃদ্ধ করে—ভবিষ্যৎ গ্যারান্টি বা চূড়ান্ত fraud verdict নয়। বিস্তারিত: /faq/wooeasylife-fraud-predict-kore-ki। Fraud score: /faq/customer-fraud-score-ki।',
+                ],
+                [
+                    'q' => 'ফেক অর্ডার কি ১০০% চিনা যায়?',
+                    'a' => 'না। পুনরাবৃত্ত খারাপ হিস্টোরি ও প্রোটেকশন সিগন্যাল দিয়ে ঝুঁকি কমানো যায়, কিন্তু “১০০% ফেক ধরার মেশিন” দাবি করা ভুল। This tool helps you make a better-informed decision. It does not guarantee that an order is fake or genuine. FAQ: /faq/fake-order-chinhe-fela-jay-ki।',
                 ],
                 [
                     'q' => 'চেকের পর কী করব?',
-                    'a' => 'কনফার্ম হলে /courier-auto-entry দিয়ে বুকিং করুন। বারবার ঝুঁকি আটকাতে OTP (/faq/cod-order-otp-kokhon), duplicate block (/faq/duplicate-cod-order-block) ও blacklist (/faq/woocommerce-customer-blacklist)। মাসিক লস: /return-loss-calculator ও /faq/cod-return-loss-hisab। সব প্রশ্ন: /faq।',
+                    'a' => 'কনফার্ম হলে /courier-auto-entry দিয়ে বুকিং করুন। বুকিংয়ের পর cancel বা return request হলে /steadfast-return-hub। বারবার ঝুঁকি আটকাতে OTP (/faq/cod-order-otp-kokhon), duplicate block (/faq/duplicate-cod-order-block) ও blacklist (/faq/woocommerce-customer-blacklist)। মাসিক লস: /return-loss-calculator। সব প্রশ্ন: /faq।',
                 ],
             ],
         ],

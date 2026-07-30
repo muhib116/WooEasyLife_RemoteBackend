@@ -17,12 +17,21 @@ $questionLinks = [
     ['path' => '/faq/woocommerce-customer-blacklist', 'label' => 'WooCommerce কাস্টমার ব্ল্যাকলিস্ট'],
     ['path' => '/faq/duplicate-cod-order-block', 'label' => 'ডুপ্লিকেট COD অর্ডার ব্লক'],
     ['path' => '/faq/cod-return-loss-hisab', 'label' => 'COD রিটার্ন লস হিসাব'],
+    ['path' => '/faq/phone-confirm-delivery-guarantee-ki', 'label' => 'ফোন কনফার্ম গ্যারান্টি?'],
+    ['path' => '/faq/history-na-thakle-ki-korbo', 'label' => 'হিস্টোরি না থাকলে'],
+    ['path' => '/faq/prottek-customer-verify-korbo-ki', 'label' => 'প্রত্যেককে ভেরিফাই?'],
+    ['path' => '/faq/wooeasylife-fraud-predict-kore-ki', 'label' => 'ফ্রড predict করে কি?'],
+    ['path' => '/faq/fake-order-chinhe-fela-jay-ki', 'label' => 'ফেক অর্ডার চিনা যায়?'],
+    ['path' => '/faq/steadfast-return-request-kivabe', 'label' => 'SteadFast Return Request'],
+    ['path' => '/faq/steadfast-stuck-parcel-ki-korbo', 'label' => 'SteadFast Stuck Parcel'],
 ];
 
 $toolLinks = [
+    ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
     ['path' => '/bd-fraud-checker', 'label' => 'ফ্রি ফ্রড চেকার'],
-    ['path' => '/fake-order-protection', 'label' => 'ফেক অর্ডার প্রোটেকশন'],
+    ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
     ['path' => '/return-loss-calculator', 'label' => 'রিটার্ন লস ক্যালকুলেটর'],
+    ['path' => '/fake-order-protection', 'label' => 'ফেক অর্ডার প্রোটেকশন'],
     ['path' => '/courier-auto-entry', 'label' => 'কুরিয়ার অটো এন্ট্রি'],
     ['path' => '/pricing', 'label' => 'প্রাইসিং ও ট্রায়াল'],
 ];
@@ -417,4 +426,4 @@ return [
             ],
         ],
     ],
-];
+] + require __DIR__.'/seo_faq_spokes/step3_new_faq_pages.php';

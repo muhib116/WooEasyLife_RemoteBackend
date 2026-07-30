@@ -22,7 +22,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('courier:retry-webhook-forwards')->everyMinute();
         $schedule->command('messenger:retry-webhook-forwards')->everyMinute();
         $schedule->command('seo:weekly-report')
-            ->weeklyOn(1, '09:00')
+            ->weeklyOn(0, '09:00') // Sunday — Step 9 authority metrics (Asia/Dhaka)
             ->timezone('Asia/Dhaka');
         $schedule->command('blog:build-learning-insights')
             ->dailyAt('02:15')

@@ -71,6 +71,7 @@ const guideSections = [
         heading: 'ফেক অর্ডার আটকানোর পূর্ণ ওয়ার্কফ্লো',
         paragraphs: [
             'নতুন অর্ডার → এই পেজে মোবাইল নম্বর চেক → প্রয়োজনে ফোন কনফার্ম → কনফার্ম → কুরিয়ার অটো এন্ট্রি। এই ফ্লো মেনে চললে ফেক পার্সেল ও রিটার্ন লস উল্লেখযোগ্যভাবে কমে।',
+            'SteadFast ফোকাস পিলার: /steadfast-fraud-check। কেস: /blog/steadfast-fraud-check-case-study। FAQ ইনডেক্স: /blog/steadfast-fraud-check-faq।',
             'শুধু ম্যানুয়াল চেক দীর্ঘমেয়াদে যথেষ্ট নয়। WooEasyLife সাবস্ক্রিপশনে চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক, ফোন/ডিভাইস ব্ল্যাকলিস্ট, দৈনিক অর্ডার লিমিট ও পার্সেল নোট হিস্ট্রি একসাথে পাবেন। ফেক অর্ডার প্রোটেকশন পেজে বিস্তারিত আছে।',
             'অ্যাড বাজেটের দিক থেকেও ফেক অর্ডার ক্ষতিকর — Pixel-এ ফেক Purchase গেলে ROAS ফুলে দেখায়। আসল ROAS দেখতে Ads ROAS ক্যালকুলেটর ব্যবহার করুন।',
         ],
@@ -111,16 +112,19 @@ const mistakeList = [
 ];
 
 const relatedLinks = [
-    { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
-    { href: '/en/bd-fraud-checker', label: 'English version' },
+    { href: '/steadfast-fraud-check', label: 'SteadFast Fraud Check গাইড' },
+    { href: '/blog/steadfast-fraud-check-case-study', label: 'SteadFast কেস স্টাডি' },
+    { href: '/blog/steadfast-fraud-check-faq', label: 'SteadFast FAQ ইনডেক্স' },
+    { href: '/faq', label: 'FAQ হাব' },
     { href: '/fake-customer-check', label: 'Fake Customer Check' },
     { href: '/fake-order-protection', label: 'ফেক অর্ডার প্রোটেকশন' },
     { href: '/return-loss-calculator', label: 'রিটার্ন লস ক্যালকুলেটর' },
     { href: '/ads-roas-calculator', label: 'Ads ROAS ক্যালকুলেটর' },
     { href: '/ki-vabe-fake-order-atkabo', label: 'কিভাবে ফেক অর্ডার আটকাবো' },
     { href: '/courier-auto-entry', label: 'কুরিয়ার অটো এন্ট্রি' },
+    { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
+    { href: '/en/bd-fraud-checker', label: 'English version' },
     { href: '/fraudbd-alternative', label: 'FraudBD Alternative' },
-    { href: '/', label: 'হোম' },
     { href: '/pricing', label: 'প্রাইসিং' },
 ];
 </script>
@@ -145,6 +149,12 @@ const relatedLinks = [
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
                     {{ seo?.prerender_lead || 'মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট চেক করুন।' }}
+                </p>
+                <p
+                    v-if="seo?.honesty_line"
+                    class="mx-auto mt-4 max-w-2xl rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-left text-xs leading-relaxed text-amber-100/90 sm:text-sm"
+                >
+                    {{ seo.honesty_line }}
                 </p>
                 <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
                     Pathao, Steadfast, RedX — অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন।

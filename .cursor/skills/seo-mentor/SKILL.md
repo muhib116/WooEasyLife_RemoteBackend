@@ -1,19 +1,22 @@
 ---
 name: seo-mentor
 description: >
-  WooEasyLife SEO mentor strategy, content IA, FAQ roadmap, and competitive
+  WooEasyLife SEO mentor strategy, content IA, FAQ roadmap, competitive
   playbook (eCourier hubs; fraud-checker SERP rivals Elite Mart and
-  FraudChecker.link). Use for today's plan, SEO next steps, FAQ architecture,
-  sitemap/internal links, GSC-driven content, fraud checker ranking tactics,
-  competitor audits, and organic growth vs BD courier/COD competitors. Also use
-  when a new plugin or app feature ships, to scan the product and turn it into
-  keyword/FAQ/landing rows in config/seo_keyword_inventory.php. Pair with
-  wooeasylife-brand and FEATURES.md. Canonical domain: app.wpsalehub.com.
+  FraudChecker.link), and the 90-day one-topic courier pillar authority
+  playbook (pillar → cluster → deep FAQs → YouTube → closed-loop links).
+  Use for today's plan, SEO next steps, FAQ architecture, sitemap/internal
+  links, GSC-driven content, fraud checker ranking tactics, SteadFast/Pathao
+  cluster campaigns, competitor audits, and organic growth vs BD courier/COD
+  competitors. Also use when a new plugin or app feature ships, to scan the
+  product and turn it into keyword/FAQ/landing rows in
+  config/seo_keyword_inventory.php. Pair with wooeasylife-brand and FEATURES.md.
+  Canonical domain: app.wpsalehub.com.
 ---
 
 # WooEasyLife SEO Mentor Skill
 
-**Last reviewed:** 2026-07-27
+**Last reviewed:** 2026-07-30
 **Rule (daily plan format):** `.cursor/rules/seo-mentor.mdc`  
 **Brand + creatives:** `.cursor/skills/wooeasylife-brand/SKILL.md`  
 **Features (claims only if Shipped):** `.cursor/skills/wooeasylife-brand/FEATURES.md`  
@@ -22,15 +25,18 @@ description: >
 
 When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do not invent duplicate slugs for money-page head terms. Blog AI already merges this inventory into seed queries, research, topic picker, and LP head-term guards.
 
+**90-day rule (authority):** One Topic → One Authority → One Category → Then Expand. Prefer owning every important search around the **active courier pillar** (default campaign: SteadFast Fraud Check → `/steadfast-fraud-check`) before hopping to Messenger / AI / Pricing themes. See **Courier pillar authority playbook** below.
+
 ---
 
 ## Agent routing (read first)
 
 | User asks… | Do this |
 |------------|---------|
-| আজকের প্ল্যান / today's plan | Follow `.cursor/rules/seo-mentor.mdc` format; CTAs only from **live** inventory paths |
-| next steps / SEO plan / organic roadmap | Re-read this skill → give **Default priority stack** below (not a week dump) |
-| FAQ / `/faq` | Phase 2 — but only after Phase 1 P0s; invent no slugs (use `plannedFaqs()`) |
+| আজকের প্ল্যান / today's plan | Follow `.cursor/rules/seo-mentor.mdc`; if calendar active → `SeoAuthorityCalendar::resolve()`; **Sundays** also merge Step 9 from `config/seo_authority_metrics.php` / `seo:weekly-report` |
+| next steps / SEO plan / organic roadmap | Re-read this skill → give **Default priority stack** + active cluster status (not a week dump) |
+| SteadFast cluster / pillar guide / 90-day / authority playbook | **Courier pillar authority playbook** (Steps 1–10) |
+| FAQ / `/faq` | Phase 2 — but only after Phase 1 P0s; invent no slugs (use `plannedFaqs()`). Cluster FAQs: deep 600–1000w, inventory-backed — **not** thin 60-word dumps |
 | fraud checker rank / SERP | **Fraud checker SERP rivals** + Gap scorecard (SSR P0 first) |
 | competitor audit + URL(s) | Run **Competitor re-audit protocol**; update roster if they enter top 3 |
 | new feature / update features / shipped | **Feature discovery → SEO opportunity loop** |
@@ -42,14 +48,15 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 
 ## Current state (keep honest)
 
-| Fact | Status (2026-07-27) |
+| Fact | Status (2026-07-30) |
 |------|---------------------|
 | Money URL | `/bd-fraud-checker` live (200) |
 | FAQ hub | `/faq` **live** + 8 inventory question URLs |
 | Inventory | live money/tool/pillar + FAQ hub · 8 live FAQ · `/steadfast-return-hub` + `/woocommerce-facebook-messenger` live · planned courier/messenger FAQs+blogs · remaining planned_commercial |
 | Product docs | Plugin **v1.5.4** · App v1.1.6 · `FEATURES.md` last analyzed **2026-07-27** (Courier hub + Messenger) |
+| Authority campaign | **Active:** SteadFast → `/steadfast-fraud-check`. Steps **1–3 + 5–9** done. **Step 4 YouTube = skipped for now** (pillar `#video` slot stays empty until `video_youtube_id` is set). Run cluster lock + Sunday Step 9; **Step 10** only after SteadFast wins. |
 
-Update this table when `/faq` ships, major gaps close, or versions bump.
+Update this table when `/faq` ships, major gaps close, versions bump, or the active authority cluster changes.
 
 ---
 
@@ -81,6 +88,10 @@ Do **not** clone courier-brand support FAQs (payment schedules, warehouse securi
 | Blog that steals money-page head terms | Soft-link the live money URL instead |
 | Claim gated features as free | Note package keys; free tool pages stay honest |
 | App lock / Meta AI Bot / Paperfly auto-entry as live | See `FEATURES.md` Do NOT claim |
+| Theme-hop mid-cluster (Mon SteadFast → Tue Messenger → Wed AI) | Breaks topical authority; run **cluster lock weeks** instead |
+| Expand to Pathao / Fake Order / Fraud Checker BD before active pillar wins | Wait until pillar is top-results + meaningful traffic (**Step 10**) |
+| Thin 50–100 FAQ stubs (60–140 words) | Allowed: ~15–20 **deep** cluster FAQs (600–1000w) that strengthen one pillar |
+| Claim the tool “guarantees” fake/genuine | Honesty line: informed decision only — see **Trust signals** |
 
 ---
 
@@ -89,11 +100,12 @@ Do **not** clone courier-brand support FAQs (payment schedules, warehouse securi
 Do in order — stop when the day's budget is used:
 
 1. **P0 — Deepen** `/bd-fraud-checker` + `/fake-customer-check` FAQs (BN) + keep FAQPage schema *(Result CTAs + SSR form + HowTo **shipped**; WebApplication removed — Semrush Software App invalid without real ratings)*  
-2. **Internal links:** fraud ↔ COD ↔ calculators ↔ courier pillars ↔ `/faq` ↔ `/pricing`  
-3. **Courier pillars:** Pathao / Steadfast / RedX FAQ blocks + links into money URL *(thin alias long-form **shipped**)*  
-4. **GSC day-30:** keep/kill; next FAQs from real query gaps only *(hub + first 8 FAQs **shipped**)*  
-5. **Later:** `planned_commercial` landings (OTP, blacklist, abandoned, AI order) — after fraud cluster is strong  
-6. **Always available:** 1 theme/day social → live CTA; founder beat weekly
+2. **Active authority cluster (when running):** finish **Courier pillar authority playbook** for the locked topic (default: SteadFast → `/steadfast-fraud-check`) before rotating themes  
+3. **Internal links:** fraud ↔ COD ↔ calculators ↔ courier pillars ↔ `/faq` ↔ `/pricing` — closed loop (guide ↔ FAQ ↔ video ↔ tool ↔ case ↔ calculator ↔ guide)  
+4. **Courier pillars:** Pathao / Steadfast / RedX — deepen the **one** active pillar to authority depth; others stay maintenance until Step 10  
+5. **GSC Sunday review:** position/CTR/impressions/tool clicks trends — not daily rank obsession *(hub + first 8 FAQs **shipped**; next FAQs from GSC + cluster map)*  
+6. **Later:** next courier/fake-order cluster only after active pillar wins; then `planned_commercial` (OTP, blacklist, abandoned, AI order)  
+7. **Always available:** 1 theme/day social **inside the active cluster** → live CTA; founder beat weekly
 
 ---
 
@@ -154,6 +166,223 @@ Semrush documents this as **three checks**: poor heading hierarchy, paragraphs t
 | How-to / case / formula story | Blog | `planned_blog` |
 | Distinct Shipped feature with its own demand | Feature landing | `planned_commercial` |
 | Synonym of existing head term | Expand existing URL | — (no new row) |
+
+---
+
+## Courier pillar authority playbook (90-day one-topic rule)
+
+**Doctrine:** One Topic → One Authority → One Category → Then Expand.
+
+Most sites chase 100 keywords and rank for none. WooEasyLife should **own every important search related to the active courier pillar first**. Once Google treats that URL cluster as the authority resource, expanding into related courier fraud / COD verification topics becomes easier.
+
+**Active campaign (default until Step 10 wins):** SteadFast Fraud Check  
+**Pillar URL:** `https://app.wpsalehub.com/steadfast-fraud-check`  
+**Free-tool CTA (always):** `https://app.wpsalehub.com/bd-fraud-checker`  
+**Expand order after win:** Pathao Fraud Check → Fake Order Check → Fake Customer Check → Fraud Checker BD (biggest long-term head term on `/bd-fraud-checker`)
+
+**Reconcile with existing rules:**
+- Inventory still wins on paths/keywords — add cluster supporting pages + FAQs as rows; do not invent money-page duplicates.
+- “Do not dump 50+ thin FAQs” still stands. Cluster FAQs are **deep** (600–1000 words), merchant language, inventory-backed — the opposite of eCourier-style stubs.
+- Money URL `/bd-fraud-checker` stays the free-tool destination; the SteadFast pillar owns the **courier-intent** SERP and feeds the tool.
+- Honesty / Shipped-only claims still apply.
+
+### Step 1 — Create the pillar page
+
+Not 800 words. Not 1200 words. Write the **best article available in Bangladesh** for that courier intent.
+
+| Target | Spec |
+|--------|------|
+| Length | **3000–5000 words** |
+| Tone | Merchant language (BD COD sellers) — not AI fluff |
+| Assets | Screenshots, real examples, workflow |
+| Language | BN primary body; EN title/H1 support OK |
+
+**Required structure (SteadFast example — adapt per courier):**
+
+1. **H1** — SteadFast Fraud Check (বাংলা) · Complete Guide for WooCommerce Merchants  
+2. **Section 1** — What is SteadFast Fraud Check?  
+3. **Section 2** — Why should merchants check before shipping?  
+4. **Section 3** — Common causes of return  
+5. **Section 4** — How customer history helps  
+6. **Section 5** — How to use WooEasyLife (**Shipped** only)  
+7. **Section 6** — FAQ (on-page; deep answers also get own URLs in Step 3)  
+8. **Section 7** — Common mistakes  
+9. **Section 8** — Summary  
+10. **Section 9** — Free Tool → labeled CTA to `/bd-fraud-checker`
+
+Pillar must also pass **Step 7 landing checklist** (TOC, images, schema, author, last updated, related).
+
+### Step 2 — Build a topic cluster
+
+Do **not** write another random article. Every supporting page must strengthen the pillar.
+
+```text
+SteadFast Fraud Check  (/steadfast-fraud-check)
+        ↓
+Supporting pages (each links back to pillar + to siblings)
+        ↓
+What is Customer History?
+What is Delivery Ratio?
+How to reduce returns?
+When should you verify?
+SteadFast FAQ (hub slice or pillar FAQ block)
+Case Study
+Common mistakes
+```
+
+| Rule | Detail |
+|------|--------|
+| Back-link | Every supporting page → pillar |
+| Cross-link | Supporting pages ↔ each other where natural |
+| Soft-link money | Never steal `fraud checker bd` head term onto a blog; CTA to `/bd-fraud-checker` with human label |
+| Inventory | Each new URL = row (`planned_blog` / `planned_faq` / expand existing pillar) |
+
+### Step 3 — Build FAQ pages (depth, not volume theater)
+
+This is where most people fail. Instead of one thin FAQ block, create a **cluster FAQ set** (~15–20 intents, not 100 stubs).
+
+**Each FAQ:** 600–1000 words · direct answer first · BD COD math · WooEasyLife how-to (Shipped) · related links · `FAQPage` schema.
+
+**Example intents (map to inventory slugs — do not invent duplicates of live `/faq/*`):**
+
+- Can I identify fake orders?  
+- What is delivery history?  
+- What is success ratio?  
+- Can phone confirmation guarantee delivery?  
+- How many deliveries are considered good?  
+- Should I verify every customer?  
+- What should I do with low success ratio?  
+- What if there is no history?  
+- What is courier history?  
+- Does WooEasyLife predict fraud? → **Honest no / decision-support only**
+
+Prefer extending live `/faq/{slug}` when intent already exists; add new inventory rows only for distinct SteadFast-angled questions.
+
+### Step 4 — YouTube strategy (same topic everywhere)
+
+**Status (2026-07-30):** **Skipped for now** — do not block Steps 5–9 or cluster lock on video. When ready: publish Long + Shorts, set `video_youtube_id` on `steadfast_fraud_check`, re-enable Week 4 record days.
+
+Google should see the brand on web + video for the **same** cluster.
+
+**Long videos:** Complete Guide · Customer History Explained · Success Ratio Explained · Real Demo · Common Mistakes · Case Study · FAQ roundup.
+
+**Shorts:** ~30 Shorts — **not random**. Every Short answers **one** cluster question (30–40s). Examples: “Can phone confirmation prevent returns?” · “What does Success Ratio mean?” · “Should you ship without history?”
+
+Embed the matching long video on the pillar (Step 7 `#video` slot). Social daily plan CTAs stay on `app.wpsalehub.com/...` live paths. YouTube + Google + Facebook reinforce the same SteadFast entity.
+
+### Step 5 — Internal linking (closed loop)
+
+Extremely important. Every page should naturally point to the others:
+
+```text
+Guide → FAQ → Video* → Tool → Case Study → Calculator → Guide
+```
+
+\*Video node optional while Step 4 is deferred — web loop must still close without it.
+
+Minimum on pillar: ≥2 tools + ≥2 blogs/FAQs + 1 `/pricing` + free checker. No orphan cluster URLs (also satisfy **Orphaned sitemap pages**). Blog bodies: human-labeled `<a href>` only (no bare paths).
+
+### Step 6 — Content calendar (cluster lock weeks)
+
+**Wrong:** Monday SteadFast · Tuesday Messenger · Wednesday AI · Thursday Pricing.
+
+**Right (while campaign is active):** 4 weeks locked on **one** cluster. Source of truth:
+
+`config/seo_authority_calendar.php` · resolver `App\Support\SeoAuthorityCalendar::resolve($date)`
+
+| Week | Focus | Example CTAs |
+|------|--------|----------------|
+| 1 | Pillar + tool awareness | `/steadfast-fraud-check`, history/ratio blogs, `/bd-fraud-checker` |
+| 2 | FAQ depth + mistakes + honesty | Step 3 FAQs, common-mistakes blog |
+| 3 | Case + return math + Return Hub | case study, `/return-loss-calculator`, return FAQs |
+| 4 | Loop reinforce + YouTube scripts | FAQ index, Long/Shorts outlines, soft `/fake-customer-check` |
+
+**Lock window (current):** `lock_start_date` = **2026-07-27** (Mon) → **4 weeks** through **2026-08-23**. After that: SteadFast **maintenance** until Step 10 win — do **not** auto-start Pathao.
+
+Daily mentor plan still = 1 theme/day, but the theme comes from the calendar day (`theme`, `cta`, `checklist`, `short_hook`). Feature-launch exceptions only if Shipped **and** SteadFast/fraud-cluster adjacent.
+
+**Today's plan agent rule:** if calendar `active`, call `SeoAuthorityCalendar::resolve()` (Asia/Dhaka) and build the day plan from `day` — ignore the generic Mon–Sun rotate table in Phase 3.
+
+Most people will not have the patience — that is why they never become the authority.
+
+### Step 7 — Landing page optimization
+
+The pillar (and major supporting pages) should contain:
+
+- Table of contents  
+- Images + screenshots  
+- FAQ schema  
+- Video embed  
+- Internal links (cluster loop)  
+- External references where appropriate (courier help docs — not hate)  
+- Author (Muhibbullah / WooEasyLife)  
+- Last updated  
+- Related articles  
+
+Google loves pages that feel **complete**. Keep SSR-critical copy in first HTML (Inertia prerender rules still apply).
+
+**SteadFast pillar checklist (shipped 2026-07-30):** `/steadfast-fraud-check` has TOC (`#guide-section-N` ↔ ItemList), figures, FAQPage + Article (`datePublished`/`dateModified`), author + `last_updated_label`, honesty banner, `external_links` (steadfast.com.bd pricing/terms/contact), cluster related pills, and `#video` slot. **Step 4 skipped for now** — leave `video_youtube_id` null until YouTube ships.
+
+### Step 8 — Build trust signals
+
+Do not only talk about WooEasyLife. Add:
+
+- Real screenshots · real workflow · real order examples  
+- Common mistakes  
+- Things the tool **cannot** do · limitations · decision tips  
+
+**Mandatory honesty line (use in pillar + FAQs that ask “is it fake?”):**
+
+> This tool helps you make a better-informed decision. It does not guarantee that an order is fake or genuine.
+
+That kind of honesty increases credibility. Aligns with `/fake-customer-check` “history ratio, not fraud verdict” angle. Never fake AggregateRating / “No.1”.
+
+**SteadFast trust checklist (shipped 2026-07-30):** pillar `#trust` block via `trust_signals` (3 anonymized order examples, cannot-do list, decision tips, mistakes → common-mistakes blog); honesty banner on pillar + `/bd-fraud-checker` + KeywordIntent when `honesty_line` set; FAQ answers for predict / “১০০% ফেক চিনা” carry the EN honesty line; long-form “বাস্তব অর্ডার উদাহরণ” + COD/auto-entry figures; no AggregateRating in JSON-LD (asserted in MarketingSeoTest).
+
+### Step 9 — Measure weekly (Sunday)
+
+| Metric | Goal |
+|--------|------|
+| Position | 10 → 8 → 6 → 4 (trend) |
+| CTR | Increasing |
+| Impressions | Increasing every week |
+| Tool clicks | Increasing (`/bd-fraud-checker` + pillar CTA) |
+| Average engagement | Increasing |
+| Internal link clicks | Increasing |
+
+Do **not** obsess over rankings daily. Watch trends. Feed winners into next FAQ; kill/merge 0-impression stubs after ~4 weeks (Phase 5).
+
+**Shipped playbook (2026-07-30):**
+
+- Config: `config/seo_authority_metrics.php` (tracked paths, query needles, goals, Sunday SOP, action rules)
+- Helper: `App\Support\SeoAuthorityMetrics` → `sundayChecklist()` / `reportMarkdown()`
+- Command: `php artisan seo:weekly-report` appends Step 9 cluster section (GSC DB pages/queries when synced)
+- Schedule: Sundays **09:00 Asia/Dhaka** (`Kernel`)
+- Mentor Sundays: `SeoAuthorityCalendar::resolve()` merges Step 9 checklist into `day.checklist` + `metrics_checklist`
+
+Log template fields live in the metrics config (`log_template`). Compare week-over-week — never invent fake metrics.
+
+### Step 10 — Expand only after winning
+
+Only after **SteadFast Fraud Check** consistently ranks in the top results **and** drives meaningful traffic, move to the next cluster:
+
+1. Pathao Fraud Check (`/pathao-fraud-check`)  
+2. Fake Order Check / protection cluster  
+3. Fake Customer Check (`/fake-customer-check`)  
+4. Fraud Checker BD (`/bd-fraud-checker` — biggest long-term keyword; keep deepening, don’t abandon)
+
+Until then: maintenance-only on non-active pillars (fix broken links, schema, SSR) — no parallel “own Pathao this week” campaigns.
+
+### 90-day “authority done” (active cluster)
+
+- Pillar at 3000–5000w, merchant-grade, screenshots, TOC, video, author, last updated  
+- Supporting cluster pages all link ↔ pillar  
+- ~15–20 deep FAQs (or live `/faq/*` expanded) — not thin stubs  
+- YouTube long + Shorts mapped 1:1 to cluster questions  
+- Closed-loop internal links; no sitemap orphans in cluster  
+- Sunday GSC trends up on pillar + tool clicks  
+- Honesty / limitations copy live  
+- Only then unlock next courier/category cluster  
 
 ---
 
@@ -240,7 +469,9 @@ Add `/faq` + question URLs to sitemap with `lastmod`. Link hub from footer + fra
 
 ### Phase 3 — Content calendar (ongoing)
 
-One theme/day (SEO mentor daily plan). Example week:
+**If an authority cluster is active** → **Step 6** + `config/seo_authority_calendar.php` (resolver: `SeoAuthorityCalendar::resolve`). Ignore the rotate-by-channel table below until Step 10.
+
+**If no cluster lock** → one theme/day (SEO mentor daily plan). Example week:
 
 | Day | Theme | Asset |
 |-----|-------|-------|
@@ -249,10 +480,10 @@ One theme/day (SEO mentor daily plan). Example week:
 | Wed | Return loss math | Calculator |
 | Thu | Courier auto-entry | `/courier-auto-entry` |
 | Fri | Founder Muhibbullah | LinkedIn + `/about` |
-| Sat | Competitor-intent (Pathao / Steadfast) | Existing pillar |
-| Sun | 1 FAQ publish or refresh | Single URL |
+| Sat | Competitor-intent (active courier pillar) | Deepen that pillar only |
+| Sun | GSC review + 1 FAQ publish or refresh | Single URL + Step 9 metrics |
 
-Rotate in **Feature launch** or **App** (multi-store / call ID) when a scan finds something new and Shipped.
+Rotate in **Feature launch** or **App** (multi-store / call ID) when a scan finds something new and Shipped — unless it breaks an active cluster lock.
 
 ### Phase 4 — Technical hygiene (parallel)
 
@@ -487,8 +718,11 @@ Update this skill — not only `FEATURES.md` — when:
 | New feature shipped | Feature loop + inventory rows + **Current state** versions |
 | Rival enters top 3 / audit run | Roster + Gap scorecard |
 | Our page changes (e.g. tool goes SSR) | **Remove closed gaps** from scorecard |
-| GSC winners/losers | Phase 1 priorities + Phase 5 |
+| GSC winners/losers | Phase 1 priorities + Phase 5 + Step 9 |
 | `/faq` hub ships | Current state → **live** (2026-07-26); first 8 FAQs live; next batch from GSC only |
+| Active cluster changes / Step 10 win | Update **Active campaign** pillar URL + expand-order pointer + `seo_authority_calendar.php` |
+| Cluster lock calendar shipped / dates shift | `config/seo_authority_calendar.php` + Step 6 lock window + Current state |
+| Pillar hits 3k–5k authority draft shipped | Note in Current state; close thin-alias gap for that courier |
 | Domain/brand change | Canonical CTA lines |
 | This review | Bump **Last reviewed** date |
 
@@ -499,10 +733,11 @@ Update this skill — not only `FEATURES.md` — when:
 ## 60-day “done” definition
 
 - `/faq` live and linked sitewide  
-- ~8–16 strong question URLs (not 100 thin)  
+- ~8–16 strong question URLs sitewide (plus deeper cluster FAQs under **authority playbook** when campaign active — still not 100 thin)  
 - `/bd-fraud-checker` checker SSR + result CTAs  
 - Fraud/COD cluster tied to free tools  
 - Organic → tools/FAQs → `/pricing`  
 - No courier-support topical pollution  
 - Mentor still 1 theme/day; CTAs on `app.wpsalehub.com` only  
-- `FEATURES.md` + inventory still in sync after ≥1 feature scan
+- `FEATURES.md` + inventory still in sync after ≥1 feature scan  
+- If SteadFast campaign active: progress against **90-day authority done** (pillar depth, cluster links, Sunday metrics) — not abandoned for Messenger/AI theme-hops
