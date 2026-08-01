@@ -42,6 +42,16 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
     Route::get('/notices', [\App\Http\Controllers\Data\NoticeController::class, 'index']);
 });
 
+// Wise AI public API — auth via Wise API key (Bearer), resolved in the controller.
+Route::group(['prefix' => 'api/wise/v1', 'as' => 'wise.'], function () {
+    Route::post('/decide', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'decide'])
+        ->middleware('throttle:120,1')
+        ->name('decide');
+    Route::post('/feedback', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'feedback'])
+        ->middleware('throttle:120,1')
+        ->name('feedback');
+});
+
 Route::group(['middleware' => ['auth.packageRenewal'], 'prefix' => 'api/package', 'as' => 'package.'], function () {
     Route::get('/plans', [\App\Http\Controllers\PackagePaymentController::class, 'plans']);
     Route::get('/billing', [\App\Http\Controllers\PackagePaymentController::class, 'billing']);

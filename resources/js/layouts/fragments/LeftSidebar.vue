@@ -348,6 +348,41 @@ const allSections: NavSection[] = [
         ],
     },
     {
+        label: "AI",
+        items: [
+            {
+                title: "Wise AI",
+                icon: "PhBrain",
+                children: [
+                    {
+                        title: "Dashboard",
+                        name: "wiseAi.dashboard",
+                        icon: "PhGauge",
+                        permission: "dashboard.view",
+                    },
+                    {
+                        title: "Playground",
+                        name: "wiseAi.playground",
+                        icon: "PhFlask",
+                        permission: "dashboard.view",
+                    },
+                    {
+                        title: "Knowledge",
+                        name: "wiseAi.knowledge",
+                        icon: "PhBooks",
+                        permission: "dashboard.view",
+                    },
+                    {
+                        title: "Config",
+                        name: "wiseAi.config",
+                        icon: "PhSlidersHorizontal",
+                        permission: "dashboard.view",
+                    },
+                ],
+            },
+        ],
+    },
+    {
         label: "Merchants",
         items: [
             {
@@ -857,6 +892,7 @@ const onChildDragEnd = () => {
 };
 
 const expandedGroups = reactive<Record<string, boolean>>({
+    "Wise AI": Boolean(route().current("wiseAi.*")),
     Merchants: Boolean(route().current("users.*")),
     "Plans & Billing": Boolean(
         route().current("packages.*")

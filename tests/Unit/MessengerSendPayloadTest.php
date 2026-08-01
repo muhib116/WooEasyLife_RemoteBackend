@@ -188,6 +188,65 @@ class MessengerSendPayloadTest extends TestCase
         });
     }
 
+    public function test_sender_action_react_includes_message_id_and_emoji(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['recipient_id' => 'PSID123'], 200),
+        ]);
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->sendSenderAction($this->connection(), 'PSID123', 'react', [
+            'message_id' => 'm_abc',
+            'reaction' => '👍',
+        ]);
+
+        $this->assertTrue($result['ok']);
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+            $this->assertSame('react', $body['sender_action'] ?? null);
+            $this->assertSame('m_abc', $body['payload']['message_id'] ?? null);
+            $this->assertSame('👍', $body['payload']['reaction'] ?? null);
+            $this->assertArrayNotHasKey('message', $body);
+
+            return true;
+        });
+    }
+
+    public function test_sender_action_unreact_omits_emoji(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['recipient_id' => 'PSID123'], 200),
+        ]);
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->sendSenderAction($this->connection(), 'PSID123', 'unreact', [
+            'message_id' => 'm_abc',
+        ]);
+
+        $this->assertTrue($result['ok']);
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+            $this->assertSame('unreact', $body['sender_action'] ?? null);
+            $this->assertSame('m_abc', $body['payload']['message_id'] ?? null);
+            $this->assertArrayNotHasKey('reaction', $body['payload'] ?? []);
+
+            return true;
+        });
+    }
+
+    public function test_sender_action_react_requires_message_id(): void
+    {
+        Http::fake();
+
+        $service = app(MessengerPageOAuthService::class);
+        $result = $service->sendSenderAction($this->connection(), 'PSID123', 'react', [
+            'reaction' => '👍',
+        ]);
+
+        $this->assertFalse($result['ok']);
+        Http::assertNothingSent();
+    }
+
     public function test_quick_replies_are_attached_to_text_message(): void
     {
         $this->fakeGraph();

@@ -1073,21 +1073,27 @@ class MessengerPageOAuthService
     }
 
     /**
-     * Send a sender_action (mark_seen, typing_on, typing_off) to a recipient.
-     * Meta requires these to be sent on their own request with only the recipient.
+     * Send a sender_action to a recipient.
      *
+     * Supported: mark_seen, typing_on, typing_off, react, unreact.
+     * Meta requires these on their own request (no message body).
+     * For react/unreact, pass options.message_id (+ options.reaction emoji for react).
+     *
+     * @param  array{message_id?:string, reaction?:string}  $options
      * @return array{ok:bool, error?:string, http_status?:int}
      */
     public function sendSenderAction(
         MessengerPageConnection $connection,
         string $psid,
-        string $action
+        string $action,
+        array $options = []
     ): array {
         $psid = trim($psid);
         $pageToken = (string) $connection->page_access_token;
         $action = strtolower(trim($action));
 
-        if (! in_array($action, ['mark_seen', 'typing_on', 'typing_off'], true)) {
+        $allowed = ['mark_seen', 'typing_on', 'typing_off', 'react', 'unreact'];
+        if (! in_array($action, $allowed, true)) {
             $action = 'typing_on';
         }
 
@@ -1095,15 +1101,34 @@ class MessengerPageOAuthService
             return ['ok' => false, 'error' => 'Missing recipient or page token.'];
         }
 
+        $payload = [
+            'recipient' => ['id' => $psid],
+            'sender_action' => $action,
+        ];
+
+        if (in_array($action, ['react', 'unreact'], true)) {
+            $messageId = trim((string) ($options['message_id'] ?? ''));
+            if ($messageId === '') {
+                return ['ok' => false, 'error' => 'message_id is required for react/unreact.'];
+            }
+
+            $reactionPayload = ['message_id' => $messageId];
+            if ($action === 'react') {
+                $reaction = trim((string) ($options['reaction'] ?? ''));
+                if ($reaction === '') {
+                    return ['ok' => false, 'error' => 'reaction emoji is required for react.'];
+                }
+                $reactionPayload['reaction'] = $reaction;
+            }
+            $payload['payload'] = $reactionPayload;
+        }
+
         try {
             $response = Http::timeout(15)
                 ->withToken($pageToken)
                 ->post(
                     'https://graph.facebook.com/' . $this->graphVersion() . '/me/messages',
-                    [
-                        'recipient' => ['id' => $psid],
-                        'sender_action' => $action,
-                    ]
+                    $payload
                 );
         } catch (\Throwable $exception) {
             return ['ok' => false, 'error' => $exception->getMessage()];

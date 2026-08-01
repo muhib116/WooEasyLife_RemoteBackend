@@ -133,8 +133,7 @@ class MessengerSendController extends Controller
     }
 
     /**
-     * Forward a sender_action (typing_on/typing_off/mark_seen) to Meta so the
-     * customer sees the "typing…" indicator while an operator composes a reply.
+     * Forward a sender_action to Meta (typing / mark_seen / react / unreact).
      */
     public function senderAction(
         Request $request,
@@ -150,13 +149,24 @@ class MessengerSendController extends Controller
         $pageId = trim((string) $request->input('page_id', ''));
         $psid = trim((string) $request->input('psid', ''));
         $action = strtolower(trim((string) $request->input('action', 'typing_on')));
+        $messageId = trim((string) $request->input('message_id', ''));
+        $reaction = trim((string) $request->input('reaction', ''));
 
         if ($psid === '') {
             return $this->errorResponse('psid is required.', 422);
         }
 
-        if (! in_array($action, ['mark_seen', 'typing_on', 'typing_off'], true)) {
+        $allowed = ['mark_seen', 'typing_on', 'typing_off', 'react', 'unreact'];
+        if (! in_array($action, $allowed, true)) {
             return $this->errorResponse('Invalid sender action.', 422);
+        }
+
+        if (in_array($action, ['react', 'unreact'], true) && $messageId === '') {
+            return $this->errorResponse('message_id is required for react/unreact.', 422);
+        }
+
+        if ($action === 'react' && $reaction === '') {
+            return $this->errorResponse('reaction is required for react.', 422);
         }
 
         $connection = $resolver->resolve($accessToken, $pageId);
@@ -165,7 +175,10 @@ class MessengerSendController extends Controller
             return $this->errorResponse('No connected Facebook Page found for this license.', 404);
         }
 
-        $result = $oauth->sendSenderAction($connection, $psid, $action);
+        $result = $oauth->sendSenderAction($connection, $psid, $action, [
+            'message_id' => $messageId,
+            'reaction' => $reaction,
+        ]);
 
         if (empty($result['ok'])) {
             return $this->errorResponse(
@@ -174,7 +187,11 @@ class MessengerSendController extends Controller
             );
         }
 
-        return $this->successResponse(['action' => $action], 'ok');
+        return $this->successResponse([
+            'action' => $action,
+            'message_id' => $messageId !== '' ? $messageId : null,
+            'reaction' => $action === 'react' ? $reaction : null,
+        ], 'ok');
     }
 
     /**

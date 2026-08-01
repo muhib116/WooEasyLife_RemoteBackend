@@ -26,6 +26,7 @@ class AdminSidebarNavOrder
         return [
             'sections' => [
                 'Overview',
+                'AI',
                 'Merchants',
                 'Platform',
                 'Marketing',
@@ -34,6 +35,7 @@ class AdminSidebarNavOrder
             ],
             'items' => [
                 'Overview' => ['Dashboard'],
+                'AI' => ['Wise AI'],
                 'Merchants' => ['Merchants', 'Fraud Checker', 'Whitelisted Domains'],
                 'Platform' => [
                     'Plugin Versions',
@@ -57,6 +59,7 @@ class AdminSidebarNavOrder
                 ],
             ],
             'children' => [
+                'Wise AI' => ['Dashboard', 'Playground', 'Knowledge', 'Config'],
                 'Merchants' => ['All Merchants', 'Trashed Merchants'],
                 'Fraud Checker' => ['Phone Check', 'Partner Credentials', 'Token & CURL'],
                 'Plans & Billing' => [

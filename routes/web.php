@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\VisitorController;
 use App\Http\Controllers\Admin\SiteVisitorsAdminController;
 use App\Http\Controllers\Admin\WebhookActivityController;
 use App\Http\Controllers\Admin\WhitelistedDomainController;
+use App\Http\Controllers\Admin\WiseAiAdminController;
 use App\Http\Controllers\Analysis\TokenLedgerController;
 use App\Http\Controllers\Analysis\UseAnalysisController;
 use App\Http\Controllers\App\BlogAnalyticsController;
@@ -569,6 +570,19 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/data/orders', [OrderIntelligenceAdminController::class, 'ordersList'])->name('ordersList');
         Route::get('/data/records/{table}', [OrderIntelligenceAdminController::class, 'recordsTable'])->name('recordsTable');
         Route::post('/reindex-search', [OrderIntelligenceAdminController::class, 'reindexSearch'])->name('reindexSearch');
+    });
+
+    Route::group(['as' => 'wiseAi.', 'prefix' => 'wise-ai', 'middleware' => 'permission:dashboard.view'], function () {
+        Route::get('/', [WiseAiAdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/playground', [WiseAiAdminController::class, 'playground'])->name('playground');
+        Route::get('/knowledge', [WiseAiAdminController::class, 'knowledge'])->name('knowledge');
+        Route::get('/config', [WiseAiAdminController::class, 'config'])->name('config');
+        Route::post('/keys', [WiseAiAdminController::class, 'storeKey'])->name('keys.store');
+        Route::post('/keys/{key}/revoke', [WiseAiAdminController::class, 'revokeKey'])->name('keys.revoke');
+        Route::post('/knowledge', [WiseAiAdminController::class, 'storeKnowledge'])->name('knowledge.store');
+        Route::post('/knowledge/{item}/update', [WiseAiAdminController::class, 'updateKnowledge'])->name('knowledge.update');
+        Route::post('/knowledge/{item}/publish', [WiseAiAdminController::class, 'publishKnowledge'])->name('knowledge.publish');
+        Route::post('/knowledge/{item}/unpublish', [WiseAiAdminController::class, 'unpublishKnowledge'])->name('knowledge.unpublish');
     });
 
     Route::group(['as' => 'developer.', 'prefix' => 'developer'], function () {
