@@ -44,12 +44,28 @@ Route::group(['middleware' => ['check.tokenDomain'], 'prefix' => 'api'], functio
 
 // Wise AI public API — auth via Wise API key (Bearer), resolved in the controller.
 Route::group(['prefix' => 'api/wise/v1', 'as' => 'wise.'], function () {
+    Route::get('/ping', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'ping'])
+        ->middleware('throttle:60,1')
+        ->name('ping');
+    Route::get('/turns/{turn}/explain', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'explain'])
+        ->whereNumber('turn')
+        ->middleware('throttle:120,1')
+        ->name('turns.explain');
     Route::post('/decide', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'decide'])
         ->middleware('throttle:120,1')
         ->name('decide');
     Route::post('/feedback', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'feedback'])
         ->middleware('throttle:120,1')
         ->name('feedback');
+    Route::post('/experience', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'experience'])
+        ->middleware('throttle:180,1')
+        ->name('experience');
+    Route::post('/commerce/events', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'commerceEvent'])
+        ->middleware('throttle:120,1')
+        ->name('commerce.events');
+    Route::post('/knowledge/upsert', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'knowledgeUpsert'])
+        ->middleware('throttle:180,1')
+        ->name('knowledge.upsert');
 });
 
 Route::group(['middleware' => ['auth.packageRenewal'], 'prefix' => 'api/package', 'as' => 'package.'], function () {

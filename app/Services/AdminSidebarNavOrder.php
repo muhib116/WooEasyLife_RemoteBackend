@@ -59,7 +59,7 @@ class AdminSidebarNavOrder
                 ],
             ],
             'children' => [
-                'Wise AI' => ['Dashboard', 'Playground', 'Knowledge', 'Config'],
+                'Wise AI' => ['Dashboard', 'Config', 'Knowledge', 'Language', 'Playground', 'Learning', 'Help', 'Train', 'Intelligence', 'Fleet'],
                 'Merchants' => ['All Merchants', 'Trashed Merchants'],
                 'Fraud Checker' => ['Phone Check', 'Partner Credentials', 'Token & CURL'],
                 'Plans & Billing' => [

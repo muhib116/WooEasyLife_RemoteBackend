@@ -28,6 +28,8 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'View employees', 'slug' => 'employees.view', 'group' => 'employees'],
             ['name' => 'Manage employees', 'slug' => 'employees.manage', 'group' => 'employees'],
             ['name' => 'Manage roles', 'slug' => 'roles.manage', 'group' => 'settings'],
+            ['name' => 'Edit Wise knowledge', 'slug' => 'wise.knowledge.edit', 'group' => 'wise'],
+            ['name' => 'Publish Wise knowledge', 'slug' => 'wise.knowledge.publish', 'group' => 'wise'],
         ];
 
         foreach ($permissions as $permission) {
@@ -57,6 +59,7 @@ class RolePermissionSeeder extends Seeder
                     'payments.view',
                     'sms.view',
                     'employees.view',
+                    'wise.knowledge.edit',
                 ],
             ],
             'billing-clerk' => [

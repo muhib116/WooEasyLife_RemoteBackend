@@ -36,6 +36,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('courier:sync-public-rates')
             ->dailyAt('03:10')
             ->timezone('Asia/Dhaka');
+        $schedule->command('wise:discovery-rank')
+            ->everyFiveMinutes();
+        $schedule->command('wise:discovery-rank --open --limit=300')
+            ->hourly();
         // ->dailyAt('00:30')
         // ->timezone('Asia/Dhaka');
     }

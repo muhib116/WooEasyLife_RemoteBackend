@@ -574,11 +574,37 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
 
     Route::group(['as' => 'wiseAi.', 'prefix' => 'wise-ai', 'middleware' => 'permission:dashboard.view'], function () {
         Route::get('/', [WiseAiAdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/live', [WiseAiAdminController::class, 'dashboardLive'])->name('dashboard.live');
+        Route::get('/tutorials', [WiseAiAdminController::class, 'tutorials'])->name('tutorials');
+        Route::get('/train', [WiseAiAdminController::class, 'train'])->name('train');
+        Route::post('/train/import', [WiseAiAdminController::class, 'importTrainingPack'])->name('train.import');
+        Route::post('/train/generate', [WiseAiAdminController::class, 'generateTrainingPack'])->name('train.generate');
         Route::get('/playground', [WiseAiAdminController::class, 'playground'])->name('playground');
+        Route::get('/intelligence', [WiseAiAdminController::class, 'intelligence'])->name('intelligence');
+        Route::get('/fleet', [WiseAiAdminController::class, 'fleet'])->name('fleet');
+        Route::get('/turns/{turn}/explain', [WiseAiAdminController::class, 'turnExplain'])
+            ->whereNumber('turn')
+            ->name('turns.explain');
+        Route::get('/turns/{turn}/replay', [WiseAiAdminController::class, 'turnReplay'])
+            ->whereNumber('turn')
+            ->name('turns.replay');
+        Route::get('/learning', [WiseAiAdminController::class, 'learning'])->name('learning');
+        Route::get('/assist', [WiseAiAdminController::class, 'assist'])->name('assist');
+        Route::get('/gaps', [WiseAiAdminController::class, 'gaps'])->name('gaps');
+        Route::get('/language', [WiseAiAdminController::class, 'language'])->name('language');
+        Route::get('/lab', [WiseAiAdminController::class, 'languageLab'])->name('lab');
+        Route::post('/language/normalize', [WiseAiAdminController::class, 'normalizeLanguage'])->name('language.normalize');
+        Route::post('/language/reviews/{review}/promote', [WiseAiAdminController::class, 'promoteLanguageReview'])->name('language.reviews.promote');
+        Route::post('/language/reviews/{review}/ignore', [WiseAiAdminController::class, 'ignoreLanguageReview'])->name('language.reviews.ignore');
         Route::get('/knowledge', [WiseAiAdminController::class, 'knowledge'])->name('knowledge');
         Route::get('/config', [WiseAiAdminController::class, 'config'])->name('config');
+        Route::post('/config/llm', [WiseAiAdminController::class, 'updateLlmConfig'])->name('config.llm');
         Route::post('/keys', [WiseAiAdminController::class, 'storeKey'])->name('keys.store');
         Route::post('/keys/{key}/revoke', [WiseAiAdminController::class, 'revokeKey'])->name('keys.revoke');
+        Route::post('/keys/{key}/governance', [WiseAiAdminController::class, 'updateKeyGovernance'])->name('keys.governance');
+        Route::post('/assist/{turn}/feedback', [WiseAiAdminController::class, 'assistFeedback'])->name('assist.feedback');
+        Route::post('/gaps/{turn}/draft', [WiseAiAdminController::class, 'draftFromGap'])->name('gaps.draft');
+        Route::post('/gaps/{turn}/ignore', [WiseAiAdminController::class, 'ignoreGap'])->name('gaps.ignore');
         Route::post('/knowledge', [WiseAiAdminController::class, 'storeKnowledge'])->name('knowledge.store');
         Route::post('/knowledge/{item}/update', [WiseAiAdminController::class, 'updateKnowledge'])->name('knowledge.update');
         Route::post('/knowledge/{item}/publish', [WiseAiAdminController::class, 'publishKnowledge'])->name('knowledge.publish');
