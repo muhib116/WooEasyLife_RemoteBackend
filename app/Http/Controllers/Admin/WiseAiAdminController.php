@@ -23,14 +23,23 @@ use App\WiseAi\Governance\WisePermission;
 use App\WiseAi\Intelligence\AiHealthScore;
 use App\WiseAi\Intelligence\FleetAlerts;
 use App\WiseAi\Intelligence\FleetHealth;
+use App\WiseAi\Intelligence\HealAlerts;
 use App\WiseAi\Intelligence\MerchantIntelligence;
 use App\WiseAi\Intelligence\MetricDefinitions;
+use App\WiseAi\Knowledge\KnowledgeAnswerRegenerator;
+use App\WiseAi\Knowledge\KnowledgePublisher;
 use App\WiseAi\Knowledge\KnowledgeSchema;
+use App\WiseAi\Knowledge\RelatedQuestionSuggester;
+use App\WiseAi\Knowledge\Seed\KnowledgeSeedValidator;
+use App\WiseAi\Knowledge\SeededKnowledge;
 use App\WiseAi\Language\LanguageNormalizer;
 use App\WiseAi\Language\LlmLanguageConfig;
 use App\WiseAi\Language\PlatformLexicon;
+use App\WiseAi\Learning\GapAutoDrafter;
 use App\WiseAi\Learning\LearningInbox;
 use App\WiseAi\Learning\ReasonCodes;
+use App\WiseAi\Playground\PlaygroundCoach;
+use App\WiseAi\Playground\PlaygroundCoachApplier;
 use App\WiseAi\Training\TrainingPackGenerator;
 use App\WiseAi\Training\TrainingPackImporter;
 use App\WiseAi\Training\TrainingPrompt;
@@ -46,11 +55,13 @@ use Inertia\Response;
 
 class WiseAiAdminController extends Controller
 {
-    public function dashboard(AiHealthScore $health, LlmLanguageConfig $llm): Response
+    public function dashboard(AiHealthScore $health, HealAlerts $healAlerts, LlmLanguageConfig $llm): Response
     {
         $today = now()->startOfDay();
         $todayTurns = WiseTurn::where('created_at', '>=', $today);
         $live = $health->live(24);
+        $gapsOpen = WiseTurn::where('gap', true)->whereNull('gap_handled_at')->count();
+        $heal = $healAlerts->fromLive($live, $gapsOpen);
 
         return Inertia::render('WiseAi/Dashboard', [
             'stats' => [
@@ -61,7 +72,7 @@ class WiseAiAdminController extends Controller
                     ->avg(fn (WiseTurn $turn) => (int) ($turn->decision['confidence'] ?? 0))),
                 'active_keys' => WiseApiKey::where('status', 'active')->count(),
                 'gaps_today' => WiseTurn::where('created_at', '>=', $today)->where('gap', true)->count(),
-                'gaps_open' => WiseTurn::where('gap', true)->whereNull('gap_handled_at')->count(),
+                'gaps_open' => $gapsOpen,
                 'assist_pending' => WiseTurn::query()
                     ->whereIn('decision->action', ['suggest_reply', 'clarify'])
                     ->whereDoesntHave('feedbacks')
@@ -77,6 +88,8 @@ class WiseAiAdminController extends Controller
                 'brain_version' => DecideEngine::BRAIN_VERSION,
             ],
             'live' => $live,
+            'heal_alerts' => $heal,
+            'heal_alerts_version' => HealAlerts::VERSION,
             'llm_pipeline' => [
                 'enabled' => $llm->enabled(),
                 'key_set' => $llm->hasApiKey(),
@@ -90,11 +103,16 @@ class WiseAiAdminController extends Controller
         ]);
     }
 
-    public function dashboardLive(AiHealthScore $health, LlmLanguageConfig $llm): JsonResponse
+    public function dashboardLive(AiHealthScore $health, HealAlerts $healAlerts, LlmLanguageConfig $llm): JsonResponse
     {
+        $live = $health->live(24);
+        $gapsOpen = WiseTurn::where('gap', true)->whereNull('gap_handled_at')->count();
+
         return response()->json([
             'ok' => true,
-            'live' => $health->live(24),
+            'live' => $live,
+            'heal_alerts' => $healAlerts->fromLive($live, $gapsOpen),
+            'heal_alerts_version' => HealAlerts::VERSION,
             'llm_pipeline' => [
                 'enabled' => $llm->enabled(),
                 'key_set' => $llm->hasApiKey(),
@@ -118,7 +136,10 @@ class WiseAiAdminController extends Controller
             'brain_version' => DecideEngine::BRAIN_VERSION,
             'schema_version' => TrainingSchema::VERSION,
             'example_pack' => TrainingSchema::examplePack(),
-            'professional_prompt' => TrainingPrompt::professional(),
+            'example_platform_pack' => TrainingSchema::examplePlatformPack(),
+            'starter_packs' => TrainingSchema::starterPacks(),
+            'prompts' => TrainingPrompt::all(),
+            'prompt_types' => TrainingPrompt::typeOptions(),
             'apiKeys' => WiseApiKey::where('status', 'active')
                 ->orderBy('name')
                 ->get(['id', 'name', 'key_prefix']),
@@ -128,16 +149,15 @@ class WiseAiAdminController extends Controller
                 'model' => $llm->model(),
             ],
             'can_edit' => $perms->canEdit($request->user()),
-            'example_platform_pack' => TrainingSchema::examplePlatformPack(),
-            'first_learning_bn' => [
-                'প্রথমে ১০–২০টা আসল কাস্টমার প্রশ্ন লিখুন (Messenger থেকে কপি) — AI দিয়ে সাজালেও ফ্যাক্ট আপনারই হতে হবে।',
-                'Platform target = সব API key-এর জন্য shared Knowledge/Language (BCLC)। Merchant key = এক স্টোর।',
-                'ডেলিভারি চার্জ, পেমেন্ট, রিটার্ন — এই তিনটা পলিসি আগে Publish করুন; এগুলোতেই সবচেয়ে বেশি প্রশ্ন আসে।',
-                'Chat slang শেখান: plz, tnx, tmr + Banglish tumar/apnar — Language লেনে Import → Language ট্যাবে Promote।',
-                '“দাম কত?” এর উত্তর সবসময় ক্ল্যারিফাই: কোন প্রোডাক্ট? নাম/ছবি চাই — ভুয়া দাম লিখবেন না।',
-                'প্রত্যেক knowledge আইটেম Draft এ আসবে → Knowledge ট্যাবে গিয়ে একট একট করে Publish।',
-                'Experience লাইন শুধু merchant key-এ — platform target-এ skip হয় (soft-hint, সত্য নয়)।',
+            'first_learning_bn' => TrainingPrompt::instructionsBn(),
+            'recommended_types_bn' => [
+                ['value' => 'language', 'why' => 'টার্গেট ২৫ সারফেস — দ্রুত বোঝাপড়া'],
+                ['value' => 'knowledge', 'why' => 'টার্গেট ২০ FAQ — ডেলিভারি/পেমেন্ট/রিটার্ন'],
+                ['value' => 'platform', 'why' => 'টার্গেট ২৪ — সব স্টোরের নিরাপদ স্ক্রিপ্ট+slang'],
             ],
+            'volume_by_type' => collect(TrainingPrompt::types())
+                ->mapWithKeys(fn (string $t) => [$t => TrainingPrompt::volumeFor($t)])
+                ->all(),
         ]);
     }
 
@@ -156,12 +176,35 @@ class WiseAiAdminController extends Controller
             'pack' => 'required|array',
             'pack.items' => 'required|array|min:1|max:200',
             'import_experience' => 'nullable|boolean',
+            'prompt_type' => 'nullable|in:merchant,platform,knowledge,language,experience',
         ]);
 
         $target = (string) ($validated['target'] ?? 'merchant');
+        $promptType = TrainingPrompt::normalizeType($validated['prompt_type'] ?? null);
+        $pack = $validated['pack'];
+        $lanesDropped = 0;
+        if (! empty($validated['prompt_type'])) {
+            $filtered = TrainingPrompt::filterPack($pack, $promptType);
+            $pack = $filtered['pack'];
+            $lanesDropped = (int) $filtered['dropped'];
+            if (! is_array($pack['items'] ?? null) || $pack['items'] === []) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'No items left after filtering for prompt type “'.$promptType.'”.',
+                    'stats' => ['errors' => ['All items were off-type for '.$promptType], 'lanes_dropped' => $lanesDropped],
+                ], 422);
+            }
+        }
+
         $apiKey = null;
         if ($target === 'platform') {
             // Platform Train: no merchant key required.
+            if (TrainingPrompt::requiresMerchantKey($promptType) && ! empty($validated['prompt_type'])) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'prompt_type “'.$promptType.'” requires a merchant API key target.',
+                ], 422);
+            }
         } else {
             if (empty($validated['wise_api_key_id'])) {
                 return response()->json([
@@ -178,12 +221,14 @@ class WiseAiAdminController extends Controller
         try {
             $stats = $importer->import(
                 $apiKey,
-                $validated['pack'],
+                $pack,
                 $request->boolean('import_experience', true),
             );
         } catch (InvalidArgumentException $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
         }
+        $stats['lanes_dropped'] = $lanesDropped;
+        $stats['prompt_type'] = $promptType;
 
         $message = sprintf(
             'Knowledge: %d new, %d updated · Language: %d new, %d updated, %d reused · Experience: %d new, %d reused · %d skipped.',
@@ -207,11 +252,16 @@ class WiseAiAdminController extends Controller
             ], 422);
         }
 
+        if ($lanesDropped > 0) {
+            $message .= sprintf(' · %d off-type lane row(s) stripped.', $lanesDropped);
+        }
+
         return response()->json([
             'ok' => true,
             'message' => $message,
             'stats' => $stats,
             'next_steps' => $stats['next_steps'] ?? [],
+            'prompt_type' => $promptType,
             'links' => [
                 'knowledge' => route('wiseAi.knowledge'),
                 'language' => route('wiseAi.language', ['review' => 'open', 'channel' => 'train']),
@@ -230,13 +280,18 @@ class WiseAiAdminController extends Controller
 
         $validated = $request->validate([
             'brief' => 'required|string|min:20|max:8000',
-            'target_items' => 'nullable|integer|min:8|max:30',
+            'target_items' => 'nullable|integer|min:8|max:50',
+            'prompt_type' => 'nullable|in:merchant,platform,knowledge,language,experience',
         ]);
+
+        $promptType = TrainingPrompt::normalizeType($validated['prompt_type'] ?? null);
+        $targetItems = (int) ($validated['target_items'] ?? TrainingPrompt::recommendedTargetItems($promptType));
 
         try {
             $result = $generator->generate(
                 $validated['brief'],
-                (int) ($validated['target_items'] ?? 16),
+                $targetItems,
+                $promptType,
             );
         } catch (RuntimeException $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
@@ -247,13 +302,112 @@ class WiseAiAdminController extends Controller
             'pack' => $result['pack'],
             'model' => $result['model'],
             'latency_ms' => $result['latency_ms'],
+            'prompt_type' => $result['prompt_type'],
+            'lanes_dropped' => $result['lanes_dropped'] ?? 0,
             'message' => 'Draft pack generated — review JSON, then Import as drafts (not published).',
         ]);
     }
 
-    public function playground(): Response
+    public function playground(WisePermission $perms, LlmLanguageConfig $llm): Response
     {
-        return Inertia::render('WiseAi/Playground');
+        return Inertia::render('WiseAi/Playground', [
+            'can_edit' => $perms->canEdit(request()->user()),
+            'can_publish' => $perms->canPublish(request()->user()),
+            'llm_ready' => $llm->enabled() && $llm->hasApiKey(),
+        ]);
+    }
+
+    public function proposePlaygroundCoach(
+        Request $request,
+        PlaygroundCoach $coach,
+        WisePermission $perms,
+    ): JsonResponse {
+        if (! $perms->canEdit($request->user())) {
+            return response()->json(['ok' => false, 'message' => 'Editor role required to run Playground Coach.'], 403);
+        }
+
+        $validated = $request->validate([
+            'turn_id' => 'required|integer|exists:wise_turns,id',
+            'messages' => 'nullable|array|max:24',
+            'messages.*.role' => 'nullable|string|max:20',
+            'messages.*.text' => 'nullable|string|max:2000',
+        ]);
+
+        $turn = WiseTurn::query()->findOrFail((int) $validated['turn_id']);
+
+        try {
+            $proposal = $coach->propose($turn, $validated['messages'] ?? []);
+        } catch (RuntimeException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'proposal' => $proposal,
+            'turn_id' => $turn->id,
+        ]);
+    }
+
+    public function applyPlaygroundCoach(
+        Request $request,
+        PlaygroundCoachApplier $applier,
+        WisePermission $perms,
+    ): JsonResponse {
+        if (! $perms->canEdit($request->user())) {
+            return response()->json(['ok' => false, 'message' => 'Editor role required to apply Playground Coach.'], 403);
+        }
+
+        $categories = implode(',', PlaygroundCoach::CATEGORIES);
+        $langTypes = implode(',', PlaygroundCoach::LANGUAGE_TYPES);
+        $validated = $request->validate([
+            'turn_id' => 'required|integer|exists:wise_turns,id',
+            'wise_api_key_id' => 'required|integer|exists:wise_api_keys,id',
+            'category' => "required|in:{$categories}",
+            'publish_now' => 'nullable|boolean',
+            'knowledge' => 'nullable|array',
+            'knowledge.title' => 'nullable|string|max:191',
+            'knowledge.question' => 'nullable|string|max:2000',
+            'knowledge.answer' => 'nullable|string|max:5000',
+            'knowledge.keywords' => 'nullable|array',
+            'knowledge.keywords.*' => 'string|max:60',
+            'language' => 'nullable|array',
+            'language.type' => "nullable|in:{$langTypes}",
+            'language.from' => 'nullable|string|max:80',
+            'language.to' => 'nullable|string|max:200',
+        ]);
+
+        $publishNow = (bool) ($validated['publish_now'] ?? false);
+        if ($publishNow && ! $perms->canPublish($request->user())) {
+            return response()->json(['ok' => false, 'message' => 'Publisher role required to publish coach proposals.'], 403);
+        }
+
+        $turn = WiseTurn::query()->findOrFail((int) $validated['turn_id']);
+        $apiKey = WiseApiKey::query()->findOrFail((int) $validated['wise_api_key_id']);
+
+        try {
+            $result = $applier->apply($turn, $apiKey, $validated);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'category' => $result['category'],
+            'published' => $result['published'],
+            'knowledge_item' => $result['knowledge_item']
+                ? $this->knowledgeRow($result['knowledge_item'])
+                : null,
+            'language_entry' => $result['language_entry']
+                ? [
+                    'id' => $result['language_entry']->id,
+                    'type' => $result['language_entry']->type,
+                    'from' => $result['language_entry']->from_text,
+                    'to' => $result['language_entry']->to_text,
+                    'status' => $result['language_entry']->status,
+                ]
+                : null,
+            'turn_id' => $result['turn']->id,
+        ]);
     }
 
     public function intelligence(Request $request, MerchantIntelligence $bi): Response
@@ -360,6 +514,24 @@ class WiseAiAdminController extends Controller
             'reason_codes' => $reasonChoices,
             'reason_codes_version' => ReasonCodes::VERSION,
             'can_edit' => $perms->canEdit($request->user()),
+            'can_publish' => $perms->canPublish($request->user()),
+            'api_keys' => WiseApiKey::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'key_prefix'])
+                ->map(fn (WiseApiKey $k) => [
+                    'id' => $k->id,
+                    'name' => $k->name,
+                    'key_prefix' => $k->key_prefix,
+                ])
+                ->values()
+                ->all(),
+            'seeded_drafts' => SeededKnowledge::scopeDraftsForReview(WiseKnowledgeItem::query())
+                ->orderByDesc('id')
+                ->limit(50)
+                ->get()
+                ->map(fn (WiseKnowledgeItem $item) => $this->knowledgeRow($item))
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -433,6 +605,8 @@ class WiseAiAdminController extends Controller
                         'assignments' => $assignments,
                     ];
                 }),
+            'region_ui_options' => \App\WiseAi\Language\RegionCode::uiOptions(),
+            'region_place_coverage' => \App\WiseAi\Language\RegionCode::placeCoverage(),
             'review_filter' => $filter,
             'review_stats' => [
                 'open' => WiseLanguageReview::where('status', 'open')->count(),
@@ -755,8 +929,16 @@ class WiseAiAdminController extends Controller
             'offer_kind' => 'nullable|in:physical,digital,service,subscription,other',
             'sku' => 'nullable|string|max:64',
             'region' => 'nullable|string|max:60',
+            'publish_now' => 'nullable|boolean',
         ]);
-        $validated['scope'] = $validated['scope'] ?? KnowledgeSchema::SCOPE_MERCHANT;
+        $validated['scope'] = $validated['scope'] ?? KnowledgeSchema::SCOPE_PLATFORM;
+        $publishNow = (bool) ($validated['publish_now'] ?? false);
+        unset($validated['publish_now']);
+
+        if ($publishNow && ! $perms->canPublish($request->user())) {
+            return response()->json(['ok' => false, 'message' => 'Publisher role required to publish now.'], 403);
+        }
+
         if ($validated['type'] === KnowledgeSchema::KIND_OTHER) {
             $validated['type'] = KnowledgeSchema::KIND_FACT;
         }
@@ -770,7 +952,21 @@ class WiseAiAdminController extends Controller
             return response()->json(['ok' => false, 'message' => 'region required for region scope.'], 422);
         }
 
-        [$item, $freshTurn] = DB::transaction(function () use ($turn, $validated) {
+        $feeErrors = app(KnowledgeSeedValidator::class)->answerFactGuards(
+            (string) $validated['answer'],
+            'gap draft',
+        );
+        if ($feeErrors !== []) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invented fee/phone/percent blocked — remove store-specific amounts or use refuse phrasing.',
+                'errors' => $feeErrors,
+            ], 422);
+        }
+
+        $publisher = app(KnowledgePublisher::class);
+
+        [$item, $freshTurn] = DB::transaction(function () use ($turn, $validated, $publishNow, $publisher) {
             $locked = WiseTurn::query()->whereKey($turn->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->gap_handled_at !== null || $locked->gap_knowledge_id !== null) {
@@ -797,34 +993,73 @@ class WiseAiAdminController extends Controller
             $needsExternal = $validated['type'] === KnowledgeSchema::KIND_OFFER
                 || $validated['scope'] === KnowledgeSchema::SCOPE_OFFER;
 
-            $item = WiseKnowledgeItem::create([
-                'wise_api_key_id' => $validated['scope'] === KnowledgeSchema::SCOPE_PLATFORM
+            $existingAuto = $locked->gap_auto_draft_id
+                ? WiseKnowledgeItem::query()->whereKey($locked->gap_auto_draft_id)->first()
+                : null;
+
+            // Gap auto-drafts stay merchant-owned for this API key (no silent platform promotion).
+            $scope = (string) $validated['scope'];
+            if (
+                $existingAuto
+                && (($existingAuto->meta['source'] ?? null) === GapAutoDrafter::META_SOURCE
+                    || ($existingAuto->meta['auto_draft'] ?? false) === true)
+            ) {
+                $scope = KnowledgeSchema::SCOPE_MERCHANT;
+            }
+
+            $payload = [
+                'wise_api_key_id' => $scope === KnowledgeSchema::SCOPE_PLATFORM
                     ? null
                     : $locked->wise_api_key_id,
                 'external_id' => $needsExternal
                     ? trim((string) ($validated['external_id'] ?? ''))
                     : ($validated['external_id'] ?? null),
                 'type' => $validated['type'],
-                'scope' => $validated['scope'],
+                'scope' => $scope,
                 'title' => $validated['title'],
                 'question' => $validated['question'] ?? $locked->text,
                 'answer' => $validated['answer'],
                 'keywords' => $validated['keywords'] ?? [],
-                'meta' => $meta ?: null,
+                'meta' => array_filter(array_merge(
+                    is_array($existingAuto?->meta) ? $existingAuto->meta : [],
+                    $meta,
+                    [
+                        'source' => $existingAuto
+                            ? GapAutoDrafter::META_SOURCE
+                            : 'gap_human_draft',
+                        'wise_turn_id' => (int) $locked->id,
+                        'human_reviewed' => true,
+                    ],
+                ), fn ($v) => $v !== null && $v !== ''),
                 'status' => 'draft',
-                'version' => 1,
-            ]);
+            ];
+
+            if ($existingAuto) {
+                $existingAuto->fill($payload);
+                if ((int) $existingAuto->version < 1) {
+                    $existingAuto->version = 1;
+                }
+                $existingAuto->save();
+                $item = $existingAuto;
+            } else {
+                $item = WiseKnowledgeItem::create(array_merge($payload, ['version' => 1]));
+            }
+
+            if ($publishNow) {
+                $item = $publisher->publish($item);
+            }
 
             $locked->update([
                 'gap_handled_at' => now(),
                 'gap_knowledge_id' => $item->id,
+                'gap_auto_draft_id' => $item->id,
             ]);
 
             $item->load('apiKey:id,name');
 
             return [
                 $item,
-                $locked->fresh(['apiKey:id,name', 'gapKnowledge:id,title,status']),
+                $locked->fresh(['apiKey:id,name', 'gapKnowledge:id,title,status', 'gapAutoDraft:id,title,status']),
             ];
         });
 
@@ -833,6 +1068,19 @@ class WiseAiAdminController extends Controller
             'item' => $this->knowledgeRow($item),
             'turn' => $this->turnRow($freshTurn),
             'stats' => $this->gapStats(),
+            'published' => $item->status === 'published',
+        ]);
+    }
+
+    public function relatedQuestions(WiseTurn $turn, RelatedQuestionSuggester $suggester): JsonResponse
+    {
+        $result = $suggester->forTurn($turn->loadMissing('apiKey'));
+
+        return response()->json([
+            'ok' => true,
+            'turn_id' => $turn->id,
+            'version' => $result['version'],
+            'items' => $result['items'],
         ]);
     }
 
@@ -922,15 +1170,32 @@ class WiseAiAdminController extends Controller
 
     public function knowledge(Request $request, WisePermission $perms): Response
     {
+        $filter = (string) $request->query('filter', 'all');
+        if (! in_array($filter, ['all', 'seeded_drafts', 'draft', 'published'], true)) {
+            $filter = 'all';
+        }
+
+        $query = WiseKnowledgeItem::with('apiKey:id,name')->latest();
+        if ($filter === 'seeded_drafts') {
+            SeededKnowledge::scopeDraftsForReview($query);
+        } elseif ($filter === 'draft') {
+            $query->where('status', 'draft');
+        } elseif ($filter === 'published') {
+            $query->where('status', 'published');
+        }
+
+        $seededDraftCount = SeededKnowledge::scopeDraftsForReview(WiseKnowledgeItem::query())->count();
+
         return Inertia::render('WiseAi/Knowledge', [
             'apiKeys' => WiseApiKey::where('status', 'active')
                 ->orderBy('name')
                 ->get(['id', 'name', 'key_prefix']),
-            'items' => WiseKnowledgeItem::with('apiKey:id,name')
-                ->latest()
+            'items' => $query
                 ->limit(100)
                 ->get()
                 ->map(fn (WiseKnowledgeItem $item) => $this->knowledgeRow($item)),
+            'filter' => $filter,
+            'seeded_draft_count' => $seededDraftCount,
             'can_edit' => $perms->canEdit($request->user()),
             'can_publish' => $perms->canPublish($request->user()),
         ]);
@@ -1183,14 +1448,17 @@ class WiseAiAdminController extends Controller
         ]);
     }
 
-    public function publishKnowledge(Request $request, WiseKnowledgeItem $item, WisePermission $perms): JsonResponse
-    {
+    public function publishKnowledge(
+        Request $request,
+        WiseKnowledgeItem $item,
+        WisePermission $perms,
+        KnowledgePublisher $publisher,
+    ): JsonResponse {
         if (! $perms->canPublish($request->user())) {
             return response()->json(['ok' => false, 'message' => 'Publisher role required to publish knowledge.'], 403);
         }
 
-        $item->update(['status' => 'published']);
-        $item->load('apiKey:id,name');
+        $item = $publisher->publish($item);
 
         return response()->json([
             'ok' => true,
@@ -1198,18 +1466,117 @@ class WiseAiAdminController extends Controller
         ]);
     }
 
-    public function unpublishKnowledge(Request $request, WiseKnowledgeItem $item, WisePermission $perms): JsonResponse
-    {
+    public function unpublishKnowledge(
+        Request $request,
+        WiseKnowledgeItem $item,
+        WisePermission $perms,
+        KnowledgePublisher $publisher,
+    ): JsonResponse {
         if (! $perms->canPublish($request->user())) {
             return response()->json(['ok' => false, 'message' => 'Publisher role required to unpublish knowledge.'], 403);
         }
 
-        $item->update(['status' => 'draft']);
-        $item->load('apiKey:id,name');
+        $item = $publisher->unpublish($item);
 
         return response()->json([
             'ok' => true,
             'item' => $this->knowledgeRow($item),
+        ]);
+    }
+
+    public function bulkPublishKnowledge(
+        Request $request,
+        WisePermission $perms,
+        KnowledgePublisher $publisher,
+    ): JsonResponse {
+        if (! $perms->canPublish($request->user())) {
+            return response()->json(['ok' => false, 'message' => 'Publisher role required to publish knowledge.'], 403);
+        }
+
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1|max:200',
+            'ids.*' => 'integer|min:1',
+        ]);
+
+        try {
+            $result = $publisher->bulkPublishSeededDrafts($validated['ids']);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'published_count' => $result['published_count'],
+            'skipped_count' => $result['skipped_count'],
+            'skipped' => $result['skipped'],
+            'items' => array_map(fn (WiseKnowledgeItem $item) => $this->knowledgeRow($item), $result['published']),
+            'seeded_draft_count' => SeededKnowledge::scopeDraftsForReview(WiseKnowledgeItem::query())->count(),
+        ]);
+    }
+
+    public function regenerateKnowledgeAnswer(
+        Request $request,
+        WiseKnowledgeItem $item,
+        WisePermission $perms,
+        KnowledgeAnswerRegenerator $regenerator,
+    ): JsonResponse {
+        if (! $perms->canEdit($request->user())) {
+            return response()->json(['ok' => false, 'message' => 'Editor role required to regenerate answers.'], 403);
+        }
+
+        try {
+            $proposal = $regenerator->propose($item);
+        } catch (RuntimeException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'item_id' => $item->id,
+            ...$proposal,
+            'message' => 'Proposed answer ready — review, Apply (stays draft), then Publish.',
+        ]);
+    }
+
+    /**
+     * Propose a safer Bangla rewrite without persisting (Learning gap dialog).
+     */
+    public function proposeKnowledgeAnswer(
+        Request $request,
+        WisePermission $perms,
+        KnowledgeAnswerRegenerator $regenerator,
+    ): JsonResponse {
+        if (! $perms->canEdit($request->user())) {
+            return response()->json(['ok' => false, 'message' => 'Editor role required.'], 403);
+        }
+
+        $scopes = implode(',', KnowledgeSchema::scopes());
+        $validated = $request->validate([
+            'title' => 'required|string|max:191',
+            'question' => 'nullable|string|max:2000',
+            'answer' => 'required|string|max:5000',
+            'scope' => "nullable|in:{$scopes}",
+        ]);
+
+        $ephemeral = new WiseKnowledgeItem([
+            'title' => $validated['title'],
+            'question' => $validated['question'] ?? null,
+            'answer' => $validated['answer'],
+            'scope' => $validated['scope'] ?? KnowledgeSchema::SCOPE_PLATFORM,
+            'type' => KnowledgeSchema::KIND_FAQ,
+            'status' => 'draft',
+        ]);
+
+        try {
+            $proposal = $regenerator->propose($ephemeral);
+        } catch (RuntimeException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            ...$proposal,
+            'message' => 'Proposed answer ready — review before Save / Publish.',
         ]);
     }
 
@@ -1241,6 +1608,8 @@ class WiseAiAdminController extends Controller
             'gap_knowledge_id' => $turn->gap_knowledge_id,
             'gap_knowledge_title' => $turn->gapKnowledge?->title,
             'gap_knowledge_status' => $turn->gapKnowledge?->status,
+            'gap_auto_draft_id' => $turn->gap_auto_draft_id,
+            'gap_auto_draft_status' => $turn->gapAutoDraft?->status,
             'reviewed' => $feedback !== null,
             'feedback_outcome' => $feedback?->outcome,
             'feedback_edited_reply' => $feedback?->edited_reply,
@@ -1275,6 +1644,8 @@ class WiseAiAdminController extends Controller
 
     private function knowledgeRow(WiseKnowledgeItem $item): array
     {
+        $seededFrom = is_string($item->meta['seeded_from'] ?? null) ? (string) $item->meta['seeded_from'] : null;
+
         return [
             'id' => $item->id,
             'wise_api_key_id' => $item->wise_api_key_id,
@@ -1292,6 +1663,9 @@ class WiseAiAdminController extends Controller
             'sku' => $item->meta['sku'] ?? null,
             'region' => $item->meta['region'] ?? null,
             'pricing_menu' => (bool) ($item->meta['pricing_menu'] ?? false),
+            'seeded_from' => $seededFrom,
+            'is_seeded' => SeededKnowledge::isSeeded($item),
+            'bulk_eligible' => SeededKnowledge::isBulkPublishEligible($item),
             'status' => $item->status,
             'version' => $item->version,
             'updated_at' => $item->updated_at?->toDateTimeString(),

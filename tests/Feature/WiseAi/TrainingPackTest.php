@@ -273,6 +273,47 @@ it('keeps merchant train scoped to the API key and rejects bad merchant targets'
     $inactive->delete();
 });
 
+it('filters import pack by prompt_type and rejects merchant types on platform target', function () {
+    $admin = User::create([
+        'name' => 'Wise Train Filter',
+        'email' => 'wise-train-filter-'.uniqid().'@example.com',
+        'phone' => '019'.random_int(10000000, 99999999),
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'status' => true,
+    ]);
+
+    $key = WiseApiKey::generate('train-filter')['key'];
+
+    $this->actingAs($admin)
+        ->postJson(route('wiseAi.train.import'), [
+            'target' => 'merchant',
+            'wise_api_key_id' => $key->id,
+            'prompt_type' => 'knowledge',
+            'pack' => TrainingSchema::examplePack(),
+            'import_experience' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('stats.knowledge_created', 3)
+        ->assertJsonPath('stats.language_created', 0)
+        ->assertJsonPath('stats.experience_created', 0)
+        ->assertJsonPath('stats.lanes_dropped', 6);
+
+    expect(WiseLanguageReview::query()->where('wise_api_key_id', $key->id)->count())->toBe(0);
+    expect(WiseExperienceSignal::query()->where('wise_api_key_id', $key->id)->count())->toBe(0);
+
+    $this->actingAs($admin)
+        ->postJson(route('wiseAi.train.import'), [
+            'target' => 'platform',
+            'prompt_type' => 'knowledge',
+            'pack' => TrainingSchema::examplePlatformPack(),
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('ok', false);
+
+    $key->delete();
+});
+
 it('imports platform training without an API key as shared drafts and language reviews', function () {
     $pack = TrainingSchema::examplePlatformPack();
 

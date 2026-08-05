@@ -6,14 +6,16 @@ use App\Models\WiseAi\WiseApiKey;
 use App\Models\WiseAi\WiseKnowledgeItem;
 use App\WiseAi\Knowledge\KnowledgeLookup;
 use App\WiseAi\Knowledge\KnowledgeSchema;
+use App\WiseAi\Knowledge\Search\KnowledgeSearchManager;
+use App\WiseAi\Language\RegionCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
  * Ground business answers on published merchant knowledge (single source of truth).
  *
- * Latency: SQL token prefilter on match_text + scope pushdown + lean columns +
- * candidate cap + early-exit scoring. Never load the whole catalog into PHP.
+ * Latency: optional Meilisearch ID prefilter → SQL LIKE fallback → PHP scoreItem.
+ * Never invent fees; suggested_reply is always a published answer.
  */
 class KnowledgeResolver
 {
@@ -39,6 +41,10 @@ class KnowledgeResolver
      */
     private static bool $excludePlatform = false;
 
+    public function __construct(
+        private KnowledgeSearchManager $search,
+    ) {}
+
     public static function excludePlatform(bool $exclude): void
     {
         self::$excludePlatform = $exclude;
@@ -57,6 +63,9 @@ class KnowledgeResolver
         'delivery' => ['ডেলিভারি', 'কুরিয়ার', 'delivery', 'courier', 'shipping', 'চার্জ', 'charge', 'পাঠা'],
         'order_status' => ['অর্ডার', 'ট্র্যাক', 'পার্সেল', 'order', 'track', 'parcel', 'status'],
         'complaint' => ['রিটার্ন', 'ফেরত', 'অভিযোগ', 'return', 'refund', 'broken', 'damaged', 'warranty'],
+        'payment' => ['পেমেন্ট', 'বিকাশ', 'নগদ', 'রকেট', 'bkash', 'nagad', 'rocket', 'payment', 'pay'],
+        'cod' => ['ক্যাশ অন', 'ক্যাশঅন', 'cod', 'cash on delivery', 'cash on'],
+        'stock' => ['স্টক', 'stock', 'available', 'আছে', 'সাইজ', 'size', 'inventory'],
     ];
 
     /**
@@ -128,7 +137,7 @@ class KnowledgeResolver
 
         $scored = [];
         foreach ($items as $item) {
-            if (! $this->scopeApplies($item, $context, $productSubject)) {
+            if (! $this->scopeApplies($item, $context, $productSubject, $apiKey)) {
                 continue;
             }
             $score = $this->scoreItem($item, $normalized, $intent);
@@ -288,8 +297,13 @@ class KnowledgeResolver
         $hints = self::INTENT_HINTS[$intent] ?? [];
         $tokens = KnowledgeLookup::tokens($normalized, $hints);
 
-        $query = $this->basePublishedQuery($apiKey);
-        $this->applyScopePushdown($query, $context, $productSubject);
+        $query = $this->basePublishedQuery($apiKey, $context);
+        $this->applyScopePushdown($query, $apiKey, $context, $productSubject);
+
+        $fromSearch = $this->candidatesFromSearch($apiKey, $normalized, $query);
+        if ($fromSearch !== null && $fromSearch->isNotEmpty()) {
+            return $fromSearch;
+        }
 
         if ($tokens !== []) {
             $filtered = (clone $query)
@@ -315,20 +329,69 @@ class KnowledgeResolver
     }
 
     /**
+     * Optional Meili/inmemory ID prefilter; null → use SQL LIKE path.
+     *
+     * @param  Builder<WiseKnowledgeItem>  $scopedQuery  Already ownership + scope filtered.
+     * @return Collection<int, WiseKnowledgeItem>|null
+     */
+    private function candidatesFromSearch(
+        WiseApiKey $apiKey,
+        string $normalized,
+        Builder $scopedQuery,
+    ): ?Collection {
+        $ids = $this->search->search($normalized, [
+            'status' => 'published',
+            'types' => KnowledgeSchema::groundableKinds(),
+            'wise_api_key_id' => $apiKey->id,
+            'exclude_platform' => self::$excludePlatform,
+        ], KnowledgeLookup::CANDIDATE_LIMIT);
+
+        if ($ids === []) {
+            return null;
+        }
+
+        $rows = (clone $scopedQuery)
+            ->whereIn('id', $ids)
+            ->get($this->leanColumns());
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $byId = $rows->keyBy('id');
+        $ordered = collect();
+        foreach ($ids as $id) {
+            if ($byId->has($id)) {
+                $ordered->push($byId->get($id));
+            }
+        }
+
+        return $ordered->isNotEmpty() ? $ordered : null;
+    }
+
+    /**
      * @return Builder<WiseKnowledgeItem>
      */
-    private function basePublishedQuery(WiseApiKey $apiKey): Builder
+    private function basePublishedQuery(WiseApiKey $apiKey, array $context = []): Builder
     {
+        $region = RegionCode::resolve($apiKey, $context);
+
         return WiseKnowledgeItem::query()
             ->where('status', 'published')
             ->whereIn('type', KnowledgeSchema::groundableKinds())
-            ->where(function ($q) use ($apiKey) {
+            ->where(function ($q) use ($apiKey, $region) {
                 $q->where('wise_api_key_id', $apiKey->id);
                 if (! self::$excludePlatform) {
                     $q->orWhere(function ($q2) {
                         $q2->where('scope', KnowledgeSchema::SCOPE_PLATFORM)
                             ->whereNull('wise_api_key_id');
                     });
+                    if ($region !== null) {
+                        $q->orWhere(function ($q2) {
+                            $q2->where('scope', KnowledgeSchema::SCOPE_REGION)
+                                ->whereNull('wise_api_key_id');
+                        });
+                    }
                 }
             });
     }
@@ -338,9 +401,13 @@ class KnowledgeResolver
      * @param  array<string, mixed>  $context
      * @param  array{knowledge_id?: int|null, external_id?: string|null}|null  $productSubject
      */
-    private function applyScopePushdown(Builder $query, array $context, ?array $productSubject): void
-    {
-        $region = strtolower(trim((string) ($context['region'] ?? '')));
+    private function applyScopePushdown(
+        Builder $query,
+        WiseApiKey $apiKey,
+        array $context,
+        ?array $productSubject,
+    ): void {
+        $region = RegionCode::resolve($apiKey, $context) ?? '';
         $offerExt = trim((string) ($productSubject['external_id'] ?? ''));
 
         $query->where(function (Builder $q) use ($region, $offerExt) {
@@ -383,14 +450,18 @@ class KnowledgeResolver
      * @param  array<string, mixed>  $context
      * @param  array{knowledge_id?: int|null, external_id?: string|null}|null  $productSubject
      */
-    private function scopeApplies(WiseKnowledgeItem $item, array $context, ?array $productSubject): bool
-    {
+    private function scopeApplies(
+        WiseKnowledgeItem $item,
+        array $context,
+        ?array $productSubject,
+        WiseApiKey $apiKey,
+    ): bool {
         $scope = (string) ($item->scope ?: KnowledgeSchema::SCOPE_MERCHANT);
 
         return match ($scope) {
             KnowledgeSchema::SCOPE_MERCHANT, KnowledgeSchema::SCOPE_PLATFORM => true,
             KnowledgeSchema::SCOPE_OFFER => $this->offerScopeMatches($item, $productSubject),
-            KnowledgeSchema::SCOPE_REGION => $this->regionScopeMatches($item, $context),
+            KnowledgeSchema::SCOPE_REGION => $this->regionScopeMatches($item, $apiKey, $context),
             default => false,
         };
     }
@@ -417,12 +488,12 @@ class KnowledgeResolver
     /**
      * @param  array<string, mixed>  $context
      */
-    private function regionScopeMatches(WiseKnowledgeItem $item, array $context): bool
+    private function regionScopeMatches(WiseKnowledgeItem $item, WiseApiKey $apiKey, array $context): bool
     {
-        $itemRegion = strtolower(trim((string) ($item->meta['region'] ?? '')));
-        $ctxRegion = strtolower(trim((string) ($context['region'] ?? '')));
+        $itemRegion = RegionCode::normalize((string) ($item->meta['region'] ?? ''));
+        $ctxRegion = RegionCode::resolve($apiKey, $context);
 
-        return $itemRegion !== '' && $ctxRegion !== '' && $itemRegion === $ctxRegion;
+        return $itemRegion !== null && $ctxRegion !== null && $itemRegion === $ctxRegion;
     }
 
     private function scoreItem(WiseKnowledgeItem $item, string $normalizedText, string $intent): int
@@ -487,7 +558,10 @@ class KnowledgeResolver
         }
 
         $scope = (string) ($item->scope ?: KnowledgeSchema::SCOPE_MERCHANT);
-        if ($scope === KnowledgeSchema::SCOPE_OFFER) {
+        if ($scope === KnowledgeSchema::SCOPE_MERCHANT && $item->wise_api_key_id !== null) {
+            // Merchant-owned truth wins over a generic platform script when both match.
+            $score += 12;
+        } elseif ($scope === KnowledgeSchema::SCOPE_OFFER) {
             $score += 6;
         } elseif ($scope === KnowledgeSchema::SCOPE_REGION) {
             $score += 4;

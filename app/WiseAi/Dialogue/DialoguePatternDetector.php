@@ -94,6 +94,9 @@ class DialoguePatternDetector
             'delivery' => 'ask_delivery',
             'order_status' => 'ask_order_status',
             'complaint' => 'raise_complaint',
+            'payment' => 'ask_payment',
+            'cod' => 'ask_cod',
+            'stock' => $hasProduct ? 'ask_stock_on_offer' : 'ask_stock_bare',
             'unknown' => 'soft_clarify_unknown',
             default => $kind === 'social' ? 'general_social' : 'general_business',
         };

@@ -21,7 +21,17 @@ it('bootstraps BCLC packs and publishes compiled artifacts', function () {
     $result = app(BclcBootstrap::class)->run();
 
     expect($result['packs'])->toContain('core-bd', 'commerce', 'messenger')
-        ->and($result['packs'])->toContain('region-chattogram', 'region-sylhet', 'region-noakhali');
+        ->and($result['packs'])->toContain(
+            'region-chattogram',
+            'region-sylhet',
+            'region-noakhali',
+            'region-barisal',
+            'region-rajshahi',
+            'region-khulna',
+            'region-rangpur',
+            'region-mymensingh',
+            'region-bogura',
+        );
 
     foreach ($result['packs'] as $slug) {
         $pack = WiseLanguagePack::query()->where('slug', $slug)->first();
@@ -362,4 +372,32 @@ it('skips known regional phrases from discovery when region opted in', function 
     expect(\App\Models\WiseAi\WiseLanguageReview::query()->where('token', 'xyzzyregionword')->exists())->toBeTrue();
 
     $key->delete();
+});
+
+it('aliases places like kishorgonj and haluaghat onto dialect hubs', function () {
+    expect(\App\WiseAi\Language\RegionCode::normalize('kishorgonj'))->toBe('mymensingh')
+        ->and(\App\WiseAi\Language\RegionCode::normalize('haluaghat'))->toBe('mymensingh')
+        ->and(\App\WiseAi\Language\RegionCode::normalize('bogra'))->toBe('bogura')
+        ->and(\App\WiseAi\Language\RegionCode::normalize('কিশোরগঞ্জ'))->toBe('mymensingh')
+        ->and(\App\WiseAi\Language\RegionCode::packSlug('kishoreganj'))->toBe('region-mymensingh')
+        ->and(\App\WiseAi\Language\RegionCode::normalize('unreviewed-place'))->toBeNull()
+        ->and(\App\WiseAi\Language\RegionCode::normalize('gazipur'))->toBeNull();
+});
+
+it('seeds region-scoped knowledge scripts for each dialect hub', function () {
+    app(BclcBootstrap::class)->run();
+    $result = app(\App\WiseAi\Language\RegionalKnowledgeSeeder::class)->run();
+
+    expect($result['upserted'])->toBeGreaterThanOrEqual(18)
+        ->and($result['regions'])->toContain('mymensingh', 'bogura');
+
+    $row = \App\Models\WiseAi\WiseKnowledgeItem::query()
+        ->where('external_id', 'bclc-region-mymensingh-area-delivery')
+        ->where('scope', 'region')
+        ->first();
+
+    expect($row)->not->toBeNull()
+        ->and($row->status)->toBe('draft')
+        ->and($row->meta['region'] ?? null)->toBe('mymensingh')
+        ->and($row->meta['sources'] ?? [])->not->toBeEmpty();
 });

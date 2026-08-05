@@ -304,12 +304,7 @@
                     </div>
                     <div v-if="promoteForm.type !== 'filler'">
                         <label class="mb-1 block text-xs text-gray-500">Canonical / expand to</label>
-                        <input
-                            v-model="promoteForm.to_text"
-                            type="text"
-                            class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none dark:border-gray-700 dark:bg-slate-900"
-                            placeholder="thank you / দাম"
-                        />
+                        <BanglaField v-model="promoteForm.to_text" placeholder="thank you / দাম" />
                     </div>
                     <div>
                         <label class="mb-1 block text-xs text-gray-500">Pack slug</label>
@@ -366,6 +361,7 @@ import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import WiseAiSubNav from "./fragments/WiseAiSubNav.vue";
 import WiseAiHowTo from "./fragments/WiseAiHowTo.vue";
 import TurnReplayDialog from "./fragments/TurnReplayDialog.vue";
+import BanglaField from "@/components/BanglaField.vue";
 
 type Entry = { type: string; from: string; to: string };
 type ReviewRow = {
@@ -411,6 +407,8 @@ const props = defineProps<{
     reviews: ReviewRow[];
     approved_entries: Array<{ id: number; type: string; from: string; to: string | null; key_name: string; enabled: boolean }>;
     can_edit?: boolean;
+    region_ui_options?: Array<{ value: string; label: string }>;
+    region_place_coverage?: Record<string, string[]>;
 }>();
 
 const reviewQuery = (review: string) => {
@@ -466,6 +464,9 @@ const scopeOptions = [
 ];
 
 const regionOptions = computed(() => {
+    if (props.region_ui_options?.length) {
+        return props.region_ui_options.map((o) => ({ label: o.label, value: o.value }));
+    }
     const fromPacks = (props.bclc_packs ?? [])
         .filter((p) => p.kind === "region" && p.region)
         .map((p) => ({ label: p.name || String(p.region), value: String(p.region) }));
@@ -474,6 +475,12 @@ const regionOptions = computed(() => {
         { label: "Chattogram", value: "chattogram" },
         { label: "Sylhet", value: "sylhet" },
         { label: "Noakhali", value: "noakhali" },
+        { label: "Barisal", value: "barisal" },
+        { label: "Rajshahi", value: "rajshahi" },
+        { label: "Bogura", value: "bogura" },
+        { label: "Khulna", value: "khulna" },
+        { label: "Rangpur", value: "rangpur" },
+        { label: "Mymensingh · Kishoreganj, Haluaghat…", value: "mymensingh" },
     ];
 });
 

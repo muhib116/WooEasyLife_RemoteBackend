@@ -50,7 +50,28 @@ class IntentContract
             'requires_product' => false,
             'requires_variant' => false,
             'requires_customer' => false,
-            'clarify_reply' => null,
+            'clarify_reply' => 'দুঃখিত শুনে। সমস্যাটা একটু বিস্তারিত লিখবেন? মার্চেন্ট নিশ্চিত করে জানাবে।',
+        ],
+        'payment' => [
+            'requires_offer' => false,
+            'requires_product' => false,
+            'requires_variant' => false,
+            'requires_customer' => false,
+            'clarify_reply' => 'পেমেন্ট কোন মাধ্যমে করতে চান—বিকাশ, নগদ, রকেট, নাকি অন্য কিছু? মার্চেন্ট নিশ্চিত করে জানাবে।',
+        ],
+        'cod' => [
+            'requires_offer' => false,
+            'requires_product' => false,
+            'requires_variant' => false,
+            'requires_customer' => false,
+            'clarify_reply' => 'ক্যাশ অন ডেলিভারি (COD) চান তাই তো? এলাকা/ঠিকানা একটু লিখলে মার্চেন্ট নিশ্চিত করে জানাবে।',
+        ],
+        'stock' => [
+            'requires_offer' => true,
+            'requires_product' => true,
+            'requires_variant' => false,
+            'requires_customer' => false,
+            'clarify_reply' => 'স্টক জানাতে কোন প্রোডাক্ট বা ভ্যারিয়েন্ট বলবেন? নাম বা ছবি পাঠালে মার্চেন্ট নিশ্চিত করে জানাবে।',
         ],
         'unknown' => [
             'requires_offer' => false,
@@ -59,6 +80,17 @@ class IntentContract
             'requires_customer' => false,
             'clarify_reply' => 'দুঃখিত, আপনার প্রশ্নটি বুঝতে পারিনি। অনুগ্রহ করে পরিষ্কার করে লিখুন, অথবা কোন প্রোডাক্ট/সার্ভিস নিয়ে জানতে চান সেটা বলুন।',
         ],
+    ];
+
+    /** Soft assist when knowledge is missing — never invents fees; always non-empty. */
+    private const GAP_ASSIST_FALLBACKS = [
+        'delivery' => 'ডেলিভারি চার্জ/সময় মার্চেন্ট নিশ্চিত করে জানাবে। এলাকা বা প্রোডাক্টের নাম একটু লিখবেন?',
+        'order_status' => 'অর্ডার স্ট্যাটাস জানতে অর্ডার নম্বর বা ফোন নম্বর একটু পাঠাবেন? মার্চেন্ট নিশ্চিত করে জানাবে।',
+        'complaint' => 'দুঃখিত শুনে। সমস্যাটা একটু বিস্তারিত লিখবেন? মার্চেন্ট নিশ্চিত করে জানাবে।',
+        'payment' => 'পেমেন্ট কোন মাধ্যমে করতে চান? মার্চেন্ট নিশ্চিত করে জানাবে।',
+        'cod' => 'COD নিয়ে মার্চেন্ট নিশ্চিত করে জানাবে। এলাকা একটু লিখবেন?',
+        'stock' => 'স্টক জানাতে কোন প্রোডাক্ট বলবেন? মার্চেন্ট নিশ্চিত করে জানাবে।',
+        'price' => 'দাম জানাতে কোন প্রোডাক্টের নাম বা ছবি পাঠাবেন? মার্চেন্ট নিশ্চিত করে জানাবে।',
     ];
 
     /**
@@ -101,5 +133,21 @@ class IntentContract
         $reply = $this->for($intent)['clarify_reply'] ?? null;
 
         return is_string($reply) && $reply !== '' ? $reply : null;
+    }
+
+    /**
+     * Non-empty Bangla assist on knowledge miss (gap stays true; no invented fees).
+     *
+     * @param  ?string  $offerKind  physical|digital|service|subscription|other
+     */
+    public function gapAssistReply(string $intent, ?string $offerKind = null): string
+    {
+        $fromClarify = $this->clarifyReply($intent, $offerKind);
+        if (is_string($fromClarify) && $fromClarify !== '') {
+            return $fromClarify;
+        }
+
+        return self::GAP_ASSIST_FALLBACKS[$intent]
+            ?? 'একটু অপেক্ষা করুন—মার্চেন্ট নিশ্চিত করে জানাবে। আরও বিস্তারিত লিখলে সাহায্য করতে পারি।';
     }
 }

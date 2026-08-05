@@ -176,22 +176,22 @@ class TrainingPackImporter
         $steps = [];
         if (($stats['knowledge_created'] + $stats['knowledge_updated']) > 0) {
             $steps[] = $platform
-                ? 'Open Knowledge → filter Platform drafts → Publish (shared facts for all keys).'
-                : 'Open Knowledge → review drafts → Publish (facts stay draft until you publish).';
+                ? 'নলেজ ট্যাব খুলুন → Platform ড্রাফট ফিল্টার → Publish (সব কীতে শেয়ার)।'
+                : 'নলেজ ট্যাব খুলুন → ড্রাফট রিভিউ → Publish (Publish না করা পর্যন্ত লাইভ নয়)।';
         }
         if (($stats['language_created'] + $stats['language_updated']) > 0) {
             $steps[] = $platform
-                ? 'Open Language → Train queue → Approve with Platform scope (BCLC surface + recompile).'
-                : 'Open Language → filter Open → Approve Train rows (abbrev/Banglish). Prefills are ready.';
+                ? 'ভাষা ট্যাব → Train কিউ → Approve (Platform scope) — BCLC আপডেট হবে।'
+                : 'ভাষা ট্যাব → Open/Train → Approve (প্রিফিল রেডি) — অটো-পাবলিশ নয়।';
         }
         if (($stats['experience_created']) > 0) {
-            $steps[] = 'Experience signals are live soft-hints (not facts). No publish step.';
+            $steps[] = 'এক্সপেরিয়েন্স soft-hint এখনই কাজ করতে পারে (সত্য/পলিসি নয়) — আলাদা Publish নেই।';
         }
         if ($stats['skipped'] > 0) {
-            $steps[] = 'Some rows were skipped — see errors and fix JSON, then re-import (safe upsert).';
+            $steps[] = 'কিছু সারি স্কিপ হয়েছে — এরর দেখে JSON ঠিক করে আবার Import (upsert নিরাপদ)।';
         }
         if ($steps === []) {
-            $steps[] = 'Nothing new applied (reused existing). Adjust pack or promote/publish what is already queued.';
+            $steps[] = 'নতুন কিছু apply হয়নি (আগে থেকেই আছে) — প্যাক বদলান বা কিউতে থাকা আইটেম Publish/Promote করুন।';
         }
 
         return $steps;

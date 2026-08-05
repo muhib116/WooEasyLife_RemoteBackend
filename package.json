@@ -31,6 +31,7 @@
         "@primevue/themes": "^4.2.1",
         "@tailwindcss/typography": "^0.5.15",
         "@vueuse/core": "^11.2.0",
+        "avro-phonetic": "^1.1.5",
         "ckeditor5": "^43.3.0",
         "codemirror-editor-vue3": "^2.8.0",
         "cropperjs": "^1.6.2",

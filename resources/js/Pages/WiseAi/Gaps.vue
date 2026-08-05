@@ -172,12 +172,7 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Title</label>
-                    <input
-                        v-model="draftForm.title"
-                        type="text"
-                        class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
-                        placeholder="Delivery charge"
-                    />
+                    <BanglaField v-model="draftForm.title" placeholder="Delivery charge" />
                 </div>
                 <div v-if="draftForm.type === 'product' || draftForm.scope === 'offer'" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="sm:col-span-2">
@@ -221,29 +216,20 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Question (match text)</label>
-                    <input
-                        v-model="draftForm.question"
-                        type="text"
-                        class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
-                    />
+                    <BanglaField v-model="draftForm.question" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Answer (কাস্টমারকে যা বলবেন)</label>
-                    <textarea
+                    <BanglaField
                         v-model="draftForm.answer"
-                        rows="3"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
+                        multiline
+                        :rows="3"
                         placeholder="ঢাকায় ৬০ টাকা, ঢাকার বাইরে ১২০ টাকা।"
                     />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Keywords (comma)</label>
-                    <input
-                        v-model="keywordsText"
-                        type="text"
-                        class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
-                        placeholder="delivery, চার্জ"
-                    />
+                    <BanglaField v-model="keywordsText" placeholder="delivery, চার্জ" />
                 </div>
                 <p class="text-xs text-amber-700 dark:text-amber-300">
                     Save = draft only. Brain ব্যবহার করবে Knowledge পেজে Publish করার পর।
@@ -283,6 +269,7 @@ import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import WiseAiSubNav from "./fragments/WiseAiSubNav.vue";
 import WiseAiHowTo from "./fragments/WiseAiHowTo.vue";
+import BanglaField from "@/components/BanglaField.vue";
 
 type GapRow = {
     id: number;

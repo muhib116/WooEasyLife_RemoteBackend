@@ -8,7 +8,7 @@ namespace App\WiseAi\Intelligence;
  */
 class FleetAlerts
 {
-    public const VERSION = '1.0';
+    public const VERSION = '1.1';
 
     /** Min turns in window before rate alerts fire. */
     public const MIN_TURNS_FOR_RATE = 20;
@@ -27,6 +27,8 @@ class FleetAlerts
     public const LATENCY_MS_WARN = 500;
 
     public const STALE_DAYS = 14;
+
+    public const AI_HEALTH_WARN = 60;
 
     /**
      * @return list<array{id: string, severity: string, label: string, definition: string}>
@@ -75,6 +77,12 @@ class FleetAlerts
                 'severity' => 'critical',
                 'label' => 'Auto mode enabled',
                 'definition' => 'Merchant allow_auto=true — autonomy must stay earned/default-off',
+            ],
+            [
+                'id' => 'low_ai_health',
+                'severity' => 'warning',
+                'label' => 'Low AI health (Dashboard)',
+                'definition' => 'Dashboard HealAlerts when AiHealthScore < '.self::AI_HEALTH_WARN.' (observe-only; see heal-alerts)',
             ],
         ];
     }

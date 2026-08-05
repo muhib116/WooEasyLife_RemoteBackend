@@ -16,6 +16,8 @@ use App\WiseAi\Language\LlmLanguageSpecialist;
 use App\WiseAi\Language\RegionCode;
 use App\WiseAi\Psychology\BizOpportunities;
 use App\WiseAi\Psychology\PsychSignals;
+use App\WiseAi\Learning\GapAutoDrafter;
+use App\WiseAi\Voice\VoiceContractBuilder;
 
 /**
  * TurnRunner — Admit / Language / Observe / Memory / Contract / Ground / Judge / Deliver.
@@ -37,6 +39,8 @@ class TurnRunner
         private DialogueScripts $dialogueScripts,
         private ExperienceResolver $experience,
         private LlmLanguageSpecialist $llmLanguage,
+        private VoiceContractBuilder $voice,
+        private GapAutoDrafter $gapAutoDraft,
     ) {}
 
     /**
@@ -245,15 +249,89 @@ class TurnRunner
             $trace['P3_ground'] = 'social_skip_knowledge';
             $trace['P7_judge'] = 'pass_social';
         } elseif ($classified['intent'] === 'unknown') {
-            // Soft clarify — not a knowledge gap, no invented facts.
-            $decision['action'] = 'clarify';
-            $decision['suggested_reply'] = $this->contracts->clarifyReply('unknown');
-            $decision['source'] = 'contract';
-            $decision['missing_context'] = 'utterance';
-            $decision['gap'] = false;
-            $gap = false;
-            $trace['P3_ground'] = 'skip_unknown_soft';
-            $trace['P7_judge'] = 'fail_unknown_utterance';
+            // Ambiguous tokens (e.g. pp) must soft-clarify — never fuzzy-hit "support" via substring.
+            $languageAmbiguous = is_array($language['ambiguous'] ?? null) ? $language['ambiguous'] : [];
+            if ($languageAmbiguous !== []) {
+                $decision['action'] = 'clarify';
+                $decision['suggested_reply'] = $this->contracts->clarifyReply('unknown');
+                $decision['source'] = 'contract';
+                $decision['missing_context'] = 'utterance';
+                $decision['gap'] = false;
+                $gap = false;
+                $trace['P3_ground'] = 'skip_unknown_ambiguous';
+                $trace['P7_judge'] = 'fail_unknown_utterance';
+            } else {
+                // Published FAQ/script hits (Playground coach teach). Soft clarify only on miss.
+                $unknownGround = $groundText;
+                if ($productSubject) {
+                    $unknownGround = trim($productSubject['title'].' '.$unknownGround);
+                }
+                $match = $this->knowledge->resolve(
+                    $apiKey,
+                    $unknownGround,
+                    $classified['intent'],
+                    $turn->context,
+                    $productSubject,
+                );
+                if ($match && ! empty($match['ambiguous']) && ! empty($match['shortlist'])) {
+                    $shortlist = $match['shortlist'];
+                    $decision['action'] = 'clarify';
+                    $decision['suggested_reply'] = $this->knowledge->shortlistClarifyReply($shortlist);
+                    $decision['source'] = 'shortlist';
+                    $decision['missing_context'] = 'offer';
+                    $decision['shortlist'] = $shortlist;
+                    $decision['gap'] = false;
+                    $gap = false;
+                    $decision['confidence'] = min(75, max(40, (int) $classified['confidence']));
+                    $trace['P3_ground'] = [
+                        'result' => 'shortlist',
+                        'candidates' => $match['candidates'] ?? count($shortlist),
+                        'best_score' => $match['score'] ?? null,
+                        'shortlist_count' => count($shortlist),
+                    ];
+                    $trace['P7_judge'] = 'fail_ambiguous_offers';
+                } elseif ($match && ! empty($match['item'])) {
+                    $item = $match['item'];
+                    $evidence = [
+                        'knowledge_id' => $item->id,
+                        'knowledge_version' => $item->version,
+                        'knowledge_type' => $item->type,
+                        'knowledge_kind' => $item->type,
+                        'knowledge_scope' => $item->scope ?: 'merchant',
+                        'title' => $item->title,
+                        'answer' => $item->answer,
+                        'answer_hash' => hash('sha256', (string) $item->answer),
+                        'match_score' => $match['score'],
+                    ];
+                    if ($productSubject) {
+                        $decision['product_subject'] = $productSubject;
+                        $evidence['product_subject'] = $productSubject;
+                    }
+                    $decision['action'] = 'suggest_reply';
+                    $decision['suggested_reply'] = $item->answer;
+                    $decision['source'] = 'knowledge';
+                    $decision['confidence'] = min(98, max(40, (int) $classified['confidence'] + 10));
+                    $decision['gap'] = false;
+                    $gap = false;
+                    $trace['P3_ground'] = [
+                        'result' => 'knowledge_hit',
+                        'candidates' => $match['candidates'] ?? null,
+                        'match_score' => $match['score'],
+                        'via' => 'unknown_utterance',
+                    ];
+                    $trace['P7_judge'] = 'pass_evidence';
+                } else {
+                    // Soft clarify — not a knowledge gap, no invented facts.
+                    $decision['action'] = 'clarify';
+                    $decision['suggested_reply'] = $this->contracts->clarifyReply('unknown');
+                    $decision['source'] = 'contract';
+                    $decision['missing_context'] = 'utterance';
+                    $decision['gap'] = false;
+                    $gap = false;
+                    $trace['P3_ground'] = 'skip_unknown_soft';
+                    $trace['P7_judge'] = 'fail_unknown_utterance';
+                }
+            }
         } elseif ($this->contracts->requiresProduct($classified['intent']) && $productSubject === null) {
             // S9: merchant-published pricing menu FAQ may answer bare price (SaaS plans).
             // Default stays clarify (S1) when no pricing_menu knowledge exists.
@@ -435,15 +513,22 @@ class TurnRunner
                 $trace['P7_judge'] = 'pass_evidence';
             } else {
                 $gap = true;
+                $offerKind = is_string($turn->context['offer_kind'] ?? null)
+                    ? (string) $turn->context['offer_kind']
+                    : null;
                 $decision['action'] = 'needs_human';
-                $decision['suggested_reply'] = null;
-                $decision['source'] = 'pattern';
+                $decision['suggested_reply'] = $this->contracts->gapAssistReply(
+                    $classified['intent'],
+                    $offerKind,
+                );
+                $decision['source'] = 'gap_assist';
                 $decision['gap'] = true;
                 if ($productSubject) {
                     $decision['product_subject'] = $productSubject;
                 }
                 $trace['P3_ground'] = 'knowledge_miss';
                 $trace['P7_judge'] = 'fail_no_evidence';
+                $trace['gap_assist_reply'] = true;
                 if ($memoryUsed && $prior) {
                     $evidence = [
                         'memory' => [
@@ -523,6 +608,16 @@ class TurnRunner
         $decision['language_llm'] = $llmResult['language_llm'];
         $trace['P6_language_llm'] = $llmResult['language_llm'];
 
+        // Voice side-channel only when channel=voice or context.output_profile=voice.
+        $decision = $this->voice->attach($decision, $turn->channel, $turn->context);
+        if (isset($decision['voice']) && is_array($decision['voice'])) {
+            $trace['P8_voice'] = [
+                'next_action' => $decision['voice']['next_action'] ?? null,
+                'slot_to_ask' => $decision['voice']['slot_to_ask'] ?? null,
+                'gap' => (bool) ($decision['voice']['gap'] ?? false),
+            ];
+        }
+
         $latencyMs = (int) round((microtime(true) - $startedAt) * 1000);
 
         $record = WiseTurn::create([
@@ -544,6 +639,26 @@ class TurnRunner
             'gap' => $gap,
             'latency_ms' => $latencyMs,
         ]);
+
+        // Guided heal: gap → draft only (never publish; inbox stays open).
+        if ($gap) {
+            $autoDraft = $this->gapAutoDraft->maybeDraft($record, $apiKey, $decision);
+            if ($autoDraft) {
+                $decision['heal'] = [
+                    'auto_draft_id' => (int) $autoDraft->id,
+                    'auto_draft_status' => 'draft',
+                ];
+                $trace['P9_heal'] = [
+                    'auto_draft_id' => (int) $autoDraft->id,
+                    'published' => false,
+                ];
+                $record->update([
+                    'decision' => $decision,
+                    'trace' => $trace,
+                ]);
+                $record->refresh();
+            }
+        }
 
         // Learning seed only — humans promote via Language Review (never auto-learn).
         $this->languageReviews->ingest(

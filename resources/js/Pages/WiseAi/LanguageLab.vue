@@ -184,6 +184,11 @@ const regionOptions = computed(() => {
               { label: "Chattogram", value: "chattogram" },
               { label: "Sylhet", value: "sylhet" },
               { label: "Noakhali", value: "noakhali" },
+              { label: "Barisal", value: "barisal" },
+              { label: "Rajshahi", value: "rajshahi" },
+              { label: "Khulna", value: "khulna" },
+              { label: "Rangpur", value: "rangpur" },
+              { label: "Mymensingh", value: "mymensingh" },
           ];
 });
 

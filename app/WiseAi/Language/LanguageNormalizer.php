@@ -15,7 +15,7 @@ class LanguageNormalizer
     /** Short TTL — publish/promote also busts explicitly. */
     private const ENTRY_CACHE_TTL = 45;
 
-    /** @var array<string, list<array{type: string, from_text: string, to_text: string, wise_api_key_id: int|null}>> */
+    /** @var array<string, list<array{id: int, version: int, type: string, from_text: string, to_text: string, wise_api_key_id: int|null, human_approved: bool}>> */
     private static array $entryMemo = [];
 
     public function __construct(
@@ -31,7 +31,7 @@ class LanguageNormalizer
     }
 
     /**
-     * @return list<array{id: int, version: int, type: string, from_text: string, to_text: string, wise_api_key_id: int|null}>
+     * @return list<array{id: int, version: int, type: string, from_text: string, to_text: string, wise_api_key_id: int|null, human_approved: bool}>
      */
     private function publishedEntries(?WiseApiKey $apiKey): array
     {
@@ -55,7 +55,7 @@ class LanguageNormalizer
                 })
                 ->orderBy('id')
                 ->limit(500)
-                ->get(['id', 'version', 'type', 'from_text', 'to_text', 'wise_api_key_id'])
+                ->get(['id', 'version', 'type', 'from_text', 'to_text', 'wise_api_key_id', 'meta'])
                 ->map(fn (WiseLanguageEntry $e) => [
                     'id' => (int) $e->id,
                     'version' => (int) $e->version,
@@ -63,6 +63,7 @@ class LanguageNormalizer
                     'from_text' => (string) $e->from_text,
                     'to_text' => (string) ($e->to_text ?? ''),
                     'wise_api_key_id' => $e->wise_api_key_id,
+                    'human_approved' => (bool) (($e->meta['human_approved'] ?? false) === true),
                 ])
                 ->all();
         });
@@ -239,12 +240,16 @@ class LanguageNormalizer
         $applied = [];
 
         // Human-approved DB entries (platform + this merchant key) — never auto-learned.
+        // Merchant + human_approved may expand AMBIGUOUS (e.g. pp) — platform never.
         foreach ($this->publishedEntries($apiKey) as $entry) {
+            $allowAmbiguous = $entry['wise_api_key_id'] !== null
+                && ! empty($entry['human_approved']);
             $pack = $this->applyEntry(
                 $pack,
                 (string) $entry['type'],
                 (string) $entry['from_text'],
                 (string) ($entry['to_text'] ?? ''),
+                $allowAmbiguous,
             );
             $row = [
                 'id' => (int) $entry['id'],
@@ -317,11 +322,14 @@ class LanguageNormalizer
      * @param  array<string, mixed>  $pack
      * @return array<string, mixed>
      */
-    private function applyEntry(array $pack, string $type, string $from, string $to): array
+    private function applyEntry(array $pack, string $type, string $from, string $to, bool $allowAmbiguous = false): array
     {
         $from = mb_strtolower(trim($from));
         $to = trim($to);
-        if ($from === '' || in_array($from, PlatformLexicon::AMBIGUOUS, true)) {
+        if ($from === '') {
+            return $pack;
+        }
+        if (in_array($from, PlatformLexicon::AMBIGUOUS, true) && ! $allowAmbiguous) {
             return $pack;
         }
         if ($type === 'filler') {
@@ -411,10 +419,15 @@ class LanguageNormalizer
                 continue;
             }
             if (in_array($from, PlatformLexicon::AMBIGUOUS, true)) {
-                if (preg_match('/(?:^|\s)'.preg_quote($from, '/').'(?:\s|$|[!?.,])/u', $text) === 1) {
-                    $ambiguous[] = $from;
+                // Pack maps usually omit ambiguous keys. Human merchant overlays may
+                // place them in the map — apply those; otherwise leave untouched.
+                $mappedTo = trim((string) ($map[$from] ?? ''));
+                if ($mappedTo === '') {
+                    if (preg_match('/(?:^|\s)'.preg_quote($from, '/').'(?:\s|$|[!?.,])/u', $text) === 1) {
+                        $ambiguous[] = $from;
+                    }
+                    continue;
                 }
-                continue;
             }
 
             $to = $map[$from];

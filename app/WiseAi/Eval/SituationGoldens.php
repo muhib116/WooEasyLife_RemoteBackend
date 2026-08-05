@@ -191,6 +191,8 @@ final class SituationGoldens
                     'intent' => 'price',
                     'action' => 'needs_human',
                     'gap' => true,
+                    'reply_non_empty' => true,
+                    'source' => 'gap_assist',
                 ],
             ),
             new GoldenCase(

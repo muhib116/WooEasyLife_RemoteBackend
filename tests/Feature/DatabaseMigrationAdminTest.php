@@ -40,7 +40,8 @@ it('shows migration status for platform admins', function () {
             'connection',
             'seeders',
         ])
-        ->assertJsonPath('seeders.0.key', 'BlogPostSeeder');
+        ->assertJsonPath('seeders.0.key', 'BlogPostSeeder')
+        ->assertJsonPath('seeders.1.key', 'WiseKnowledgeSeeder');
 });
 
 it('can dry-run migrations from the admin UI', function () {
@@ -80,4 +81,30 @@ it('seeds SEO blog posts from the admin UI and is idempotent', function () {
 
     $slug = 'fake-order-loss-calculation-bangladesh';
     $this->get(route('blog.show', $slug))->assertOk();
+});
+
+it('seeds Wise knowledge drafts from the admin UI and stays unpublished', function () {
+    $admin = createMigrationAdmin();
+
+    $this->actingAs($admin)
+        ->postJson(route('migrations.seed'), ['seeder' => 'WiseKnowledgeSeeder'])
+        ->assertOk()
+        ->assertJsonPath('success', true);
+
+    $drafts = \App\WiseAi\Knowledge\SeededKnowledge::scopeDraftsForReview(
+        \App\Models\WiseAi\WiseKnowledgeItem::query()
+    )->count();
+
+    expect($drafts)->toBeGreaterThanOrEqual(24);
+
+    $this->actingAs($admin)
+        ->postJson(route('migrations.seed'), ['seeder' => 'WiseKnowledgeSeeder'])
+        ->assertOk()
+        ->assertJsonPath('success', true);
+
+    expect(
+        \App\WiseAi\Knowledge\SeededKnowledge::scopeOwnedSeeds(
+            \App\Models\WiseAi\WiseKnowledgeItem::query()
+        )->where('status', 'published')->count()
+    )->toBe(0);
 });

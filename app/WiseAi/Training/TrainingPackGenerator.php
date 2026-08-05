@@ -16,9 +16,9 @@ class TrainingPackGenerator
     ) {}
 
     /**
-     * @return array{pack: array<string, mixed>, model: string, latency_ms: int}
+     * @return array{pack: array<string, mixed>, model: string, latency_ms: int, prompt_type: string, lanes_dropped: int}
      */
-    public function generate(string $merchantBrief, int $targetItems = 16): array
+    public function generate(string $merchantBrief, int $targetItems = 0, string $promptType = TrainingPrompt::TYPE_MERCHANT): array
     {
         $apiKey = $this->llm->apiKey();
         if ($apiKey === null) {
@@ -28,24 +28,38 @@ class TrainingPackGenerator
             throw new RuntimeException('LLM Language is disabled in Config. Enable it to generate training packs.');
         }
 
-        $targetItems = max(8, min(30, $targetItems));
+        $promptType = TrainingPrompt::normalizeType($promptType);
+        // 0 / omitted → type TARGET. Never rewrite an explicit count (e.g. experience strong=16).
+        if ($targetItems <= 0) {
+            $targetItems = TrainingPrompt::recommendedTargetItems($promptType);
+        }
+        $targetItems = max(8, min(50, $targetItems));
         $model = $this->llm->model();
-        $user = "Merchant brief:\n".trim($merchantBrief)."\n\n"
-            ."Generate a Wise training pack JSON with about {$targetItems} items.\n"
+        $vol = TrainingPrompt::volumeFor($promptType);
+        $briefLabel = in_array($promptType, [TrainingPrompt::TYPE_PLATFORM, TrainingPrompt::TYPE_LANGUAGE], true)
+            ? 'Training brief'
+            : 'Merchant brief';
+        $user = "{$briefLabel}:\n".trim($merchantBrief)."\n\n"
+            ."Generate a Wise training pack JSON with about {$targetItems} items "
+            ."(minimum {$vol['min']} for usable training; target {$vol['target']} for proper training).\n"
+            .'Prompt type: '.$promptType.".\n"
             .'Schema version must be '.TrainingSchema::VERSION.'.';
+
+        // ~180 tokens/item headroom so TARGET/STRONG packs do not truncate mid-JSON.
+        $maxTokens = max(3500, min(12000, $targetItems * 180));
 
         $started = microtime(true);
         $response = Http::withToken($apiKey)
-            ->timeout(45)
+            ->timeout(90)
             ->acceptJson()
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $model,
                 'temperature' => 0.4,
-                'max_tokens' => 3500,
+                'max_tokens' => $maxTokens,
                 'response_format' => ['type' => 'json_object'],
                 'messages' => [
-                    ['role' => 'system', 'content' => TrainingPrompt::generatorSystem()],
-                    ['role' => 'user', 'content' => TrainingPrompt::professional()."\n\n".$user],
+                    ['role' => 'system', 'content' => TrainingPrompt::generatorSystem($promptType)],
+                    ['role' => 'user', 'content' => TrainingPrompt::for($promptType)."\n\n".$user],
                 ],
             ]);
 
@@ -71,10 +85,20 @@ class TrainingPackGenerator
             throw new RuntimeException('JSON missing items array.');
         }
 
+        $filtered = TrainingPrompt::filterPack($decoded, $promptType);
+        $decoded = $filtered['pack'];
+        if ($decoded['items'] === []) {
+            throw new RuntimeException(
+                'Model returned no items for prompt type “'.$promptType.'” after lane filtering. Try again or paste JSON manually.'
+            );
+        }
+
         return [
             'pack' => $decoded,
             'model' => $model,
             'latency_ms' => $latency,
+            'prompt_type' => $promptType,
+            'lanes_dropped' => $filtered['dropped'],
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models\WiseAi;
 
 use App\WiseAi\Knowledge\KnowledgeLookup;
+use App\WiseAi\Knowledge\Search\KnowledgeSearchManager;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -37,6 +38,14 @@ class WiseKnowledgeItem extends Model
                 (string) ($item->question ?? ''),
                 $item->keywords ?? [],
             );
+        });
+
+        static::saved(function (WiseKnowledgeItem $item): void {
+            app(KnowledgeSearchManager::class)->syncItem($item);
+        });
+
+        static::deleted(function (WiseKnowledgeItem $item): void {
+            app(KnowledgeSearchManager::class)->deleteItem((int) $item->id);
         });
     }
 

@@ -90,12 +90,12 @@ class LearningInbox
     private function gapRows(int $limit): array
     {
         return WiseTurn::query()
-            ->with(['apiKey:id,name'])
+            ->with(['apiKey:id,name', 'gapAutoDraft:id,title,status'])
             ->where('gap', true)
             ->whereNull('gap_handled_at')
             ->latest('id')
             ->limit($limit)
-            ->get(['id', 'wise_api_key_id', 'channel', 'text', 'decision', 'created_at'])
+            ->get(['id', 'wise_api_key_id', 'channel', 'text', 'decision', 'gap_auto_draft_id', 'created_at'])
             ->map(fn (WiseTurn $turn) => [
                 'uid' => 'gap:'.$turn->id,
                 'kind' => 'gap',
@@ -104,9 +104,15 @@ class LearningInbox
                 'key_name' => $turn->apiKey?->name,
                 'channel' => $turn->channel,
                 'title' => $turn->text ?: '(empty)',
-                'detail' => 'Knowledge gap · '.($turn->decision['intent'] ?? 'unknown'),
+                'detail' => 'Knowledge gap · '.($turn->decision['intent'] ?? 'unknown')
+                    .($turn->gap_auto_draft_id ? ' · auto-draft ready' : ''),
                 'intent' => $turn->decision['intent'] ?? null,
-                'suggested_reply' => null,
+                'suggested_reply' => is_string($turn->decision['suggested_reply'] ?? null)
+                    ? (string) $turn->decision['suggested_reply']
+                    : null,
+                'auto_draft_id' => $turn->gap_auto_draft_id,
+                'auto_draft_status' => $turn->gapAutoDraft?->status,
+                'auto_draft_title' => $turn->gapAutoDraft?->title,
                 'psych' => $turn->decision['psych'] ?? null,
                 'opportunities' => $turn->decision['opportunities']['items'] ?? [],
                 'reason_code' => null,

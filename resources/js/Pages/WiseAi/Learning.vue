@@ -21,12 +21,53 @@
 
             <WiseAiHowTo
                 title="Learning কীভাবে ব্যবহার করবেন"
-                subtitle="এক inbox — রিভিউ · মিসড আনসার · ভাষা · রিজেক্ট"
+                subtitle="এক জায়গায় — gap draft/publish · language · assist · seeded seeds"
                 badge="মানুষ অনুমোদন"
                 storage-key="learning"
                 :steps="howToSteps"
                 :tips="howToTips"
             />
+
+            <PageCard
+                v-if="seededDrafts.length > 0"
+                title="Seeded drafts (platform)"
+                description="Catalog seeds — এখান থেকেই Publish, Knowledge পেজে যেতে হবে না"
+            >
+                <div class="mb-3 flex flex-wrap items-center gap-2">
+                    <Button
+                        v-if="can_publish"
+                        label="Publish selected"
+                        icon="pi pi-check"
+                        size="small"
+                        severity="success"
+                        :disabled="selectedSeedIds.length === 0"
+                        :loading="bulkPublishing"
+                        @click="bulkPublishSeeds"
+                    />
+                    <span class="text-xs text-gray-500">{{ seededDrafts.length }} draft(s)</span>
+                </div>
+                <DataTable
+                    v-model:selection="selectedSeeds"
+                    :value="seededDrafts"
+                    data-key="id"
+                    size="small"
+                    striped-rows
+                    class="professional-table"
+                >
+                    <Column selection-mode="multiple" header-style="width: 3rem" />
+                    <Column header="Title">
+                        <template #body="{ data }">
+                            <div class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ data.title }}</div>
+                            <div class="text-[11px] text-gray-400">{{ data.seeded_from || "seed" }} · {{ data.scope }}</div>
+                        </template>
+                    </Column>
+                    <Column header="Answer">
+                        <template #body="{ data }">
+                            <p class="max-w-md truncate text-xs text-gray-500" :title="data.answer">{{ data.answer }}</p>
+                        </template>
+                    </Column>
+                </DataTable>
+            </PageCard>
 
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <Link
@@ -102,7 +143,7 @@
                                 <template v-if="data.kind === 'gap'">
                                     <Button
                                         v-if="can_edit"
-                                        label="Draft FAQ"
+                                        :label="data.auto_draft_id ? 'Review draft' : 'Draft FAQ'"
                                         size="small"
                                         text
                                         @click="openDraft(data)"
@@ -134,13 +175,7 @@
                                         :loading="busyUid === data.uid"
                                         @click="ignoreLanguage(data)"
                                     />
-                                    <Link
-                                        v-if="!can_edit"
-                                        :href="route('wiseAi.language', { review: 'open' })"
-                                        class="text-xs font-medium text-fuchsia-600 hover:underline"
-                                    >
-                                        Language →
-                                    </Link>
+                                    <span v-else class="text-[11px] text-gray-400">Editor required</span>
                                 </template>
                                 <template v-else-if="data.kind === 'assist'">
                                     <Button
@@ -192,11 +227,7 @@
                 <p class="text-sm text-gray-600 dark:text-gray-300">Customer: “{{ active.title }}”</p>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Your reply</label>
-                    <textarea
-                        v-model="editedReply"
-                        rows="4"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
-                    />
+                    <BanglaField v-model="editedReply" multiline :rows="4" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Reason (optional)</label>
@@ -262,11 +293,7 @@
                 </div>
                 <div v-if="promoteForm.type !== 'filler'">
                     <label class="mb-1 block text-xs text-gray-500">Canonical / to_text</label>
-                    <input
-                        v-model="promoteForm.to_text"
-                        type="text"
-                        class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
-                    />
+                    <BanglaField v-model="promoteForm.to_text" />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Scope</label>
@@ -287,7 +314,7 @@
 
         <Dialog
             v-model:visible="showDraft"
-            header="Gap থেকে draft knowledge"
+            header="Gap → knowledge (in place)"
             modal
             :style="{ width: '36rem' }"
             dismissable-mask
@@ -296,6 +323,32 @@
                 <div class="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2 text-sm dark:border-rose-500/20 dark:bg-rose-500/10">
                     <p class="text-[10px] font-semibold uppercase tracking-wide text-rose-500">Customer asked</p>
                     <p class="mt-0.5 text-gray-800 dark:text-gray-100">“{{ active.title }}”</p>
+                    <p v-if="active.auto_draft_id" class="mt-1 text-[11px] text-rose-600 dark:text-rose-300">
+                        Auto-draft #{{ active.auto_draft_id }} ready — review, then Save / Publish (never silent).
+                    </p>
+                </div>
+                <div>
+                    <label class="mb-1.5 block text-xs text-gray-500">Audience</label>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            label="গ্লোবাল (Platform)"
+                            size="small"
+                            :outlined="draftAudience !== 'platform'"
+                            :disabled="Boolean(active?.auto_draft_id)"
+                            @click="setDraftAudience('platform')"
+                        />
+                        <Button
+                            type="button"
+                            label="এক দোকান (Merchant)"
+                            size="small"
+                            :outlined="draftAudience !== 'merchant'"
+                            @click="setDraftAudience('merchant')"
+                        />
+                    </div>
+                    <p v-if="active?.auto_draft_id" class="mt-1 text-[11px] text-gray-400">
+                        Auto-draft stays merchant-scoped for this store key.
+                    </p>
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Kind</label>
@@ -303,11 +356,7 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Title</label>
-                    <input
-                        v-model="draftForm.title"
-                        type="text"
-                        class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
-                    />
+                    <BanglaField v-model="draftForm.title" />
                 </div>
                 <div v-if="draftForm.type === 'product'" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div class="sm:col-span-2">
@@ -333,31 +382,51 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Question</label>
-                    <input
-                        v-model="draftForm.question"
-                        type="text"
-                        class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none dark:border-gray-700 dark:bg-slate-900"
-                    />
+                    <BanglaField v-model="draftForm.question" />
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs text-gray-500">Answer</label>
-                    <textarea
+                    <div class="mb-1 flex items-center justify-between gap-2">
+                        <label class="block text-xs text-gray-500">Answer</label>
+                        <Button
+                            v-if="can_edit"
+                            label="AI rewrite"
+                            size="small"
+                            text
+                            :loading="proposingAnswer"
+                            :disabled="!draftForm.answer.trim()"
+                            @click="proposeDraftAnswer"
+                        />
+                    </div>
+                    <BanglaField
                         v-model="draftForm.answer"
-                        rows="3"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none dark:border-gray-700 dark:bg-slate-900"
-                        placeholder="Merchant-approved answer"
+                        multiline
+                        :rows="4"
+                        placeholder="Clarify / handoff — no invented fees"
                     />
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Keywords (comma)</label>
-                    <input
-                        v-model="keywordsText"
-                        type="text"
-                        class="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none dark:border-gray-700 dark:bg-slate-900"
-                    />
+                    <BanglaField v-model="keywordsText" />
                 </div>
-                <p class="text-xs text-amber-700 dark:text-amber-300">
-                    Save = draft only. Publish later in Knowledge.
+                <div v-if="relatedLoading || relatedItems.length" class="rounded-xl border border-gray-200 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-slate-800/40">
+                    <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Related questions</p>
+                    <p class="mt-0.5 text-[11px] text-gray-400">Published FAQs / sibling gaps — questions only, no invented answers</p>
+                    <p v-if="relatedLoading" class="mt-2 text-xs text-gray-500">Loading…</p>
+                    <ul v-else class="mt-2 max-h-36 space-y-1.5 overflow-y-auto">
+                        <li v-for="(rq, idx) in relatedItems" :key="`${rq.knowledge_id || 'g'}-${idx}`" class="text-xs text-gray-700 dark:text-gray-200">
+                            <button
+                                type="button"
+                                class="text-left font-medium text-fuchsia-700 hover:underline dark:text-fuchsia-300"
+                                @click="applyRelatedQuestion(rq.question)"
+                            >
+                                {{ rq.question }}
+                            </button>
+                            <span class="text-gray-400"> · {{ rq.reason }}{{ rq.knowledge_id ? ` #${rq.knowledge_id}` : "" }}</span>
+                        </li>
+                    </ul>
+                </div>
+                <p class="text-xs text-gray-500">
+                    Save = draft · Save &amp; Publish = লাইভ (publisher)। গ্লোবাল হলে API key লাগে না।
                 </p>
             </div>
             <template #footer>
@@ -366,9 +435,20 @@
                     label="Save as draft"
                     icon="pi pi-save"
                     size="small"
-                    :loading="savingDraft"
-                    :disabled="!canSaveDraft"
-                    @click="saveDraft"
+                    severity="secondary"
+                    :loading="savingDraft && !publishingDraft"
+                    :disabled="!canSaveDraft || savingDraft"
+                    @click="saveDraft(false)"
+                />
+                <Button
+                    v-if="can_publish"
+                    label="Save & Publish"
+                    icon="pi pi-check"
+                    size="small"
+                    severity="success"
+                    :loading="publishingDraft"
+                    :disabled="!canSaveDraft || savingDraft"
+                    @click="saveDraft(true)"
                 />
             </template>
         </Dialog>
@@ -395,6 +475,8 @@ import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import WiseAiSubNav from "./fragments/WiseAiSubNav.vue";
 import WiseAiHowTo from "./fragments/WiseAiHowTo.vue";
 import TurnReplayDialog from "./fragments/TurnReplayDialog.vue";
+import BanglaField from "@/components/BanglaField.vue";
+import { feeInvented } from "@/utils/wiseFeeGuard";
 
 type ReasonOpt = { value: string; label: string };
 type LearningRow = {
@@ -406,6 +488,9 @@ type LearningRow = {
     title: string;
     detail: string;
     suggested_reply: string | null;
+    auto_draft_id?: number | null;
+    auto_draft_status?: string | null;
+    auto_draft_title?: string | null;
     psych?: { emotion?: string; priority?: string; journey?: string } | null;
     opportunities?: { id: string; title: string }[];
     suggested_pack?: string | null;
@@ -414,6 +499,14 @@ type LearningRow = {
     reason_code: string | null;
     reason_label: string | null;
     occurred_at: string | null;
+};
+type SeededDraft = {
+    id: number;
+    title: string;
+    answer: string;
+    scope?: string;
+    seeded_from?: string | null;
+    bulk_eligible?: boolean;
 };
 
 const props = defineProps<{
@@ -430,26 +523,39 @@ const props = defineProps<{
     reason_codes: ReasonOpt[];
     reason_codes_version: string;
     can_edit?: boolean;
+    can_publish?: boolean;
+    api_keys?: { id: number; name: string; key_prefix: string }[];
+    seeded_drafts?: SeededDraft[];
 }>();
 
 const can_edit = props.can_edit !== false;
+const can_publish = props.can_publish === true;
 const toast = useToast();
 const items = ref<LearningRow[]>([...props.items]);
 const stats = ref({ ...props.stats });
+const seededDrafts = ref<SeededDraft[]>([...(props.seeded_drafts || [])]);
+const selectedSeeds = ref<SeededDraft[]>([]);
+const selectedSeedIds = computed(() => selectedSeeds.value.map((s) => s.id));
+const bulkPublishing = ref(false);
 const busyUid = ref<string | null>(null);
 const busyAction = ref<string | null>(null);
 const showReject = ref(false);
 const showEdit = ref(false);
 const showPromote = ref(false);
 const showDraft = ref(false);
+const relatedLoading = ref(false);
+const relatedItems = ref<{ question: string; knowledge_id?: number | null; reason: string }[]>([]);
 const savingDraft = ref(false);
+const publishingDraft = ref(false);
+const proposingAnswer = ref(false);
+const draftAudience = ref<"platform" | "merchant">("platform");
 const keywordsText = ref("");
 const replayOpen = ref(false);
 const replayTurnId = ref<number | null>(null);
 const active = ref<LearningRow | null>(null);
 const draftForm = reactive({
     type: "faq",
-    scope: "merchant",
+    scope: "platform",
     title: "",
     question: "",
     answer: "",
@@ -507,20 +613,21 @@ const langScopes = [
 const howToSteps = [
     {
         title: "এক Inbox-এ সব শেখার কাজ",
-        detail: "Gap = knowledge মিস · Language = unknown token · Assist = suggestion রিভিউ · Reject = কেন ভুল (reason code)।",
+        detail: "Gap = knowledge মিস · Language = unknown token · Assist = suggestion রিভিউ · Seeded = catalog draft publish।",
     },
     {
-        title: "Reject-এ সবসময় reason বাছুন",
-        detail: "wrong_fact / missing_knowledge / tone… — পরে Coach/BI এগুলো থেকে শিখবে। Silent reject নেই।",
+        title: "Gap থেকে Draft বা Save & Publish",
+        detail: "গ্লোবাল (Platform) ডিফল্ট — API key লাগে না। AI rewrite দিয়ে উত্তর নরম করতে পারেন; fee invent হবে না।",
     },
     {
         title: "Publish = মানুষের অনুমোদন",
-        detail: "Language promote বা Knowledge Publish ছাড়া production truth বদলায় না।",
+        detail: "Language promote বা Knowledge Publish ছাড়া production truth বদলায় না — কিন্তু Learning থেকেই করা যায়।",
     },
 ];
 
 const howToTips = [
-    "Draft FAQ এখান থেকেই — পরে Knowledge-এ Publish।",
+    "Draft FAQ এখান থেকেই Save & Publish — Knowledge পেজে যেতে হবে না।",
+    "Seeded drafts স্ট্রিপ থেকে bulk Publish করুন।",
     "Auto-learn নেই। Reject-এ সবসময় reason বাছুন।",
     `Reason taxonomy v${props.reason_codes_version}.`,
 ];
@@ -551,30 +658,112 @@ const removeUid = (uid: string) => {
 const openDraft = (row: LearningRow) => {
     active.value = row;
     const priceHint = /price|dam|দাম/i.test(`${row.title} ${row.detail}`);
+    draftAudience.value = row.auto_draft_id ? "merchant" : "platform";
     draftForm.type = priceHint ? "product" : "faq";
-    draftForm.scope = "merchant";
-    draftForm.title = priceHint ? `Offer — ${row.title.slice(0, 40)}` : row.title.slice(0, 80) || "FAQ";
+    draftForm.scope = draftAudience.value === "platform" ? "platform" : "merchant";
+    draftForm.title = row.auto_draft_title
+        || (priceHint ? `Offer — ${row.title.slice(0, 40)}` : row.title.slice(0, 80) || "FAQ");
     draftForm.question = row.title || "";
-    draftForm.answer = "";
+    draftForm.answer = (row.suggested_reply || "").trim();
     draftForm.external_id = "";
     draftForm.platform = "";
     draftForm.offer_kind = priceHint ? "physical" : null;
     draftForm.sku = "";
     keywordsText.value = "";
+    relatedItems.value = [];
     showDraft.value = true;
+    void loadRelatedQuestions(row.turn_id || row.ref_id);
 };
 
-const saveDraft = async () => {
+const loadRelatedQuestions = async (turnId: number) => {
+    if (!turnId) return;
+    relatedLoading.value = true;
+    try {
+        const { data } = await axios.get(route("wiseAi.turns.relatedQuestions", { turn: turnId }));
+        relatedItems.value = Array.isArray(data?.items) ? data.items : [];
+    } catch {
+        relatedItems.value = [];
+    } finally {
+        relatedLoading.value = false;
+    }
+};
+
+const applyRelatedQuestion = (question: string) => {
+    draftForm.question = question;
+    if (!draftForm.title.trim() || draftForm.title.startsWith("Gap ·") || draftForm.title === "FAQ") {
+        draftForm.title = question.slice(0, 80);
+    }
+};
+
+const setDraftAudience = (next: "platform" | "merchant") => {
+    draftAudience.value = next;
+    draftForm.scope = next === "platform" ? "platform" : "merchant";
+};
+
+const proposeDraftAnswer = async () => {
+    if (!draftForm.answer.trim() || proposingAnswer.value) return;
+    if (feeInvented(draftForm.answer)) {
+        toast.add({
+            severity: "warn",
+            summary: "Fee digits detected",
+            detail: "digit / টাকা / phone / % সরিয়ে নিন — Evidence First।",
+            life: 4000,
+            group: "br",
+        });
+        return;
+    }
+    proposingAnswer.value = true;
+    try {
+        const { data } = await axios.post(route("wiseAi.knowledge.proposeAnswer"), {
+            title: draftForm.title,
+            question: draftForm.question,
+            answer: draftForm.answer,
+            scope: draftForm.scope,
+        });
+        if (data.proposed_answer) {
+            draftForm.answer = data.proposed_answer;
+            toast.add({ severity: "success", summary: "AI rewrite ready — review before publish", life: 2500, group: "br" });
+        }
+    } catch (e: unknown) {
+        const msg =
+            typeof e === "object" && e && "response" in e
+                ? (e as { response?: { data?: { message?: string } } }).response?.data?.message
+                : null;
+        toast.add({
+            severity: "error",
+            summary: msg || "AI rewrite failed",
+            life: 4000,
+            group: "br",
+        });
+    } finally {
+        proposingAnswer.value = false;
+    }
+};
+
+const saveDraft = async (publishNow = false) => {
     if (!active.value || !canSaveDraft.value || savingDraft.value) return;
+    if (feeInvented(draftForm.answer)) {
+        toast.add({
+            severity: "warn",
+            summary: "Invented fee blocked",
+            detail: "digit / টাকা / phone / % সরিয়ে নিন — Evidence First।",
+            life: 4000,
+            group: "br",
+        });
+        return;
+    }
     savingDraft.value = true;
+    publishingDraft.value = publishNow;
     try {
         const keywords = keywordsText.value
             .split(",")
             .map((k) => k.trim())
             .filter(Boolean);
-        await axios.post(route("wiseAi.gaps.draft", { turn: active.value.ref_id }), {
+        const { data } = await axios.post(route("wiseAi.gaps.draft", { turn: active.value.ref_id }), {
             ...draftForm,
+            scope: draftAudience.value === "platform" ? "platform" : "merchant",
             keywords,
+            publish_now: publishNow,
         });
         removeUid(active.value.uid);
         stats.value.gaps_open = Math.max(0, stats.value.gaps_open - 1);
@@ -582,8 +771,8 @@ const saveDraft = async () => {
         showDraft.value = false;
         toast.add({
             severity: "success",
-            summary: "Draft saved",
-            detail: "Knowledge → Publish",
+            summary: data.published ? "Published" : "Draft saved",
+            detail: data.published ? "Live for decide grounding" : "Stays draft until Publish",
             life: 3500,
             group: "br",
         });
@@ -591,6 +780,47 @@ const saveDraft = async () => {
         toast.add({ severity: "error", summary: "Could not save draft", life: 3500, group: "br" });
     } finally {
         savingDraft.value = false;
+        publishingDraft.value = false;
+    }
+};
+
+const bulkPublishSeeds = async () => {
+    if (!can_publish || selectedSeedIds.value.length === 0 || bulkPublishing.value) return;
+    bulkPublishing.value = true;
+    try {
+        const { data } = await axios.post(route("wiseAi.knowledge.bulkPublish"), {
+            ids: selectedSeedIds.value,
+        });
+        const publishedCount = Number(data.published_count ?? 0);
+        const skippedCount = Number(data.skipped_count ?? 0);
+        const publishedIds = new Set<number>(
+            (data.items || []).map((i: { id: number }) => i.id),
+        );
+        if (publishedCount === 0 || publishedIds.size === 0) {
+            toast.add({
+                severity: "warn",
+                summary: "Nothing published",
+                detail:
+                    skippedCount > 0
+                        ? `${skippedCount} selected item(s) were not eligible (already live, not seeded, or missing).`
+                        : "No eligible seeded drafts in this selection.",
+                life: 4500,
+                group: "br",
+            });
+            return;
+        }
+        seededDrafts.value = seededDrafts.value.filter((s) => !publishedIds.has(s.id));
+        selectedSeeds.value = [];
+        toast.add({
+            severity: "success",
+            summary: `Published ${publishedCount} seed(s)` + (skippedCount ? ` · skipped ${skippedCount}` : ""),
+            life: 3000,
+            group: "br",
+        });
+    } catch {
+        toast.add({ severity: "error", summary: "Bulk publish failed", life: 3500, group: "br" });
+    } finally {
+        bulkPublishing.value = false;
     }
 };
 

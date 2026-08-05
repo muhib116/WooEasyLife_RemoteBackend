@@ -200,6 +200,13 @@ class EvalRunner
             $errors[] = 'source expected '.$expect['source'].' got '.($decision['source'] ?? 'null');
         }
 
+        if (! empty($expect['reply_non_empty'])) {
+            $reply = trim((string) ($decision['suggested_reply'] ?? ''));
+            if ($reply === '') {
+                $errors[] = 'suggested_reply expected non-empty gap assist';
+            }
+        }
+
         if (array_key_exists('pricing_menu', $expect)
             && (bool) ($evidence['pricing_menu'] ?? false) !== (bool) $expect['pricing_menu']) {
             $errors[] = 'pricing_menu expected '.json_encode($expect['pricing_menu']);

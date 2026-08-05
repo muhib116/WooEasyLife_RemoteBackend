@@ -48,6 +48,20 @@ class WiseBclcBootstrapCommand extends Command
             ));
         }
 
+        $knowledge = app(\App\WiseAi\Language\RegionalKnowledgeSeeder::class)->run();
+        $this->info(sprintf(
+            'Regional knowledge: %d scripts across %s',
+            $knowledge['upserted'],
+            implode(', ', $knowledge['regions'])
+        ));
+
+        $platform = app(\App\WiseAi\Knowledge\Seed\PlatformKnowledgeSeeder::class)->run();
+        $this->info(sprintf(
+            'Platform knowledge: %d scripts (catalog v%s)',
+            $platform['upserted'],
+            $platform['version']
+        ));
+
         return self::SUCCESS;
     }
 }

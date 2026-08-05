@@ -7,28 +7,50 @@ namespace App\WiseAi;
  *
  * Social intents may reply without merchant knowledge.
  * Business intents must be grounded by KnowledgeResolver (evidence rule).
+ *
+ * Sprint 1: score all pattern hits; business beats social on mixed utterances.
  */
 class DecideEngine
 {
-    public const BRAIN_VERSION = '0.6.0';
+    public const BRAIN_VERSION = '0.6.4';
+
+    /** Casual hi/hello — never wa-alaikum. */
+    public const REPLY_CASUAL_GREETING = 'হ্যালো! কীভাবে সাহায্য করতে পারি?';
+
+    /** Response to salam / assalamu alaikum only. */
+    public const REPLY_SALAM_GREETING = 'ওয়ালাইকুম আসসালাম! কীভাবে সাহায্য করতে পারি?';
 
     /** @var list<string> */
     public const SOCIAL_INTENTS = ['greeting', 'thanks', 'ack'];
 
     /** @var list<string> */
-    public const BUSINESS_INTENTS = ['price', 'delivery', 'order_status', 'complaint'];
+    private const SALAM_GREETING_PATTERNS = [
+        'আসসালামু', 'সালাম', 'assalamu', 'salam', 'assalamualaikum',
+    ];
+
+    /** @var list<string> */
+    public const BUSINESS_INTENTS = [
+        'price',
+        'delivery',
+        'order_status',
+        'complaint',
+        'payment',
+        'cod',
+        'stock',
+    ];
 
     /**
      * @var array<string, array{patterns: list<string>, confidence: int, reply: ?string, kind: string}>
      */
     private const INTENTS = [
         'greeting' => [
+            // Casual vs salam replies are chosen in classify() — never one salam line for "hi".
             'patterns' => [
                 'আসসালামু', 'সালাম', 'হ্যালো', 'হাই',
                 'assalamu', 'salam', 'hello', 'hlw',
             ],
             'confidence' => 85,
-            'reply' => 'আসসালামু আলাইকুম! কীভাবে সাহায্য করতে পারি?',
+            'reply' => self::REPLY_CASUAL_GREETING,
             'kind' => 'social',
         ],
         'price' => [
@@ -86,6 +108,35 @@ class DecideEngine
             'reply' => null,
             'kind' => 'business',
         ],
+        'payment' => [
+            'patterns' => [
+                'পেমেন্ট', 'পেমেন্ট মেথড', 'কীভাবে পেমেন্ট', 'কিভাবে পেমেন্ট',
+                'bkash', 'bKash', 'nagad', 'rocket', 'বিকাশ', 'নগদ', 'রকেট',
+                'payment', 'pay how', 'payment method', 'কিভাবে দিব',
+            ],
+            'confidence' => 78,
+            'reply' => null,
+            'kind' => 'business',
+        ],
+        'cod' => [
+            'patterns' => [
+                'ক্যাশ অন ডেলিভারি', 'ক্যাশঅন', 'ক্যাশ অন',
+                'cod', 'cash on delivery', 'cash on',
+            ],
+            'confidence' => 82,
+            'reply' => null,
+            'kind' => 'business',
+        ],
+        'stock' => [
+            'patterns' => [
+                'স্টক', 'আছে কি', 'আছে?', 'কয়টা আছে', 'কতগুলো আছে',
+                'stock', 'available', 'in stock', 'ache?', 'ache ki', 'koita ache',
+                'সাইজ আছে', 'size ache', 'out of stock',
+            ],
+            'confidence' => 76,
+            'reply' => null,
+            'kind' => 'business',
+        ],
     ];
 
     /**
@@ -94,40 +145,27 @@ class DecideEngine
     public function classify(string $text): array
     {
         $normalized = $this->normalize($text);
+        /** @var list<array{intent: string, confidence: int, kind: string, social_reply: ?string, score: int}> $hits */
+        $hits = [];
 
         // Word-boundary "hi" (avoid matching inside words like "this").
         if ($normalized === 'hi' || preg_match('/(?:^|\\s)hi(?:\\s|$|[!?.,])/u', $normalized) === 1) {
-            return [
-                'intent' => 'greeting',
-                'confidence' => 85,
-                'kind' => 'social',
-                'social_reply' => self::INTENTS['greeting']['reply'],
-            ];
+            $hits[] = $this->hit('greeting', 85, 'social', self::REPLY_CASUAL_GREETING, 85);
         }
 
         // Bare "dam" (not "damaged") — common Banglish price ask.
         if ($normalized === 'dam' || preg_match('/(?:^|\\s)dam(?:\\s|$|[!?.,])/u', $normalized) === 1) {
-            return [
-                'intent' => 'price',
-                'confidence' => 78,
-                'kind' => 'business',
-                'social_reply' => null,
-            ];
+            $hits[] = $this->hit('price', 78, 'business', null, 90);
         }
 
-        // Bare okay/ok after Language emoji→text (👍). Never substring-match "ok" inside tokens (bjyulok).
+        // Bare okay/ok after Language emoji→text (👍). Never substring-match "ok" inside tokens.
         if (
             $normalized === 'okay'
             || $normalized === 'ok'
             || preg_match('/(?:^|\\s)okay(?:\\s|$|[!?.,])/u', $normalized) === 1
             || preg_match('/(?:^|\\s)ok(?:\\s|$|[!?.,])/u', $normalized) === 1
         ) {
-            return [
-                'intent' => 'ack',
-                'confidence' => 82,
-                'kind' => 'social',
-                'social_reply' => self::INTENTS['ack']['reply'],
-            ];
+            $hits[] = $this->hit('ack', 82, 'social', self::INTENTS['ack']['reply'], 82);
         }
 
         foreach (self::INTENTS as $intent => $config) {
@@ -140,22 +178,109 @@ class DecideEngine
                 if ($intent === 'ack' && ($p === 'ok' || $p === 'okay')) {
                     continue;
                 }
-                if (str_contains($normalized, $p)) {
-                    return [
-                        'intent' => $intent,
-                        'confidence' => $config['confidence'],
-                        'kind' => $config['kind'],
-                        'social_reply' => $config['reply'],
-                    ];
+                if (! str_contains($normalized, $p)) {
+                    continue;
                 }
+                $specificity = min(20, mb_strlen($p));
+                $score = (int) $config['confidence'] + $specificity;
+                $reply = $config['reply'];
+                if ($intent === 'greeting') {
+                    $reply = $this->isSalamGreetingPattern($p)
+                        ? self::REPLY_SALAM_GREETING
+                        : self::REPLY_CASUAL_GREETING;
+                    // Prefer salam reply flavor when both casual + salam match (e.g. "salam hi").
+                    if ($this->isSalamGreetingPattern($p)) {
+                        $score += 5;
+                    }
+                }
+                $hits[] = $this->hit(
+                    $intent,
+                    (int) $config['confidence'],
+                    (string) $config['kind'],
+                    $reply,
+                    $score,
+                );
             }
         }
 
+        if ($hits === []) {
+            return [
+                'intent' => 'unknown',
+                'confidence' => 0,
+                'kind' => 'business',
+                'social_reply' => null,
+            ];
+        }
+
+        // Deduplicate by intent — keep highest score per intent.
+        $byIntent = [];
+        foreach ($hits as $hit) {
+            $key = $hit['intent'];
+            if (! isset($byIntent[$key]) || $hit['score'] > $byIntent[$key]['score']) {
+                $byIntent[$key] = $hit;
+            }
+        }
+        $unique = array_values($byIntent);
+
+        $business = array_values(array_filter($unique, static fn ($h) => $h['kind'] === 'business'));
+        $pool = $business !== [] ? $business : $unique;
+
+        usort($pool, function (array $a, array $b): int {
+            // Higher composite score first.
+            $byScore = $b['score'] <=> $a['score'];
+            if ($byScore !== 0) {
+                return $byScore;
+            }
+            // Equal score → higher base confidence (cod 82 beats stock 76).
+            $byConf = $b['confidence'] <=> $a['confidence'];
+            if ($byConf !== 0) {
+                return $byConf;
+            }
+
+            return $this->intentOrder($a['intent'], $a['kind'])
+                <=> $this->intentOrder($b['intent'], $b['kind']);
+        });
+        $best = $pool[0];
+
         return [
-            'intent' => 'unknown',
-            'confidence' => 0,
-            'kind' => 'business',
-            'social_reply' => null,
+            'intent' => $best['intent'],
+            'confidence' => $best['confidence'],
+            'kind' => $best['kind'],
+            'social_reply' => $best['social_reply'],
+        ];
+    }
+
+    /** Stable rank for equal score+confidence (lower wins). */
+    private function intentOrder(string $intent, string $kind): int
+    {
+        $list = $kind === 'social' ? self::SOCIAL_INTENTS : self::BUSINESS_INTENTS;
+        $idx = array_search($intent, $list, true);
+
+        return $idx === false ? 1000 + ord($intent[0] ?? 'z') : (int) $idx;
+    }
+
+    private function isSalamGreetingPattern(string $normalizedPattern): bool
+    {
+        foreach (self::SALAM_GREETING_PATTERNS as $salam) {
+            if ($normalizedPattern === $this->normalize($salam)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array{intent: string, confidence: int, kind: string, social_reply: ?string, score: int}
+     */
+    private function hit(string $intent, int $confidence, string $kind, ?string $socialReply, int $score): array
+    {
+        return [
+            'intent' => $intent,
+            'confidence' => $confidence,
+            'kind' => $kind,
+            'social_reply' => $socialReply,
+            'score' => $score,
         ];
     }
 

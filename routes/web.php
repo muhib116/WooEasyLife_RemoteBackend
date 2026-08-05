@@ -580,6 +580,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/train/import', [WiseAiAdminController::class, 'importTrainingPack'])->name('train.import');
         Route::post('/train/generate', [WiseAiAdminController::class, 'generateTrainingPack'])->name('train.generate');
         Route::get('/playground', [WiseAiAdminController::class, 'playground'])->name('playground');
+        Route::post('/playground/coach', [WiseAiAdminController::class, 'proposePlaygroundCoach'])->name('playground.coach');
+        Route::post('/playground/coach/apply', [WiseAiAdminController::class, 'applyPlaygroundCoach'])->name('playground.coachApply');
         Route::get('/intelligence', [WiseAiAdminController::class, 'intelligence'])->name('intelligence');
         Route::get('/fleet', [WiseAiAdminController::class, 'fleet'])->name('fleet');
         Route::get('/turns/{turn}/explain', [WiseAiAdminController::class, 'turnExplain'])
@@ -605,10 +607,16 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/assist/{turn}/feedback', [WiseAiAdminController::class, 'assistFeedback'])->name('assist.feedback');
         Route::post('/gaps/{turn}/draft', [WiseAiAdminController::class, 'draftFromGap'])->name('gaps.draft');
         Route::post('/gaps/{turn}/ignore', [WiseAiAdminController::class, 'ignoreGap'])->name('gaps.ignore');
+        Route::get('/turns/{turn}/related-questions', [WiseAiAdminController::class, 'relatedQuestions'])
+            ->whereNumber('turn')
+            ->name('turns.relatedQuestions');
         Route::post('/knowledge', [WiseAiAdminController::class, 'storeKnowledge'])->name('knowledge.store');
+        Route::post('/knowledge/bulk-publish', [WiseAiAdminController::class, 'bulkPublishKnowledge'])->name('knowledge.bulkPublish');
+        Route::post('/knowledge/propose-answer', [WiseAiAdminController::class, 'proposeKnowledgeAnswer'])->name('knowledge.proposeAnswer');
         Route::post('/knowledge/{item}/update', [WiseAiAdminController::class, 'updateKnowledge'])->name('knowledge.update');
         Route::post('/knowledge/{item}/publish', [WiseAiAdminController::class, 'publishKnowledge'])->name('knowledge.publish');
         Route::post('/knowledge/{item}/unpublish', [WiseAiAdminController::class, 'unpublishKnowledge'])->name('knowledge.unpublish');
+        Route::post('/knowledge/{item}/regenerate-answer', [WiseAiAdminController::class, 'regenerateKnowledgeAnswer'])->name('knowledge.regenerateAnswer');
     });
 
     Route::group(['as' => 'developer.', 'prefix' => 'developer'], function () {

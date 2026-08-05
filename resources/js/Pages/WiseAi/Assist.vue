@@ -229,11 +229,7 @@
                 </div>
                 <div>
                     <label class="mb-1 block text-xs text-gray-500">Your reply (will be logged as edited)</label>
-                    <textarea
-                        v-model="editedReply"
-                        rows="4"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-fuchsia-400 dark:border-gray-700 dark:bg-slate-900"
-                    />
+                    <BanglaField v-model="editedReply" multiline :rows="4" />
                 </div>
             </div>
             <template #footer>
@@ -271,6 +267,7 @@ import EmptyState from "@/Pages/Users/fragments/EmptyState.vue";
 import WiseAiSubNav from "./fragments/WiseAiSubNav.vue";
 import WiseAiHowTo from "./fragments/WiseAiHowTo.vue";
 import TurnReplayDialog from "./fragments/TurnReplayDialog.vue";
+import BanglaField from "@/components/BanglaField.vue";
 
 type AssistRow = {
     id: number;

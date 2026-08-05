@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\BlogAi\BlogAiRuntimeConfig;
 use App\Services\CacheRuntimeConfig;
 use App\Services\OrderIntelligence\FraudCheckRuntimeConfig;
+use App\WiseAi\Knowledge\Search\KnowledgeSearchManager;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
@@ -15,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(KnowledgeSearchManager::class);
     }
 
     /**

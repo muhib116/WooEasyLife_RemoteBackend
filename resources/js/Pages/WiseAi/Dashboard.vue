@@ -80,6 +80,25 @@
                 title="AI Health (live)"
                 :description="`Last ${liveLocal.window_hours}h · polls every 15s · ${liveLocal.label}`"
             >
+                <div
+                    v-if="healAlertsLocal.length"
+                    class="mb-4 space-y-2"
+                >
+                    <Link
+                        v-for="alert in healAlertsLocal"
+                        :key="alert.id + alert.message"
+                        :href="route('wiseAi.learning', { kind: alert.href_kind || 'gap' })"
+                        class="block rounded-xl border px-3 py-2 text-sm transition hover:shadow-sm"
+                        :class="
+                            alert.severity === 'critical'
+                                ? 'border-rose-200 bg-rose-50/80 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100'
+                                : 'border-amber-200 bg-amber-50/80 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100'
+                        "
+                    >
+                        <span class="font-semibold">{{ alert.label }}</span>
+                        — {{ alert.message }}
+                    </Link>
+                </div>
                 <div class="flex flex-wrap items-end gap-6">
                     <div>
                         <p class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
@@ -290,6 +309,14 @@ type LivePayload = {
     llm: { platform_enabled: boolean; key_set: boolean; applied_rate: number };
 };
 
+type HealAlert = {
+    id: string;
+    severity: string;
+    label: string;
+    message: string;
+    href_kind?: string;
+};
+
 const props = defineProps<{
     stats: {
         turns_today: number;
@@ -306,11 +333,14 @@ const props = defineProps<{
         brain_version?: string;
     };
     live: LivePayload;
+    heal_alerts?: HealAlert[];
+    heal_alerts_version?: string;
     llm_pipeline: { enabled: boolean; key_set: boolean; model: string };
     recentTurns: TurnRow[];
 }>();
 
 const liveLocal = ref<LivePayload>({ ...props.live });
+const healAlertsLocal = ref<HealAlert[]>([...(props.heal_alerts || [])]);
 const llmLocal = ref({ ...props.llm_pipeline });
 const showPipeline = ref(false);
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -367,6 +397,7 @@ const poll = async () => {
         const { data } = await axios.get(route("wiseAi.dashboard.live"));
         if (data?.live) liveLocal.value = data.live;
         if (data?.llm_pipeline) llmLocal.value = data.llm_pipeline;
+        if (Array.isArray(data?.heal_alerts)) healAlertsLocal.value = data.heal_alerts;
     } catch {
         // keep last snapshot
     }

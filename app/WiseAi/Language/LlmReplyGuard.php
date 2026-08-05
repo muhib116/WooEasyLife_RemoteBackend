@@ -28,7 +28,24 @@ class LlmReplyGuard
             }
         }
 
+        // Do not escalate casual hi/hello into a salam reply.
+        if ($this->hasSalamMarker($rewrite) && ! $this->hasSalamMarker($original)) {
+            return false;
+        }
+
         return true;
+    }
+
+    private function hasSalamMarker(string $text): bool
+    {
+        $t = mb_strtolower($text);
+
+        return str_contains($t, 'ওয়ালাইকুম')
+            || str_contains($t, 'ওয়ালাইকুম')
+            || str_contains($t, 'আসসালামু')
+            || str_contains($t, 'assalam')
+            || str_contains($t, 'walaikum')
+            || str_contains($t, 'wa alaikum');
     }
 
     /**

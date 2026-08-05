@@ -25,6 +25,7 @@ class WiseTurn extends Model
         'gap',
         'gap_handled_at',
         'gap_knowledge_id',
+        'gap_auto_draft_id',
         'latency_ms',
     ];
 
@@ -46,6 +47,11 @@ class WiseTurn extends Model
     public function gapKnowledge(): BelongsTo
     {
         return $this->belongsTo(WiseKnowledgeItem::class, 'gap_knowledge_id');
+    }
+
+    public function gapAutoDraft(): BelongsTo
+    {
+        return $this->belongsTo(WiseKnowledgeItem::class, 'gap_auto_draft_id');
     }
 
     public function feedbacks(): HasMany

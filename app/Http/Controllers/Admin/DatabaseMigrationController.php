@@ -23,6 +23,7 @@ class DatabaseMigrationController extends Controller
      */
     private const ALLOWED_SEEDERS = [
         'BlogPostSeeder' => \Database\Seeders\BlogPostSeeder::class,
+        'WiseKnowledgeSeeder' => \Database\Seeders\WiseKnowledgeSeeder::class,
     ];
 
     public function index(): Response
@@ -275,6 +276,11 @@ class DatabaseMigrationController extends Controller
                     'key' => 'BlogPostSeeder',
                     'label' => 'Seed SEO blogs',
                     'description' => 'Publishes 20 SEO blog posts (idempotent — safe to re-run). Does not touch users or demo data.',
+                ],
+                [
+                    'key' => 'WiseKnowledgeSeeder',
+                    'label' => 'Seed Wise knowledge',
+                    'description' => 'Platform + regional scripts as drafts only (idempotent). Publish manually in Wise AI → Knowledge → Seeded review.',
                 ],
             ],
         ];

@@ -84,6 +84,7 @@ Provide a production-grade architectural definition of channel application so th
 - Commerce fact authority / business state SoR
 - Reasoning, Learning Evaluation, or Knowledge authorship
 - Implementation of transport, retries, or connector stacks
+- **Voice telephony / STT / TTS** — planned as future Channel adapters; Core may expose a spoken **DecisionResult side-channel** (`decision.voice`) without owning call audio (see plugin skill `voice-prep.md`)
 
 ---
 
