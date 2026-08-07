@@ -88,6 +88,8 @@ final class DialogueScripts
             && ($decision['action'] ?? '') === 'clarify'
             && ($decision['source'] ?? '') !== 'knowledge'
             && ($decision['source'] ?? '') !== 'shortlist'
+            && ($decision['source'] ?? '') !== 'grounded_assist'
+            && ($decision['source'] ?? '') !== 'grounded_assist_clarify'
             && empty($decision['shortlist'])
         ) {
             $preferredPattern = explode('.', $preferredScript, 2)[0] ?? '';
@@ -126,6 +128,8 @@ final class DialogueScripts
             && ($decision['action'] ?? '') === 'clarify'
             && ($decision['source'] ?? '') !== 'knowledge'
             && ($decision['source'] ?? '') !== 'shortlist'
+            && ($decision['source'] ?? '') !== 'grounded_assist'
+            && ($decision['source'] ?? '') !== 'grounded_assist_clarify'
             && empty($decision['shortlist'])
             && trim($script['text']) !== ''
         ) {

@@ -13,6 +13,7 @@ use App\WiseAi\DecideEngine;
 use App\WiseAi\Experience\ExperienceRecorder;
 use App\WiseAi\Explain\ExplainBuilder;
 use App\WiseAi\Knowledge\CatalogKnowledgeUpsertor;
+use App\WiseAi\Knowledge\MerchantKnowledgeImporter;
 use App\WiseAi\TurnRunner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ class WiseApiController extends Controller
         private ExplainBuilder $explainer,
         private CommerceEventIngestor $commerceEvents,
         private CatalogKnowledgeUpsertor $catalogUpsertor,
+        private MerchantKnowledgeImporter $merchantKnowledge,
         private ExperienceRecorder $experienceRecorder,
     ) {}
 
@@ -337,6 +339,55 @@ class WiseApiController extends Controller
             'version' => $item->version,
             'schema_version' => CatalogKnowledgeUpsertor::SCHEMA_VERSION,
         ], $result['created'] ? 201 : 200);
+    }
+
+    /**
+     * Messenger SST → hub knowledge drafts (FAQ / policy / pitch / objections).
+     * Never auto-publishes — merchant publishes in hub Knowledge.
+     */
+    public function knowledgeImport(Request $request): JsonResponse
+    {
+        $apiKey = $this->resolveApiKey($request);
+
+        if (! $apiKey) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'invalid_api_key',
+                'message' => 'Provide a valid Wise AI API key as a Bearer token.',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1|max:50',
+            'items.*.messenger_key' => 'required_without:items.*.source_key|string|max:191',
+            'items.*.source_key' => 'nullable|string|max:191',
+            'items.*.type' => 'nullable|string|max:40',
+            'items.*.scope' => 'nullable|string|max:40',
+            'items.*.title' => 'required|string|max:191',
+            'items.*.answer' => 'required|string|max:5000',
+            'items.*.question' => 'nullable|string|max:2000',
+            'items.*.external_id' => 'nullable|string|max:191',
+            'items.*.keywords' => 'nullable|array',
+            'items.*.keywords.*' => 'string|max:60',
+            'items.*.platform' => 'nullable|string|max:40',
+            'items.*.sku' => 'nullable|string|max:64',
+            'items.*.offer_kind' => 'nullable|string|max:40',
+            'items.*.chunk' => 'nullable|string|max:40',
+            'items.*.wc_product_id' => 'nullable',
+            'items.*.meta' => 'nullable|array',
+        ]);
+
+        $stats = $this->merchantKnowledge->importMany($apiKey, $validated['items']);
+
+        return response()->json([
+            'ok' => true,
+            'imported' => $stats['ok'],
+            'created' => $stats['created'],
+            'changed' => $stats['changed'],
+            'unchanged' => $stats['unchanged'],
+            'errors' => $stats['errors'],
+            'schema_version' => MerchantKnowledgeImporter::SCHEMA_VERSION,
+        ], empty($stats['errors']) ? 200 : 207);
     }
 
     /**

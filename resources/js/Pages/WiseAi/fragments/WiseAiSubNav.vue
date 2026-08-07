@@ -76,6 +76,7 @@ const primary: NavItem[] = [
     { label: "Knowledge", name: "wiseAi.knowledge", icon: "PhBooks", title: "Facts — draft → publish" },
     { label: "Language", name: "wiseAi.language", icon: "PhTranslate", title: "Abbrev / Banglish promote" },
     { label: "Playground", name: "wiseAi.playground", icon: "PhFlask", title: "Test real /decide API" },
+    { label: "Log", name: "wiseAi.log", icon: "PhHardDrives", title: "Decide request / response analysis" },
     { label: "Learning", name: "wiseAi.learning", icon: "PhTray", title: "কাজের তালিকা — review inbox" },
     { label: "Help", name: "wiseAi.tutorials", icon: "PhGraduationCap", title: "Tutorials & checklist" },
 ];

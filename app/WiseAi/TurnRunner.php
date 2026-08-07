@@ -6,6 +6,8 @@ use App\Models\WiseAi\WiseApiKey;
 use App\Models\WiseAi\WiseKnowledgeItem;
 use App\Models\WiseAi\WiseTurn;
 use App\WiseAi\Contracts\IncomingTurn;
+use App\WiseAi\Assist\GroundedAssistEngine;
+use App\WiseAi\Context\ContextPackBuilder;
 use App\WiseAi\Dialogue\DialoguePatternDetector;
 use App\WiseAi\Dialogue\DialogueScripts;
 use App\WiseAi\Experience\ExperienceResolver;
@@ -16,7 +18,9 @@ use App\WiseAi\Language\LlmLanguageSpecialist;
 use App\WiseAi\Language\RegionCode;
 use App\WiseAi\Psychology\BizOpportunities;
 use App\WiseAi\Psychology\PsychSignals;
+use App\WiseAi\Learning\ConversationLearningExtractor;
 use App\WiseAi\Learning\GapAutoDrafter;
+use App\WiseAi\Memory\SoftMemoryExtractor;
 use App\WiseAi\Voice\VoiceContractBuilder;
 
 /**
@@ -41,6 +45,10 @@ class TurnRunner
         private LlmLanguageSpecialist $llmLanguage,
         private VoiceContractBuilder $voice,
         private GapAutoDrafter $gapAutoDraft,
+        private ContextPackBuilder $contextPack,
+        private GroundedAssistEngine $groundedAssist,
+        private SoftMemoryExtractor $softMemory,
+        private ConversationLearningExtractor $continuousLearning,
     ) {}
 
     /**
@@ -544,6 +552,84 @@ class TurnRunner
             }
         }
 
+        // Grounded conversational assist — miss / unknown soft only; strong knowledge hits skip.
+        $assistPack = null;
+        $flags = is_array($configSnapshot['feature_flags'] ?? null) ? $configSnapshot['feature_flags'] : [];
+        $assistEligible = ! empty($flags['llm_grounded_assist'])
+            && (
+                ($decision['source'] ?? null) === 'gap_assist'
+                || ($trace['P3_ground'] ?? null) === 'skip_unknown_soft'
+            );
+        if ($assistEligible) {
+            $assistPack = $this->contextPack->build(
+                $apiKey,
+                $groundText,
+                $language,
+                $classified,
+                $productSubject,
+                $turn->context,
+                $turn->conversationId,
+            );
+            $trace['P3_context_pack'] = $assistPack['pack_meta'] ?? [];
+            $assist = $this->groundedAssist->run($assistPack);
+            $trace['P6_grounded_assist'] = [
+                'applied' => (bool) ($assist['applied'] ?? false),
+                'reason' => $assist['reason'] ?? null,
+                'attempts' => $assist['attempts'] ?? 0,
+                'score' => $assist['score'] ?? null,
+                'confidence' => $assist['confidence'] ?? null,
+                'passed_bar' => $assist['passed_bar'] ?? null,
+                'used_knowledge_ids' => $assist['used_knowledge_ids'] ?? [],
+                'prompt_version' => $assist['prompt_version'] ?? null,
+                'latency_ms' => $assist['latency_ms'] ?? 0,
+            ];
+            if (! empty($assist['applied']) && is_string($assist['reply'] ?? null) && trim((string) $assist['reply']) !== '') {
+                $needClarify = ! empty($assist['need_clarify']);
+                $passedBar = ! empty($assist['passed_bar']);
+                // Below bar: keep legacy gap/contract reply unless it is an explicit clarify ask.
+                if (! $passedBar && ! $needClarify) {
+                    $trace['P6_grounded_assist']['applied_to_decision'] = false;
+                    $trace['P6_grounded_assist']['discard_reason'] = 'below_bar';
+                } else {
+                    $decision['suggested_reply'] = (string) $assist['reply'];
+                    $decision['action'] = $needClarify ? 'clarify' : 'suggest_reply';
+                    $decision['source'] = $needClarify ? 'grounded_assist_clarify' : 'grounded_assist';
+                    $decision['confidence'] = max(40, min(98, (int) ($assist['confidence'] ?? 70)));
+                    $decision['gap'] = false;
+                    $gap = false;
+                    $decision['grounded_assist'] = [
+                        'applied' => true,
+                        'score' => $assist['score'] ?? null,
+                        'confidence' => $assist['confidence'] ?? null,
+                        'attempts' => $assist['attempts'] ?? 0,
+                        'plan' => $assist['plan'] ?? [],
+                        'need_clarify' => $needClarify,
+                        'used_knowledge_ids' => $assist['used_knowledge_ids'] ?? [],
+                        'prompt_version' => $assist['prompt_version'] ?? null,
+                        'passed_bar' => $passedBar,
+                        'conversation_summary' => $assistPack['conversation_summary'] ?? null,
+                        'goal' => $assistPack['goal'] ?? null,
+                    ];
+                    $evidence['answer'] = (string) $assist['reply'];
+                    $evidence['answer_hash'] = hash('sha256', (string) $assist['reply']);
+                    if (! empty($assist['used_knowledge_ids'])) {
+                        $evidence['grounded_assist_ids'] = $assist['used_knowledge_ids'];
+                        $evidence['knowledge_id'] = (int) ($assist['used_knowledge_ids'][0] ?? 0) ?: null;
+                    } else {
+                        $evidence['grounded_assist_ids'] = [];
+                        $evidence['grounding'] = $needClarify ? 'clarify_no_fact' : 'assist_without_cited_ids';
+                    }
+                    $trace['P7_judge'] = $needClarify ? 'assist_clarify' : 'pass_grounded_assist';
+                    $trace['P3_ground'] = [
+                        'result' => 'grounded_assist',
+                        'chunk_count' => count($assistPack['evidence_pack'] ?? []),
+                        'passed_bar' => $passedBar,
+                    ];
+                    $trace['P6_grounded_assist']['applied_to_decision'] = true;
+                }
+            }
+        }
+
         // Persist subject for later turns even when we only clarified/gapped after a mention.
         if ($productSubject && empty($decision['product_subject'])) {
             $decision['product_subject'] = $productSubject;
@@ -598,15 +684,20 @@ class TurnRunner
             'preferred_script' => $expResult['experience']['preferred_script'] ?? null,
         ];
 
-        // Optional LLM wording — fail-open; digit/fact guard; never decides.
-        $llmResult = $this->llmLanguage->maybeRewrite(
-            $decision,
-            $configSnapshot,
-            is_array($evidence) ? $evidence : null,
-        );
-        $decision = $llmResult['decision'];
-        $decision['language_llm'] = $llmResult['language_llm'];
-        $trace['P6_language_llm'] = $llmResult['language_llm'];
+        // Optional LLM wording — skip when grounded assist already owns the human reply.
+        $assistOwned = in_array((string) ($decision['source'] ?? ''), ['grounded_assist', 'grounded_assist_clarify'], true);
+        if (! $assistOwned) {
+            $llmResult = $this->llmLanguage->maybeRewrite(
+                $decision,
+                $configSnapshot,
+                is_array($evidence) ? $evidence : null,
+            );
+            $decision = $llmResult['decision'];
+            $decision['language_llm'] = $llmResult['language_llm'];
+            $trace['P6_language_llm'] = $llmResult['language_llm'];
+        } else {
+            $trace['P6_language_llm'] = ['applied' => false, 'reason' => 'grounded_assist_owns_reply'];
+        }
 
         // Voice side-channel only when channel=voice or context.output_profile=voice.
         $decision = $this->voice->attach($decision, $turn->channel, $turn->context);
@@ -650,6 +741,27 @@ class TurnRunner
                 ];
                 $trace['P9_heal'] = [
                     'auto_draft_id' => (int) $autoDraft->id,
+                    'published' => false,
+                ];
+                $record->update([
+                    'decision' => $decision,
+                    'trace' => $trace,
+                ]);
+                $record->refresh();
+            }
+        }
+
+        // Soft memory + continuous learning drafts (never auto-publish).
+        if ($assistPack !== null) {
+            $this->softMemory->persist($apiKey, $turn->conversationId, $record, $decision, $assistPack);
+            $clDraft = $this->continuousLearning->maybeDraft($record, $apiKey, $decision, $assistPack);
+            if ($clDraft) {
+                $decision['learning'] = [
+                    'cl_draft_id' => (int) $clDraft->id,
+                    'status' => 'draft',
+                ];
+                $trace['P9_continuous_learning'] = [
+                    'draft_id' => (int) $clDraft->id,
                     'published' => false,
                 ];
                 $record->update([

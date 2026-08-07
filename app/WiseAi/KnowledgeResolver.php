@@ -185,6 +185,63 @@ class KnowledgeResolver
     }
 
     /**
+     * Top scored published chunks for grounded assist evidence packs (may be below MIN_FINAL).
+     *
+     * @return list<array{id: int, type: string, title: string, question: string|null, answer: string, score: int, scope: string}>
+     */
+    public function topChunks(
+        WiseApiKey $apiKey,
+        string $text,
+        string $intent,
+        array $context = [],
+        ?array $productSubject = null,
+        int $limit = 8,
+    ): array {
+        $limit = max(1, min(20, $limit));
+        $normalized = KnowledgeLookup::normalize($text);
+        $items = $this->candidates($apiKey, $normalized, $intent, $context, $productSubject);
+        if ($items->isEmpty()) {
+            return [];
+        }
+
+        $scored = [];
+        foreach ($items as $item) {
+            if (! $this->scopeApplies($item, $context, $productSubject, $apiKey)) {
+                continue;
+            }
+            $score = $this->scoreItem($item, $normalized, $intent);
+            if ($score < self::MIN_LEXICAL) {
+                continue;
+            }
+            $scored[] = ['item' => $item, 'score' => $score];
+        }
+
+        if ($scored === []) {
+            return [];
+        }
+
+        usort($scored, static fn ($a, $b) => $b['score'] <=> $a['score']);
+        $maxChars = (int) config('wise_ai.grounded_assist.max_chunk_chars', 400);
+        $out = [];
+        foreach (array_slice($scored, 0, $limit) as $row) {
+            /** @var WiseKnowledgeItem $item */
+            $item = $row['item'];
+            $answer = mb_substr(trim((string) $item->answer), 0, $maxChars);
+            $out[] = [
+                'id' => (int) $item->id,
+                'type' => (string) $item->type,
+                'title' => (string) $item->title,
+                'question' => $item->question !== null ? (string) $item->question : null,
+                'answer' => $answer,
+                'score' => (int) $row['score'],
+                'scope' => (string) ($item->scope ?: 'merchant'),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * @param  list<array{item: WiseKnowledgeItem, score: int}>  $scored  desc by score
      */
     private function isAmbiguousCluster(array $scored, int $bestScore, int $secondScore): bool

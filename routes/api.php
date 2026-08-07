@@ -66,6 +66,9 @@ Route::group(['prefix' => 'api/wise/v1', 'as' => 'wise.'], function () {
     Route::post('/knowledge/upsert', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'knowledgeUpsert'])
         ->middleware('throttle:180,1')
         ->name('knowledge.upsert');
+    Route::post('/knowledge/import', [\App\Http\Controllers\WiseAi\WiseApiController::class, 'knowledgeImport'])
+        ->middleware('throttle:60,1')
+        ->name('knowledge.import');
 });
 
 Route::group(['middleware' => ['auth.packageRenewal'], 'prefix' => 'api/package', 'as' => 'package.'], function () {

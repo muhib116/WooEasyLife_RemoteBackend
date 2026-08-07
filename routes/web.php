@@ -582,6 +582,10 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/playground', [WiseAiAdminController::class, 'playground'])->name('playground');
         Route::post('/playground/coach', [WiseAiAdminController::class, 'proposePlaygroundCoach'])->name('playground.coach');
         Route::post('/playground/coach/apply', [WiseAiAdminController::class, 'applyPlaygroundCoach'])->name('playground.coachApply');
+        Route::get('/log', [WiseAiAdminController::class, 'log'])->name('log');
+        Route::get('/log/{turn}', [WiseAiAdminController::class, 'logTurn'])
+            ->whereNumber('turn')
+            ->name('log.turn');
         Route::get('/intelligence', [WiseAiAdminController::class, 'intelligence'])->name('intelligence');
         Route::get('/fleet', [WiseAiAdminController::class, 'fleet'])->name('fleet');
         Route::get('/turns/{turn}/explain', [WiseAiAdminController::class, 'turnExplain'])

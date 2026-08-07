@@ -12,7 +12,7 @@ namespace App\WiseAi;
  */
 class DecideEngine
 {
-    public const BRAIN_VERSION = '0.6.4';
+    public const BRAIN_VERSION = '0.7.0';
 
     /** Casual hi/hello — never wa-alaikum. */
     public const REPLY_CASUAL_GREETING = 'হ্যালো! কীভাবে সাহায্য করতে পারি?';

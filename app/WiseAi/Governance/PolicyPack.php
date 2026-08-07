@@ -30,6 +30,7 @@ class PolicyPack
                 'explain_api' => true,
                 'pricing_menu' => true,
                 'llm_language' => true,
+                'llm_grounded_assist' => true,
                 'experience_engine' => true,
                 'auto_send' => false,
             ],

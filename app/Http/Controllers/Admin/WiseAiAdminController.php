@@ -472,6 +472,457 @@ class WiseAiAdminController extends Controller
         ]);
     }
 
+    /**
+     * Decide request/response log — analyze Messenger / Playground / API turns.
+     */
+    public function log(Request $request): Response
+    {
+        $channel = trim($request->string('channel', '')->toString());
+        $q = trim($request->string('q', '')->toString());
+        $keyId = (int) $request->integer('key_id', 0);
+        $gap = $request->string('gap', 'all')->toString();
+        if (! in_array($gap, ['all', 'yes', 'no'], true)) {
+            $gap = 'all';
+        }
+        $action = trim($request->string('action', '')->toString());
+        $source = trim($request->string('source', '')->toString());
+        $status = trim($request->string('status', '')->toString());
+        $conversationId = trim($request->string('conversation_id', '')->toString());
+        $hours = (int) $request->integer('hours', 24);
+        if (! in_array($hours, [0, 1, 6, 24, 72, 168, 720], true)) {
+            $hours = 24;
+        }
+        $perPage = (int) $request->integer('per_page', 40);
+        if (! in_array($perPage, [25, 40, 60, 100], true)) {
+            $perPage = 40;
+        }
+        $page = max(1, (int) $request->integer('page', 1));
+        $selectedTurnId = (int) $request->integer('turn', 0);
+
+        $query = WiseTurn::query()
+            ->with(['apiKey:id,name,key_prefix'])
+            ->orderByDesc('id');
+
+        $this->applyLogFilters($query, [
+            'channel' => $channel,
+            'q' => $q,
+            'key_id' => $keyId,
+            'gap' => $gap,
+            'action' => $action,
+            'source' => $source,
+            'status' => $status,
+            'conversation_id' => $conversationId,
+            'hours' => $hours,
+        ]);
+
+        $statsBase = WiseTurn::query();
+        $this->applyLogFilters($statsBase, [
+            'channel' => $channel,
+            'q' => $q,
+            'key_id' => $keyId,
+            'gap' => $gap,
+            'action' => $action,
+            'source' => $source,
+            'status' => $status,
+            'conversation_id' => $conversationId,
+            'hours' => $hours,
+        ]);
+
+        $matched = (clone $statsBase)->count();
+        $gaps = (clone $statsBase)->where('gap', true)->count();
+        $avgLatency = (clone $statsBase)->avg('latency_ms');
+        $avgConfidence = (clone $statsBase)->avg(DB::raw("CAST(JSON_UNQUOTE(JSON_EXTRACT(decision, '$.confidence')) AS DECIMAL(10,2))"));
+        $p95Latency = $this->logLatencyPercentile(clone $statsBase, 0.95);
+        $actionMix = (clone $statsBase)
+            ->selectRaw("JSON_UNQUOTE(JSON_EXTRACT(decision, '$.action')) as action_name, COUNT(*) as c")
+            ->groupBy(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(decision, '$.action'))"))
+            ->orderByDesc('c')
+            ->limit(8)
+            ->get()
+            ->map(fn ($row) => [
+                'action' => $row->action_name ?: 'unknown',
+                'count' => (int) $row->c,
+            ])
+            ->values()
+            ->all();
+        $channelMix = (clone $statsBase)
+            ->selectRaw('channel, COUNT(*) as c')
+            ->groupBy('channel')
+            ->orderByDesc('c')
+            ->limit(8)
+            ->get()
+            ->map(fn ($row) => [
+                'channel' => $row->channel ?: 'unknown',
+                'count' => (int) $row->c,
+            ])
+            ->values()
+            ->all();
+
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+        $turns = collect($paginator->items())
+            ->map(fn (WiseTurn $turn) => $this->logTurnRow($turn))
+            ->values()
+            ->all();
+
+        // Facets stay inside the probe window (hours/key/thread) — not a full-table scan.
+        $facetBase = WiseTurn::query();
+        $this->applyLogFilters($facetBase, [
+            'channel' => '',
+            'q' => '',
+            'key_id' => $keyId,
+            'gap' => 'all',
+            'action' => '',
+            'source' => '',
+            'status' => '',
+            'conversation_id' => $conversationId,
+            'hours' => $hours,
+        ]);
+
+        $channels = (clone $facetBase)
+            ->select('channel')
+            ->whereNotNull('channel')
+            ->where('channel', '!=', '')
+            ->distinct()
+            ->orderBy('channel')
+            ->pluck('channel')
+            ->values()
+            ->all();
+
+        $sources = (clone $facetBase)
+            ->whereNotNull('decision')
+            ->selectRaw("DISTINCT JSON_UNQUOTE(JSON_EXTRACT(decision, '$.source')) as source_name")
+            ->havingRaw('source_name IS NOT NULL AND source_name <> ?', [''])
+            ->orderBy('source_name')
+            ->pluck('source_name')
+            ->values()
+            ->all();
+
+        return Inertia::render('WiseAi/Log', [
+            'turns' => $turns,
+            'pagination' => [
+                'page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+            ],
+            'stats' => [
+                'matched' => $matched,
+                'gaps' => $gaps,
+                'gap_rate' => $matched > 0 ? round(($gaps / $matched) * 100, 1) : 0.0,
+                'avg_latency_ms' => $avgLatency !== null ? (int) round((float) $avgLatency) : null,
+                'p95_latency_ms' => $p95Latency,
+                'avg_confidence' => $avgConfidence !== null ? (int) round((float) $avgConfidence) : null,
+                'action_mix' => $actionMix,
+                'channel_mix' => $channelMix,
+            ],
+            'filters' => [
+                'channel' => $channel,
+                'q' => $q,
+                'key_id' => $keyId > 0 ? $keyId : null,
+                'gap' => $gap,
+                'action' => $action,
+                'source' => $source,
+                'status' => $status,
+                'conversation_id' => $conversationId,
+                'hours' => $hours,
+                'per_page' => $perPage,
+                'page' => $page,
+                'turn' => $selectedTurnId > 0 ? $selectedTurnId : null,
+            ],
+            'channels' => $channels,
+            'sources' => $sources,
+            'actions' => ['suggest_reply', 'clarify', 'needs_human'],
+            'statuses' => ['ok', 'error'],
+            'hour_options' => [
+                ['value' => 1, 'label' => '1h'],
+                ['value' => 6, 'label' => '6h'],
+                ['value' => 24, 'label' => '24h'],
+                ['value' => 72, 'label' => '3d'],
+                ['value' => 168, 'label' => '7d'],
+                ['value' => 720, 'label' => '30d'],
+                ['value' => 0, 'label' => 'All'],
+            ],
+            'api_keys' => WiseApiKey::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'key_prefix'])
+                ->map(fn (WiseApiKey $k) => [
+                    'id' => $k->id,
+                    'name' => $k->name,
+                    'key_prefix' => $k->key_prefix,
+                ])
+                ->values()
+                ->all(),
+            'brain_version' => DecideEngine::BRAIN_VERSION,
+        ]);
+    }
+
+    /**
+     * Full sealed request + response for one turn (Log detail pane).
+     */
+    public function logTurn(Request $request, WiseTurn $turn): JsonResponse
+    {
+        $turn->loadMissing(['apiKey:id,name,key_prefix']);
+        $requestPayload = is_array($turn->payload) ? $turn->payload : [
+            'text' => $turn->text,
+            'channel' => $turn->channel,
+            'conversation_id' => $turn->conversation_id,
+            'context' => [],
+        ];
+        $decision = is_array($turn->decision) ? $turn->decision : [];
+        $evidence = is_array($turn->evidence) ? $turn->evidence : null;
+        $trace = is_array($turn->trace) ? $turn->trace : null;
+        $context = is_array($requestPayload['context'] ?? null) ? $requestPayload['context'] : [];
+
+        $navFilters = $this->logFiltersFromRequest($request);
+        $prevQuery = WiseTurn::query()->where('id', '<', $turn->id)->orderByDesc('id');
+        $this->applyLogFilters($prevQuery, $navFilters);
+        $prevId = $prevQuery->value('id');
+
+        $nextQuery = WiseTurn::query()->where('id', '>', $turn->id)->orderBy('id');
+        $this->applyLogFilters($nextQuery, $navFilters);
+        $nextId = $nextQuery->value('id');
+
+        $thread = [];
+        if (is_string($turn->conversation_id) && $turn->conversation_id !== '') {
+            $thread = WiseTurn::query()
+                ->where('conversation_id', $turn->conversation_id)
+                ->where('wise_api_key_id', $turn->wise_api_key_id)
+                ->orderByDesc('id')
+                ->limit(12)
+                ->get()
+                ->map(fn (WiseTurn $row) => [
+                    'id' => $row->id,
+                    'created_at' => optional($row->created_at)?->toIso8601String(),
+                    'text' => $row->text,
+                    'action' => is_array($row->decision) ? ($row->decision['action'] ?? null) : null,
+                    'gap' => (bool) $row->gap,
+                    'latency_ms' => $row->latency_ms,
+                    'is_current' => $row->id === $turn->id,
+                ])
+                ->values()
+                ->all();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'turn' => [
+                'id' => $turn->id,
+                'created_at' => optional($turn->created_at)?->toIso8601String(),
+                'latency_ms' => $turn->latency_ms,
+                'status' => $turn->status,
+                'gap' => (bool) $turn->gap,
+                'channel' => $turn->channel,
+                'conversation_id' => $turn->conversation_id,
+                'wise_api_key_id' => $turn->wise_api_key_id,
+                'key_name' => $turn->apiKey?->name,
+                'key_prefix' => $turn->apiKey?->key_prefix,
+                'brain_version' => $decision['brain_version'] ?? null,
+            ],
+            'nav' => [
+                'prev_id' => $prevId ? (int) $prevId : null,
+                'next_id' => $nextId ? (int) $nextId : null,
+                'scoped' => true,
+            ],
+            'highlights' => [
+                'text' => $turn->text,
+                'action' => $decision['action'] ?? null,
+                'intent' => $decision['intent'] ?? null,
+                'confidence' => $decision['confidence'] ?? null,
+                'source' => $decision['source'] ?? null,
+                'suggested_reply' => $decision['suggested_reply'] ?? null,
+                'reason' => $decision['reason'] ?? ($decision['reason_code'] ?? null),
+                'knowledge_id' => $evidence['knowledge_id'] ?? null,
+                'match_score' => $evidence['match_score'] ?? null,
+                'context_keys' => array_keys($context),
+                'context_bytes' => strlen((string) json_encode($context)),
+            ],
+            'trace_steps' => $this->logTraceSteps($trace),
+            'thread' => $thread,
+            'request' => $requestPayload,
+            'response' => [
+                'decision' => $decision,
+                'evidence' => $evidence,
+                'gap' => (bool) $turn->gap,
+                'latency_ms' => $turn->latency_ms,
+                'status' => $turn->status,
+            ],
+            'trace' => $trace,
+            'config_snapshot' => is_array($turn->config_snapshot) ? $turn->config_snapshot : null,
+        ]);
+    }
+
+    /**
+     * @return array{channel:string,q:string,key_id:int,gap:string,action:string,source:string,status:string,conversation_id:string,hours:int}
+     */
+    private function logFiltersFromRequest(Request $request): array
+    {
+        $gap = $request->string('gap', 'all')->toString();
+        if (! in_array($gap, ['all', 'yes', 'no'], true)) {
+            $gap = 'all';
+        }
+        $hours = (int) $request->integer('hours', 0);
+        if (! in_array($hours, [0, 1, 6, 24, 72, 168, 720], true)) {
+            $hours = 0;
+        }
+
+        return [
+            'channel' => trim($request->string('channel', '')->toString()),
+            'q' => trim($request->string('q', '')->toString()),
+            'key_id' => (int) $request->integer('key_id', 0),
+            'gap' => $gap,
+            'action' => trim($request->string('action', '')->toString()),
+            'source' => trim($request->string('source', '')->toString()),
+            'status' => trim($request->string('status', '')->toString()),
+            'conversation_id' => trim($request->string('conversation_id', '')->toString()),
+            // Detail nav defaults to no time clip unless the probe passes hours.
+            'hours' => $hours,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\WiseAi\WiseTurn>  $query
+     * @param  array{channel:string,q:string,key_id:int,gap:string,action:string,source:string,status:string,conversation_id:string,hours:int}  $filters
+     */
+    private function applyLogFilters($query, array $filters): void
+    {
+        if ($filters['hours'] > 0) {
+            $query->where('created_at', '>=', now()->subHours($filters['hours']));
+        }
+        if ($filters['channel'] !== '') {
+            $query->where('channel', $filters['channel']);
+        }
+        if ($filters['key_id'] > 0) {
+            $query->where('wise_api_key_id', $filters['key_id']);
+        }
+        if ($filters['gap'] === 'yes') {
+            $query->where('gap', true);
+        } elseif ($filters['gap'] === 'no') {
+            $query->where(function ($inner) {
+                $inner->where('gap', false)->orWhereNull('gap');
+            });
+        }
+        if ($filters['action'] !== '') {
+            $query->where('decision->action', $filters['action']);
+        }
+        if ($filters['source'] !== '') {
+            $query->where('decision->source', $filters['source']);
+        }
+        if ($filters['status'] !== '') {
+            $query->where('status', $filters['status']);
+        }
+        if ($filters['conversation_id'] !== '') {
+            $query->where('conversation_id', $filters['conversation_id']);
+        }
+        if ($filters['q'] !== '') {
+            $like = '%'.$filters['q'].'%';
+            $q = $filters['q'];
+            $query->where(function ($inner) use ($like, $q) {
+                $inner->where('text', 'like', $like)
+                    ->orWhere('conversation_id', 'like', $like)
+                    ->orWhere('decision->suggested_reply', 'like', $like)
+                    ->orWhere('decision->intent', 'like', $like);
+                if (ctype_digit($q)) {
+                    $inner->orWhere('id', (int) $q);
+                }
+            });
+        }
+    }
+
+    /**
+     * True percentile over the filtered set (single ordered row at offset).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\WiseAi\WiseTurn>  $query
+     */
+    private function logLatencyPercentile($query, float $percentile): ?int
+    {
+        $count = (clone $query)->whereNotNull('latency_ms')->count();
+        if ($count < 1) {
+            return null;
+        }
+
+        $offset = (int) max(0, min($count - 1, (int) floor(($count - 1) * $percentile)));
+
+        $value = (clone $query)
+            ->whereNotNull('latency_ms')
+            ->orderBy('latency_ms')
+            ->offset($offset)
+            ->limit(1)
+            ->value('latency_ms');
+
+        return $value !== null ? (int) $value : null;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $trace
+     * @return list<array{key:string,summary:string,raw:mixed}>
+     */
+    private function logTraceSteps(?array $trace): array
+    {
+        if (! $trace) {
+            return [];
+        }
+
+        $steps = [];
+        foreach ($trace as $key => $value) {
+            $summary = '';
+            if (is_array($value)) {
+                $bits = [];
+                foreach (['ok', 'hit', 'gap', 'intent', 'action', 'source', 'score', 'match_score', 'next_action'] as $field) {
+                    if (array_key_exists($field, $value)) {
+                        $bits[] = $field.'='.(is_scalar($value[$field]) ? (string) $value[$field] : json_encode($value[$field]));
+                    }
+                }
+                $summary = $bits ? implode(' · ', $bits) : (count($value).' keys');
+            } elseif (is_scalar($value) || $value === null) {
+                $summary = (string) ($value ?? 'null');
+            } else {
+                $summary = gettype($value);
+            }
+            $steps[] = [
+                'key' => (string) $key,
+                'summary' => $summary,
+                'raw' => $value,
+            ];
+        }
+
+        return $steps;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function logTurnRow(WiseTurn $turn): array
+    {
+        $decision = is_array($turn->decision) ? $turn->decision : [];
+        $payload = is_array($turn->payload) ? $turn->payload : [];
+        $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
+        $evidence = is_array($turn->evidence) ? $turn->evidence : [];
+
+        return [
+            'id' => $turn->id,
+            'created_at' => optional($turn->created_at)?->toIso8601String(),
+            'channel' => $turn->channel,
+            'conversation_id' => $turn->conversation_id,
+            'text' => $turn->text,
+            'action' => $decision['action'] ?? null,
+            'intent' => $decision['intent'] ?? null,
+            'confidence' => isset($decision['confidence']) ? (int) $decision['confidence'] : null,
+            'source' => $decision['source'] ?? null,
+            'gap' => (bool) $turn->gap,
+            'status' => $turn->status,
+            'latency_ms' => $turn->latency_ms,
+            'suggested_reply' => $decision['suggested_reply'] ?? null,
+            'key_name' => $turn->apiKey?->name,
+            'key_prefix' => $turn->apiKey?->key_prefix,
+            'brain_version' => $decision['brain_version'] ?? null,
+            'has_context' => $context !== [],
+            'context_keys' => count($context),
+            'knowledge_id' => $evidence['knowledge_id'] ?? null,
+        ];
+    }
+
     public function fleet(Request $request, FleetHealth $fleet): Response
     {
         $days = (int) $request->integer('days', 7);

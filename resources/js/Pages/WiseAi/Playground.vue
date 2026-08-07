@@ -510,6 +510,40 @@
                             </dl>
 
                             <div
+                                v-if="lastTrace.grounded_assist"
+                                class="rounded-xl border border-violet-100 bg-violet-50/50 p-2.5 text-[11px] dark:border-violet-500/20 dark:bg-violet-500/10"
+                            >
+                                <p class="font-semibold text-violet-800 dark:text-violet-300">
+                                    Grounded assist
+                                </p>
+                                <p class="mt-0.5 text-gray-600 dark:text-gray-300">
+                                    score {{ lastTrace.grounded_assist.score ?? "—" }}/10 · conf
+                                    {{ lastTrace.grounded_assist.confidence ?? "—" }}% · attempts
+                                    {{ lastTrace.grounded_assist.attempts ?? 0 }}
+                                    <span v-if="lastTrace.grounded_assist.passed_bar"> · bar passed</span>
+                                    <span v-if="lastTrace.grounded_assist.need_clarify"> · clarify</span>
+                                </p>
+                                <p
+                                    v-if="lastTrace.grounded_assist.plan?.length"
+                                    class="mt-1 text-gray-700 dark:text-gray-200"
+                                >
+                                    plan: {{ lastTrace.grounded_assist.plan.join(" → ") }}
+                                </p>
+                                <p
+                                    v-if="lastTrace.grounded_assist.used_knowledge_ids?.length"
+                                    class="mt-1 font-mono text-[10px] text-gray-500"
+                                >
+                                    knowledge #{{ lastTrace.grounded_assist.used_knowledge_ids.join(", #") }}
+                                </p>
+                                <p
+                                    v-if="lastTrace.grounded_assist.prompt_version"
+                                    class="mt-1 text-[10px] text-gray-400"
+                                >
+                                    {{ lastTrace.grounded_assist.prompt_version }}
+                                </p>
+                            </div>
+
+                            <div
                                 v-if="lastTrace.voice"
                                 class="rounded-xl border border-cyan-100 bg-cyan-50/50 p-2.5 text-[11px] dark:border-cyan-500/20 dark:bg-cyan-500/10"
                             >
@@ -1202,6 +1236,16 @@ type DecisionTrace = {
         style_hint?: string;
     } | null;
     opportunities?: { id: string; title: string }[];
+    grounded_assist?: {
+        score?: number | null;
+        confidence?: number | null;
+        attempts?: number;
+        plan?: string[];
+        need_clarify?: boolean;
+        used_knowledge_ids?: number[];
+        prompt_version?: string | null;
+        passed_bar?: boolean;
+    } | null;
 };
 
 type ExplainPayload = {
@@ -1539,6 +1583,7 @@ const sendMessage = async () => {
             opportunities: Array.isArray(decision.opportunities?.items)
                 ? decision.opportunities.items
                 : [],
+            grounded_assist: decision.grounded_assist || null,
         };
         activeTab.value = "decision";
 
@@ -1560,7 +1605,11 @@ const sendMessage = async () => {
             id: nextId++,
             role: "brain",
             text: replyText,
-            meta: `${decision.intent} · ${decision.confidence}% · ${decision.source}`,
+            meta: `${decision.intent} · ${decision.confidence}% · ${decision.source}${
+                decision.grounded_assist?.score != null
+                    ? ` · assist ${decision.grounded_assist.score}/10`
+                    : ""
+            }`,
             turn_id: data.turn_id,
         });
     } catch (error: unknown) {

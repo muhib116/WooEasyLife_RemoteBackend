@@ -78,6 +78,20 @@ class HealAlerts
             ];
         }
 
+        $clOpen = \App\Models\WiseAi\WiseKnowledgeItem::query()
+            ->where('status', 'draft')
+            ->where('meta->source', \App\WiseAi\Learning\ConversationLearningExtractor::META_SOURCE)
+            ->count();
+        if ($clOpen >= 10) {
+            $alerts[] = [
+                'id' => 'cl_drafts_backlog',
+                'severity' => 'warning',
+                'label' => 'Learning drafts awaiting review',
+                'message' => "{$clOpen} continuous-learning FAQ drafts — publish or reject in Learning.",
+                'href_kind' => 'cl_candidate',
+            ];
+        }
+
         return $alerts;
     }
 }

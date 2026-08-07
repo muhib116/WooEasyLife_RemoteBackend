@@ -18,7 +18,7 @@ class LlmReplyGuard
         }
 
         $allowed = $this->digitTokens($original);
-        foreach ($this->evidenceDigitTokens($evidence) as $token) {
+        foreach ($this->evidenceDigitTokens($evidence) as $token => $_) {
             $allowed[$token] = true;
         }
 
@@ -64,6 +64,9 @@ class LlmReplyGuard
     }
 
     /**
+     * Digits allowed from evidence prose only (answers/titles/tool values).
+     * Never whitelist metadata numerals like knowledge id or match score.
+     *
      * @param  array<string, mixed>|null  $evidence
      * @return array<string, true>
      */
@@ -73,12 +76,45 @@ class LlmReplyGuard
             return [];
         }
 
-        $blob = json_encode($evidence, JSON_UNESCAPED_UNICODE);
-        if (! is_string($blob)) {
+        $parts = [];
+        foreach (['answer', 'title', 'question'] as $key) {
+            if (isset($evidence[$key]) && is_string($evidence[$key])) {
+                $parts[] = $evidence[$key];
+            }
+        }
+
+        foreach (['chunks', 'evidence_pack'] as $listKey) {
+            if (! is_array($evidence[$listKey] ?? null)) {
+                continue;
+            }
+            foreach ($evidence[$listKey] as $chunk) {
+                if (! is_array($chunk)) {
+                    continue;
+                }
+                foreach (['answer', 'title', 'question', 'value'] as $key) {
+                    if (isset($chunk[$key]) && (is_string($chunk[$key]) || is_numeric($chunk[$key]))) {
+                        $parts[] = (string) $chunk[$key];
+                    }
+                }
+            }
+        }
+
+        if (is_array($evidence['tool_facts'] ?? null)) {
+            foreach ($evidence['tool_facts'] as $fact) {
+                if (! is_array($fact)) {
+                    continue;
+                }
+                if (isset($fact['value']) && (is_string($fact['value']) || is_numeric($fact['value']))) {
+                    $parts[] = (string) $fact['value'];
+                }
+            }
+        }
+
+        if ($parts === []) {
             return [];
         }
 
-        return $this->digitTokens($blob);
+        return $this->digitTokens(implode("\n", $parts));
     }
 
     private function normalizeDigits(string $text): string

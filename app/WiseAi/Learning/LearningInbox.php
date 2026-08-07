@@ -3,6 +3,7 @@
 namespace App\WiseAi\Learning;
 
 use App\Models\WiseAi\WiseFeedback;
+use App\Models\WiseAi\WiseKnowledgeItem;
 use App\Models\WiseAi\WiseLanguageReview;
 use App\Models\WiseAi\WiseTurn;
 use Illuminate\Support\Collection;
@@ -12,7 +13,7 @@ use Illuminate\Support\Collection;
  */
 class LearningInbox
 {
-    public const KINDS = ['all', 'gap', 'language', 'assist', 'reject'];
+    public const KINDS = ['all', 'gap', 'language', 'assist', 'reject', 'cl_candidate'];
 
     /**
      * @return array{
@@ -20,6 +21,7 @@ class LearningInbox
      *     language_open: int,
      *     assist_pending: int,
      *     rejects_recent: int,
+     *     cl_drafts_open: int,
      *     open_total: int
      * }
      */
@@ -35,13 +37,18 @@ class LearningInbox
             ->where('outcome', 'rejected')
             ->where('created_at', '>=', now()->subDays(14))
             ->count();
+        $cl = WiseKnowledgeItem::query()
+            ->where('status', 'draft')
+            ->where('meta->source', ConversationLearningExtractor::META_SOURCE)
+            ->count();
 
         return [
             'gaps_open' => $gaps,
             'language_open' => $language,
             'assist_pending' => $assist,
             'rejects_recent' => $rejects,
-            'open_total' => $gaps + $language + $assist,
+            'cl_drafts_open' => $cl,
+            'open_total' => $gaps + $language + $assist + $cl,
         ];
     }
 
@@ -72,6 +79,9 @@ class LearningInbox
         }
         if ($kind === 'all' || $kind === 'assist') {
             $rows = $rows->merge($this->assistRows($kind === 'assist' ? $limit : 40));
+        }
+        if ($kind === 'all' || $kind === 'cl_candidate') {
+            $rows = $rows->merge($this->clCandidateRows($kind === 'cl_candidate' ? $limit : 40));
         }
         if ($kind === 'reject') {
             $rows = $rows->merge($this->rejectRows($limit));
@@ -203,6 +213,40 @@ class LearningInbox
             ])
             ->take($limit)
             ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function clCandidateRows(int $limit): array
+    {
+        return WiseKnowledgeItem::query()
+            ->with(['apiKey:id,name'])
+            ->where('status', 'draft')
+            ->where('meta->source', ConversationLearningExtractor::META_SOURCE)
+            ->latest('id')
+            ->limit($limit)
+            ->get(['id', 'wise_api_key_id', 'title', 'question', 'answer', 'meta', 'created_at'])
+            ->map(fn (WiseKnowledgeItem $item) => [
+                'uid' => 'cl_candidate:'.$item->id,
+                'kind' => 'cl_candidate',
+                'ref_id' => $item->id,
+                'knowledge_id' => $item->id,
+                'turn_id' => $item->meta['from_turn_id'] ?? null,
+                'key_name' => $item->apiKey?->name,
+                'channel' => null,
+                'title' => $item->title ?: ($item->question ?: '(empty)'),
+                'detail' => 'Continuous learning draft · score '
+                    .($item->meta['assist_score'] ?? '?')
+                    .' · review then publish',
+                'intent' => null,
+                'suggested_reply' => $item->answer,
+                'reason_code' => null,
+                'reason_label' => null,
+                'hit_count' => null,
+                'occurred_at' => $item->created_at?->toDateTimeString(),
+            ])
             ->all();
     }
 

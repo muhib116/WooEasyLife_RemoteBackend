@@ -195,6 +195,14 @@
                                         @click="openReject(data)"
                                     />
                                 </template>
+                                <template v-else-if="data.kind === 'cl_candidate'">
+                                    <Link
+                                        :href="route('wiseAi.knowledge')"
+                                        class="text-[11px] font-medium text-violet-600 hover:underline"
+                                    >
+                                        Review in Knowledge →
+                                    </Link>
+                                </template>
                                 <template v-else>
                                     <StatusBadge
                                         :label="data.reason_label || data.reason_code || 'reject'"
@@ -637,6 +645,7 @@ const kindTabs = computed(() => [
     { value: "assist", label: "Needs reply", count: stats.value.assist_pending },
     { value: "gap", label: "Missed answers", count: stats.value.gaps_open },
     { value: "language", label: "Language", count: stats.value.language_open },
+    { value: "cl_candidate", label: "CL drafts", count: stats.value.cl_drafts_open ?? 0 },
     { value: "reject", label: "Rejected", count: stats.value.rejects_recent },
 ]);
 
@@ -648,6 +657,7 @@ const kindVariant = (kind: string) => {
     if (kind === "gap") return "danger";
     if (kind === "language") return "warning";
     if (kind === "assist") return "success";
+    if (kind === "cl_candidate") return "info";
     return "neutral";
 };
 
