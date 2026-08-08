@@ -231,6 +231,61 @@
                 </p>
             </section>
 
+            <section class="rounded-xl border border-gray-100 dark:border-gray-800">
+                <div
+                    class="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800"
+                >
+                    <div class="min-w-0">
+                        <p class="text-xs font-medium uppercase tracking-wide text-gray-500">
+                            OTP SMS
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Platform-paid checkout OTP for this website
+                        </p>
+                    </div>
+                    <div class="shrink-0 text-right text-xs tabular-nums text-gray-600 dark:text-gray-300">
+                        <p>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ otpSms.total_count }}</span>
+                            SMS
+                        </p>
+                        <p>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ otpSms.total_platform_cost }}</span>
+                            TK cost
+                        </p>
+                    </div>
+                </div>
+
+                <div v-if="otpSms.recent.length" class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <div
+                        v-for="row in otpSms.recent.slice(0, 5)"
+                        :key="row.id"
+                        class="flex items-start justify-between gap-3 px-4 py-2.5 text-sm"
+                    >
+                        <div class="min-w-0">
+                            <p class="truncate font-medium text-gray-900 dark:text-gray-100">
+                                {{ row.phone || "—" }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ formatOtpWhen(row.created_at) }}
+                                · {{ row.sms_count }} SMS
+                            </p>
+                        </div>
+                        <p class="shrink-0 tabular-nums text-xs font-medium text-gray-700 dark:text-gray-200">
+                            {{ row.platform_cost }} TK
+                        </p>
+                    </div>
+                    <div
+                        v-if="otpSms.recent.length > 5"
+                        class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                        Showing latest 5 of {{ otpSms.recent.length }} recent rows
+                    </div>
+                </div>
+                <p v-else class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    No checkout OTP SMS sent for this website yet.
+                </p>
+            </section>
+
             <div class="flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
                 <Button
                     :label="primaryAction.label"
@@ -306,6 +361,7 @@ import {
 } from "@/utils/websiteSubscription";
 import { useSubscriptionExpiryCountdown } from "@/composables/useSubscriptionExpiryCountdown";
 import { computed, toRef } from "vue";
+import { dateFormat } from "@/Helper";
 
 const props = defineProps<{
     website: any;
@@ -323,6 +379,24 @@ defineEmits<{
     "edit-license": [license: any];
     "delete-license": [license: any];
 }>();
+
+const otpSms = computed(() => {
+    const raw = props.website?.otp_sms ?? {};
+    return {
+        total_count: Number(raw.total_count || 0),
+        total_platform_cost: Number(raw.total_platform_cost || 0).toFixed(2),
+        recent: Array.isArray(raw.recent) ? raw.recent : [],
+    };
+});
+
+const formatOtpWhen = (value?: string | null) => {
+    if (!value) return "—";
+    try {
+        return dateFormat(value);
+    } catch {
+        return value;
+    }
+};
 
 const expiryWarning = useSubscriptionExpiryCountdown(
     toRef(() => props.website.subscription?.expires_at),

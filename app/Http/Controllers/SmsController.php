@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\LogHelper;
 use App\Models\SmsBalance;
 use App\Models\SmsRecharge;
+use App\Services\BulkSmsService;
 use App\Services\DomainNormalizer;
 use App\Traits\Transaction;
 use Illuminate\Http\Request;
@@ -236,6 +237,18 @@ class SmsController extends Controller
 
         $phone = $request->phone;
         $sms = $request->content;
+
+        // Checkout OTP: same path as landing-order confirm / download-gate OTP —
+        // platform BulkSmsService (BULKSMS_API_KEY), no merchant SmsBalance debit.
+        $purpose = strtolower(trim((string) (
+            $request->input('purpose')
+            ?: $request->header('X-WEL-SMS-Purpose')
+            ?: ''
+        )));
+        if ($purpose === 'checkout_otp') {
+            return $this->sendCheckoutOtpViaPlatformBulkSms((string) $phone, (string) $sms);
+        }
+
         $smsCount = 1;
 
         try {
@@ -367,6 +380,166 @@ class SmsController extends Controller
         return $this->successResponse($responseDecoded, 'Sms sent successfully');
     }
 
+    /**
+     * Platform-paid checkout OTP (plugin purpose=checkout_otp).
+     * Mirrors LandingOrderConversionNotifier / DownloadGateService: BulkSmsService only.
+     * Still writes a merchant-domain SmsBalance usage row (amount 0) so admin/history
+     * can see OTP SMS count + platform cost under that website — without cutting wallet.
+     */
+    private function sendCheckoutOtpViaPlatformBulkSms(string $phone, string $message)
+    {
+        $bulkSms = app(BulkSmsService::class);
+
+        if (! $bulkSms->isConfigured()) {
+            LogHelper::saveLog('checkout_otp sms provider missing', 'BULKSMS_API_KEY / sender_id not configured');
+
+            return $this->errorResponse('SMS provider is not configured.');
+        }
+
+        // One recipient only (OTP); reject comma-lists to limit abuse of platform credits.
+        if (str_contains($phone, ',')) {
+            return $this->errorResponse('Checkout OTP supports a single phone number.');
+        }
+
+        $phone = preg_replace('/\D+/', '', $phone) ?? '';
+        if (strlen($phone) === 13 && str_starts_with($phone, '8801')) {
+            $phone = '0'.substr($phone, 2);
+        }
+        if (! preg_match('/^01[3-9]\d{8}$/', $phone)) {
+            return $this->errorResponse('Invalid Bangladesh phone number for checkout OTP.');
+        }
+
+        $message = trim($message);
+        if ($message === '' || mb_strlen($message) > 160) {
+            return $this->errorResponse('Checkout OTP message must be 1–160 characters.');
+        }
+        // Must look like a short OTP notice — block free-form marketing on platform credits.
+        if (! preg_match('/\bOTP\b/i', $message) || ! preg_match('/\b\d{4,8}\b/', $message)) {
+            return $this->errorResponse('Checkout OTP content must include OTP and a numeric code.');
+        }
+
+        $merchantUserId = (int) Auth::id();
+        $rateError = $this->enforceCheckoutOtpHubRateLimits($merchantUserId, $phone);
+        if ($rateError !== null) {
+            return $rateError;
+        }
+
+        $result = $bulkSms->send($phone, $message);
+
+        if (! ($result['ok'] ?? false)) {
+            LogHelper::saveLog(
+                'checkout_otp sms failed',
+                'merchant_user_id='.$merchantUserId
+                .'; phone='.$phone
+                .'; code='.($result['response_code'] ?? '')
+                .'; message='.($result['message'] ?? '')
+            );
+
+            return $this->errorResponse($result['message'] ?? 'Failed to send checkout OTP SMS.');
+        }
+
+        $this->recordCheckoutOtpHubSend($merchantUserId, $phone);
+
+        $smsRate = 0.40;
+        $smsCount = 1;
+        try {
+            $smsCount = max(1, (int) $this->getTotalSmsCount($message));
+        } catch (\Throwable $th) {
+            // keep 1
+        }
+        $platformCost = round($smsCount * $smsRate, 2);
+
+        try {
+            // Store redacted body in history (never persist the raw OTP digits in admin DB if avoidable).
+            $redactedText = preg_replace('/\b\d{4,8}\b/', '****', $message) ?: 'Checkout OTP';
+
+            SmsBalance::create([
+                'user_id' => $merchantUserId,
+                'type' => 'out',
+                // amount 0 = do not debit merchant wallet; cost lives in sms_rate * sms_count + note
+                'amount' => 0,
+                'sms_rate' => $smsRate,
+                'phone' => $phone,
+                'sms_text' => $redactedText,
+                'sms_count' => $smsCount,
+                'message_id' => $result['message_id'] ?? null,
+                'note' => 'checkout_otp|platform_cost='.$platformCost,
+                'domain' => $this->getTokenDomain(),
+                'created_by' => $merchantUserId,
+            ]);
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('checkout_otp history log failed', $th->getMessage());
+        }
+
+        $payload = new stdClass;
+        $payload->response_code = $result['response_code'] ?? 202;
+        $payload->success_message = $result['message'] ?? 'SMS Submitted Successfully';
+        $payload->purpose = 'checkout_otp';
+        $payload->platform_cost = $platformCost;
+        $payload->sms_count = $smsCount;
+
+        return $this->successResponse($payload, 'Sms sent successfully');
+    }
+
+    /**
+     * @return \Illuminate\Http\JsonResponse|null
+     */
+    private function enforceCheckoutOtpHubRateLimits(int $merchantUserId, string $phone)
+    {
+        $phoneMax = (int) config('services.bulksms.checkout_otp_max_per_phone_hour', 8);
+        $merchantMax = (int) config('services.bulksms.checkout_otp_max_per_merchant_hour', 120);
+        $phoneMax = max(1, $phoneMax);
+        $merchantMax = max(1, $merchantMax);
+
+        $phoneKey = 'checkout_otp_rate_phone_'.$merchantUserId.'_'.md5($phone);
+        $merchantKey = 'checkout_otp_rate_merchant_'.$merchantUserId;
+        $now = time();
+
+        $phoneHits = $this->checkoutOtpRecentHits(cache()->get($phoneKey), $now);
+        if (count($phoneHits) >= $phoneMax) {
+            LogHelper::saveLog('checkout_otp phone rate limited', 'user='.$merchantUserId.' phone='.$phone);
+
+            return $this->errorResponse('Checkout OTP rate limit reached for this phone.');
+        }
+
+        $merchantHits = $this->checkoutOtpRecentHits(cache()->get($merchantKey), $now);
+        if (count($merchantHits) >= $merchantMax) {
+            LogHelper::saveLog('checkout_otp merchant rate limited', 'user='.$merchantUserId);
+
+            return $this->errorResponse('Checkout OTP rate limit reached for this store.');
+        }
+
+        return null;
+    }
+
+    private function recordCheckoutOtpHubSend(int $merchantUserId, string $phone): void
+    {
+        $now = time();
+        $phoneKey = 'checkout_otp_rate_phone_'.$merchantUserId.'_'.md5($phone);
+        $merchantKey = 'checkout_otp_rate_merchant_'.$merchantUserId;
+
+        $phoneHits = $this->checkoutOtpRecentHits(cache()->get($phoneKey), $now);
+        $phoneHits[] = $now;
+        cache()->put($phoneKey, $phoneHits, 3600);
+
+        $merchantHits = $this->checkoutOtpRecentHits(cache()->get($merchantKey), $now);
+        $merchantHits[] = $now;
+        cache()->put($merchantKey, $merchantHits, 3600);
+    }
+
+    /**
+     * @param  mixed  $raw
+     * @return list<int>
+     */
+    private function checkoutOtpRecentHits($raw, int $now): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return array_values(array_filter($raw, static fn ($ts) => ($now - (int) $ts) < 3600));
+    }
+
     public function smsAdminRecharge(Request $request, $userId)
     {
         $request->validate([
@@ -453,7 +626,11 @@ class SmsController extends Controller
 
         $query = SmsBalance::query()
             ->where('user_id', $userId)
-            ->where('type', 'out');
+            ->where('type', 'out')
+            ->where(function ($q) {
+                $q->whereNull('note')
+                    ->orWhere('note', 'not like', 'checkout_otp%');
+            });
 
         if ($request->has('start_date')) {
             $query->whereDate('created_at', '>=', $request->start_date);

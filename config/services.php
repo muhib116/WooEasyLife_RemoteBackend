@@ -34,6 +34,8 @@ return [
     'bulksms' => [
         'api_key' => env('BULKSMS_API_KEY'),
         'sender_id' => env('BULKSMS_SENDER_ID', '8809617619992'),
+        'checkout_otp_max_per_phone_hour' => (int) env('SMS_CHECKOUT_OTP_MAX_PER_PHONE_HOUR', 8),
+        'checkout_otp_max_per_merchant_hour' => (int) env('SMS_CHECKOUT_OTP_MAX_PER_MERCHANT_HOUR', 120),
     ],
 
     'plugin_upload' => [

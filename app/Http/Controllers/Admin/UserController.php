@@ -354,6 +354,8 @@ class UserController extends Controller
             ->values()
             ->all();
 
+        $websites = $this->attachCheckoutOtpSmsToWebsites((int) $userId, $websites);
+
         return Inertia::render('Users/Websites/Index', [
             'user' => $user,
             'websites' => $websites,
@@ -391,6 +393,10 @@ class UserController extends Controller
         $recharge = SmsRecharge::where('user_id', $userId)->orderBy('id', 'desc')->get();
         $sms_history = SmsBalance::where('user_id', $userId)
             ->where('type', 'out')
+            ->where(function ($query) {
+                $query->whereNull('note')
+                    ->orWhere('note', 'not like', 'checkout_otp%');
+            })
             ->orderBy('id', 'desc')
             ->get();
         $user_packages = UserPackage::where('user_id', $userId)
@@ -831,5 +837,65 @@ class UserController extends Controller
                 'step' => 'complete',
             ])
             ->with('license_token', $result['plain_text_token']);
+    }
+
+    /**
+     * Attach per-website checkout OTP SMS usage (platform-paid) for Merchant → Websites → OTP SMS.
+     *
+     * @param  array<int, array<string, mixed>>  $websites
+     * @return array<int, array<string, mixed>>
+     */
+    private function attachCheckoutOtpSmsToWebsites(int $userId, array $websites): array
+    {
+        $domainNormalizer = app(DomainNormalizer::class);
+
+        $rows = SmsBalance::query()
+            ->where('user_id', $userId)
+            ->where('type', 'out')
+            ->where('note', 'like', 'checkout_otp%')
+            ->orderByDesc('id')
+            ->limit(500)
+            ->get(['id', 'phone', 'sms_count', 'sms_rate', 'note', 'message_id', 'domain', 'created_at']);
+
+        return array_map(function (array $website) use ($rows, $domainNormalizer) {
+            $domain = (string) ($website['domain'] ?? '');
+            $matched = $rows
+                ->filter(fn (SmsBalance $row) => $domainNormalizer->matches((string) $row->domain, $domain))
+                ->values();
+
+            $totalCount = (int) $matched->sum(fn (SmsBalance $row) => (int) ($row->sms_count ?: 1));
+            $totalCost = round($matched->sum(fn (SmsBalance $row) => $this->checkoutOtpPlatformCostFromRow($row)), 2);
+
+            $website['otp_sms'] = [
+                'total_count' => $totalCount,
+                'total_platform_cost' => $totalCost,
+                'recent' => $matched->take(15)->map(function (SmsBalance $row) {
+                    return [
+                        'id' => $row->id,
+                        'phone' => $row->phone,
+                        'sms_count' => (int) ($row->sms_count ?: 1),
+                        'sms_rate' => (float) ($row->sms_rate ?: 0.4),
+                        'platform_cost' => $this->checkoutOtpPlatformCostFromRow($row),
+                        'message_id' => $row->message_id,
+                        'created_at' => optional($row->created_at)?->toIso8601String(),
+                    ];
+                })->values()->all(),
+            ];
+
+            return $website;
+        }, $websites);
+    }
+
+    private function checkoutOtpPlatformCostFromRow(SmsBalance $row): float
+    {
+        $note = (string) ($row->note ?? '');
+        if (preg_match('/platform_cost=([0-9.]+)/', $note, $matches)) {
+            return round((float) $matches[1], 2);
+        }
+
+        $count = (int) ($row->sms_count ?: 1);
+        $rate = (float) ($row->sms_rate ?: 0.4);
+
+        return round($count * $rate, 2);
     }
 }

@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Http;
 class BulkSmsService
 {
     /**
-     * @return array{ok: bool, response_code: int|null, message: string|null, raw: string|null}
-     */
-    public function send(string $number, string $message): array
-    {
+ * @return array{ok: bool, response_code: int|null, message_id: mixed, message: string|null, raw: string|null}
+ */
+public function send(string $number, string $message): array
+{
         $apiKey = config('services.bulksms.api_key');
         $senderId = config('services.bulksms.sender_id');
 
@@ -19,6 +19,7 @@ class BulkSmsService
             return [
                 'ok' => false,
                 'response_code' => null,
+                'message_id' => null,
                 'message' => 'SMS provider is not configured.',
                 'raw' => null,
             ];
@@ -48,6 +49,7 @@ class BulkSmsService
                 return [
                     'ok' => false,
                     'response_code' => null,
+                    'message_id' => null,
                     'message' => 'Invalid SMS provider response.',
                     'raw' => $raw,
                 ];
@@ -68,6 +70,7 @@ class BulkSmsService
             return [
                 'ok' => $ok,
                 'response_code' => $code,
+                'message_id' => $messageId,
                 'message' => $ok
                     ? ($success !== '' ? $success : 'SMS Submitted Successfully')
                     : ($error !== '' ? $error : 'SMS send failed.'),
@@ -79,6 +82,7 @@ class BulkSmsService
             return [
                 'ok' => false,
                 'response_code' => null,
+                'message_id' => null,
                 'message' => $th->getMessage(),
                 'raw' => null,
             ];
