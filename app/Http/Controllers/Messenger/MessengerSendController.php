@@ -466,9 +466,10 @@ class MessengerSendController extends Controller
 
         $pageId = trim((string) $request->input('page_id', ''));
         $postId = trim((string) $request->input('post_id', ''));
+        $permalink = trim((string) $request->input('permalink', ''));
 
-        if ($postId === '') {
-            return $this->errorResponse('post_id is required.', 422);
+        if ($postId === '' && $permalink === '') {
+            return $this->errorResponse('post_id or permalink is required.', 422);
         }
 
         $connection = $resolver->resolve($accessToken, $pageId);
@@ -476,7 +477,7 @@ class MessengerSendController extends Controller
             return $this->errorResponse('No connected Facebook Page found for this license.', 404);
         }
 
-        $result = $oauth->fetchPostMeta($connection, $postId);
+        $result = $oauth->fetchPostMeta($connection, $postId !== '' ? $postId : $permalink, $permalink !== '' ? $permalink : null);
         if (empty($result['ok'])) {
             return $this->errorResponse(
                 (string) ($result['error'] ?? 'Failed to load post.'),

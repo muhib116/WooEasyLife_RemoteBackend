@@ -948,45 +948,219 @@ class MessengerPageOAuthService
     }
 
     /**
-     * Fetch Page post preview fields for Comments inbox context.
+     * Fetch Page post preview fields for Comments / Messenger inbox context.
+     *
+     * Supports classic `{page}_{post}` ids, opaque `pfbid…` story ids, and permalink URLs
+     * (Graph `/?id={url}&fields=og_object…` fallback when node fields fail).
      *
      * @return array{ok:bool, post_id?:string, message?:string, story?:string, permalink?:string, picture_url?:string, created_time?:string, error?:string, http_status?:int}
      */
-    public function fetchPostMeta(MessengerPageConnection $connection, string $postId): array
+    public function fetchPostMeta(MessengerPageConnection $connection, string $postId, ?string $permalink = null): array
     {
         $postId = trim($postId);
+        $permalink = trim((string) $permalink);
         $pageToken = (string) $connection->page_access_token;
 
-        if ($postId === '' || $pageToken === '') {
+        if (($postId === '' && $permalink === '') || $pageToken === '') {
             return ['ok' => false, 'error' => 'Missing post id or page token.'];
         }
 
-        $url = 'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($postId);
-        $response = Http::timeout(20)->get($url, [
-            'fields' => 'id,message,story,permalink_url,full_picture,picture,created_time,attachments{media,title,description,type,url}',
-            'access_token' => $pageToken,
-        ]);
+        $nodeFields = 'id,message,story,permalink_url,full_picture,picture,created_time,attachments{media,title,description,type,url,media_type,target}';
+        $candidates = [];
+        if ($postId !== '') {
+            $candidates[] = $postId;
+            // Numeric page_id + pfbid / story sometimes resolves as page_post composite.
+            $pageId = trim((string) $connection->page_id);
+            if ($pageId !== '' && ! str_contains($postId, '_') && ! str_starts_with($postId, 'http')) {
+                $candidates[] = $pageId . '_' . $postId;
+            }
+        }
+        if ($permalink !== '') {
+            $candidates[] = $permalink;
+        }
 
-        if (! $response->successful()) {
-            $error = (string) (
+        $lastError = 'Facebook post lookup failed.';
+        $lastStatus = 422;
+
+        // Prefer Page feed match for opaque pfbid (Graph URL crawl is blocked for facebook.com).
+        $needle = '';
+        if (preg_match('#pfbid[A-Za-z0-9]+#', $postId . ' ' . $permalink, $m)) {
+            $needle = $m[0];
+        } elseif ($permalink !== '' && preg_match('#[?&]story_fbid=([0-9]+)#', $permalink, $m)) {
+            $needle = $m[1];
+        }
+        if ($needle !== '') {
+            $feed = $this->findPostMetaInPageFeed($connection, $needle, $permalink);
+            if (! empty($feed['ok'])) {
+                return $feed;
+            }
+            if (! empty($feed['error'])) {
+                $lastError = (string) $feed['error'];
+                $lastStatus = (int) ($feed['http_status'] ?? $lastStatus);
+            }
+        }
+
+        foreach (array_values(array_unique($candidates)) as $candidate) {
+            $isUrl = (bool) preg_match('#^https?://#i', $candidate);
+            $response = Http::timeout(20)->get(
+                'https://graph.facebook.com/' . $this->graphVersion() . '/' . ($isUrl ? '' : rawurlencode($candidate)),
+                array_filter([
+                    'id' => $isUrl ? $candidate : null,
+                    'fields' => $nodeFields,
+                    'access_token' => $pageToken,
+                ], static fn ($v) => $v !== null && $v !== '')
+            );
+
+            if ($response->successful()) {
+                $parsed = $this->parsePostMetaGraphResponse($response->json(), $candidate, $permalink);
+
+                return $parsed + ['http_status' => $response->status()];
+            }
+
+            $lastError = (string) (
                 $response->json('error.message')
                 ?: $response->json('error.error_user_msg')
                 ?: ('Facebook post lookup failed (HTTP ' . $response->status() . ').')
             );
+            $lastStatus = (int) $response->status();
 
+            // URL / pfbid nodes often reject `message` — try og_object (non-FB hosts only).
+            $ogId = $isUrl ? $candidate : ($permalink !== '' ? $permalink : $candidate);
+            $isFacebookHost = (bool) preg_match('#facebook\.com|fb\.com|fb\.watch#i', (string) $ogId);
+            if (($isUrl || str_starts_with((string) $candidate, 'pfbid')) && ! $isFacebookHost) {
+                $og = Http::timeout(20)->get('https://graph.facebook.com/' . $this->graphVersion() . '/', [
+                    'id' => $isUrl ? $candidate : ($permalink !== '' ? $permalink : $candidate),
+                    'fields' => 'id,og_object{id,title,description,image}',
+                    'access_token' => $pageToken,
+                ]);
+                if ($og->successful()) {
+                    $json = $og->json();
+                    $ogObject = is_array($json['og_object'] ?? null) ? $json['og_object'] : [];
+                    $picture = '';
+                    $image = $ogObject['image'] ?? null;
+                    if (is_array($image)) {
+                        if (isset($image['url'])) {
+                            $picture = trim((string) $image['url']);
+                        } elseif (isset($image[0]) && is_array($image[0])) {
+                            $picture = trim((string) ($image[0]['url'] ?? ''));
+                        }
+                    } elseif (is_string($image)) {
+                        $picture = trim($image);
+                    }
+                    $title = trim((string) ($ogObject['title'] ?? ''));
+                    $desc = trim((string) ($ogObject['description'] ?? ''));
+                    if ($picture !== '' || $title !== '' || $desc !== '') {
+                        return [
+                            'ok' => true,
+                            'post_id' => trim((string) ($json['id'] ?? $ogObject['id'] ?? $postId)),
+                            'message' => $desc,
+                            'story' => $title,
+                            'permalink' => $permalink !== '' ? $permalink : (str_starts_with($candidate, 'http') ? $candidate : ''),
+                            'picture_url' => $picture,
+                            'created_time' => '',
+                            'http_status' => $og->status(),
+                        ];
+                    }
+                } else {
+                    $lastError = (string) (
+                        $og->json('error.message')
+                        ?: $lastError
+                    );
+                    $lastStatus = (int) $og->status();
+                }
+            }
+        }
+
+        return [
+            'ok' => false,
+            'error' => $lastError,
+            'http_status' => $lastStatus,
+        ];
+    }
+
+    /**
+     * Match a pfbid / story id against recent Page feed posts (permalink contains needle).
+     *
+     * @return array{ok:bool, post_id?:string, message?:string, story?:string, permalink?:string, picture_url?:string, created_time?:string, error?:string, http_status?:int}
+     */
+    private function findPostMetaInPageFeed(MessengerPageConnection $connection, string $needle, string $permalinkFallback = ''): array
+    {
+        $pageId = trim((string) $connection->page_id);
+        $pageToken = (string) $connection->page_access_token;
+        if ($pageId === '' || $pageToken === '' || $needle === '') {
+            return ['ok' => false, 'error' => 'Missing page feed lookup inputs.'];
+        }
+
+        $response = Http::timeout(25)->get(
+            'https://graph.facebook.com/' . $this->graphVersion() . '/' . rawurlencode($pageId) . '/feed',
+            [
+                'fields' => 'id,message,story,permalink_url,full_picture,picture,created_time,attachments{media,title,description,type,url}',
+                'limit' => 40,
+                'access_token' => $pageToken,
+            ]
+        );
+
+        if (! $response->successful()) {
             return [
                 'ok' => false,
-                'error' => $error,
+                'error' => (string) (
+                    $response->json('error.message')
+                    ?: ('Page feed lookup failed (HTTP ' . $response->status() . ').')
+                ),
                 'http_status' => $response->status(),
             ];
         }
 
-        $picture = trim((string) ($response->json('full_picture') ?? ''));
+        $data = $response->json('data');
+        if (! is_array($data)) {
+            return ['ok' => false, 'error' => 'Page feed returned no posts.', 'http_status' => $response->status()];
+        }
+
+        foreach ($data as $post) {
+            if (! is_array($post)) {
+                continue;
+            }
+            $plink = (string) ($post['permalink_url'] ?? '');
+            $pid = (string) ($post['id'] ?? '');
+            if ($plink === '' && $pid === '') {
+                continue;
+            }
+            if (
+                ($plink !== '' && str_contains($plink, $needle))
+                || ($pid !== '' && str_contains($pid, $needle))
+            ) {
+                $parsed = $this->parsePostMetaGraphResponse($post, $pid, $permalinkFallback !== '' ? $permalinkFallback : $plink);
+                $parsed['http_status'] = $response->status();
+
+                return $parsed;
+            }
+        }
+
+        return [
+            'ok' => false,
+            'error' => 'Post not found on this Page feed (pfbid may belong to another Page).',
+            'http_status' => $response->status(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $json
+     * @return array{ok:bool, post_id:string, message:string, story:string, permalink:string, picture_url:string, created_time:string}
+     */
+    private function parsePostMetaGraphResponse($json, string $fallbackId, string $permalinkFallback = ''): array
+    {
+        if (! is_array($json)) {
+            $json = [];
+        }
+
+        $attTitle = '';
+        $attDesc = '';
+        $picture = trim((string) ($json['full_picture'] ?? ''));
         if ($picture === '') {
-            $picture = trim((string) ($response->json('picture') ?? ''));
+            $picture = trim((string) ($json['picture'] ?? ''));
         }
         if ($picture === '') {
-            $attachments = $response->json('attachments.data');
+            $attachments = $json['attachments']['data'] ?? null;
             if (is_array($attachments) && isset($attachments[0]) && is_array($attachments[0])) {
                 $media = $attachments[0]['media']['image']['src']
                     ?? $attachments[0]['media']['source']
@@ -994,18 +1168,28 @@ class MessengerPageOAuthService
                 if (is_string($media) && trim($media) !== '') {
                     $picture = trim($media);
                 }
+                $attTitle = trim((string) ($attachments[0]['title'] ?? ''));
+                $attDesc = trim((string) ($attachments[0]['description'] ?? ''));
             }
+        }
+
+        $message = trim((string) ($json['message'] ?? ''));
+        $story = trim((string) ($json['story'] ?? ''));
+        if ($message === '' && $attDesc !== '') {
+            $message = $attDesc;
+        }
+        if ($story === '' && $attTitle !== '') {
+            $story = $attTitle;
         }
 
         return [
             'ok' => true,
-            'post_id' => trim((string) ($response->json('id') ?? $postId)),
-            'message' => trim((string) ($response->json('message') ?? '')),
-            'story' => trim((string) ($response->json('story') ?? '')),
-            'permalink' => trim((string) ($response->json('permalink_url') ?? '')),
+            'post_id' => trim((string) ($json['id'] ?? $fallbackId)),
+            'message' => $message,
+            'story' => $story,
+            'permalink' => trim((string) ($json['permalink_url'] ?? $permalinkFallback)),
             'picture_url' => $picture,
-            'created_time' => trim((string) ($response->json('created_time') ?? '')),
-            'http_status' => $response->status(),
+            'created_time' => trim((string) ($json['created_time'] ?? '')),
         ];
     }
 
