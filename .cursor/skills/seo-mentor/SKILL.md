@@ -16,7 +16,7 @@ description: >
 
 # WooEasyLife SEO Mentor Skill
 
-**Last reviewed:** 2026-07-30
+**Last reviewed:** 2026-08-08
 **Rule (daily plan format):** `.cursor/rules/seo-mentor.mdc`  
 **Brand + creatives:** `.cursor/skills/wooeasylife-brand/SKILL.md`  
 **Features (claims only if Shipped):** `.cursor/skills/wooeasylife-brand/FEATURES.md`  
@@ -48,13 +48,14 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 
 ## Current state (keep honest)
 
-| Fact | Status (2026-07-30) |
+| Fact | Status (2026-08-08) |
 |------|---------------------|
 | Money URL | `/bd-fraud-checker` live (200) |
 | FAQ hub | `/faq` **live** + 8 inventory question URLs |
-| Inventory | live money/tool/pillar + FAQ hub · 8 live FAQ · `/steadfast-return-hub` + `/woocommerce-facebook-messenger` live · planned courier/messenger FAQs+blogs · remaining planned_commercial |
-| Product docs | Plugin **v1.5.4** · App v1.1.6 · `FEATURES.md` last analyzed **2026-07-27** (Courier hub + Messenger) |
-| Authority campaign | **Active:** SteadFast → `/steadfast-fraud-check`. Steps **1–3 + 5–9** done. **Step 4 YouTube = skipped for now** (pillar `#video` slot stays empty until `video_youtube_id` is set). Run cluster lock + Sunday Step 9; **Step 10** only after SteadFast wins. |
+| Inventory | live money/tool/pillar + FAQ hub · checkout protection blog **live**: `/blog/checkout-security-update-otp-bd-area` · planned courier/messenger FAQs+blogs · remaining planned_commercial |
+| Product docs | Plugin **v1.5.4+** · App v1.1.6 · `FEATURES.md` last analyzed **2026-08-08** (checkout OTP gate, BD area, soft-pass, throttle) |
+| Landing | Home fraud showcase + `/fake-order-protection` pillars updated for OTP/BD area/throttle honesty |
+| Authority campaign | **Active:** SteadFast → `/steadfast-fraud-check`. Steps **1–3 + 5–9** done. **Step 4 YouTube = skipped for now**. Run cluster lock + Sunday Step 9; **Step 10** only after SteadFast wins. |
 
 Update this table when `/faq` ships, major gaps close, versions bump, or the active authority cluster changes.
 

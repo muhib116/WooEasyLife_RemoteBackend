@@ -601,6 +601,23 @@ return [
         [
             'cluster' => 'checkout_protection',
             'type' => 'planned_blog',
+            'status' => 'live',
+            'path' => '/blog/checkout-security-update-otp-bd-area',
+            'slug' => 'checkout-security-update-otp-bd-area',
+            'primary' => 'woocommerce checkout security update bangladesh',
+            'secondary' => [
+                'checkout otp soft pass',
+                'bd area fields checkout',
+                'checkout attempt throttle',
+                'duplicate order otp',
+            ],
+            'cta' => '/fake-order-protection',
+            'article_type' => 'howto',
+            'notes' => 'Live markdown 2026-08-08. Soft-links money page; covers OTP gate, BD area, throttle, soft-pass honesty (default OFF).',
+        ],
+        [
+            'cluster' => 'checkout_protection',
+            'type' => 'planned_blog',
             'status' => 'planned',
             'path' => '/blog/cod-otp-kokhon-chalabo',
             'slug' => 'cod-otp-kokhon-chalabo',

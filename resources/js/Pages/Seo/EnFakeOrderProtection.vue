@@ -29,23 +29,23 @@ const pillars = [
         body: 'Before confirming, check Pathao, Steadfast, and RedX success rate and return history by mobile number.',
     },
     {
-        title: 'Checkout OTP',
-        body: 'Verify the phone with OTP — fake or wrong numbers get blocked earlier. Keep form validation on too.',
+        title: 'Checkout OTP + BD area',
+        body: 'Phone OTP (server gate; platform-billed OTP SMS) plus Division→District→Upazila→Union picker — fewer fake numbers and vague addresses.',
     },
     {
-        title: 'Duplicates & blacklists',
-        body: 'Stop the same order from repeating. Block risky phones, emails, IPs, or devices.',
+        title: 'Duplicates, limits & throttle',
+        body: 'Same-cart block (phone/email/device), daily limits, optional attempt throttle. OTP soft-pass stays default OFF.',
     },
     {
-        title: 'Return loss & Ads ROAS',
-        body: 'Fewer fake parcels cut return fees; fewer fake Pixel purchases keep ad optimization cleaner.',
+        title: 'Blacklists & Ads ROAS',
+        body: 'Block risky phones/emails/devices. Fewer fake parcels cut return fees and fake Pixel purchases.',
     },
 ];
 
 const steps = [
     'On new orders, check the mobile number with BD Fraud Checker.',
     'If risk looks high, call or hold; if low, continue.',
-    'Keep checkout OTP, duplicate blocks, and blacklists on so the same pattern does not return.',
+    'Keep checkout OTP, BD area, duplicate blocks, and blacklists on; enable throttle only if you see hammering.',
     'Confirm safe orders and send them via courier auto-entry — focus staff on packing and follow-up.',
 ];
 

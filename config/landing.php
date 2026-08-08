@@ -597,7 +597,7 @@ return [
             'headline' => 'ফেক অর্ডারের জন্য স্মার্ট মাল্টি-লেয়ার প্রোটেকশন',
             'teaser' => 'কুরিয়ার রেকর্ড + নম্বর যাচাই + অটো ব্লক',
             'pain' => 'ফেক অর্ডার একবার পাঠিয়ে দিলে রিটার্ন চার্জ, প্যাকেজিং আর সময় — সব আপনার পকেট থেকে যায়। অনেক ব্যবসায়ী মাসে লাখ টাকারও বেশি লস করেন।',
-            'solution' => 'অর্ডার কনফার্মের আগে Courier History চেক করুন। Checkout-এ নম্বর ভেরিফাই করুন, ডুপ্লিকেট অর্ডার আটকান, আর সমস্যাযুক্ত নম্বর ব্লক করুন।',
+            'solution' => 'অর্ডার কনফার্মের আগে Courier History চেক করুন। Checkout-এ ফোন OTP, BD এরিয়া পিকার, ডুপ্লিকেট অর্ডার ব্লক, দৈনিক লিমিট ও (প্রয়োজনে) চেকআউট থ্রোটল চালু করুন — সমস্যাযুক্ত নম্বর ব্লক রাখুন।',
             'benefit' => 'ঝুঁকিপূর্ণ অর্ডার আগেই আটকে যায় — রিটার্ন কমে, সফল ডেলিভারি বাড়ে, মাসে হাজার হাজার টাকা বাঁচে।',
             'profit' => [
                 'monthly' => '৳৪৫,০০০+',
@@ -606,10 +606,11 @@ return [
             ],
             'highlights' => [
                 'কুরিয়ার ডেলিভারি হার দেখে সিদ্ধান্ত',
-                'চেকআউটে নম্বর OTP যাচাই',
-                'একই অর্ডার বারবার আসা বন্ধ',
+                'চেকআউটে নম্বর OTP যাচাই (প্ল্যাটফর্ম OTP SMS)',
+                'BD ডিভিশন→জেলা→উপজেলা→ইউনিয়ন পিকার',
+                'একই কার্ট ডুপ্লিকেট ব্লক (ফোন/ইমেইল/ডিভাইস)',
+                'ঐচ্ছিক চেকআউট থ্রোটল ও OTP soft-pass',
                 'সমস্যাযুক্ত নম্বর/ডিভাইস ব্লক',
-                'শুধু বাংলাদেশ থেকে অর্ডার নেওয়ার অপশন',
             ],
             'read_more' => [
                 [
@@ -618,7 +619,7 @@ return [
                 ],
                 [
                     'title' => 'কী কী সুরক্ষা পাবেন?',
-                    'body' => 'চেকআউটে: ফোন OTP, নাম-ঠিকানা-নম্বর যাচাই, একই অর্ডার ব্লক, দৈনিক অর্ডার সীমা। সুরক্ষায়: নম্বর/ইমেইল/ডিভাইস ব্লক, শুধু বাংলাদেশি অর্ডার, কাস্টম ব্ল্যাকলিস্ট। প্রতিটি অপশন এক ক্লিকে চালু/বন্ধ করা যায়।',
+                    'body' => 'চেকআউটে: ফোন OTP (সার্ভার-সাইড গেট), BD এরিয়া ফিল্ড, নাম-ঠিকানা যাচাই, একই কার্ট ডুপ্লিকেট ব্লক, দৈনিক অর্ডার সীমা, ঐচ্ছিক অ্যাটেম্পট থ্রোটল। সুরক্ষায়: নম্বর/ইমেইল/ডিভাইস ব্লক, শুধু বাংলাদেশি অর্ডার, কাস্টম ব্ল্যাকলিস্ট। প্রতিটি অপশন Security → Checkout থেকে এক ক্লিকে চালু/বন্ধ।',
                 ],
                 [
                     'title' => 'ফ্রড চেক কীভাবে কাজ করে?',
@@ -626,7 +627,7 @@ return [
                 ],
             ],
             'accent' => 'emerald',
-            'feature_keys' => ['fraud_customer_checker', 'checkout_otp_validation', 'checkout_form_validation', 'duplicate_order_validation', 'daily_order_limit', 'ip_block', 'phone_email_block', 'device_block', 'bd_ip_restriction', 'store_api_checkout_protection', 'customer_blacklist'],
+            'feature_keys' => ['fraud_customer_checker', 'checkout_otp_validation', 'checkout_bd_area_fields', 'checkout_form_validation', 'duplicate_order_validation', 'duplicate_order_otp_soft_pass', 'checkout_attempt_throttle', 'daily_order_limit', 'ip_block', 'phone_email_block', 'device_block', 'bd_ip_restriction', 'store_api_checkout_protection', 'customer_blacklist'],
         ],
         [
             'id' => 'pixel',
@@ -913,8 +914,11 @@ return [
             'feature_keys' => [
                 'fraud_customer_checker',
                 'checkout_otp_validation',
+                'checkout_bd_area_fields',
                 'checkout_form_validation',
                 'duplicate_order_validation',
+                'duplicate_order_otp_soft_pass',
+                'checkout_attempt_throttle',
                 'daily_order_limit',
                 'ip_block',
                 'phone_email_block',
@@ -954,6 +958,11 @@ return [
         'bulk_sms' => 'message',
         'duplicate_order_validation' => 'clipboard',
         'checkout_form_validation' => 'clipboard',
+        'checkout_otp_validation' => 'shield',
+        'checkout_bd_area_fields' => 'clipboard',
+        'duplicate_order_otp_soft_pass' => 'shield',
+        'checkout_attempt_throttle' => 'shield',
+        'daily_order_limit' => 'clipboard',
         'ai_text_order_create' => 'spark',
         'ai_image_to_order_create' => 'spark',
         'invoice_print' => 'print',
@@ -995,6 +1004,9 @@ return [
         'checkout_form_validation' => 'চেকআউট ফর্ম ভ্যালিডেশন',
         'duplicate_order_validation' => 'ডুপ্লিকেট অর্ডার ব্লক',
         'checkout_otp_validation' => 'চেকআউট ওটিপি ভেরিফিকেশন',
+        'checkout_bd_area_fields' => 'BD এরিয়া ফিল্ড (চেকআউট)',
+        'duplicate_order_otp_soft_pass' => 'ডুপ্লিকেট কার্ট OTP soft-pass',
+        'checkout_attempt_throttle' => 'চেকআউট অ্যাটেম্পট থ্রোটল',
         'ip_block' => 'আইপি ব্লক',
         'phone_email_block' => 'ফোন / ইমেইল ব্লক',
         'device_block' => 'ডিভাইস ব্লক',
@@ -1052,6 +1064,9 @@ return [
         'checkout_form_validation' => 'Checkout',
         'duplicate_order_validation' => 'Orders',
         'checkout_otp_validation' => 'Checkout',
+        'checkout_bd_area_fields' => 'Checkout',
+        'duplicate_order_otp_soft_pass' => 'Checkout',
+        'checkout_attempt_throttle' => 'Checkout',
         'ip_block' => 'Block & restrict',
         'phone_email_block' => 'Block & restrict',
         'device_block' => 'Block & restrict',
@@ -1084,7 +1099,10 @@ return [
         'parcel_note_history' => 'কুরিয়ার পার্সেল নোট ও হিস্ট্রি এক জায়গায় দেখুন ও আপডেট করুন।',
         'customer_sms_for_order' => 'অর্ডার ও ডেলিভারি আপডেট কাস্টমারকে এসএমএসে পাঠান।',
         'duplicate_order_validation' => 'একই কাস্টমারের ডুপ্লিকেট অর্ডার ব্লক করে লস কমান।',
-        'checkout_otp_validation' => 'চেকআউটে ফোন OTP ভেরিফিকেশন — ভুয়া নম্বরের অর্ডার আগেই আটকান।',
+        'checkout_otp_validation' => 'চেকআউটে ফোন OTP ভেরিফিকেশন — ভুয়া নম্বরের অর্ডার আগেই আটকান। OTP SMS প্ল্যাটফর্ম ক্রেডিটে।',
+        'checkout_bd_area_fields' => 'চেকআউটে Division → District → Upazila → Union পিকার — পরিষ্কার BD ঠিকানা, কম কুরিয়ার ফেইল।',
+        'duplicate_order_otp_soft_pass' => 'ডুপ্লিকেট ব্লকের পর একবার OTP দিয়ে কার্ট চালিয়ে যেতে দিন (ডিফল্ট অফ)। দৈনিক লিমিট বাইপাস করে না।',
+        'checkout_attempt_throttle' => 'একই ফোন/ডিভাইস দ্রুত চেকআউট রিট্রাই সীমিত করে বট হ্যামারিং কমায় (ডিফল্ট অফ)।',
         'checkout_form_validation' => 'নাম, ঠিকানা ও ফোন ফরম্যাট যাচাই + রেট লিমিট — জাঙ্ক অর্ডার কমে।',
         'daily_order_limit' => 'প্রতি কাস্টমার/নম্বরে দৈনিক অর্ডার লিমিট — স্প্যাম ও বারবার ফেক অর্ডার বন্ধ।',
         'ip_block' => 'সন্দেহজনক IP থেকে আসা অর্ডার ব্লক করুন।',
@@ -1128,7 +1146,7 @@ return [
         ],
         'duplicate_order_validation' => [
             'summary' => 'একই কাস্টমারের ডুপ্লিকেট অর্ডার আগেই ব্লক করুন।',
-            'detail' => 'আগে অর্ডার দিয়েছেন এমন কাস্টমার আবার অর্ডার দিলে অ্যালার্ট বা ব্লক — অপ্রয়োজনীয় প্যাকেজিং লস কমে।',
+            'detail' => 'একই ফোন, ইমেইল বা ডিভাইস থেকে একই কার্ট ২৪ ঘণ্টার মধ্যে এলে ব্লক — ক্যানসেল/ফেক অর্ডারও গণনায় থাকে। IP দিয়ে মিলানো হয় না।',
         ],
         'customer_delivery_history' => [
             'summary' => 'কাস্টমারের আগের ডেলিভারি রেকর্ড দেখুন।',
@@ -1140,7 +1158,19 @@ return [
         ],
         'checkout_otp_validation' => [
             'summary' => 'চেকআউটে ওটিপি — ফেক অর্ডার কমে।',
-            'detail' => 'অর্ডার করার সময় ফোন নম্বর ভেরিফাই হয় — ভুয়া বা জাঙ্ক অর্ডার আগেই ফিল্টার হয়ে যায়।',
+            'detail' => 'Place order-এর আগে ফোন OTP যাচাই (ক্লাসিক + CartFlows)। সার্ভার-সাইড গেট বাইপাস রোধ করে। OTP SMS WooEasyLife প্ল্যাটফর্ম ক্রেডিটে — মার্চেন্ট SMS ব্যালেন্স কাটে না।',
+        ],
+        'checkout_bd_area_fields' => [
+            'summary' => 'BD এরিয়া পিকার — ঠিকানা পরিষ্কার।',
+            'detail' => 'বিলিং ও শিপিংয়ে Division → District → Upazila → Union। প্রয়োজনে Required টগল। কুরিয়ার এন্ট্রির জন্য স্ট্রাকচার্ড ঠিকানা।',
+        ],
+        'duplicate_order_otp_soft_pass' => [
+            'summary' => 'ডুপ্লিকেটের পর OTP soft-pass (ঐচ্ছিক)।',
+            'detail' => 'ডুপ্লিকেট ব্লকের পর একবার OTP দিয়ে অর্ডার চালিয়ে যেতে দেয়। ডিফল্ট অফ। দৈনিক অর্ডার লিমিট বাইপাস করে না।',
+        ],
+        'checkout_attempt_throttle' => [
+            'summary' => 'চেকআউট থ্রোটল — বট হ্যামারিং কমায়।',
+            'detail' => 'একই ফোন বা ডিভাইসের দ্রুত রিট্রাই সীমিত করে। ডিফল্ট অফ — হ্যামারিং দেখলে চালু করুন।',
         ],
         'pixel_protection' => [
             'summary' => 'WooEasyLife কনফার্ম হওয়া অর্ডারই শুধু Facebook-এ Purchase হিসেবে পাঠায়।',
