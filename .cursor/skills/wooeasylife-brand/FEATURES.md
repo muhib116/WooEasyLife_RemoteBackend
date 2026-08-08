@@ -1,8 +1,8 @@
 # WooEasyLife — Living Feature Inventory
 
-**Last analyzed:** 2026-07-27  
+**Last analyzed:** 2026-08-08  
 **Sources (re-scan when features change):**
-- Plugin: `$WOOEASYLIFE_PLUGIN` — local checkout of `woo-easy-life` (v1.5.4)
+- Plugin: `$WOOEASYLIFE_PLUGIN` — local checkout of `woo-easy-life` (v1.5.4+)
 - App: `$WOOEASYLIFE_APP` — local checkout of Flutter `WooEasyLife` (v1.1.6+)
 - Backend packages: this repo (`WooEasyLife_RemoteBackend`) / WPSaleHub gating keys
 
@@ -13,7 +13,7 @@
 ## Hero claims (safe for ads / social)
 
 1. BD **fraud / courier history check** (phone) before confirm  
-2. **Fake-order protection:** OTP, duplicate block, blacklist (phone/email/IP/device), daily limits, BD-IP option  
+2. **Fake-order protection:** checkout OTP (platform-billed SMS), duplicate same-cart block, optional OTP soft-pass, checkout attempt throttle, BD area picker, blacklist (phone/email/IP/device), daily limits, BD-IP option  
 3. **Courier auto-entry + status sync:** Pathao, Steadfast, RedX (+ webhooks)  
 4. **SteadFast courier hub (newer):** Return Requests (ask-to-return → Decide cancel/resend) + portal Notifications + stuck-parcel scan *(package: `courier_automation`; needs SteadFast portal login)*  
 5. **Facebook Messenger inbox (newer):** Page connect, chat, media/voice, lead labels — inside WP admin  
@@ -35,8 +35,10 @@
 ### Orders
 Enhanced order list · details modal · bulk/quick status · custom COD statuses · manual create · clone (gated) · invoice codes · custom fields → courier/invoice · address completeness + Fix with AI · status history · click-to-call + call log · label/POS sticker print (gated) · repeat-customer signals
 
-### Fraud / protection
-Phone fraud checker (gated) · delivery history on order · customer behavior / fraud score · blacklist CRUD + CSV · daily order limit · duplicate same-cart block · checkout validation · checkout OTP · IP/phone/email/device block · BD-IP-only · Store API parity · Fake Order status
+### Fraud / protection (checkout security — 2026-08 harden)
+Phone fraud checker (gated) · delivery history on order · customer behavior / fraud score · blacklist CRUD + CSV · daily order limit per customer · **duplicate same-cart block** (phone / email / device — not IP; cancelled + fake still count) · checkout form validation · **always-on checkout OTP** (classic + CartFlows; server-side gate; platform-paid OTP SMS, not merchant wallet) · **optional duplicate-cart OTP soft-pass** (default OFF; one-shot after OTP; does not bypass daily limit) · **optional checkout attempt throttle** (phone/device velocity; default OFF) · **BD area fields** on classic/CartFlows checkout (Division → District → Upazila → Union; billing + shipping; optional required) · IP/phone/email/device block · BD-IP-only · Store API parity for fraud checks · Fake Order status · Security → Checkout admin can set **admin phone** inline (same as Integration → Contact)
+
+**Honesty notes for copy:** Soft-pass and throttle ship **default OFF**. Blocks/Store API OTP UI is best-effort — prefer classic/CartFlows when marketing always-on OTP. OTP SMS is billed to WooEasyLife platform credits.
 
 ### Courier (core — Pathao / SteadFast / RedX)
 Send · bulk entry · status refresh · webhooks · inline consignment edit · Pathao AI location enrich · RedX in-app track
