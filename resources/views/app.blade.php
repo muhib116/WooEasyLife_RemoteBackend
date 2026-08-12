@@ -328,6 +328,10 @@
         </script>
         <!-- End Meta Pixel Code -->
     @endif
+
+    @if (! empty($headerScripts))
+        {!! $headerScripts !!}
+    @endif
 </head>
 
 <body class="font-sans antialiased">
@@ -583,6 +587,10 @@
     </div>
 
     @inertia
+
+    @if (! empty($footerScripts))
+        {!! $footerScripts !!}
+    @endif
 </body>
 
 </html>

@@ -26,10 +26,18 @@ class MarketingSettingsController extends Controller
             'meta_pixel_id' => $request->filled('meta_pixel_id')
                 ? $request->string('meta_pixel_id')->trim()->toString()
                 : null,
+            'header_scripts' => $request->filled('header_scripts')
+                ? $request->string('header_scripts')->toString()
+                : null,
+            'footer_scripts' => $request->filled('footer_scripts')
+                ? $request->string('footer_scripts')->toString()
+                : null,
         ]);
 
         $validated = $request->validate([
             'meta_pixel_id' => ['nullable', 'string', 'max:64', 'regex:/^\d+$/'],
+            'header_scripts' => ['nullable', 'string', 'max:50000'],
+            'footer_scripts' => ['nullable', 'string', 'max:50000'],
         ]);
 
         $this->landingSettings->update($validated);

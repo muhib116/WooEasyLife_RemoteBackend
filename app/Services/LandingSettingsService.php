@@ -27,6 +27,10 @@ class LandingSettingsService
 
     public const META_PIXEL_ID_KEY = 'landing.meta_pixel_id';
 
+    public const HEADER_SCRIPTS_KEY = 'landing.header_scripts';
+
+    public const FOOTER_SCRIPTS_KEY = 'landing.footer_scripts';
+
     public const OPENAI_API_KEY_KEY = 'landing.openai_api_key';
 
     public const OPENAI_BLOG_MODEL_KEY = 'landing.openai_blog_model';
@@ -206,6 +210,22 @@ class LandingSettingsService
         return $this->resolve(self::META_PIXEL_ID_KEY, config('landing.meta_pixel_id'));
     }
 
+    /**
+     * Raw HTML injected into &lt;head&gt; (verification metas, head scripts, etc.).
+     */
+    public function headerScripts(): ?string
+    {
+        return $this->resolve(self::HEADER_SCRIPTS_KEY, config('landing.header_scripts'));
+    }
+
+    /**
+     * Raw HTML injected before &lt;/body&gt; (footer tracking snippets, etc.).
+     */
+    public function footerScripts(): ?string
+    {
+        return $this->resolve(self::FOOTER_SCRIPTS_KEY, config('landing.footer_scripts'));
+    }
+
     public function openaiApiKey(): ?string
     {
         return $this->resolve(self::OPENAI_API_KEY_KEY, config('landing.openai_api_key'));
@@ -263,13 +283,24 @@ class LandingSettingsService
     }
 
     /**
-     * @return array{meta_pixel_id: string|null, meta_pixel_id_source: string}
+     * @return array{
+     *     meta_pixel_id: string|null,
+     *     meta_pixel_id_source: string,
+     *     header_scripts: string|null,
+     *     header_scripts_source: string,
+     *     footer_scripts: string|null,
+     *     footer_scripts_source: string
+     * }
      */
     public function marketingTracking(): array
     {
         return [
             'meta_pixel_id' => $this->metaPixelId(),
             'meta_pixel_id_source' => $this->sourceWithConfig(self::META_PIXEL_ID_KEY, 'landing.meta_pixel_id'),
+            'header_scripts' => $this->headerScripts(),
+            'header_scripts_source' => $this->sourceWithConfig(self::HEADER_SCRIPTS_KEY, 'landing.header_scripts'),
+            'footer_scripts' => $this->footerScripts(),
+            'footer_scripts_source' => $this->sourceWithConfig(self::FOOTER_SCRIPTS_KEY, 'landing.footer_scripts'),
         ];
     }
 
@@ -298,6 +329,8 @@ class LandingSettingsService
             'admin_email' => self::ADMIN_EMAIL_KEY,
             'admin_phone' => self::ADMIN_PHONE_KEY,
             'meta_pixel_id' => self::META_PIXEL_ID_KEY,
+            'header_scripts' => self::HEADER_SCRIPTS_KEY,
+            'footer_scripts' => self::FOOTER_SCRIPTS_KEY,
             'openai_api_key' => self::OPENAI_API_KEY_KEY,
             'openai_blog_model' => self::OPENAI_BLOG_MODEL_KEY,
             'openai_blog_planning_model' => self::OPENAI_BLOG_PLANNING_MODEL_KEY,

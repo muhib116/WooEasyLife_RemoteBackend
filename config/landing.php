@@ -31,6 +31,14 @@ return [
 
     'meta_pixel_id' => env('LANDING_META_PIXEL_ID'),
 
+    /*
+    | Optional raw HTML injected into public pages (app.blade.php).
+    | Prefer Marketing Settings in admin; env is only a deploy-time fallback.
+    */
+    'header_scripts' => env('LANDING_HEADER_SCRIPTS'),
+
+    'footer_scripts' => env('LANDING_FOOTER_SCRIPTS'),
+
     'openai_api_key' => env('OPENAI_API_KEY'),
 
     'openai_blog_model' => env('OPENAI_BLOG_MODEL', 'gpt-4o-mini'),

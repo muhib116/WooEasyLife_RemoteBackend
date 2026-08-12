@@ -578,7 +578,7 @@ const allSections: NavSection[] = [
         label: "Marketing",
         items: [
             {
-                title: "Meta Pixel",
+                title: "Tracking & scripts",
                 name: "marketingSettings.index",
                 icon: "PhMetaLogo",
                 permission: "billing.manage",
