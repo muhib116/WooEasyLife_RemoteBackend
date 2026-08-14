@@ -17,28 +17,46 @@ class PathaoFraudChecker
 
     public function check(string $phone): array
     {
+        $ratingFallback = null;
+
         if ($this->hasMerchantCredentials()) {
             $report = $this->checkViaMerchantPortal($phone);
 
-            if ($this->hasDeliveryData($report)) {
+            if (CourierReportFormatter::hasDeliveryCounts($report)) {
                 return $report;
+            }
+
+            if (CourierReportFormatter::isRatingOnly($report)) {
+                $ratingFallback = $report;
             }
         }
 
         if ($this->hasHermesTokenInDatabase()) {
             $report = $this->checkViaHermes($phone);
 
-            if ($this->hasDeliveryData($report)) {
+            if (CourierReportFormatter::hasDeliveryCounts($report)) {
                 return $report;
+            }
+
+            if ($ratingFallback === null && CourierReportFormatter::isRatingOnly($report)) {
+                $ratingFallback = $report;
             }
         }
 
         if ($this->hasHermesIssueTokenCredentials()) {
             $report = $this->checkViaHermesIssueToken($phone);
 
-            if ($this->hasDeliveryData($report)) {
+            if (CourierReportFormatter::hasDeliveryCounts($report)) {
                 return $report;
             }
+
+            if ($ratingFallback === null && CourierReportFormatter::isRatingOnly($report)) {
+                $ratingFallback = $report;
+            }
+        }
+
+        if ($ratingFallback !== null) {
+            return $ratingFallback;
         }
 
         LogHelper::saveLog('Pathao fraud check skipped', 'Pathao credentials are not configured or returned no data.');
@@ -90,14 +108,6 @@ class PathaoFraudChecker
     private function hasMerchantCredentials(): bool
     {
         return $this->credentials->isConfigured('pathao');
-    }
-
-    private function hasDeliveryData(array $report): bool
-    {
-        return ($report['total_order'] ?? 0) > 0
-            || ($report['confirmed'] ?? 0) > 0
-            || ($report['cancel'] ?? 0) > 0
-            || !empty($report['customer_rating']);
     }
 
     private function checkViaHermes(string $phone): array

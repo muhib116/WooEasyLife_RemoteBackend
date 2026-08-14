@@ -32,7 +32,7 @@ locale: bn
 
 ### সপ্তাহ ২ — কম রেট SOP
 
-কম সাকসেসে অন্ধ শিপ বন্ধ। [কম রেট FAQ](/faq/success-rate-kom-hole-ki-korbo) অনুযায়ী কল → ঠিকানা → OTP/অগ্রিম → হোল্ড। OTP: [কখন OTP](/faq/cod-order-otp-kokhon)।
+কম সাকসেসে অন্ধভাবে পার্সেল পাঠানো বন্ধ। [কম রেট FAQ](/faq/success-rate-kom-hole-ki-korbo) অনুযায়ী কল → ঠিকানা → OTP/অগ্রিম → হোল্ড। OTP: [কখন OTP](/faq/cod-order-otp-kokhon)।
 
 ### সপ্তাহ ৩ — প্রোটেকশন + অটো এন্ট্রি
 
@@ -54,7 +54,7 @@ Pending cancel/return [SteadFast Return Hub](/steadfast-return-hub)-এ Decide; 
 
 1. চেক ছাড়া ভলিউম বাড়ানো লস বাড়ায়।  
 2. রেট = সিগন্যাল; গ্যারান্টি নয়।  
-3. প্রি-শিপ চেক ও পোস্ট-বুকিং Return Hub দুটোই লাগে।  
-4. স্টাফ টার্গেট “শিপ সংখ্যা” হলে রিটার্ন বাড়ে—“ডেলিভারযোগ্য কনফার্ম” হওয়া উচিত।
+3. পার্সেল পাঠানোর আগের চেক ও পোস্ট-বুকিং Return Hub দুটোই লাগে।  
+4. স্টাফ টার্গেট “পার্সেল পাঠানোর সংখ্যা” হলে রিটার্ন বাড়ে—“ডেলিভারযোগ্য কনফার্ম” হওয়া উচিত।
 
 সাধারণ ভুল: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)। FAQ: [SteadFast FAQ ইনডেক্স](/blog/steadfast-fraud-check-faq) · [FAQ হাব](/faq)। প্ল্যান: [প্রাইসিং](/pricing)।

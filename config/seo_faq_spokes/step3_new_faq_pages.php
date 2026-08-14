@@ -39,7 +39,7 @@ return [
         ], $steadfastClusterLinks),
         'faqs' => [
             [
-                'q' => 'শুধু কল করে শিপ করলে কী সমস্যা?',
+                'q' => 'শুধু কল করে পার্সেল পাঠালে কী সমস্যা?',
                 'a' => 'কল শুধু মুহূর্তের সম্মতি ধরে; আগের রিটার্ন প্যাটার্ন ধরে না। রাইডার পৌঁছালে ফোন বন্ধ বা রিফিউজ হতে পারে। হিস্টোরি মিলিয়ে নিন: /faq/customer-delivery-history-check।',
             ],
             [
@@ -60,7 +60,7 @@ return [
         'og_type' => 'article',
         'og_image' => '/images/seo/cluster/fraud-layers.jpg',
         'prerender_h1' => 'হিস্টোরি না থাকলে কী করব?',
-        'prerender_lead' => 'খালি হিস্টোরি = অটো-রিজেক্ট নয়, অন্ধ শিপও নয়—স্ট্যান্ডার্ড যাচাই ও ঝুঁকি নীতি।',
+        'prerender_lead' => 'খালি হিস্টোরি = অটো-রিজেক্ট নয়, অন্ধভাবে পার্সেল পাঠানোও নয়—স্ট্যান্ডার্ড যাচাই ও ঝুঁকি নীতি।',
         'page_kind' => 'faq_question',
         'pillar_path' => '/steadfast-fraud-check',
         'hreflang_paths' => [
@@ -254,7 +254,7 @@ return [
             ],
             [
                 'q' => 'আগে রিটার্ন কমাতে কী করব?',
-                'a' => 'প্রি-শিপ চেক: /steadfast-fraud-check · /blog/steadfast-return-komano।',
+                'a' => 'পার্সেল পাঠানোর আগের চেক: /steadfast-fraud-check · /blog/steadfast-return-komano।',
             ],
         ],
     ],

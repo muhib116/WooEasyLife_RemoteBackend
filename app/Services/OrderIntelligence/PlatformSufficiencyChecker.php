@@ -95,6 +95,13 @@ class PlatformSufficiencyChecker
                 continue;
             }
 
+            // Pathao rating-only snapshots hide confirm/cancel — keep trying for counts.
+            if ($courier === 'pathao' && $this->snapshotIsRatingOnly($snapshot)) {
+                $need[] = $courier;
+
+                continue;
+            }
+
             $fetchedAt = $snapshot['fetched_at'] ?? null;
 
             if ($fetchedAt === null || ! $this->isWithinHours((string) $fetchedAt, $maxHours)) {
@@ -218,5 +225,22 @@ class PlatformSufficiencyChecker
     private function isWithinHours(string $timestamp, int $hours): bool
     {
         return Carbon::parse($timestamp)->greaterThanOrEqualTo(now()->subHours($hours));
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function snapshotIsRatingOnly(array $snapshot): bool
+    {
+        if (
+            (int) ($snapshot['total_order'] ?? 0) > 0
+            || (int) ($snapshot['confirmed'] ?? 0) > 0
+            || (int) ($snapshot['cancel'] ?? 0) > 0
+        ) {
+            return false;
+        }
+
+        return filled($snapshot['customer_rating'] ?? null)
+            || ($snapshot['data_type'] ?? '') === 'rating';
     }
 }

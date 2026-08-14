@@ -30,7 +30,7 @@ locale: bn
 
 ## ভুল ৬: বুকিংয়ের পর cancel কিউ পোর্টালে ফেলে রাখা
 
-প্রি-শিপ চেক যথেষ্ট নয়। [SteadFast Return Hub](/steadfast-return-hub) দিয়ে Decide করুন।
+পার্সেল পাঠানোর আগের চেক যথেষ্ট নয়। [SteadFast Return Hub](/steadfast-return-hub) দিয়ে Decide করুন।
 
 ## ভুল ৭: টুলকে গ্যারান্টি ভাবা
 
@@ -40,7 +40,7 @@ locale: bn
 
 অর্ডার বাড়লে ফিল্টার ছাড়া রিটার্নও বাড়ে। প্লেবুক: [রিটার্ন কমানো](/blog/steadfast-return-komano)। লস মাপুন: [ক্যালকুলেটর](/return-loss-calculator)।
 
-## ভুল ৯: স্টাফ টার্গেট শুধু “শিপ করো”
+## ভুল ৯: স্টাফ টার্গেট শুধু “পার্সেল পাঠাও”
 
 টার্গেট হোক কনফার্মড ও ডেলিভারযোগ্য অর্ডার। কেস হিসাব: [কেস স্টাডি](/blog/steadfast-fraud-check-case-study)।
 

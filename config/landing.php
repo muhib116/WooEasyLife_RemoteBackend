@@ -1033,7 +1033,7 @@ return [
         'customer_behavior_track' => 'কাস্টমার বিহেভিয়ার ট্র্যাক',
         'repeat_customer_identifier' => 'রিপিট কাস্টমার শনাক্ত',
         'order_source_identifier' => 'অর্ডারে স্টাফ অ্যাসাইন ও সোর্স',
-        'inline_shipping_change' => 'ইনলাইন শিপিং পরিবর্তন',
+        'inline_shipping_change' => 'ইনলাইন কুরিয়ার পরিবর্তন',
         'order_note_management' => 'অর্ডার নোট ম্যানেজমেন্ট',
         'cod_change' => 'COD পরিবর্তন',
         'ordered_product_management' => 'অর্ডার প্রোডাক্ট ম্যানেজ',
@@ -1170,7 +1170,7 @@ return [
         ],
         'checkout_bd_area_fields' => [
             'summary' => 'BD এরিয়া পিকার — ঠিকানা পরিষ্কার।',
-            'detail' => 'বিলিং ও শিপিংয়ে Division → District → Upazila → Union। প্রয়োজনে Required টগল। কুরিয়ার এন্ট্রির জন্য স্ট্রাকচার্ড ঠিকানা।',
+            'detail' => 'বিলিং ও ডেলিভারি ঠিকানায় Division → District → Upazila → Union। প্রয়োজনে Required টগল। কুরিয়ার এন্ট্রির জন্য স্ট্রাকচার্ড ঠিকানা।',
         ],
         'duplicate_order_otp_soft_pass' => [
             'summary' => 'ডুপ্লিকেটের পর OTP soft-pass (ঐচ্ছিক)।',
@@ -1262,7 +1262,7 @@ return [
         ],
         'ai_driven_customer_scoring' => [
             'summary' => 'এআই কাস্টমার রিস্ক স্কোর।',
-            'detail' => 'কাকে ফোন-কনফার্ম, কাকে সরাসরি শিপ — ডাটা দিয়ে।',
+            'detail' => 'কাকে ফোন-কনফার্ম, কাকে সরাসরি পার্সেল পাঠাবেন — ডাটা দিয়ে।',
         ],
         'common_dashboard' => [
             'summary' => 'সব ওয়েবসাইট এক ড্যাশবোর্ডে।',

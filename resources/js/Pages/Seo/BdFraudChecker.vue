@@ -9,7 +9,7 @@ import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
 import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 
-defineProps({
+const props = defineProps({
     canLogin: { type: Boolean, default: false },
     seo: { type: Object, default: null },
     fraudCheck: { type: Object, default: () => ({}) },
@@ -57,7 +57,7 @@ const guideSections = [
         heading: 'Courier Fraud Checker BD কী এবং কেন লাগে',
         paragraphs: [
             'Free Courier Fraud Checker BD হলো বাংলাদেশি COD ও WooCommerce সেলারদের জন্য ফ্রি টুল — কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার ডেলিভারি হিস্টোরি, সাকসেস রেট ও রিটার্ন রেকর্ড যাচাই করা যায়। অর্ডার কনফার্মের আগেই ফেক বা ঝুঁকিপূর্ণ কাস্টমার চেক করলে পার্সেল রিটার্ন, প্যাকেজিং লস ও অ্যাড বাজেটের অপচয় কমে।',
-            'Facebook পেজ ও ই-কমার্সে অনেক অর্ডার ভুল নম্বর, মজার অর্ডার বা আগে রিটার্ন করা কাস্টমার থেকে আসে। হিস্টোরি না দেখে শিপ করলে রিটার্ন চার্জ বিক্রেতার ঘাড়ে পড়ে। এই পেজে অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করে শুরু করতে পারেন।',
+            'Facebook পেজ ও ই-কমার্সে অনেক অর্ডার ভুল নম্বর, মজার অর্ডার বা আগে রিটার্ন করা কাস্টমার থেকে আসে। হিস্টোরি না দেখে পার্সেল পাঠালে রিটার্ন চার্জ বিক্রেতার ঘাড়ে পড়ে। এই পেজে অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করে শুরু করতে পারেন।',
         ],
     },
     {
@@ -98,35 +98,52 @@ const decisionList = [
     },
     {
         title: 'আটকে রাখুন',
-        body: 'খুব কম সাকসেস রেট, বারবার রিটার্ন, সন্দেহজনক প্যাটার্ন — অগ্রিম ছাড়া শিপ করবেন না।',
+        body: 'খুব কম সাকসেস রেট, বারবার রিটার্ন, সন্দেহজনক প্যাটার্ন — অগ্রিম ছাড়া পার্সেল পাঠাবেন না।',
         tone: 'bad',
     },
 ];
 
 const mistakeList = [
-    'হিস্টোরি না দেখেই সব COD অর্ডার শিপ করা।',
+    'হিস্টোরি না দেখেই সব COD অর্ডার পার্সেল পাঠানো।',
     'শুধু একবার চেক করে মাসের বাকি অর্ডার অচেক রাখা।',
     'খারাপ রেট দেখেও “হয়তো ডেলিভারি হবে” বলে পাঠানো।',
     'ফ্রড চেক আছে বলে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা।',
     'রিপোর্টেড Ads ROAS দেখে বাজেট বাড়ানো, রিটার্ন না মাপা।',
 ];
 
-const relatedLinks = [
+const relatedLinksFallback = [
     { href: '/steadfast-fraud-check', label: 'SteadFast Fraud Check গাইড' },
     { href: '/blog/steadfast-fraud-check-case-study', label: 'SteadFast কেস স্টাডি' },
     { href: '/blog/steadfast-fraud-check-faq', label: 'SteadFast FAQ ইনডেক্স' },
+    { href: '/blog/steadfast-fraud-check-common-mistakes', label: 'SteadFast সাধারণ ভুল' },
     { href: '/faq', label: 'FAQ হাব' },
     { href: '/fake-customer-check', label: 'Fake Customer Check' },
     { href: '/fake-order-protection', label: 'ফেক অর্ডার প্রোটেকশন' },
+    { href: '/courier-auto-entry', label: 'কুরিয়ার অটো এন্ট্রি' },
+    { href: '/steadfast-return-hub', label: 'SteadFast Return Hub' },
     { href: '/return-loss-calculator', label: 'রিটার্ন লস ক্যালকুলেটর' },
     { href: '/ads-roas-calculator', label: 'Ads ROAS ক্যালকুলেটর' },
     { href: '/ki-vabe-fake-order-atkabo', label: 'কিভাবে ফেক অর্ডার আটকাবো' },
-    { href: '/courier-auto-entry', label: 'কুরিয়ার অটো এন্ট্রি' },
     { href: '/woocommerce-bangladesh', label: 'WooCommerce Bangladesh গাইড' },
     { href: '/en/bd-fraud-checker', label: 'English version' },
     { href: '/fraudbd-alternative', label: 'FraudBD Alternative' },
     { href: '/pricing', label: 'প্রাইসিং' },
 ];
+
+/** Prefer seo.cluster_links so SSR prerender pills and Vue related row stay in sync. */
+const relatedLinks = computed(() => {
+    const fromSeo = props.seo?.cluster_links;
+    if (Array.isArray(fromSeo) && fromSeo.length > 0) {
+        return fromSeo
+            .map((link) => ({
+                href: link?.path || link?.href || '',
+                label: link?.label || '',
+            }))
+            .filter((link) => link.href && link.label);
+    }
+
+    return relatedLinksFallback;
+});
 </script>
 
 <template>
@@ -138,44 +155,40 @@ const relatedLinks = [
         active-nav="fraud-check"
         suppress-mobile-whatsapp-fab
     >
-        <section class="border-b border-white/10 px-4 py-12 sm:py-16 lg:px-8">
+        <!-- Checker-first on all viewports: keep H1 short, put the phone input in the first screen -->
+        <section class="border-b border-white/10 px-4 pb-2 pt-3 sm:px-6 sm:pb-3 sm:pt-4 lg:px-8">
             <div class="mx-auto max-w-3xl text-center">
-                <div class="mx-auto max-w-3xl text-left">
+                <div class="mx-auto hidden max-w-3xl text-left lg:block">
                     <SeoBreadcrumbs :items="seo?.breadcrumbs || []" />
                 </div>
-                <p class="text-sm font-semibold tracking-[0.18em] text-amber-300/90">Courier Fraud Checker BD</p>
-                <h1 class="mt-3 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-                    {{ seo?.prerender_h1 || 'Free Courier Fraud Checker BD — ফ্রি ফ্রড চেকার' }}
+                <h1 class="text-xl font-extrabold leading-snug text-white sm:text-2xl sm:leading-tight lg:text-3xl">
+                    {{ seo?.prerender_h1 || 'Fraud Checker BD — ফ্রি কুরিয়ার হিস্টোরি চেক' }}
                 </h1>
-                <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
-                    {{ seo?.prerender_lead || 'মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট চেক করুন।' }}
+                <p class="mx-auto mt-1.5 max-w-2xl text-xs text-slate-400 sm:text-sm">
+                    নম্বর দিন · Pathao · SteadFast · RedX — অর্ডার কনফার্মের আগে চেক করুন
                 </p>
+            </div>
+        </section>
+
+        <section id="fraud-check" class="scroll-mt-20 border-b border-white/10 bg-[#111111] px-3 pb-6 pt-3 sm:scroll-mt-24 sm:px-4 sm:pb-8 sm:pt-4 lg:px-8">
+            <div class="mx-auto max-w-3xl">
+                <LandingFraudCheck :fraud-check="fraudCheck" compact />
                 <p
                     v-if="seo?.honesty_line"
-                    class="mx-auto mt-4 max-w-2xl rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-left text-xs leading-relaxed text-amber-100/90 sm:text-sm"
+                    class="mx-auto mt-3 max-w-2xl text-left text-[11px] leading-relaxed text-slate-500 sm:text-xs"
                 >
                     {{ seo.honesty_line }}
                 </p>
-                <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-                    Pathao, Steadfast, RedX — অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন।
-                    ই-কমার্স ও Facebook পেজ সেলারদের জন্য ফ্রি টুল।
-                </p>
-                <div class="mt-6 flex flex-wrap justify-center gap-3">
-                    <a
-                        href="#fraud-check"
-                        class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
-                    >
-                        এখনই চেক করুন
-                    </a>
+                <div class="mt-4 flex flex-wrap justify-center gap-3">
                     <Link
                         href="/fake-order-protection"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                        class="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
                     >
                         ফেক অর্ডার প্রোটেকশন
                     </Link>
                     <Link
                         href="/en/bd-fraud-checker"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10"
+                        class="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-white/10"
                     >
                         English version
                     </Link>
@@ -206,23 +219,6 @@ const relatedLinks = [
                     <h2 class="text-base font-bold text-white sm:text-lg">{{ item.title }}</h2>
                     <p class="mt-2 text-sm leading-relaxed text-slate-400">{{ item.body }}</p>
                 </article>
-            </div>
-        </section>
-
-        <section id="fraud-check" class="scroll-mt-24 border-y border-white/10 bg-[#111111] px-4 pb-12 pt-12 sm:pt-14 lg:px-8">
-            <div class="mx-auto max-w-3xl">
-                <div class="mb-6 text-center">
-                    <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                        ফ্রি টুল — অ্যাকাউন্ট লাগবে না
-                    </span>
-                    <h2 class="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                        ফোন নম্বর দিন — কুরিয়ার হিস্টোরি দেখুন
-                    </h2>
-                    <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">
-                        নম্বর দিন — রিটার্নের ঝুঁকি কমান। অর্ডার কনফার্মের আগেই চেক করুন।
-                    </p>
-                </div>
-                <LandingFraudCheck :fraud-check="fraudCheck" />
             </div>
         </section>
 

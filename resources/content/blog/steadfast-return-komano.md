@@ -10,7 +10,7 @@ locale: bn
 
 পিলার গাইড: [SteadFast Fraud Check Complete Guide](/steadfast-fraud-check)। সাধারণ COD প্লেবুক: [COD Return Reduction](/cod-return-reduction)।
 
-## ধাপ ১ — শিপের আগে ফিল্টার
+## ধাপ ১ — পার্সেল পাঠানোর আগে ফিল্টার
 
 অর্ডার কনফার্মের আগে মোবাইল নম্বর চেক করুন: [SteadFast Fraud Check](/steadfast-fraud-check) বা [BD Fraud Checker](/bd-fraud-checker)।
 
@@ -49,7 +49,7 @@ locale: bn
 
 ## যা করবেন না
 
-অন্ধ শিপ, শুধু ফোন কনফার্মে নির্ভর, টুলকে গ্যারান্টি ভাবা, স্টাফকে শুধু “শিপ করো” টার্গেট দেওয়া। বিস্তারিত: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)।
+অন্ধভাবে পার্সেল পাঠানো, শুধু ফোন কনফার্মে নির্ভর, টুলকে গ্যারান্টি ভাবা, স্টাফকে শুধু “পার্সেল পাঠাও” টার্গেট দেওয়া। বিস্তারিত: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)।
 
 ## আজকের চেকলিস্ট
 

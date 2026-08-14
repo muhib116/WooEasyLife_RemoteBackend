@@ -12,6 +12,8 @@ const props = defineProps({
         default: () => ({}),
     },
     locale: { type: String, default: 'bn' },
+    /** Hide extra chrome so the input sits higher on tool landings (esp. mobile). */
+    compact: { type: Boolean, default: false },
 });
 
 const isEn = computed(() => props.locale === 'en');
@@ -253,37 +255,46 @@ onMounted(() => {
 <template>
     <div v-if="isEnabled">
         <div
-            v-if="dailySearchPhrase"
+            v-if="dailySearchPhrase && !compact"
             class="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"
         >
             <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
             {{ dailySearchPhrase }}
         </div>
+        <div
+            v-else-if="dailySearchPhrase && compact"
+            class="mb-2 text-center text-[11px] text-emerald-400/90 sm:mb-2 sm:text-xs"
+        >
+            {{ dailySearchPhrase }}
+        </div>
 
         <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/80 shadow-2xl shadow-amber-900/20">
-            <div class="border-b border-white/10 px-4 py-4 sm:px-5">
+            <div
+                v-if="!compact"
+                class="border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4"
+            >
                 <p class="text-sm font-semibold text-white">{{ copy.formTitle }}</p>
                 <p class="mt-1 text-xs text-slate-400">
                     {{ copy.formSubtitle }}
                 </p>
             </div>
 
-            <div class="p-4 sm:p-5">
-                <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="handleSearch">
+            <div class="p-3 sm:p-4" :class="compact ? 'pt-3 sm:pt-4' : ''">
+                <form class="flex flex-col gap-2.5 sm:flex-row sm:gap-3" @submit.prevent="handleSearch">
                     <label class="relative flex-1">
-                        <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">📞</span>
+                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400 sm:left-4">📞</span>
                         <input
                             v-model="phone"
                             type="tel"
                             inputmode="numeric"
                             maxlength="14"
                             placeholder="017XXXXXXXX"
-                            class="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-white placeholder:text-slate-500 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                            class="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-3 text-base text-white placeholder:text-slate-500 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 sm:py-3.5 sm:pl-11 sm:pr-4"
                         >
                     </label>
                     <button
                         type="submit"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3.5 text-sm font-bold text-black transition hover:from-amber-400 hover:to-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3 text-sm font-bold text-black transition hover:from-amber-400 hover:to-yellow-400 disabled:cursor-not-allowed disabled:opacity-60 sm:py-3.5"
                         :disabled="isLoading || remainingSearches <= 0"
                     >
                         <span v-if="isLoading" class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -291,7 +302,7 @@ onMounted(() => {
                     </button>
                 </form>
 
-                <p v-if="freeSearchNote" class="mt-3 text-center text-xs text-slate-500">
+                <p v-if="freeSearchNote" class="mt-2 text-center text-[11px] text-slate-500 sm:mt-3 sm:text-xs">
                     {{ freeSearchNote }}
                     <span v-if="remainingSearches > 0" class="text-slate-400">
                         {{ copy.remainingToday(remainingSearches) }}

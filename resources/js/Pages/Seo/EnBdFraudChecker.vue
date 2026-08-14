@@ -132,38 +132,33 @@ const relatedLinks = [
         active-nav="fraud-check"
         suppress-mobile-whatsapp-fab
     >
-        <section class="border-b border-white/10 px-4 py-12 sm:py-16 lg:px-8">
+        <section class="border-b border-white/10 px-4 pb-2 pt-3 sm:px-6 sm:pb-3 sm:pt-4 lg:px-8">
             <div class="mx-auto max-w-3xl text-center">
-                <div class="text-left">
+                <div class="hidden text-left lg:block">
                     <SeoBreadcrumbs :items="seo?.breadcrumbs || []" />
                 </div>
-                <p class="text-sm font-semibold tracking-[0.18em] text-amber-300/90">Courier Fraud Checker BD</p>
-                <h1 class="mt-3 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
+                <h1 class="text-xl font-extrabold leading-snug text-white sm:text-2xl sm:leading-tight lg:text-3xl">
                     {{ seo?.prerender_h1 || 'Free Courier Fraud Checker BD — delivery history by phone' }}
                 </h1>
-                <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
-                    {{ seo?.prerender_lead || 'Verify courier history and success rate before confirming COD orders.' }}
+                <p class="mx-auto mt-1.5 max-w-2xl text-xs text-slate-400 sm:text-sm">
+                    Enter number · Pathao · SteadFast · RedX — check before you confirm
                 </p>
-                <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-                    Pathao, Steadfast, RedX — check fake or risky customers before you ship.
-                    Free tool for Bangladesh ecommerce and Facebook page sellers.
-                </p>
-                <div class="mt-6 flex flex-wrap justify-center gap-3">
-                    <a
-                        href="#fraud-check"
-                        class="inline-flex rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
-                    >
-                        Check now
-                    </a>
+            </div>
+        </section>
+
+        <section id="fraud-check" class="scroll-mt-20 border-b border-white/10 bg-[#111111] px-3 pb-6 pt-3 sm:scroll-mt-24 sm:px-4 sm:pb-8 sm:pt-4 lg:px-8">
+            <div class="mx-auto max-w-3xl">
+                <LandingFraudCheck :fraud-check="fraudCheck" locale="en" compact />
+                <div class="mt-4 flex flex-wrap justify-center gap-3">
                     <Link
                         href="/en/fake-order-protection"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                        class="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"
                     >
                         Fake order protection
                     </Link>
                     <Link
                         href="/bd-fraud-checker"
-                        class="inline-flex rounded-xl border border-white/15 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10"
+                        class="inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-white/10"
                     >
                         বাংলা ভার্সন
                     </Link>
@@ -194,23 +189,6 @@ const relatedLinks = [
                     <h2 class="text-base font-bold text-white sm:text-lg">{{ item.title }}</h2>
                     <p class="mt-2 text-sm leading-relaxed text-slate-400">{{ item.body }}</p>
                 </article>
-            </div>
-        </section>
-
-        <section id="fraud-check" class="scroll-mt-24 border-y border-white/10 bg-[#111111] px-4 pb-12 pt-12 sm:pt-14 lg:px-8">
-            <div class="mx-auto max-w-3xl">
-                <div class="mb-6 text-center">
-                    <span class="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                        Free tool — no account needed
-                    </span>
-                    <h2 class="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                        Enter a phone number — view courier history
-                    </h2>
-                    <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">
-                        Check before you confirm. Reduce return risk on COD parcels.
-                    </p>
-                </div>
-                <LandingFraudCheck :fraud-check="fraudCheck" />
             </div>
         </section>
 

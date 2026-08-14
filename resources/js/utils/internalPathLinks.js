@@ -60,7 +60,7 @@ const LABELS = {
     '/fake-order-check': { bn: 'Fake Order Check', en: 'Fake Order Check' },
     '/bd-courier-ratio-checker': { bn: 'BD Courier Ratio Checker', en: 'BD Courier Ratio Checker' },
     '/pathao-fraud-check': { bn: 'Pathao ফ্রড চেক', en: 'Pathao fraud check' },
-    '/steadfast-fraud-check': { bn: 'Steadfast ফ্রড চেক', en: 'Steadfast fraud check' },
+    '/steadfast-fraud-check': { bn: 'SteadFast Fraud Check গাইড', en: 'SteadFast Fraud Check guide' },
     '/redx-fraud-check': { bn: 'RedX ফ্রড চেক', en: 'RedX fraud check' },
     '/faq': { bn: 'FAQ হাব', en: 'FAQ hub' },
     '/faq/courier-success-rate-kivabe-bujhbo': { bn: 'সাকসেস রেট কীভাবে বুঝবেন', en: 'How to read success rate' },

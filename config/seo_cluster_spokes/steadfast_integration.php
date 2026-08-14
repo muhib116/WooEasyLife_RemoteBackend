@@ -36,7 +36,7 @@ return array (
     'paragraphs' =>
     array (
       0 => '১) Steadfast মার্চেন্ট অ্যাকাউন্ট খুলে API Integration enable করুন। ২) API Key ও Secret Key কপি করুন। ৩) WooEasyLife → Courier Settings → Steadfast enable করে কী দুটি পেস্ট করুন। ৪) ডিফল্ট warehouse/store address সিলেক্ট করুন—ভুল pickup context অনেক booking error-এর কারণ। ৫) Connection test চালান। ৬) একটি লো-রিস্ক টেস্ট অর্ডার কনফার্ম করে Steadfast-এ পাঠান; প্যানেলে COD ও area ঠিক আছে কিনা দেখুন।',
-      1 => 'সুরক্ষিত ক্রম: /bd-fraud-checker দিয়ে নম্বর চেক → হলুদ/লাল জোনে /customer-verification (কল/OTP) → কনফার্ম → /courier-auto-entry দিয়ে Steadfast বুকিং। প্রতিটি অর্ডার অটো-শিপ করলে Steadfast দ্রুতই ব্যয়বহুল RTS মেশিনে পরিণত হয়।',
+      1 => 'সুরক্ষিত ক্রম: /bd-fraud-checker দিয়ে নম্বর চেক → হলুদ/লাল জোনে /customer-verification (কল/OTP) → কনফার্ম → /courier-auto-entry দিয়ে Steadfast বুকিং। প্রতিটি অর্ডার অটো পার্সেল পাঠালে Steadfast দ্রুতই ব্যয়বহুল RTS মেশিনে পরিণত হয়।',
       2 => 'ট্র্যাকিং মেসেজের জন্য /woocommerce-notifications সেটআপ করুন। ট্রায়াল শুরু: /pricing।',
     ),
     'figures' =>
@@ -56,7 +56,7 @@ return array (
     array (
       0 => 'API সেটআপ শেষ হলে WooCommerce Orders তালিকা থেকে একক অর্ডারে “Send to Steadfast” বা সমতুল্য অ্যাকশন দিয়ে তৎক্ষণাৎ বুকিং করা যায়। বাল্ক মোডে ২০–১০০টি কনফার্মড অর্ডার একসাথে সিলেক্ট করে এক অ্যাকশনে Steadfast-এ পাঠান—যেখানে ম্যানুয়ালি এক ঘণ্টা লাগত, API-তে কয়েক সেকেন্ড।',
       1 => 'বাল্ক চালু করার আগে single-order ফ্লো stable করুন। Failed row (invalid area, missing phone, COD mismatch) আলাদা দেখে retry করুন—একই অর্ডারে বারবার “send” চাপলে ডুপ্লিকেট কনসাইনমেন্ট হতে পারে। অর্ডারে ইতিমধ্যে tracking ID থাকলে আবার বুকিং করবেন না।',
-      2 => 'দৈনন্দিন “কনফার্ম → বুক” রুটিনের বিস্তারিত /courier-auto-entry-তে। শিপিং লেবেল ও বারকোড এক ক্লিকে প্রিন্ট করে প্যাকিং লাইন দ্রুত চালান।',
+      2 => 'দৈনন্দিন “কনফার্ম → বুক” রুটিনের বিস্তারিত /courier-auto-entry-তে। পার্সেল লেবেল ও বারকোড এক ক্লিকে প্রিন্ট করে প্যাকিং লাইন দ্রুত চালান।',
     ),
   ),
   5 =>
@@ -93,7 +93,7 @@ return array (
     'heading' => 'SteadFast Return Requests — Ask to return ও Decide ওয়ার্কফ্লো',
     'paragraphs' =>
     array (
-      0 => 'অফিসিয়াল SteadFast WooCommerce প্লাগইন মূলত বুকিং/ট্র্যাক/ব্যালেন্স করে। রিটার্ন রিকোয়েস্ট API ডেভেলপার প্যাকেজে আছে, কিন্তু BD মার্চেন্টদের দৈনন্দিন চাহিদা হলো: প্যানেল না খুলেই Ask to return → Pending তালিকা → Confirm cancel বা Resend request। WooEasyLife Courier হাবে এই Decide ফ্লো SteadFast-এর জন্য শিপড (প্যাকেজ: courier_automation; portal login লাগে)।',
+      0 => 'অফিসিয়াল SteadFast WooCommerce প্লাগইন মূলত বুকিং/ট্র্যাক/ব্যালেন্স করে। রিটার্ন রিকোয়েস্ট API ডেভেলপার প্যাকেজে আছে, কিন্তু BD মার্চেন্টদের দৈনন্দিন চাহিদা হলো: প্যানেল না খুলেই Ask to return → Pending তালিকা → Confirm cancel বা Resend request। WooEasyLife Courier হাবে এই Decide ফ্লো SteadFast-এর জন্য লাইভ (প্যাকেজ: courier_automation; portal login লাগে)।',
       1 => 'স্ট্যাটাস: pending → confirmed / resend_request / cancelled / resent। অর্ডার থেকে Ask to return করলে রিকোয়েস্ট লোকাল টেবিলে ও হাব সিঙ্কে যায়; Pending-এ Decide দিয়ে ক্যানসেল কনফার্ম বা কুরিয়ারকে রিসেন্ড চাইতে পারেন। CSV এক্সপোর্ট ও রিফ্রেশ দিয়ে পোর্টাল আপডেট ধরা যায়।',
       2 => 'Pathao/RedX-এ এখনো একই Return Requests হাব নেই—সেগুলোতে বুকিং/ওয়েবহুক চালু রাখুন (/pathao-courier-guide, /redx-courier-guide)। রিটার্ন লস মাপুন /return-loss-calculator দিয়ে।',
     ),

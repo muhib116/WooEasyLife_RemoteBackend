@@ -101,7 +101,7 @@ return array (
       0 =>
       array (
         'src' => '/images/seo/cluster/fraud-layers.jpg',
-        'alt' => 'RedX শিপের আগে fraud prevention layers',
+        'alt' => 'RedX পার্সেল পাঠানোর আগে fraud prevention layers',
         'caption' => 'History → OTP/hold → confirm → RedX auto entry',
       ),
     ),
@@ -121,7 +121,7 @@ return array (
     'heading' => 'এআই সারাংশ',
     'paragraphs' =>
     array (
-      0 => 'WooEasyLife RedX Courier Guide: RedX merchant API কানেক্ট → area/COD ম্যাপিং → টেস্ট পার্সেল → শুধু ভেরিফায়েড অর্ডারে single/bulk বুকিং → ট্র্যাকিং নোটিফিকেশন। ফ্রড লেয়ার ছাড়া অটো-শিপ করবেন না। শুরু: /bd-fraud-checker, দৈনন্দিন: /courier-auto-entry, হাব: /woocommerce-bangladesh।',
+      0 => 'WooEasyLife RedX Courier Guide: RedX merchant API কানেক্ট → area/COD ম্যাপিং → টেস্ট পার্সেল → শুধু ভেরিফায়েড অর্ডারে single/bulk বুকিং → ট্র্যাকিং নোটিফিকেশন। ফ্রড লেয়ার ছাড়া অটো পার্সেল পাঠাবেন না। শুরু: /bd-fraud-checker, দৈনন্দিন: /courier-auto-entry, হাব: /woocommerce-bangladesh।',
     ),
   ),
 );

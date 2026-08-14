@@ -28,7 +28,7 @@ return [
             'heading' => 'কনফার্ম + হিস্টোরি একসাথে',
             'paragraphs' => [
                 'হিস্টোরি কী: /faq/customer-delivery-history-check · /blog/steadfast-customer-history-ki। সাকসেস রেট: /faq/courier-success-rate-kivabe-bujhbo · /blog/steadfast-delivery-ratio-ki।',
-                'উচ্চ রেট + পরিষ্কার কনফার্ম → দ্রুত শিপ। কম রেট + কনফার্ম → একা বিশ্বাস নয়; OTP বা হোল্ড: /faq/success-rate-kom-hole-ki-korbo। হিস্টোরি খালি → /faq/history-na-thakle-ki-korbo।',
+                'উচ্চ রেট + পরিষ্কার কনফার্ম → দ্রুত পার্সেল পাঠান। কম রেট + কনফার্ম → একা বিশ্বাস নয়; OTP বা হোল্ড: /faq/success-rate-kom-hole-ki-korbo। হিস্টোরি খালি → /faq/history-na-thakle-ki-korbo।',
                 'SteadFast ফোকাস টুল: /steadfast-fraud-check। মাল্টি-কুরিয়ার: /bd-fraud-checker।',
             ],
         ],
@@ -56,7 +56,7 @@ return [
             'heading' => 'রিয়েল উদাহরণ',
             'paragraphs' => [
                 'ধরুন স্টাফ কল করে কাস্টমার বললেন নিব। SteadFast বুকিং হলো। রাইডার দুইবার কল করে না পেয়ে return request দিলেন। হিস্টোরি চেক করলে দেখা যেত এই নম্বরে আগেও তিনবার একই প্যাটার্ন। কল একা সেই প্যাটার্ন ধরে না।',
-                'উল্টো উদাহরণ: হিস্টোরি ভালো, কলও পরিষ্কার—তবু OTP ছাড়া হাই-টিকেট শিপ করে রিটার্ন এলে লস বড়। তাই টিকেট সাইজ অনুযায়ী লেয়ার বাড়ান। কেস হিসাব: /blog/steadfast-fraud-check-case-study।',
+                'উল্টো উদাহরণ: হিস্টোরি ভালো, কলও পরিষ্কার—তবু OTP ছাড়া হাই-টিকেট পার্সেল পাঠিয়ে রিটার্ন এলে লস বড়। তাই টিকেট সাইজ অনুযায়ী লেয়ার বাড়ান। কেস হিসাব: /blog/steadfast-fraud-check-case-study।',
                 'রিটার্ন অপস পরেও লাগে: /faq/steadfast-return-request-kivabe · /steadfast-return-hub।',
             ],
         ],
@@ -73,7 +73,7 @@ return [
             'heading' => 'দ্রুত উত্তর',
             'paragraphs' => [
                 'হিস্টোরি না থাকলেই অর্ডার অটো-রিজেক্ট করবেন না। নতুন সিম, প্রথমবার ক্রেতা, বা ডাটা কভারেজ ফাঁকা থাকতে পারে। স্ট্যান্ডার্ড কনফার্ম + ঝুঁকি নীতি প্রয়োগ করুন—হাই-টিকেটে OTP বা ছোট অগ্রিম বিবেচনা করুন।',
-                'খালি হিস্টোরি মানে “নিরাপদ প্রমাণিত”ও নয়। সিগন্যাল নেই বলে অন্ধ শিপ করা জুয়া। পিলার: /steadfast-fraud-check। চেক টুল: /bd-fraud-checker।',
+                'খালি হিস্টোরি মানে “নিরাপদ প্রমাণিত”ও নয়। সিগন্যাল নেই বলে অন্ধভাবে পার্সেল পাঠানো জুয়া। পিলার: /steadfast-fraud-check। চেক টুল: /bd-fraud-checker।',
             ],
         ],
         [
@@ -93,7 +93,7 @@ return [
         [
             'heading' => 'WooEasyLife-এ কীভাবে',
             'paragraphs' => [
-                'চেকারে “কোনো রেকর্ড নেই” দেখলেও স্ক্রিন ক্লোজ করে অন্ধ শিপ করবেন না—কল ও নোট রাখুন। প্যাকেজ থাকলে অর্ডারে হিস্টোরি প্যানেল খালি থাকতে পারে; তখনও একই নীতি।',
+                'চেকারে “কোনো রেকর্ড নেই” দেখলেও স্ক্রিন ক্লোজ করে অন্ধভাবে পার্সেল পাঠাবেন না—কল ও নোট রাখুন। প্যাকেজ থাকলে অর্ডারে হিস্টোরি প্যানেল খালি থাকতে পারে; তখনও একই নীতি।',
                 'ফেক অর্ডার চিনে ফেলা যায় কি না: /faq/fake-order-chinhe-fela-jay-ki। টুল কি প্রেডিক্ট করে: /faq/wooeasylife-fraud-predict-kore-ki।',
             ],
         ],
@@ -114,7 +114,7 @@ return [
             'heading' => 'রিয়েল উদাহরণ',
             'paragraphs' => [
                 'নতুন নম্বর, অর্ডার ৮০০ টাকা, ঠিকানা পরিষ্কার, কল ভালো—কনফার্ম করে অটো এন্ট্রি যুক্তিযুক্ত। নোট: no history, call OK।',
-                'নতুন নম্বর, অর্ডার ৪,৫০০ টাকা, ঠিকানা অস্পষ্ট—OTP বা অগ্রিম ছাড়া শিপ করবেন না। ভেরিফাই নীতি: /faq/prottek-customer-verify-korbo-ki।',
+                'নতুন নম্বর, অর্ডার ৪,৫০০ টাকা, ঠিকানা অস্পষ্ট—OTP বা অগ্রিম ছাড়া পার্সেল পাঠাবেন না। ভেরিফাই নীতি: /faq/prottek-customer-verify-korbo-ki।',
                 'একই দিনে তিনটা অর্ডার এক নম্বরে হিস্টোরি খালি—ডুপ্লিকেট সন্দেহ: /faq/duplicate-cod-order-block।',
             ],
         ],
@@ -151,7 +151,7 @@ return [
         [
             'heading' => 'টিম নীতি',
             'paragraphs' => [
-                'স্টাফকে লিখে দিন কোন জোনে কী করতে হবে—প্রতিবার মালিকের কলের অপেক্ষা বিলম্ব বাড়ায়। টার্গেট “শিপ সংখ্যা” নয়—“ডেলিভারযোগ্য কনফার্ম”।',
+                'স্টাফকে লিখে দিন কোন জোনে কী করতে হবে—প্রতিবার মালিকের কলের অপেক্ষা বিলম্ব বাড়ায়। টার্গেট “পার্সেল পাঠানোর সংখ্যা” নয়—“ডেলিভারযোগ্য কনফার্ম”।',
                 'জোন রুল পেজ: /customer-verification। প্রোটেকশন: /fake-order-protection। OTP: /faq/cod-order-otp-kokhon।',
             ],
         ],
@@ -172,7 +172,7 @@ return [
             'heading' => 'রিয়েল উদাহরণ',
             'paragraphs' => [
                 'দিনে ৮০ অর্ডার স্টোরে সব অর্ডারে গভীর কল অসম্ভব। রিস্ক জোন বাছুন—নতুন নম্বর ও হাই টিকেটে সময় খরচ করুন, বাকিতে দ্রুত পাথ।',
-                'স্টাফ যদি শুধু শিপ টার্গেট পায়, হলুদ জোনও অন্ধ শিপ হবে। টার্গেট ডেলিভারযোগ্য কনফার্ম করুন। ভুল তালিকা: /blog/steadfast-fraud-check-common-mistakes।',
+                'স্টাফ যদি শুধু পার্সেল পাঠানোর টার্গেট পায়, হলুদ জোনও অন্ধভাবে পার্সেল পাঠানো হবে। টার্গেট ডেলিভারযোগ্য কনফার্ম করুন। ভুল তালিকা: /blog/steadfast-fraud-check-common-mistakes।',
                 'ফোন কনফার্মের সীমা মনে রাখুন: /faq/phone-confirm-delivery-guarantee-ki।',
             ],
         ],
@@ -193,7 +193,7 @@ return [
             ],
         ],
         [
-            'heading' => 'টুল কী করে (শিপড)',
+            'heading' => 'টুল কী করে (লাইভ)',
             'paragraphs' => [
                 'মোবাইল নম্বর দিয়ে Pathao, SteadFast, RedX হিস্টোরি ও রেশিও দেখা, অর্ডারে ডেলিভারি হিস্টোরি, ঝুঁকি সিগন্যাল, আর প্রোটেকশন লেয়ার (OTP, ডুপ্লিকেট ব্লক, ব্ল্যাকলিস্ট)—প্যাকেজ অনুযায়ী।',
                 'হিস্টোরি: /faq/customer-delivery-history-check। রেট: /faq/courier-success-rate-kivabe-bujhbo। স্কোর: /faq/customer-fraud-score-ki। ফেক অর্ডার চিনা: /faq/fake-order-chinhe-fela-jay-ki।',
@@ -275,13 +275,13 @@ return [
                 'কল করে ঠিকানা ও প্রয়োজন মিলান।',
                 'সন্দেহে OTP বা হোল্ড।',
                 'পুনরাবৃত্তিতে ব্ল্যাকলিস্ট + নোট।',
-                'কনফার্ম হলে অটো এন্ট্রি—অন্ধ শিপ নয়।',
+                'কনফার্ম হলে অটো এন্ট্রি—অন্ধভাবে পার্সেল পাঠানো নয়।',
             ],
         ],
         [
             'heading' => 'রিয়েল উদাহরণ',
             'paragraphs' => [
-                'নম্বর B: ছয় পার্সেলে চার রিটার্ন, আজ হাই-টিকেট—ফেক নিশ্চিত নয়, কিন্তু অন্ধ শিপ নিষেধ। কল + OTP + হোল্ড।',
+                'নম্বর B: ছয় পার্সেলে চার রিটার্ন, আজ হাই-টিকেট—ফেক নিশ্চিত নয়, কিন্তু অন্ধভাবে পার্সেল পাঠানো নিষেধ। কল + OTP + হোল্ড।',
                 'নম্বর A: উচ্চ রেট, কিন্তু এক দিনে পাঁচ অর্ডার—ডুপ্লিকেট বা টেস্ট সন্দেহ। /faq/duplicate-cod-order-block।',
                 'রিটার্ন পরে ব্ল্যাকলিস্ট: /blog/blacklist-customer-after-returns · /faq/woocommerce-customer-blacklist।',
             ],
@@ -299,18 +299,18 @@ return [
             'heading' => 'দ্রুত উত্তর',
             'paragraphs' => [
                 'SteadFast-এ রাইডার cancel বা return request এলে প্রতিবার পোর্টালে Change Status না ঘুরে WooEasyLife Courier → Return Requests থেকে Decide করুন—Confirm cancel বা Ask to resend। রাইডার কল ও কল লগ একই মডালে করা যায়।',
-                'প্রোডাক্ট ল্যান্ডিং: /steadfast-return-hub। API সেটআপ: /steadfast-integration। এটা বুকিংয়ের পরের লেয়ার—প্রি-শিপ চেকের বদলি নয়: /steadfast-fraud-check।',
+                'প্রোডাক্ট ল্যান্ডিং: /steadfast-return-hub। API সেটআপ: /steadfast-integration। এটা বুকিংয়ের পরের লেয়ার—পার্সেল পাঠানোর আগের চেকের বদলি নয়: /steadfast-fraud-check।',
             ],
         ],
         [
             'heading' => 'BD COD-তে কেন গুরুত্বপূর্ণ',
             'paragraphs' => [
                 'পোর্টালে কিউ ফেলে রাখলে স্টাফ সময় নষ্ট হয় এবং কিছু অর্ডার কলে বাঁচানো যেত। তাড়াহুড়ো ক্যানসেলও লস। Return Hub অপসকে এক জায়গায় আনে।',
-                'প্রি-শিপ ফিল্টার থাকলেই Pending কম আসে: /blog/steadfast-return-komano · /bd-fraud-checker।',
+                'পার্সেল পাঠানোর আগের ফিল্টার থাকলেই Pending কম আসে: /blog/steadfast-return-komano · /bd-fraud-checker।',
             ],
         ],
         [
-            'heading' => 'WooEasyLife-এ কীভাবে (শিপড)',
+            'heading' => 'WooEasyLife-এ কীভাবে (লাইভ)',
             'paragraphs' => [
                 'package `courier_automation` + SteadFast পোর্টাল লগইন। Pending থেকে Decide → Confirm cancel বা Ask to resend। AI সাজেশন থাকতে পারে (`ai_intelligence`)—বাধ্যতামূলক নয়। Pathao বা RedX-এ একই Return Hub দাবি করি না।',
                 'Stuck পার্সেল আলাদা প্রশ্ন: /faq/steadfast-stuck-parcel-ki-korbo।',
@@ -350,7 +350,7 @@ return [
             'heading' => 'দ্রুত উত্তর',
             'paragraphs' => [
                 'SteadFast পার্সেল কয়েকদিন নিস্তব্ধ থাকলে WooEasyLife Notifications-এ Scan stuck ব্যবহার করুন (সাধারণত ~৩ দিন quiet)। Stuck মানেই সবসময় cancel নয়—রাইডার ব্যস্ত বা নেটওয়ার্ক সমস্যাও হতে পারে। আগে ধরলে কল বা return ফ্লো তাড়াতাড়ি শুরু হয়।',
-                'ল্যান্ডিং: /steadfast-return-hub। সেটআপ: /steadfast-integration। প্রি-শিপ ঝুঁকি কমাতে: /steadfast-fraud-check।',
+                'ল্যান্ডিং: /steadfast-return-hub। সেটআপ: /steadfast-integration। পার্সেল পাঠানোর আগে ঝুঁকি কমাতে: /steadfast-fraud-check।',
             ],
         ],
         [
@@ -361,7 +361,7 @@ return [
             ],
         ],
         [
-            'heading' => 'WooEasyLife-এ কীভাবে (শিপড)',
+            'heading' => 'WooEasyLife-এ কীভাবে (লাইভ)',
             'paragraphs' => [
                 'Courier → Notifications: portal আপডেট, রাইডার নোট, cancel সিগন্যাল। Scan stuck দিয়ে নিস্তব্ধ পার্সেল ধরুন। Return request থাকলে Decide: /faq/steadfast-return-request-kivabe।',
                 'শুধু SteadFast—Pathao বা RedX stuck হাব এখানে দাবি নয়।',

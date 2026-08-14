@@ -31,7 +31,7 @@ locale: bn
 
 - উচ্চ রেট + পরিষ্কার ঠিকানা → দ্রুত কনফার্ম
 - মাঝারি রেট বা নতুন নম্বর → স্ট্যান্ডার্ড কনফার্ম + যাচাই
-- কম রেট → [সাকসেস রেট কম হলে কী করব](/faq/success-rate-kom-hole-ki-korbo) অনুসরণ করুন—অন্ধ শিপ নয়
+- কম রেট → [সাকসেস রেট কম হলে কী করব](/faq/success-rate-kom-hole-ki-korbo) অনুসরণ করুন—অন্ধভাবে পার্সেল পাঠানো নয়
 
 হিস্টোরি কী: [Customer History কী](/blog/steadfast-customer-history-ki)। কখন ভেরিফাই: [কখন কাস্টমার ভেরিফাই করব](/blog/kokhon-customer-verify-korbo)।
 

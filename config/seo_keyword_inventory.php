@@ -432,7 +432,7 @@ return [
             'path' => '/faq/phone-confirm-delivery-guarantee-ki',
             'slug' => 'phone-confirm-delivery-guarantee-ki',
             'primary' => 'ফোন কনফার্ম কি ডেলিভারি গ্যারান্টি',
-            'secondary' => ['phone confirmation prevent return', 'কল করে শিপ করলেই কি যথেষ্ট'],
+            'secondary' => ['phone confirmation prevent return', 'কল করে পার্সেল পাঠালেই কি যথেষ্ট'],
             'cta' => '/steadfast-fraud-check',
             'notes' => 'Step 3 cluster FAQ',
         ],

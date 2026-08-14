@@ -150,9 +150,25 @@ class CourierReportFormatter
             return false;
         }
 
+        return self::hasDeliveryCounts($report);
+    }
+
+    public static function hasDeliveryCounts(array $report): bool
+    {
         return (int) ($report['total_order'] ?? 0) > 0
             || (int) ($report['confirmed'] ?? 0) > 0
             || (int) ($report['cancel'] ?? 0) > 0;
+    }
+
+    public static function isRatingOnly(array $report): bool
+    {
+        if (self::hasDeliveryCounts($report)) {
+            return false;
+        }
+
+        return ($report['data_type'] ?? '') === 'rating'
+            || filled($report['customer_rating'] ?? null)
+            || ($report['status'] ?? '') === 'rating_only';
     }
 
     public static function formatRating(string $rating): string

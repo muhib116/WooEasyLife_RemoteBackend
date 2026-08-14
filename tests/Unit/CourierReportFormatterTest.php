@@ -53,6 +53,31 @@ it('parses pathao rating-only responses without fabricating counts', function ()
     expect($report['estimated_success_rate'])->toBe('85%');
 });
 
+it('exposes helpers for delivery counts vs rating-only pathao rows', function () {
+    $delivery = CourierReportFormatter::fromPathao([
+        'data' => [
+            'show_count' => true,
+            'customer' => [
+                'total_delivery' => 10,
+                'successful_delivery' => 9,
+                'failed_delivery' => 1,
+            ],
+        ],
+    ]);
+
+    $rating = CourierReportFormatter::fromPathao([
+        'data' => [
+            'show_count' => false,
+            'customer_rating' => 'good_customer',
+        ],
+    ]);
+
+    expect(CourierReportFormatter::hasDeliveryCounts($delivery))->toBeTrue()
+        ->and(CourierReportFormatter::isRatingOnly($delivery))->toBeFalse()
+        ->and(CourierReportFormatter::hasDeliveryCounts($rating))->toBeFalse()
+        ->and(CourierReportFormatter::isRatingOnly($rating))->toBeTrue();
+});
+
 it('parses steadfast and paperfly payloads into combined totals', function () {
     $steadfast = CourierReportFormatter::fromSteadfast([
         'total_delivered' => 7,

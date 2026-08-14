@@ -140,7 +140,7 @@ return [
         'og_type' => 'article',
         'og_image' => '/images/seo/cluster/fraud-layers.jpg',
         'prerender_h1' => 'সাকসেস রেট কম হলে কী করব?',
-        'prerender_lead' => 'হলুদ বা লাল জোনে অন্ধ শিপ নয়—কল, OTP বা হোল্ড দিয়ে রিটার্ন ৳ বাঁচান।',
+        'prerender_lead' => 'হলুদ বা লাল জোনে অন্ধভাবে পার্সেল পাঠানো নয়—কল, OTP বা হোল্ড দিয়ে রিটার্ন ৳ বাঁচান।',
         'page_kind' => 'faq_question',
         'pillar_path' => '/bd-fraud-checker',
         'hreflang_paths' => [

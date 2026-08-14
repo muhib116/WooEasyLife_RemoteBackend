@@ -83,7 +83,7 @@ class SeoPrerenderText
         '/fake-customer-check' => ['bn' => 'Fake Customer Check', 'en' => 'Fake Customer Check'],
         '/en/fake-customer-check' => ['bn' => 'Fake Customer Check (EN)', 'en' => 'Fake Customer Check'],
         '/pathao-fraud-check' => ['bn' => 'Pathao ফ্রড চেক', 'en' => 'Pathao fraud check'],
-        '/steadfast-fraud-check' => ['bn' => 'Steadfast ফ্রড চেক', 'en' => 'Steadfast fraud check'],
+        '/steadfast-fraud-check' => ['bn' => 'SteadFast Fraud Check গাইড', 'en' => 'SteadFast Fraud Check guide'],
         '/redx-fraud-check' => ['bn' => 'RedX ফ্রড চেক', 'en' => 'RedX fraud check'],
         '/bd-courier-ratio-checker' => ['bn' => 'BD Courier Ratio Checker', 'en' => 'BD Courier Ratio Checker'],
         '/fake-order-check' => ['bn' => 'Fake Order Check', 'en' => 'Fake Order Check'],

@@ -240,7 +240,7 @@ return [
                         'Blog → pillar → tool',
                         'Mention Return Hub only as post-booking layer',
                     ],
-                    'short_hook' => 'রিটার্ন কমাতে প্রি-শিপ চেকই যথেষ্ট নয়।',
+                    'short_hook' => 'রিটার্ন কমাতে পার্সেল পাঠানোর আগের চেকই যথেষ্ট নয়।',
                 ],
                 'thu' => [
                     'theme' => 'Return Request / Decide',

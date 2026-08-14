@@ -79,7 +79,7 @@ return array (
       'heading' => 'কখন অর্ডার আটকাবেন',
       'paragraphs' => 
       array (
-        0 => 'নম্বরের সাকসেস রেট খুব কম, একাধিক সাম্প্রতিক রিটার্ন, ঠিকানা অসম্পূর্ণ, কল না ধরা, OTP ব্যর্থ এবং অগ্রিম চার্জে অস্বীকৃতি—একাধিক ঝুঁকি একসাথে থাকলে অন্ধভাবে শিপ করবেন না। হোল্ড করে পুনরায় যাচাই করুন; শুধু একটি পুরোনো রিটার্ন দেখে চূড়ান্ত সিদ্ধান্ত নেবেন না।',
+        0 => 'নম্বরের সাকসেস রেট খুব কম, একাধিক সাম্প্রতিক রিটার্ন, ঠিকানা অসম্পূর্ণ, কল না ধরা, OTP ব্যর্থ এবং অগ্রিম চার্জে অস্বীকৃতি—একাধিক ঝুঁকি একসাথে থাকলে অন্ধভাবে পার্সেল পাঠাবেন না। হোল্ড করে পুনরায় যাচাই করুন; শুধু একটি পুরোনো রিটার্ন দেখে চূড়ান্ত সিদ্ধান্ত নেবেন না।',
         1 => 'প্র্যাকটিক্যাল ফ্লো: নতুন অর্ডার → /bd-fraud-checker পেজে নম্বর চেক → প্রয়োজনে কল/OTP → নোট লিখুন → কনফার্ম → /courier-auto-entry। বারবার fake pattern আটকাতে /fake-order-protection ও /pricing দেখুন। সব সহায়ক প্রশ্ন: /faq।',
       ),
     ),
@@ -97,7 +97,7 @@ return array (
       'heading' => 'সাধারণ ভুল যা এড়াবেন',
       'paragraphs' => 
       array (
-        0 => 'হিস্টোরি না দেখেই সব COD অর্ডার শিপ করা, শুধু একবার চেক করে মাসের বাকি অর্ডার অচেক রাখা, খারাপ রেট দেখেও পাঠানো, ফ্রড চেক আছে বলে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা, এবং শুধু রিপোর্টেড Ads ROAS দেখে বাজেট বাড়ানো — এগুলো এড়িয়ে চলুন।',
+        0 => 'হিস্টোরি না দেখেই সব COD অর্ডার পার্সেল পাঠানো, শুধু একবার চেক করে মাসের বাকি অর্ডার অচেক রাখা, খারাপ রেট দেখেও পাঠানো, ফ্রড চেক আছে বলে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা, এবং শুধু রিপোর্টেড Ads ROAS দেখে বাজেট বাড়ানো — এগুলো এড়িয়ে চলুন।',
         1 => 'WooEasyLife ফ্রি চেক দিয়ে শুরু, সাবস্ক্রিপশনে পূর্ণ প্রোটেকশন। প্রাইসিং থেকে ট্রায়াল নিন।',
       ),
     ),
@@ -136,7 +136,7 @@ return array (
       'heading' => 'কেন কনফার্মের আগে কাস্টমার চেক জরুরি',
       'paragraphs' => 
       array (
-        0 => 'নতুন সিম, ভুল নম্বর বা মজার অর্ডার দিয়ে COD প্লেস করা সহজ—পার্সেল চলে গেলে রিটার্ন ফি, প্যাকিং ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে “সব অর্ডার শিপ” করলে লাভ কেটে যায়।',
+        0 => 'নতুন সিম, ভুল নম্বর বা মজার অর্ডার দিয়ে COD প্লেস করা সহজ—পার্সেল চলে গেলে রিটার্ন ফি, প্যাকিং ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে “সব অর্ডার পার্সেল পাঠানো” করলে লাভ কেটে যায়।',
         1 => 'Fake customer check-এর কাজ হলো সিগন্যাল দেওয়া: এই নম্বর আগে কতবার সফল delivery নিয়েছে, কতবার return বা cancel করেছে। “Fraud score” বা ratio সম্ভাব্য risk বোঝায়, পরিচয় বা উদ্দেশ্যের চূড়ান্ত প্রমাণ নয়। সিদ্ধান্ত seller-এর—টুল অন্ধ auto-ship করে না। বিস্তারিত: /faq/customer-fraud-score-ki ও /faq/customer-delivery-history-check।',
         2 => 'পূর্ণ COD ম্যাথ ও রিটার্ন প্লেবুক: /cod-return-reduction এবং হাব /woocommerce-bangladesh।',
       ),
@@ -182,7 +182,7 @@ return array (
       'heading' => 'সাধারণ ভুল যা এড়াবেন',
       'paragraphs' => 
       array (
-        0 => 'হিস্টোরি না দেখেই সব COD শিপ করা; লাল জোন দেখেও “একবার ট্রাই” করে পাঠানো; শুধু চেক আছে বলে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা; এবং রিপোর্টেড Ads ROAS দেখেই স্কেল করা। চেক দেখেও নোট না রাখলে টিম একই নম্বর বারবার ভুল শিপ করে।',
+        0 => 'হিস্টোরি না দেখেই সব COD পার্সেল পাঠানো; লাল জোন দেখেও “একবার ট্রাই” করে পাঠানো; শুধু চেক আছে বলে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা; এবং রিপোর্টেড Ads ROAS দেখেই স্কেল করা। চেক দেখেও নোট না রাখলে টিম একই নম্বর বারবার ভুল পার্সেল পাঠায়।',
         1 => 'সঠিক অভ্যাস: প্রতিটি নতুন/সন্দেহজনক অর্ডারে fake customer check → নোট লিখে রাখা → টিমকে একই SOP। FraudBD তুলনা চাইলে: /fraudbd-alternative। পূর্ণ স্ট্যাক গাইড: /ki-vabe-fake-order-atkabo।',
       ),
     ),
@@ -191,7 +191,7 @@ return array (
       'heading' => 'টিম SOP: কে চেক করবে, কী নোট রাখবে',
       'paragraphs' => 
       array (
-        0 => 'ছোট টিমেও একই রুল রাখুন: নতুন অর্ডার খুললে প্রথমে fake customer check, ফলাফল অর্ডার নোটে লিখুন (সাকসেস %, কল করা হয়েছে কি না, জোন), তারপরই approve। ডুপ্লিকেট কল ও ভুল শিপ কমে। হলুদ/লালে /customer-verification রুল অনুসরণ করুন।',
+        0 => 'ছোট টিমেও একই রুল রাখুন: নতুন অর্ডার খুললে প্রথমে fake customer check, ফলাফল অর্ডার নোটে লিখুন (সাকসেস %, কল করা হয়েছে কি না, জোন), তারপরই approve। ডুপ্লিকেট কল ও ভুল পার্সেল পাঠানো কমে। হলুদ/লালে /customer-verification রুল অনুসরণ করুন।',
         1 => 'মোবাইল অ্যাপ দিয়ে রাস্তায় থাকলেও পুশ দেখে নম্বর চেক ও কল করা যায়—গাইড: /woocommerce-mobile-app। কুরিয়ার বুকিং শুধু কনফার্মের পর: /courier-auto-entry। সাপ্তাহিক RTS% ও /return-loss-calculator আপডেট করুন।',
       ),
     ),
@@ -209,7 +209,7 @@ return array (
       'heading' => 'এআই সারাংশ ও পরবর্তী ধাপ',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife Fake Customer Check মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখিয়ে COD কনফার্মের আগে ফেক/ঝুঁকিপূর্ণ কাস্টমার আটকাতে সাহায্য করে—ফ্রি, অ্যাকাউন্ট ছাড়াই। সিদ্ধান্ত আপনার; টুল অন্ধ অটো-শিপ করে না।',
+        0 => 'WooEasyLife Fake Customer Check মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখিয়ে COD কনফার্মের আগে ফেক/ঝুঁকিপূর্ণ কাস্টমার আটকাতে সাহায্য করে—ফ্রি, অ্যাকাউন্ট ছাড়াই। সিদ্ধান্ত আপনার; টুল অন্ধভাবে অটো পার্সেল পাঠায় না।',
         1 => 'এখনই নিচে নম্বর চেক করুন, অথবা /bd-fraud-checker খুলুন। SteadFast পিলার: /steadfast-fraud-check। কেস: /blog/steadfast-fraud-check-case-study। পূর্ণ সুরক্ষা ও অটো এন্ট্রির জন্য /pricing থেকে ট্রায়াল নিন। সম্পর্কিত: /fake-order-protection, /customer-verification, /cod-return-reduction, /ki-vabe-fake-order-atkabo, /fraudbd-alternative। ইংরেজি: /en/fake-customer-check। হোম: /।',
       ),
     ),
@@ -267,7 +267,7 @@ return array (
       'heading' => 'সাধারণ ভুল যা এড়াবেন',
       'paragraphs' => 
       array (
-        0 => 'হিস্টোরি না দেখেই সব COD অর্ডার শিপ করা। শুধু একবার চেক করে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা। খারাপ সাকসেস রেট দেখেও পাঠানো। রিপোর্টেড Ads ROAS দেখে বাজেট বাড়ানো।',
+        0 => 'হিস্টোরি না দেখেই সব COD অর্ডার পার্সেল পাঠানো। শুধু একবার চেক করে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা। খারাপ সাকসেস রেট দেখেও পাঠানো। রিপোর্টেড Ads ROAS দেখে বাজেট বাড়ানো।',
         1 => 'প্রোটেকশন চালু করেও কুরিয়ার অ্যাকাউন্ট/স্ট্যাটাস সিঙ্ক উপেক্ষা করা। নিরাপদ কনফার্মের পর /courier-auto-entry চালু রাখুন। শুরু: /pricing।',
       ),
     ),
@@ -323,7 +323,7 @@ return array (
       'heading' => 'রিটার্ন লস কমাতে করণীয়',
       'paragraphs' => 
       array (
-        0 => 'প্রথমে /bd-fraud-checker দিয়ে নম্বর চেক করুন। তারপর /fake-order-protection দিয়ে OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট চালু করুন। নিরাপদ অর্ডার /courier-auto-entry দিয়ে দ্রুত শিপ করুন।',
+        0 => 'প্রথমে /bd-fraud-checker দিয়ে নম্বর চেক করুন। তারপর /fake-order-protection দিয়ে OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট চালু করুন। নিরাপদ অর্ডার /courier-auto-entry দিয়ে দ্রুত পার্সেল পাঠান।',
         1 => 'অ্যাড বাজেটের দিক থেকে ফেক Purchaseও ক্ষতিকর — /ads-roas-calculator দিয়ে রিপোর্টেড vs আসল ROAS দেখুন। প্ল্যান: /pricing। ইংরেজি মিরর: /en/return-loss-calculator।',
       ),
     ),
@@ -538,7 +538,7 @@ return array (
       'heading' => 'নিরাপদ ওয়ার্কফ্লো: ফ্রড চেক → কনফার্ম → অটো এন্ট্রি',
       'paragraphs' => 
       array (
-        0 => 'অটো এন্ট্রি দ্রুত, কিন্তু ঝুঁকিপূর্ণ অর্ডার অটো শিপ করা উচিত নয়। প্রথমে /bd-fraud-checker দিয়ে মোবাইল নম্বর দিয়ে Pathao/Steadfast/RedX হিস্টোরি ও সাকসেস রেট দেখুন। কম সাকসেস রেট বা বারবার রিটার্ন হলে ফোন-কনফার্ম বা হোল্ড করুন।',
+        0 => 'অটো এন্ট্রি দ্রুত, কিন্তু ঝুঁকিপূর্ণ অর্ডার অটো পার্সেল পাঠানো উচিত নয়। প্রথমে /bd-fraud-checker দিয়ে মোবাইল নম্বর দিয়ে Pathao/Steadfast/RedX হিস্টোরি ও সাকসেস রেট দেখুন। কম সাকসেস রেট বা বারবার রিটার্ন হলে ফোন-কনফার্ম বা হোল্ড করুন।',
         1 => 'ভালো হিস্টোরি থাকলে দ্রুত কনফার্ম করুন — কনফার্ম হলেই অটো এন্ট্রি। বারবার ফেক প্যাটার্ন আটকাতে /fake-order-protection (OTP, ডুপ্লিকেট ব্লক, ব্ল্যাকলিস্ট) চালু রাখুন। মাসিক রিটার্ন খরচ দেখতে /return-loss-calculator; অ্যাড বাজেটের আসল ROAS দেখতে /ads-roas-calculator।',
       ),
     ),
@@ -1069,7 +1069,7 @@ return array (
       'heading' => 'সাধারণ ভুল যা এড়াবেন',
       'paragraphs' => 
       array (
-        0 => 'শুধু চেকার রেখে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা; চেক দেখেও সব COD অন্ধ শিপ করা; কনফার্মের পরও হাতে কুরিয়ার প্যানেল এন্ট্রি চালিয়ে যাওয়া; রিটার্ন লস না মেপে “টুল সস্তা” ধরে নেওয়া; এবং ফেক অর্ডার বাড়তে দিয়ে অ্যাড বাজেট বাড়ানো।',
+        0 => 'শুধু চেকার রেখে OTP/ব্ল্যাকলিস্ট বন্ধ রাখা; চেক দেখেও সব COD অন্ধভাবে পার্সেল পাঠানো; কনফার্মের পরও হাতে কুরিয়ার প্যানেল এন্ট্রি চালিয়ে যাওয়া; রিটার্ন লস না মেপে “টুল সস্তা” ধরে নেওয়া; এবং ফেক অর্ডার বাড়তে দিয়ে অ্যাড বাজেট বাড়ানো।',
         1 => 'সঠিক অভ্যাস: প্রতি নতুন অর্ডারে চেক (/fake-customer-check বা /bd-fraud-checker) → নোটে সাকসেস% → হলুদ/লালে কল/OTP → তারপরই approve → /courier-auto-entry। মোবাইল SOP: /woocommerce-mobile-app।',
       ),
     ),
@@ -1237,7 +1237,7 @@ return array (
       'paragraphs' => 
       array (
         0 => 'একই নম্বর/ডিভাইস থেকে বারবার অর্ডার এলে ডুপ্লিকেট ভ্যালিডেশন ও দৈনিক লিমিট চালু রাখুন। বারবার রিটার্ন নম্বর ব্ল্যাকলিস্টে রাখলে একই লস ঘোরে না।',
-        1 => 'শুধু ম্যানুয়াল চেক দীর্ঘমেয়াদে যথেষ্ট নয়—অটোমেশন ছাড়া স্টাফ ক্লান্ত হয়ে আবার অন্ধ শিপ শুরু করে।',
+        1 => 'শুধু ম্যানুয়াল চেক দীর্ঘমেয়াদে যথেষ্ট নয়—অটোমেশন ছাড়া স্টাফ ক্লান্ত হয়ে আবার অন্ধভাবে পার্সেল পাঠানো শুরু করে।',
       ),
     ),
     5 => 
@@ -1280,7 +1280,7 @@ return array (
       'heading' => 'টিম চেকলিস্ট (প্রতিদিন)',
       'paragraphs' => 
       array (
-        0 => 'প্রতি নতুন COD অর্ডারে: নম্বর চেক → নোটে সাকসেস% লিখুন → হলুদ/লালে কল/OTP → তারপরই approve। লাল জোন অন্ধ শিপ বন্ধ রাখুন।',
+        0 => 'প্রতি নতুন COD অর্ডারে: নম্বর চেক → নোটে সাকসেস% লিখুন → হলুদ/লালে কল/OTP → তারপরই approve। লাল জোন অন্ধভাবে পার্সেল পাঠানো বন্ধ রাখুন।',
         1 => 'সাপ্তাহিক: RTS% ও /return-loss-calculator আপডেট; খারাপ অ্যাড ক্রিয়েটিভ পজ করুন (/facebook-ads-for-woocommerce)। মোবাইল SOP: /woocommerce-mobile-app।',
         2 => 'পরবর্তী পড়া: /fake-order-protection, /customer-verification, /cod-return-reduction, /woocommerce-bangladesh।',
       ),
@@ -1382,7 +1382,7 @@ return array (
       'heading' => 'Daily team checklist',
       'paragraphs' => 
       array (
-        0 => 'For every new COD order: number check → note success % → call/OTP on yellow/red → only then approve. Never blind-ship red zone.',
+        0 => 'For every new COD order: number check → note success % → call/OTP on yellow/red → only then approve. Never send the parcel blindly red zone.',
         1 => 'Weekly: update RTS % and /en/return-loss-calculator; pause junk creatives (/en/facebook-ads-for-woocommerce). Mobile SOP: /en/woocommerce-mobile-app.',
         2 => 'Keep reading: /en/fake-order-protection, /en/customer-verification, /en/cod-return-reduction, /en/woocommerce-bangladesh.',
       ),
@@ -1414,7 +1414,7 @@ return array (
       'paragraphs' => 
       array (
         0 => 'New SIMs, wrong numbers, and joke COD orders are easy to place. Once the parcel ships, return fees, packing, and ad CPA hit the seller. Blind “ship everything” destroys thin margins—especially on Facebook page COD where address quality varies.',
-        1 => 'Fake customer check gives a signal: how often this number delivered successfully versus returned or cancelled. You decide—the tool does not auto-ship. Pair history with a short call when the zone is yellow or red.',
+        1 => 'Fake customer check gives a signal: how often this number delivered successfully versus returned or cancelled. You decide—the tool does not auto-send parcels. Pair history with a short call when the zone is yellow or red.',
         2 => 'Full COD math: /en/cod-return-reduction. Ops hub: /en/woocommerce-bangladesh. Compare checker-only tools vs platform: /en/fraudbd-alternative.',
       ),
     ),
@@ -1486,7 +1486,7 @@ return array (
       'heading' => 'AI summary & next steps',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife Fake Customer Check helps Bangladesh COD sellers verify courier history and success rate by mobile before confirm—free, no account required. You decide; the tool does not blind auto-ship.',
+        0 => 'WooEasyLife Fake Customer Check helps Bangladesh COD sellers verify courier history and success rate by mobile before confirm—free, no account required. You decide; the tool does not auto-send parcels blindly.',
         1 => 'Check a number below, or open /en/bd-fraud-checker. For full protection and auto-entry, start a trial on /pricing. Related: /en/fake-order-protection, /en/customer-verification, /en/cod-return-reduction, /en/ki-vabe-fake-order-atkabo, /en/fraudbd-alternative. Bangla: /fake-customer-check. Home: /en.',
       ),
     ),
@@ -1516,8 +1516,8 @@ return array (
       'heading' => 'কেন Courier Checker দরকার (BD COD)',
       'paragraphs' => 
       array (
-        0 => 'ভুল নম্বর, মজার অর্ডার বা বারবার-রিফিউজ কাস্টমার পার্সেল পাঠালে রিটার্ন ফি, প্যাকিং ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে “সব শিপ” করলে লাভ কেটে যায়।',
-        1 => 'Courier Checker-এর কাজ সিগন্যাল দেওয়া: এই নম্বর আগে কতবার সফল ডেলিভারি নিয়েছে, কতবার রিটার্ন/ক্যানসেল করেছে। সিদ্ধান্ত আপনার—টুল অন্ধ অটো-শিপ করে না।',
+        0 => 'ভুল নম্বর, মজার অর্ডার বা বারবার-রিফিউজ কাস্টমার পার্সেল পাঠালে রিটার্ন ফি, প্যাকিং ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে “সব পার্সেল পাঠানো” করলে লাভ কেটে যায়।',
+        1 => 'Courier Checker-এর কাজ সিগন্যাল দেওয়া: এই নম্বর আগে কতবার সফল ডেলিভারি নিয়েছে, কতবার রিটার্ন/ক্যানসেল করেছে। সিদ্ধান্ত আপনার—টুল অন্ধভাবে অটো পার্সেল পাঠায় না।',
         2 => 'পূর্ণ COD ম্যাথ: /cod-return-reduction। হাব: /woocommerce-bangladesh।',
       ),
     ),
@@ -1535,7 +1535,7 @@ return array (
       'heading' => 'সাকসেস রেট ও জোন কীভাবে পড়বেন',
       'paragraphs' => 
       array (
-        0 => 'উচ্চ সাকসেস (সবুজ): দ্রুত কনফার্ম ও /courier-auto-entry দিয়ে বুকিং সাধারণত নিরাপদ। মাঝারি (হলুদ): ফোন-কনফার্ম, ঠিকানা পরিষ্কার, প্রয়োজনে OTP। কম সাকসেস/বারবার রিটার্ন (লাল): অগ্রিম ডেলিভারি চার্জ ছাড়া শিপ করবেন না।',
+        0 => 'উচ্চ সাকসেস (সবুজ): দ্রুত কনফার্ম ও /courier-auto-entry দিয়ে বুকিং সাধারণত নিরাপদ। মাঝারি (হলুদ): ফোন-কনফার্ম, ঠিকানা পরিষ্কার, প্রয়োজনে OTP। কম সাকসেস/বারবার রিটার্ন (লাল): অগ্রিম ডেলিভারি চার্জ ছাড়া পার্সেল পাঠাবেন না।',
         1 => 'একটি খারাপ রেকর্ড মানেই সবসময় “ফেক” নয়—এলাকা/ঠিকানা সমস্যাও হতে পারে। হিস্টোরি + ছোট কল সবচেয়ে নিরাপদ। বিস্তারিত রুল: /customer-verification।',
       ),
     ),
@@ -1571,7 +1571,7 @@ return array (
       'heading' => 'টিম SOP: কে চেক করবে, কী নোট রাখবে',
       'paragraphs' => 
       array (
-        0 => 'প্রতি নতুন COD অর্ডারে: Courier Checker চালান → নোটে সাকসেস % ও জোন লিখুন → হলুদ/লালে কল/OTP → তারপরই approve। লাল জোন অন্ধ শিপ বন্ধ রাখুন।',
+        0 => 'প্রতি নতুন COD অর্ডারে: Courier Checker চালান → নোটে সাকসেস % ও জোন লিখুন → হলুদ/লালে কল/OTP → তারপরই approve। লাল জোন অন্ধভাবে পার্সেল পাঠানো বন্ধ রাখুন।',
         1 => 'সাপ্তাহিক: RTS% ও /return-loss-calculator আপডেট; কুরিয়ার API সেটআপ রিভিউ: /pathao-courier-guide, /steadfast-integration, /redx-courier-guide। মোবাইল: /woocommerce-mobile-app।',
       ),
     ),
@@ -1580,7 +1580,7 @@ return array (
       'heading' => 'সাধারণ ভুল যা এড়াবেন',
       'paragraphs' => 
       array (
-        0 => 'হিস্টোরি না দেখেই সব COD শিপ; লাল জোন দেখেও “একবার ট্রাই”; শুধু চেক আছে বলে OTP/ব্ল্যাকলিস্ট বন্ধ; রিপোর্টেড ROAS দেখেই স্কেল; নোট না রেখে টিম একই নম্বর বারবার ভুল শিপ।',
+        0 => 'হিস্টোরি না দেখেই সব COD পার্সেল পাঠানো; লাল জোন দেখেও “একবার ট্রাই”; শুধু চেক আছে বলে OTP/ব্ল্যাকলিস্ট বন্ধ; রিপোর্টেড ROAS দেখেই স্কেল; নোট না রেখে টিম একই নম্বর বারবার ভুল পার্সেল পাঠানো।',
         1 => 'সঠিক অভ্যাস: প্রতি সন্দেহজনক অর্ডারে Courier Checker → নোট → একই SOP। চেকার-শুধু টুল তুলনা: /fraudbd-alternative। পূর্ণ গাইড: /ki-vabe-fake-order-atkabo।',
       ),
     ),
@@ -1589,7 +1589,7 @@ return array (
       'heading' => 'এআই সারাংশ ও পরবর্তী ধাপ',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife Courier Checker BD মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখিয়ে COD কনফার্মের আগে ঝুঁকি কমায়—ফ্রি, অ্যাকাউন্ট ছাড়াই। সিদ্ধান্ত আপনার; টুল অন্ধ অটো-শিপ করে না।',
+        0 => 'WooEasyLife Courier Checker BD মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখিয়ে COD কনফার্মের আগে ঝুঁকি কমায়—ফ্রি, অ্যাকাউন্ট ছাড়াই। সিদ্ধান্ত আপনার; টুল অন্ধভাবে অটো পার্সেল পাঠায় না।',
         1 => 'এখনই নিচে নম্বর চেক করুন, বা /bd-fraud-checker খুলুন। পূর্ণ সুরক্ষা: /pricing। সম্পর্কিত: /fake-customer-check, /fake-order-check, /fake-order-protection, /customer-verification, /cod-return-reduction, /ki-vabe-fake-order-atkabo, /fraudbd-alternative। হোম: /।',
       ),
     ),
@@ -1619,8 +1619,8 @@ return array (
       'heading' => 'কেন Fake Order Check দরকার',
       'paragraphs' => 
       array (
-        0 => 'ভুল নম্বর, মজার অর্ডার বা বারবার-রিফিউজ কাস্টমার পার্সেল পাঠালে রিটার্ন ফি ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে শিপ করলে লাভ কেটে যায়।',
-        1 => 'টুল সিগন্যাল দেয়—অন্ধ অটো-শিপ করে না। সিদ্ধান্ত আপনার। মাসিক লস: /return-loss-calculator। COD প্লেবুক: /cod-return-reduction।',
+        0 => 'ভুল নম্বর, মজার অর্ডার বা বারবার-রিফিউজ কাস্টমার পার্সেল পাঠালে রিটার্ন ফি ও অ্যাড CPA বিক্রেতার। হিস্টোরি না দেখে পার্সেল পাঠালে লাভ কেটে যায়।',
+        1 => 'টুল সিগন্যাল দেয়—অন্ধভাবে অটো পার্সেল পাঠায় না। সিদ্ধান্ত আপনার। মাসিক লস: /return-loss-calculator। COD প্লেবুক: /cod-return-reduction।',
       ),
     ),
     2 => 
@@ -1711,7 +1711,7 @@ return array (
       'heading' => 'এআই সারাংশ',
       'paragraphs' => 
       array (
-        0 => 'BD Courier Ratio Checker ফ্রি মোবাইল চেক দিয়ে সাকসেস রেট দেখায়—কম রেটে অন্ধ শিপ করবেন না। শুরু: নিচের টুল বা /bd-fraud-checker।',
+        0 => 'BD Courier Ratio Checker ফ্রি মোবাইল চেক দিয়ে সাকসেস রেট দেখায়—কম রেটে অন্ধভাবে পার্সেল পাঠাবেন না। শুরু: নিচের টুল বা /bd-fraud-checker।',
       ),
     ),
   ),
@@ -2261,7 +2261,7 @@ return array (
       'paragraphs' => 
       array (
         0 => 'বাংলাদেশি Facebook পেজ COD সেলারদের অর্ডারের বেশিরভাগ কথা মেসেঞ্জারে হয়। WooEasyLife সেই Page মেসেঞ্জার চ্যাট WordPress অ্যাডমিনে আনে—ওয়েবসাইটের কোণায় চ্যাট বাবল নয়, ManyChat-স্টাইল স্টোরফ্রন্ট উইজেটও নয়। Sync দিয়ে একটা Page কানেক্ট করুন; All/Unread কিউ, lead labels, টেক্সট–ইমেজ–ভয়েস রিপ্লাই, তারপর অর্ডার কনফার্মের আগে ফ্রড চেক।',
-        1 => 'মানব ইনবক্সই মূল শিপড ফিচার। AI Semi থাকলে সাজেশন ড্রাফট আসতে পারে—পাঠাবেন আপনি। AI Full সবার জন্য আনলক নয়; Meta AI Bot বলে বিজ্ঞাপন দিই না। শুরু: /pricing। পেজ COD গাইড: /facebook-page-cod-management।',
+        1 => 'মানব ইনবক্সই মূল লাইভ ফিচার। AI Semi থাকলে সাজেশন ড্রাফট আসতে পারে—পাঠাবেন আপনি। AI Full সবার জন্য আনলক নয়; Meta AI Bot বলে বিজ্ঞাপন দিই না। শুরু: /pricing। পেজ COD গাইড: /facebook-page-cod-management।',
       ),
       'figures' => 
       array (
