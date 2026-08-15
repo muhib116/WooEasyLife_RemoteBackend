@@ -37,6 +37,7 @@ class PublicFraudCheckController extends Controller
                 (string) $request->ip(),
                 (string) $validated['phone'],
                 $locale,
+                $request,
             );
 
             if ($result['limited'] ?? false) {

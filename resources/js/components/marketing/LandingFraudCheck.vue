@@ -37,6 +37,8 @@ const copy = computed(() => (isEn.value
         successRate: 'Success rate',
         courierReport: 'Courier breakdown',
         noDeliveryData: 'No delivery data',
+        ratingOnly: 'Rating only (no delivery counts)',
+        ratingOnlyEst: (est) => ` · est. ${est}`,
         steadfastNotes: 'Steadfast fraud notes',
         reportsCount: (n) => `${n} report${n === 1 ? '' : 's'}`,
         consignment: 'Consignment',
@@ -67,6 +69,8 @@ const copy = computed(() => (isEn.value
         successRate: 'সাকসেস রেট',
         courierReport: 'কুরিয়ার ভিত্তিক রিপোর্ট',
         noDeliveryData: 'কোনো ডেলিভারি ডাটা নেই',
+        ratingOnly: 'শুধু রেটিং (ডেলিভারি কাউন্ট নেই)',
+        ratingOnlyEst: (est) => ` · আনুমানিক ${est}`,
         steadfastNotes: 'Steadfast ফ্রড নোট',
         reportsCount: (n) => `${n}টি রিপোর্ট`,
         consignment: 'কনসাইনমেন্ট',
@@ -175,6 +179,17 @@ const courierRateClass = (report) => {
     }
 
     return 'text-slate-400';
+};
+
+/** Match plugin/admin: Pathao may return rating without delivery counts. */
+const isRatingOnlyCourier = (report) => {
+    if (!report || Number(report.total_order ?? 0) > 0) {
+        return false;
+    }
+
+    return report.data_type === 'rating'
+        || report.status === 'rating_only'
+        || !!report.customer_rating;
 };
 
 const normalizePhone = (value) => String(value).replace(/\D/g, '');
@@ -458,6 +473,9 @@ onMounted(() => {
                                     <p class="truncate text-sm font-semibold text-white">{{ item.title }}</p>
                                     <p v-if="item.report?.total_order > 0" class="text-xs leading-snug text-slate-400">
                                         {{ copy.courierDeliveryLine(item.report.confirmed, item.report.cancel) }}
+                                    </p>
+                                    <p v-else-if="isRatingOnlyCourier(item.report)" class="text-xs leading-snug text-slate-500">
+                                        {{ copy.ratingOnly }}<template v-if="item.report?.estimated_success_rate">{{ copy.ratingOnlyEst(item.report.estimated_success_rate) }}</template>
                                     </p>
                                     <p v-else class="text-xs text-slate-500">{{ copy.noDeliveryData }}</p>
                                 </div>

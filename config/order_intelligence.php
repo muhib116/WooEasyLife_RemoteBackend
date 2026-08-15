@@ -8,8 +8,9 @@ return [
         'mode' => env('ORDER_INTELLIGENCE_FRAUD_CHECK_MODE', 'hybrid'),
         'min_platform_orders' => (int) env('ORDER_INTELLIGENCE_MIN_PLATFORM_ORDERS', 1),
         'max_stats_staleness_hours' => (int) env('ORDER_INTELLIGENCE_MAX_STATS_STALENESS_HOURS', 72),
-        // How long courier snapshots are considered fresh (default 5 hours).
-        'max_snapshot_staleness_hours' => (int) env('ORDER_INTELLIGENCE_MAX_SNAPSHOT_STALENESS_HOURS', 5),
+        // How long courier snapshots are considered fresh (default 10 hours).
+        // Plugin + public landing share this hybrid cache TTL.
+        'max_snapshot_staleness_hours' => (int) env('ORDER_INTELLIGENCE_MAX_SNAPSHOT_STALENESS_HOURS', 10),
         // hybrid: serve last known cache immediately; refresh in background when stale.
         'stale_while_revalidate' => (bool) env('ORDER_INTELLIGENCE_STALE_WHILE_REVALIDATE', true),
         // Never replace a useful courier snapshot with a failed/blocked fetch.

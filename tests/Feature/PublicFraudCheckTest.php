@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Services\FraudCheckService;
+use App\Services\OrderIntelligence\FraudCheckCoordinator;
 use App\Services\PublicFraudCheckService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
@@ -41,9 +43,11 @@ class PublicFraudCheckTest extends TestCase
                 ->once()
                 ->with('01770989591')
                 ->andReturn('01770989591');
-            $mock->shouldReceive('getReport')
+        });
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) {
+            $mock->shouldReceive('checkSingle')
                 ->once()
-                ->with('01770989591')
                 ->andReturn([
                     'total_order' => 10,
                     'confirmed' => 8,
@@ -69,18 +73,20 @@ class PublicFraudCheckTest extends TestCase
             ->assertJsonPath('limited', false)
             ->assertJsonPath('risk_label', 'নিরাপদ গ্রাহক')
             ->assertJsonPath('report.frauds.0.details', 'ফেইক অর্ডার করেছে')
-            ->assertJsonPath('meta.daily_search_count', 1)
+            ->assertJsonPath('meta.used_searches', 1)
             ->assertJsonPath('meta.remaining_searches', 4);
     }
 
     public function test_public_fraud_check_enforces_daily_limit(): void
     {
-        $service = app(PublicFraudCheckService::class);
         $ip = '203.0.113.10';
 
         $this->mock(FraudCheckService::class, function ($mock) {
             $mock->shouldReceive('normalizePhone')->andReturn('01770989591');
-            $mock->shouldReceive('getReport')->andReturn([
+        });
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) {
+            $mock->shouldReceive('checkSingle')->andReturn([
                 'total_order' => 0,
                 'confirmed' => 0,
                 'frauds' => [],
@@ -89,6 +95,8 @@ class PublicFraudCheckTest extends TestCase
                 'courier' => [],
             ]);
         });
+
+        $service = app(PublicFraudCheckService::class);
 
         for ($i = 0; $i < 5; $i++) {
             $service->check($ip, '01770989591');
@@ -110,5 +118,53 @@ class PublicFraudCheckTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_public_fraud_check_uses_hybrid_coordinator(): void
+    {
+        $this->mock(FraudCheckService::class, function ($mock) {
+            $mock->shouldReceive('normalizePhone')
+                ->once()
+                ->with('01770989591')
+                ->andReturn('01770989591');
+        });
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) {
+            $mock->shouldReceive('checkSingle')
+                ->once()
+                ->withArgs(function (Request $request, array $payload) {
+                    return ($payload['phone'] ?? null) === '01770989591';
+                })
+                ->andReturn([
+                    'total_order' => 5,
+                    'confirmed' => 4,
+                    'cancel' => 1,
+                    'success_rate' => '80%',
+                    'frauds' => [],
+                    'courier' => [
+                        [
+                            'title' => 'Pathao',
+                            'report' => [
+                                'data_type' => 'rating',
+                                'status' => 'rating_only',
+                                'customer_rating' => 'good_customer',
+                                'success_rate' => 'Good Customer',
+                                'total_order' => 0,
+                                'confirmed' => 0,
+                                'cancel' => 0,
+                            ],
+                        ],
+                    ],
+                    'source' => 'hybrid',
+                ]);
+        });
+
+        $response = $this->postJson(route('landing.fraud-check.check'), [
+            'phone' => '01770989591',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('report.courier.0.report.data_type', 'rating')
+            ->assertJsonPath('report.courier.0.report.success_rate', 'Good Customer');
     }
 }

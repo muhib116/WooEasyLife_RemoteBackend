@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\LogHelper;
 use App\Services\FraudCheckService;
+use App\Services\FraudCheck\PluginFraudCheckFreeQuota;
 use App\Services\OrderIntelligence\FraudCheckCoordinator;
 use App\Services\OrderIntelligence\FraudCheckRuntimeConfig;
 use Enan\PathaoCourier\Facades\PathaoCourier;
@@ -21,6 +22,7 @@ class FraudCheckController extends Controller
         private FraudCheckService $fraudCheckService,
         private FraudCheckCoordinator $fraudCheckCoordinator,
         private FraudCheckRuntimeConfig $fraudCheckRuntimeConfig,
+        private PluginFraudCheckFreeQuota $pluginFreeQuota,
     ) {}
 
     public function index()
@@ -158,12 +160,48 @@ class FraudCheckController extends Controller
 
         try {
             if (is_array($request->data)) {
-                return $this->successResponse(
-                    $this->fraudCheckCoordinator->checkMultiple($request, $request->data),
-                );
+                $phones = $this->pluginFreeQuota->countPhonesInRequest($request);
+
+                if (
+                    $phones > 0
+                    && $this->pluginFreeQuota->isOnFreeTier($request)
+                    && ! $this->pluginFreeQuota->hasRemaining($request, $phones)
+                ) {
+                    return response()->json($this->pluginFreeQuota->denyPayload($request, $phones), 429);
+                }
+
+                $users = $this->fraudCheckCoordinator->checkMultiple($request, $request->data);
+
+                if ($this->pluginFreeQuota->isOnFreeTier($request) && $users !== []) {
+                    $this->pluginFreeQuota->consume($request, count($users));
+                    $users = array_map(
+                        fn (array $row): array => [
+                            ...$row,
+                            'report' => $this->pluginFreeQuota->attachFreeAccessMeta(
+                                is_array($row['report'] ?? null) ? $row['report'] : [],
+                                $request,
+                            ),
+                        ],
+                        $users,
+                    );
+                }
+
+                return $this->successResponse($users);
+            }
+
+            if (
+                $this->pluginFreeQuota->isOnFreeTier($request)
+                && ! $this->pluginFreeQuota->hasRemaining($request, 1)
+            ) {
+                return response()->json($this->pluginFreeQuota->denyPayload($request, 1), 429);
             }
 
             $response = $this->fraudCheckCoordinator->checkSingle($request, $request->all());
+
+            if ($this->pluginFreeQuota->isOnFreeTier($request)) {
+                $this->pluginFreeQuota->consume($request, 1);
+                $response = $this->pluginFreeQuota->attachFreeAccessMeta($response, $request);
+            }
 
             return response()->json($response);
         } catch (InvalidArgumentException $e) {
@@ -197,7 +235,29 @@ class FraudCheckController extends Controller
                 $processed++;
 
                 try {
-                    $report = $this->fraudCheckCoordinator->checkSingle($request, $number);
+                    if (! is_array($number) || empty($number['phone'])) {
+                        $report = [
+                            'total_order' => 0,
+                            'confirmed' => 0,
+                            'frauds' => [],
+                            'cancel' => 0,
+                            'success_rate' => 'No order history found!',
+                            'courier' => [],
+                            'error' => 'Missing phone',
+                        ];
+                    } elseif (
+                        $this->pluginFreeQuota->isOnFreeTier($request)
+                        && ! $this->pluginFreeQuota->hasRemaining($request, 1)
+                    ) {
+                        $report = $this->pluginFreeQuota->denyPayload($request, 1);
+                    } else {
+                        $report = $this->fraudCheckCoordinator->checkSingle($request, $number);
+
+                        if ($this->pluginFreeQuota->isOnFreeTier($request)) {
+                            $this->pluginFreeQuota->consume($request, 1);
+                            $report = $this->pluginFreeQuota->attachFreeAccessMeta($report, $request);
+                        }
+                    }
                 } catch (\Throwable $th) {
                     LogHelper::saveLog('Fraud stream check error', $th->getMessage());
                     $report = [

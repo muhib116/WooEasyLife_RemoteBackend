@@ -85,7 +85,7 @@ class CourierIntelPersister
 
         // Never treat failed/blocked fetches as fresh successful cache.
         if ($this->isFailedFetch($report)) {
-            $staleHours = max(1, (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 5)) + 1;
+            $staleHours = max(1, (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 10)) + 1;
             $preserve = (bool) config('order_intelligence.fraud_check.preserve_snapshot_on_failure', true);
 
             if ($preserve && $existing && $this->snapshotHasUsefulData($existing)) {

@@ -77,7 +77,7 @@ class PlatformSufficiencyChecker
             }
         }
 
-        $maxHours = (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 5);
+        $maxHours = (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 10);
         $need = [];
 
         foreach ($required as $courier) {

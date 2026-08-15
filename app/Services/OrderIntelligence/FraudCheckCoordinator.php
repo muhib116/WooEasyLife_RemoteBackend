@@ -44,7 +44,7 @@ class FraudCheckCoordinator
             'phone' => $phoneNormalized,
             'mode' => $mode,
             'stale_while_revalidate' => (bool) config('order_intelligence.fraud_check.stale_while_revalidate', true),
-            'max_snapshot_staleness_hours' => (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 5),
+            'max_snapshot_staleness_hours' => (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 10),
             'partial_refresh' => (bool) config('order_intelligence.fraud_check.partial_refresh', true),
             'preserve_snapshot_on_failure' => (bool) config('order_intelligence.fraud_check.preserve_snapshot_on_failure', true),
         ]);

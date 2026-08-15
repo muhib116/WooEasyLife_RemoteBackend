@@ -451,7 +451,7 @@ const configForm = reactive({
     stale_while_revalidate: true,
     preserve_snapshot_on_failure: true,
     partial_refresh: true,
-    max_snapshot_staleness_hours: 5,
+    max_snapshot_staleness_hours: 10,
     refresh_unique_for_seconds: 900,
     min_platform_orders: 1,
     debug_trace: false,
@@ -515,7 +515,7 @@ const applyConfigSnapshot = (snapshot: RuntimeConfigSnapshot | null | undefined)
     configForm.stale_while_revalidate = Boolean(snapshot.values.stale_while_revalidate);
     configForm.preserve_snapshot_on_failure = Boolean(snapshot.values.preserve_snapshot_on_failure);
     configForm.partial_refresh = Boolean(snapshot.values.partial_refresh);
-    configForm.max_snapshot_staleness_hours = Number(snapshot.values.max_snapshot_staleness_hours ?? 5);
+    configForm.max_snapshot_staleness_hours = Number(snapshot.values.max_snapshot_staleness_hours ?? 10);
     configForm.refresh_unique_for_seconds = Number(snapshot.values.refresh_unique_for_seconds ?? 900);
     configForm.min_platform_orders = Number(snapshot.values.min_platform_orders ?? 1);
     configForm.debug_trace = Boolean(snapshot.values.debug_trace);

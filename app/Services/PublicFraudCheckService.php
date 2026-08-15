@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Services\OrderIntelligence\FraudCheckCoordinator;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
@@ -9,6 +11,7 @@ class PublicFraudCheckService
 {
     public function __construct(
         private FraudCheckService $fraudCheckService,
+        private FraudCheckCoordinator $fraudCheckCoordinator,
     ) {}
 
     public function isEnabled(): bool
@@ -50,9 +53,11 @@ class PublicFraudCheckService
     }
 
     /**
+     * Same hybrid cache path as the plugin (Hermes fallback + rating-only live upgrade).
+     *
      * @return array<string, mixed>
      */
-    public function check(string $ip, string $phone, string $locale = 'bn'): array
+    public function check(string $ip, string $phone, string $locale = 'bn', ?Request $request = null): array
     {
         if (! $this->isEnabled()) {
             throw new InvalidArgumentException('Public fraud check is currently unavailable.');
@@ -71,7 +76,13 @@ class PublicFraudCheckService
         }
 
         $normalizedPhone = $this->fraudCheckService->normalizePhone($phone);
-        $report = $this->fraudCheckService->getReport($normalizedPhone);
+        $request ??= Request::create('/public/fraud-check', 'POST', [
+            'phone' => $normalizedPhone,
+        ]);
+
+        $report = $this->fraudCheckCoordinator->checkSingle($request, [
+            'phone' => $normalizedPhone,
+        ]);
 
         $this->incrementIpUsage($ip);
         $this->incrementDailySearchCount();
