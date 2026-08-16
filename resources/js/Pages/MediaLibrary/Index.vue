@@ -58,114 +58,89 @@
                             </a>
                         </div>
 
-                        <!-- Compact bar: always visible, toggles full details -->
-                        <div class="flex h-11 items-center gap-1 border-t border-slate-200 px-1.5 dark:border-slate-700">
-                            <button
-                                type="button"
-                                class="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 text-left transition hover:bg-slate-100 dark:hover:bg-slate-800"
-                                :aria-expanded="isDetailsOpen(item.id)"
-                                :aria-controls="`media-details-${item.id}`"
-                                @click="toggleDetails(item.id)"
-                            >
-                                <i
-                                    class="pi shrink-0 text-[10px] text-slate-400"
-                                    :class="isDetailsOpen(item.id) ? 'pi-chevron-down' : 'pi-chevron-right'"
-                                />
-                                <span class="min-w-0 flex-1 truncate text-[13px] font-medium leading-none text-slate-800 dark:text-slate-100">
-                                    {{ drafts[item.id]?.title || item.title || item.filename }}
-                                </span>
-                                <span
-                                    v-if="isDirty(item)"
-                                    class="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
-                                    title="Unsaved changes"
-                                />
-                                <span class="hidden shrink-0 text-[10px] tabular-nums text-slate-400 sm:inline">
-                                    {{ item.human_size }}
-                                </span>
-                            </button>
-                            <Button
-                                :icon="copiedId === item.id ? 'pi pi-check' : 'pi pi-link'"
-                                size="small"
-                                text
-                                rounded
-                                class="!h-8 !w-8 shrink-0"
-                                :severity="copiedId === item.id ? 'success' : 'secondary'"
-                                :aria-label="copiedId === item.id ? 'Copied' : 'Copy link'"
-                                v-tooltip.top="copiedId === item.id ? 'Copied' : 'Copy link'"
-                                @click="copyUrl(item)"
-                            />
+                        <!-- Inline editable title + alt (save on blur) -->
+                        <div class="space-y-2 border-t border-slate-200 px-2.5 py-2.5 dark:border-slate-700">
+                            <div class="flex items-start gap-1">
+                                <button
+                                    type="button"
+                                    class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                                    :aria-expanded="isDetailsOpen(item.id)"
+                                    :aria-controls="`media-details-${item.id}`"
+                                    :aria-label="isDetailsOpen(item.id) ? 'Hide details' : 'Show details'"
+                                    @click="toggleDetails(item.id)"
+                                >
+                                    <i
+                                        class="pi text-[10px]"
+                                        :class="isDetailsOpen(item.id) ? 'pi-chevron-down' : 'pi-chevron-right'"
+                                    />
+                                </button>
+                                <div class="min-w-0 flex-1 space-y-1.5">
+                                    <InputText
+                                        v-if="drafts[item.id]"
+                                        :id="`media-title-${item.id}`"
+                                        v-model="drafts[item.id].title"
+                                        class="w-full !text-sm !font-medium"
+                                        :placeholder="item.filename || 'Title'"
+                                        :disabled="savingId === item.id"
+                                        aria-label="Title"
+                                        @keydown.enter.prevent="blurActive"
+                                        @blur="saveMetaOnBlur($event, item)"
+                                    />
+                                    <InputText
+                                        v-if="drafts[item.id]"
+                                        :id="`media-alt-${item.id}`"
+                                        v-model="drafts[item.id].alt"
+                                        class="w-full !text-xs"
+                                        placeholder="Alt text"
+                                        :disabled="savingId === item.id"
+                                        aria-label="Alt text"
+                                        @keydown.enter.prevent="blurActive"
+                                        @blur="saveMetaOnBlur($event, item)"
+                                    />
+                                </div>
+                                <div class="flex shrink-0 items-center gap-0.5 pt-0.5">
+                                    <span
+                                        v-if="isDirty(item) || savingId === item.id"
+                                        class="mr-0.5 h-1.5 w-1.5 rounded-full"
+                                        :class="savingId === item.id ? 'animate-pulse bg-sky-500' : 'bg-amber-500'"
+                                        :title="savingId === item.id ? 'Saving…' : 'Unsaved'"
+                                    />
+                                    <Button
+                                        :icon="copiedId === item.id ? 'pi pi-check' : 'pi pi-link'"
+                                        size="small"
+                                        text
+                                        rounded
+                                        class="!h-8 !w-8"
+                                        :severity="copiedId === item.id ? 'success' : 'secondary'"
+                                        :aria-label="copiedId === item.id ? 'Copied' : 'Copy link'"
+                                        v-tooltip.top="copiedId === item.id ? 'Copied' : 'Copy link'"
+                                        @click="copyUrl(item)"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Full details panel -->
+                        <!-- Extra details + delete -->
                         <div
                             v-show="isDetailsOpen(item.id)"
                             :id="`media-details-${item.id}`"
                             class="border-t border-slate-200 dark:border-slate-700"
                         >
-                            <div class="space-y-3 px-3 py-3">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
-                                        {{ item.width }}×{{ item.height }}
-                                        <span class="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
-                                        {{ item.human_size }}
-                                    </p>
-                                    <span class="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                                        WebP
-                                    </span>
-                                </div>
-
-                                <div class="space-y-1">
-                                    <label
-                                        class="block text-[11px] font-medium text-slate-500 dark:text-slate-400"
-                                        :for="`media-title-${item.id}`"
-                                    >
-                                        Title
-                                    </label>
-                                    <InputText
-                                        v-if="drafts[item.id]"
-                                        :id="`media-title-${item.id}`"
-                                        v-model="drafts[item.id].title"
-                                        class="w-full !text-sm"
-                                        placeholder="Descriptive title"
-                                    />
-                                </div>
-
-                                <div class="space-y-1">
-                                    <label
-                                        class="block text-[11px] font-medium text-slate-500 dark:text-slate-400"
-                                        :for="`media-alt-${item.id}`"
-                                    >
-                                        Alt text
-                                    </label>
-                                    <InputText
-                                        v-if="drafts[item.id]"
-                                        :id="`media-alt-${item.id}`"
-                                        v-model="drafts[item.id].alt"
-                                        class="w-full !text-sm"
-                                        placeholder="Describe the image"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-2 border-t border-slate-200 px-3 py-3 dark:border-slate-700">
-                                <Button
-                                    :label="isDirty(item) ? 'Save' : 'Saved'"
-                                    :icon="isDirty(item) ? 'pi pi-check' : 'pi pi-check-circle'"
-                                    size="small"
-                                    class="!h-9 !justify-center"
-                                    :outlined="!isDirty(item)"
-                                    :severity="isDirty(item) ? undefined : 'secondary'"
-                                    :disabled="!isDirty(item) || savingId === item.id"
-                                    :loading="savingId === item.id"
-                                    @click="saveMeta(item)"
-                                />
+                            <div class="flex items-center justify-between gap-2 px-3 py-3">
+                                <p class="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+                                    {{ item.width }}×{{ item.height }}
+                                    <span class="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+                                    {{ item.human_size }}
+                                    <span class="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+                                    <span class="font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">WebP</span>
+                                </p>
                                 <Button
                                     label="Delete"
                                     icon="pi pi-trash"
                                     size="small"
                                     severity="danger"
                                     outlined
-                                    class="!h-9 !justify-center"
+                                    class="!h-8"
                                     :loading="deletingId === item.id"
                                     @click="destroy(item)"
                                 />
@@ -227,6 +202,14 @@ const drafts = reactive({});
 
 const syncDrafts = () => {
     rows.value.forEach((item) => {
+        const existing = drafts[item.id];
+        if (existing && (
+            (existing.title || '') !== (item.title || '')
+            || (existing.alt || '') !== (item.alt || '')
+        )) {
+            // Keep in-progress edits when the list refreshes.
+            return;
+        }
         drafts[item.id] = {
             title: item.title || '',
             alt: item.alt || '',
@@ -282,10 +265,37 @@ const copyUrl = async (item) => {
     }
 };
 
-const saveMeta = async (item) => {
+const blurActive = (event) => {
+    event?.target?.blur?.();
+};
+
+const saveMetaIfDirty = (item) => {
+    if (!isDirty(item) || savingId.value === item.id) {
+        return;
+    }
+    return saveMeta(item, { quiet: true });
+};
+
+const saveMetaOnBlur = (event, item) => {
+    const nextFocusId = event?.relatedTarget?.id;
+    if (
+        nextFocusId === `media-title-${item.id}`
+        || nextFocusId === `media-alt-${item.id}`
+    ) {
+        return;
+    }
+
+    return saveMetaIfDirty(item);
+};
+
+const saveMeta = async (item, { quiet = false } = {}) => {
+    if (savingId.value === item.id) {
+        return;
+    }
+
     savingId.value = item.id;
     try {
-        await axios.put(route('mediaLibrary.update', item.id), {
+        const { data } = await axios.put(route('mediaLibrary.update', item.id), {
             title: drafts[item.id]?.title || null,
             alt: drafts[item.id]?.alt || null,
         }, {
@@ -294,8 +304,20 @@ const saveMeta = async (item) => {
                 'X-Requested-With': 'XMLHttpRequest',
             },
         });
-        toast.add({ severity: 'success', summary: 'Saved', detail: 'Media details updated.', life: 2500 });
-        router.reload({ only: ['items'] });
+
+        const updated = data?.media;
+        if (updated) {
+            item.title = updated.title ?? '';
+            item.alt = updated.alt ?? '';
+            drafts[item.id] = {
+                title: updated.title || '',
+                alt: updated.alt || '',
+            };
+        }
+
+        if (!quiet) {
+            toast.add({ severity: 'success', summary: 'Saved', detail: 'Media details updated.', life: 2500 });
+        }
     } catch (e) {
         toast.add({
             severity: 'error',
