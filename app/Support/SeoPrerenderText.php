@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Cache;
+
 /**
  * Soft-clean mashed cluster copy for #seo-prerender (crawlers).
  * Keeps meaning; strips LaTeX delimiters and box-drawing noise.
@@ -9,6 +11,14 @@ namespace App\Support;
  */
 class SeoPrerenderText
 {
+    public const SITEMAP_NAV_CACHE_PREFIX = 'seo.sitemap_nav_links.v1.';
+
+    public static function forgetSitemapNavLinksCache(): void
+    {
+        Cache::forget(self::SITEMAP_NAV_CACHE_PREFIX.'bn');
+        Cache::forget(self::SITEMAP_NAV_CACHE_PREFIX.'en');
+    }
+
     /** @var array<string, array{bn: string, en: string}> */
     private const PATH_LABELS = [
         '/' => ['bn' => 'হোম', 'en' => 'Bangla home'],
@@ -105,33 +115,36 @@ class SeoPrerenderText
     public static function sitemapNavLinks(bool $isEn = false): array
     {
         $lang = $isEn ? 'en' : 'bn';
-        $links = [];
-        $seen = [];
 
-        foreach (config('seo.sitemap.paths', []) as $item) {
-            $path = (string) ($item['path'] ?? '');
-            if ($path === '' || $path === '/' || isset($seen[$path])) {
-                continue;
+        return Cache::remember(self::SITEMAP_NAV_CACHE_PREFIX.$lang, 300, function () use ($lang) {
+            $links = [];
+            $seen = [];
+
+            foreach (config('seo.sitemap.paths', []) as $item) {
+                $path = (string) ($item['path'] ?? '');
+                if ($path === '' || $path === '/' || isset($seen[$path])) {
+                    continue;
+                }
+
+                $seen[$path] = true;
+                $links[] = [
+                    'href' => $path,
+                    'label' => self::PATH_LABELS[$path][$lang] ?? ltrim($path, '/'),
+                ];
             }
 
-            $seen[$path] = true;
-            $links[] = [
-                'href' => $path,
-                'label' => self::PATH_LABELS[$path][$lang] ?? ltrim($path, '/'),
-            ];
-        }
+            foreach (self::blogSitemapNavLinks() as $blogLink) {
+                $path = (string) ($blogLink['href'] ?? '');
+                if ($path === '' || isset($seen[$path])) {
+                    continue;
+                }
 
-        foreach (self::blogSitemapNavLinks() as $blogLink) {
-            $path = (string) ($blogLink['href'] ?? '');
-            if ($path === '' || isset($seen[$path])) {
-                continue;
+                $seen[$path] = true;
+                $links[] = $blogLink;
             }
 
-            $seen[$path] = true;
-            $links[] = $blogLink;
-        }
-
-        return $links;
+            return $links;
+        });
     }
 
     /**

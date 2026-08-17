@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\PackageHub;
 use App\Models\User;
 use App\Models\UserPackage;
+use App\Services\LandingPageService;
 use App\Support\PackageCatalogFeatures;
 use Illuminate\Database\Seeder;
 
@@ -128,6 +129,8 @@ class PackageCatalogSeeder extends Seeder
                 ],
             );
         }
+
+        LandingPageService::forgetActivePlansCache();
 
         $this->command?->info('Catalog packages seeded: ' . count($definitions));
     }

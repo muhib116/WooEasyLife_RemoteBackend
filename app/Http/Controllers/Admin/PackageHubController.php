@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PackageHub;
 use App\Models\UserPackage;
+use App\Services\LandingPageService;
 use App\Services\PackagePlanResolver;
 use App\Support\PackageCatalogFeatures;
 use Illuminate\Http\Request;
@@ -63,6 +64,8 @@ class PackageHubController extends Controller
             'index' => PackageHub::withTrashed()->count() + 1,
         ]);
 
+        LandingPageService::forgetActivePlansCache();
+
         return back()->with('success', 'Package created successfully!');
     }
 
@@ -98,6 +101,8 @@ class PackageHubController extends Controller
             'updated_by' => Auth::id(),
         ]);
 
+        LandingPageService::forgetActivePlansCache();
+
         return back()->with('success', 'Package updated successfully!');
     }
 
@@ -119,6 +124,8 @@ class PackageHubController extends Controller
         $package->update(['updated_by' => Auth::id()]);
         $package->delete();
 
+        LandingPageService::forgetActivePlansCache();
+
         return back()->with('success', 'Package deleted successfully!');
     }
 
@@ -132,6 +139,8 @@ class PackageHubController extends Controller
 
         $package->update(['updated_by' => Auth::id()]);
         $package->restore();
+
+        LandingPageService::forgetActivePlansCache();
 
         return back()->with('success', 'Package restored successfully!');
     }
@@ -151,6 +160,8 @@ class PackageHubController extends Controller
             'is_active' => ! $package->is_active,
             'updated_by' => Auth::id(),
         ]);
+
+        LandingPageService::forgetActivePlansCache();
 
         $label = $package->is_active ? 'enabled' : 'disabled';
 

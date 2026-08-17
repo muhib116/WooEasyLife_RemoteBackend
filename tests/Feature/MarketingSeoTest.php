@@ -48,6 +48,8 @@ class MarketingSeoTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Courier Fraud Checker BD', false);
+        $response->assertSee('WordPress', false);
+        $response->assertSee('WooCommerce', false);
         $response->assertSee('name="description"', false);
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Seo/BdFraudChecker')
@@ -55,6 +57,12 @@ class MarketingSeoTest extends TestCase
             ->has('seo')
             ->where('seo.canonical_path', '/bd-fraud-checker')
             ->where('seo.ssr_fraud_checker', true)
+        );
+
+        $faqs = config('seo.pages.bd_fraud_checker.faqs', []);
+        $this->assertGreaterThanOrEqual(10, count($faqs));
+        $this->assertTrue(
+            collect($faqs)->contains(fn (array $faq) => str_contains((string) ($faq['q'] ?? ''), 'WordPress')),
         );
     }
 
@@ -1229,11 +1237,17 @@ class MarketingSeoTest extends TestCase
         $response = $this->get('/robots.txt');
 
         $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
+        $response->assertHeader('Cache-Control');
+        $this->assertStringContainsString('public', (string) $response->headers->get('Cache-Control'));
+        $this->assertFalse($response->headers->has('Set-Cookie'), 'robots.txt must not set session cookies');
         $response->assertSee('User-agent: *', false);
         $response->assertSee('Disallow: /woodnutsbolts/privacy-policy', false);
         $response->assertSee('Disallow: /woodnutsbolts/terms-of-service', false);
         $response->assertSee('Sitemap:', false);
         $response->assertSee('/sitemap.xml', false);
+        $this->assertFileExists(public_path('robots.txt'));
+        $this->assertStringContainsString('Sitemap:', (string) file_get_contents(public_path('robots.txt')));
     }
 
     public function test_robots_disallows_authenticated_admin_and_portal_paths(): void
@@ -1268,6 +1282,116 @@ class MarketingSeoTest extends TestCase
                 $body
             );
         }
+    }
+
+    public function test_robots_is_cacheable_and_does_not_start_a_session(): void
+    {
+        $response = $this->get('/robots.txt');
+
+        $response->assertOk();
+        $cacheControl = strtolower((string) $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('public', $cacheControl);
+        $this->assertStringContainsString('max-age=86400', $cacheControl);
+        $this->assertFalse($response->headers->has('Set-Cookie'));
+        $this->assertNotEquals('X-Inertia', (string) $response->headers->get('Vary'));
+    }
+
+    public function test_robots_is_reachable_during_maintenance(): void
+    {
+        $this->artisan('down');
+
+        try {
+            $this->get('/robots.txt')->assertOk()->assertSee('User-agent: *', false);
+        } finally {
+            $this->artisan('up');
+        }
+    }
+
+    public function test_public_robots_txt_uses_canonical_sitemap(): void
+    {
+        $path = public_path('robots.txt');
+        $original = is_file($path) ? (string) file_get_contents($path) : '';
+
+        try {
+            config(['app.url' => 'https://app.wpsalehub.com']);
+            $this->artisan('seo:write-robots')->assertSuccessful();
+
+            $this->assertFileExists($path);
+            $body = (string) file_get_contents($path);
+            $this->assertStringContainsString('User-agent: *', $body);
+            $this->assertStringContainsString('Sitemap: https://app.wpsalehub.com/sitemap.xml', $body);
+            $this->assertStringNotContainsString('localhost', $body);
+            $this->assertStringNotContainsString("Disallow: /\n", $body."\n");
+        } finally {
+            if ($original !== '') {
+                file_put_contents($path, $original);
+            }
+        }
+    }
+
+    public function test_seo_write_robots_command_refreshes_public_file(): void
+    {
+        $path = public_path('robots.txt');
+        $original = (string) file_get_contents($path);
+
+        try {
+            config(['app.url' => 'https://app.wpsalehub.com']);
+            $this->artisan('seo:write-robots')->assertSuccessful();
+            $body = (string) file_get_contents($path);
+            $this->assertStringContainsString('Sitemap: https://app.wpsalehub.com/sitemap.xml', $body);
+            $this->assertStringContainsString('Disallow: /dashboard', $body);
+        } finally {
+            file_put_contents($path, $original);
+        }
+    }
+
+    public function test_robots_cache_miss_rewrites_public_file(): void
+    {
+        $path = public_path('robots.txt');
+        $original = (string) file_get_contents($path);
+
+        try {
+            config(['app.url' => 'https://app.wpsalehub.com']);
+            \Illuminate\Support\Facades\Cache::forget(\App\Http\Controllers\App\RobotsController::CACHE_KEY);
+            file_put_contents($path, "User-agent: *\nDisallow: /\n");
+
+            $this->get('/robots.txt')->assertOk();
+
+            $body = (string) file_get_contents($path);
+            $this->assertStringContainsString('Sitemap: https://app.wpsalehub.com/sitemap.xml', $body);
+            $this->assertStringNotContainsString("Disallow: /\n", $body."\n");
+        } finally {
+            file_put_contents($path, $original);
+            \Illuminate\Support\Facades\Cache::forget(\App\Http\Controllers\App\RobotsController::CACHE_KEY);
+        }
+    }
+
+    public function test_publishing_blog_post_forgets_sitemap_nav_cache(): void
+    {
+        \App\Support\SeoPrerenderText::sitemapNavLinks(false);
+        $this->assertTrue(\Illuminate\Support\Facades\Cache::has(\App\Support\SeoPrerenderText::SITEMAP_NAV_CACHE_PREFIX.'bn'));
+
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-nav-'.uniqid().'@example.com',
+            'phone' => '01700000999',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        BlogPost::create([
+            'title' => 'Nav cache bust post',
+            'slug' => 'nav-cache-bust-post',
+            'locale' => 'bn',
+            'status' => 'published',
+            'body_html' => '<p>Test</p>',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has(\App\Support\SeoPrerenderText::SITEMAP_NAV_CACHE_PREFIX.'bn'));
     }
 
     public function test_home_includes_ga4_gtag_when_measurement_id_configured(): void

@@ -231,7 +231,7 @@ class MarketingSeoController extends Controller
             abort(404);
         }
 
-        $payload = $landing->payload($request);
+        $payload = $landing->marketingShell($request);
         $whatsapp = $landingSettings->adminWhatsapp();
         $seoMeta = $seo->forPage($map[$key]['seo']);
 
@@ -338,7 +338,7 @@ class MarketingSeoController extends Controller
             abort(404);
         }
 
-        $payload = $landing->payload($request);
+        $payload = $landing->marketingShell($request);
         $whatsapp = $landingSettings->adminWhatsapp();
         $seoMeta = $seo->forPage($seoKey);
 
@@ -397,7 +397,7 @@ class MarketingSeoController extends Controller
         string $component,
         array $payloadKeys,
     ): Response {
-        $payload = $landing->payload($request);
+        $payload = $landing->calculatorProps(array_values($payloadKeys), $request);
         $whatsapp = $landingSettings->adminWhatsapp();
         $seoMeta = $seo->forPage($seoPage);
 
@@ -428,7 +428,7 @@ class MarketingSeoController extends Controller
         string $component,
         string $activeNav,
     ): Response {
-        $payload = $landing->payload($request);
+        $payload = $landing->marketingShell($request);
         $whatsapp = $landingSettings->adminWhatsapp();
         $seoMeta = $seo->forPage($seoPage);
 

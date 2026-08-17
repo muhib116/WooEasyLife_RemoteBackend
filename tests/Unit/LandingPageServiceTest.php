@@ -12,6 +12,12 @@ class LandingPageServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        LandingPageService::forgetActivePlansCache();
+    }
+
     public function test_builds_feature_highlights_from_featured_plan(): void
     {
         PackageHub::create([
@@ -51,5 +57,38 @@ class LandingPageServiceTest extends TestCase
         $this->assertNotEmpty($payload['fraudBenefitCards']);
         $this->assertNotEmpty($payload['valuePillars']);
         $this->assertCount(1, $payload['plans']);
+    }
+
+    public function test_slim_payload_omits_homepage_unused_blobs(): void
+    {
+        PackageHub::create([
+            'title' => 'Pro Plus – 1 Month',
+            'description' => '<p>Full plan</p>',
+            'per_order_rate' => 0,
+            'package_duration' => '1_month',
+            'order_rate_token' => 10000,
+            'package_price' => 4999,
+            'app_connect' => true,
+            'is_special' => true,
+            'is_active' => true,
+            'features' => PackageCatalogFeatures::map(),
+        ]);
+
+        $payload = app(LandingPageService::class)->payload(null, 'bn', ['slim' => true]);
+
+        $this->assertArrayNotHasKey('courierChargeCalculator', $payload);
+        $this->assertArrayNotHasKey('conversionFeatures', $payload);
+        $this->assertArrayNotHasKey('featureHighlights', $payload);
+        $this->assertNotEmpty($payload['plans']);
+        $this->assertArrayHasKey('fraudCheck', $payload);
+    }
+
+    public function test_marketing_shell_is_lightweight(): void
+    {
+        $shell = app(LandingPageService::class)->marketingShell();
+
+        $this->assertArrayHasKey('fraudCheck', $shell);
+        $this->assertArrayHasKey('whatsappUrl', $shell);
+        $this->assertArrayNotHasKey('plans', $shell);
     }
 }

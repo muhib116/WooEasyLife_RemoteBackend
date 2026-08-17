@@ -7,8 +7,12 @@ description: >
   playbook (pillar → cluster → deep FAQs → YouTube → closed-loop links).
   Use for today's plan, SEO next steps, FAQ architecture, sitemap/internal
   links, GSC-driven content, fraud checker ranking tactics, SteadFast/Pathao
-  cluster campaigns, competitor audits, and organic growth vs BD courier/COD
-  competitors. Also use when a new plugin or app feature ships, to scan the
+  cluster campaigns, competitor audits, organic growth vs BD courier/COD
+  competitors, grounded AI search / zero-click / GEO-AEO guidance (no MCP
+  or llms.txt hype), GSC Crawl stats / robots.txt host availability ops,
+  and Core Web Vitals / TTFB / marketing-page speed optimization (keep
+  content campaigns separate from host/perf work).
+  Also use when a new plugin or app feature ships, to scan the
   product and turn it into keyword/FAQ/landing rows in
   config/seo_keyword_inventory.php. Pair with wooeasylife-brand and FEATURES.md.
   Canonical domain: app.wpsalehub.com.
@@ -16,7 +20,7 @@ description: >
 
 # WooEasyLife SEO Mentor Skill
 
-**Last reviewed:** 2026-08-08
+**Last reviewed:** 2026-08-17
 **Rule (daily plan format):** `.cursor/rules/seo-mentor.mdc`  
 **Brand + creatives:** `.cursor/skills/wooeasylife-brand/SKILL.md`  
 **Features (claims only if Shipped):** `.cursor/skills/wooeasylife-brand/FEATURES.md`  
@@ -36,12 +40,18 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 | আজকের প্ল্যান / today's plan | Follow `.cursor/rules/seo-mentor.mdc`; if calendar active → `SeoAuthorityCalendar::resolve()`; **Sundays** also merge Step 9 from `config/seo_authority_metrics.php` / `seo:weekly-report` |
 | next steps / SEO plan / organic roadmap | Re-read this skill → give **Default priority stack** + active cluster status (not a week dump) |
 | SteadFast cluster / pillar guide / 90-day / authority playbook | **Courier pillar authority playbook** (Steps 1–10) |
+| topical map / topical mapping / topic cluster / hub and spoke | Same as pillar playbook — see glossary under **Courier pillar authority playbook** (not a parallel system) |
+| semantic writing / semantic content / competition before volume / KD-first keywords | Same cluster discipline — see glossary under **Courier pillar authority playbook** (not a parallel workflow) |
+| keyword mapping / initial SEO audit / weak-SERP keyword pick | Same cluster discipline — see glossary under **Courier pillar authority playbook** (not a parallel workflow) |
 | FAQ / `/faq` | Phase 2 — but only after Phase 1 P0s; invent no slugs (use `plannedFaqs()`). Cluster FAQs: deep 600–1000w, inventory-backed — **not** thin 60-word dumps |
 | fraud checker rank / SERP | **Fraud checker SERP rivals** + Gap scorecard (SSR P0 first) |
 | competitor audit + URL(s) | Run **Competitor re-audit protocol**; update roster if they enter top 3 |
 | new feature / update features / shipped | **Feature discovery → SEO opportunity loop** |
 | keywords / long-tails / new URLs | Inventory decision rule; write rows to inventory file |
 | orphaned sitemap / Semrush crawlability orphans | **Orphaned sitemap pages** playbook below — fix links, never only remove from sitemap |
+| AI Overview / GEO / AEO / zero-click / LLM SEO | **AI search / zero-click (2026)** — keep grounded; do not start a new campaign theme |
+| GSC Host had problems / robots.txt fail / Crawl stats availability | **GSC Crawl stats / robots.txt host availability** — ops fix, not a content campaign |
+| PageSpeed / CWV Failed / slow TTFB / LCP / heavy homepage | **Speed / CWV / marketing TTFB** — host + payload weight; not a new content theme |
 | review / upgrade this skill | **Skill self-maintenance** checklist |
 
 ---
@@ -56,6 +66,7 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 | Product docs | Plugin **v1.5.4+** · App v1.1.6 · `FEATURES.md` last analyzed **2026-08-08** (checkout OTP gate, BD area, soft-pass, throttle) |
 | Landing | Home fraud showcase + `/fake-order-protection` pillars updated for OTP/BD area/throttle honesty |
 | Authority campaign | **Active:** SteadFast → `/steadfast-fraud-check`. Steps **1–3 + 5–9** done. **Step 4 YouTube = skipped for now**. Run cluster lock + Sunday Step 9; **Step 10** only after SteadFast wins. |
+| Perf / crawl ops (2026-08-17) | robots.txt static + cookie-free route; marketing `marketingShell`/`slim` payload; CWV still host/field — deploy + `seo:write-robots` required |
 
 Update this table when `/faq` ships, major gaps close, versions bump, or the active authority cluster changes.
 
@@ -93,6 +104,14 @@ Do **not** clone courier-brand support FAQs (payment schedules, warehouse securi
 | Expand to Pathao / Fake Order / Fraud Checker BD before active pillar wins | Wait until pillar is top-results + meaningful traffic (**Step 10**) |
 | Thin 50–100 FAQ stubs (60–140 words) | Allowed: ~15–20 **deep** cluster FAQs (600–1000w) that strengthen one pillar |
 | Claim the tool “guarantees” fake/genuine | Honesty line: informed decision only — see **Trust signals** |
+| Treat MCP / `llms.txt` as SEO requirements | Not ranking signals for Google AI bots; skip unless product/dev needs MCP |
+| Start a “GEO/AEO campaign” or theme-hop off the active pillar | GEO/AEO = how you write & measure the **same** cluster — see **AI search / zero-click (2026)** |
+| Panic on impression↑ / click↓ alone | Often AI Overview / zero-click; judge tool checks, brand search, CTA — not vanity CTR only |
+| Serve `/robots.txt` through web/Inertia/session middleware | Cookies + slow PHP → GSC “robots.txt fetch” fails; see **GSC Crawl stats / robots.txt host availability** |
+| Treat “Host had problems” as a content/keyword gap | It is crawl **availability** (robots.txt / DNS / connectivity) — fix hosting/static file first |
+| “Fix CWV” by dumping 20 new blogs / theme-hop | Speed ≠ content authority; see **Speed / CWV / marketing TTFB** |
+| Re-introduce full `LandingPageService::payload()` on SEO tool pages | Use `marketingShell()` / `calculatorProps()` — full payload kills TTFB |
+| Cache sitemap nav / plans without invalidation | Stale footer orphans + wrong pricing; forget on blog save / package change |
 
 ---
 
@@ -105,8 +124,109 @@ Do in order — stop when the day's budget is used:
 3. **Internal links:** fraud ↔ COD ↔ calculators ↔ courier pillars ↔ `/faq` ↔ `/pricing` — closed loop (guide ↔ FAQ ↔ video ↔ tool ↔ case ↔ calculator ↔ guide)  
 4. **Courier pillars:** Pathao / Steadfast / RedX — deepen the **one** active pillar to authority depth; others stay maintenance until Step 10  
 5. **GSC Sunday review:** position/CTR/impressions/tool clicks trends — not daily rank obsession *(hub + first 8 FAQs **shipped**; next FAQs from GSC + cluster map)*  
-6. **Later:** next courier/fake-order cluster only after active pillar wins; then `planned_commercial` (OTP, blacklist, abandoned, AI order)  
-7. **Always available:** 1 theme/day social **inside the active cluster** → live CTA; founder beat weekly
+6. **Speed / CWV (when PSI or field CrUX is Failed):** follow **Speed / CWV / marketing TTFB** — TTFB + HTML weight first; do not pause SteadFast cluster for a redesign rabbit hole  
+7. **Later:** next courier/fake-order cluster only after active pillar wins; then `planned_commercial` (OTP, blacklist, abandoned, AI order)  
+8. **Always available:** 1 theme/day social **inside the active cluster** → live CTA; founder beat weekly
+
+---
+
+## AI search / zero-click (2026) — keep grounded
+
+Industry shift is real; **hype tactics are not**. Use this when the user asks about AI Overview, GEO, AEO, LLM SEO, zero-click, or “SEO is dead.”
+
+**What is true (act on):**
+- AI Overviews / answer surfaces often **compress CTR** on informational queries (studies ~58–65% lower CTR when AIO present; floor can bounce — still a new normal).
+- Many searches end **zero-click**; success ≠ impressions alone.
+- For Google AI surfaces, fundamentals still win: crawlable HTML, topical depth, clear answers, E-E-A-T — Google frames AEO/GEO as **still SEO**, not a separate index.
+- **Answer-first** blocks help: open FAQ/pillar sections with a **40–60 word** direct answer, then detail; prefer **question-shaped H2s** on cluster FAQs.
+- Brand / entity mentions and founder proof matter more alongside links — keep Muhibbullah byline + real product CTAs.
+- Prefer **tool / commercial intent** CTAs (`/bd-fraud-checker`, trial, pillar) where clicks still convert under zero-click pressure.
+- **Citation spot-check (monthly, light):** in Google AI Mode / Overview, ask 3–5 conversational BN questions from the active pillar (e.g. SteadFast fraud check / COD return). Note which brands/URLs get cited — treat gaps as content or off-site mention work, not a reason to abandon the cluster.
+- **Off-site for BD COD niche:** prioritize **YouTube + Facebook/seller-community** brand mentions and founder clips over Reddit-first playbooks (Reddit matters globally; BD merchants live on FB/YT).
+- **Original proof beats generic AI blogs:** real tool UI, delivery/return numbers honesty, founder experience — citable specifics AI and users both trust.
+
+**What to ignore (do not add to plans):**
+- MCP as a website SEO requirement (AI crawlers use HTTP + `robots.txt`, not MCP).
+- Mandatory `llms.txt` / “agentic SEO stack” as ranking work.
+- Paid “AI Visibility” tools as a must-buy to “rank in ChatGPT” — optional later; GSC + tool funnel first.
+- Doom framing that “search dies 25%” as a reason to abandon the active pillar — demand **redistributes**; deepen SteadFast (or locked topic) first.
+- Renaming the daily theme to GEO/AEO or expanding Pathao/Messenger mid-cluster.
+
+**WEL measurement add-ons (Sunday / Step 9 friendly):**
+- Free-tool checks + remaining-limit funnel, not only GSC clicks  
+- Branded queries (`WooEasyLife`, `wpsalehub`, pillar brand+intent)  
+- CTA to `/pricing` / trial from cluster pages  
+
+**One-liner for plans:** Write the **same** SteadFast (or active) cluster deeper and more answer-extractable — do not open a parallel “AI SEO” workstream.
+
+---
+
+## GSC Crawl stats / robots.txt host availability
+
+Use when GSC shows **Host had problems**, **robots.txt fetch / high fail rate**, or Settings → Crawl stats → Host status is red. Official ref: [Crawl Stats report](https://support.google.com/webmasters/answer/9679690) (§ availability).
+
+**This is not a content gap.** Do not respond with new blogs/FAQs/Pathao themes. Fix crawl availability first.
+
+**Host status categories:**
+1. **robots.txt fetching** — Google needs a successful response before normal crawl  
+2. **DNS resolution** — registrar / DNS  
+3. **Server connectivity** — 5xx / timeouts / unreachable host  
+
+**Successful robots.txt responses (any of these OK):**
+- `200` + body (valid, invalid, or empty)  
+- `403` / `404` / `410` (no file — site may still be crawled)  
+
+**Unsuccessful (crawl slows/stops):** `429`, `5xx`, connection failures. After failed fetches Google may pause crawl (~first 12 hours), then fall back to last good robots.txt (up to ~30 days), then either crawl unconstrained (if homepage up) or stop.
+
+**WEL implementation (keep):**
+- Static `public/robots.txt` so LiteSpeed can serve without PHP  
+- Route `/robots.txt` **outside** `web` middleware (no session/Inertia cookies)  
+- `Cache-Control: public, max-age=86400`  
+- Deploy / after disallow-list changes: `php artisan seo:write-robots`  
+- Never cloak robots.txt by user-agent  
+
+**Sunday / Step 9 (light):** If Host status is red, note it in the weekly metrics log and verify `curl -sI https://app.wpsalehub.com/robots.txt` → `200`, no `Set-Cookie`, then re-check GSC next week. Do not block the SteadFast content checklist unless the site is still failing live.
+
+---
+
+## Speed / CWV / marketing TTFB
+
+Use when PageSpeed Insights / CrUX shows **CWV Failed**, slow **TTFB**, poor **LCP/FCP**, or the user asks about site speed. Official context: Core Web Vitals are a quality signal — **not** a substitute for SteadFast cluster authority, and **not** fixed by new keyword pages.
+
+**Root cause pattern on WEL (Inertia marketing):**
+1. **TTFB** — every public hit boots Laravel + often builds a huge landing payload  
+2. **Document weight** — home/tool HTML can be hundreds of KB (plans, showcases, calculators, sitewide `sitemapNavLinks`)  
+3. **LCP/FCP** trail TTFB; CLS from fonts/layout is secondary once TTFB is healthy  
+4. Field CrUX lags ~28 days after deploy — lab `curl` TTFB is the early check  
+
+**Keep (code patterns — do not regress):**
+| Pattern | Where |
+|---------|--------|
+| SEO/tool pages → `LandingPageService::marketingShell()` (fraud + WhatsApp only) | `MarketingSeoController`, `EnglishMarketingController` |
+| Calculator pages → `calculatorProps([...])` only | Same |
+| Home `/` + `/en` → `payload(..., ['slim' => true])` | Skip unused calculator/feature blobs |
+| Cache landing settings + active plan attributes (hydrate) | `LandingSettingsService`, `LandingPageService` — forget on package admin/seeder |
+| Cache `sitemapNavLinks` 5m — **invalidate** on `BlogPost` save/delete/restore | `SeoPrerenderText::forgetSitemapNavLinksCache()` |
+| Do not preload OG images that are not the LCP element | `resources/views/app.blade.php` |
+| `/robots.txt` cookie-free + sync `public/robots.txt` | See **GSC Crawl stats / robots.txt host availability** |
+
+**When editing marketing/SEO routes or landing services, always ask:**
+1. Does this page need the **full** homepage payload, or shell/slim/calculator slice?  
+2. Am I adding DB work on every public GET that could be cached (with a clear forget path)?  
+3. Will HTML size grow (new shared Inertia props, giant FAQ dumps, duplicate payment method arrays)?  
+4. After package/blog/robots config changes, is cache/static file invalidated?
+
+**Do:**
+- Prefer host/OPcache/LiteSpeed tuning + payload slimming over redesign  
+- Measure: `curl -sL -o /dev/null -w 'ttfb=%{time_starttransfer}s size=%{size_download}\n' https://app.wpsalehub.com/` (and `/bd-fraud-checker`)  
+- Keep SSR forms / prerender text — speed work must not strip crawlable checker HTML  
+
+**Do not:**
+- Theme-hop to “performance campaign” off SteadFast  
+- Full-page cache HTML that breaks CSRF/Inertia sessions without a careful design  
+- Claim CWV “fixed” from local lab only — wait for CrUX / re-check PSI origin  
+
+**Sunday / Step 9 (light):** If CWV Failed in GSC or PSI, log TTFB snapshot + note whether robots host status is also red. One speed task max unless the site is unusable — cluster content still ships.
 
 ---
 
@@ -173,6 +293,12 @@ Semrush documents this as **three checks**: poor heading hierarchy, paragraphs t
 ## Courier pillar authority playbook (90-day one-topic rule)
 
 **Doctrine:** One Topic → One Authority → One Category → Then Expand.
+
+**Glossary alias — topical mapping:** Industry term for this playbook’s blueprint. A **topical map** = which intents/subtopics the active pillar owns and how pages link (plan). A **topic cluster** = the published hub + spokes from that map. Do **not** invent a second content system named “topical mapping”; deepen Steps 1–10 for the locked courier only. Keyword research seeds the map; it does not replace depth-before-width.
+
+**Glossary alias — semantic writing / competition-before-volume:** Same playbook, page-level habits — not a new workstream. **Semantic writing** = cover the topic with answer-first, deep FAQs and related intents (inventory `primary` + supporting terms on one owner URL); do not keyword-stuff. **Competition-before-volume** = prefer winnable long-tails inside the active cluster (GSC + inventory) over chasing only high-volume head terms that cannibalize money pages. Still use `reservedHeadTermsForCluster()`; still no Pathao/Messenger theme-hop.
+
+**Glossary alias — keyword mapping / audit / weak-SERP picks:** Same playbook language from agency “process” videos — not extra steps. **Keyword mapping** = group same-intent queries onto one owner URL (inventory row / pillar / FAQ), never 10 near-duplicate pages. **Initial audit** for WEL = existing crawlability checks (SSR form, orphans, schema, closed-loop links, broken anchors) — not a mandatory Screaming Frog ritual. **Weak-SERP keyword pick** = prefer intents where current top results are thin/weak enough to win inside the locked SteadFast (or active) cluster. Skip broken-link farming, Web 2.0, and cheap-tool gray markets.
 
 Most sites chase 100 keywords and rank for none. WooEasyLife should **own every important search related to the active courier pillar first**. Once Google treats that URL cluster as the authority resource, expanding into related courier fraud / COD verification topics becomes easier.
 
@@ -261,7 +387,7 @@ Prefer extending live `/faq/{slug}` when intent already exists; add new inventor
 
 ### Step 4 — YouTube strategy (same topic everywhere)
 
-**Status (2026-07-30):** **Skipped for now** — do not block Steps 5–9 or cluster lock on video. When ready: publish Long + Shorts, set `video_youtube_id` on `steadfast_fraud_check`, re-enable Week 4 record days.
+**Status (2026-08-17):** **Skipped embed for now** — scripts ready in `resources/content/youtube/steadfast-step4-scripts.md`. Do not block Steps 5–9 on video. When ready: publish Long + Shorts, set `video_youtube_id` on `steadfast_fraud_check`, re-enable Week 4 record days.
 
 Google should see the brand on web + video for the **same** cluster.
 
@@ -351,7 +477,7 @@ That kind of honesty increases credibility. Aligns with `/fake-customer-check` �
 | Average engagement | Increasing |
 | Internal link clicks | Increasing |
 
-Do **not** obsess over rankings daily. Watch trends. Feed winners into next FAQ; kill/merge 0-impression stubs after ~4 weeks (Phase 5).
+Do **not** obsess over rankings daily. Watch trends. Feed winners into next FAQ; kill/merge 0-impression stubs after ~4 weeks (Phase 5). Optionally glance **Crawl stats → Host status** (green preferred); if red → **GSC Crawl stats / robots.txt host availability**, not new keywords.
 
 **Shipped playbook (2026-07-30):**
 
@@ -701,10 +827,11 @@ Already **wins** on: title, H1, FAQ schema (~8 Qs), visible courier names, ~900-
 |----------|-----|-----|
 | ~~P0~~ | ~~Result → next action weak~~ | **Shipped:** post-check CTAs → protection, return-loss, guide, trial |
 | ~~P1~~ | ~~Missing `HowTo`~~ | **Shipped** (3 steps). WebApplication removed — Semrush flags Software App without real AggregateRating; never invent ratings |
-| P1 | FAQ can add rival intents | +Qs: mobile-number check, blacklist/fake-customer, WordPress/Woo use (Shipped only) → FAQ ≥10 |
-| P2 | "blacklist" weak in body | Add blacklist + WooCommerce protection story in body, not only sidebar |
+| ~~P1~~ | ~~FAQ rival intents thin (WP/Woo, blacklist)~~ | **Shipped (2026-08-17):** BN+EN WP/Woo FAQ + blacklist/fake-customer Q; tool FAQ ≥10; cluster OG on money URL |
+| ~~P2~~ | ~~"blacklist" weak in body~~ | **Shipped (2026-08-17):** SteadFast pillar §৫ blacklist when + FAQ; trust tips/mistakes updated |
 | P2 | No exact-match domain vs fraudchecker.link | Brand cluster + external links to **tool URL** (not home) |
 | P3 | Authority gap | BD FB seller groups, blog embeds, partner links to tool URL; weekly mentor posts |
+| P3 | Step 4 YouTube skipped | Scripts in `resources/content/youtube/steadfast-step4-scripts.md` — set `video_youtube_id` after publish |
 
 **Moat line:** rivals = `number → history → (pay API / leave)`; us = `number → history → OTP / blacklist / fake-order protection → less return loss`.
 
@@ -726,6 +853,9 @@ Update this skill — not only `FEATURES.md` — when:
 | Pillar hits 3k–5k authority draft shipped | Note in Current state; close thin-alias gap for that courier |
 | Domain/brand change | Canonical CTA lines |
 | This review | Bump **Last reviewed** date |
+| AI Overview / GEO hype spikes in content briefs | Re-read **AI search / zero-click (2026)**; do not invent MCP/`llms.txt` tasks |
+| GSC Host status / robots.txt fetch failures | Confirm **GSC Crawl stats / robots.txt host availability** + `seo:write-robots` / static `public/robots.txt` still deployed |
+| PSI / CrUX CWV Failed / TTFB regressions | Re-read **Speed / CWV / marketing TTFB**; confirm shell/slim/cache patterns not regressing on marketing routes |
 
 **Tie-breaker:** inventory wins on paths/keywords · `FEATURES.md` wins on claims · this file wins on strategy/priority. Remove stale gaps; do not accumulate permanent audit history.
 

@@ -68,4 +68,11 @@
     <Files "manifest.json">
         Header set Cache-Control "public, max-age=3600, must-revalidate"
     </Files>
+
+    # Static crawl directives — keep Googlebot fetches cheap and cookie-free
+    <Files "robots.txt">
+        Header set Cache-Control "public, max-age=86400, stale-while-revalidate=3600"
+        Header set Content-Type "text/plain; charset=UTF-8"
+        Header unset Set-Cookie
+    </Files>
 </IfModule>

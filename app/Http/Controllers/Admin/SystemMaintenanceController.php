@@ -140,6 +140,12 @@ class SystemMaintenanceController extends Controller
             'commands' => ['seo:weekly-report'],
             'group' => 'blog',
         ],
+        'seo_write_robots' => [
+            'label' => 'Write robots.txt',
+            'description' => 'php artisan seo:write-robots — refresh public/robots.txt + cache (GSC crawl / cookie-free static file)',
+            'commands' => ['seo:write-robots'],
+            'group' => 'blog',
+        ],
         'seo_gsc_status' => [
             'label' => 'GSC status / probe',
             'description' => 'php artisan seo:gsc-status --probe — check Google Search Console OAuth + fetch sample queries',

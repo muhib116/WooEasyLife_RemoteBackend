@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Controllers\App\CachedBuildAssetController;
+use App\Http\Controllers\App\RobotsController;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -36,6 +37,11 @@ class RouteServiceProvider extends ServiceProvider
             Route::get('/build/assets/{file}', CachedBuildAssetController::class)
                 ->where('file', '[A-Za-z0-9._\-]+')
                 ->name('build.assets.show');
+
+            // Googlebot polls robots.txt independently of page crawls. Keep it off the
+            // web/Inertia/session stack so a slow DB or deploy cookie layer cannot 5xx it.
+            Route::get('/robots.txt', RobotsController::class)
+                ->name('robots');
 
             Route::middleware('api')
                 // ->prefix('api')

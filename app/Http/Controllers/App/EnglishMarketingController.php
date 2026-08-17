@@ -8,7 +8,6 @@ use App\Services\LandingPageService;
 use App\Services\LandingSettingsService;
 use App\Services\PublicSubscriptionService;
 use App\Services\SeoMetaService;
-use App\Services\SubscriptionPaymentConfigService;
 use App\Support\WhatsappLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -23,9 +22,8 @@ class EnglishMarketingController extends Controller
         SeoMetaService $seo,
         LandingSettingsService $landingSettings,
         PublicSubscriptionService $publicSubscriptions,
-        SubscriptionPaymentConfigService $paymentConfig,
     ): Response {
-        $payload = $landing->payload($request, 'en');
+        $payload = $landing->payload($request, 'en', ['slim' => true]);
         $whatsapp = $landingSettings->adminWhatsapp();
         $seoMeta = $seo->forPage('en_home');
 
@@ -43,7 +41,6 @@ class EnglishMarketingController extends Controller
             'canRegister' => Route::has('register'),
             'domains' => [],
             'subscriptionWizard' => config('landing.subscription_wizard', []),
-            'subscriptionPaymentMethods' => $paymentConfig->forApi(),
             'whatsappSupportUrl' => WhatsappLink::url(
                 $whatsapp,
                 'Hi, I want a WooEasyLife subscription.',
@@ -79,8 +76,7 @@ class EnglishMarketingController extends Controller
         SeoMetaService $seo,
         LandingSettingsService $landingSettings,
     ): Response {
-        $payload = $landing->payload($request);
-        $whatsapp = $landingSettings->adminWhatsapp();
+        $payload = $landing->marketingShell($request, 'en');
         $seoMeta = $seo->forPage('en_return_loss_calculator');
 
         return Inertia::render('Seo/EnReturnLossCalculator', [
@@ -90,7 +86,7 @@ class EnglishMarketingController extends Controller
             'roiScenarios' => config('landing.roi_scenarios_en', []),
             'whatsappUrl' => $payload['whatsappUrl'] ?? null,
             'whatsappContactUrl' => WhatsappLink::url(
-                $whatsapp,
+                $landingSettings->adminWhatsapp(),
                 'Hi, I want a WooEasyLife subscription.',
             ),
             'faqs' => $seoMeta['faqs'] ?? [],
@@ -139,8 +135,7 @@ class EnglishMarketingController extends Controller
         SeoMetaService $seo,
         LandingSettingsService $landingSettings,
     ): Response {
-        $payload = $landing->payload($request);
-        $whatsapp = $landingSettings->adminWhatsapp();
+        $payload = $landing->marketingShell($request, 'en');
         $seoMeta = $seo->forPage('en_ki_vabe_fake_order_atkabo');
 
         return Inertia::render('Seo/KeywordIntent', [
@@ -167,7 +162,7 @@ class EnglishMarketingController extends Controller
         SeoMetaService $seo,
         LandingSettingsService $landingSettings,
     ): Response {
-        $payload = $landing->payload($request);
+        $payload = $landing->marketingShell($request, 'en');
         $seoMeta = $seo->forPage('en_fake_customer_check');
 
         return Inertia::render('Seo/KeywordIntent', [
@@ -229,17 +224,16 @@ class EnglishMarketingController extends Controller
         SeoMetaService $seo,
         LandingSettingsService $landingSettings,
     ): Response {
-        $payload = $landing->payload($request);
-        $whatsapp = $landingSettings->adminWhatsapp();
+        $payload = $landing->marketingShell($request, 'en');
         $seoMeta = $seo->forPage('en_ads_roas_calculator');
 
         return Inertia::render('Seo/EnAdsRoasCalculator', [
             'canLogin' => Route::has('merchant.login'),
             'seo' => $seoMeta,
-            'adsRoasCalculator' => $payload['adsRoasCalculatorEn'] ?? config('landing.ads_roas_calculator_en', []),
+            'adsRoasCalculator' => config('landing.ads_roas_calculator_en', []),
             'whatsappUrl' => $payload['whatsappUrl'] ?? null,
             'whatsappContactUrl' => WhatsappLink::url(
-                $whatsapp,
+                $landingSettings->adminWhatsapp(),
                 'Hi, I want a WooEasyLife subscription.',
             ),
             'faqs' => $seoMeta['faqs'] ?? [],
@@ -252,8 +246,7 @@ class EnglishMarketingController extends Controller
         SeoMetaService $seo,
         LandingSettingsService $landingSettings,
     ): Response {
-        $payload = $landing->payload($request);
-        $whatsapp = $landingSettings->adminWhatsapp();
+        $payload = $landing->marketingShell($request, 'en');
         $seoMeta = $seo->forPage('en_courier_charge_calculator');
 
         return Inertia::render('Seo/EnCourierChargeCalculator', [
@@ -263,7 +256,7 @@ class EnglishMarketingController extends Controller
                 ->calculatorConfig('en'),
             'whatsappUrl' => $payload['whatsappUrl'] ?? null,
             'whatsappContactUrl' => WhatsappLink::url(
-                $whatsapp,
+                $landingSettings->adminWhatsapp(),
                 'Hi, I want a WooEasyLife subscription.',
             ),
             'faqs' => $seoMeta['faqs'] ?? [],
@@ -304,7 +297,7 @@ class EnglishMarketingController extends Controller
         string $seoPage,
         string $component,
     ): Response {
-        $payload = $landing->payload($request);
+        $payload = $landing->marketingShell($request, 'en');
         $whatsapp = $landingSettings->adminWhatsapp();
         $seoMeta = $seo->forPage($seoPage);
 

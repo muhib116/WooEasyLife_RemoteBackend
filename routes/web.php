@@ -50,7 +50,6 @@ use App\Http\Controllers\App\MarketingSeoController;
 use App\Http\Controllers\App\PricingController;
 use App\Http\Controllers\App\PublicSubscriptionController;
 use App\Http\Controllers\App\LlmsTxtController;
-use App\Http\Controllers\App\RobotsController;
 use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\DeployController;
@@ -66,7 +65,6 @@ use App\Services\LandingPageService;
 use App\Services\LandingSettingsService;
 use App\Services\PublicSubscriptionService;
 use App\Services\SeoMetaService;
-use App\Services\SubscriptionPaymentConfigService;
 use App\Support\WhatsappLink;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -87,13 +85,12 @@ Route::get('/storage/{path}', [PublicStorageController::class, 'show'])
     ->where('path', '.*')
     ->name('public-storage.show');
 
-Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/llms.txt', LlmsTxtController::class)->name('llms-txt');
 
 Route::get('/', function () {
     $landingSettings = app(LandingSettingsService::class);
-    $landing = app(LandingPageService::class)->payload(request());
+    $landing = app(LandingPageService::class)->payload(request(), 'bn', ['slim' => true]);
     $whatsapp = $landingSettings->adminWhatsapp();
     $subscriptionService = app(PublicSubscriptionService::class);
     $pendingInquiry = $subscriptionService->resolvePendingForVisitor(
@@ -112,7 +109,6 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
         'domains' => [],
         'subscriptionWizard' => config('landing.subscription_wizard', []),
-        'subscriptionPaymentMethods' => app(SubscriptionPaymentConfigService::class)->forApi(),
         'whatsappSupportUrl' => WhatsappLink::url(
             $whatsapp,
             config('landing.whatsapp_default_message'),

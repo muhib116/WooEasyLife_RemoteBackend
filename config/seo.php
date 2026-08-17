@@ -159,6 +159,7 @@ return [
             'title' => 'Fraud Checker BD — ফ্রি নম্বর চেক (Pathao·SteadFast·RedX)',
             'description' => 'ফ্রি Fraud Checker BD: মোবাইল নম্বরে Pathao, SteadFast, RedX হিস্টোরি ও সাকসেস রেট দেখুন। অ্যাকাউন্ট ছাড়াই—ফেক/রিটার্ন ঝুঁকি বুঝে কনফার্ম করুন (গ্যারান্টি নয়)।',
             'canonical_path' => '/bd-fraud-checker',
+            'og_image' => '/images/seo/cluster/fraud-layers.jpg',
             'prerender_h1' => 'Fraud Checker BD — ফ্রি কুরিয়ার হিস্টোরি চেক',
             'prerender_lead' => 'কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি, ডেলিভারি সাকসেস রেট ও রিটার্ন রেকর্ড তাৎক্ষণিক দেখুন। অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন — Pathao, SteadFast, RedX।',
             'honesty_line' => 'This tool helps you make a better-informed decision. It does not guarantee that an order is fake or genuine.',
@@ -221,6 +222,14 @@ return [
                 [
                     'q' => 'রিটার্ন লস কমাতে আর কী দেখব?',
                     'a' => '/return-loss-calculator-এ দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ দিয়ে মাসিক COD ক্ষতি হিসাব করুন। হিসাবের সূত্র ও করণীয়: /faq/cod-return-loss-hisab। SteadFast ক্লাস্টার কেস: /blog/steadfast-fraud-check-case-study। Facebook Pixel-এ ফেক Purchase থাকলে /ads-roas-calculator দিয়ে পরিষ্কার ROAS দেখুন।',
+                ],
+                [
+                    'q' => 'WordPress বা WooCommerce-এ কীভাবে Fraud Checker ব্যবহার করব?',
+                    'a' => 'দুই রাস্তা: (১) এই পেজে মোবাইল নম্বর দিয়ে অ্যাকাউন্ট ছাড়াই ফ্রি চেক—মেসেঞ্জার/ফোন অর্ডার আগে যাচাইয়ের জন্য। (২) WooCommerce স্টোরে WooEasyLife প্লাগইন + সক্রিয় প্ল্যান থাকলে অর্ডার লিস্ট/ডিটেইল থেকেই ফোন হিস্টোরি দেখা যায়; সাথে checkout OTP, duplicate block ও blacklist চালু রাখুন যাতে শুধু চেক নয়, রিপিট ফেকও কমে। WooCommerce BD গাইড: /woocommerce-bangladesh। পূর্ণ সুরক্ষা: /fake-order-protection। প্ল্যান: /pricing।',
+                ],
+                [
+                    'q' => 'WooCommerce অর্ডারে নম্বর চেক করে কী করব—blacklist কখন?',
+                    'a' => 'চেক রিপোর্ট দেখে সবুজ/উচ্চ সাকসেস হলে কনফার্ম করতে পারেন; হলুদ হলে কল বা OTP; লাল/খুব কম সাকসেস বা বারবার রিটার্ন হলে হোল্ড বা অগ্রিম চার্জ। একই নম্বর/ইমেইল/ডিভাইসে বারবার ফেক বা যাচাই ব্যর্থ হলে WooEasyLife blacklist-এ নোটসহ যোগ করুন—শুধু একবার চেক করলেই ভবিষ্যৎ অর্ডার বন্ধ হয় না। Fake customer workflow: /fake-customer-check। ব্ল্যাকলিস্ট FAQ: /faq/woocommerce-customer-blacklist। মোবাইল থেকে approve/hold: /woocommerce-mobile-app।',
                 ],
                 [
                     'q' => 'ইংরেজি পেজ আছে কি?',
@@ -959,12 +968,12 @@ return [
             'og_type' => 'article',
             'og_image' => '/images/seo/cluster/fraud-layers.jpg',
             'prerender_h1' => 'SteadFast Fraud Check — পার্সেল পাঠানোর আগে হিস্টোরি যাচাই',
-            'prerender_lead' => 'মোবাইল নম্বর দিয়ে SteadFast সহ কুরিয়ার হিস্টোরি যাচাই করুন। COD কনফার্ম ও পার্সেল পাঠানোর আগে রিটার্ন ঝুঁকি কমান—risk signal, চূড়ান্ত fraud verdict নয়। শেষ হালনাগাদ: ১৫ আগস্ট ২০২৬।',
+            'prerender_lead' => 'মোবাইল নম্বর দিয়ে SteadFast সহ কুরিয়ার হিস্টোরি যাচাই করুন। COD কনফার্ম ও পার্সেল পাঠানোর আগে রিটার্ন ঝুঁকি কমান—risk signal, চূড়ান্ত fraud verdict নয়। শেষ হালনাগাদ: ১৭ আগস্ট ২০২৬।',
             'is_pillar' => true,
             'article_section' => 'SteadFast Fraud Check',
             'date_published' => '2026-07-30',
-            'date_modified' => '2026-08-15',
-            'last_updated_label' => '১৫ আগস্ট ২০২৬',
+            'date_modified' => '2026-08-17',
+            'last_updated_label' => '১৭ আগস্ট ২০২৬',
             'author_name' => 'Muhibbullah Ansary',
             'author_role' => 'Founder & CEO, WPSaleHub',
             'author_image' => '/images/seo/about/founder-headshot.jpg',
@@ -1004,12 +1013,14 @@ return [
                     'ফোন কনফার্ম একা ডেলিভারি গ্যারান্টি নয়',
                     'সন্দেহে হোল্ড—এক দিন দেরি < এক রিটার্ন লস',
                     'স্টাফ নোটে history OK / yellow / hold লিখে রাখুন',
+                    'রিপিট খারাপ প্যাটার্ন → নোটসহ WooCommerce blacklist (একবার চেক ≠ অটো-ব্লক)',
                     'No.1 / ১০০% ফেক ধরার দাবি বিশ্বাস করবেন না (আমরাও করি না)',
                 ],
                 'mistakes' => [
                     'এক পুরোনো রিটার্ন = চিরকাল ব্লক',
                     'শুধু SteadFast প্যানেল স্ক্রিনশটে নির্ভর',
                     'টুলকে গ্যারান্টি ভাবা',
+                    'চেক করেও OTP/blacklist বন্ধ রাখা',
                     'অ্যাডস বাড়ানো, ভেরিফিকেশন স্কিপ',
                 ],
                 'mistakes_cta' => [
@@ -1087,6 +1098,10 @@ return [
                 [
                     'q' => 'চেকের পর কী করব?',
                     'a' => 'কনফার্ম হলে /courier-auto-entry দিয়ে বুকিং করুন। বুকিংয়ের পর cancel বা return request হলে /steadfast-return-hub। বারবার ঝুঁকি আটকাতে OTP (/faq/cod-order-otp-kokhon), duplicate block (/faq/duplicate-cod-order-block) ও blacklist (/faq/woocommerce-customer-blacklist)। মাসিক লস: /return-loss-calculator। সব প্রশ্ন: /faq।',
+                ],
+                [
+                    'q' => 'SteadFast চেকের পর কখন WooCommerce blacklist করব?',
+                    'a' => 'চেক সিগন্যাল দেয়—স্টোরের ভবিষ্যৎ অর্ডার নিজে বন্ধ করে না। একই নম্বর/ইমেইল/ডিভাইসে বারবার কম সাকসেস, যাচাই ব্যর্থ, OTP/অগ্রিম অস্বীকৃতি, বা স্পষ্ট ফেক প্যাটার্ন দেখলে নোটসহ blacklist যোগ করুন। এক পুরোনো রিটার্ন বা খালি হিস্টোরি = অটো-ব্ল্যাকলিস্ট নয়। FAQ: /faq/woocommerce-customer-blacklist। কেস গাইড: /blog/blacklist-customer-after-returns। পূর্ণ স্ট্যাক: /fake-order-protection।',
                 ],
             ],
         ],
@@ -1210,6 +1225,7 @@ return [
             'description' => 'Free Courier Fraud Checker BD. Check Pathao, Steadfast, RedX delivery history and success rate by mobile number. Stop fake COD orders before you ship.',
             'canonical_path' => '/en/bd-fraud-checker',
             'html_lang' => 'en',
+            'og_image' => '/images/seo/cluster/fraud-layers.jpg',
             'prerender_h1' => 'Free Courier Fraud Checker BD — delivery history by phone',
             'prerender_lead' => 'Verify customer courier history and success rate before confirming COD orders. Pathao, Steadfast, RedX — built for Bangladesh WooCommerce & Facebook sellers.',
             'hreflang_paths' => [
@@ -1245,6 +1261,14 @@ return [
                 [
                     'q' => 'How do I measure return and ad loss?',
                     'a' => 'Use /en/return-loss-calculator for monthly COD return cost and /en/ads-roas-calculator for reported vs real ROAS after fake purchases.',
+                ],
+                [
+                    'q' => 'How do I use this Fraud Checker with WordPress / WooCommerce?',
+                    'a' => 'Two paths: (1) use this page for free phone checks before confirming Messenger or phone orders; (2) with the WooEasyLife plugin and an active plan, open courier history from WooCommerce orders, and keep checkout OTP, duplicate blocks, and blacklists on so checks become a full workflow—not a one-off. WooCommerce BD guide: /en/woocommerce-bangladesh. Protection stack: /en/fake-order-protection. Plans: /pricing.',
+                ],
+                [
+                    'q' => 'After checking a WooCommerce order number, when should I blacklist?',
+                    'a' => 'Green/high success → confirm; yellow → call or OTP; red/very low success or repeated returns → hold or ask for advance fee. Blacklist the phone/email/device with a note when the same identity repeats fake or fails verification—one check does not block future carts by itself. Workflow: /en/fake-customer-check. Mobile approve/hold: /en/woocommerce-mobile-app.',
                 ],
                 [
                     'q' => 'Is there a Bangla version?',

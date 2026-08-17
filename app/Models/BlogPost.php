@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SeoPrerenderText;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,15 @@ class BlogPost extends Model
     public const LOCALES = ['bn', 'en'];
 
     public const ARTICLE_TYPES = ['howto', 'comparison', 'glossary', 'case_study'];
+
+    protected static function booted(): void
+    {
+        $forgetNav = static fn () => SeoPrerenderText::forgetSitemapNavLinksCache();
+
+        static::saved($forgetNav);
+        static::deleted($forgetNav);
+        static::restored($forgetNav);
+    }
 
     protected $fillable = [
         'title',

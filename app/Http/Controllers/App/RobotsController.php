@@ -3,42 +3,27 @@
 namespace App\Http\Controllers\App;
 
 use App\Http\Controllers\Controller;
-use App\Services\SeoMetaService;
+use App\Support\SeoRobotsTxt;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 class RobotsController extends Controller
 {
-    /**
-     * Legal/legacy paths that must stay out of the index even though they are public.
-     *
-     * @var list<string>
-     */
-    private const EXTRA_DISALLOW = [
-        '/woodnutsbolts/privacy-policy',
-        '/woodnutsbolts/terms-of-service',
-    ];
+    public const CACHE_KEY = 'seo:robots.txt';
 
-    public function __invoke(SeoMetaService $seo): Response
+    public const CACHE_SECONDS = 86400;
+
+    public function __invoke(): Response
     {
-        $sitemap = $seo->absoluteUrl('/sitemap.xml');
+        // Body is config-only (no DB) — always rebuild so Disallow/Sitemap cannot drift for 24h.
+        $body = SeoRobotsTxt::body();
+        SeoRobotsTxt::syncPublicFile($body);
+        Cache::put(self::CACHE_KEY, $body, self::CACHE_SECONDS);
 
-        $disallow = collect(config('site_visitors.blocked_path_prefixes', []))
-            ->merge(self::EXTRA_DISALLOW)
-            ->filter(fn ($path) => is_string($path) && str_starts_with($path, '/') && $path !== '/')
-            ->unique()
-            ->sort()
-            ->values();
-
-        $lines = ['User-agent: *'];
-        foreach ($disallow as $path) {
-            $lines[] = 'Disallow: '.$path;
-        }
-        $lines[] = '';
-        $lines[] = 'Sitemap: '.$sitemap;
-        $lines[] = '';
-
-        return response(implode("\n", $lines), 200, [
+        return response($body, 200, [
             'Content-Type' => 'text/plain; charset=UTF-8',
+            'Cache-Control' => 'public, max-age='.self::CACHE_SECONDS.', stale-while-revalidate=3600',
+            'X-Robots-Tag' => 'noindex',
         ]);
     }
 }

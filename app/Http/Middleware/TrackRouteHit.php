@@ -30,6 +30,10 @@ class TrackRouteHit
         try {
             $response = $next($request);
         } catch (\Throwable $e) {
+            // Never turn robots/sitemap into JSON 500 — Googlebot needs plain failure or success.
+            if ($this->shouldSkipTracking($request)) {
+                throw $e;
+            }
             $error = $e->getMessage();
             $response = response()->json(['error' => 'Server Error'], 500);
         }
@@ -74,6 +78,7 @@ class TrackRouteHit
         // Plugin + public JSON APIs: never pay analytics write cost on the hot path.
         return $request->is('api', 'api/*')
             || $request->is('public/*')
-            || $request->is('api/webhooks/*');
+            || $request->is('api/webhooks/*')
+            || $request->is('robots.txt', 'sitemap.xml', 'llms.txt');
     }
 }

@@ -8,10 +8,16 @@ use App\Support\PlanDisplayPresenter;
 use App\Support\WhatsappLink;
 use App\Services\PublicFraudCheckService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class LandingPageService
 {
+    public const ACTIVE_PLANS_CACHE_KEY = 'landing.active_plans.v1';
+
+    private const ACTIVE_PLANS_CACHE_SECONDS = 300;
+
     public function __construct(
         protected PackagePlanResolver $planResolver,
         protected PublicFraudCheckService $publicFraudCheckService,
@@ -20,17 +26,70 @@ class LandingPageService
     ) {
     }
 
+    public static function forgetActivePlansCache(): void
+    {
+        Cache::forget(self::ACTIVE_PLANS_CACHE_KEY);
+    }
+
     /**
+     * Lightweight props for SEO tool/intent pages (fraud widget + WhatsApp only).
+     *
+     * @return array{whatsappUrl: ?string, whatsappContactUrl: ?string, fraudCheck: array<string, mixed>}
+     */
+    public function marketingShell(?Request $request = null, string $locale = 'bn'): array
+    {
+        $whatsappPhone = $this->landingSettings->adminWhatsapp();
+
+        return [
+            'whatsappUrl' => WhatsappLink::url($whatsappPhone),
+            'whatsappContactUrl' => WhatsappLink::url(
+                $whatsappPhone,
+                $locale === 'en'
+                    ? 'Hi, I want a WooEasyLife subscription.'
+                    : config('landing.whatsapp_default_message'),
+            ),
+            'fraudCheck' => $this->publicFraudCheckService->meta($request?->ip(), $locale),
+        ];
+    }
+
+    /**
+     * Calculator landing pages — shell + only the config blobs they render.
+     *
+     * @param  list<string>  $keys
      * @return array<string, mixed>
      */
-    public function payload(?Request $request = null, string $locale = 'bn'): array
+    public function calculatorProps(array $keys, ?Request $request = null, string $locale = 'bn'): array
     {
-        $plans = PackageHub::query()
-            ->where('is_active', true)
-            ->whereNotNull('package_duration')
-            ->orderBy('index')
-            ->orderBy('id')
-            ->get();
+        $props = $this->marketingShell($request, $locale);
+
+        foreach ($keys as $key) {
+            $props[$key] = match ($key) {
+                'courierChargeCalculator' => app(\App\Services\Marketing\CourierPublicRatesService::class)
+                    ->calculatorConfig($locale),
+                'roiCalculator' => $locale === 'en'
+                    ? config('landing.roi_calculator_en', config('landing.roi_calculator', []))
+                    : config('landing.roi_calculator', []),
+                'roiScenarios' => $locale === 'en'
+                    ? config('landing.roi_scenarios_en', config('landing.roi_scenarios', []))
+                    : config('landing.roi_scenarios', []),
+                'adsRoasCalculator' => $locale === 'en'
+                    ? config('landing.ads_roas_calculator_en', [])
+                    : config('landing.ads_roas_calculator', []),
+                default => [],
+            };
+        }
+
+        return $props;
+    }
+
+    /**
+     * @param  array{slim?: bool}  $options  slim=true omits homepage-unused blobs (TTFB/HTML weight)
+     * @return array<string, mixed>
+     */
+    public function payload(?Request $request = null, string $locale = 'bn', array $options = []): array
+    {
+        $slim = (bool) ($options['slim'] ?? false);
+        $plans = $this->activePlans();
 
         $planPayloads = $this->planResolver->mapPlansPayload($plans);
         $featured = $this->resolveFeaturedPlan($plans);
@@ -47,17 +106,6 @@ class LandingPageService
             'featuredPlan' => $featuredPayload
                 ? PlanDisplayPresenter::enrich($featuredPayload)
                 : null,
-            'featureHighlights' => $featuredPayload
-                ? collect(PlanDisplayPresenter::buildTopFeatures($featuredPayload, 6))
-                    ->map(fn (array $item) => [...$item, 'icon' => 'check'])
-                    ->all()
-                : [],
-            'featureGroups' => $featuredPayload
-                ? $this->buildFeatureGroups($this->legacyFeatures($featuredPayload['features'] ?? []))
-                : [],
-            'conversionFeatures' => $featuredPayload
-                ? $this->buildConversionFeatures($this->legacyFeatures($featuredPayload['features'] ?? []))
-                : [],
             'heroBullets' => config('landing.hero_bullets', []),
             'heroTrustBadges' => collect(config('landing.hero_trust_badges', []))
                 ->map(function ($badge) use ($paymentMethods) {
@@ -76,16 +124,10 @@ class LandingPageService
             'integrations' => config('landing.integrations', []),
             'roiScenarios' => config('landing.roi_scenarios', []),
             'roiCalculator' => config('landing.roi_calculator', []),
-            'courierChargeCalculator' => app(\App\Services\Marketing\CourierPublicRatesService::class)->calculatorConfig(),
-            'adsRoasCalculator' => config('landing.ads_roas_calculator', []),
-            'adsRoasCalculatorEn' => config('landing.ads_roas_calculator_en', []),
             'howItWorks' => config('landing.how_it_works', []),
             'appShowcase' => config('landing.app_showcase', []),
             'featureShowcases' => $featuredPayload
                 ? $this->buildFeatureShowcases($this->legacyFeatures($featuredPayload['features'] ?? []))
-                : [],
-            'valuePillars' => $featuredPayload
-                ? $this->buildValuePillars($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [],
             'stats' => config('landing.stats', []),
             'courierPerformance' => config('landing.courier_performance', []),
@@ -105,13 +147,6 @@ class LandingPageService
                     : config('landing.whatsapp_default_message'),
             ),
             'whatsappDisplayPhone' => $this->displayPhone($whatsappPhone),
-            'adminEmail' => $this->landingSettings->adminEmail(),
-            'adminPhone' => $this->landingSettings->adminPhone(),
-            'paymentNumbers' => [
-                'bkash' => $this->landingSettings->bkashNumber(),
-                'rocket' => $this->landingSettings->rocketNumber(),
-                'nagad' => $this->landingSettings->nagadNumber(),
-            ],
             'appDownloadUrl' => $this->landingSettings->appDownloadUrl(),
             'playStoreUrl' => $this->landingSettings->playStoreUrl(),
             'pluginDownloadUrl' => $this->landingSettings->pluginDownloadUrl(),
@@ -121,11 +156,60 @@ class LandingPageService
             'locale' => $locale,
         ];
 
+        if (! $slim) {
+            $payload['featureHighlights'] = $featuredPayload
+                ? collect(PlanDisplayPresenter::buildTopFeatures($featuredPayload, 6))
+                    ->map(fn (array $item) => [...$item, 'icon' => 'check'])
+                    ->all()
+                : [];
+            $payload['featureGroups'] = $featuredPayload
+                ? $this->buildFeatureGroups($this->legacyFeatures($featuredPayload['features'] ?? []))
+                : [];
+            $payload['conversionFeatures'] = $featuredPayload
+                ? $this->buildConversionFeatures($this->legacyFeatures($featuredPayload['features'] ?? []))
+                : [];
+            $payload['valuePillars'] = $featuredPayload
+                ? $this->buildValuePillars($this->legacyFeatures($featuredPayload['features'] ?? []))
+                : [];
+            $payload['courierChargeCalculator'] = app(\App\Services\Marketing\CourierPublicRatesService::class)
+                ->calculatorConfig($locale);
+            $payload['adsRoasCalculator'] = config('landing.ads_roas_calculator', []);
+            $payload['adsRoasCalculatorEn'] = config('landing.ads_roas_calculator_en', []);
+            $payload['adminEmail'] = $this->landingSettings->adminEmail();
+            $payload['adminPhone'] = $this->landingSettings->adminPhone();
+            $payload['paymentNumbers'] = [
+                'bkash' => $this->landingSettings->bkashNumber(),
+                'rocket' => $this->landingSettings->rocketNumber(),
+                'nagad' => $this->landingSettings->nagadNumber(),
+            ];
+        }
+
         if ($locale === 'en') {
             return $this->applyEnglishLandingOverlays($payload, $paymentMethods);
         }
 
         return $payload;
+    }
+
+    /**
+     * @return Collection<int, PackageHub>
+     */
+    private function activePlans(): Collection
+    {
+        /** @var list<array<string, mixed>> $rows */
+        $rows = Cache::remember(self::ACTIVE_PLANS_CACHE_KEY, self::ACTIVE_PLANS_CACHE_SECONDS, function () {
+            return PackageHub::query()
+                ->where('is_active', true)
+                ->whereNotNull('package_duration')
+                ->orderBy('index')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (PackageHub $plan) => $plan->getAttributes())
+                ->values()
+                ->all();
+        });
+
+        return PackageHub::hydrate($rows);
     }
 
     /**

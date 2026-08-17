@@ -3,10 +3,17 @@
 namespace App\Services;
 
 use App\Models\PlatformSetting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class LandingSettingsService
 {
+    private const STORED_CACHE_PREFIX = 'landing.settings.stored.v1:';
+
+    private const TABLE_READY_CACHE_KEY = 'landing.settings.table_ready.v1';
+
+    private const STORED_CACHE_SECONDS = 300;
+
     public const APP_DOWNLOAD_URL_KEY = 'landing.app_download_url';
 
     public const PLAY_STORE_URL_KEY = 'landing.play_store_url';
@@ -386,21 +393,29 @@ class LandingSettingsService
             return null;
         }
 
-        $row = PlatformSetting::query()->where('key', $key)->first();
+        $cached = Cache::remember(
+            self::STORED_CACHE_PREFIX.$key,
+            self::STORED_CACHE_SECONDS,
+            function () use ($key) {
+                $row = PlatformSetting::query()->where('key', $key)->first();
 
-        if (! $row) {
-            return null;
-        }
+                if (! $row) {
+                    return false;
+                }
 
-        $value = $row->value;
+                $value = $row->value;
 
-        if (is_string($value)) {
-            $value = trim($value);
+                if (is_string($value)) {
+                    $value = trim($value);
 
-            return $value !== '' ? $value : null;
-        }
+                    return $value !== '' ? $value : false;
+                }
 
-        return null;
+                return false;
+            },
+        );
+
+        return $cached === false ? null : $cached;
     }
 
     private function put(string $key, ?string $value): void
@@ -411,6 +426,7 @@ class LandingSettingsService
 
         if ($value === null) {
             PlatformSetting::query()->where('key', $key)->delete();
+            Cache::forget(self::STORED_CACHE_PREFIX.$key);
 
             return;
         }
@@ -419,6 +435,7 @@ class LandingSettingsService
             ['key' => $key],
             ['value' => $value],
         );
+        Cache::forget(self::STORED_CACHE_PREFIX.$key);
     }
 
     private function normalizeUrl(mixed $value): ?string
@@ -495,10 +512,12 @@ class LandingSettingsService
 
     private function tableReady(): bool
     {
-        try {
-            return Schema::hasTable('platform_settings');
-        } catch (\Throwable) {
-            return false;
-        }
+        return (bool) Cache::remember(self::TABLE_READY_CACHE_KEY, self::STORED_CACHE_SECONDS, function () {
+            try {
+                return Schema::hasTable('platform_settings');
+            } catch (\Throwable) {
+                return false;
+            }
+        });
     }
 }

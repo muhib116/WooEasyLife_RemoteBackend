@@ -53,7 +53,6 @@
             <meta property="og:image:height" content="{{ $seo['og_image_height'] ?? 630 }}">
             <meta property="og:image:type" content="{{ $seo['og_image_type'] ?? 'image/jpeg' }}">
             <meta name="twitter:image" content="{{ $seo['og_image'] }}">
-            <link rel="preload" as="image" href="{{ $seo['og_image'] }}" fetchpriority="high">
         @endif
         <meta name="twitter:card" content="summary_large_image">
         @if (! empty($seo['json_ld']))
