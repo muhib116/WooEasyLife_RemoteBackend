@@ -58,6 +58,9 @@ class PluginAdminVersionTest extends TestCase
     {
         $admin = $this->admin();
         $plugin = $this->seedVersion('1.6.5', 12, $admin->id);
+        $createdAt = $plugin->created_at?->copy();
+
+        $this->travel(5)->minutes();
 
         $this->actingAs($admin)
             ->from(route('plugins.index'))
@@ -74,6 +77,8 @@ class PluginAdminVersionTest extends TestCase
         $this->assertSame($admin->id, $plugin->created_by);
         $this->assertSame('app/private/wpsalehub-1.6.5.zip', $plugin->path);
         $this->assertSame('WooEasyLife', $plugin->settings['name'] ?? null);
+        $this->assertTrue($plugin->updated_at?->gt($createdAt));
+        $this->assertTrue($plugin->updated_at?->gt($plugin->created_at));
     }
 
     public function test_admin_can_replace_plugin_zip_without_resetting_downloads(): void
@@ -228,6 +233,9 @@ class PluginAdminVersionTest extends TestCase
     {
         $admin = $this->admin();
         $plugin = $this->seedVersion('1.6.5', 12, $admin->id);
+        $createdAt = $plugin->created_at?->copy();
+
+        $this->travel(3)->minutes();
 
         $this->actingAs($admin)
             ->post(route('plugins.updateVersion', $plugin->id), [
@@ -237,11 +245,14 @@ class PluginAdminVersionTest extends TestCase
             ])
             ->assertRedirect(route('plugins.index'));
 
+        $plugin->refresh();
+
         $this->getJson('/get-metadata')
             ->assertOk()
             ->assertJsonPath('version', '1.6.5')
             ->assertJsonPath('name', 'WooEasyLife');
 
-        $this->assertSame(12, (int) $plugin->fresh()->download_count);
+        $this->assertSame(12, (int) $plugin->download_count);
+        $this->assertTrue($plugin->updated_at?->gt($createdAt));
     }
 }

@@ -101,7 +101,11 @@ class PluginsController extends Controller
             $this->deletePluginZipIfOrphaned($pluginsVersion->path, $data['path']);
         }
 
-        $pluginsVersion->update($data);
+        // In-place ZIP replace keeps the same path; version/settings may be unchanged too.
+        // Eloquent then skips the UPDATE and leaves updated_at stale — force a touch.
+        $pluginsVersion->fill($data);
+        $pluginsVersion->updated_at = now();
+        $pluginsVersion->save();
 
         return redirect()->route('plugins.index')->with('success', 'Version updated successfully');
     }
