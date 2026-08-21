@@ -30,17 +30,33 @@ return new class extends Migration
             ->unique()
             ->all();
 
-        Schema::table('wise_knowledge_items', function (Blueprint $table) use ($indexes, $hasScope, $hasExternalId) {
-            if (! in_array('wise_knowledge_key_status_type', $indexes, true)) {
+        if (! in_array('wise_knowledge_key_status_type', $indexes, true)) {
+            Schema::table('wise_knowledge_items', function (Blueprint $table) {
                 $table->index(['wise_api_key_id', 'status', 'type'], 'wise_knowledge_key_status_type');
-            }
-            if ($hasScope && ! in_array('wise_knowledge_status_scope', $indexes, true)) {
+            });
+        }
+
+        if ($hasScope && ! in_array('wise_knowledge_status_scope', $indexes, true)) {
+            Schema::table('wise_knowledge_items', function (Blueprint $table) {
                 $table->index(['status', 'scope'], 'wise_knowledge_status_scope');
+            });
+        }
+
+        // utf8mb4: VARCHAR(191)+status+type exceeds MySQL's 1000-byte index limit.
+        // Prefix external_id so the composite fits on older InnoDB / compact row formats.
+        if ($hasExternalId && ! in_array('wise_knowledge_ext_status_type', $indexes, true)) {
+            $driver = Schema::getConnection()->getDriverName();
+            if ($driver === 'mysql') {
+                DB::statement(
+                    'ALTER TABLE wise_knowledge_items
+                     ADD INDEX wise_knowledge_ext_status_type (external_id(120), status, type)'
+                );
+            } else {
+                Schema::table('wise_knowledge_items', function (Blueprint $table) {
+                    $table->index(['external_id', 'status', 'type'], 'wise_knowledge_ext_status_type');
+                });
             }
-            if ($hasExternalId && ! in_array('wise_knowledge_ext_status_type', $indexes, true)) {
-                $table->index(['external_id', 'status', 'type'], 'wise_knowledge_ext_status_type');
-            }
-        });
+        }
 
         if (! $hasMatchText) {
             return;
