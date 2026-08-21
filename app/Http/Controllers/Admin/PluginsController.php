@@ -6,28 +6,33 @@ use App\Http\Controllers\Controller;
 use App\Models\PluginsVersion;
 use App\Services\Plugin\PluginLogoUrl;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 use Inertia\Inertia;
 
 class PluginsController extends Controller
 {
-
     public function index()
     {
         $plugins_link = storage_path('/private/plugins.zip');
         $versions = PluginsVersion::query()->orderBy('id', 'desc')->get() ?? [];
+
         return Inertia::render('Plugins/Index', compact('plugins_link', 'versions'));
     }
 
     public function createVersion(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'version' => 'required|unique:plugins_versions,version',
-            'file' => 'required|file|mimes:zip',
-            'settings' => 'required|json',
-        ]);
+        @ini_set('max_execution_time', '300');
+
+        $validator = Validator::make(
+            $request->all(),
+            $this->pluginVersionValidationRules(fileRequired: true),
+            $this->pluginVersionValidationMessages()
+        );
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
@@ -40,16 +45,18 @@ class PluginsController extends Controller
             Auth::id()
         );
 
-        return back()->with('success', 'Version created successfully');
+        return redirect()->route('plugins.index')->with('success', 'Version created successfully');
     }
 
     public function createVersionApi(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'version' => 'required|unique:plugins_versions,version',
-            'file' => 'required|file|mimes:zip',
-            'settings' => 'required|json',
-        ]);
+        @ini_set('max_execution_time', '300');
+
+        $validator = Validator::make(
+            $request->all(),
+            $this->pluginVersionValidationRules(fileRequired: true),
+            $this->pluginVersionValidationMessages()
+        );
 
         if ($validator->fails()) {
             return $this->validationErrorResponse($validator->errors());
@@ -72,44 +79,31 @@ class PluginsController extends Controller
             201
         );
     }
+
     public function updateVersion(Request $request, $id)
     {
+        @ini_set('max_execution_time', '300');
+
         $pluginsVersion = PluginsVersion::findOrFail($id);
-        $request->validate([
-            'version' => 'required|unique:plugins_versions,version,' . $pluginsVersion->id,
-            'settings' => 'required',
-            'file' => 'nullable|mimes:zip'
-        ]);
-
-        $file = $request->file('file');
-        if ($file) {
-            $destinationPath = storage_path('/app/private');
-
-
-            // Create the directory if it does not exist
-            if (!file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
-            }
-
-            $fileName = 'wpsalehub-' . $request->version . '.' . $file->extension();
-            $file->move($destinationPath, $fileName);
-            $path = 'app/private/' . $fileName;
-        }
+        $request->validate(
+            $this->pluginVersionValidationRules($pluginsVersion->id),
+            $this->pluginVersionValidationMessages()
+        );
 
         $data = [
             'version' => $request->version,
-            'download_count' => 0,
-            'created_by' => Auth::id(),
             'settings' => $this->normalizePluginSettings($request->settings),
         ];
 
-        if (isset($path) && $path) {
-            $data['path'] = $path;
+        $file = $request->file('file');
+        if ($file) {
+            $data['path'] = $this->storePluginZip($request->version, $file);
+            $this->deletePluginZipIfOrphaned($pluginsVersion->path, $data['path']);
         }
 
         $pluginsVersion->update($data);
 
-        return back()->with('success', 'Version updated successfully');
+        return redirect()->route('plugins.index')->with('success', 'Version updated successfully');
     }
 
     public function downloadVersion($version)
@@ -117,15 +111,16 @@ class PluginsController extends Controller
         $plugins = PluginsVersion::where('version', $version)->first();
         $path = storage_path($plugins->path);
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             abort(404);
         }
         $file = file_get_contents($path);
         $type = mime_content_type($path);
         $fileName = basename($path);
+
         return Response::make($file, 200, [
             'Content-Type' => $type,
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
         ]);
     }
 
@@ -152,7 +147,7 @@ class PluginsController extends Controller
             abort(404);
         }
 
-        $path = public_path('images/woo-easy-life/' . $asset);
+        $path = public_path('images/woo-easy-life/'.$asset);
 
         if ($asset === 'app_icon.jpg' && ! file_exists($path)) {
             $path = public_path('logo.webp');
@@ -175,28 +170,30 @@ class PluginsController extends Controller
     public function downloadApp()
     {
         $plugins = PluginsVersion::orderBy('created_at', 'desc')->first();
-        if (!$plugins) {
+        if (! $plugins) {
             abort(404);
         }
         $plugins->increment('download_count');
         $path = $plugins->path;
         $path = storage_path($plugins->path);
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             abort(404);
         }
         $file = file_get_contents($path);
         $type = mime_content_type($path);
         $fileName = basename($path);
+
         return Response::make($file, 200, [
             'Content-Type' => $type,
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
         ]);
     }
+
     public function getMetadata()
     {
         $plugins = PluginsVersion::orderBy('created_at', 'desc')->first();
-        if (!$plugins) {
+        if (! $plugins) {
             abort(404);
         }
 
@@ -207,7 +204,7 @@ class PluginsController extends Controller
     }
 
     /**
-     * @param mixed $settings
+     * @param  mixed  $settings
      * @return array<string, mixed>
      */
     private function normalizePluginSettings($settings): array
@@ -231,24 +228,91 @@ class PluginsController extends Controller
         return [];
     }
 
-    private function storeNewPluginVersion(
-        string $version,
-        \Illuminate\Http\UploadedFile $file,
-        array $settings,
-        ?int $createdBy
-    ): PluginsVersion {
-        $destinationPath = storage_path('/app/private');
+    /**
+     * @return array<string, mixed>
+     */
+    private function pluginVersionValidationRules(?int $ignoreId = null, bool $fileRequired = false): array
+    {
+        return [
+            'version' => ['required', 'string', 'max:50', $this->uniquePluginVersionRule($ignoreId)],
+            'settings' => ['required', 'json'],
+            'file' => $fileRequired
+                ? ['required', 'file', 'extensions:zip', 'max:102400']
+                : ['nullable', 'file', 'extensions:zip', 'max:102400'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function pluginVersionValidationMessages(): array
+    {
+        return [
+            'file.extensions' => 'The plugin file must be a ZIP archive.',
+            'file.max' => 'The plugin ZIP may not be greater than 100MB.',
+            'file.uploaded' => 'The plugin ZIP failed to upload. It may exceed the server upload_max_filesize or post_max_size limit.',
+            'settings.json' => 'The settings field must be valid JSON.',
+        ];
+    }
+
+    private function uniquePluginVersionRule(?int $ignoreId = null): Unique
+    {
+        $rule = Rule::unique('plugins_versions', 'version')->whereNull('deleted_at');
+
+        if ($ignoreId) {
+            $rule->ignore($ignoreId);
+        }
+
+        return $rule;
+    }
+
+    private function storePluginZip(string $version, UploadedFile $file): string
+    {
+        $destinationPath = storage_path('app/private');
 
         if (! file_exists($destinationPath)) {
             mkdir($destinationPath, 0755, true);
         }
 
-        $fileName = 'wpsalehub-' . $version . '.' . $file->extension();
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'zip');
+        $fileName = 'wpsalehub-'.$version.'.'.$extension;
         $file->move($destinationPath, $fileName);
 
+        return 'app/private/'.$fileName;
+    }
+
+    private function deletePluginZipIfOrphaned(?string $oldPath, string $newPath): void
+    {
+        if (! $oldPath || $oldPath === $newPath) {
+            return;
+        }
+
+        $oldAbsolute = storage_path($oldPath);
+        $newAbsolute = storage_path($newPath);
+
+        if (! is_file($oldAbsolute)) {
+            return;
+        }
+
+        $oldReal = realpath($oldAbsolute);
+        $newReal = realpath($newAbsolute);
+
+        if ($oldReal && $newReal && $oldReal === $newReal) {
+            return;
+        }
+
+        @unlink($oldAbsolute);
+    }
+
+    private function storeNewPluginVersion(
+        string $version,
+        UploadedFile $file,
+        array $settings,
+        ?int $createdBy
+    ): PluginsVersion {
         return PluginsVersion::create([
             'version' => $version,
-            'path' => 'app/private/' . $fileName,
+            'path' => $this->storePluginZip($version, $file),
             'download_count' => 0,
             'created_by' => $createdBy,
             'settings' => $settings,
@@ -259,7 +323,7 @@ class PluginsController extends Controller
     {
         $path = public_path('/app/private/plugins.zip');
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             abort(404);
         }
 
@@ -272,13 +336,13 @@ class PluginsController extends Controller
         ]);
     }
 
-
     public function deleteVersion($id)
     {
         $version = PluginsVersion::findOrFail($id);
 
         $path = storage_path($version->path);
         $version->delete();
+
         return back()->with('success', 'Version deleted successfully');
     }
 
@@ -295,6 +359,7 @@ class PluginsController extends Controller
         } catch (\Throwable $th) {
         }
         $version->delete();
+
         return back()->with('success', 'Version deleted successfully');
     }
 }

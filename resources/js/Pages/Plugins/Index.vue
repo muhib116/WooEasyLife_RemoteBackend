@@ -329,22 +329,41 @@ const handleDelete = (item: PluginsVersion) => {
 };
 
 const handleSubmit = () => {
-    if (form.id) {
-        form.post(route("plugins.updateVersion", form.id), {
-            onSuccess(event) {
-                if (!Object.keys(event.props?.errors || {}).length) {
-                    closeForm();
-                }
-            },
-        });
-    } else {
-        form.post(route("plugins.createVersion"), {
-            onSuccess(event) {
-                if (!Object.keys(event.props?.errors || {}).length) {
-                    closeForm();
-                }
-            },
-        });
-    }
+    const isUpdate = Boolean(form.id);
+    const url = isUpdate
+        ? route("plugins.updateVersion", form.id)
+        : route("plugins.createVersion");
+
+    form.transform((data) => {
+        const payload: Record<string, unknown> = {
+            version: data.version,
+            settings: data.settings,
+        };
+
+        if (data.file) {
+            payload.file = data.file;
+        }
+
+        return payload;
+    }).post(url, {
+        forceFormData: true,
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess() {
+            if (Object.keys(form.errors).length) {
+                return;
+            }
+
+            toast.add({
+                severity: "success",
+                summary: isUpdate ? "Updated" : "Published",
+                detail: isUpdate
+                    ? "Plugin version updated successfully"
+                    : "Plugin version published successfully",
+                life: 3000,
+            });
+            closeForm();
+        },
+    });
 };
 </script>
