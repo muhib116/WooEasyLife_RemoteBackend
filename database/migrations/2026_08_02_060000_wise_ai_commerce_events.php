@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('wise_commerce_events')) {
+            return;
+        }
+
         Schema::create('wise_commerce_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('wise_api_key_id')->index();

@@ -235,7 +235,25 @@ class PluginsController extends Controller
     {
         return [
             'version' => ['required', 'string', 'max:50', $this->uniquePluginVersionRule($ignoreId)],
-            'settings' => ['required', 'json'],
+            'settings' => [
+                'required',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_array($value)) {
+                        return;
+                    }
+
+                    if (! is_string($value) || trim($value) === '') {
+                        $fail('The settings field must be valid JSON.');
+
+                        return;
+                    }
+
+                    json_decode($value);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $fail('The settings field must be valid JSON.');
+                    }
+                },
+            ],
             'file' => $fileRequired
                 ? ['required', 'file', 'extensions:zip', 'max:102400']
                 : ['nullable', 'file', 'extensions:zip', 'max:102400'],

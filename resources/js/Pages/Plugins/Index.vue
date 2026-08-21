@@ -166,13 +166,12 @@
             <VersionForm
                 :form="form"
                 :file-name="fileName"
+                :submit-error="submitError"
                 @submit="handleSubmit"
                 @cancel="closeForm"
                 @file-select="handleFileSelect"
             />
         </AdminDialog>
-
-        <Toast />
     </AuthenticatedLayout>
 </template>
 
@@ -208,6 +207,7 @@ const confirm = useConfirm();
 const toast = useToast();
 const search = ref("");
 const showForm = ref(false);
+const submitError = ref("");
 
 const form = useForm({
     id: null as number | null,
@@ -217,6 +217,21 @@ const form = useForm({
 });
 
 const fileName = computed(() => get(form, "file.name") as string | undefined);
+
+const notify = (
+    severity: "success" | "warn" | "error" | "info",
+    summary: string,
+    detail: string,
+    life = 4000,
+) => {
+    toast.add({
+        severity,
+        summary,
+        detail,
+        life,
+        group: "br",
+    });
+};
 
 const stats = computed(() => {
     const list = props.versions || [];
@@ -277,21 +292,44 @@ const handleEdit = (item: PluginsVersion) => {
     form.version = item.version || "";
     form.settings = stringifySettings(item.settings);
     form.file = null;
+    submitError.value = "";
     showForm.value = true;
 };
 
 const handleFileSelect = (event: Event) => {
     const file = get(event, "target.files[0]") as File | undefined;
 
-    if (file) {
-        form.file = file;
-        form.errors.file = "";
+    if (!file) {
+        return;
     }
+
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".zip")) {
+        form.setError("file", "Please choose a .zip file.");
+        submitError.value = "Please choose a .zip file.";
+        form.file = null;
+        return;
+    }
+
+    // Keep in sync with server max:102400 (KB) ≈ 100MB.
+    if (file.size > 100 * 1024 * 1024) {
+        form.setError("file", "The plugin ZIP may not be greater than 100MB.");
+        submitError.value = "The plugin ZIP may not be greater than 100MB.";
+        form.file = null;
+        return;
+    }
+
+    form.file = file;
+    form.clearErrors("file");
+    submitError.value = "";
 };
 
 const resetForm = () => {
     form.reset();
     form.clearErrors();
+    // Clear sticky Inertia transform from the previous submit.
+    form.transform((data) => data);
+    submitError.value = "";
 };
 
 const closeForm = () => {
@@ -316,54 +354,117 @@ const handleDelete = (item: PluginsVersion) => {
         accept: () => {
             router.post(route("plugins.deleteVersion", item.id), {
                 onSuccess: () => {
-                    toast.add({
-                        severity: "success",
-                        summary: "Deleted",
-                        detail: "Plugin version removed successfully",
-                        life: 3000,
-                    });
+                    notify(
+                        "success",
+                        "Deleted",
+                        "Plugin version removed successfully",
+                        3000,
+                    );
                 },
             });
         },
     });
 };
 
+const validateBeforeSubmit = (): boolean => {
+    submitError.value = "";
+    form.clearErrors();
+
+    if (!String(form.version || "").trim()) {
+        form.setError("version", "Version is required.");
+        submitError.value = "Version is required.";
+        return false;
+    }
+
+    if (!form.id && !form.file) {
+        form.setError("file", "A plugin ZIP file is required for new versions.");
+        submitError.value = "A plugin ZIP file is required for new versions.";
+        return false;
+    }
+
+    const settings = String(form.settings || "").trim();
+    if (!settings) {
+        form.setError("settings", "Settings JSON is required.");
+        submitError.value = "Settings JSON is required.";
+        return false;
+    }
+
+    try {
+        const parsed = JSON.parse(settings);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            form.setError("settings", "Settings must be a JSON object.");
+            submitError.value = "Settings must be a JSON object.";
+            return false;
+        }
+    } catch {
+        form.setError("settings", "Settings must be valid JSON.");
+        submitError.value = "Settings must be valid JSON.";
+        return false;
+    }
+
+    return true;
+};
+
 const handleSubmit = () => {
+    if (!validateBeforeSubmit()) {
+        notify("error", "Fix the form", submitError.value || "Validation failed.", 6000);
+        return;
+    }
+
     const isUpdate = Boolean(form.id);
     const url = isUpdate
         ? route("plugins.updateVersion", form.id)
         : route("plugins.createVersion");
+    const hasFile = Boolean(form.file);
 
-    form.transform((data) => {
-        const payload: Record<string, unknown> = {
-            version: data.version,
-            settings: data.settings,
-        };
+    form
+        .transform((data) => {
+            const payload: Record<string, unknown> = {
+                version: String(data.version || "").trim(),
+                settings: String(data.settings || "").trim(),
+            };
 
-        if (data.file) {
-            payload.file = data.file;
-        }
-
-        return payload;
-    }).post(url, {
-        forceFormData: true,
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess() {
-            if (Object.keys(form.errors).length) {
-                return;
+            if (data.file) {
+                payload.file = data.file;
             }
 
-            toast.add({
-                severity: "success",
-                summary: isUpdate ? "Updated" : "Published",
-                detail: isUpdate
-                    ? "Plugin version updated successfully"
-                    : "Plugin version published successfully",
-                life: 3000,
-            });
-            closeForm();
-        },
-    });
+            return payload;
+        })
+        .post(url, {
+            forceFormData: hasFile,
+            preserveScroll: true,
+            // Keep dialog/local state only when Laravel returns validation errors.
+            preserveState: "errors",
+            onError(errors) {
+                showForm.value = true;
+                const messages = Object.values(errors || {}).filter(
+                    (message): message is string =>
+                        typeof message === "string" && message.length > 0,
+                );
+                submitError.value =
+                    messages.join("\n") ||
+                    "Save failed. Check version, JSON settings, and ZIP file.";
+                notify("error", "Update failed", submitError.value, 8000);
+            },
+            onSuccess() {
+                if (Object.keys(form.errors).length) {
+                    showForm.value = true;
+                    return;
+                }
+
+                notify(
+                    "success",
+                    isUpdate ? "Updated" : "Published",
+                    isUpdate
+                        ? "Plugin version updated successfully"
+                        : "Plugin version published successfully",
+                    4000,
+                );
+                closeForm();
+            },
+            onFinish() {
+                form.transform((data) => data);
+            },
+        });
 };
 </script>

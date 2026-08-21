@@ -9,12 +9,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('wise_knowledge_items', function (Blueprint $table) {
-            $table->string('scope', 20)->default('merchant')->after('type')->index();
-        });
+        if (! Schema::hasTable('wise_knowledge_items')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('wise_knowledge_items', 'scope')) {
+            Schema::table('wise_knowledge_items', function (Blueprint $table) {
+                $table->string('scope', 20)->default('merchant')->after('type')->index();
+            });
+        }
 
         // Platform-scoped packs may omit a merchant key (marketplace foundation).
-        DB::statement('ALTER TABLE wise_knowledge_items MODIFY wise_api_key_id BIGINT UNSIGNED NULL');
+        $nullability = DB::selectOne(
+            "SHOW COLUMNS FROM wise_knowledge_items WHERE Field = 'wise_api_key_id'"
+        );
+        if (strtoupper((string) ($nullability->Null ?? '')) !== 'YES') {
+            DB::statement('ALTER TABLE wise_knowledge_items MODIFY wise_api_key_id BIGINT UNSIGNED NULL');
+        }
 
         // Legacy "other" → fact (kind taxonomy). Validation still accepts "other" as alias.
         DB::table('wise_knowledge_items')
@@ -24,6 +35,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasTable('wise_knowledge_items')) {
+            return;
+        }
+
         DB::table('wise_knowledge_items')
             ->where('type', 'fact')
             ->update(['type' => 'other']);
@@ -34,8 +49,10 @@ return new class extends Migration
 
         DB::statement('ALTER TABLE wise_knowledge_items MODIFY wise_api_key_id BIGINT UNSIGNED NOT NULL');
 
-        Schema::table('wise_knowledge_items', function (Blueprint $table) {
-            $table->dropColumn('scope');
-        });
+        if (Schema::hasColumn('wise_knowledge_items', 'scope')) {
+            Schema::table('wise_knowledge_items', function (Blueprint $table) {
+                $table->dropColumn('scope');
+            });
+        }
     }
 };

@@ -163,6 +163,16 @@
             </PageCard>
 
             <PageCard
+                v-if="lastOutput"
+                title="Last command output"
+                description="Artisan console output from the most recent migrate/rollback/seed"
+            >
+                <pre
+                    class="max-h-72 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-relaxed text-emerald-300"
+                >{{ lastOutput }}</pre>
+            </PageCard>
+
+            <PageCard
                 title="Pending migrations"
                 :description="status.pending_count
                     ? `${status.pending_count} file${status.pending_count === 1 ? '' : 's'} not applied yet`
@@ -212,16 +222,6 @@
                         </span>
                     </div>
                 </div>
-            </PageCard>
-
-            <PageCard
-                v-if="lastOutput"
-                title="Last command output"
-                description="Artisan console output from the most recent migrate/rollback/seed"
-            >
-                <pre
-                    class="max-h-72 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-relaxed text-emerald-300"
-                >{{ lastOutput }}</pre>
             </PageCard>
         </div>
     </AuthenticatedLayout>
@@ -275,6 +275,21 @@ const busy = computed(
     () => loading.value || running.value || rollingBack.value || seedingKey.value !== null
 );
 
+const notify = (
+    severity: "success" | "warn" | "error" | "info",
+    summary: string,
+    detail: string,
+    life = 5000,
+) => {
+    toast.add({
+        severity,
+        summary,
+        detail,
+        life,
+        group: "br",
+    });
+};
+
 const applyStatus = (next?: MigrationStatus) => {
     if (!next) {
         return;
@@ -296,12 +311,12 @@ const loadStatus = async () => {
         const { data } = await axios.get(route("migrations.status"));
         applyStatus(data);
     } catch (error: any) {
-        toast.add({
-            severity: "error",
-            summary: "Could not load status",
-            detail: error?.response?.data?.message || "Failed to load migration status.",
-            life: 4000,
-        });
+        notify(
+            "error",
+            "Could not load status",
+            error?.response?.data?.message || "Failed to load migration status.",
+            4000,
+        );
     } finally {
         loading.value = false;
     }
@@ -317,22 +332,21 @@ const runMigrate = async (isPretend = false) => {
         });
         applyStatus(data?.status);
         lastOutput.value = data?.output || "";
-        toast.add({
-            severity: data?.success ? "success" : "warn",
-            summary: isPretend ? "Dry run" : "Migrations",
-            detail: data?.message || "Done.",
-            life: 5000,
-        });
+        notify(
+            data?.success ? "success" : "warn",
+            isPretend ? "Dry run" : "Migrations",
+            data?.message || "Done.",
+        );
     } catch (error: any) {
         const payload = error?.response?.data;
         applyStatus(payload?.status);
         lastOutput.value = payload?.output || payload?.message || "";
-        toast.add({
-            severity: "error",
-            summary: "Migration failed",
-            detail: payload?.message || "Could not run migrations.",
-            life: 6000,
-        });
+        notify(
+            "error",
+            "Migration failed",
+            payload?.message || "Could not run migrations.",
+            8000,
+        );
     } finally {
         running.value = false;
         pretend.value = false;
@@ -346,9 +360,17 @@ const confirmMigrate = () => {
             ? `This will apply ${status.pending_count} pending migration${status.pending_count === 1 ? "" : "s"} to the live database.`
             : "No pending migrations are listed.",
         icon: "pi pi-exclamation-triangle",
-        acceptLabel: "Run now",
-        rejectLabel: "Cancel",
-        acceptClass: "p-button-warning",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Run now",
+            severity: "warning",
+            size: "small",
+        },
         accept: () => runMigrate(false),
     });
 };
@@ -363,22 +385,21 @@ const runRollback = async () => {
         });
         applyStatus(data?.status);
         lastOutput.value = data?.output || "";
-        toast.add({
-            severity: data?.success ? "success" : "warn",
-            summary: "Rollback",
-            detail: data?.message || "Done.",
-            life: 5000,
-        });
+        notify(
+            data?.success ? "success" : "warn",
+            "Rollback",
+            data?.message || "Done.",
+        );
     } catch (error: any) {
         const payload = error?.response?.data;
         applyStatus(payload?.status);
         lastOutput.value = payload?.output || payload?.message || "";
-        toast.add({
-            severity: "error",
-            summary: "Rollback failed",
-            detail: payload?.message || "Could not roll back migrations.",
-            life: 6000,
-        });
+        notify(
+            "error",
+            "Rollback failed",
+            payload?.message || "Could not roll back migrations.",
+            8000,
+        );
     } finally {
         rollingBack.value = false;
     }
@@ -390,9 +411,17 @@ const confirmRollback = () => {
         header: "Roll back migrations?",
         message: `This will undo the last ${steps} migration step${steps === 1 ? "" : "s"}. Take a backup first if you are unsure.`,
         icon: "pi pi-exclamation-triangle",
-        acceptLabel: "Rollback",
-        rejectLabel: "Cancel",
-        acceptClass: "p-button-danger",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Rollback",
+            severity: "danger",
+            size: "small",
+        },
         accept: () => runRollback(),
     });
 };
@@ -404,22 +433,21 @@ const runSeed = async (key: string) => {
         const { data } = await axios.post(route("migrations.seed"), { seeder: key });
         applyStatus(data?.status);
         lastOutput.value = data?.output || "";
-        toast.add({
-            severity: data?.success ? "success" : "warn",
-            summary: "Seeder",
-            detail: data?.message || "Done.",
-            life: 5000,
-        });
+        notify(
+            data?.success ? "success" : "warn",
+            "Seeder",
+            data?.message || "Done.",
+        );
     } catch (error: any) {
         const payload = error?.response?.data;
         applyStatus(payload?.status);
         lastOutput.value = payload?.output || payload?.message || "";
-        toast.add({
-            severity: "error",
-            summary: "Seeder failed",
-            detail: payload?.message || "Could not run seeder.",
-            life: 6000,
-        });
+        notify(
+            "error",
+            "Seeder failed",
+            payload?.message || "Could not run seeder.",
+            8000,
+        );
     } finally {
         seedingKey.value = null;
     }
@@ -430,9 +458,17 @@ const confirmSeed = (seeder: SeederOption) => {
         header: `Run ${seeder.label}?`,
         message: seeder.description,
         icon: "pi pi-database",
-        acceptLabel: "Run seeder",
-        rejectLabel: "Cancel",
-        acceptClass: "p-button-warning",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+            size: "small",
+        },
+        acceptProps: {
+            label: "Run seeder",
+            severity: "warning",
+            size: "small",
+        },
         accept: () => runSeed(seeder.key),
     });
 };

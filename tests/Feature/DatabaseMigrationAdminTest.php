@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\BlogPost;
 use App\Models\User;
+use App\Models\WiseAi\WiseKnowledgeItem;
+use App\WiseAi\Knowledge\SeededKnowledge;
 use Illuminate\Support\Facades\Hash;
 
 function createMigrationAdmin(): User
@@ -53,6 +56,16 @@ it('can dry-run migrations from the admin UI', function () {
         ->assertJsonPath('success', true);
 });
 
+it('runs migrate without passing a false pretend flag', function () {
+    $admin = createMigrationAdmin();
+
+    $this->actingAs($admin)
+        ->postJson(route('migrations.run'), ['pretend' => false])
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonStructure(['output', 'status' => ['pending_count', 'ran_count']]);
+});
+
 it('rejects unknown seeders from the admin UI', function () {
     $admin = createMigrationAdmin();
 
@@ -69,15 +82,15 @@ it('seeds SEO blog posts from the admin UI and is idempotent', function () {
         ->assertOk()
         ->assertJsonPath('success', true);
 
-    expect(\App\Models\BlogPost::query()->count())->toBe(20);
+    expect(BlogPost::query()->count())->toBe(20);
 
     $this->actingAs($admin)
         ->postJson(route('migrations.seed'), ['seeder' => 'BlogPostSeeder'])
         ->assertOk()
         ->assertJsonPath('success', true);
 
-    expect(\App\Models\BlogPost::query()->count())->toBe(20);
-    expect(\App\Models\BlogPost::query()->where('status', 'published')->count())->toBe(20);
+    expect(BlogPost::query()->count())->toBe(20);
+    expect(BlogPost::query()->where('status', 'published')->count())->toBe(20);
 
     $slug = 'fake-order-loss-calculation-bangladesh';
     $this->get(route('blog.show', $slug))->assertOk();
@@ -91,8 +104,8 @@ it('seeds Wise knowledge drafts from the admin UI and stays unpublished', functi
         ->assertOk()
         ->assertJsonPath('success', true);
 
-    $drafts = \App\WiseAi\Knowledge\SeededKnowledge::scopeDraftsForReview(
-        \App\Models\WiseAi\WiseKnowledgeItem::query()
+    $drafts = SeededKnowledge::scopeDraftsForReview(
+        WiseKnowledgeItem::query()
     )->count();
 
     expect($drafts)->toBeGreaterThanOrEqual(24);
@@ -103,8 +116,8 @@ it('seeds Wise knowledge drafts from the admin UI and stays unpublished', functi
         ->assertJsonPath('success', true);
 
     expect(
-        \App\WiseAi\Knowledge\SeededKnowledge::scopeOwnedSeeds(
-            \App\Models\WiseAi\WiseKnowledgeItem::query()
+        SeededKnowledge::scopeOwnedSeeds(
+            WiseKnowledgeItem::query()
         )->where('status', 'published')->count()
     )->toBe(0);
 });

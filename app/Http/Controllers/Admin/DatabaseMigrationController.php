@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Database\Seeders\BlogPostSeeder;
+use Database\Seeders\WiseKnowledgeSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -22,8 +24,8 @@ class DatabaseMigrationController extends Controller
      * @var array<string, class-string>
      */
     private const ALLOWED_SEEDERS = [
-        'BlogPostSeeder' => \Database\Seeders\BlogPostSeeder::class,
-        'WiseKnowledgeSeeder' => \Database\Seeders\WiseKnowledgeSeeder::class,
+        'BlogPostSeeder' => BlogPostSeeder::class,
+        'WiseKnowledgeSeeder' => WiseKnowledgeSeeder::class,
     ];
 
     public function index(): Response
@@ -46,6 +48,9 @@ class DatabaseMigrationController extends Controller
 
         $pretend = (bool) ($validated['pretend'] ?? false);
 
+        @set_time_limit(600);
+        @ini_set('max_execution_time', '600');
+
         Log::info('Database migrate started from admin UI.', [
             'pretend' => $pretend,
             'user_id' => $request->user()?->id,
@@ -53,11 +58,15 @@ class DatabaseMigrationController extends Controller
         ]);
 
         try {
-            $output = new BufferedOutput();
-            $exitCode = Artisan::call('migrate', [
-                '--force' => true,
-                '--pretend' => $pretend,
-            ], $output);
+            $output = new BufferedOutput;
+            $params = ['--force' => true];
+            if ($pretend) {
+                // Only pass the flag when true — VALUE_NONE options can misbehave if keyed with false.
+                $params['--pretend'] = true;
+            }
+
+            $exitCode = Artisan::call('migrate', $params, $output);
+            $console = trim($output->fetch());
 
             Log::info('Database migrate finished from admin UI.', [
                 'pretend' => $pretend,
@@ -70,7 +79,7 @@ class DatabaseMigrationController extends Controller
                 'message' => $pretend
                     ? 'Dry-run completed (no database changes).'
                     : ($exitCode === 0 ? 'Migrations ran successfully.' : 'Migration command finished with errors.'),
-                'output' => trim($output->fetch()),
+                'output' => $console !== '' ? $console : ($exitCode === 0 ? 'No pending migrations.' : 'Migration failed with no console output.'),
                 'status' => $this->statusPayload(),
             ], $exitCode === 0 ? 200 : 500);
         } catch (Throwable $e) {
@@ -83,7 +92,7 @@ class DatabaseMigrationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Migration failed: '.$e->getMessage(),
-                'output' => $e->getMessage(),
+                'output' => $this->formatThrowable($e),
                 'status' => $this->statusPayload(),
             ], 500);
         }
@@ -106,13 +115,20 @@ class DatabaseMigrationController extends Controller
             'ip' => $request->ip(),
         ]);
 
+        @set_time_limit(600);
+        @ini_set('max_execution_time', '600');
+
         try {
-            $output = new BufferedOutput();
-            $exitCode = Artisan::call('migrate:rollback', [
+            $output = new BufferedOutput;
+            $params = [
                 '--force' => true,
                 '--step' => $step,
-                '--pretend' => $pretend,
-            ], $output);
+            ];
+            if ($pretend) {
+                $params['--pretend'] = true;
+            }
+
+            $exitCode = Artisan::call('migrate:rollback', $params, $output);
 
             Log::warning('Database rollback finished from admin UI.', [
                 'step' => $step,
@@ -140,7 +156,7 @@ class DatabaseMigrationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Rollback failed: '.$e->getMessage(),
-                'output' => $e->getMessage(),
+                'output' => $this->formatThrowable($e),
                 'status' => $this->statusPayload(),
             ], 500);
         }
@@ -158,6 +174,9 @@ class DatabaseMigrationController extends Controller
         $key = $validated['seeder'];
         $class = self::ALLOWED_SEEDERS[$key];
 
+        @set_time_limit(600);
+        @ini_set('max_execution_time', '600');
+
         Log::info('Database seeder started from admin UI.', [
             'seeder' => $key,
             'class' => $class,
@@ -166,7 +185,7 @@ class DatabaseMigrationController extends Controller
         ]);
 
         try {
-            $output = new BufferedOutput();
+            $output = new BufferedOutput;
             $exitCode = Artisan::call('db:seed', [
                 '--class' => $class,
                 '--force' => true,
@@ -196,10 +215,22 @@ class DatabaseMigrationController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Seeder failed: '.$e->getMessage(),
-                'output' => $e->getMessage(),
+                'output' => $this->formatThrowable($e),
                 'status' => $this->statusPayload(),
             ], 500);
         }
+    }
+
+    private function formatThrowable(Throwable $e): string
+    {
+        $lines = [$e->getMessage()];
+        $previous = $e->getPrevious();
+        while ($previous) {
+            $lines[] = $previous->getMessage();
+            $previous = $previous->getPrevious();
+        }
+
+        return implode("\n", array_values(array_unique(array_filter($lines))));
     }
 
     /**

@@ -1,5 +1,13 @@
 <template>
     <form class="space-y-5" @submit.prevent="$emit('submit')">
+        <div
+            v-if="errorBanner"
+            class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200"
+        >
+            <p class="font-semibold">Could not save this version</p>
+            <p class="mt-1 whitespace-pre-wrap">{{ errorBanner }}</p>
+        </div>
+
         <div>
             <label
                 for="version"
@@ -45,7 +53,7 @@
                 {{ form.errors.settings }}
             </p>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Valid JSON metadata served to the plugin update API.
+                Must be valid JSON. This metadata is served to the plugin update API.
             </p>
         </div>
 
@@ -71,7 +79,7 @@
                     <input
                         type="file"
                         class="hidden"
-                        accept=".zip"
+                        accept=".zip,application/zip"
                         @change="$emit('file-select', $event)"
                     />
                 </label>
@@ -106,9 +114,12 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from "vue";
+
+const props = defineProps<{
     form: any;
     fileName?: string | null;
+    submitError?: string | null;
 }>();
 
 defineEmits<{
@@ -116,4 +127,18 @@ defineEmits<{
     cancel: [];
     "file-select": [event: Event];
 }>();
+
+const errorBanner = computed(() => {
+    if (props.submitError) {
+        return props.submitError;
+    }
+
+    const errors = props.form?.errors || {};
+    const messages = Object.values(errors).filter(
+        (message): message is string =>
+            typeof message === "string" && message.trim().length > 0,
+    );
+
+    return messages.length ? messages.join("\n") : "";
+});
 </script>
