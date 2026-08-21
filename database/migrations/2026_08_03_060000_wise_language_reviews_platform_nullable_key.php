@@ -7,7 +7,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Platform Train may open Language Discovery reviews with no merchant key.
- * Unique token per scope via functional IFNULL(key, 0) index (MySQL 8+).
+ * Unique token per scope via plain wise_api_key_scope (= IFNULL(key, 0)) column.
+ * Avoids MySQL-8-only functional indexes and FK+generated-column conflicts
+ * (MariaDB / MySQL safe). App model keeps scope in sync on save.
  *
  * Idempotent: safe if FK/index/nullability already match the target schema.
  */
@@ -34,7 +36,7 @@ return new class extends Migration
 
             DB::statement('ALTER TABLE wise_language_reviews MODIFY wise_api_key_id BIGINT UNSIGNED NULL');
 
-            if (! $this->foreignKeyExists('wise_language_reviews_wise_api_key_id_foreign')) {
+            if (! $this->foreignKeyOnColumnExists('wise_api_key_id')) {
                 Schema::table('wise_language_reviews', function (Blueprint $table) {
                     $table->foreign('wise_api_key_id')
                         ->references('id')
@@ -43,17 +45,10 @@ return new class extends Migration
                 });
             }
         } else {
-            // Partial prior run: unique may already be gone; FK should be nullOnDelete.
-            $this->dropIndexIfExists('wise_lang_review_token_unique');
             $this->ensureNullOnDeleteForeign();
         }
 
-        if (! $this->indexExists('wise_lang_review_token_unique')) {
-            DB::statement(
-                'CREATE UNIQUE INDEX wise_lang_review_token_unique
-                 ON wise_language_reviews ((IFNULL(wise_api_key_id, 0)), token)'
-            );
-        }
+        $this->ensureScopeColumnAndUnique();
     }
 
     public function down(): void
@@ -63,6 +58,13 @@ return new class extends Migration
         }
 
         $this->dropIndexIfExists('wise_lang_review_token_unique');
+
+        if (Schema::hasColumn('wise_language_reviews', 'wise_api_key_scope')) {
+            Schema::table('wise_language_reviews', function (Blueprint $table) {
+                $table->dropColumn('wise_api_key_scope');
+            });
+        }
+
         $this->dropForeignOnColumnIfExists('wise_api_key_id');
 
         DB::table('wise_language_reviews')->whereNull('wise_api_key_id')->delete();
@@ -76,6 +78,49 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->unique(['wise_api_key_id', 'token'], 'wise_lang_review_token_unique');
         });
+    }
+
+    private function ensureScopeColumnAndUnique(): void
+    {
+        if (! Schema::hasColumn('wise_language_reviews', 'wise_api_key_scope')) {
+            Schema::table('wise_language_reviews', function (Blueprint $table) {
+                $table->unsignedBigInteger('wise_api_key_scope')->default(0);
+            });
+        }
+
+        DB::statement(
+            'UPDATE wise_language_reviews SET wise_api_key_scope = IFNULL(wise_api_key_id, 0)'
+        );
+
+        if ($this->indexExists('wise_lang_review_token_unique') && ! $this->uniqueIsOnScopeAndToken()) {
+            $this->dropIndexIfExists('wise_lang_review_token_unique');
+        }
+
+        if (! $this->indexExists('wise_lang_review_token_unique')) {
+            Schema::table('wise_language_reviews', function (Blueprint $table) {
+                $table->unique(['wise_api_key_scope', 'token'], 'wise_lang_review_token_unique');
+            });
+        }
+    }
+
+    private function uniqueIsOnScopeAndToken(): bool
+    {
+        $cols = DB::select(
+            'SELECT COLUMN_NAME AS name
+             FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = ?
+               AND INDEX_NAME = ?
+             ORDER BY SEQ_IN_INDEX',
+            ['wise_language_reviews', 'wise_lang_review_token_unique']
+        );
+
+        if (count($cols) !== 2) {
+            return false;
+        }
+
+        return ($cols[0]->name ?? '') === 'wise_api_key_scope'
+            && ($cols[1]->name ?? '') === 'token';
     }
 
     private function dropIndexIfExists(string $name): void
@@ -99,23 +144,21 @@ return new class extends Migration
         return $row !== null;
     }
 
-    private function foreignKeyExists(string $constraintName): bool
+    private function foreignKeyOnColumnExists(string $column): bool
     {
         $row = DB::selectOne(
-            'SELECT 1 AS ok FROM information_schema.REFERENTIAL_CONSTRAINTS
-             WHERE CONSTRAINT_SCHEMA = DATABASE()
+            'SELECT 1 AS ok FROM information_schema.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = DATABASE()
                AND TABLE_NAME = ?
-               AND CONSTRAINT_NAME = ?
+               AND COLUMN_NAME = ?
+               AND REFERENCED_TABLE_NAME IS NOT NULL
              LIMIT 1',
-            ['wise_language_reviews', $constraintName]
+            ['wise_language_reviews', $column]
         );
 
         return $row !== null;
     }
 
-    /**
-     * Drop any FK on the given column, regardless of constraint name.
-     */
     private function dropForeignOnColumnIfExists(string $column): void
     {
         $constraints = DB::select(
@@ -140,22 +183,20 @@ return new class extends Migration
     private function ensureNullOnDeleteForeign(): void
     {
         $rule = DB::selectOne(
-            "SELECT CONSTRAINT_NAME, DELETE_RULE
-             FROM information_schema.REFERENTIAL_CONSTRAINTS
-             WHERE CONSTRAINT_SCHEMA = DATABASE()
-               AND TABLE_NAME = 'wise_language_reviews'
-               AND CONSTRAINT_NAME IN (
-                   SELECT DISTINCT CONSTRAINT_NAME
-                   FROM information_schema.KEY_COLUMN_USAGE
-                   WHERE TABLE_SCHEMA = DATABASE()
-                     AND TABLE_NAME = 'wise_language_reviews'
-                     AND COLUMN_NAME = 'wise_api_key_id'
-                     AND REFERENCED_TABLE_NAME IS NOT NULL
-               )
+            "SELECT rc.DELETE_RULE AS delete_rule
+             FROM information_schema.REFERENTIAL_CONSTRAINTS rc
+             INNER JOIN information_schema.KEY_COLUMN_USAGE kcu
+               ON kcu.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
+              AND kcu.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+              AND kcu.TABLE_NAME = rc.TABLE_NAME
+             WHERE rc.CONSTRAINT_SCHEMA = DATABASE()
+               AND rc.TABLE_NAME = 'wise_language_reviews'
+               AND kcu.COLUMN_NAME = 'wise_api_key_id'
+               AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
              LIMIT 1"
         );
 
-        if ($rule && strtoupper((string) $rule->DELETE_RULE) === 'SET NULL') {
+        if ($rule && strtoupper((string) $rule->delete_rule) === 'SET NULL') {
             return;
         }
 

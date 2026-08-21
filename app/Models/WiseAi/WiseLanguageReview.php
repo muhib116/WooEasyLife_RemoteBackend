@@ -35,6 +35,14 @@ class WiseLanguageReview extends Model
         'rank_score' => 'float',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $model): void {
+            // Keep unique (scope, token) in sync for nullable platform keys (scope = 0).
+            $model->wise_api_key_scope = (int) ($model->wise_api_key_id ?? 0);
+        });
+    }
+
     public function apiKey(): BelongsTo
     {
         return $this->belongsTo(WiseApiKey::class, 'wise_api_key_id');

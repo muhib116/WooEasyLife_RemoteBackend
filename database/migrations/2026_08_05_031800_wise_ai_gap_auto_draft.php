@@ -4,6 +4,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Idempotent: safe if column/index already exist; after() falls back if gap columns differ.
+ */
 return new class extends Migration
 {
     public function up(): void
@@ -13,12 +16,19 @@ return new class extends Migration
         }
 
         if (! Schema::hasColumn('wise_turns', 'gap_auto_draft_id')) {
-            $after = Schema::hasColumn('wise_turns', 'gap_knowledge_id')
-                ? 'gap_knowledge_id'
-                : (Schema::hasColumn('wise_turns', 'gap_handled_at') ? 'gap_handled_at' : 'gap');
+            $after = null;
+            foreach (['gap_knowledge_id', 'gap_handled_at', 'gap', 'id'] as $candidate) {
+                if (Schema::hasColumn('wise_turns', $candidate)) {
+                    $after = $candidate;
+                    break;
+                }
+            }
 
             Schema::table('wise_turns', function (Blueprint $table) use ($after) {
-                $table->unsignedBigInteger('gap_auto_draft_id')->nullable()->after($after);
+                $col = $table->unsignedBigInteger('gap_auto_draft_id')->nullable();
+                if ($after !== null) {
+                    $col->after($after);
+                }
             });
         }
 
@@ -27,7 +37,8 @@ return new class extends Migration
             ->unique()
             ->all();
 
-        if (! in_array('wise_turns_gap_auto_draft_idx', $indexes, true)) {
+        if (! in_array('wise_turns_gap_auto_draft_idx', $indexes, true)
+            && Schema::hasColumn('wise_turns', 'gap_auto_draft_id')) {
             Schema::table('wise_turns', function (Blueprint $table) {
                 $table->index('gap_auto_draft_id', 'wise_turns_gap_auto_draft_idx');
             });
