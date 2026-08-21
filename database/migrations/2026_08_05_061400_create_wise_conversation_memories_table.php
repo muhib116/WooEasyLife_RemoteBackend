@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('wise_conversation_memories')) {
+            return;
+        }
+
         Schema::create('wise_conversation_memories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('wise_api_key_id')->constrained('wise_api_keys')->cascadeOnDelete();
