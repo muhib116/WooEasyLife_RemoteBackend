@@ -670,6 +670,51 @@ return [
             'feature_keys' => ['pixel_protection'],
         ],
         [
+            'id' => 'funnels',
+            'badge' => 'Funnels · Beta',
+            'headline' => 'Facebook Ads-এর জন্য COD ল্যান্ডিং পেজ — কোডিং ছাড়াই',
+            'teaser' => 'Funnels (Beta): AI প্রম্পট → Import JSON → /wel/ clean URL',
+            'pain' => 'অ্যাড চালাচ্ছেন কিন্তু ল্যান্ডিং পেজ বানাতে Elementor/ডেভেলপার দেরি — কনটেন্ট বদলাতেও ঘণ্টার পর ঘণ্টা লাগে।',
+            'solution' => 'WooEasyLife Funnels-এ ফানেল তৈরি করুন, প্রোডাক্ট ও ফোন সেট করুন, ChatGPT/Gemini প্রম্পট দিয়ে কনটেন্ট জেনারেট করে Import JSON করুন — তারপর থিম/লেআউট বেছে পাবলিশ।',
+            'benefit' => 'নন-টেকনিক্যাল টিমও দ্রুত সিঙ্গেল-প্রোডাক্ট COD ল্যান্ডিং পেজ লাইভ করতে পারে — অ্যাড ক্রিয়েটিভের সাথে ম্যাচ করা সহজ।',
+            'profit' => [
+                'label' => 'সময় ও এজেন্সি খরচ',
+                'monthly' => 'ঘণ্টা বাঁচে',
+                'basis' => 'ম্যানুয়াল পেজ বিল্ড/এজেন্সি রাউন্ডের বদলে একই দিনে ল্যান্ডার আপডেট — উদাহরণভিত্তিক; ফলাফল ব্যবসা অনুযায়ী ভিন্ন',
+                'compare' => '১৪ দিন ফ্রি ট্রায়ালে নিজের স্টোরে Funnels টেস্ট করুন।',
+                'note' => 'Beta ফিচার — Views/Conversions মেট্রিক্স এখনো প্লেসহোল্ডার। গ্যারান্টিযুক্ত কনভার্সন রেট দাবি করা হয় না।',
+            ],
+            'highlights' => [
+                'Funnels hub → Create → Design Your Funnel',
+                'AI prompt + competitor URL/ইমেজ → Import JSON',
+                'Inline COD অর্ডার ফর্ম · ফোন/WhatsApp',
+                'Clean public URL: /wel/{slug}',
+                'Classic / Offer / Voyage / Atlas লেআউট ও থিম',
+            ],
+            'read_more' => [
+                [
+                    'title' => 'Funnels কী?',
+                    'body' => 'WooEasyLife অ্যাডমিনে Funnels (Beta) হলো সেলস ফানেল হাব। একটি ফানেল তৈরি করলে ল্যান্ডিং পেজ স্টেপ তৈরি হয় — Elementor WEL Landing widget দিয়ে এডিট ও পাবলিশ। পুরনো Elementor ল্যান্ডারও আগের মতোই কাজ করে।',
+                ],
+                [
+                    'title' => 'AI কনটেন্ট কীভাবে?',
+                    'body' => 'Config থেকে Reset prompt + fill product → Copy → ChatGPT/Gemini-তে প্রতিযোগী URL বা প্রোডাক্ট ইমেজ দিন → পাওয়া JSON Import করুন। ছবি ম্যানুয়ালি আপলোড করুন, তারপর Publish।',
+                ],
+            ],
+            'scenario' => [
+                'title' => 'উদাহরণ ফ্লো (ভিডিওর মতো)',
+                'steps' => [
+                    'Funnels → Create → নাম ও slug',
+                    'ফোন/WhatsApp + চেকআউট প্রোডাক্ট সেট',
+                    'AI প্রম্পট কপি → ChatGPT → Import JSON',
+                    'ইমেজ/থিম ঠিক করে Publish → /wel/… লিংক অ্যাডে',
+                ],
+            ],
+            'accent' => 'orange',
+            'always_show' => true,
+            'feature_keys' => [],
+        ],
+        [
             'id' => 'team',
             'badge' => 'স্টাফ ও কল ট্র্যাকিং',
             'headline' => 'ক্যানসেল হলে জানুন কেন — কে কল করেছিল, কতক্ষণ',

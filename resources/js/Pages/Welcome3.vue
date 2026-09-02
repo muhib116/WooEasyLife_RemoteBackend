@@ -11,6 +11,7 @@ import RoiCalculatorSection from '@/components/marketing/RoiCalculatorSection.vu
 import LossComparisonSection from '@/components/marketing/LossComparisonSection.vue';
 import HowItWorksSection from '@/components/marketing/HowItWorksSection.vue';
 import FeatureShowcaseSection from '@/components/marketing/FeatureShowcaseSection.vue';
+import FunnelsPromoSection from '@/components/marketing/FunnelsPromoSection.vue';
 import AppShowcaseSection from '@/components/marketing/AppShowcaseSection.vue';
 import DownloadGateSection from '@/components/marketing/DownloadGateSection.vue';
 import IntegrationsSection from '@/components/marketing/IntegrationsSection.vue';
@@ -107,6 +108,12 @@ const returnLossCalculatorHref = computed(() => (
         : route('seo.return-loss-calculator')
 ));
 
+const pricingHref = computed(() => route('pricing'));
+
+const funnelsAnchorHref = computed(() => (
+    isEn.value ? '/en#funnels' : '/#funnels'
+));
+
 const hasPendingInquiry = computed(() => Boolean(props.pendingSubscriptionInquiry?.id));
 
 const paymentMethodLabels = computed(() => {
@@ -191,6 +198,7 @@ const copy = computed(() => (isEn.value
             { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'Free fraud checker · courier history', theme: 'emerald' },
             { href: fakeOrderProtectionHref.value, title: 'Fake order protection', desc: 'OTP · block · cut return loss', theme: 'amber' },
             { href: courierAutoEntryHref.value, title: 'Courier auto entry', desc: 'Pathao · Steadfast · RedX', theme: 'sky' },
+            { href: funnelsAnchorHref.value, title: 'Funnels (Beta)', desc: 'COD landing pages for Facebook Ads', theme: 'orange' },
         ],
         fraudBdAltPrefix: 'Only need a checker tool?',
         fraudBdAltLink: 'See FraudBD Alternative',
@@ -220,6 +228,7 @@ const copy = computed(() => (isEn.value
             { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'ফ্রি ফ্রড চেকার · কুরিয়ার হিস্টোরি', theme: 'emerald' },
             { href: fakeOrderProtectionHref.value, title: 'ফেক অর্ডার প্রোটেকশন', desc: 'OTP · ব্লক · রিটার্ন লস কমান', theme: 'amber' },
             { href: courierAutoEntryHref.value, title: 'কুরিয়ার অটো এন্ট্রি', desc: 'Pathao · Steadfast · RedX', theme: 'sky' },
+            { href: funnelsAnchorHref.value, title: 'Funnels (Beta)', desc: 'Facebook Ads COD ল্যান্ডিং পেজ', theme: 'orange' },
         ],
         fraudBdAltPrefix: 'টুল-শুধু চেকারের বিকল্প?',
         fraudBdAltLink: 'FraudBD Alternative দেখুন',
@@ -284,6 +293,10 @@ const faqs = computed(() => {
                 a: 'Yes. With a typical setup, fake/cancelled orders still count as “sales”, so Facebook shows ads to the wrong people. WooEasyLife counts only confirmed orders as sales — ad budget goes further.',
             },
             {
+                q: 'What is WooEasyLife Funnels?',
+                a: 'Funnels (Beta) helps you build WooCommerce COD landing pages for Facebook Ads without coding — AI prompt → Import JSON, themes/layouts, and a clean /wel/ URL with an inline order form. Start from the free trial, then open Funnels in the plugin admin.',
+            },
+            {
                 q: 'How do I get help when stuck?',
                 a: 'Every feature page has a video guide. Message us on WhatsApp for direct support.',
             },
@@ -332,6 +345,10 @@ const faqs = computed(() => {
             {
                 q: 'ফেক অর্ডার কি Facebook অ্যাড নষ্ট করে?',
                 a: 'হ্যাঁ। সাধারণ সেটআপে ফেক/ক্যানসেল অর্ডারও «বিক্রি» হিসেবে গোনা হয়, তাই Facebook ভুল মানুষের কাছে অ্যাড দেখায়। WooEasyLife শুধু কনফার্মড অর্ডারকেই বিক্রি ধরে — অ্যাড বাজেট বাঁচে।',
+            },
+            {
+                q: 'WooEasyLife Funnels কী?',
+                a: 'Funnels (Beta) দিয়ে Facebook Ads-এর জন্য WooCommerce COD ল্যান্ডিং পেজ কোডিং ছাড়াই বানানো যায় — AI প্রম্পট → Import JSON, থিম/লেআউট, /wel/ clean URL ও ইনলাইন অর্ডার ফর্ম। ফ্রি ট্রায়াল শুরু করে প্লাগইন অ্যাডমিনে Funnels খুলুন।',
             },
             {
                 q: 'সমস্যায় পড়লে সাহায্য পাব কীভাবে?',
@@ -414,7 +431,7 @@ const toggleFaq = (i) => {
 
         <!-- 2b. SEO intent links (one job: discovery) -->
         <ScrollReveal as="section" class="px-4 pb-10 lg:px-8">
-            <div class="mx-auto grid max-w-6xl gap-4 sm:grid-cols-3">
+            <div class="mx-auto grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Link
                     v-for="card in copy.seoCards"
                     :key="card.title"
@@ -424,7 +441,9 @@ const toggleFaq = (i) => {
                         ? 'border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-400/40'
                         : card.theme === 'amber'
                             ? 'border-amber-500/20 bg-amber-500/5 hover:border-amber-400/40'
-                            : 'border-sky-500/20 bg-sky-500/5 hover:border-sky-400/40'"
+                            : card.theme === 'orange'
+                                ? 'border-orange-500/25 bg-orange-500/5 hover:border-orange-400/40'
+                                : 'border-sky-500/20 bg-sky-500/5 hover:border-sky-400/40'"
                 >
                     <h2 class="text-base font-bold text-white">{{ card.title }}</h2>
                     <p class="mt-1 text-sm text-slate-400">{{ card.desc }}</p>
@@ -492,6 +511,14 @@ const toggleFaq = (i) => {
         <!-- 8. How it works -->
         <ScrollReveal :delay="80">
             <HowItWorksSection :steps="howItWorks" :locale="locale" />
+        </ScrollReveal>
+
+        <!-- 8b. Funnels (Beta) — product discovery, hero stays fraud-first -->
+        <ScrollReveal :delay="70">
+            <FunnelsPromoSection
+                :locale="locale"
+                :pricing-href="pricingHref"
+            />
         </ScrollReveal>
 
         <!-- 9. Feature deep-dives (accordion) -->

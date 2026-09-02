@@ -1,6 +1,6 @@
 # WooEasyLife — Living Feature Inventory
 
-**Last analyzed:** 2026-08-08  
+**Last analyzed:** 2026-08-23  
 **Sources (re-scan when features change):**
 - Plugin: `$WOOEASYLIFE_PLUGIN` — local checkout of `woo-easy-life` (v1.5.4+)
 - App: `$WOOEASYLIFE_APP` — local checkout of Flutter `WooEasyLife` (v1.1.6+)
@@ -21,7 +21,8 @@
 7. **AI order from image/text** + address Fix with AI (OpenAI)  
 8. **Mobile app:** multi-store, push, call ID / inbound match, approve on the go  
 9. **SMS** status + bulk; **Meta Pixel + CAPI**  
-10. **Team / employees** + performance; invoices / POS stickers (package-gated)
+10. **Team / employees** + performance; invoices / POS stickers (package-gated)  
+11. **Funnels (Beta):** COD landing pages for Facebook Ads — AI prompt → Import JSON, themes/layouts, `/wel/{slug}` + inline order form *(do not claim CartFlows replacement or live views/revenue analytics)*
 
 **Founder personal brand:** Muhibbullah · `dev.muhibbullah@gmail.com` · WooEasyLife  
 
@@ -69,6 +70,14 @@ Package: `messenger_sales_agent` and/or `ai_intelligence`
 ### AI / automation (non-Messenger)
 AI Order from Image · AI Order from Text · address enrich · status SMS · bulk SMS + recharge · new-order sound/toast · Missing Orders / abandoned cart (gated) · Meta Pixel + CAPI (+ CartFlows hooks)
 
+### Funnels (Beta — WP admin)
+Top-nav **Funnels** hub:
+- Create funnel → Elementor **WEL Landing** widget → design/publish  
+- AI content path: Reset prompt + product fill → Copy → ChatGPT/Gemini (competitor URL / product image) → **Import JSON**  
+- Themes + layouts: Classic · Offer · Voyage · Atlas  
+- Public clean URL: `/wel/{slug}` with inline COD order form · phone/WhatsApp CTAs  
+- **Honesty:** step analytics (Views / Revenue) are placeholders — do not claim conversion guarantees or CartFlows replacement
+
 ### Mobile link
 Connect App QR · FCM push · store profile sync · caller ID → order (with app)
 
@@ -109,6 +118,8 @@ Steadfast · RedX · Pathao · **Paperfly** (settings list; live assign/refresh 
 - iOS as primary ship target  
 - App lock / PIN (empty module)  
 - Shopper-facing storefront app  
+- Funnels **live** Views/Revenue/conversion analytics (placeholders in Beta)  
+- Funnels as a full CartFlows / multi-step checkout replacement 
 
 ---
 

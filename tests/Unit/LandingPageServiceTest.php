@@ -53,6 +53,11 @@ class LandingPageServiceTest extends TestCase
         $this->assertNotNull($teamShowcase);
         $this->assertNotEmpty($teamShowcase['scenario']);
         $this->assertNotEmpty($teamShowcase['read_more']);
+        $funnelsShowcase = collect($payload['featureShowcases'])->firstWhere('id', 'funnels');
+        $this->assertNotNull($funnelsShowcase);
+        $this->assertTrue($funnelsShowcase['always_show'] ?? false);
+        $this->assertNotEmpty($funnelsShowcase['features']);
+        $this->assertSame('orange', $funnelsShowcase['accent']);
         $this->assertNotEmpty($payload['stats']);
         $this->assertNotEmpty($payload['fraudBenefitCards']);
         $this->assertNotEmpty($payload['valuePillars']);

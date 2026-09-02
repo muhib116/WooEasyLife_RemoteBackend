@@ -99,6 +99,15 @@ const accentStyles = (accent) => {
             highlight: 'text-fuchsia-400',
             scenario: 'border-fuchsia-500/25 bg-fuchsia-950/30',
         },
+        orange: {
+            badge: 'border-orange-400/30 bg-orange-500/10 text-orange-300',
+            border: 'border-orange-500/20',
+            bg: 'from-orange-950/30 to-[#111111]',
+            dot: 'text-orange-400',
+            benefit: 'border-orange-500/20 bg-orange-500/10 text-orange-200',
+            highlight: 'text-orange-400',
+            scenario: 'border-orange-500/25 bg-orange-950/30',
+        },
         cyan: {
             badge: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-300',
             border: 'border-cyan-500/20',

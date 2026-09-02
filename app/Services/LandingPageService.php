@@ -435,6 +435,7 @@ class LandingPageService
 
         return collect(config('landing.feature_showcases', []))
             ->map(function (array $showcase) use ($features, $labels, $descriptions, $detailCopy) {
+                $alwaysShow = (bool) ($showcase['always_show'] ?? false);
                 $items = collect($showcase['feature_keys'] ?? [])
                     ->filter(fn (string $key) => $features[$key] ?? false)
                     ->map(function (string $key) use ($labels, $descriptions, $detailCopy) {
@@ -449,6 +450,20 @@ class LandingPageService
                     })
                     ->values()
                     ->all();
+
+                // Beta / hub features (e.g. Funnels) may ship without package feature_keys.
+                if ($alwaysShow && $items === []) {
+                    $items = collect($showcase['highlights'] ?? [])
+                        ->take(6)
+                        ->values()
+                        ->map(fn (string $label, int $i) => [
+                            'key' => 'highlight_'.$i,
+                            'label' => $label,
+                            'description' => $label,
+                            'detail' => '',
+                        ])
+                        ->all();
+                }
 
                 return [
                     'id' => $showcase['id'],
@@ -465,9 +480,10 @@ class LandingPageService
                     'accent' => $showcase['accent'] ?? 'violet',
                     'features' => $items,
                     'enabled_count' => count($items),
+                    'always_show' => $alwaysShow,
                 ];
             })
-            ->filter(fn (array $showcase) => $showcase['enabled_count'] > 0)
+            ->filter(fn (array $showcase) => ($showcase['always_show'] ?? false) || $showcase['enabled_count'] > 0)
             ->values()
             ->all();
     }
