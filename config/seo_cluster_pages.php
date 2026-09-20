@@ -1145,8 +1145,8 @@ return array (
   ),
   'woocommerce_mobile_app' => 
   array (
-    'title' => 'WooCommerce মোবাইল অ্যাপ গাইড ২০২৬ — পুশ, কল ও কুরিয়ার',
-    'description' => 'WooCommerce অ্যাডমিন মোবাইল অ্যাপ: রিয়েল-টাইম পুশ, ওয়ান-ট্যাপ কল/WhatsApp, ফ্রড ফ্ল্যাগ, ইনকমপ্লিট অ্যালার্ট ও কুরিয়ার অটো এন্ট্রি—ল্যাপটপ ছাড়া COD অপস।',
+    'title' => 'WooEasyLife মোবাইল অ্যাপ (Android) — ফোন থেকেই অর্ডার ও কুরিয়ার',
+    'description' => 'WooEasyLife অ্যাপ কী? Android ফোনে নতুন অর্ডারের নোটিফিকেশন, এক ট্যাপে কল, হিস্টোরি দেখে কনফার্ম বা হোল্ড, একাধিক স্টোর QR দিয়ে যুক্ত করা। কাস্টমার শপিং অ্যাপ নয়। প্রাইসিং পেজ থেকে ট্রায়াল।',
     'canonical_path' => '/woocommerce-mobile-app',
     'html_lang' => 'bn-BD',
     'og_type' => 'article',
@@ -1171,46 +1171,51 @@ return array (
       ),
       2 => 
       array (
-        'name' => 'WooCommerce Mobile App',
+        'name' => 'WooEasyLife মোবাইল অ্যাপ',
         'path' => '/woocommerce-mobile-app',
       ),
     ),
-    'prerender_h1' => 'WooCommerce মোবাইল অ্যাপ — রিয়েল-টাইম অর্ডার, ফ্রড ফ্ল্যাগ ও কুরিয়ার এন্ট্রি',
-    'prerender_lead' => 'পুশ অ্যালার্ট, ওয়ান-ট্যাপ কল/WhatsApp এবং কনফার্মের পর কুরিয়ার বুকিং—ল্যাপটপ ছাড়াই COD অপারেশন চালান।',
+    'prerender_h1' => 'WooEasyLife মোবাইল অ্যাপ — ল্যাপটপ ছাড়াই অর্ডার চালান',
+    'prerender_lead' => 'WooEasyLife Android অ্যাপ দিয়ে WooCommerce মার্চেন্টরা ফোনে নতুন অর্ডারের খবর পান, কাস্টমারকে এক ট্যাপে কল করেন, কুরিয়ার হিস্টোরি দেখে কনফার্ম বা হোল্ড করেন, আর Pathao/SteadFast/RedX-এ পার্সেল পাঠানো শুরু করেন। এটা কাস্টমারের শপিং অ্যাপ নয়। iPhone এখন মূল ভার্সন নয়।',
     'faqs' => 
     array (
       0 => 
       array (
-        'q' => 'WooCommerce মোবাইল অ্যাপে কী কী করা যায়?',
-        'a' => 'নতুন ও ইনকমপ্লিট অর্ডারের পুশ সাউন্ড, এক ট্যাপে কল বা WhatsApp কনফার্মেশন, সবুজ/লাল কুরিয়ার হিস্টোরি ফ্ল্যাগ দেখে approve/hold, এবং কনফার্মের পর Pathao/Steadfast/RedX এন্ট্রি ট্রিগার—ল্যাপটপ ছাড়াই রেসপন্স টাইম কমে। ফ্রড চেক: /bd-fraud-checker। দৈনন্দিন বুকিং: /courier-auto-entry। হাব কনটেক্সট: /woocommerce-bangladesh।',
+        'q' => 'WooEasyLife মোবাইল অ্যাপ কী?',
+        'a' => 'WooEasyLife অ্যাপ হলো WooCommerce মার্চেন্টদের Android অ্যাপ। WooCommerce বা Facebook COD ব্যবসায় ফোন থেকে অর্ডার দেখা, কল করা, হিস্টোরি চেক করা এবং কনফার্ম বা হোল্ড করা যায়। কাস্টমার দিয়ে প্রোডাক্ট কেনার অ্যাপ নয়। বিস্তারিত এই পেজে। ট্রায়াল: /pricing। প্রতিষ্ঠাতা: /about।',
       ),
       1 => 
       array (
-        'q' => 'মোবাইল ব্রাউজার অ্যাডমিন কেন যথেষ্ট নয়?',
-        'a' => 'মোবাইল ব্রাউজারে WooCommerce অ্যাডমিন ধীর, ক্লিক-ভারী এবং নোটিফিকেশন ইমেইল/রিফ্রেশের ওপর নির্ভর করে। ছোট স্ক্রিনে অর্ডার খুঁজে কল ও কুরিয়ার প্যানেল খোলা কঠিন। ডেডিকেটেড অ্যাপে পুশ + ওয়ান-ট্যাপ অ্যাকশন থাকায় অনুমোদন/হোল্ড দ্রুত হয়। ভেরিফিকেশন রুল: /customer-verification ও /fake-order-protection।',
+        'q' => 'অ্যাপ কি Android-এ আছে? iPhone-এ কি চলবে?',
+        'a' => 'মূল ভার্সন Android-এর জন্য। iPhone এখন প্রধান নয়—আইফোনে সব ফিচার আছে বলে দাবি করবেন না। Android চালাতে /pricing থেকে ট্রায়াল বা প্ল্যান নিয়ে QR দিয়ে স্টোর যুক্ত করুন এবং ফোনের নোটিফিকেশন চালু রাখুন।',
       ),
       2 => 
       array (
-        'q' => 'অ্যাপে ফ্রড ফ্ল্যাগ দেখে কি সরাসরি পার্সেল পাঠাব?',
-        'a' => 'না—সবুজ হিস্টোরিতে দ্রুত কনফার্ম করে পার্সেল পাঠানো যায়; হলুদ/লালে আগে কল, OTP বা অগ্রিম চার্জ নিন। অ্যাপ সিগন্যাল দেখায়, সিদ্ধান্ত আপনার। ফ্রি হিস্টোরি: /bd-fraud-checker। প্রোটেকশন: /fake-order-protection। লস মাপতে: /return-loss-calculator।',
+        'q' => 'অ্যাপে কী কী করা যায়?',
+        'a' => 'একাধিক ওয়েবসাইট যুক্ত করা, নতুন বা অসম্পূর্ণ অর্ডারের নোটিফিকেশন, এক ট্যাপে কল বা WhatsApp, কল এলে অর্ডার মিলানো, হিস্টোরি দেখে কনফার্ম বা হোল্ড, Pathao/SteadFast/RedX পার্সেল কাজ, আর প্ল্যান অনুযায়ী SMS ও টিম টুল। হিস্টোরি শুধু ইঙ্গিত—ফেক বা আসল গ্যারান্টি নয়। ফ্রি চেক: /bd-fraud-checker। সুরক্ষা: /fake-order-protection। কুরিয়ার: /courier-auto-entry।',
       ),
       3 => 
       array (
-        'q' => 'মোবাইল থেকে কুরিয়ার বুকিং কীভাবে হয়?',
-        'a' => 'কুরিয়ার API কানেক্ট থাকলে কনফার্মের পর /courier-auto-entry ওয়ার্কফ্লো পার্সেল তৈরি করে এবং ট্র্যাকিং আইডি সেভ করে। Pathao/Steadfast/RedX সেটআপ: /pathao-courier-guide, /steadfast-integration, /redx-courier-guide। ট্র্যাকিং মেসেজ: /woocommerce-notifications।',
+        'q' => 'স্টোর কীভাবে অ্যাপে যুক্ত করব?',
+        'a' => 'ট্রায়াল বা প্ল্যান চালু থাকলে ওয়েব/প্লাগইন থেকে Connect App QR দেখান। অ্যাপে স্ক্যান করে স্টোর যুক্ত করুন। নোটিফিকেশন অনুমতি দিন। একটা টেস্ট অর্ডার দিয়ে নোটিফিকেশন→কল→কনফার্ম চেক করুন। শুরু: /pricing। মেসেজ গাইড: /woocommerce-notifications।',
       ),
       4 => 
       array (
-        'q' => 'এই পেজ কোন ক্লাস্টারের অংশ?',
-        'a' => 'হ্যাঁ—/woocommerce-bangladesh হাবের অপারেশন স্পোক। পরবর্তী ধাপ: /bd-fraud-checker → /fake-order-protection → /courier-auto-entry। ইংরেজি মিরর: /en/woocommerce-mobile-app। লস/অ্যাড টুল: /return-loss-calculator, /ads-roas-calculator।',
+        'q' => 'ফোনের ব্রাউজারে অ্যাডমিন খুললেই কি হয় না?',
+        'a' => 'ব্রাউজারে পেজ ধীর ও ঝামেলাপূর্ণ; নতুন অর্ডারের খবর প্রায়ই দেরিতে আসে। WooEasyLife অ্যাপে নোটিফিকেশন ও এক-ট্যাপ কল থাকায় রাস্তায় বা সাপ্লায়ারের কাছেও অর্ডার কম মিস হয়। সুরক্ষা গাইড: /customer-verification · /fake-order-protection।',
       ),
       5 => 
       array (
-        'q' => 'WooEasyLife মোবাইল অ্যাপ কীভাবে শুরু করব?',
-        'a' => 'প্রথমে /bd-fraud-checker দিয়ে ফ্রি চেক টেস্ট করুন। তারপর /pricing থেকে ট্রায়াল নিন, WooCommerce ও কুরিয়ার কানেক্ট করুন, /fake-order-protection চালু করুন, অ্যাপে পুশ পারমিশন দিন এবং একটা টেস্ট অর্ডারে পুশ→কল→কনফার্ম→এন্ট্রি যাচাই করুন। মেসেজিং: /woocommerce-notifications।',
+        'q' => 'হিস্টোরি খারাপ দেখলে কি সাথে সাথে পার্সেল পাঠাব?',
+        'a' => 'না। হিস্টোরি ভালো হলে তাড়াতাড়ি কনফার্ম করা যায়। মাঝারি/খারাপ হলে আগে কল, OTP বা অগ্রিম চার্জ নিন। অ্যাপ গ্যারান্টি দেয় না—সিদ্ধান্ত আপনার। ফ্রি চেক: /bd-fraud-checker। লস হিসাব: /return-loss-calculator।',
+      ),
+      6 => 
+      array (
+        'q' => 'কীভাবে শুরু করব?',
+        'a' => 'আগে /bd-fraud-checker দিয়ে একটা নম্বর চেক করে দেখুন। তারপর /pricing থেকে ট্রায়াল নিন, WooCommerce ও কুরিয়ার যুক্ত করুন, /fake-order-protection চালু করুন, Android অ্যাপে QR দিয়ে স্টোর যুক্ত করে নোটিফিকেশন চালু রাখুন। ইংরেজি: /en/woocommerce-mobile-app। হাব: /woocommerce-bangladesh।',
       ),
     ),
-    'cluster_eyebrow' => 'অ্যাপ · অপারেশন',
+    'cluster_eyebrow' => 'মোবাইল অ্যাপ',
     'cluster_links' => 
     array (
       0 => 
@@ -1246,7 +1251,7 @@ return array (
       6 => 
       array (
         'path' => '/woocommerce-mobile-app',
-        'label' => 'WooCommerce Mobile App',
+        'label' => 'WooEasyLife মোবাইল অ্যাপ',
       ),
       7 => 
       array (
@@ -1279,14 +1284,14 @@ return array (
     'pillar_path' => '/woocommerce-bangladesh',
     'is_pillar' => false,
     'date_published' => '2026-07-01',
-    'date_modified' => '2026-07-23',
+    'date_modified' => '2026-09-21',
     'author_name' => 'Muhibbullah Ansary',
     'schema_type' => 'Article',
   ),
   'en_woocommerce_mobile_app' => 
   array (
-    'title' => 'WooCommerce Mobile App Guide 2026 — Push, Call & Courier',
-    'description' => 'Run WooCommerce COD from a mobile admin app: realtime push, one-tap call/WhatsApp, fraud flags, incomplete alerts, and courier auto entry without a laptop.',
+    'title' => 'WooEasyLife Mobile App (Android) — Orders & Couriers on Your Phone',
+    'description' => 'What is the WooEasyLife app? Android alerts for new orders, one-tap call, confirm or hold after reading history, connect many stores with QR. Not a shopper app. Start a trial from Pricing.',
     'canonical_path' => '/en/woocommerce-mobile-app',
     'html_lang' => 'en',
     'og_type' => 'article',
@@ -1311,46 +1316,51 @@ return array (
       ),
       2 => 
       array (
-        'name' => 'WooCommerce Mobile App',
+        'name' => 'WooEasyLife Mobile App',
         'path' => '/en/woocommerce-mobile-app',
       ),
     ),
-    'prerender_h1' => 'WooCommerce Mobile App — Realtime Orders, Fraud Flags & Courier Entry',
-    'prerender_lead' => 'Push alerts, one-tap call/WhatsApp, and post-confirm courier booking—run COD ops without sitting at a laptop.',
+    'prerender_h1' => 'WooEasyLife Mobile App — Run Orders Without a Laptop',
+    'prerender_lead' => 'With the WooEasyLife Android app, WooCommerce merchants get new-order alerts on the phone, one-tap customer calls, confirm or hold after reading courier history, and start Pathao/SteadFast/RedX entry on the go. It is not a customer shopping app. iPhone is not the main version yet.',
     'faqs' => 
     array (
       0 => 
       array (
-        'q' => 'What can I do in the WooCommerce mobile app?',
-        'a' => 'Push sound for new and incomplete orders, one-tap call or WhatsApp confirmation, green/red courier-history flags for approve/hold, and Pathao/Steadfast/RedX entry after confirm—faster response without a laptop. Fraud checks: /en/bd-fraud-checker. Daily booking: /en/courier-auto-entry. Hub context: /en/woocommerce-bangladesh.',
+        'q' => 'What is the WooEasyLife mobile app?',
+        'a' => 'WooEasyLife is an Android app for WooCommerce merchants. For WooCommerce or Facebook COD businesses, you can see orders, call customers, check history hints, and confirm or hold from your phone. It is not a shopping app for buyers. Details on this page. Trial: /pricing. Founder: /en/about.',
       ),
       1 => 
       array (
-        'q' => 'Why isn’t mobile browser admin enough?',
-        'a' => 'WooCommerce admin in a phone browser is slow and click-heavy, and notifications depend on email/refresh. Finding an order to call or open a courier panel is painful on a small screen. A dedicated app keeps push + one-tap actions so approve/hold is faster. Verification rules: /en/customer-verification and /en/fake-order-protection.',
+        'q' => 'Is it on Android? Does it work on iPhone?',
+        'a' => 'The main version is for Android. iPhone is not the main version yet—do not claim full iPhone features. To use Android, start a trial or plan on /pricing, connect with QR, and keep phone notifications on.',
       ),
       2 => 
       array (
-        'q' => 'Should I ship immediately when I see a fraud flag?',
-        'a' => 'No—green history can confirm/ship fast; yellow/red needs call, OTP, or advance fee first. The app shows signals; you decide. Free history: /en/bd-fraud-checker. Protection: /en/fake-order-protection. Measure loss with /en/return-loss-calculator.',
+        'q' => 'What can I do in the app?',
+        'a' => 'Connect multiple websites, get alerts for new or unfinished orders, one-tap call or WhatsApp, match some incoming calls to orders, confirm or hold after reading history, Pathao/SteadFast/RedX parcel work, plus SMS and team tools by plan. History is a hint—not a fake/genuine guarantee. Free check: /en/bd-fraud-checker. Protection: /en/fake-order-protection. Courier: /en/courier-auto-entry.',
       ),
       3 => 
       array (
-        'q' => 'How does courier booking work from mobile?',
-        'a' => 'With courier APIs connected, confirm triggers /en/courier-auto-entry to create the parcel and save the tracking ID. Setup guides: /en/pathao-courier-guide, /en/steadfast-integration, /en/redx-courier-guide. Tracking messages: /en/woocommerce-notifications.',
+        'q' => 'How do I connect my store?',
+        'a' => 'With an active trial or plan, open Connect App QR from web or plugin. Scan in the app. Allow notifications. Test one order: alert → call → confirm. Start: /pricing. Messaging guide: /en/woocommerce-notifications.',
       ),
       4 => 
       array (
-        'q' => 'Is this part of a topic cluster?',
-        'a' => 'Yes—an operations spoke under /en/woocommerce-bangladesh. Next steps: /en/bd-fraud-checker → /en/fake-order-protection → /en/courier-auto-entry. Bangla mirror: /woocommerce-mobile-app. Loss/ads tools: /en/return-loss-calculator, /en/ads-roas-calculator.',
+        'q' => 'Isn’t the phone browser enough?',
+        'a' => 'Browser admin is often slow and clunky; new-order news can arrive late. WooEasyLife’s app adds alerts and one-tap call so fewer orders are missed on the road or at a supplier. Protection guides: /en/customer-verification · /en/fake-order-protection.',
       ),
       5 => 
       array (
-        'q' => 'How do I start WooEasyLife with the mobile app?',
-        'a' => 'Test a free check on /en/bd-fraud-checker first. Then start from /pricing, connect WooCommerce and couriers, enable /en/fake-order-protection, allow push in the app, and validate push→call→confirm→entry on one test order. Messaging: /en/woocommerce-notifications.',
+        'q' => 'If history looks bad, should I ship right away?',
+        'a' => 'No. Strong history can confirm faster. Medium/weak history: call, OTP, or advance fee first. The app does not guarantee fake or genuine—you decide. Free check: /en/bd-fraud-checker. Loss math: /en/return-loss-calculator.',
+      ),
+      6 => 
+      array (
+        'q' => 'How do I start?',
+        'a' => 'First try a free number check on /en/bd-fraud-checker. Then start from /pricing, connect WooCommerce and couriers, turn on /en/fake-order-protection, connect the Android app with QR, and keep notifications on. Bangla: /woocommerce-mobile-app. Hub: /en/woocommerce-bangladesh.',
       ),
     ),
-    'cluster_eyebrow' => 'App · Operations',
+    'cluster_eyebrow' => 'Mobile app',
     'cluster_links' => 
     array (
       0 => 
@@ -1386,7 +1396,7 @@ return array (
       6 => 
       array (
         'path' => '/en/woocommerce-mobile-app',
-        'label' => 'WooCommerce Mobile App',
+        'label' => 'WooEasyLife Mobile App',
       ),
       7 => 
       array (
@@ -1419,7 +1429,7 @@ return array (
     'pillar_path' => '/en/woocommerce-bangladesh',
     'is_pillar' => false,
     'date_published' => '2026-07-01',
-    'date_modified' => '2026-07-23',
+    'date_modified' => '2026-09-21',
     'author_name' => 'Muhibbullah Ansary',
     'schema_type' => 'Article',
   ),

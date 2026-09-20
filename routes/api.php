@@ -15,6 +15,7 @@ use App\Http\Controllers\Messenger\MessengerAttachmentController;
 use App\Http\Controllers\Messenger\MessengerConnectController;
 use App\Http\Controllers\Messenger\MessengerSendController;
 use App\Http\Controllers\Messenger\MessengerWebhookController;
+use App\Http\Controllers\Meta\MetaConnectionController;
 use App\Http\Controllers\OrderIntelligenceController;
 use App\Http\Controllers\Plugin\EmployeeController as PluginEmployeeController;
 use App\Http\Controllers\SmsController;
@@ -107,6 +108,15 @@ Route::prefix('api/webhooks')->group(function () {
 });
 
 Route::get('api/messenger/intent-packs', [MessengerWebhookController::class, 'intentPacks']);
+
+// Unified Meta Business (Ads + Pages) — Phase 1 connect/list only.
+// Auth via license_key in body/query (same Sanctum token as plugin Bearer).
+Route::prefix('api/v1/meta')->middleware('throttle:60,1')->group(function () {
+    Route::post('/connect', [MetaConnectionController::class, 'connect']);
+    Route::get('/accounts', [MetaConnectionController::class, 'accounts']);
+    Route::get('/pages', [MetaConnectionController::class, 'pages']);
+});
+
 
 // Facebook OAuth callback + page picker (browser redirects; no plugin auth).
 Route::get('api/messenger/oauth/callback', [MessengerConnectController::class, 'oauthCallback']);

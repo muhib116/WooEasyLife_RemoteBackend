@@ -241,7 +241,7 @@ onUnmounted(() => {
                             {{ seo?.prerender_h1 }}
                         </h1>
                         <p class="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-lg">
-                            {{ seo?.prerender_lead }}
+                            <LinkedRichText :text="seo?.prerender_lead || ''" :is-en="isEn" />
                         </p>
 
                         <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">

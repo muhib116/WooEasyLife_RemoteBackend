@@ -9,7 +9,8 @@ description: >
   links, GSC-driven content, fraud checker ranking tactics, SteadFast/Pathao
   cluster campaigns, competitor audits, organic growth vs BD courier/COD
   competitors, grounded AI search / zero-click / GEO-AEO guidance (no MCP
-  or llms.txt hype), GSC Crawl stats / robots.txt host availability ops,
+  or llms.txt hype), on-request blog E-E-A-T audit/rewrite for AI Overview-era
+  drafts, GSC Crawl stats / robots.txt host availability ops,
   and Core Web Vitals / TTFB / marketing-page speed optimization (keep
   content campaigns separate from host/perf work).
   Also use when a new plugin or app feature ships, to scan the
@@ -20,7 +21,7 @@ description: >
 
 # WooEasyLife SEO Mentor Skill
 
-**Last reviewed:** 2026-08-17
+**Last reviewed:** 2026-09-03
 **Rule (daily plan format):** `.cursor/rules/seo-mentor.mdc`  
 **Brand + creatives:** `.cursor/skills/wooeasylife-brand/SKILL.md`  
 **Features (claims only if Shipped):** `.cursor/skills/wooeasylife-brand/FEATURES.md`  
@@ -50,6 +51,7 @@ When planning FAQs, blogs, or commercial pages: **read the inventory first**. Do
 | keywords / long-tails / new URLs | Inventory decision rule; write rows to inventory file |
 | orphaned sitemap / Semrush crawlability orphans | **Orphaned sitemap pages** playbook below — fix links, never only remove from sitemap |
 | AI Overview / GEO / AEO / zero-click / LLM SEO | **AI search / zero-click (2026)** — keep grounded; do not start a new campaign theme |
+| E-E-A-T audit / rewrite blog / people-first draft rewrite | **Blog E-E-A-T rewrite (on request)** under AI search — Report first, then revised draft; no parallel campaign |
 | GSC Host had problems / robots.txt fail / Crawl stats availability | **GSC Crawl stats / robots.txt host availability** — ops fix, not a content campaign |
 | PageSpeed / CWV Failed / slow TTFB / LCP / heavy homepage | **Speed / CWV / marketing TTFB** — host + payload weight; not a new content theme |
 | review / upgrade this skill | **Skill self-maintenance** checklist |
@@ -158,6 +160,34 @@ Industry shift is real; **hype tactics are not**. Use this when the user asks ab
 - CTA to `/pricing` / trial from cluster pages  
 
 **One-liner for plans:** Write the **same** SteadFast (or active) cluster deeper and more answer-extractable — do not open a parallel “AI SEO” workstream.
+
+### Blog E-E-A-T rewrite (on request)
+
+Use when the user pastes a blog/pillar draft and asks for an **E-E-A-T audit**, **AI Overview-ready rewrite**, or **people-first** pass. This is a **writing checklist** for the same active cluster — **not** a new daily theme, GEO campaign, or reason to theme-hop off SteadFast.
+
+**Confirm → ask for draft** if none provided. Then deliver in this order:
+
+1. **Report** (gaps only — Experience / Expertise / Authoritativeness / Trustworthiness)
+2. **Revised draft** (human, conversational; keep answer-first 40–60w openers where useful)
+
+**Four-step frame:**
+
+| Factor | What to ensure | If missing |
+|--------|----------------|------------|
+| **Experience** (first-hand) | Specific “I” / testing / workflow detail from Muhibbullah or a real merchant case | `[INSERT SCREENSHOT OF …]` / `[INSERT REAL … DATA]` — never invent |
+| **Expertise** (why me) | Byline + short About: Founder Muhibbullah Ansary · WooEasyLife / WPSaleHub · BD WooCommerce COD ops — only facts from About/`FEATURES.md` | Ask user for years/degrees/stories; do **not** invent credentials |
+| **Authoritativeness** (social proof) | Link external proof where real: YT embed, FB seller-community mention, live tool, case blog — BD niche prefers **YT + Facebook** over Reddit-first | `[INSERT LINK TO …]` or soft-link inventory URLs with human labels |
+| **Trustworthiness** (transparency) | `datePublished` / last updated, honesty line for fraud claims, citations for numbers, affiliate disclosure **only if** affiliates exist | Strip unverifiable metrics; use mandatory honesty: signal ≠ fake/genuine guarantee |
+
+**WEL hard locks (no hallucinations):**
+- Claims only from `.cursor/skills/wooeasylife-brand/FEATURES.md` (**Shipped** only)
+- CTAs only on `https://app.wpsalehub.com/...` (never wooeasylife.com)
+- Blog HTML: human-labeled `<a href>` only (CKEditor has **no** linkify)
+- Soft-link money head terms to `/bd-fraud-checker` / active pillar — do not steal reserved head terms onto a thin blog
+- No fake #1, fake AggregateRating, invented subscriber counts, or competitor hate
+- Do not open MCP / `llms.txt` / parallel “AI SEO” tasks from this rewrite
+
+**Tone:** people-first; avoid SEO jargon in the revised body (jargon OK only inside the Report if needed).
 
 ---
 
@@ -854,6 +884,7 @@ Update this skill — not only `FEATURES.md` — when:
 | Domain/brand change | Canonical CTA lines |
 | This review | Bump **Last reviewed** date |
 | AI Overview / GEO hype spikes in content briefs | Re-read **AI search / zero-click (2026)**; do not invent MCP/`llms.txt` tasks |
+| Blog E-E-A-T / AI Overview rewrite requests | Confirm **Blog E-E-A-T rewrite (on request)** still under AI search (checklist only — not a new campaign) |
 | GSC Host status / robots.txt fetch failures | Confirm **GSC Crawl stats / robots.txt host availability** + `seo:write-robots` / static `public/robots.txt` still deployed |
 | PSI / CrUX CWV Failed / TTFB regressions | Re-read **Speed / CWV / marketing TTFB**; confirm shell/slim/cache patterns not regressing on marketing routes |
 
