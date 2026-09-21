@@ -25,7 +25,7 @@
             </button>
         </div>
 
-        <nav class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 admin-scrollbar">
+        <nav class="admin-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 pb-8">
             <p
                 v-if="reorderMode"
                 class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"
@@ -127,9 +127,9 @@
                                         <Transition
                                             enter-active-class="transition duration-200 ease-out"
                                             enter-from-class="opacity-0 -translate-y-1 max-h-0"
-                                            enter-to-class="opacity-100 translate-y-0 max-h-40"
+                                            enter-to-class="opacity-100 translate-y-0 max-h-[32rem]"
                                             leave-active-class="transition duration-150 ease-in"
-                                            leave-from-class="opacity-100 translate-y-0 max-h-40"
+                                            leave-from-class="opacity-100 translate-y-0 max-h-[32rem]"
                                             leave-to-class="opacity-0 -translate-y-1 max-h-0"
                                         >
                                             <div
@@ -426,6 +426,12 @@ const allSections: NavSection[] = [
                 icon: "PhUsers",
                 children: [
                     {
+                        title: "Billing",
+                        name: "packagePayments.index",
+                        icon: "PhCreditCard",
+                        permission: "payments.view",
+                    },
+                    {
                         title: "All Merchants",
                         name: "users.index",
                         icon: "PhUsersThree",
@@ -476,17 +482,6 @@ const allSections: NavSection[] = [
                 icon: "PhGlobe",
                 permission: "merchants.manage",
             },
-        ],
-    },
-    {
-        label: "Platform",
-        items: [
-            {
-                title: "Plugin Versions",
-                name: "plugins.index",
-                icon: "PhPlugsConnected",
-                permission: "licenses.manage",
-            },
             {
                 title: "Plans & Billing",
                 icon: "PhCurrencyCircleDollar",
@@ -504,18 +499,23 @@ const allSections: NavSection[] = [
                         permission: "payments.view",
                     },
                     {
-                        title: "Payment Requests",
-                        name: "packagePayments.index",
-                        icon: "PhCreditCard",
-                        permission: "payments.view",
-                    },
-                    {
                         title: "Customer Notices",
                         name: "customerNotices.index",
                         icon: "PhMegaphone",
                         permission: "billing.manage",
                     },
                 ],
+            },
+        ],
+    },
+    {
+        label: "Platform",
+        items: [
+            {
+                title: "Plugin Versions",
+                name: "plugins.index",
+                icon: "PhPlugsConnected",
+                permission: "licenses.manage",
             },
             {
                 title: "Settings",
@@ -930,12 +930,13 @@ const onChildDragEnd = () => {
 const expandedGroups = reactive<Record<string, boolean>>({
     "Wise AI": Boolean(route().current("wiseAi.*")),
     Merchants: Boolean(
-        route().current("users.*") || route().current("subscriptionAlerts.*"),
+        route().current("users.*")
+            || route().current("subscriptionAlerts.*")
+            || route().current("packagePayments.*"),
     ),
     "Plans & Billing": Boolean(
         route().current("packages.*")
             || route().current("orders.*")
-            || route().current("packagePayments.*")
             || route().current("customerNotices.*"),
     ),
     "Fraud Checker": Boolean(route().current("frauds.*")),

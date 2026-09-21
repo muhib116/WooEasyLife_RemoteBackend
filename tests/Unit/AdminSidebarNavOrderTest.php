@@ -21,9 +21,11 @@ it('merges partial stored order with full catalog defaults', function () {
         ->and($merged['items']['Platform'][0])->toBe('Blog Posts')
         ->and($merged['items']['Platform'][1])->toBe('Settings')
         ->and($merged['items']['Platform'])->toContain('Plugin Versions')
-        ->and($merged['children']['Merchants'][0])->toBe('Trashed Merchants')
+        ->and($merged['children']['Merchants'][0])->toBe('Billing')
+        ->and($merged['children']['Merchants'])->toContain('Trashed Merchants')
         ->and($merged['children']['Merchants'])->toContain('All Merchants')
         ->and($merged['children']['Merchants'])->toContain('Subscription Alerts')
+        ->and($merged['items']['Merchants'])->not->toContain('Billing')
         ->and($merged['items']['Platform'])->not->toContain('Subscription Alerts');
 });
 
@@ -70,8 +72,11 @@ it('exposes a complete catalog with unique section and item titles', function ()
     expect($catalog['sections'])->toHaveCount(7)
         ->and($catalog['sections'])->toBe(array_values(array_unique($catalog['sections'])))
         ->and(array_keys($catalog['items']))->toEqualCanonicalizing($catalog['sections'])
-        ->and($catalog['children']['Merchants'])->toBe(['All Merchants', 'Trashed Merchants', 'Subscription Alerts'])
-        ->and($catalog['items']['Platform'])->not->toContain('Subscription Alerts');
+        ->and($catalog['children']['Merchants'])->toBe(['Billing', 'All Merchants', 'Trashed Merchants', 'Subscription Alerts'])
+        ->and($catalog['items']['Merchants'])->not->toContain('Billing')
+        ->and($catalog['items']['Merchants'])->toContain('Plans & Billing')
+        ->and($catalog['items']['Platform'])->not->toContain('Subscription Alerts')
+        ->and($catalog['items']['Platform'])->not->toContain('Plans & Billing');
 
     foreach ($catalog['items'] as $section => $titles) {
         expect($titles)->not->toBeEmpty()

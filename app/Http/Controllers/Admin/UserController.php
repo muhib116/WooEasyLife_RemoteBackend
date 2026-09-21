@@ -27,6 +27,7 @@ use App\Services\SubscriptionPaymentConfigService;
 use App\Services\LicenseProvisioningService;
 use App\Services\MerchantDomainValidator;
 use App\Services\WebsiteAggregatorService;
+use App\Services\MerchantAdminSearch;
 use App\Services\MerchantOpsSummaryService;
 use App\Services\SubscriptionAdminService;
 use App\Services\WebsiteAdminService;
@@ -47,31 +48,38 @@ class UserController extends Controller
 {
     use Transaction;
 
-    public function index()
+    public function index(Request $request)
     {
+        return $this->merchantIndex($request, false);
+    }
+
+    public function trashed(Request $request)
+    {
+        return $this->merchantIndex($request, true);
+    }
+
+    private function merchantIndex(Request $request, bool $trashed)
+    {
+        $search = mb_substr(trim((string) $request->query('search', '')), 0, 80);
+
         $users = app(MerchantOpsSummaryService::class)
-            ->appendToUsers($this->usersQuery()->get());
+            ->appendToUsers($this->usersQuery($trashed, $search)->get());
 
         return Inertia::render('Users/Index', [
             'users' => $users,
-            'trashed' => false,
+            'trashed' => $trashed,
+            'filters' => [
+                'search' => $search,
+            ],
+            'stats' => $this->merchantListStats($trashed),
         ]);
     }
 
-    public function trashed()
-    {
-        $users = app(MerchantOpsSummaryService::class)
-            ->appendToUsers($this->usersQuery(true)->get());
-
-        return Inertia::render('Users/Index', [
-            'users' => $users,
-            'trashed' => true,
-        ]);
-    }
-
-    private function usersQuery(bool $onlyTrashed = false)
+    private function usersQuery(bool $onlyTrashed = false, string $search = '')
     {
         $query = $onlyTrashed ? User::onlyTrashed() : User::query();
+
+        app(MerchantAdminSearch::class)->apply($query, $search);
 
         return $query
             ->withSum(['userPackage as remaining_order' => function ($query) {
@@ -79,6 +87,25 @@ class UserController extends Controller
             }], 'remaining_order')
             ->withCount(['websites', 'merchantEmployees'])
             ->orderBy($onlyTrashed ? 'deleted_at' : 'id', 'desc');
+    }
+
+    /**
+     * @return array{total: int, active: int, remainingOrders: int}
+     */
+    private function merchantListStats(bool $onlyTrashed): array
+    {
+        $users = $onlyTrashed ? User::onlyTrashed() : User::query();
+
+        $merchantIds = (clone $users)->where('role', 'user')->select('id');
+
+        return [
+            'total' => (clone $users)->count(),
+            'active' => (clone $users)->where('role', 'user')->where('status', true)->count(),
+            'remainingOrders' => (int) UserPackage::query()
+                ->where('is_active', 1)
+                ->whereIn('user_id', $merchantIds)
+                ->sum('remaining_order'),
+        ];
     }
 
     public function getUser(Request $request)

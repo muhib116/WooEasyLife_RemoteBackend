@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <PageHeader
                 title="Settings"
-                description="Download links, payment numbers, support contacts, and OpenAI settings"
+                description="Download links, payment numbers, support contacts, OpenAI, and expiry SMS"
                 icon="PhGearSix"
                 icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
                 icon-class="text-sky-600 dark:text-sky-400"
@@ -231,6 +231,37 @@
                         </div>
                     </template>
 
+                    <template v-else-if="activeTab === 'notifications'">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="min-w-0">
+                                <label
+                                    for="sms_expiry"
+                                    class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                                >
+                                    Expiry SMS to merchants
+                                </label>
+                                <p class="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                                    Default ON. Sends plan/license expiry SMS at 7, 3, 1, and 0 days. No website links — today/expired messages include 01770989591.
+                                    <span
+                                        class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                    >
+                                        active: {{ settings.sms_expiry_source ?? "env" }}
+                                    </span>
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                id="sms_expiry"
+                                v-model="form.sms_expiry"
+                            />
+                        </div>
+                        <p
+                            v-if="form.errors.sms_expiry"
+                            class="text-xs text-rose-500"
+                        >
+                            {{ form.errors.sms_expiry }}
+                        </p>
+                    </template>
+
                     <template v-else>
                         <div
                             v-for="field in activeFields"
@@ -291,6 +322,7 @@ import { useForm } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
+import ToggleSwitch from "primevue/toggleswitch";
 import { computed, ref, watch } from "vue";
 
 type LandingSettings = {
@@ -328,6 +360,8 @@ type LandingSettings = {
     blog_planning_model_options: string[];
     blog_writing_model_options: string[];
     image_model_options: string[];
+    sms_expiry?: boolean;
+    sms_expiry_source?: string;
 };
 
 type FormFields = {
@@ -346,6 +380,7 @@ type FormFields = {
     openai_blog_writing_model: string;
     openai_image_model: string;
     blog_ai_daily_token_cap: string;
+    sms_expiry: boolean;
 };
 
 type SettingsField = {
@@ -356,7 +391,7 @@ type SettingsField = {
     placeholder: string;
 };
 
-type TabValue = "downloads" | "payments" | "contact" | "ai";
+type TabValue = "downloads" | "payments" | "contact" | "ai" | "notifications";
 
 const props = defineProps<{
     settings: LandingSettings;
@@ -366,6 +401,7 @@ const tabOptions: { label: string; value: TabValue; icon: IconName }[] = [
     { label: "Downloads", value: "downloads", icon: "PhDownloadSimple" },
     { label: "Payments", value: "payments", icon: "PhCreditCard" },
     { label: "Contact", value: "contact", icon: "PhPhone" },
+    { label: "Notifications", value: "notifications", icon: "PhBellRinging" },
     { label: "AI", value: "ai", icon: "PhOpenAiLogo" },
 ];
 
@@ -469,6 +505,7 @@ const form = useForm({
     openai_image_model: props.settings.openai_image_model ?? "gpt-image-1",
     // Always include the effective cap so saving other tabs does not clear a DB override.
     blog_ai_daily_token_cap: String(props.settings.blog_ai_daily_token_cap ?? 400000),
+    sms_expiry: props.settings.sms_expiry !== false,
 });
 
 const activeFields = computed(() => {
@@ -505,6 +542,13 @@ const activeCard = computed(() => {
         };
     }
 
+    if (activeTab.value === "notifications") {
+        return {
+            title: "Merchant notifications",
+            description: "Control expiry SMS sent to merchants. Default is enabled.",
+        };
+    }
+
     return {
         title: "Download links",
         description: "Saved values override defaults. Leave blank to clear the database value and fall back to env / auto plugin URL.",
@@ -528,6 +572,10 @@ const tabForError = (field: string): TabValue | null => {
 
     if (["openai_api_key", "openai_blog_model", "openai_blog_planning_model", "openai_blog_writing_model", "openai_image_model", "blog_ai_daily_token_cap"].includes(field)) {
         return "ai";
+    }
+
+    if (field === "sms_expiry") {
+        return "notifications";
     }
 
     return null;

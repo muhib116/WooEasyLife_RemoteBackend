@@ -70,7 +70,6 @@ it('allows roles.manage admins to save sidebar order', function () {
                 'Customer Notices',
                 'Pricing Plans',
                 'Landing Orders',
-                'Payment Requests',
             ],
         ],
     ];
@@ -118,6 +117,10 @@ it('strips unknown titles and appends missing catalog entries', function () {
         ->and($order['children']['Plans & Billing'])->not->toContain('Fake Child')
         ->and($order['children']['Plans & Billing'][0])->toBe('Pricing Plans')
         ->and($order['items']['Platform'])->not->toContain('Subscription Alerts')
+        ->and($order['items']['Platform'])->not->toContain('Plans & Billing')
+        ->and($order['items']['Merchants'])->toContain('Plans & Billing')
+        ->and($order['items']['Merchants'])->not->toContain('Billing')
+        ->and($order['children']['Merchants'][0])->toBe('Billing')
         ->and($order['children']['Merchants'])->toContain('Subscription Alerts');
 });
 
@@ -149,7 +152,6 @@ it('preserves hidden platform items when a partial item list is saved', function
             'Settings',
             'Plugin Versions',
             'Blog Posts',
-            'Plans & Billing',
             'Tutorials',
             'Media Library',
         ]);

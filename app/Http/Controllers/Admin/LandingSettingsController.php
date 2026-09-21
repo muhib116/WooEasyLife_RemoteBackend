@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\LandingSettingsService;
+use App\Services\SubscriptionNotificationRuntimeConfig;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,12 +12,19 @@ class LandingSettingsController extends Controller
 {
     public function __construct(
         private LandingSettingsService $landingSettings,
+        private SubscriptionNotificationRuntimeConfig $subscriptionNotifications,
     ) {}
 
     public function index()
     {
+        $settings = $this->landingSettings->all();
+        $smsExpiry = $this->subscriptionNotifications->snapshot();
+
         return Inertia::render('LandingSettings/Index', [
-            'settings' => $this->landingSettings->all(),
+            'settings' => array_merge($settings, [
+                'sms_expiry' => $smsExpiry['sms_expiry'],
+                'sms_expiry_source' => $smsExpiry['source'],
+            ]),
         ]);
     }
 
@@ -72,6 +80,13 @@ class LandingSettingsController extends Controller
         ]);
 
         $this->landingSettings->update($validated);
+
+        if ($request->exists('sms_expiry')) {
+            $request->validate([
+                'sms_expiry' => ['required', 'boolean'],
+            ]);
+            $this->subscriptionNotifications->update($request->boolean('sms_expiry'));
+        }
 
         return back()->with('success', 'Settings saved.');
     }

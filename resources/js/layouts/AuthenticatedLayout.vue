@@ -27,7 +27,10 @@
                 :class="wrapperClass"
             >
                 <div class="mx-auto w-full max-w-[1600px]">
-                    <slot />
+                    <AdminPageSkeleton v-if="pageLoading" />
+                    <div v-show="!pageLoading">
+                        <slot />
+                    </div>
                 </div>
             </main>
         </div>
@@ -69,9 +72,11 @@
 
 <script setup lang="ts">
 import AdminConfirmDialog from "@/Pages/Users/fragments/AdminConfirmDialog.vue";
+import AdminPageSkeleton from "@/components/AdminPageSkeleton.vue";
 import LeftSidebar from "./fragments/LeftSidebar.vue";
 import AppHeader from "./fragments/AppHeader.vue";
 import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";
+import { useInertiaPageLoading } from "@/composables/useInertiaPageLoading";
 import { Head, router, usePage } from "@inertiajs/vue3";
 import { useTheme } from "@/composable";
 import { computed, onMounted, ref } from "vue";
@@ -99,6 +104,7 @@ onMounted(() => {
 
 const sidebarOpen = ref(false);
 const themeDialog = ref(false);
+const pageLoading = useInertiaPageLoading();
 const { colors, primaryTheme, changePrimaryColor } = useTheme();
 
 useInertiaFlashToasts();

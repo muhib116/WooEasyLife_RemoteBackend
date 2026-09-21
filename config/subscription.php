@@ -12,6 +12,16 @@ return [
         'min_severity' => env('SUBSCRIPTION_NOTIFY_MIN_SEVERITY', 'warning'),
         'email' => (bool) env('SUBSCRIPTION_NOTIFY_EMAIL', true),
         'sms' => (bool) env('SUBSCRIPTION_NOTIFY_SMS', false),
+        // Early SMS for plan/license expiry only (not quota). Days before expiry, plus 0 = today.
+        'sms_expiry' => filter_var(env('SUBSCRIPTION_NOTIFY_SMS_EXPIRY', true), FILTER_VALIDATE_BOOLEAN),
+        'sms_expiry_days' => array_values(array_unique(array_map(
+            'intval',
+            array_filter(
+                explode(',', (string) env('SUBSCRIPTION_NOTIFY_SMS_EXPIRY_DAYS', '7,3,1,0')),
+                fn (string $day) => $day !== ''
+            )
+        ))),
+        'sms_support_phone' => env('SUBSCRIPTION_SMS_SUPPORT_PHONE', '01770989591'),
         'whatsapp' => (bool) env('SUBSCRIPTION_NOTIFY_WHATSAPP', false),
         // Required when whatsapp is true — POST endpoint receiving phone, message, domain, etc.
         'whatsapp_webhook_url' => env('SUBSCRIPTION_WHATSAPP_WEBHOOK_URL'),

@@ -84,13 +84,42 @@ class SubscriptionAlertServiceTest extends TestCase
             'total_cost' => 100,
             'transaction_charge' => 0,
             'is_active' => true,
-            'expires_at' => now()->addDays(3),
+            'expires_at' => now()->addDays(3)->endOfDay(),
         ]);
 
         $alerts = app(SubscriptionAlertService::class)->collectAlerts($user, $token);
 
         $this->assertTrue(
-            collect($alerts)->contains(fn (array $alert) => $alert['type'] === 'subscription_expiring')
+            collect($alerts)->contains(fn (array $alert) => $alert['type'] === 'subscription_expiring'
+                && ($alert['days_remaining'] ?? null) === 3)
+        );
+    }
+
+    public function test_collects_license_expiring_alert(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $token->forceFill(['expires_at' => now()->addDay()->endOfDay()])->save();
+
+        UserPackage::create([
+            'title' => 'Standard',
+            'domain' => 'shop.example.com',
+            'user_id' => $user->id,
+            'package_hub_id' => 1,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 50,
+            'total_order_handled' => 50,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+            'expires_at' => now()->addMonths(2),
+        ]);
+
+        $alerts = app(SubscriptionAlertService::class)->collectAlerts($user, $token->fresh());
+
+        $this->assertTrue(
+            collect($alerts)->contains(fn (array $alert) => $alert['type'] === 'license_expiring'
+                && (int) ($alert['days_remaining'] ?? -1) === 1)
         );
     }
 

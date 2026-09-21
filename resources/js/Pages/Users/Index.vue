@@ -66,7 +66,7 @@
                         </InputIcon>
                         <InputText
                             v-model="search"
-                            placeholder="Search by name, email, phone, or domain..."
+                            placeholder="Search name, email, phone, or domain..."
                             class="w-full"
                         />
                     </IconField>
@@ -89,8 +89,13 @@
                     </div>
                 </div>
 
+                <TableSkeletonLoader
+                    v-if="tableLoading"
+                    :columns="merchantTableSkeletonColumns"
+                    :rows="8"
+                />
                 <EmptyState
-                    v-if="!paginatedUsers.length"
+                    v-else-if="!paginatedUsers.length"
                     :title="trashed ? 'No trashed users' : 'No users found'"
                     :description="
                         trashed
@@ -316,7 +321,7 @@
                 </div>
 
                 <div
-                    v-if="filteredUsers.length"
+                    v-if="!tableLoading && filteredUsers.length"
                     class="flex flex-col items-center justify-between gap-3 border-t border-gray-100 px-6 py-4 text-sm dark:border-gray-700/80 sm:flex-row"
                 >
                     <span class="text-gray-500 dark:text-gray-400">
@@ -346,7 +351,7 @@
                         />
                         <Select
                             v-model="rowsPerPage"
-                            :options="[10, 25, 50]"
+                            :options="[10, 25, 50, 100, 200, 300]"
                             class="w-20"
                         />
                     </div>
@@ -369,6 +374,7 @@ import { AuthenticatedLayout } from "@/layouts";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import { useConfirm } from "primevue";
 import { computed, ref, watch } from "vue";
+import { watchDebounced } from "@vueuse/core";
 import { format, parseISO } from "date-fns";
 import UserForm from "./fragments/UserForm.vue";
 import PageHeader from "./fragments/PageHeader.vue";
@@ -379,6 +385,7 @@ import EmptyState from "./fragments/EmptyState.vue";
 import UserAvatar from "./fragments/UserAvatar.vue";
 import TableActions from "./fragments/TableActions.vue";
 import TableActionButton from "./fragments/TableActionButton.vue";
+import TableSkeletonLoader from "./fragments/TableSkeletonLoader.vue";
 
 defineOptions({
     name: "Users",
@@ -388,9 +395,17 @@ const props = withDefaults(
     defineProps<{
         users: any[];
         trashed?: boolean;
+        filters?: { search?: string };
+        stats?: {
+            total: number;
+            active: number;
+            remainingOrders: number;
+        } | null;
     }>(),
     {
         trashed: false,
+        filters: () => ({ search: "" }),
+        stats: null,
     },
 );
 
@@ -412,15 +427,32 @@ const healthOptions = [
 
 const mode = ref("");
 const healthFilter = ref("");
-const search = ref("");
+const search = ref(props.filters?.search ?? "");
 const currentPage = ref(1);
-const rowsPerPage = ref(10);
+const rowsPerPage = ref(25);
 const showForm = ref(false);
 const selectedUser = ref<any>(null);
 const deletingUserId = ref<number | null>(null);
 const restoringUserId = ref<number | null>(null);
+const tableLoading = ref(false);
+let searchRequestId = 0;
+
+const merchantTableSkeletonColumns = [
+    { width: "16rem", headerWidth: "4rem", variant: "stack" as const },
+    { width: "8rem", headerWidth: "3.5rem" },
+    { width: "5rem", headerWidth: "3.5rem", variant: "badge" as const },
+    { width: "5rem", headerWidth: "4.5rem" },
+    { width: "9rem", headerWidth: "4rem" },
+    { width: "8rem", headerWidth: "5rem" },
+    { width: "5rem", headerWidth: "5rem" },
+    { width: "7rem", headerWidth: "4.5rem", variant: "actions" as const },
+];
 
 const stats = computed(() => {
+    if (props.stats) {
+        return props.stats;
+    }
+
     const merchants = (props.users || []).filter((u) => u.role === "user");
 
     return {
@@ -446,20 +478,7 @@ const filteredUsers = computed(() => {
         list = list.filter((item) => Boolean(item?.attention));
     }
 
-    const keyword = search.value.trim().toLowerCase();
-
-    if (!keyword) {
-        return list;
-    }
-
-    return list.filter((user) => {
-        const haystack = [user.name, user.email, user.phone, domainList(user)]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-
-        return haystack.includes(keyword);
-    });
+    return list;
 });
 
 const totalPages = computed(() =>
@@ -485,9 +504,50 @@ const paginationLabel = computed(() => {
     return `Showing ${start}–${end} of ${total}`;
 });
 
-watch([mode, healthFilter, search, rowsPerPage], () => {
+watch([mode, healthFilter, rowsPerPage], () => {
     currentPage.value = 1;
 });
+
+watchDebounced(
+    search,
+    (value) => {
+        const next = value.trim();
+        const current = (props.filters?.search ?? "").trim();
+
+        if (next === current) {
+            return;
+        }
+
+        currentPage.value = 1;
+
+        const requestId = ++searchRequestId;
+
+        router.get(
+            route(props.trashed ? "users.trashed" : "users.index"),
+            next ? { search: next } : {},
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                only: ["users", "filters", "stats"],
+                onStart: () => {
+                    tableLoading.value = true;
+                },
+                onFinish: () => {
+                    if (requestId === searchRequestId) {
+                        tableLoading.value = false;
+                    }
+                },
+                onError: () => {
+                    if (requestId === searchRequestId) {
+                        tableLoading.value = false;
+                    }
+                },
+            },
+        );
+    },
+    { debounce: 400 },
+);
 
 const domainList = (user: any) => {
     if (!Array.isArray(user?.domains) || !user.domains.length) {

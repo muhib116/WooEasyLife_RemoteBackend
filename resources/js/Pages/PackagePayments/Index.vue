@@ -53,7 +53,14 @@
                     <Column header="Merchant">
                         <template #body="{ data }">
                             <div>
-                                <div class="font-medium">{{ data.user?.name }}</div>
+                                <Link
+                                    v-if="data.user?.id"
+                                    :href="route('users.billing', data.user.id)"
+                                    class="font-medium text-primary-600 hover:underline dark:text-primary-400"
+                                >
+                                    {{ data.user?.name }}
+                                </Link>
+                                <div v-else class="font-medium">{{ data.user?.name }}</div>
                                 <div class="text-xs text-gray-500">
                                     {{ data.user?.email }}
                                 </div>
@@ -117,7 +124,7 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import TableActions from "@/Pages/Users/fragments/TableActions.vue";
 import TableActionButton from "@/Pages/Users/fragments/TableActionButton.vue";
-import { router } from "@inertiajs/vue3";
+import { Link, router } from "@inertiajs/vue3";
 import { ref } from "vue";
 import { useConfirm } from "primevue";
 import { formatPaymentIntentLabel } from "@/utils/formatLabels";

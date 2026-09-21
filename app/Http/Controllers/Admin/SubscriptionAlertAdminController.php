@@ -32,9 +32,14 @@ class SubscriptionAlertAdminController extends Controller
             'notifications_enabled' => (bool) config('subscription.notifications.enabled', true),
             'notification_channels' => [
                 'email' => (bool) config('subscription.notifications.email', true),
-                'sms' => (bool) config('subscription.notifications.sms', false),
+                'sms' => (bool) config('subscription.notifications.sms', false)
+                    || (bool) config('subscription.notifications.sms_expiry', true),
                 'whatsapp' => (bool) config('subscription.notifications.whatsapp', false),
             ],
+            'sms_expiry_days' => array_values(array_map(
+                'intval',
+                config('subscription.notifications.sms_expiry_days', [7, 3, 1, 0])
+            )),
         ]);
     }
 }

@@ -36,10 +36,9 @@ class AdminSidebarNavOrder
             'items' => [
                 'Overview' => ['Dashboard'],
                 'AI' => ['Wise AI'],
-                'Merchants' => ['Merchants', 'Fraud Checker', 'Whitelisted Domains'],
+                'Merchants' => ['Merchants', 'Fraud Checker', 'Whitelisted Domains', 'Plans & Billing'],
                 'Platform' => [
                     'Plugin Versions',
-                    'Plans & Billing',
                     'Settings',
                     'Tutorials',
                     'Media Library',
@@ -59,12 +58,11 @@ class AdminSidebarNavOrder
             ],
             'children' => [
                 'Wise AI' => ['Dashboard', 'Config', 'Knowledge', 'Language', 'Playground', 'Learning', 'Help', 'Train', 'Intelligence', 'Fleet'],
-                'Merchants' => ['All Merchants', 'Trashed Merchants', 'Subscription Alerts'],
+                'Merchants' => ['Billing', 'All Merchants', 'Trashed Merchants', 'Subscription Alerts'],
                 'Fraud Checker' => ['Phone Check', 'Partner Credentials', 'Token & CURL'],
                 'Plans & Billing' => [
                     'Pricing Plans',
                     'Landing Orders',
-                    'Payment Requests',
                     'Customer Notices',
                 ],
                 'Blog Posts' => [
@@ -293,7 +291,7 @@ class AdminSidebarNavOrder
                 ))
                 ->all(),
             'children' => collect($catalog['children'])
-                ->map(fn (array $allowed, string $parent) => $this->appendMissing(
+                ->map(fn (array $allowed, string $parent) => $this->insertMissingAtCatalogPosition(
                     $sanitized['children'][$parent] ?? [],
                     $allowed,
                 ))
@@ -337,6 +335,40 @@ class AdminSidebarNavOrder
             if (! isset($seen[$title])) {
                 $out[] = $title;
             }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Place newly added catalog titles next to their catalog neighbors
+     * instead of always appending them at the end of a stored list.
+     *
+     * @param  list<string>  $ordered
+     * @param  list<string>  $all
+     * @return list<string>
+     */
+    private function insertMissingAtCatalogPosition(array $ordered, array $all): array
+    {
+        $present = array_fill_keys($ordered, true);
+        $out = $ordered;
+
+        foreach ($all as $index => $title) {
+            if (isset($present[$title])) {
+                continue;
+            }
+
+            $insertAt = count($out);
+            for ($j = $index + 1, $len = count($all); $j < $len; $j++) {
+                $neighborPos = array_search($all[$j], $out, true);
+                if ($neighborPos !== false) {
+                    $insertAt = $neighborPos;
+                    break;
+                }
+            }
+
+            array_splice($out, $insertAt, 0, [$title]);
+            $present[$title] = true;
         }
 
         return $out;

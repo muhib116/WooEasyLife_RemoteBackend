@@ -20,7 +20,10 @@
 
             <main class="admin-scrollbar flex-1 overflow-auto px-4 py-5 lg:px-6 lg:py-6">
                 <div class="mx-auto w-full max-w-[1200px]">
-                    <slot />
+                    <AdminPageSkeleton v-if="pageLoading" />
+                    <div v-show="!pageLoading">
+                        <slot />
+                    </div>
                 </div>
             </main>
 
@@ -51,9 +54,11 @@
 
 <script setup lang="ts">
 import AdminConfirmDialog from "@/Pages/Users/fragments/AdminConfirmDialog.vue";
+import AdminPageSkeleton from "@/components/AdminPageSkeleton.vue";
 import MerchantPortalHeader from "./fragments/MerchantPortalHeader.vue";
 import MerchantPortalSidebar from "./fragments/MerchantPortalSidebar.vue";
 import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";
+import { useInertiaPageLoading } from "@/composables/useInertiaPageLoading";
 import { useMerchantPortalNav } from "@/composables/useMerchantPortalNav";
 import { Icon } from "@/plugins";
 import { Head, Link } from "@inertiajs/vue3";
@@ -65,6 +70,7 @@ defineProps<{
 }>();
 
 const sidebarOpen = ref(false);
+const pageLoading = useInertiaPageLoading();
 const { navItems } = useMerchantPortalNav();
 
 useInertiaFlashToasts();

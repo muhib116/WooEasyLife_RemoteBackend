@@ -35,7 +35,22 @@ class SubscriptionNotificationService
 
         $domain ??= app(DomainNormalizer::class)->normalize($token->domain);
 
-        foreach ($this->enabledChannels() as $channel) {
+        foreach ($this->enabledChannels($alert) as $channel) {
+            if ($channel === 'sms' && ! $this->shouldSendExpirySms($alert)) {
+                $result['skipped']++;
+
+                continue;
+            }
+
+            if (
+                in_array($channel, ['sms', 'whatsapp'], true)
+                && $this->shouldSkipDuplicateLicenseExpirySms($user, $domain, $alert, $channel)
+            ) {
+                $result['skipped']++;
+
+                continue;
+            }
+
             if ($this->alertService->wasNotified($user, $domain, $alert, $channel)) {
                 $result['skipped']++;
 
@@ -61,9 +76,10 @@ class SubscriptionNotificationService
     }
 
     /**
+     * @param  array<string, mixed>  $alert
      * @return array<int, string>
      */
-    private function enabledChannels(): array
+    private function enabledChannels(array $alert): array
     {
         $channels = [];
 
@@ -71,7 +87,7 @@ class SubscriptionNotificationService
             $channels[] = 'email';
         }
 
-        if (config('subscription.notifications.sms', false)) {
+        if ($this->smsEnabledForAlert($alert)) {
             $channels[] = 'sms';
         }
 
@@ -80,6 +96,77 @@ class SubscriptionNotificationService
         }
 
         return $channels;
+    }
+
+    /**
+     * @param  array<string, mixed>  $alert
+     */
+    private function smsEnabledForAlert(array $alert): bool
+    {
+        if (config('subscription.notifications.sms', false)) {
+            return true;
+        }
+
+        return (bool) config('subscription.notifications.sms_expiry', true)
+            && $this->isExpiryAlert($alert);
+    }
+
+    /**
+     * @param  array<string, mixed>  $alert
+     */
+    private function isExpiryAlert(array $alert): bool
+    {
+        return in_array($alert['type'] ?? '', [
+            'subscription_expiring',
+            'subscription_expired',
+            'license_expiring',
+            'license_expired',
+        ], true);
+    }
+
+    /**
+     * Early SMS only on configured milestones (default 7, 3, 1, 0 days).
+     *
+     * @param  array<string, mixed>  $alert
+     */
+    private function shouldSendExpirySms(array $alert): bool
+    {
+        if (! $this->isExpiryAlert($alert)) {
+            return true;
+        }
+
+        if (in_array($alert['type'] ?? '', ['subscription_expired', 'license_expired'], true)) {
+            return true;
+        }
+
+        $days = $alert['days_remaining'] ?? null;
+        if ($days === null) {
+            return false;
+        }
+
+        $milestones = array_map('intval', config('subscription.notifications.sms_expiry_days', [7, 3, 1, 0]));
+
+        return in_array((int) $days, $milestones, true);
+    }
+
+    /**
+     * Package and license usually end the same day — send the plan SMS only.
+     *
+     * @param  array<string, mixed>  $alert
+     */
+    private function shouldSkipDuplicateLicenseExpirySms(User $user, ?string $domain, array $alert, string $channel): bool
+    {
+        $type = $alert['type'] ?? '';
+
+        if (! in_array($type, ['license_expiring', 'license_expired'], true)) {
+            return false;
+        }
+
+        $planAlert = [
+            'type' => $type === 'license_expired' ? 'subscription_expired' : 'subscription_expiring',
+        ];
+
+        return $this->alertService->wasNotified($user, $domain, $planAlert, $channel);
     }
 
     /**
@@ -180,9 +267,20 @@ class SubscriptionNotificationService
      */
     private function formatSmsMessage(User $user, ?string $domain, array $alert): string
     {
-        $portalUrl = rtrim((string) config('subscription.notifications.portal_url'), '/') . '/portal/billing';
-        $domainPart = $domain ? " ({$domain})" : '';
+        $shop = $domain ?: 'আপনার স্টোর';
+        $phone = trim((string) config('subscription.notifications.sms_support_phone', '01770989591'));
+        $type = $alert['type'] ?? '';
+        $days = (int) ($alert['days_remaining'] ?? 0);
+        $isLicense = in_array($type, ['license_expiring', 'license_expired'], true);
+        $subject = $isLicense ? 'লাইসেন্স টোকেনের' : 'প্ল্যানের';
+        $renewItem = $isLicense ? 'টোকেনটি' : 'প্ল্যানটি';
 
-        return config('app.name') . ": {$alert['message']}{$domainPart}. Renew: {$portalUrl}";
+        return match ($type) {
+            'subscription_expiring', 'license_expiring' => $days === 0
+                ? "WooEasyLife: {$shop} {$subject} মেয়াদ আজ শেষ হবে। সেবা চালু রাখতে এখনই Renew করুন। যেকোনো প্রয়োজনে কল করুন: {$phone}"
+                : "WooEasyLife: {$shop} {$subject} মেয়াদ {$days} দিনের মধ্যে শেষ হবে। সেবা চালু রাখতে সময়মতো {$renewItem} Renew করুন।",
+            'subscription_expired', 'license_expired' => "WooEasyLife: {$shop} {$subject} মেয়াদ শেষ। সেবা চালু করতে এখনই Renew করুন। প্রয়োজনে কল করুন: {$phone}",
+            default => 'WooEasyLife: '.trim((string) ($alert['message'] ?? 'সাবস্ক্রিপশন আপডেট')).($domain ? " ({$domain})" : ''),
+        };
     }
 }

@@ -5,7 +5,7 @@ import 'primeicons/primeicons.css'
 import 'ckeditor5/ckeditor5.css'
 import '../css/ckeditorOverride.css'
 
-import { createApp, h, ref, onMounted } from 'vue';
+import { createApp, h, onMounted } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from './ziggy';
@@ -17,7 +17,6 @@ import ToastService from 'primevue/toastservice';
 import { CkeditorPlugin } from '@ckeditor/ckeditor5-vue'
 import DialogService from 'primevue/dialogservice';
 import axios from 'axios';
-import AppLoader from '@/components/AppLoader.vue';
 
 // set axios default Bearer token
 axios.defaults.headers.common['Authorization'] = `Bearer Kod30eDnI1EFG9vaf9gBPsSwaD3IkklCIATZoSYz9cf733bd`;
@@ -53,13 +52,7 @@ createInertiaApp({
     },
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
-        const navigating = ref(false);
-
         let metaPixelInitialPage = true;
-
-        router.on('start', () => {
-            navigating.value = true;
-        });
 
         router.on('navigate', (event) => {
             // SPA PageView after initial Blade boot.
@@ -82,12 +75,10 @@ createInertiaApp({
         });
 
         router.on('finish', () => {
-            navigating.value = false;
             markAppReady();
         });
 
         router.on('error', () => {
-            navigating.value = false;
             markAppReady();
         });
 
@@ -97,10 +88,7 @@ createInertiaApp({
                     markAppReady();
                 });
 
-                return () => [
-                    h(AppLoader, { show: navigating.value }),
-                    h(App, props),
-                ];
+                return () => h(App, props);
             },
         });
 

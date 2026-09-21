@@ -151,9 +151,111 @@
             animation: app-loader-spin 1.2s linear infinite reverse;
         }
 
-        @keyframes app-loader-spin {
-            to {
-                transform: rotate(360deg);
+        #app-loader.app-loader--page-skeleton {
+            align-items: stretch;
+            justify-content: stretch;
+            background: #f1f5f9;
+        }
+
+        html.dark #app-loader.app-loader--page-skeleton {
+            background: #020617;
+        }
+
+        .app-page-skeleton {
+            display: flex;
+            min-height: 100svh;
+            width: 100%;
+        }
+
+        .app-page-skeleton__sidebar {
+            display: none;
+            width: 272px;
+            flex-shrink: 0;
+            border-right: 1px solid #e2e8f0;
+            background: #fff;
+            padding: 1.25rem 0.85rem;
+        }
+
+        @media (min-width: 1024px) {
+            .app-page-skeleton__sidebar {
+                display: block;
+            }
+        }
+
+        .app-page-skeleton__brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 0.35rem 1.25rem;
+        }
+
+        .app-page-skeleton__main {
+            display: flex;
+            min-width: 0;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .app-page-skeleton__header {
+            height: 4rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #fff;
+        }
+
+        .app-page-skeleton__body {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            gap: 1.25rem;
+            padding: 1.5rem;
+        }
+
+        .app-page-skeleton__cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .app-page-skeleton__cards {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        .app-page-skeleton__card,
+        .app-page-skeleton__panel {
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            background: #fff;
+        }
+
+        .app-page-skeleton__card {
+            padding: 1.25rem;
+        }
+
+        .app-page-skeleton__panel {
+            overflow: hidden;
+        }
+
+        .app-page-skeleton-block {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.375rem;
+            background: #e2e8f0;
+        }
+
+        .app-page-skeleton-block::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.55) 50%, transparent 100%);
+            animation: skeleton-shimmer 1.35s ease-in-out infinite;
+        }
+
+        @keyframes skeleton-shimmer {
+            100% {
+                transform: translateX(100%);
             }
         }
 
@@ -577,13 +679,65 @@
         </noscript>
     @endisset
 
-    <div id="app-loader" aria-live="polite" aria-busy="true">
-        <div class="app-loader-spinner" role="status" aria-label="লোড হচ্ছে">
-            <div class="app-loader-spinner__ring app-loader-spinner__ring--one"></div>
-            <div class="app-loader-spinner__ring app-loader-spinner__ring--two"></div>
-            <img src="/app-logo" alt="WooEasyLife" class="app-loader-spinner__logo" width="53" height="53">
+    @auth
+        <div id="app-loader" class="app-loader--page-skeleton" aria-live="polite" aria-busy="true">
+            <div class="app-page-skeleton" role="status" aria-label="Loading">
+                <aside class="app-page-skeleton__sidebar">
+                    <div class="app-page-skeleton__brand">
+                        <div class="app-page-skeleton-block" style="width:2.5rem;height:2.5rem;border-radius:0.75rem"></div>
+                        <div style="flex:1">
+                            <div class="app-page-skeleton-block" style="width:8rem;height:0.7rem;margin-bottom:0.45rem"></div>
+                            <div class="app-page-skeleton-block" style="width:5rem;height:0.5rem"></div>
+                        </div>
+                    </div>
+                    <div class="app-page-skeleton-block" style="width:4rem;height:0.45rem;margin:0.4rem 0.35rem 0.75rem"></div>
+                    <div class="app-page-skeleton-block" style="height:2.25rem;border-radius:0.75rem;margin-bottom:0.5rem"></div>
+                    <div class="app-page-skeleton-block" style="height:2.25rem;border-radius:0.75rem;margin-bottom:0.5rem"></div>
+                    <div class="app-page-skeleton-block" style="height:2.25rem;border-radius:0.75rem;margin-bottom:0.5rem"></div>
+                    <div class="app-page-skeleton-block" style="height:2.25rem;border-radius:0.75rem;margin-bottom:0.5rem"></div>
+                    <div class="app-page-skeleton-block" style="height:2.25rem;border-radius:0.75rem;margin-bottom:0.5rem"></div>
+                    <div class="app-page-skeleton-block" style="height:2.25rem;border-radius:0.75rem"></div>
+                </aside>
+                <div class="app-page-skeleton__main">
+                    <div class="app-page-skeleton__header"></div>
+                    <div class="app-page-skeleton__body">
+                        <div class="app-page-skeleton__cards">
+                            <div class="app-page-skeleton__card">
+                                <div class="app-page-skeleton-block" style="width:5.5rem;height:0.7rem;margin-bottom:0.85rem"></div>
+                                <div class="app-page-skeleton-block" style="width:3.5rem;height:1.6rem"></div>
+                            </div>
+                            <div class="app-page-skeleton__card">
+                                <div class="app-page-skeleton-block" style="width:5.5rem;height:0.7rem;margin-bottom:0.85rem"></div>
+                                <div class="app-page-skeleton-block" style="width:3.5rem;height:1.6rem"></div>
+                            </div>
+                            <div class="app-page-skeleton__card">
+                                <div class="app-page-skeleton-block" style="width:5.5rem;height:0.7rem;margin-bottom:0.85rem"></div>
+                                <div class="app-page-skeleton-block" style="width:3.5rem;height:1.6rem"></div>
+                            </div>
+                        </div>
+                        <div class="app-page-skeleton__panel">
+                            <div style="padding:1rem 1.25rem;border-bottom:1px solid #e2e8f0">
+                                <div class="app-page-skeleton-block" style="width:16rem;height:2.25rem;border-radius:0.5rem"></div>
+                            </div>
+                            <div class="app-page-skeleton-block" style="height:3.1rem;border-radius:0;background:#f8fafc"></div>
+                            <div class="app-page-skeleton-block" style="height:3.5rem;border-radius:0;margin:0.15rem 1.25rem"></div>
+                            <div class="app-page-skeleton-block" style="height:3.5rem;border-radius:0;margin:0.15rem 1.25rem"></div>
+                            <div class="app-page-skeleton-block" style="height:3.5rem;border-radius:0;margin:0.15rem 1.25rem"></div>
+                            <div class="app-page-skeleton-block" style="height:3.5rem;border-radius:0;margin:0.15rem 1.25rem 1rem"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    @else
+        <div id="app-loader" aria-live="polite" aria-busy="true">
+            <div class="app-loader-spinner" role="status" aria-label="লোড হচ্ছে">
+                <div class="app-loader-spinner__ring app-loader-spinner__ring--one"></div>
+                <div class="app-loader-spinner__ring app-loader-spinner__ring--two"></div>
+                <img src="/app-logo" alt="WooEasyLife" class="app-loader-spinner__logo" width="53" height="53">
+            </div>
+        </div>
+    @endauth
 
     @inertia
 

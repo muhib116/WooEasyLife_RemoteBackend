@@ -84,6 +84,8 @@ class MerchantOpsAdminTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Users/Index')
                 ->has('users')
+                ->has('filters.search')
+                ->has('stats.total')
                 ->where('users', function ($users) use ($merchant) {
                     $row = collect($users)->firstWhere('id', $merchant->id);
 
@@ -91,6 +93,61 @@ class MerchantOpsAdminTest extends TestCase
                         && in_array('expired.example.com', $row['domains'] ?? [], true)
                         && ($row['attention']['code'] ?? null) === 'expired'
                         && ($row['name'] ?? null) === 'Expired Shop';
+                })
+            );
+    }
+
+    public function test_merchant_list_search_filters_on_the_server(): void
+    {
+        $admin = $this->createAdmin();
+        $match = $this->createMerchantWithExpiredPlan();
+        $other = User::create([
+            'name' => 'Other Shop',
+            'email' => 'other-' . uniqid() . '@example.com',
+            'phone' => '01733334444',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('users.index', ['search' => 'expired.example.com']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Users/Index')
+                ->where('filters.search', 'expired.example.com')
+                ->where('users', function ($users) use ($match, $other) {
+                    $ids = collect($users)->pluck('id')->all();
+
+                    return in_array($match->id, $ids, true)
+                        && ! in_array($other->id, $ids, true);
+                })
+                ->where('stats.total', fn ($total) => $total >= 3)
+            );
+    }
+
+    public function test_merchant_list_search_matches_phone_and_name(): void
+    {
+        $admin = $this->createAdmin();
+        $merchant = $this->createMerchantWithExpiredPlan();
+
+        $this->actingAs($admin)
+            ->get(route('users.index', ['search' => '01711112222']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('users', function ($users) use ($merchant) {
+                    $ids = collect($users)->pluck('id')->all();
+
+                    return in_array($merchant->id, $ids, true);
+                })
+            );
+
+        $this->actingAs($admin)
+            ->get(route('users.index', ['search' => 'Expired']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('users', function ($users) use ($merchant) {
+                    return collect($users)->contains('id', $merchant->id);
                 })
             );
     }

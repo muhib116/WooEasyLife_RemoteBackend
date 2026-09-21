@@ -118,7 +118,8 @@ class SubscriptionAlertService
                     'warning',
                     $days === 0
                         ? $this->billingAlertMessage('subscription_expiring_today')
-                        : $this->billingAlertMessage('subscription_expiring_days', ['days' => $days])
+                        : $this->billingAlertMessage('subscription_expiring_days', ['days' => $days]),
+                    ['days_remaining' => $days]
                 );
             }
         }
@@ -222,7 +223,8 @@ class SubscriptionAlertService
                     'warning',
                     $days === 0
                         ? $this->billingAlertMessage('subscription_expiring_today')
-                        : $this->billingAlertMessage('subscription_expiring_days', ['days' => $days])
+                        : $this->billingAlertMessage('subscription_expiring_days', ['days' => $days]),
+                    ['days_remaining' => $days]
                 );
             }
         }
@@ -241,7 +243,8 @@ class SubscriptionAlertService
                     'warning',
                     $days === 0
                         ? $this->billingAlertMessage('license_expiring_today')
-                        : $this->billingAlertMessage('license_expiring_days', ['days' => $days])
+                        : $this->billingAlertMessage('license_expiring_days', ['days' => $days]),
+                    ['days_remaining' => $days]
                 );
             }
         }
@@ -378,13 +381,22 @@ class SubscriptionAlertService
 
     public function notificationAlertKey(User $user, ?string $domain, array $alert, string $channel): string
     {
-        return implode(':', [
+        $parts = [
             $user->id,
             $domain ?? 'all',
             $alert['type'],
-            now()->toDateString(),
-            $channel,
-        ]);
+        ];
+
+        // Expired SMS is a one-shot reminder, not a daily loop.
+        if ($channel === 'sms' && in_array($alert['type'] ?? '', ['subscription_expired', 'license_expired'], true)) {
+            $parts[] = 'once';
+        } else {
+            $parts[] = now()->toDateString();
+        }
+
+        $parts[] = $channel;
+
+        return implode(':', $parts);
     }
 
     /**
@@ -404,15 +416,16 @@ class SubscriptionAlertService
     }
 
     /**
+     * @param  array<string, mixed>  $extra
      * @return array<string, mixed>
      */
-    private function alert(string $type, string $severity, string $message): array
+    private function alert(string $type, string $severity, string $message, array $extra = []): array
     {
-        return [
+        return array_merge([
             'type' => $type,
             'severity' => $severity,
             'message' => $message,
-        ];
+        ], $extra);
     }
 
     /**
