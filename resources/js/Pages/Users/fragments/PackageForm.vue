@@ -9,64 +9,133 @@
 
         <!-- Adjust existing subscription (admin override) -->
         <template v-if="mode === 'adjust'">
-            <PlanSelectSummary
+            <p
                 v-if="currentPlan"
-                :plan="currentPlan"
-                :order-limit="
-                    currentPlan && !isCatalogPackage(currentPlan)
-                        ? form.total_order_can_handle
-                        : null
-                "
-                :total-cost="currentPlanDisplayCost"
-            />
+                class="rounded-lg border border-gray-100 bg-slate-50 px-3 py-2.5 text-sm text-gray-600 dark:border-gray-800 dark:bg-slate-900/40 dark:text-gray-300"
+            >
+                Catalog template:
+                <span class="font-medium text-gray-900 dark:text-white">{{ currentPlan.title }}</span>
+                <span v-if="isCatalogPackage(currentPlan)">
+                    · list {{ catalogListPriceLabel }}
+                    · {{ Number(currentPlan.order_rate_token ?? 0).toLocaleString() }} tokens
+                    · {{ packageDurationLabel(currentPlan.package_duration) }}
+                </span>
+            </p>
 
             <p
                 class="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
             >
-                Use <strong>Renew plan</strong> or <strong>Change plan</strong> to switch plans.
-                This form is for manual overrides only.
+                Values below apply only to this merchant.
+                <strong>Renew plan</strong> or <strong>Change plan</strong> will reset price, tokens, and expiry to the catalog plan.
             </p>
 
             <section class="space-y-4">
-                <FormSection title="Plan quota" step="1">
-                    <div class="space-y-1">
-                        <label for="remaining_order" class="text-sm font-medium">
-                            {{
-                                form.plan_type === "catalog"
-                                    ? "Remaining tokens"
-                                    : "Remaining orders"
-                            }}
-                        </label>
-                        <InputNumber
-                            :useGrouping="false"
-                            v-model="form.remaining_order"
-                            inputId="remaining_order"
-                            :max="form.total_order_can_handle ?? undefined"
-                            :placeholder="
-                                form.plan_type === 'catalog'
-                                    ? 'Enter remaining token count'
-                                    : 'Enter remaining order count'
-                            "
-                            fluid
-                        />
-                        <p
-                            v-if="form.total_order_can_handle"
-                            class="text-xs text-gray-500 dark:text-gray-400"
-                        >
-                            Plan quota: {{ form.total_order_can_handle }}
-                            {{ form.plan_type === "catalog" ? "tokens" : "orders" }}
-                        </p>
-                        <p
-                            v-if="form.errors.remaining_order"
-                            class="text-sm text-rose-500"
-                        >
-                            {{ form.errors.remaining_order }}
-                        </p>
+                <FormSection
+                    title="Custom deal"
+                    step="1"
+                    hint="Set the price, token amount, and months this merchant actually paid for."
+                >
+                    <div class="space-y-4">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="space-y-1">
+                                <label for="total_order_can_handle" class="text-sm font-medium">
+                                    {{
+                                        form.plan_type === "catalog"
+                                            ? "Token quota"
+                                            : "Order quota"
+                                    }}
+                                </label>
+                                <InputNumber
+                                    :useGrouping="false"
+                                    v-model="form.total_order_can_handle"
+                                    inputId="total_order_can_handle"
+                                    :min="1"
+                                    :placeholder="
+                                        form.plan_type === 'catalog'
+                                            ? 'Tokens included in this deal'
+                                            : 'Orders included in this deal'
+                                    "
+                                    fluid
+                                    @update:model-value="onQuotaChange"
+                                />
+                                <p v-if="form.errors.total_order_can_handle" class="text-sm text-rose-500">
+                                    {{ form.errors.total_order_can_handle }}
+                                </p>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="remaining_order" class="text-sm font-medium">
+                                    {{
+                                        form.plan_type === "catalog"
+                                            ? "Remaining tokens"
+                                            : "Remaining orders"
+                                    }}
+                                </label>
+                                <InputNumber
+                                    :useGrouping="false"
+                                    v-model="form.remaining_order"
+                                    inputId="remaining_order"
+                                    :min="0"
+                                    :max="form.total_order_can_handle ?? undefined"
+                                    :placeholder="
+                                        form.plan_type === 'catalog'
+                                            ? 'Enter remaining token count'
+                                            : 'Enter remaining order count'
+                                    "
+                                    fluid
+                                />
+                                <button
+                                    type="button"
+                                    class="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+                                    @click="matchRemainingToQuota"
+                                >
+                                    Set remaining to quota
+                                </button>
+                                <p v-if="form.errors.remaining_order" class="text-sm text-rose-500">
+                                    {{ form.errors.remaining_order }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="total_cost" class="text-sm font-medium">Price (TK)</label>
+                            <InputNumber
+                                :useGrouping="false"
+                                :min="0"
+                                :maxFractionDigits="2"
+                                v-model="form.total_cost"
+                                inputId="total_cost"
+                                placeholder="Agreed price for this merchant"
+                                fluid
+                            />
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Catalog list price is a starting point. Enter the amount this merchant will actually pay.
+                            </p>
+                            <p v-if="form.errors.total_cost" class="text-sm text-rose-500">
+                                {{ form.errors.total_cost }}
+                            </p>
+                        </div>
                     </div>
                 </FormSection>
 
-                <FormSection title="Expiry & status" step="2">
+                <FormSection title="Duration & status" step="2">
                     <div class="space-y-4">
+                        <div class="space-y-2">
+                            <p class="text-sm font-medium">Set expiry from today</p>
+                            <div class="flex flex-wrap gap-2">
+                                <Button
+                                    v-for="preset in durationPresets"
+                                    :key="preset.months"
+                                    type="button"
+                                    :label="preset.label"
+                                    size="small"
+                                    severity="secondary"
+                                    outlined
+                                    @click="setExpiryFromMonths(preset.months)"
+                                />
+                            </div>
+                        </div>
+
                         <div class="space-y-1">
                             <label class="text-sm font-medium">Expires at</label>
                             <DatePicker
@@ -101,7 +170,7 @@
                                 v-model="form.note"
                                 autoResize
                                 rows="2"
-                                placeholder="Optional note about this plan"
+                                placeholder="Optional note about this custom deal"
                                 class="!w-full"
                             />
                         </div>
@@ -424,10 +493,12 @@ import FormSection from "@/components/FormSection.vue";
 import {
     groupPlansForSelect,
     isCatalogPackage,
+    packageDurationLabel,
     planDropdownLabel,
 } from "@/data/packageCatalogDraft";
 import { useDomainValidation } from "@/composables/useDomainValidation";
 import { domainValidationErrorTitle } from "@/utils/domainValidationMessages";
+import { addMonths, startOfDay } from "date-fns";
 import { computed, ref, toRef } from "vue";
 
 const props = withDefaults(
@@ -583,6 +654,41 @@ const onDomainBlur = () => {
     }
 
     void domainValidation.validateNow();
+};
+
+const durationPresets = [
+    { label: "1 month", months: 1 },
+    { label: "3 months", months: 3 },
+    { label: "5 months", months: 5 },
+    { label: "7 months", months: 7 },
+    { label: "1 year", months: 12 },
+];
+
+const catalogListPriceLabel = computed(() => {
+    const amount = Number(props.currentPlan?.package_price ?? 0);
+    return amount === 0 ? "Free" : `${amount.toLocaleString()} TK`;
+});
+
+const onQuotaChange = (value: number | null) => {
+    if (value == null || props.form.remaining_order == null) {
+        return;
+    }
+
+    if (props.form.remaining_order > value) {
+        props.form.remaining_order = value;
+    }
+};
+
+const matchRemainingToQuota = () => {
+    if (props.form.total_order_can_handle == null) {
+        return;
+    }
+
+    props.form.remaining_order = props.form.total_order_can_handle;
+};
+
+const setExpiryFromMonths = (months: number) => {
+    props.form.expires_at = addMonths(startOfDay(new Date()), months);
 };
 
 const groupedPlans = computed(() => groupPlansForSelect(props.packages || []));

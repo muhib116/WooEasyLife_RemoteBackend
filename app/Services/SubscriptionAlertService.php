@@ -306,7 +306,9 @@ class SubscriptionAlertService
         $tokens = AccessToken::query()
             ->where('tokenable_type', User::class)
             ->whereHasMorph('tokenable', [User::class], fn ($query) => $query->where('role', 'user'))
-            ->with('tokenable:id,name,email,phone')
+            ->with(['tokenable' => function ($query) {
+                $query->select('id', 'name', 'email', 'phone', 'status', 'role', 'deleted_at');
+            }])
             ->orderByDesc('id')
             ->get();
 

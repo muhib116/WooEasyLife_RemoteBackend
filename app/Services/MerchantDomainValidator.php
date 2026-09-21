@@ -20,7 +20,8 @@ class MerchantDomainValidator
         User $merchant,
         string $rawDomain,
         bool $forAdmin = false,
-        bool $requireNewWebsite = false
+        bool $requireNewWebsite = false,
+        ?int $ignoreWebsiteId = null
     ): string {
         $domain = $this->domainNormalizer->normalize($rawDomain);
         if (! $domain) {
@@ -40,8 +41,8 @@ class MerchantDomainValidator
         $this->domainAvailability->rejectCrossUserWebsiteClaim($merchant, $domain, $forAdmin);
         $this->domainAvailability->assertAvailableForUser($merchant, $domain, $forAdmin);
 
-        if ($requireNewWebsite) {
-            $this->domainAvailability->rejectDuplicateWebsiteForUser($merchant, $domain);
+        if ($requireNewWebsite || $ignoreWebsiteId !== null) {
+            $this->domainAvailability->rejectDuplicateWebsiteForUser($merchant, $domain, $ignoreWebsiteId);
         }
 
         return $domain;

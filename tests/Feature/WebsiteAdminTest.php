@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AccessToken;
 use App\Models\User;
 use App\Models\Website;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -243,5 +244,63 @@ class WebsiteAdminTest extends TestCase
         $this->assertSame('Local WordPress', $payload['title']);
         $this->assertSame('http://localhost:8081/wordpress', $payload['base_url']);
         $this->assertSame('http://localhost:8081/wordpress', $payload['display_url']);
+    }
+
+    public function test_admin_can_change_website_domain_without_replacing_the_license(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-domain@example.com',
+            'phone' => '01700000094',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-domain@example.com',
+            'phone' => '01700000093',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $website = Website::create([
+            'user_id' => $merchant->id,
+            'domain' => 'localhost',
+            'title' => 'localhost',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        $token = AccessToken::unguarded(fn () => AccessToken::create([
+            'tokenable_type' => User::class,
+            'tokenable_id' => $merchant->id,
+            'name' => 'Local License',
+            'token' => hash('sha256', 'keep-admin-license'),
+            'domain' => 'localhost',
+            'website_id' => $website->id,
+            'status' => true,
+        ]));
+
+        $this->actingAs($admin)->post(
+            route('users.websites.update', $merchant->id),
+            [
+                'website_id' => $website->id,
+                'domain' => '127.0.0.1',
+                'title' => 'Loopback store',
+                'status' => true,
+                'is_primary' => true,
+            ]
+        )->assertRedirect()->assertSessionHas('success');
+
+        $website->refresh();
+        $token->refresh();
+
+        $this->assertSame('127.0.0.1', $website->domain);
+        $this->assertSame('Loopback store', $website->title);
+        $this->assertSame('127.0.0.1', $token->domain);
+        $this->assertSame(hash('sha256', 'keep-admin-license'), $token->token);
     }
 }

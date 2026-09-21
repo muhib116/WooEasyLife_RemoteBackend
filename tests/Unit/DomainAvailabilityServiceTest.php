@@ -82,6 +82,23 @@ class DomainAvailabilityServiceTest extends TestCase
         $this->service->rejectDuplicateWebsiteForUser($user, 'localhost');
     }
 
+    public function test_reject_duplicate_website_can_ignore_the_current_website(): void
+    {
+        $user = $this->merchant('ignore@example.com');
+
+        $website = Website::create([
+            'user_id' => $user->id,
+            'domain' => 'localhost',
+            'title' => 'localhost',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        $this->service->rejectDuplicateWebsiteForUser($user, 'localhost', $website->id);
+
+        $this->assertTrue(true);
+    }
+
     public function test_other_users_website_is_blocked(): void
     {
         $owner = $this->merchant('owner@example.com');

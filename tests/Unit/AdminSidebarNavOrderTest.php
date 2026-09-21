@@ -22,7 +22,9 @@ it('merges partial stored order with full catalog defaults', function () {
         ->and($merged['items']['Platform'][1])->toBe('Settings')
         ->and($merged['items']['Platform'])->toContain('Plugin Versions')
         ->and($merged['children']['Merchants'][0])->toBe('Trashed Merchants')
-        ->and($merged['children']['Merchants'])->toContain('All Merchants');
+        ->and($merged['children']['Merchants'])->toContain('All Merchants')
+        ->and($merged['children']['Merchants'])->toContain('Subscription Alerts')
+        ->and($merged['items']['Platform'])->not->toContain('Subscription Alerts');
 });
 
 it('sanitizes unknown titles from an incoming payload', function () {
@@ -65,9 +67,11 @@ it('keeps previous order when incoming partial list is empty', function () {
 it('exposes a complete catalog with unique section and item titles', function () {
     $catalog = (new AdminSidebarNavOrder)->catalog();
 
-    expect($catalog['sections'])->toHaveCount(6)
+    expect($catalog['sections'])->toHaveCount(7)
         ->and($catalog['sections'])->toBe(array_values(array_unique($catalog['sections'])))
-        ->and(array_keys($catalog['items']))->toEqualCanonicalizing($catalog['sections']);
+        ->and(array_keys($catalog['items']))->toEqualCanonicalizing($catalog['sections'])
+        ->and($catalog['children']['Merchants'])->toBe(['All Merchants', 'Trashed Merchants', 'Subscription Alerts'])
+        ->and($catalog['items']['Platform'])->not->toContain('Subscription Alerts');
 
     foreach ($catalog['items'] as $section => $titles) {
         expect($titles)->not->toBeEmpty()

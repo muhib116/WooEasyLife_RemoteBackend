@@ -241,6 +241,7 @@ class DashboardController extends Controller
                     'id' => $token->id,
                     'title' => $token->title ?? $token->name,
                     'domain' => $token->domain,
+                    'user_id' => $token->tokenable_id,
                     'user_name' => $token->tokenable?->name,
                     'user_email' => $token->tokenable?->email,
                     'expires_at' => $token->expires_at?->format('Y-m-d H:i'),

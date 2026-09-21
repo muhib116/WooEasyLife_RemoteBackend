@@ -100,12 +100,22 @@
                                 class="bg-white transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700/60"
                             >
                                 <td class="px-4 py-4">
-                                    <div class="font-medium text-gray-900 dark:text-gray-100">
-                                        {{ row.title || "Untitled" }}
-                                    </div>
-                                    <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                        {{ row.user_name || "Unknown user" }}
-                                    </div>
+                    <div class="font-medium text-gray-900 dark:text-gray-100">
+                        {{ row.title || "Untitled" }}
+                    </div>
+                    <Link
+                        v-if="row.user_id"
+                        :href="route('users.websites', row.user_id)"
+                        class="mt-0.5 text-xs text-primary-600 hover:underline dark:text-primary-400"
+                    >
+                        {{ row.user_name || "Unknown user" }}
+                    </Link>
+                    <div
+                        v-else
+                        class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                        {{ row.user_name || "Unknown user" }}
+                    </div>
                                 </td>
                                 <td class="px-4 py-4">
                                     <span
@@ -167,6 +177,7 @@ type ExpiredToken = {
     id: number;
     title: string;
     domain: string | null;
+    user_id?: number | null;
     user_name: string | null;
     user_email: string | null;
     expires_at: string | null;

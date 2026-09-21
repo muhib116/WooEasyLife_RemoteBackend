@@ -106,4 +106,27 @@ class MerchantDomainValidatorTest extends TestCase
 
         $this->assertSame('localhost', $domain);
     }
+
+    public function test_allows_current_website_when_ignore_website_id_is_set(): void
+    {
+        $user = $this->merchant('rename@example.com');
+
+        $website = Website::create([
+            'user_id' => $user->id,
+            'domain' => 'localhost',
+            'title' => 'localhost',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+
+        $domain = $this->validator->validate(
+            $user,
+            'localhost',
+            forAdmin: true,
+            requireNewWebsite: true,
+            ignoreWebsiteId: (int) $website->id,
+        );
+
+        $this->assertSame('localhost', $domain);
+    }
 }

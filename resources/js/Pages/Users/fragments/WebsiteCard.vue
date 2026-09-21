@@ -80,22 +80,22 @@
 
                 <div class="space-y-3 px-4 py-3">
                     <div
-                        v-if="expiryWarning.showWarning"
+                        v-if="showExpiryWarning"
                         class="flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm"
                         :class="expiryBannerClass"
                     >
                         <Icon
-                            :name="expiryWarning.status === 'expired' ? 'PhWarningCircle' : 'PhClock'"
+                            :name="expiryStatus === 'expired' ? 'PhWarningCircle' : 'PhClock'"
                             class="mt-0.5 shrink-0 text-base"
                         />
                         <div class="min-w-0">
-                            <p class="font-semibold">{{ expiryWarning.title }}</p>
+                            <p class="font-semibold">{{ expiryTitle }}</p>
                             <p class="mt-0.5 font-mono text-xs tabular-nums tracking-wide">
-                                {{ expiryWarning.countdown }}
+                                {{ expiryCountdown }}
                             </p>
                             <p class="mt-1 text-xs opacity-90">
                                 {{
-                                    expiryWarning.status === "expired"
+                                    expiryStatus === "expired"
                                         ? "Renew the plan to restore plugin access."
                                         : "Renew before expiry to avoid interruption."
                                 }}
@@ -184,13 +184,16 @@
                                     {{ license.title || "License key" }}
                                 </span>
                                 <StatusBadge
-                                    :label="license.status ? 'Active' : 'Disabled'"
-                                    :variant="license.status ? 'success' : 'neutral'"
+                                    :label="licenseBadge(license).label"
+                                    :variant="licenseBadge(license).variant"
                                     format="none"
                                 />
                             </div>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                                 Last used: {{ license.last_used_ago || "Never" }}
+                                <span v-if="licenseExpiryLabel(license)">
+                                    · {{ licenseExpiryLabel(license) }}
+                                </span>
                             </p>
                         </div>
                         <div class="flex shrink-0 items-center">
@@ -228,6 +231,36 @@
                 </div>
                 <p v-else class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     Generate a license key so the WooCommerce plugin can connect.
+                </p>
+            </section>
+
+            <section class="rounded-xl border border-gray-100 dark:border-gray-800">
+                <div
+                    class="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800"
+                >
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Courier
+                    </p>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ website.couriers?.length ? website.couriers.length : 0 }} connected
+                    </span>
+                </div>
+                <div v-if="website.couriers?.length" class="flex flex-wrap gap-2 px-4 py-3">
+                    <StatusBadge
+                        v-for="courier in website.couriers"
+                        :key="courier.partner"
+                        :label="
+                            courier.scope === 'account'
+                                ? `${courier.label} · shared account`
+                                : courier.label
+                        "
+                        :variant="courier.scope === 'account' ? 'warning' : 'info'"
+                        format="none"
+                    />
+                </div>
+                <p v-else class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    No SteadFast, Pathao, or RedX connected for this website.
+                    A second store currently shares the merchant-level courier account unless separate credentials are saved.
                 </p>
             </section>
 
@@ -333,7 +366,7 @@
                         severity="secondary"
                         outlined
                         class="shrink-0"
-                        v-tooltip.top="'Override quota, expiry, or active status'"
+                        v-tooltip.top="'Customize price, tokens, duration, features, or status'"
                         @click="$emit('adjust-subscription')"
                     />
                 </template>
@@ -401,11 +434,15 @@ const formatOtpWhen = (value?: string | null) => {
 const expiryWarning = useSubscriptionExpiryCountdown(
     toRef(() => props.website.subscription?.expires_at),
 );
+const expiryStatus = expiryWarning.status;
+const expiryTitle = expiryWarning.title;
+const expiryCountdown = expiryWarning.countdown;
+const showExpiryWarning = expiryWarning.showWarning;
 
 const primaryIssue = computed(() => {
     const issues = props.website.health?.issues ?? [];
-    const filtered = expiryWarning.showWarning.value
-        ? issues.filter((issue) => !/expir/i.test(issue))
+    const filtered = showExpiryWarning.value
+        ? issues.filter((issue: string) => !/expir/i.test(issue))
         : issues;
 
     return primaryWebsiteIssue(filtered);
@@ -420,7 +457,7 @@ const expiryLabel = computed(() =>
 );
 
 const expiryBannerClass = computed(() => {
-    if (expiryWarning.status.value === "expired") {
+    if (expiryStatus.value === "expired") {
         return "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100";
     }
 
@@ -428,14 +465,48 @@ const expiryBannerClass = computed(() => {
 });
 
 const expiryDateClass = computed(() => {
-    if (expiryWarning.status.value === "expired") {
+    if (expiryStatus.value === "expired") {
         return "text-rose-600 dark:text-rose-400";
     }
 
-    if (expiryWarning.status.value === "expiring") {
+    if (expiryStatus.value === "expiring") {
         return "text-amber-600 dark:text-amber-400";
     }
 
     return "text-gray-900 dark:text-gray-100";
 });
+
+const licenseIsExpired = (license: { expires_at?: string | null }) => {
+    if (!license?.expires_at) {
+        return false;
+    }
+
+    try {
+        return new Date(license.expires_at).getTime() <= Date.now();
+    } catch {
+        return false;
+    }
+};
+
+const licenseBadge = (license: { status?: boolean; expires_at?: string | null }) => {
+    if (license.status && licenseIsExpired(license)) {
+        return { label: "Expired", variant: "danger" as const };
+    }
+
+    if (license.status) {
+        return { label: "Active", variant: "success" as const };
+    }
+
+    return { label: "Disabled", variant: "neutral" as const };
+};
+
+const licenseExpiryLabel = (license: { expires_at?: string | null }) => {
+    const label = formatSubscriptionExpiry(license?.expires_at);
+
+    if (!label) {
+        return null;
+    }
+
+    return licenseIsExpired(license) ? `Expired ${label}` : `Key expires ${label}`;
+};
 </script>

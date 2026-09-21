@@ -437,6 +437,12 @@ const allSections: NavSection[] = [
                         icon: "PhTrash",
                         permission: "merchants.manage",
                     },
+                    {
+                        title: "Subscription Alerts",
+                        name: "subscriptionAlerts.index",
+                        icon: "PhBellRinging",
+                        permission: "billing.view",
+                    },
                 ],
             },
             {
@@ -565,12 +571,6 @@ const allSections: NavSection[] = [
                         permission: ["roles.manage", "billing.manage"],
                     },
                 ],
-            },
-            {
-                title: "Subscription Alerts",
-                name: "subscriptionAlerts.index",
-                icon: "PhBellRinging",
-                permission: "billing.view",
             },
         ],
     },
@@ -929,7 +929,9 @@ const onChildDragEnd = () => {
 
 const expandedGroups = reactive<Record<string, boolean>>({
     "Wise AI": Boolean(route().current("wiseAi.*")),
-    Merchants: Boolean(route().current("users.*")),
+    Merchants: Boolean(
+        route().current("users.*") || route().current("subscriptionAlerts.*"),
+    ),
     "Plans & Billing": Boolean(
         route().current("packages.*")
             || route().current("orders.*")

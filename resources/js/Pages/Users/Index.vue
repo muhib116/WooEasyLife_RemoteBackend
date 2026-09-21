@@ -66,17 +66,27 @@
                         </InputIcon>
                         <InputText
                             v-model="search"
-                            placeholder="Search by name, email, or phone..."
+                            placeholder="Search by name, email, phone, or domain..."
                             class="w-full"
                         />
                     </IconField>
-                    <SelectButton
-                        v-model="mode"
-                        :options="roleOptions"
-                        option-label="label"
-                        option-value="value"
-                        aria-labelledby="role-filter"
-                    />
+                    <div class="flex flex-wrap items-center gap-2">
+                        <SelectButton
+                            v-model="mode"
+                            :options="roleOptions"
+                            option-label="label"
+                            option-value="value"
+                            aria-labelledby="role-filter"
+                        />
+                        <SelectButton
+                            v-if="!trashed"
+                            v-model="healthFilter"
+                            :options="healthOptions"
+                            option-label="label"
+                            option-value="value"
+                            aria-labelledby="health-filter"
+                        />
+                    </div>
                 </div>
 
                 <EmptyState
@@ -91,7 +101,7 @@
                 />
 
                 <div v-else class="overflow-x-auto">
-                    <table class="w-full min-w-[720px] text-left text-sm">
+                    <table class="w-full min-w-[960px] text-left text-sm">
                         <thead>
                             <tr
                                 class="border-b border-gray-100 bg-slate-50/80 dark:border-gray-700 dark:bg-slate-900/40"
@@ -123,6 +133,18 @@
                                     class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
                                 >
                                     Websites
+                                </th>
+                                <th
+                                    v-if="!trashed"
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Domain
+                                </th>
+                                <th
+                                    v-if="!trashed"
+                                    class="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Attention
                                 </th>
                                 <th
                                     v-if="!trashed"
@@ -203,6 +225,32 @@
                                     >
                                         <i class="pi pi-globe text-[0.7rem]" />
                                         {{ user.websites_count ?? 0 }}
+                                    </span>
+                                </td>
+                                <td v-if="!trashed" class="px-6 py-4">
+                                    <span
+                                        class="inline-block max-w-[180px] truncate font-mono text-xs text-gray-600 dark:text-gray-300"
+                                        :title="domainList(user)"
+                                    >
+                                        {{ domainList(user) || "—" }}
+                                    </span>
+                                </td>
+                                <td v-if="!trashed" class="px-6 py-4">
+                                    <StatusBadge
+                                        v-if="user.attention"
+                                        :label="attentionLabel(user.attention)"
+                                        :variant="
+                                            user.attention.severity === 'danger'
+                                                ? 'danger'
+                                                : 'warning'
+                                        "
+                                        format="none"
+                                    />
+                                    <span
+                                        v-else
+                                        class="text-xs text-gray-400 dark:text-gray-500"
+                                    >
+                                        —
                                     </span>
                                 </td>
                                 <td v-if="!trashed" class="px-6 py-4">
@@ -357,7 +405,13 @@ const roleOptions = [
     { label: "Admins", value: "admin" },
 ];
 
+const healthOptions = [
+    { label: "All health", value: "" },
+    { label: "Needs attention", value: "attention" },
+];
+
 const mode = ref("");
+const healthFilter = ref("");
 const search = ref("");
 const currentPage = ref(1);
 const rowsPerPage = ref(10);
@@ -388,6 +442,10 @@ const filteredUsers = computed(() => {
         list = list.filter((item) => item?.role === "user");
     }
 
+    if (healthFilter.value === "attention") {
+        list = list.filter((item) => Boolean(item?.attention));
+    }
+
     const keyword = search.value.trim().toLowerCase();
 
     if (!keyword) {
@@ -395,7 +453,7 @@ const filteredUsers = computed(() => {
     }
 
     return list.filter((user) => {
-        const haystack = [user.name, user.email, user.phone]
+        const haystack = [user.name, user.email, user.phone, domainList(user)]
             .filter(Boolean)
             .join(" ")
             .toLowerCase();
@@ -427,9 +485,27 @@ const paginationLabel = computed(() => {
     return `Showing ${start}–${end} of ${total}`;
 });
 
-watch([mode, search, rowsPerPage], () => {
+watch([mode, healthFilter, search, rowsPerPage], () => {
     currentPage.value = 1;
 });
+
+const domainList = (user: any) => {
+    if (!Array.isArray(user?.domains) || !user.domains.length) {
+        return "";
+    }
+
+    return user.domains.join(", ");
+};
+
+const attentionLabel = (attention: { label?: string; domain?: string | null }) => {
+    if (!attention?.label) {
+        return "";
+    }
+
+    return attention.domain
+        ? `${attention.label} · ${attention.domain}`
+        : attention.label;
+};
 
 const formatDeletedAt = (value?: string | null) => {
     if (!value) {

@@ -329,6 +329,134 @@ class WebsitePlanEditTest extends TestCase
         $this->assertSame(75, $userPackage->fresh()->remaining_order);
     }
 
+    public function test_admin_can_raise_quota_and_set_custom_price_and_expiry(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-custom-deal@example.com',
+            'phone' => '01700000095',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-custom-deal@example.com',
+            'phone' => '01700000005',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $plan = PackageHub::create([
+            'title' => 'Starter',
+            'per_order_rate' => 0,
+            'package_price' => 999,
+            'order_rate_token' => 1000,
+            'package_duration' => '1_month',
+            'is_active' => true,
+            'created_by' => $admin->id,
+            'index' => 1,
+            'features' => PackageCatalogFeatures::starterMap(),
+        ]);
+
+        $userPackage = UserPackage::create([
+            'title' => 'Starter',
+            'domain' => 'shop.example.com',
+            'user_id' => $merchant->id,
+            'package_hub_id' => $plan->id,
+            'plan_type' => 'catalog',
+            'order_rate_token' => 1000,
+            'package_duration' => '1_month',
+            'total_order_can_handle' => 1000,
+            'remaining_order' => 800,
+            'total_order_handled' => 200,
+            'per_order_rate' => 0,
+            'total_cost' => 999,
+            'transaction_charge' => 0,
+            'is_active' => true,
+            'features' => PackageCatalogFeatures::starterMap(),
+            'expires_at' => now()->addDays(5),
+        ]);
+
+        $expiresAt = now()->addMonths(7)->format('Y-m-d');
+
+        $response = $this->actingAs($admin)->post(
+            route('users.updatePurchasePackage', $merchant->id),
+            [
+                'id' => $userPackage->id,
+                'total_order_can_handle' => 2500,
+                'remaining_order' => 2500,
+                'total_cost' => 1800,
+                'expires_at' => $expiresAt,
+                'is_active' => true,
+                'note' => '7-month custom deal',
+            ]
+        );
+
+        $response->assertRedirect()->assertSessionHas('success');
+
+        $userPackage->refresh();
+
+        $this->assertSame(2500, $userPackage->total_order_can_handle);
+        $this->assertSame(2500, $userPackage->remaining_order);
+        $this->assertSame(2500, $userPackage->order_rate_token);
+        $this->assertEquals(1800.0, (float) $userPackage->total_cost);
+        $this->assertSame('1_month', $userPackage->package_duration);
+        $this->assertSame('7-month custom deal', $userPackage->note);
+        $this->assertSame($expiresAt, $userPackage->expires_at->format('Y-m-d'));
+        $this->assertSame(200, $userPackage->total_order_handled);
+    }
+
+    public function test_remaining_can_exceed_old_quota_when_new_quota_is_raised(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin-raise-quota@example.com',
+            'phone' => '01700000094',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-raise-quota@example.com',
+            'phone' => '01700000008',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $userPackage = UserPackage::create([
+            'title' => 'Standard',
+            'domain' => 'shop.example.com',
+            'user_id' => $merchant->id,
+            'package_hub_id' => 1,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 75,
+            'total_order_handled' => 25,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->post(
+            route('users.updatePurchasePackage', $merchant->id),
+            [
+                'id' => $userPackage->id,
+                'total_order_can_handle' => 200,
+                'remaining_order' => 150,
+                'is_active' => true,
+            ]
+        )->assertRedirect();
+
+        $this->assertSame(200, $userPackage->fresh()->total_order_can_handle);
+        $this->assertSame(150, $userPackage->fresh()->remaining_order);
+    }
+
     public function test_cannot_activate_expired_plan_without_extending_expiry(): void
     {
         $admin = User::create([

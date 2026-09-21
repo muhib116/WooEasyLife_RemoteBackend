@@ -44,7 +44,6 @@ class AdminSidebarNavOrder
                     'Tutorials',
                     'Media Library',
                     'Blog Posts',
-                    'Subscription Alerts',
                 ],
                 'Marketing' => ['Meta Pixel'],
                 'Analytics' => ['Visitors', 'Visitor Report', 'Use Analysis', 'Order Intelligence'],
@@ -60,7 +59,7 @@ class AdminSidebarNavOrder
             ],
             'children' => [
                 'Wise AI' => ['Dashboard', 'Config', 'Knowledge', 'Language', 'Playground', 'Learning', 'Help', 'Train', 'Intelligence', 'Fleet'],
-                'Merchants' => ['All Merchants', 'Trashed Merchants'],
+                'Merchants' => ['All Merchants', 'Trashed Merchants', 'Subscription Alerts'],
                 'Fraud Checker' => ['Phone Check', 'Partner Credentials', 'Token & CURL'],
                 'Plans & Billing' => [
                     'Pricing Plans',

@@ -127,7 +127,7 @@
                         Edit Website
                     </h2>
                     <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                        Update store title, WordPress base URL, and website settings.
+                        Update store domain, title, WordPress base URL, and website settings.
                     </p>
                 </div>
             </template>
@@ -200,6 +200,7 @@ const planForm = useForm({
     limit: 300,
     remaining_order: null as number | null,
     total_order_can_handle: null as number | null,
+    total_cost: null as number | null,
     expires_at: null as Date | null,
     is_active: true,
     plan_type: "legacy" as string,
@@ -256,7 +257,7 @@ const planDialogTitle = computed(() => {
 
 const planDialogSubtitle = computed(() => {
     if (planFormMode.value === "adjust") {
-        return "Override quota, expiry, or active status. Use Renew or Change plan for plan switches.";
+        return "Customize price, tokens, duration, features, or status for this merchant. Renew and Change plan still reset to the catalog plan.";
     }
 
     if (planFormMode.value === "change") {
@@ -454,6 +455,7 @@ const openAdjustPlan = (website: any) => {
     planForm.note = subscriptionRow?.note ?? null;
     planForm.remaining_order = subscription.remaining_order;
     planForm.total_order_can_handle = subscription.total_order_can_handle;
+    planForm.total_cost = Number(subscription.total_cost ?? 0);
     planForm.is_active = Boolean(subscription.is_active);
     planForm.plan_type =
         subscriptionRow?.plan_type ?? subscription.plan_type ?? "legacy";

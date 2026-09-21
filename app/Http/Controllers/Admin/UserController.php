@@ -27,6 +27,7 @@ use App\Services\SubscriptionPaymentConfigService;
 use App\Services\LicenseProvisioningService;
 use App\Services\MerchantDomainValidator;
 use App\Services\WebsiteAggregatorService;
+use App\Services\MerchantOpsSummaryService;
 use App\Services\SubscriptionAdminService;
 use App\Services\WebsiteAdminService;
 use App\Services\WebsiteRemovalService;
@@ -48,7 +49,8 @@ class UserController extends Controller
 
     public function index()
     {
-        $users = $this->usersQuery()->get();
+        $users = app(MerchantOpsSummaryService::class)
+            ->appendToUsers($this->usersQuery()->get());
 
         return Inertia::render('Users/Index', [
             'users' => $users,
@@ -58,7 +60,8 @@ class UserController extends Controller
 
     public function trashed()
     {
-        $users = $this->usersQuery(true)->get();
+        $users = app(MerchantOpsSummaryService::class)
+            ->appendToUsers($this->usersQuery(true)->get());
 
         return Inertia::render('Users/Index', [
             'users' => $users,
@@ -197,7 +200,21 @@ class UserController extends Controller
 
         $setup = app(MerchantSetupService::class)->progress($user);
 
-        return Inertia::render('Users/View', compact('user', 'report', 'setup'));
+        $websiteHealth = [];
+        if ($user && $user->role === 'user') {
+            $websiteHealth = collect(app(WebsiteAggregatorService::class)->forUser($user))
+                ->map(fn (array $website) => [
+                    'domain' => $website['domain'],
+                    'status' => $website['health']['status'] ?? 'incomplete',
+                    'issues' => $website['health']['issues'] ?? [],
+                    'expires_at' => $website['subscription']['expires_at'] ?? null,
+                    'couriers' => $website['couriers'] ?? [],
+                ])
+                ->values()
+                ->all();
+        }
+
+        return Inertia::render('Users/View', compact('user', 'report', 'setup', 'websiteHealth'));
     }
 
     public function store(Request $request)
@@ -472,6 +489,8 @@ class UserController extends Controller
             'note' => 'nullable|string|max:1000',
             'is_active' => 'nullable|boolean',
             'remaining_order' => 'nullable|integer|min:0',
+            'total_order_can_handle' => 'nullable|integer|min:1',
+            'total_cost' => 'nullable|numeric|min:0',
             'expires_at' => 'nullable|date',
         ]);
 
@@ -480,15 +499,20 @@ class UserController extends Controller
             ->where('user_id', $id)
             ->firstOrFail();
 
-        $quotaLabel = ($userPackage->plan_type ?? 'legacy') === 'catalog' ? 'tokens' : 'orders';
+        $isCatalog = ($userPackage->plan_type ?? 'legacy') === 'catalog';
+        $quotaLabel = $isCatalog ? 'tokens' : 'orders';
+
+        $quota = $request->filled('total_order_can_handle')
+            ? (int) $request->total_order_can_handle
+            : (int) $userPackage->total_order_can_handle;
 
         if ($request->filled('remaining_order')) {
             $remainingOrder = (int) $request->remaining_order;
 
-            if ($remainingOrder > (int) $userPackage->total_order_can_handle) {
+            if ($remainingOrder > $quota) {
                 throw ValidationException::withMessages([
                     'remaining_order' => 'Remaining '.$quotaLabel.' cannot exceed the plan quota ('
-                        .$userPackage->total_order_can_handle.').',
+                        .$quota.').',
                 ]);
             }
         }
@@ -504,6 +528,13 @@ class UserController extends Controller
         $remainingOrder = $request->filled('remaining_order')
             ? (int) $request->remaining_order
             : (int) $userPackage->remaining_order;
+
+        if ($remainingOrder > $quota) {
+            throw ValidationException::withMessages([
+                'remaining_order' => 'Remaining '.$quotaLabel.' cannot exceed the plan quota ('
+                    .$quota.').',
+            ]);
+        }
 
         $isActive = $request->has('is_active')
             ? $request->boolean('is_active')
@@ -527,8 +558,17 @@ class UserController extends Controller
             'domain' => $domain,
             'is_active' => $isActive,
             'remaining_order' => $remainingOrder,
+            'total_order_can_handle' => $quota,
             'expires_at' => $expiresAt,
         ];
+
+        if ($isCatalog) {
+            $updateData['order_rate_token'] = $quota;
+        }
+
+        if ($request->has('total_cost') && $request->input('total_cost') !== null && $request->input('total_cost') !== '') {
+            $updateData['total_cost'] = round((float) $request->input('total_cost'), 2);
+        }
 
         if (($userPackage->plan_type ?? 'legacy') === 'catalog' && $request->has('features')) {
             $request->validate([
@@ -639,6 +679,7 @@ class UserController extends Controller
     {
         $request->validate([
             'website_id' => 'required|integer',
+            'domain' => 'sometimes|nullable|string|max:255',
             'title' => 'nullable|string|max:255',
             'base_url' => 'nullable|string|max:512',
             'status' => 'sometimes|boolean',
@@ -653,12 +694,18 @@ class UserController extends Controller
             ->firstOrFail();
 
         try {
-            $websiteAdmin->update($user, $website, [
+            $payload = [
                 'title' => $request->input('title'),
                 'base_url' => $request->input('base_url'),
                 'status' => $request->has('status') ? $request->boolean('status') : $website->status,
                 'is_primary' => $request->has('is_primary') ? $request->boolean('is_primary') : $website->is_primary,
-            ]);
+            ];
+
+            if ($request->exists('domain')) {
+                $payload['domain'] = $request->input('domain');
+            }
+
+            $websiteAdmin->update($user, $website, $payload);
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors());
         }

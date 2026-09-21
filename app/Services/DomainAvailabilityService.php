@@ -99,7 +99,7 @@ class DomainAvailabilityService
     /**
      * Reject when this merchant already has a website for the domain (add-website flow).
      */
-    public function rejectDuplicateWebsiteForUser(User $user, string $domain): void
+    public function rejectDuplicateWebsiteForUser(User $user, string $domain, ?int $ignoreWebsiteId = null): void
     {
         $normalized = $this->normalize($domain);
         if (! $normalized) {
@@ -108,12 +108,15 @@ class DomainAvailabilityService
             ]);
         }
 
-        $exists = Website::query()
+        $query = Website::query()
             ->where('user_id', $user->id)
-            ->where('domain', $normalized)
-            ->exists();
+            ->where('domain', $normalized);
 
-        if ($exists) {
+        if ($ignoreWebsiteId) {
+            $query->whereKeyNot($ignoreWebsiteId);
+        }
+
+        if ($query->exists()) {
             throw ValidationException::withMessages([
                 'domain' => 'This merchant already has a website with this domain.',
             ]);

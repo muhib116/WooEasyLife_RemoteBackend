@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\AccessToken;
+use App\Models\CourierConfiguration;
+use App\Models\LicenseCourierAccount;
 use App\Models\MerchantEmployee;
 use App\Models\User;
 use App\Models\UserBusiness;
@@ -64,7 +66,89 @@ class WebsiteAggregatorService
             $results->push($this->buildWebsite($domain, $packages, $tokens, $employees));
         }
 
-        return $results->values()->all();
+        return $this->attachCouriers($user, $results->values()->all());
+    }
+
+    /**
+     * Read-only courier chips for admin. Does not change how configs are saved.
+     *
+     * @param  array<int, array<string, mixed>>  $websites
+     * @return array<int, array<string, mixed>>
+     */
+    private function attachCouriers(User $user, array $websites): array
+    {
+        $partnerLabels = [
+            'steadfast' => 'SteadFast',
+            'pathao' => 'Pathao',
+            'redx' => 'RedX',
+        ];
+
+        $accountPartners = CourierConfiguration::query()
+            ->where('user_id', $user->id)
+            ->whereIn('slug', array_keys($partnerLabels))
+            ->pluck('slug')
+            ->map(fn ($slug) => strtolower(trim((string) $slug)))
+            ->unique()
+            ->values()
+            ->all();
+
+        $licenseIds = collect($websites)
+            ->flatMap(fn (array $website) => collect($website['licenses'] ?? [])->pluck('id'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $licensePartners = [];
+
+        if ($licenseIds !== []) {
+            $links = LicenseCourierAccount::query()
+                ->whereIn('access_token_id', $licenseIds)
+                ->where('is_current', true)
+                ->with('courierAccount:id,partner')
+                ->get();
+
+            foreach ($links as $link) {
+                $partner = strtolower(trim((string) ($link->courierAccount?->partner ?? '')));
+                if ($partner === '' || ! isset($partnerLabels[$partner])) {
+                    continue;
+                }
+
+                $licensePartners[(int) $link->access_token_id][] = $partner;
+            }
+        }
+
+        return array_map(function (array $website) use ($partnerLabels, $accountPartners, $licensePartners) {
+            $connected = [];
+
+            foreach ($website['licenses'] ?? [] as $license) {
+                foreach ($licensePartners[(int) ($license['id'] ?? 0)] ?? [] as $partner) {
+                    $connected[$partner] = 'license';
+                }
+            }
+
+            $couriers = [];
+
+            foreach ($partnerLabels as $partner => $label) {
+                if (isset($connected[$partner])) {
+                    $couriers[] = [
+                        'partner' => $partner,
+                        'label' => $label,
+                        'scope' => 'license',
+                    ];
+                } elseif (in_array($partner, $accountPartners, true)) {
+                    $couriers[] = [
+                        'partner' => $partner,
+                        'label' => $label,
+                        'scope' => 'account',
+                    ];
+                }
+            }
+
+            $website['couriers'] = $couriers;
+
+            return $website;
+        }, $websites);
     }
 
     private function collectDomains(Collection $packages, Collection $tokens, Collection $businesses): Collection

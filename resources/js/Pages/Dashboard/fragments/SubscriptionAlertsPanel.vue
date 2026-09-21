@@ -69,12 +69,15 @@
                         format="severity"
                     />
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <Link
+                            :href="route('users.websites', alert.user_id)"
+                            class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
+                        >
                             {{ alert.user_name }}
                             <span class="font-normal text-gray-500 dark:text-gray-400">
                                 · {{ alert.domain }}
                             </span>
-                        </p>
+                        </Link>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                             {{ alert.message }}
                         </p>

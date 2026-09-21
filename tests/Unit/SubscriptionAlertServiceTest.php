@@ -94,6 +94,34 @@ class SubscriptionAlertServiceTest extends TestCase
         );
     }
 
+    public function test_admin_alert_feed_includes_expired_subscription_when_user_status_is_not_selected(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+
+        UserPackage::create([
+            'title' => 'Standard',
+            'domain' => 'shop.example.com',
+            'user_id' => $user->id,
+            'package_hub_id' => 1,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 50,
+            'total_order_handled' => 50,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+            'expires_at' => now()->subDay(),
+        ]);
+
+        $feed = app(SubscriptionAlertService::class)->adminAlertFeed(50);
+
+        $this->assertTrue(
+            $feed->contains(fn (array $alert) => $alert['type'] === 'subscription_expired'
+                && $alert['user_id'] === $user->id
+                && $alert['domain'] === 'shop.example.com')
+        );
+    }
+
     public function test_collects_pending_payment_alert(): void
     {
         [$user, $token] = $this->createMerchantWithToken();

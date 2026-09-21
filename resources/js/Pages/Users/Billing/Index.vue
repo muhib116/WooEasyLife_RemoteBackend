@@ -117,7 +117,7 @@
                     <Column field="total_order_can_handle" header="Quota" />
                     <Column field="expires_at" header="Expires">
                         <template #body="{ data }">
-                            {{ data.expires_at || "—" }}
+                            {{ data.expires_at ? dateFormat(data.expires_at) : "—" }}
                         </template>
                     </Column>
                 </DataTable>

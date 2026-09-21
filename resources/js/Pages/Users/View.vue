@@ -172,6 +172,57 @@
                     icon-class="text-amber-600 dark:text-amber-400"
                 />
             </div>
+
+            <PageCard
+                v-if="websiteHealth.length"
+                title="Website health"
+                :description="`${websiteHealth.length} store${websiteHealth.length === 1 ? '' : 's'}`"
+            >
+                <ul class="space-y-3">
+                    <li
+                        v-for="site in websiteHealth"
+                        :key="site.domain"
+                        class="rounded-xl border border-gray-100 px-4 py-3 dark:border-gray-800"
+                    >
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="truncate font-medium text-gray-900 dark:text-white">
+                                    {{ site.domain }}
+                                </p>
+                                <p
+                                    v-if="site.issues?.length"
+                                    class="mt-0.5 text-xs text-amber-700 dark:text-amber-300"
+                                >
+                                    {{ site.issues[0] }}
+                                </p>
+                                <p
+                                    v-else
+                                    class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{ courierSummary(site) }}
+                                </p>
+                            </div>
+                            <StatusBadge
+                                :label="healthStatusLabel(site.status)"
+                                :variant="healthStatusVariant(site.status)"
+                                format="none"
+                            />
+                        </div>
+                    </li>
+                </ul>
+                <div class="mt-4">
+                    <Link :href="route('users.websites', user.id)">
+                        <Button
+                            label="Open websites"
+                            icon="pi pi-globe"
+                            size="small"
+                            severity="secondary"
+                            outlined
+                            as="span"
+                        />
+                    </Link>
+                </div>
+            </PageCard>
         </div>
 
         <UserForm
@@ -195,6 +246,10 @@ import UserAvatar from "./fragments/UserAvatar.vue";
 import SetupChecklist from "./fragments/SetupChecklist.vue";
 import UserForm from "./fragments/UserForm.vue";
 import { formatUserRoleLabel } from "@/utils/formatLabels";
+import {
+    healthStatusLabel,
+    healthStatusVariant,
+} from "@/utils/websiteSubscription";
 
 defineOptions({
     name: "UserView",
@@ -210,7 +265,34 @@ const props = defineProps<{
         needs_wizard?: boolean;
         steps: any[];
     };
+    websiteHealth?: Array<{
+        domain: string;
+        status: string;
+        issues: string[];
+        expires_at?: string | null;
+        couriers?: Array<{ partner: string; label: string; scope: string }>;
+    }>;
 }>();
+
+const websiteHealth = computed(() => props.websiteHealth ?? []);
+
+const courierSummary = (site: {
+    couriers?: Array<{ label: string; scope: string }>;
+}) => {
+    const couriers = site.couriers ?? [];
+
+    if (!couriers.length) {
+        return "No courier connected";
+    }
+
+    return couriers
+        .map((courier) =>
+            courier.scope === "account"
+                ? `${courier.label} (account)`
+                : courier.label,
+        )
+        .join(" · ");
+};
 
 const showForm = ref(false);
 

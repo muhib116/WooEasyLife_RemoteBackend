@@ -104,13 +104,22 @@
                     </Column>
                     <Column header="Actions">
                         <template #body="{ data }">
-                            <Link
-                                :href="route('users.billing', data.user_id)"
-                                class="text-theme-xs inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-slate-800"
-                            >
-                                Billing
-                                <Icon name="PhArrowRight" class="text-sm" />
-                            </Link>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <Link
+                                    :href="route('users.websites', data.user_id)"
+                                    class="text-theme-xs inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-slate-800"
+                                >
+                                    Websites
+                                    <Icon name="PhArrowRight" class="text-sm" />
+                                </Link>
+                                <Link
+                                    :href="route('users.billing', data.user_id)"
+                                    class="text-theme-xs inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-slate-800"
+                                >
+                                    Billing
+                                    <Icon name="PhArrowRight" class="text-sm" />
+                                </Link>
+                            </div>
                         </template>
                     </Column>
                 </DataTable>

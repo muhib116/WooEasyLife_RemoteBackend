@@ -1,22 +1,27 @@
 <template>
     <form class="flex flex-col gap-5" @submit.prevent="$emit('submit')">
         <p
-            class="rounded-lg border border-gray-100 bg-slate-50 px-3 py-2.5 text-sm text-gray-600 dark:border-gray-800 dark:bg-slate-900/40 dark:text-gray-300"
+            class="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200"
         >
-            Update store details for this website. The store domain is fixed because it is tied to subscription and license records.
+            Changing the store domain keeps the same plan and license key. The merchant must use that same key on the new website.
         </p>
 
         <FormSection title="Store identity" step="1">
             <div class="space-y-4">
                 <div class="space-y-1">
-                    <label class="text-sm font-medium">Store domain</label>
+                    <label for="website_domain" class="text-sm font-medium">Store domain</label>
                     <InputText
-                        :model-value="form.domain"
+                        id="website_domain"
+                        v-model="form.domain"
                         class="!w-full"
-                        disabled
+                        placeholder="shop.example.com"
+                        :invalid="Boolean(form.errors.domain)"
                     />
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Domain cannot be changed here. Create a new website to onboard a different store.
+                        Use this when the merchant moved or replaced their store URL. Do not change it for a second shop — add a new website instead.
+                    </p>
+                    <p v-if="form.errors.domain" class="text-sm text-rose-500">
+                        {{ form.errors.domain }}
                     </p>
                 </div>
 

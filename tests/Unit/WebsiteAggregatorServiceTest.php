@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\AccessToken;
+use App\Models\CourierConfiguration;
 use App\Models\MerchantEmployee;
 use App\Models\Role;
 use App\Models\User;
@@ -269,5 +270,64 @@ class WebsiteAggregatorServiceTest extends TestCase
 
         $this->assertSame(1, $shopB['employee_count']);
         $this->assertSame('All Websites Staff', $shopB['employees'][0]['name']);
+    }
+
+    public function test_attaches_account_level_courier_without_changing_health(): void
+    {
+        $user = User::create([
+            'name' => 'Courier Merchant',
+            'email' => 'courier-merchant@example.com',
+            'phone' => '01700000044',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        Website::create([
+            'user_id' => $user->id,
+            'domain' => 'courier.example.com',
+            'status' => true,
+        ]);
+
+        UserPackage::create([
+            'title' => 'Standard',
+            'domain' => 'courier.example.com',
+            'user_id' => $user->id,
+            'package_hub_id' => 1,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 50,
+            'total_order_handled' => 50,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+        ]);
+
+        AccessToken::unguarded(function () use ($user) {
+            AccessToken::create([
+                'tokenable_type' => User::class,
+                'tokenable_id' => $user->id,
+                'name' => 'License',
+                'token' => hash('sha256', 'courier-token'),
+                'domain' => 'courier.example.com',
+                'status' => true,
+                'last_used_at' => now(),
+            ]);
+        });
+
+        CourierConfiguration::create([
+            'user_id' => $user->id,
+            'title' => 'SteadFast',
+            'slug' => 'steadfast',
+            'api_key' => 'demo-key',
+            'secret_key' => 'demo-secret',
+            'is_active' => true,
+        ]);
+
+        $websites = app(WebsiteAggregatorService::class)->forUser($user);
+
+        $this->assertSame('connected', $websites[0]['health']['status']);
+        $this->assertSame('steadfast', $websites[0]['couriers'][0]['partner']);
+        $this->assertSame('account', $websites[0]['couriers'][0]['scope']);
     }
 }

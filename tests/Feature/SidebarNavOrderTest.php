@@ -63,7 +63,6 @@ it('allows roles.manage admins to save sidebar order', function () {
                 'Plans & Billing',
                 'Tutorials',
                 'Media Library',
-                'Subscription Alerts',
             ],
         ],
         'children' => [
@@ -117,7 +116,9 @@ it('strips unknown titles and appends missing catalog entries', function () {
         ->and(array_search('Blog Posts', $order['items']['Platform'], true))
         ->toBeLessThan(array_search('Settings', $order['items']['Platform'], true))
         ->and($order['children']['Plans & Billing'])->not->toContain('Fake Child')
-        ->and($order['children']['Plans & Billing'][0])->toBe('Pricing Plans');
+        ->and($order['children']['Plans & Billing'][0])->toBe('Pricing Plans')
+        ->and($order['items']['Platform'])->not->toContain('Subscription Alerts')
+        ->and($order['children']['Merchants'])->toContain('Subscription Alerts');
 });
 
 it('preserves hidden platform items when a partial item list is saved', function () {
@@ -133,7 +134,6 @@ it('preserves hidden platform items when a partial item list is saved', function
                 'Plans & Billing',
                 'Tutorials',
                 'Media Library',
-                'Subscription Alerts',
             ],
         ],
     ]);
@@ -152,7 +152,6 @@ it('preserves hidden platform items when a partial item list is saved', function
             'Plans & Billing',
             'Tutorials',
             'Media Library',
-            'Subscription Alerts',
         ]);
 });
 
