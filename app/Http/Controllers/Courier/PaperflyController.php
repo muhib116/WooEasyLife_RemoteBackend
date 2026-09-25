@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
-use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierConfigurationResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -15,8 +15,9 @@ class PaperflyController extends Controller
     protected $apiKey;
     protected $secretKey;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected CourierConfigurationResolver $courierConfigurations,
+    ) {
         $this->baseUrl = 'https://portal.packzy.com/api/v1';
         $this->apiKey = 'j2a4jnjre3fv87rg41yyolpmlzu7os80';
         $this->secretKey = 'rmxck4fxysvp8u3nwjcfgm3t';
@@ -24,9 +25,7 @@ class PaperflyController extends Controller
 
     private function getConfig()
     {
-        $config = CourierConfiguration::where('user_id', Auth::id())
-            ->where('slug', 'steadfast')
-            ->first();
+        $config = $this->courierConfigurations->forUser((int) Auth::id(), 'steadfast');
 
         if (!$config || !$config->api_key || !$config->secret_key) {
             return false;

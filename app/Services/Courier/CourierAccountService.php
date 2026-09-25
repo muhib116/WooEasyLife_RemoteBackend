@@ -198,10 +198,7 @@ class CourierAccountService
     public function configurationForAccount(int $accountId, int $userId, string $partner): ?CourierConfiguration
     {
         if ($accountId <= 0) {
-            return CourierConfiguration::query()
-                ->where('user_id', $userId)
-                ->where('slug', strtolower(trim($partner)))
-                ->first();
+            return app(CourierConfigurationResolver::class)->forUser($userId, $partner);
         }
 
         $account = CourierAccount::query()->find($accountId);
@@ -213,9 +210,6 @@ class CourierAccountService
             return CourierConfiguration::query()->find($account->courier_configuration_id);
         }
 
-        return CourierConfiguration::query()
-            ->where('user_id', $userId)
-            ->where('slug', strtolower(trim($partner)))
-            ->first();
+        return app(CourierConfigurationResolver::class)->forUser($userId, $partner);
     }
 }

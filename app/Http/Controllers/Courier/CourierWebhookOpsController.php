@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
-use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierConfigurationResolver;
 use App\Services\Courier\CourierAccountService;
 use App\Services\Courier\CourierForwardRetryService;
 use App\Services\Courier\CourierShipmentService;
@@ -113,10 +113,7 @@ class CourierWebhookOpsController extends Controller
             return $this->validationErrorResponse($validator->errors());
         }
 
-        $configuration = CourierConfiguration::query()
-            ->where('user_id', Auth::id())
-            ->where('slug', $partner)
-            ->first();
+        $configuration = app(CourierConfigurationResolver::class)->forUser((int) Auth::id(), $partner);
 
         if (!$configuration) {
             return $this->errorResponse('Courier configuration not found for this partner.');

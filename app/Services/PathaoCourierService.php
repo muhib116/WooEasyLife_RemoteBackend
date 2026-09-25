@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierConfigurationResolver;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -13,6 +14,11 @@ class PathaoCourierService
     const DELIVERY_TYPE_DEMAND = 12;
     const ITEM_TYPE_DOCUMENT = 1;
     const ITEM_TYPE_PARCEL = 2;
+
+    public function __construct(
+        private CourierConfigurationResolver $configurations,
+    ) {
+    }
 
     public function getConfig(int $userId): ?CourierConfiguration
     {
@@ -36,9 +42,7 @@ class PathaoCourierService
         }
 
         if (!$config && $userId > 0) {
-            $config = CourierConfiguration::where('user_id', $userId)
-                ->where('slug', 'pathao')
-                ->first();
+            $config = $this->configurations->forUser($userId, 'pathao');
         }
 
         if (!empty($override['api_key'])) {

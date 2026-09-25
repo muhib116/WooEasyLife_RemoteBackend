@@ -3,7 +3,7 @@
 namespace App\Services\FraudCheck;
 
 use App\Models\AccessToken;
-use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierConfigurationResolver;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -57,12 +57,7 @@ class MerchantSteadfastFraudCredentialResolver
 
     public function resolveForUserId(int $userId): ?array
     {
-        $configuration = CourierConfiguration::query()
-            ->where('user_id', $userId)
-            ->where('slug', 'steadfast')
-            ->orderByDesc('is_active')
-            ->orderByDesc('id')
-            ->first();
+        $configuration = app(CourierConfigurationResolver::class)->forUser($userId, 'steadfast');
 
         if (! $configuration) {
             return null;

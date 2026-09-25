@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Courier;
 
 use App\Http\Controllers\Controller;
 use App\LogHelper;
-use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierConfigurationResolver;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\SteadfastNotificationsService;
@@ -37,15 +37,14 @@ class SteadFastController extends Controller
         protected SteadfastNotificationsService $notificationsService,
         protected MerchantSteadfastFraudCredentialResolver $steadfastPortalCredentials,
         protected MerchantPackageFeatureGate $packageFeatureGate,
+        protected CourierConfigurationResolver $courierConfigurations,
     ) {
         $this->baseUrl = 'https://portal.packzy.com/api/v1';
     }
 
     private function getConfig()
     {
-        $config = CourierConfiguration::where('user_id', Auth::id())
-            ->where('slug', 'steadfast')
-            ->first();
+        $config = $this->courierConfigurations->forUser((int) Auth::id(), 'steadfast');
 
         if (!$config || !$config->api_key || !$config->secret_key) {
             return false;

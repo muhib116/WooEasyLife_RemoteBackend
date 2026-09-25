@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Courier;
 use App\Http\Controllers\Controller;
 use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
+use App\Services\Courier\CourierConfigurationResolver;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierWebhookSettingsService;
 use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
@@ -21,6 +22,7 @@ class ConfigurationController extends Controller
 
     public function __construct(
         protected CourierAccountService $courierAccountService,
+        protected CourierConfigurationResolver $courierConfigurations,
         protected CourierWebhookSettingsService $webhookSettingsService,
         protected MerchantSteadfastFraudCredentialResolver $steadfastFraudCredentialResolver,
         protected SteadfastFraudChecker $steadfastFraudChecker,
@@ -271,14 +273,25 @@ class ConfigurationController extends Controller
             $webhookSecretOverride = trim((string) ($request->input('settings.webhook_secret') ?? ''));
         }
 
-        // Check if ID is provided for an existing record
         if ($request->filled('id')) {
-            // Update the existing record
-            $configuration = CourierConfiguration::find($request->id);
+            $configuration = CourierConfiguration::query()
+                ->where('id', (int) $request->id)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (! $configuration) {
+                return $this->errorResponse('Courier configuration not found for this account.');
+            }
+
             $configuration->update($data);
         } else {
-            // Create a new record
-            $configuration = CourierConfiguration::create($data);
+            $configuration = $this->courierConfigurations->forUser((int) Auth::id(), (string) $data['slug']);
+
+            if ($configuration) {
+                $configuration->update($data);
+            } else {
+                $configuration = CourierConfiguration::create($data);
+            }
         }
 
         if ($request->slug === 'steadfast') {
@@ -340,13 +353,12 @@ class ConfigurationController extends Controller
 
     public function getConfiguration(Request $request)
     {
-        $query = CourierConfiguration::query();
+        $query = CourierConfiguration::query()
+            ->where('user_id', Auth::id())
+            ->whereIn('slug', ['steadfast', 'pathao', 'redx'])
+            ->orderByDesc('id');
 
-        $query->whereIn('slug', ['steadfast', 'pathao', 'redx']);
-
-        $query->where(['user_id' => Auth::id()]);
-
-        $config = collect($query->get() ?? []);
+        $config = $query->get();
 
         $data = [
             'steadfast' => new \stdClass(),
@@ -355,6 +367,10 @@ class ConfigurationController extends Controller
         ];
 
         foreach ($config as $item) {
+            if (isset($data[$item->slug]) && ! $data[$item->slug] instanceof \stdClass) {
+                continue;
+            }
+
             $item->logo = CourierLogoUrl::forSlug((string) $item->slug);
 
             if ($item->slug === 'pathao' && is_array($item->settings)) {

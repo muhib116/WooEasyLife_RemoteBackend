@@ -4,7 +4,6 @@ namespace App\Services\Courier;
 
 use App\Models\AccessToken;
 use App\Models\CourierAccount;
-use App\Models\CourierConfiguration;
 use App\Models\CourierHubToken;
 use App\Models\CourierShipment;
 use App\Models\LicenseCourierAccount;
@@ -118,10 +117,10 @@ class CourierWebhookSyncService
             return $link->courierAccount;
         }
 
-        $configuration = CourierConfiguration::query()
-            ->where('user_id', $accessToken->tokenable_id)
-            ->where('slug', $partner)
-            ->first();
+        $configuration = app(CourierConfigurationResolver::class)->forUser(
+            (int) $accessToken->tokenable_id,
+            $partner
+        );
 
         if (!$configuration) {
             return null;

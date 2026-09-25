@@ -2,7 +2,7 @@
 
 namespace App\Services\Marketing;
 
-use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierConfigurationResolver;
 use App\Services\PathaoCourierService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -168,10 +168,7 @@ class CourierPublicRatesService
             ];
         }
 
-        $config = CourierConfiguration::query()
-            ->where('user_id', $userId)
-            ->where('slug', 'pathao')
-            ->first();
+        $config = app(CourierConfigurationResolver::class)->forUser($userId, 'pathao');
 
         if (! $config) {
             return [

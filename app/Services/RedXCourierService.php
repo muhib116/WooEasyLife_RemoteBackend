@@ -3,20 +3,24 @@
 namespace App\Services;
 
 use App\Models\CourierConfiguration;
+use App\Services\Courier\CourierConfigurationResolver;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Http;
 
 class RedXCourierService
 {
+    public function __construct(
+        private CourierConfigurationResolver $configurations,
+    ) {
+    }
+
     public function getConfig(int $userId): ?CourierConfiguration
     {
         if ($userId <= 0) {
             return null;
         }
 
-        $config = CourierConfiguration::where('user_id', $userId)
-            ->where('slug', 'redx')
-            ->first();
+        $config = $this->configurations->forUser($userId, 'redx');
 
         if (!$config || !$this->hasAccessToken($config)) {
             return null;
@@ -44,9 +48,7 @@ class RedXCourierService
         }
 
         if (!$config && $userId > 0) {
-            $config = CourierConfiguration::where('user_id', $userId)
-                ->where('slug', 'redx')
-                ->first();
+            $config = $this->configurations->forUser($userId, 'redx');
         }
 
         if (!empty($override['secret_key'])) {
