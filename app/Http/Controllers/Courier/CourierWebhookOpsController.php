@@ -113,7 +113,8 @@ class CourierWebhookOpsController extends Controller
             return $this->validationErrorResponse($validator->errors());
         }
 
-        $configuration = app(CourierConfigurationResolver::class)->forUser((int) Auth::id(), $partner);
+        $configuration = app(\App\Services\Courier\CourierLicenseSyncService::class)
+            ->bookingConfiguration((int) Auth::id(), $partner);
 
         if (!$configuration) {
             return $this->errorResponse('Courier configuration not found for this partner.');

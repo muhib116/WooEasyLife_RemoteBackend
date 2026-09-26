@@ -17,6 +17,7 @@ use App\Models\UserBusiness;
 use App\Models\UserPackage;
 use App\Models\Website;
 use App\Services\ApiAccessTokenResolver;
+use App\Services\Courier\CourierLicenseSyncService;
 use App\Services\DomainNormalizer;
 use App\Services\MerchantSetupService;
 use App\Services\PackagePaymentService;
@@ -204,6 +205,7 @@ class UserController extends Controller
                 'expires_at' => $accessToken->expires_at,
                 'status' => (bool) $accessToken->status,
             ];
+            $user->site = app(CourierLicenseSyncService::class)->roleForLicense($accessToken);
 
             return response()->json($user, 200);
         } catch (\Throwable $th) {

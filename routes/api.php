@@ -204,6 +204,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/list', [ConfigurationController::class, 'getList']);
             Route::post('/save-configuration', [ConfigurationController::class, 'saveConfiguration']);
             Route::post('/get-configuration', [ConfigurationController::class, 'getConfiguration']);
+            Route::post('/sync-configuration', [ConfigurationController::class, 'syncConfiguration']);
             Route::get('/webhook-settings', [ConfigurationController::class, 'getWebhookSettings']);
             Route::post('/webhook-sync', [CourierWebhookOpsController::class, 'webhookSync']);
             Route::get('/webhook-health', [CourierWebhookOpsController::class, 'webhookHealth']);

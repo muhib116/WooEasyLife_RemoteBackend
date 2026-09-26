@@ -198,7 +198,8 @@ class CourierAccountService
     public function configurationForAccount(int $accountId, int $userId, string $partner): ?CourierConfiguration
     {
         if ($accountId <= 0) {
-            return app(CourierConfigurationResolver::class)->forUser($userId, $partner);
+            return app(\App\Services\Courier\CourierLicenseSyncService::class)
+                ->bookingConfiguration($userId, $partner);
         }
 
         $account = CourierAccount::query()->find($accountId);
@@ -210,6 +211,7 @@ class CourierAccountService
             return CourierConfiguration::query()->find($account->courier_configuration_id);
         }
 
-        return app(CourierConfigurationResolver::class)->forUser($userId, $partner);
+        return app(\App\Services\Courier\CourierLicenseSyncService::class)
+            ->bookingConfiguration($userId, $partner);
     }
 }

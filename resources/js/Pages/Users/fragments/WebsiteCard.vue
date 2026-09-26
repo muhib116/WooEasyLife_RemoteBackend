@@ -249,18 +249,13 @@
                     <StatusBadge
                         v-for="courier in website.couriers"
                         :key="courier.partner"
-                        :label="
-                            courier.scope === 'account'
-                                ? `${courier.label} · shared account`
-                                : courier.label
-                        "
+                        :label="courierChipLabel(courier)"
                         :variant="courier.scope === 'account' ? 'warning' : 'info'"
                         format="none"
                     />
                 </div>
                 <p v-else class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     No SteadFast, Pathao, or RedX connected for this website.
-                    A second store currently shares the merchant-level courier account unless separate credentials are saved.
                 </p>
             </section>
 
@@ -412,6 +407,18 @@ defineEmits<{
     "edit-license": [license: any];
     "delete-license": [license: any];
 }>();
+
+function courierChipLabel(courier: { label?: string; scope?: string; sync_source_domain?: string | null }) {
+    if (courier.scope === "synced") {
+        return `${courier.label} · synced with ${courier.sync_source_domain || "primary website"}`;
+    }
+
+    if (courier.scope === "account") {
+        return `${courier.label} · shared account`;
+    }
+
+    return courier.label || "";
+}
 
 const otpSms = computed(() => {
     const raw = props.website?.otp_sms ?? {};

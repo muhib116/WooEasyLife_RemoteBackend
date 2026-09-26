@@ -25,7 +25,8 @@ class PaperflyController extends Controller
 
     private function getConfig()
     {
-        $config = $this->courierConfigurations->forUser((int) Auth::id(), 'steadfast');
+        $config = app(\App\Services\Courier\CourierLicenseSyncService::class)
+            ->bookingConfiguration((int) Auth::id(), 'steadfast');
 
         if (!$config || !$config->api_key || !$config->secret_key) {
             return false;

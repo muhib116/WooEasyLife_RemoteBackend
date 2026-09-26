@@ -117,10 +117,8 @@ class CourierWebhookSyncService
             return $link->courierAccount;
         }
 
-        $configuration = app(CourierConfigurationResolver::class)->forUser(
-            (int) $accessToken->tokenable_id,
-            $partner
-        );
+        $configuration = app(\App\Services\Courier\CourierLicenseSyncService::class)
+            ->bookingConfiguration((int) $accessToken->tokenable_id, $partner);
 
         if (!$configuration) {
             return null;

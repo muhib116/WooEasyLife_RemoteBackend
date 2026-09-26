@@ -42,7 +42,8 @@ class PathaoCourierService
         }
 
         if (!$config && $userId > 0) {
-            $config = $this->configurations->forUser($userId, 'pathao');
+            $config = app(\App\Services\Courier\CourierLicenseSyncService::class)
+                ->bookingConfiguration($userId, 'pathao');
         }
 
         if (!empty($override['api_key'])) {

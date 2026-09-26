@@ -57,7 +57,8 @@ class MerchantSteadfastFraudCredentialResolver
 
     public function resolveForUserId(int $userId): ?array
     {
-        $configuration = app(CourierConfigurationResolver::class)->forUser($userId, 'steadfast');
+        $configuration = app(\App\Services\Courier\CourierLicenseSyncService::class)
+            ->bookingConfiguration($userId, 'steadfast');
 
         if (! $configuration) {
             return null;

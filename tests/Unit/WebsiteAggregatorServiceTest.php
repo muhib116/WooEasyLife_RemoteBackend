@@ -328,6 +328,66 @@ class WebsiteAggregatorServiceTest extends TestCase
 
         $this->assertSame('connected', $websites[0]['health']['status']);
         $this->assertSame('steadfast', $websites[0]['couriers'][0]['partner']);
-        $this->assertSame('account', $websites[0]['couriers'][0]['scope']);
+        $this->assertSame('own', $websites[0]['couriers'][0]['scope']);
+    }
+
+    public function test_a_second_website_does_not_inherit_the_primary_courier_chip(): void
+    {
+        $user = User::create([
+            'name' => 'Two Stores',
+            'email' => 'two-stores@example.com',
+            'phone' => '01700000045',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $primary = Website::create([
+            'user_id' => $user->id,
+            'domain' => 'primary.example.com',
+            'status' => true,
+            'is_primary' => true,
+        ]);
+        $second = Website::create([
+            'user_id' => $user->id,
+            'domain' => 'second.example.com',
+            'status' => true,
+            'is_primary' => false,
+        ]);
+
+        AccessToken::unguarded(function () use ($user, $primary, $second) {
+            AccessToken::create([
+                'tokenable_type' => User::class,
+                'tokenable_id' => $user->id,
+                'name' => 'Primary',
+                'token' => hash('sha256', 'primary-token'),
+                'domain' => 'primary.example.com',
+                'website_id' => $primary->id,
+                'status' => true,
+            ]);
+            AccessToken::create([
+                'tokenable_type' => User::class,
+                'tokenable_id' => $user->id,
+                'name' => 'Second',
+                'token' => hash('sha256', 'second-token'),
+                'domain' => 'second.example.com',
+                'website_id' => $second->id,
+                'status' => true,
+            ]);
+        });
+
+        CourierConfiguration::create([
+            'user_id' => $user->id,
+            'title' => 'SteadFast',
+            'slug' => 'steadfast',
+            'api_key' => 'primary-key',
+            'secret_key' => 'primary-secret',
+            'is_active' => true,
+        ]);
+
+        $websites = collect(app(WebsiteAggregatorService::class)->forUser($user))->keyBy('domain');
+
+        $this->assertSame('own', $websites->get('primary.example.com')['couriers'][0]['scope']);
+        $this->assertSame([], $websites->get('second.example.com')['couriers']);
     }
 }

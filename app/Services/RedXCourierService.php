@@ -20,7 +20,8 @@ class RedXCourierService
             return null;
         }
 
-        $config = $this->configurations->forUser($userId, 'redx');
+        $config = app(\App\Services\Courier\CourierLicenseSyncService::class)
+            ->bookingConfiguration($userId, 'redx');
 
         if (!$config || !$this->hasAccessToken($config)) {
             return null;
@@ -48,7 +49,8 @@ class RedXCourierService
         }
 
         if (!$config && $userId > 0) {
-            $config = $this->configurations->forUser($userId, 'redx');
+            $config = app(\App\Services\Courier\CourierLicenseSyncService::class)
+                ->bookingConfiguration($userId, 'redx');
         }
 
         if (!empty($override['secret_key'])) {

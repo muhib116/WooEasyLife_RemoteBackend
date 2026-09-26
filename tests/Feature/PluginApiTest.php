@@ -81,6 +81,8 @@ class PluginApiTest extends TestCase
             ->assertJsonPath('active_package.remaining_order', 75)
             ->assertJsonPath('active_package.total_order_can_handle', 100)
             ->assertJsonPath('active_package.title', 'Standard')
+            ->assertJsonPath('site.is_primary', true)
+            ->assertJsonPath('site.has_other_sites', false)
             ->assertJsonStructure([
                 'id',
                 'name',

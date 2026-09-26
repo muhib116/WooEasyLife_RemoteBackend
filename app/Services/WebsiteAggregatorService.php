@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AccessToken;
 use App\Models\CourierConfiguration;
+use App\Models\CourierLicenseLink;
 use App\Models\LicenseCourierAccount;
 use App\Models\MerchantEmployee;
 use App\Models\User;
@@ -11,6 +12,7 @@ use App\Models\UserBusiness;
 use App\Models\UserPackage;
 use App\Models\Website;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class WebsiteAggregatorService
 {
@@ -118,31 +120,72 @@ class WebsiteAggregatorService
             }
         }
 
-        return array_map(function (array $website) use ($partnerLabels, $accountPartners, $licensePartners) {
+        $linksReady = Schema::hasTable('courier_license_links');
+        $syncByToken = [];
+        $primaryDomain = null;
+
+        if ($linksReady && $licenseIds !== []) {
+            $primaryDomain = Website::query()
+                ->where('user_id', $user->id)
+                ->where('is_primary', true)
+                ->value('domain');
+
+            $syncRows = CourierLicenseLink::query()
+                ->whereIn('access_token_id', $licenseIds)
+                ->whereIn('slug', array_keys($partnerLabels))
+                ->get(['access_token_id', 'slug', 'synced']);
+
+            foreach ($syncRows as $row) {
+                $syncByToken[(int) $row->access_token_id][strtolower((string) $row->slug)] = (bool) $row->synced;
+            }
+        }
+
+        $singleWebsite = count($websites) <= 1;
+
+        return array_map(function (array $website) use ($partnerLabels, $accountPartners, $licensePartners, $linksReady, $syncByToken, $primaryDomain, $singleWebsite) {
             $connected = [];
+            $syncState = [];
 
             foreach ($website['licenses'] ?? [] as $license) {
-                foreach ($licensePartners[(int) ($license['id'] ?? 0)] ?? [] as $partner) {
-                    $connected[$partner] = 'license';
+                $tokenId = (int) ($license['id'] ?? 0);
+
+                foreach ($syncByToken[$tokenId] ?? [] as $partner => $synced) {
+                    $connected[$partner] = true;
+                    $syncState[$partner] = $synced ? 'synced' : 'own';
+                }
+
+                foreach ($licensePartners[$tokenId] ?? [] as $partner) {
+                    if (! isset($connected[$partner])) {
+                        $connected[$partner] = true;
+                        $syncState[$partner] = 'license';
+                    }
                 }
             }
 
             $couriers = [];
 
             foreach ($partnerLabels as $partner => $label) {
-                if (isset($connected[$partner])) {
-                    $couriers[] = [
-                        'partner' => $partner,
-                        'label' => $label,
-                        'scope' => 'license',
-                    ];
-                } elseif (in_array($partner, $accountPartners, true)) {
-                    $couriers[] = [
-                        'partner' => $partner,
-                        'label' => $label,
-                        'scope' => 'account',
-                    ];
+                if (! isset($connected[$partner])) {
+                    if (! in_array($partner, $accountPartners, true)) {
+                        continue;
+                    }
+
+                    if (! $linksReady) {
+                        $syncState[$partner] = 'account';
+                    } elseif ($singleWebsite || ! empty($website['is_primary'])) {
+                        $syncState[$partner] = 'own';
+                    } else {
+                        continue;
+                    }
                 }
+
+                $scope = $syncState[$partner] ?? 'own';
+                $couriers[] = [
+                    'partner' => $partner,
+                    'label' => $label,
+                    'scope' => $scope,
+                    'sync_source_domain' => $scope === 'synced' ? $primaryDomain : null,
+                ];
             }
 
             $website['couriers'] = $couriers;

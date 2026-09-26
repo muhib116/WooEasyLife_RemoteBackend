@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CourierConfiguration;
 use App\Services\Courier\CourierAccountService;
 use App\Services\Courier\CourierConfigurationResolver;
+use App\Services\Courier\CourierLicenseSyncService;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierWebhookSettingsService;
 use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
@@ -23,6 +24,7 @@ class ConfigurationController extends Controller
     public function __construct(
         protected CourierAccountService $courierAccountService,
         protected CourierConfigurationResolver $courierConfigurations,
+        protected CourierLicenseSyncService $courierLicenseSync,
         protected CourierWebhookSettingsService $webhookSettingsService,
         protected MerchantSteadfastFraudCredentialResolver $steadfastFraudCredentialResolver,
         protected SteadfastFraudChecker $steadfastFraudChecker,
@@ -273,25 +275,36 @@ class ConfigurationController extends Controller
             $webhookSecretOverride = trim((string) ($request->input('settings.webhook_secret') ?? ''));
         }
 
-        if ($request->filled('id')) {
-            $configuration = CourierConfiguration::query()
-                ->where('id', (int) $request->id)
-                ->where('user_id', Auth::id())
-                ->first();
+        $target = $this->courierLicenseSync->resolveSaveTarget(
+            (int) Auth::id(),
+            (string) $data['slug'],
+            $request->filled('id') ? (int) $request->id : null,
+            $data
+        );
 
-            if (! $configuration) {
-                return $this->errorResponse('Courier configuration not found for this account.');
-            }
+        if (($target['action'] ?? '') === 'reject') {
+            return $this->errorResponse('Courier configuration not found for this account.');
+        }
 
+        if (($target['action'] ?? '') === 'noop') {
+            $configuration = $target['configuration'];
+        } elseif (($target['action'] ?? '') === 'update' && $target['configuration']) {
+            $configuration = $target['configuration'];
             $configuration->update($data);
         } else {
-            $configuration = $this->courierConfigurations->forUser((int) Auth::id(), (string) $data['slug']);
-
-            if ($configuration) {
-                $configuration->update($data);
-            } else {
-                $configuration = CourierConfiguration::create($data);
+            if (! empty($target['own_token']) && ! $this->courierLicenseSync->present((int) Auth::id(), (string) $data['slug'])['is_primary_site']) {
+                $data['access_token_id'] = $target['own_token']->id;
             }
+            $configuration = CourierConfiguration::create($data);
+        }
+
+        if (($target['action'] ?? '') !== 'noop' && ! empty($target['own_token'])) {
+            $this->courierLicenseSync->markOwned(
+                (int) Auth::id(),
+                $target['own_token'],
+                $configuration,
+                (string) $data['slug']
+            );
         }
 
         if ($request->slug === 'steadfast') {
@@ -333,6 +346,14 @@ class ConfigurationController extends Controller
         $responseData['logo'] = CourierLogoUrl::forSlug((string) $configuration->slug);
         $responseData['webhook_settings'] = $webhookSettings;
         $responseData['credentials_changed'] = (bool) ($sync['credentials_changed'] ?? false);
+        $presented = $this->courierLicenseSync->present((int) Auth::id(), (string) $configuration->slug);
+        if ($presented['synced']) {
+            unset($responseData['id']);
+        }
+        $responseData['synced'] = (bool) $presented['synced'];
+        $responseData['can_sync'] = (bool) $presented['can_sync'];
+        $responseData['is_primary_site'] = (bool) $presented['is_primary_site'];
+        $responseData['sync_source_domain'] = $presented['sync_source_domain'];
 
         return $this->successResponse($responseData, 'Configuration saved successfully!');
     }
@@ -353,46 +374,78 @@ class ConfigurationController extends Controller
 
     public function getConfiguration(Request $request)
     {
-        $query = CourierConfiguration::query()
-            ->where('user_id', Auth::id())
-            ->whereIn('slug', ['steadfast', 'pathao', 'redx'])
-            ->orderByDesc('id');
+        $data = [];
 
-        $config = $query->get();
+        foreach (['steadfast', 'pathao', 'redx'] as $slug) {
+            $data[$slug] = $this->presentCourierConfiguration($slug);
+        }
 
-        $data = [
-            'steadfast' => new \stdClass(),
-            'pathao' => new \stdClass(),
-            'redx' => new \stdClass(),
+        return $this->successResponse($data);
+    }
+
+    public function syncConfiguration(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->input('slug', '')));
+
+        if (! in_array($slug, ['steadfast', 'pathao', 'redx'], true)) {
+            return $this->errorResponse('Invalid courier partner.');
+        }
+
+        try {
+            $this->courierLicenseSync->syncCurrentToken((int) Auth::id(), $slug);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->errorResponse($exception->getMessage());
+        }
+
+        return $this->successResponse(
+            $this->presentCourierConfiguration($slug),
+            'Courier configuration synced from the primary website.'
+        );
+    }
+
+    private function presentCourierConfiguration(string $slug): array
+    {
+        $presented = $this->courierLicenseSync->present((int) Auth::id(), $slug);
+        $configuration = $presented['configuration'];
+        $meta = [
+            'synced' => (bool) $presented['synced'],
+            'can_sync' => (bool) $presented['can_sync'],
+            'is_primary_site' => (bool) $presented['is_primary_site'],
+            'is_primary_website' => (bool) ($presented['is_primary_website'] ?? $presented['is_primary_site']),
+            'has_other_sites' => (bool) ($presented['has_other_sites'] ?? false),
+            'sync_source_domain' => $presented['sync_source_domain'],
         ];
 
-        foreach ($config as $item) {
-            if (isset($data[$item->slug]) && ! $data[$item->slug] instanceof \stdClass) {
-                continue;
-            }
-
-            $item->logo = CourierLogoUrl::forSlug((string) $item->slug);
-
-            if ($item->slug === 'pathao' && is_array($item->settings)) {
-                $settings = $item->settings;
-                unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
-                $settings['password'] = '';
-                $item->settings = $settings;
-            }
-
-            if ($item->slug === 'steadfast' && is_array($item->settings)) {
-                $settings = $item->settings;
-                $settings['password'] = '';
-                $item->settings = $settings;
-            }
-
-            if ($item->slug === 'redx') {
-                $item->secret_key = '';
-            }
-
-            $data[$item->slug] = $item;
+        if (! $configuration) {
+            return $meta;
         }
-        return $this->successResponse($data);
+
+        $item = $configuration->replicate();
+        if (! $presented['synced']) {
+            $item->id = $configuration->id;
+            $item->exists = true;
+        }
+
+        $item->logo = CourierLogoUrl::forSlug($slug);
+
+        if ($slug === 'pathao' && is_array($item->settings)) {
+            $settings = $item->settings;
+            unset($settings['access_token'], $settings['refresh_token'], $settings['expires_at']);
+            $settings['password'] = '';
+            $item->settings = $settings;
+        }
+
+        if ($slug === 'steadfast' && is_array($item->settings)) {
+            $settings = $item->settings;
+            $settings['password'] = '';
+            $item->settings = $settings;
+        }
+
+        if ($slug === 'redx') {
+            $item->secret_key = '';
+        }
+
+        return array_merge($item->toArray(), $meta);
     }
 
     private function pathaoStringSetting($value, $fallback = '')
