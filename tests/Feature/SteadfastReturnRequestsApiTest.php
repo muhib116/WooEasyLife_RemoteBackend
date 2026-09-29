@@ -541,4 +541,95 @@ HTML;
             ->assertJsonPath('data.status', 'confirmed')
             ->assertJsonPath('data.verify_status', 1);
     }
+
+    public function test_list_parses_sf_creq_cards_without_using_parcel_number_as_request_id(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $pendingHtml = <<<'HTML'
+<html><head><meta name="csrf-token" content="csrf-test"></head><body>
+<ul>
+<li class="sf-creq-item" data-sf-creq="22315485">
+  <div class="sf-creq-item__who">
+    <a class="sf-parcels__id" href="https://www.steadfast.com.bd/user/consignment/299879646">#299879646</a>
+    <b>Enamul</b>
+    <span>Requested 29 Sep 2026, 08:29 PM</span>
+    <span>Entered 23 Sep 2026</span>
+  </div>
+  <p class="sf-creq-item__reason"><span>"Customer asked to cancel"</span></p>
+  <span class="sf-creq-item__cod">COD ৳650</span>
+</li>
+<li class="sf-creq-item" data-sf-creq="22298083">
+  <div class="sf-creq-item__who">
+    <a class="sf-parcels__id" href="https://www.steadfast.com.bd/user/consignment/298712355">#298712355</a>
+    <b>Ariful</b>
+    <span>Requested 29 Sep 2026, 06:08 PM</span>
+  </div>
+  <p class="sf-creq-item__reason is-empty"><span>No reason given.</span></p>
+  <span class="sf-creq-item__cod">COD ৳500</span>
+</li>
+</ul>
+<input id="sf-creq-date" value="2026-09-30">
+</body></html>
+HTML;
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) use ($pendingHtml) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+
+            if (str_contains($url, '/login') && $request->method() === 'GET') {
+                return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+            }
+
+            if (str_contains($url, '/login') && $request->method() === 'POST') {
+                return Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+            }
+
+            if (str_contains($url, '/user/consignment/cancel-requests/show/0')) {
+                return Http::response($pendingHtml, 200);
+            }
+
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response('<html><body></body></html>', 200);
+            }
+
+            if (str_contains($url, 'latest-cancelled')) {
+                return Http::response('date-filter-should-not-run', 500);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $response = $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', [
+                'status' => 'pending',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.source', 'portal')
+            ->assertJsonPath('data.counts.pending', 2)
+            ->assertJsonPath('data.items.0.id', '22315485')
+            ->assertJsonPath('data.items.0.consignment_id', '299879646')
+            ->assertJsonPath('data.items.0.customer_name', 'Enamul')
+            ->assertJsonPath('data.items.0.reason', 'Customer asked to cancel')
+            ->assertJsonPath('data.items.0.charge', 650)
+            ->assertJsonPath('data.items.0.requested_at', '29 Sep 2026, 08:29 PM')
+            ->assertJsonPath('data.items.1.id', '22298083')
+            ->assertJsonPath('data.items.1.consignment_id', '298712355')
+            ->assertJsonPath('data.items.1.reason', '')
+            ->assertJsonPath('data.items.1.charge', 500);
+
+        $ids = collect($response->json('data.items'))->pluck('id')->all();
+        $this->assertNotContains('299879646', $ids);
+        $this->assertNotContains('298712355', $ids);
+    }
 }

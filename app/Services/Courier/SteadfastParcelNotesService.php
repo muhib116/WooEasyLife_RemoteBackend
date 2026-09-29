@@ -48,12 +48,13 @@ class SteadfastParcelNotesService
                 $credentials
             );
             $editFields = $this->fetchEditParcelFields($client, $host, $cookies, $consignmentId);
+            $snapshot = is_array($bundle['snapshot'] ?? null) ? $bundle['snapshot'] : [];
 
             return [
                 'consignment_id' => $consignmentId,
-                'merchant_note' => $editFields['note'],
-                'cus_address' => $editFields['cus_address'],
-                'cod_amount' => $editFields['cod_amount'],
+                'merchant_note' => $editFields['note'] ?? ($snapshot['note'] ?? null),
+                'cus_address' => $editFields['cus_address'] ?? ($snapshot['cus_address'] ?? null),
+                'cod_amount' => $editFields['cod_amount'] ?? ($snapshot['cod_amount'] ?? null),
                 'notes' => $bundle['notes'],
                 'rider' => $bundle['rider'],
             ];
@@ -268,8 +269,9 @@ class SteadfastParcelNotesService
         ?array $credentials = null,
     ): array {
         // Consignment page validates the session and may expose a tracking code.
-        // The Tracking Updates list is Vue-rendered in the browser, so raw HTML often
-        // lacks .step nodes — never treat a weak HTML parse as final.
+        // Current pages SSR ol.sf-parcel__timeline. Older pages used .tracking-steps,
+        // which the browser sometimes rendered after load — never treat a weak HTML
+        // parse as final when the track endpoint has a longer list.
         $path = '/user/consignment/' . rawurlencode($consignmentId);
         $page = $client->get($path, $host, $cookies, expectJson: false);
         $cookies = $client->absorbCookies($cookies, $page, $host, $credentials);
@@ -282,8 +284,12 @@ class SteadfastParcelNotesService
         $html = $page->body();
         $rider = $this->extractRiderFromHtml($html);
 
-        // 1) Structural DOM parse (only when Steadfast SSR/includes the steps).
+        // 1) Structural DOM parse. Prefer the longer of the current timeline and the old steps.
         $fromSteps = $this->parseTrackingStepsHtml($html);
+        $fromTimeline = $this->parseSfParcelTimelineHtml($html);
+        if (count($fromTimeline) > count($fromSteps)) {
+            $fromSteps = $fromTimeline;
+        }
 
         // 2) Authenticated track JSON — this is what their UI uses for the full timeline.
         $fromApi = [];
@@ -316,6 +322,7 @@ class SteadfastParcelNotesService
         return [
             'notes' => $notes,
             'rider' => $rider,
+            'snapshot' => $this->extractSfParcelSnapshot($html),
         ];
     }
 
@@ -331,6 +338,7 @@ class SteadfastParcelNotesService
         }
 
         foreach ([
+            '/<dt>\s*Tracking\s*code\s*<\/dt>\s*<dd>\s*([A-Za-z0-9_-]{4,40})\s*<\/dd>/i',
             '/Tracking\s*Code\s*:?\s*<\/?(?:span|strong|b|td|p|div)[^>]*>\s*([A-Za-z0-9_-]{4,40})/i',
             '/Tracking\s*Code\s*:?\s*([A-Za-z0-9_-]{4,40})/i',
             '/"track_id"\s*:\s*"([A-Za-z0-9_-]{4,40})"/i',
@@ -404,7 +412,10 @@ class SteadfastParcelNotesService
 
         $payload = $response->json();
         if (! is_array($payload)) {
-            $fromHtml = $this->parseTrackingStepsHtml($response->body());
+            $fromHtml = $this->parseSfParcelTimelineHtml($response->body());
+            if ($fromHtml === []) {
+                $fromHtml = $this->parseTrackingStepsHtml($response->body());
+            }
             if ($fromHtml !== []) {
                 return [
                     'notes' => $fromHtml,
@@ -614,7 +625,13 @@ class SteadfastParcelNotesService
      */
     private function parseTrackingHtml(string $html): array
     {
-        // Real Steadfast markup: date + time are separate <p> tags inside .date-time,
+        // Current parcel page: ol.sf-parcel__timeline > li > p.sf-parcel__step + time[datetime].
+        $fromTimeline = $this->parseSfParcelTimelineHtml($html);
+        if ($fromTimeline !== []) {
+            return $fromTimeline;
+        }
+
+        // Older markup: date + time are separate <p> tags inside .date-time,
         // message is <p class="txt-black"> inside .tracking_content.
         $fromSteps = $this->parseTrackingStepsHtml($html);
         if ($fromSteps !== []) {
@@ -757,6 +774,135 @@ class SteadfastParcelNotesService
     }
 
     /**
+     * Current parcel page (Sep 2026): ol.sf-parcel__timeline.
+     *
+     * @return list<array{message: string, at: ?string, source: string, rider_name?: ?string, rider_phone?: ?string}>
+     */
+    private function parseSfParcelTimelineHtml(string $html): array
+    {
+        if (! preg_match('/<ol\b[^>]*\bsf-parcel__timeline\b[^>]*>(.*?)<\/ol>/is', $html, $list)) {
+            return [];
+        }
+
+        if (! preg_match_all('/<li\b[^>]*>(.*?)<\/li>/is', (string) $list[1], $items)) {
+            return [];
+        }
+
+        $notes = [];
+        foreach ($items[1] as $inner) {
+            if (! preg_match('/<p\b[^>]*\bsf-parcel__step\b[^>]*>(.*?)<\/p>/is', (string) $inner, $step)) {
+                continue;
+            }
+
+            $message = $this->normalizeTimelineMessage((string) $step[1]);
+            if ($message === '') {
+                continue;
+            }
+
+            $at = null;
+            if (preg_match('/<time\b[^>]*\bdatetime="([^"]+)"/i', (string) $inner, $time)) {
+                $at = $this->normalizeSteadfastDatetime(html_entity_decode($time[1], ENT_QUOTES | ENT_HTML5));
+            }
+
+            $riderName = null;
+            $riderPhone = null;
+            if (preg_match('/<p\b[^>]*\bsf-parcel__who\b[^>]*>(.*?)<\/p>/is', (string) $inner, $who)) {
+                if (preg_match('/\b(0\d{9,13})\b/', (string) $who[1], $phoneMatch)) {
+                    $riderPhone = $phoneMatch[1];
+                }
+                $whoText = $this->normalizeTimelineMessage(strip_tags((string) $who[1]));
+                $whoText = preg_replace('/\b0\d{9,13}\b/', '', $whoText) ?? $whoText;
+                $whoText = trim($whoText, " \t\n\r\0\x0B·");
+                if ($whoText !== '') {
+                    $riderName = $whoText;
+                }
+            }
+
+            if ($riderName || $riderPhone) {
+                $lines = [$message];
+                if ($riderName) {
+                    $lines[] = $riderName;
+                }
+                if ($riderPhone) {
+                    $lines[] = $riderPhone;
+                }
+                $message = implode("\n", $lines);
+            }
+
+            $note = [
+                'message' => $message,
+                'at' => $at,
+                'source' => $this->classifySource($message),
+            ];
+            if ($riderName) {
+                $note['rider_name'] = $riderName;
+            }
+            if ($riderPhone) {
+                $note['rider_phone'] = $riderPhone;
+            }
+            $notes[] = $note;
+        }
+
+        return $this->uniqueNotes($notes);
+    }
+
+    /**
+     * Delivery address, COD, and merchant note shown on the parcel page.
+     *
+     * @return array{note: ?string, cus_address: ?string, cod_amount: float|int|null}
+     */
+    private function extractSfParcelSnapshot(string $html): array
+    {
+        $empty = [
+            'note' => null,
+            'cus_address' => null,
+            'cod_amount' => null,
+        ];
+
+        if (! preg_match('/\bsf-parcel\b/', $html)) {
+            return $empty;
+        }
+
+        $note = null;
+        if (preg_match(
+            '/sf-parcel__label[^>]*>\s*Note for delivery\s*<\/span>\s*<p\b[^>]*\bsf-parcel__text\b[^>]*>(.*?)<\/p>/is',
+            $html,
+            $noteMatch
+        )) {
+            $note = html_entity_decode(strip_tags((string) $noteMatch[1]), ENT_QUOTES | ENT_HTML5);
+            $note = trim(preg_replace('/\s+/u', ' ', $note) ?? $note);
+            if ($note === '') {
+                $note = null;
+            }
+        }
+
+        $address = null;
+        if (preg_match('/<div\b[^>]*\bsf-parcel__person\b[^>]*>(.*?)<\/div>/is', $html, $person)) {
+            if (preg_match('/<p\b(?![^>]*\bsf-parcel__area\b)[^>]*>(.*?)<\/p>/is', (string) $person[1], $addressMatch)) {
+                $address = $this->normalizeTimelineMessage((string) $addressMatch[1]);
+                if ($address === '') {
+                    $address = null;
+                }
+            }
+        }
+
+        $cod = null;
+        if (preg_match(
+            '/sf-parcel__money[\s\S]{0,500}?<span>\s*COD\s*<\/span>\s*<b>\s*[^\d]*([\d,]+(?:\.\d+)?)/iu',
+            $html,
+            $codMatch
+        )) {
+            $cod = $this->normalizeCodAmount(str_replace(',', '', $codMatch[1]));
+        }
+
+        return [
+            'note' => $note,
+            'cus_address' => $address,
+            'cod_amount' => $cod,
+        ];
+    }
+
+    /**
      * @return array{name: string, phone: string}|null
      */
     private function extractRiderFromHtml(string $html): ?array
@@ -771,6 +917,15 @@ class SteadfastParcelNotesService
             if (preg_match('/"phone"\s*:\s*"([^"]{5,20})"/u', $block[1], $m)) {
                 $phone = $this->normalizeTimelineMessage($m[1]);
             }
+        }
+
+        if ((! $name || ! $phone) && preg_match(
+            '/<div\b[^>]*\bsf-parcel__rider\b[^>]*>[\s\S]{0,2500}?<b>\s*([^<]{2,120}?)\s*<\/b>[\s\S]{0,400}?<span\b[^>]*\bsf-parcel__mono\b[^>]*>\s*(0\d{9,13})\s*<\/span>/iu',
+            $html,
+            $m
+        )) {
+            $name = $name ?: $this->normalizeTimelineMessage($m[1]);
+            $phone = $phone ?: $this->normalizeTimelineMessage($m[2]);
         }
 
         if ((! $name || ! $phone) && preg_match(

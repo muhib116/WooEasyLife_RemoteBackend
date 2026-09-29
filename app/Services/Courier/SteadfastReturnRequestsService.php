@@ -483,6 +483,34 @@ class SteadfastReturnRequestsService
             return '';
         }
 
+        $parcelId = preg_quote($consignmentId, '/');
+        if (preg_match('/<div\b[^>]*\bdata-id="'.$parcelId.'"[^>]*>/i', $html)
+            && preg_match('/<div\b([^>]*\bsf-parcel__creq\b[^>]*)>/i', $html, $creqTag)
+            && preg_match('/\bdata-sf-creq="(\d+)"/', (string) $creqTag[1], $detailMatch)
+        ) {
+            $id = (string) $detailMatch[1];
+            if ($id !== '' && $id !== $consignmentId) {
+                return $id;
+            }
+        }
+
+        if (preg_match_all('/<li\b([^>]*)>(.*?)<\/li>/is', $html, $cards, PREG_SET_ORDER)) {
+            foreach ($cards as $card) {
+                if (! preg_match('/\bdata-sf-creq="(\d+)"/', (string) $card[1], $idMatch)) {
+                    continue;
+                }
+                $id = (string) $idMatch[1];
+                $body = (string) $card[2];
+                $needle = '/user/consignment/'.$consignmentId;
+                if (! str_contains($body, $needle) && ! str_contains($body, '#'.$consignmentId)) {
+                    continue;
+                }
+                if ($id !== '' && $id !== $consignmentId) {
+                    return $id;
+                }
+            }
+        }
+
         if (preg_match_all('/<cancel-request\s+:item="([^"]+)"/i', $html, $itemMatches)) {
             foreach ($itemMatches[1] as $encoded) {
                 $decoded = html_entity_decode($encoded, ENT_QUOTES | ENT_HTML5);
@@ -830,8 +858,8 @@ class SteadfastReturnRequestsService
             $body = $response->body();
             $rows = $this->parseCancelRequestRows($body, $slug);
 
-            // Page uses div.tbody-row / <cancel-request> (not <tr>). If markers exist but
-            // parse yields nothing, treat as scrape failure so Packzy fallback can run.
+            // Page uses li.sf-creq-item, div.tbody-row, or <cancel-request> (not <tr>).
+            // If markers exist but parse yields nothing, treat as scrape failure so Packzy fallback can run.
             if ($rows === [] && $this->portalHtmlHasCancelRequestRows($body)) {
                 throw new RuntimeException(
                     'Failed to parse Steadfast cancel-requests rows for status '.$slug
@@ -940,13 +968,96 @@ class SteadfastReturnRequestsService
     }
 
     /**
-     * SteadFast cancel-requests UI renders div.tbody-row + <cancel-request :item="...">,
-     * not classic <table>/<tr> markup.
+     * SteadFast cancel-requests UI renders li.sf-creq-item cards, or the older
+     * div.tbody-row + <cancel-request :item="..."> markup. Classic <tr> is last.
      */
     private function portalHtmlHasCancelRequestRows(string $html): bool
     {
-        return (bool) preg_match('/<cancel-request\b/i', $html)
+        return (bool) preg_match('/\bdata-sf-creq="/i', $html)
+            || (bool) preg_match('/\bsf-creq-item\b/i', $html)
+            || (bool) preg_match('/<cancel-request\b/i', $html)
             || (bool) preg_match('/class="[^"]*\btbody-row\b/i', $html);
+    }
+
+    /**
+     * Current portal cards (Sep 2026): request id is data-sf-creq, parcel number is the consignment link.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function parseSfCreqCardRows(string $html, string $status): array
+    {
+        if (! preg_match_all('/<li\b([^>]*)>(.*?)<\/li>/is', $html, $cards, PREG_SET_ORDER)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($cards as $card) {
+            $attrs = (string) $card[1];
+            $inner = (string) $card[2];
+            if (! preg_match('/\bsf-creq-item\b/', $attrs) && ! preg_match('/\bdata-sf-creq="/', $attrs)) {
+                continue;
+            }
+            if (! preg_match('/\bdata-sf-creq="(\d+)"/', $attrs, $idMatch)) {
+                continue;
+            }
+            $requestId = (string) $idMatch[1];
+
+            $consignmentId = '';
+            if (preg_match('#/user/consignment/(\d{6,20})#', $inner, $consignmentMatch)) {
+                $consignmentId = $consignmentMatch[1];
+            } elseif (preg_match('/#(\d{6,20})\b/', $inner, $consignmentMatch)) {
+                $consignmentId = $consignmentMatch[1];
+            }
+            if ($consignmentId === '' || $requestId === '') {
+                continue;
+            }
+
+            $customer = '';
+            if (preg_match('/<b>(.*?)<\/b>/is', $inner, $nameMatch)) {
+                $customer = trim(html_entity_decode(strip_tags($nameMatch[1]), ENT_QUOTES | ENT_HTML5));
+            }
+
+            $reason = '';
+            if (preg_match('/<p\b([^>]*\bsf-creq-item__reason\b[^>]*)>(.*?)<\/p>/is', $inner, $reasonMatch)) {
+                $reasonAttrs = (string) $reasonMatch[1];
+                $reasonText = trim(html_entity_decode(strip_tags((string) $reasonMatch[2]), ENT_QUOTES | ENT_HTML5));
+                $reasonText = trim($reasonText, " \t\n\r\0\x0B\"“”");
+                $empty = str_contains($reasonAttrs, 'is-empty')
+                    || preg_match('/^no reason given\.?$/i', $reasonText) === 1;
+                if (! $empty) {
+                    $reason = $reasonText;
+                }
+            }
+
+            $charge = null;
+            if (preg_match('/sf-creq-item__cod[^>]*>\s*COD\s*[^\d]*([\d,]+(?:\.\d+)?)/iu', $inner, $codMatch)) {
+                $charge = (float) str_replace(',', '', $codMatch[1]);
+            }
+
+            $requestedAt = '';
+            if (preg_match(
+                '/Requested\s+(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4},\s+\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4},\s+\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M)/i',
+                $inner,
+                $dateMatch
+            )) {
+                $requestedAt = trim(preg_replace('/\s+/', ' ', $dateMatch[1]) ?? $dateMatch[1]);
+            }
+
+            $rows[] = [
+                'id' => $requestId,
+                'consignment_id' => $consignmentId,
+                'status' => $status,
+                'reason' => $reason,
+                'customer_name' => $customer,
+                'charge' => $charge,
+                'invoice' => '',
+                'tracking_code' => '',
+                'requested_at' => $requestedAt,
+                'updated_at' => '',
+            ];
+        }
+
+        return $rows;
     }
 
     /**
@@ -954,10 +1065,10 @@ class SteadfastReturnRequestsService
      */
     private function parseCancelRequestRows(string $html, string $status): array
     {
-        $rows = [];
+        $rows = $this->parseSfCreqCardRows($html, $status);
 
-        // 1) Preferred: Vue <cancel-request :item="{...}"> payload (full note + consignment).
-        if (preg_match_all('/<cancel-request\s+:item="([^"]+)"/i', $html, $itemMatches)) {
+        // 1) Older Vue <cancel-request :item="{...}"> payload (full note + consignment).
+        if ($rows === [] && preg_match_all('/<cancel-request\s+:item="([^"]+)"/i', $html, $itemMatches)) {
             foreach ($itemMatches[1] as $encoded) {
                 $decoded = html_entity_decode($encoded, ENT_QUOTES | ENT_HTML5);
                 $payload = json_decode($decoded, true);

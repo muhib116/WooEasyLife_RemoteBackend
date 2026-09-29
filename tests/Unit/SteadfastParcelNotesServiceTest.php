@@ -147,6 +147,59 @@ it('rejects update payload when recipient phone is missing', function () {
     expect($payload)->toBeNull();
 });
 
+it('parses the current parcel timeline, rider, and snapshot', function () {
+    $html = <<<'HTML'
+<div class="sf-parcel" data-id="299879646">
+  <div class="sf-parcel__money"><div><span>COD</span><b>৳650</b></div></div>
+  <div class="sf-parcel__person"><b>Enamul</b><p>School road</p><p class="sf-parcel__area">Sadar</p></div>
+  <div class="sf-parcel__rider"><div><b>AL AMIN</b><span class="sf-parcel__mono">01700000000</span></div></div>
+  <span class="sf-parcel__label">Note for delivery</span><p class="sf-parcel__text">-ok</p>
+  <dl class="sf-parcel__facts"><div><dt>Tracking code</dt><dd>SFR000000TESTCODE</dd></div></dl>
+  <ol class="sf-parcel__timeline">
+    <li class="is-latest"><div><p class="sf-parcel__step">Cancellation Request has been sent.</p><time datetime="2026-09-29T20:29:25+06:00">29 Sep 2026, 08:29 PM</time></div></li>
+    <li><div><p class="sf-parcel__step">Rider Note: "customer will not take it"</p><time datetime="2026-09-29T19:35:43+06:00">29 Sep 2026, 07:35 PM</time></div></li>
+    <li><div><p class="sf-parcel__step">Assigned to rider.</p><p class="sf-parcel__who">AL AMIN · <a href="tel:01700000000">01700000000</a></p><time datetime="2026-09-25T15:46:42+06:00">25 Sep 2026, 03:46 PM</time></div></li>
+  </ol>
+</div>
+HTML;
+
+    $notes = welInvokeParcelNotesMethod('parseTrackingHtml', $html);
+    $rider = welInvokeParcelNotesMethod('extractRiderFromHtml', $html);
+    $snapshot = welInvokeParcelNotesMethod('extractSfParcelSnapshot', $html);
+    $codes = welInvokeParcelNotesMethod('candidateTrackCodes', $html, '299879646', null);
+
+    expect($notes)->toHaveCount(3)
+        ->and($notes[0]['source'])->toBe('status')
+        ->and($notes[0]['message'])->toBe('Cancellation Request has been sent.')
+        ->and($notes[0]['at'])->toBe('2026-09-29 20:29:25')
+        ->and($notes[1]['source'])->toBe('rider')
+        ->and($notes[1]['message'])->toContain('Rider Note:')
+        ->and($notes[2]['source'])->toBe('assigned_rider')
+        ->and($notes[2]['rider_name'])->toBe('AL AMIN')
+        ->and($notes[2]['rider_phone'])->toBe('01700000000')
+        ->and($rider['name'])->toBe('AL AMIN')
+        ->and($rider['phone'])->toBe('01700000000')
+        ->and($snapshot['note'])->toBe('-ok')
+        ->and($snapshot['cus_address'])->toBe('School road')
+        ->and($snapshot['cod_amount'])->toBe(650)
+        ->and($codes[0])->toBe('SFR000000TESTCODE');
+});
+
+it('reads the cancel-request id from the parcel details notice', function () {
+    $html = <<<'HTML'
+<div class="sf-parcel" data-id="299879646">
+  <div class="sf-parcel__notice sf-parcel__creq" data-sf-creq="22315485"></div>
+</div>
+HTML;
+
+    $service = (new ReflectionClass(App\Services\Courier\SteadfastReturnRequestsService::class))
+        ->newInstanceWithoutConstructor();
+    $method = new ReflectionMethod(App\Services\Courier\SteadfastReturnRequestsService::class, 'extractCancelRequestItemIdFromHtml');
+    $method->setAccessible(true);
+
+    expect($method->invoke($service, $html, '299879646'))->toBe('22315485');
+});
+
 it('extracts tracking code candidates from consignment html', function () {
     $html = '<p>Tracking Code : <span>SFABC12345</span></p><a href="/user/tracking/SFABC12345">view</a>';
 
