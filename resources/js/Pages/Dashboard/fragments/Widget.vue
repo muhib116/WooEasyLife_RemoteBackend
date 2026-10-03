@@ -8,7 +8,7 @@
                     {{ title }}
                 </p>
                 <h4
-                    class="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90"
+                    class="mt-2 break-words text-xl font-bold leading-tight text-gray-800 sm:text-2xl dark:text-white/90"
                 >
                     {{ value }}
                 </h4>

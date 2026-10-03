@@ -6,12 +6,12 @@
             <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
                     <Icon name="PhGlobe" class="text-primary-500" />
-                    <h3 class="truncate font-semibold text-gray-900 dark:text-white">
+                    <h3 class="break-all font-semibold text-gray-900 dark:text-white">
                         {{ website.title && website.title !== website.domain ? website.title : website.domain }}
                     </h3>
                     <p
                         v-if="website.title && website.title !== website.domain"
-                        class="truncate text-xs text-gray-500 dark:text-gray-400"
+                        class="break-all text-xs text-gray-500 dark:text-gray-400"
                     >
                         {{ website.domain }}
                     </p>
@@ -32,7 +32,7 @@
                     :href="website.display_url"
                     target="_blank"
                     rel="noopener"
-                    class="mt-1 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+                    class="mt-1 inline-flex max-w-full items-center gap-1 break-all text-sm text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
                 >
                     {{ website.display_url }}
                     <Icon name="PhArrowSquareOut" class="text-[0.7rem]" />
@@ -45,6 +45,7 @@
                 outlined
                 rounded
                 aria-label="More actions"
+                class="!min-h-11 !min-w-11 shrink-0"
                 v-tooltip.top="'More actions'"
                 @click="$emit('menu', $event)"
             />
@@ -205,6 +206,8 @@
                                 severity="secondary"
                                 text
                                 rounded
+                                aria-label="Copy key"
+                                class="!min-h-11 !min-w-11"
                                 :loading="isRevealing(license.id)"
                                 @click="$emit('copy-license', license.id)"
                             />
@@ -215,6 +218,8 @@
                                 severity="secondary"
                                 text
                                 rounded
+                                aria-label="Edit license"
+                                class="!min-h-11 !min-w-11"
                                 @click="$emit('edit-license', license)"
                             />
                             <Button
@@ -224,6 +229,8 @@
                                 severity="danger"
                                 text
                                 rounded
+                                aria-label="Delete license"
+                                class="!min-h-11 !min-w-11"
                                 @click="$emit('delete-license', license)"
                             />
                         </div>
@@ -314,12 +321,12 @@
                 </p>
             </section>
 
-            <div class="flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
+            <div class="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
                 <Button
                     :label="primaryAction.label"
                     :icon="primaryAction.icon"
                     size="small"
-                    class="shrink-0"
+                    class="w-full !min-h-11 justify-center"
                     @click="primaryAction.run()"
                 />
                 <template v-if="website.subscription">
@@ -330,7 +337,7 @@
                         size="small"
                         severity="secondary"
                         outlined
-                        class="shrink-0"
+                        class="w-full !min-h-11 justify-center"
                         v-tooltip.top="'Reset tokens and extend expiry for a new plan period'"
                         @click="$emit('renew-plan')"
                     />
@@ -341,7 +348,7 @@
                         size="small"
                         severity="secondary"
                         outlined
-                        class="shrink-0"
+                        class="w-full !min-h-11 justify-center"
                         v-tooltip.top="'Legacy plans renew through Billing — add order quota there'"
                         @click="$emit('renew-via-billing')"
                     />
@@ -351,7 +358,7 @@
                         size="small"
                         severity="secondary"
                         outlined
-                        class="shrink-0"
+                        class="w-full !min-h-11 justify-center"
                         @click="$emit('change-plan')"
                     />
                     <Button
@@ -360,7 +367,7 @@
                         size="small"
                         severity="secondary"
                         outlined
-                        class="shrink-0"
+                        class="w-full !min-h-11 justify-center"
                         v-tooltip.top="'Customize price, tokens, duration, features, or status'"
                         @click="$emit('adjust-subscription')"
                     />

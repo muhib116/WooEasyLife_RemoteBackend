@@ -29,6 +29,7 @@
                 label="Add First Employee"
                 icon="pi pi-plus"
                 size="small"
+                class="!min-h-11"
                 @click="openCreate"
             />
         </EmptyState>

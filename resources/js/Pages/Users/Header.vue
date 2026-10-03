@@ -2,8 +2,8 @@
     <div
         class="box-bg box-color box-border rounded-2xl border px-5 py-4 shadow-sm"
     >
-        <div class="flex items-center justify-between gap-4">
-            <div class="flex min-w-0 items-center gap-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div class="flex min-w-0 items-center gap-3 sm:gap-4">
                 <UserAvatar
                     v-if="user?.name"
                     :name="user.name"
@@ -36,7 +36,7 @@
                         </template>
                     </nav>
                     <h1
-                        class="truncate text-lg font-semibold text-gray-900 dark:text-white"
+                        class="text-lg font-semibold leading-snug text-gray-900 dark:text-white"
                     >
                         {{ pageTitle }}
                     </h1>
@@ -48,13 +48,14 @@
                     </p>
                 </div>
             </div>
-            <Link :href="route('users.index')">
+            <Link :href="route('users.index')" class="w-full shrink-0 sm:w-auto">
                 <Button
                     label="All Users"
                     icon="pi pi-arrow-left"
                     size="small"
                     severity="secondary"
                     outlined
+                    class="w-full !min-h-11 justify-center sm:w-auto"
                 />
             </Link>
         </div>

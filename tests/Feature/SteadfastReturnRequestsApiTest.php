@@ -185,7 +185,9 @@ class SteadfastReturnRequestsApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', true)
             ->assertJsonPath('data.items.0.consignment_id', '272300623')
-            ->assertJsonPath('data.counts.pending', 1);
+            ->assertJsonPath('data.counts.pending', 1)
+            ->assertJsonPath('data.source', 'packzy')
+            ->assertJsonPath('data.authoritative_statuses', []);
     }
 
     public function test_list_return_requests_accepts_packzy_data_without_status_field(): void
@@ -280,13 +282,15 @@ class SteadfastReturnRequestsApiTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_list_falls_back_to_packzy_when_portal_login_fails(): void
+    public function test_list_returns_portal_error_when_login_fails(): void
     {
         [$user, $token] = $this->createMerchantWithToken();
         $this->attachCatalogPackage($user, [
             'courier_automation' => true,
         ]);
         $this->attachSteadfastConfig($user);
+
+        \Illuminate\Support\Facades\Cache::flush();
 
         Http::fake([
             'portal.packzy.com/api/v1/get_return_requests' => Http::response([
@@ -301,20 +305,25 @@ class SteadfastReturnRequestsApiTest extends TestCase
                     ],
                 ],
             ], 200),
-            // Portal session looks like login → scrape fails → Packzy fallback.
-            'steadfast.com/*' => Http::response('login', 200),
-            'scstech.io/*' => Http::response('login', 200),
+            // Real portal host, login HTML with no CSRF token.
+            'www.steadfast.com.bd/*' => Http::response('<form action="/login"></form>', 200),
+            'steadfast.com.bd/*' => Http::response('<form action="/login"></form>', 200),
+            'scstech.io/*' => Http::response('<form action="/login"></form>', 200),
         ]);
 
-        $this->withHeaders($this->apiHeaders($token))
+        $response = $this->withHeaders($this->apiHeaders($token))
             ->postJson('/api/steadfast/return-requests', [
                 'status' => 'pending',
             ])
-            ->assertOk()
-            ->assertJsonPath('status', true)
-            ->assertJsonPath('data.items.0.consignment_id', '272300623')
-            ->assertJsonPath('data.items.0.reason', 'from-packzy')
-            ->assertJsonPath('data.counts.pending', 1);
+            ->assertStatus(400)
+            ->assertJsonPath('status', false);
+
+        $message = (string) $response->json('message');
+        $this->assertMatchesRegularExpression(
+            '/CSRF token not found|did not create a session cookie/i',
+            $message
+        );
+        $this->assertStringNotContainsString('from-packzy', (string) $response->getContent());
     }
 
     public function test_list_prefers_portal_cancel_requests_over_packzy_returns(): void
@@ -381,7 +390,7 @@ HTML;
             return Http::response('not-found', 404);
         });
 
-        $this->withHeaders($this->apiHeaders($token))
+        $response = $this->withHeaders($this->apiHeaders($token))
             ->postJson('/api/steadfast/return-requests', [
                 'status' => 'pending',
             ])
@@ -390,7 +399,106 @@ HTML;
             ->assertJsonPath('data.items.0.consignment_id', '272384678')
             ->assertJsonPath('data.items.0.customer_name', 'Sonia')
             ->assertJsonPath('data.counts.pending', 1)
+            ->assertJsonPath('data.source', 'portal')
             ->assertJsonMissing(['consignment_id' => '267997491']);
+
+        $this->assertContains('pending', $response->json('data.authoritative_statuses'));
+    }
+
+    public function test_full_pending_page_is_not_authoritative(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $cards = '';
+        for ($i = 1; $i <= 20; $i++) {
+            $consignment = 300000000 + $i;
+            $cards .= '<li class="sf-creq-item" data-sf-creq="'.$i.'">'
+                .'<a href="/user/consignment/'.$consignment.'">#'.$consignment.'</a>'
+                .'<b>Buyer</b></li>';
+        }
+        $pendingHtml = '<html><body><ul>'.$cards.'</ul></body></html>';
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) use ($pendingHtml) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+            if (str_contains($url, '/login') && $request->method() === 'GET') {
+                return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+            }
+            if (str_contains($url, '/login') && $request->method() === 'POST') {
+                return Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/0')) {
+                return Http::response($pendingHtml, 200);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response('<html><body></body></html>', 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $response = $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', [
+                'mode' => 'quick',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.source', 'portal')
+            ->assertJsonPath('data.counts.pending', 20);
+
+        $this->assertNotContains('pending', $response->json('data.authoritative_statuses') ?? []);
+    }
+
+    public function test_dated_portal_list_is_not_authoritative(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $pendingHtml = '<html><body><ul>'
+            .'<li class="sf-creq-item" data-sf-creq="9">'
+            .'<a href="/user/consignment/299056668">#299056668</a><b>Buyer</b>'
+            .'</li></ul></body></html>';
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) use ($pendingHtml) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+            if (str_contains($url, '/login') && $request->method() === 'GET') {
+                return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+            }
+            if (str_contains($url, '/login') && $request->method() === 'POST') {
+                return Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response($pendingHtml, 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', [
+                'date' => '2026-09-29',
+                'mode' => 'quick',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.source', 'portal')
+            ->assertJsonPath('data.authoritative_statuses', []);
     }
 
     public function test_list_scrapes_all_portal_cancel_request_pages(): void

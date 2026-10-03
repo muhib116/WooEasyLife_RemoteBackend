@@ -6,13 +6,13 @@
             class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
         >
             <div
-                class="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-slate-900/60"
+                class="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 sm:flex sm:flex-wrap dark:bg-slate-900/60 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*]:col-span-auto"
             >
                 <Link
                     v-for="menu in menus"
                     :key="menu.title"
                     :href="menu.url"
-                    class="whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-all"
+                    class="flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all sm:justify-start sm:px-3.5"
                     :class="
                         menu.isActive
                             ? 'bg-white text-primary-600 shadow-sm dark:bg-slate-800 dark:text-primary-400'
@@ -38,7 +38,7 @@
             </div>
             <div
                 v-if="$slots.default"
-                class="flex shrink-0 items-center justify-end gap-2 px-1"
+                class="flex w-full flex-col gap-2 px-1 sm:w-auto sm:flex-row sm:items-center sm:justify-end [&_.p-button]:min-h-11 [&_.p-button]:w-full sm:[&_.p-button]:w-auto"
             >
                 <slot />
             </div>

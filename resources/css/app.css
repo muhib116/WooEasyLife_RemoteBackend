@@ -563,6 +563,25 @@
         color: rgb(226 232 240);
     }
 
+    .admin-choice-row .p-selectbutton {
+        display: flex;
+        width: 100%;
+        max-width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .admin-choice-row .p-togglebutton {
+        flex: 1 1 auto;
+        justify-content: center;
+        min-height: 2.75rem;
+    }
+
+    @media (min-width: 640px) {
+        .admin-choice-row .p-selectbutton {
+            width: auto;
+        }
+    }
+
     .table-actions {
         display: flex;
         align-items: center;

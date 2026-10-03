@@ -10,6 +10,7 @@
         :loading="loading"
         :disabled="disabled"
         class="table-action-btn"
+        :aria-label="tooltip || action || 'Action'"
         v-tooltip.top="tooltip"
         @click="handleClick"
     />

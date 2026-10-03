@@ -36,7 +36,7 @@
             <div
                 v-for="payment in recent"
                 :key="payment.id"
-                class="flex items-center gap-4 px-5 py-4 md:px-6"
+                class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5 md:px-6"
             >
                 <div
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-500/15"
@@ -53,7 +53,7 @@
                         · {{ payment.submitted_ago }}
                     </p>
                 </div>
-                <div class="shrink-0 text-right">
+                <div class="shrink-0 sm:text-right">
                     <p class="text-sm font-bold text-gray-900 dark:text-gray-100">
                         {{ payment.total_amount }} TK
                     </p>

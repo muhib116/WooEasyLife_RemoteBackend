@@ -29,12 +29,13 @@
                 class="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"
             >
                 <span>Finish setup with the guided wizard for the first website.</span>
-                <Link :href="route('users.setup', userId)">
+                <Link :href="route('users.setup', userId)" class="block shrink-0 sm:inline-block">
                     <Button
                         label="Complete Setup"
                         icon="pi pi-play"
                         size="small"
                         as="span"
+                        class="w-full !min-h-11 justify-center sm:w-auto"
                     />
                 </Link>
             </div>
@@ -94,6 +95,7 @@
                     <Link
                         v-if="!step.complete && step.action_route"
                         :href="fixUrl(step)"
+                        class="shrink-0"
                     >
                         <Button
                             label="Fix"
@@ -101,6 +103,7 @@
                             severity="secondary"
                             outlined
                             as="span"
+                            class="!min-h-10 !min-w-11"
                         />
                     </Link>
                 </li>

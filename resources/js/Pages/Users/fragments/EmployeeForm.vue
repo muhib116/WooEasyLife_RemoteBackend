@@ -94,6 +94,7 @@
                                 size="small"
                                 severity="secondary"
                                 outlined
+                                class="!min-h-11"
                                 @click="photoInput?.click()"
                             />
                             <Button
@@ -198,18 +199,20 @@
             />
         </FormSection>
 
-        <div class="flex justify-end gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+        <div class="flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:justify-end dark:border-gray-800">
             <Button
                 type="button"
                 label="Cancel"
                 severity="secondary"
                 outlined
+                class="!min-h-11 w-full sm:w-auto"
                 @click="$emit('cancel')"
             />
             <Button
                 type="submit"
                 :label="form.id ? 'Save changes' : 'Create employee'"
                 icon="pi pi-check"
+                class="!min-h-11 w-full sm:w-auto"
                 :loading="form.processing"
             />
         </div>

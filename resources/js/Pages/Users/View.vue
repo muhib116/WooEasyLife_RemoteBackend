@@ -55,7 +55,7 @@
                                 </Link>
                             </div>
                         </div>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:flex xl:flex-wrap">
                             <Button
                                 v-if="user?.role === 'user'"
                                 label="Edit Profile"
@@ -63,19 +63,22 @@
                                 size="small"
                                 severity="secondary"
                                 outlined
+                                class="w-full !min-h-11 justify-center xl:w-auto"
                                 @click="showForm = true"
                             />
-                            <Link :href="route('users.websites', user.id)">
+                            <Link :href="route('users.websites', user.id)" class="block min-w-0">
                                 <Button
                                     label="Manage Websites"
                                     icon="pi pi-globe"
                                     size="small"
                                     as="span"
+                                    class="w-full !min-h-11 justify-center xl:w-auto"
                                 />
                             </Link>
                             <Link
                                 v-if="setup?.needs_wizard"
                                 :href="route('users.setup', user.id)"
+                                class="block min-w-0"
                             >
                                 <Button
                                     label="Complete Setup"
@@ -83,9 +86,11 @@
                                     size="small"
                                     severity="warning"
                                     as="span"
+                                    class="w-full !min-h-11 justify-center xl:w-auto"
                                 />
                             </Link>
                             <Link
+                                class="block min-w-0"
                                 :href="
                                     route('users.websites', {
                                         user_id: user.id,
@@ -99,6 +104,7 @@
                                     size="small"
                                     severity="success"
                                     as="span"
+                                    class="w-full !min-h-11 justify-center xl:w-auto"
                                 />
                             </Link>
                         </div>
@@ -127,7 +133,7 @@
                                     {{ item.label }}
                                 </p>
                                 <p
-                                    class="truncate text-sm font-medium text-gray-800 dark:text-gray-200"
+                                    class="break-all text-sm font-medium leading-5 text-gray-800 dark:text-gray-200"
                                 >
                                     {{ item.value }}
                                 </p>
@@ -186,7 +192,7 @@
                     >
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="min-w-0">
-                                <p class="truncate font-medium text-gray-900 dark:text-white">
+                                <p class="break-all font-medium text-gray-900 dark:text-white">
                                     {{ site.domain }}
                                 </p>
                                 <p
@@ -203,6 +209,7 @@
                                 </p>
                             </div>
                             <StatusBadge
+                                class="shrink-0"
                                 :label="healthStatusLabel(site.status)"
                                 :variant="healthStatusVariant(site.status)"
                                 format="none"
@@ -211,7 +218,7 @@
                     </li>
                 </ul>
                 <div class="mt-4">
-                    <Link :href="route('users.websites', user.id)">
+                    <Link :href="route('users.websites', user.id)" class="block sm:inline-block">
                         <Button
                             label="Open websites"
                             icon="pi pi-globe"
@@ -219,6 +226,7 @@
                             severity="secondary"
                             outlined
                             as="span"
+                            class="w-full !min-h-11 justify-center sm:w-auto"
                         />
                     </Link>
                 </div>

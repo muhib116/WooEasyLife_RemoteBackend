@@ -91,17 +91,24 @@ class UserController extends Controller
     }
 
     /**
-     * @return array{total: int, active: int, remainingOrders: int}
+     * @return array{total: int, active: int, disabled: int, needsAttention: int, remainingOrders: int}
      */
     private function merchantListStats(bool $onlyTrashed): array
     {
         $users = $onlyTrashed ? User::onlyTrashed() : User::query();
 
         $merchantIds = (clone $users)->where('role', 'user')->select('id');
+        $merchants = (clone $users)->where('role', 'user')->get();
+        $needsAttention = app(MerchantOpsSummaryService::class)
+            ->appendToUsers($merchants)
+            ->filter(fn (User $user) => filled($user->attention))
+            ->count();
 
         return [
             'total' => (clone $users)->count(),
             'active' => (clone $users)->where('role', 'user')->where('status', true)->count(),
+            'disabled' => (clone $users)->where('role', 'user')->where('status', false)->count(),
+            'needsAttention' => $needsAttention,
             'remainingOrders' => (int) UserPackage::query()
                 ->where('is_active', 1)
                 ->whereIn('user_id', $merchantIds)

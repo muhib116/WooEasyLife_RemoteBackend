@@ -129,6 +129,7 @@ class DashboardController extends Controller
         return [
             'merchants_total' => $totalMerchants,
             'merchants_new_month' => $currentMonthMerchants,
+            'merchants_previous_month' => $previousMonthMerchants,
             'merchants_growth_pct' => number_format($growthPct, 2),
             'merchants_growth_positive' => $growthPct >= 0,
             'pending_payments' => $pendingPayments,

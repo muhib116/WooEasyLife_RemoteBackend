@@ -18,9 +18,7 @@
 
         <BillingAlertsPanel v-if="alerts.length" :alerts="alerts" />
 
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        >
+        <div class="admin-choice-row">
             <SelectButton
                 v-model="activeTab"
                 :options="tabOptions"

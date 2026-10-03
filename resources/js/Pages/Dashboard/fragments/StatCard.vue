@@ -1,6 +1,6 @@
 <template>
     <div
-        class="box-bg box-color box-border group relative flex h-full min-h-[9.25rem] flex-col overflow-hidden rounded-2xl border p-5 transition-all duration-200 hover:shadow-md"
+        class="box-bg box-color box-border group relative flex h-full min-h-[8.75rem] flex-col overflow-hidden rounded-2xl border p-3.5 transition-all duration-200 hover:shadow-md sm:p-5"
         :class="
             highlight
                 ? 'border-emerald-300/80 ring-1 ring-emerald-200/60 dark:border-emerald-500/40 dark:ring-emerald-500/20'
@@ -17,7 +17,7 @@
                     {{ title }}
                 </p>
                 <h4
-                    class="mt-2 truncate text-2xl font-bold text-gray-800 dark:text-white/90"
+                    class="mt-2 break-words text-xl font-bold leading-tight text-gray-800 sm:text-2xl dark:text-white/90"
                 >
                     {{ value }}
                 </h4>
@@ -29,13 +29,13 @@
                 </p>
             </div>
             <div
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11"
                 :class="iconBgClass"
             >
                 <Icon :name="icon" class="text-xl" :class="iconClass" />
             </div>
         </div>
-        <div v-if="badge" class="relative mt-4 flex items-center gap-2">
+        <div v-if="badge" class="relative mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
             <span
                 :class="
                     twMerge(

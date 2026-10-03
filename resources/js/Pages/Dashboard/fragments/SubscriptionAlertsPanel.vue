@@ -78,7 +78,7 @@
                                 · {{ alert.domain }}
                             </span>
                         </Link>
-                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        <p class="mt-0.5 break-words text-xs text-gray-500 dark:text-gray-400">
                             {{ alert.message }}
                         </p>
                     </div>

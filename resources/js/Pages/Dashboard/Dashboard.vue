@@ -13,17 +13,17 @@
                         v-for="action in quickActions"
                         :key="action.name"
                         :href="route(action.name)"
-                        class="text-theme-sm inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-2 font-medium text-gray-700 shadow-sm transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-200 dark:hover:border-primary-500/40 dark:hover:bg-primary-500/10 dark:hover:text-primary-300"
+                        class="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 sm:gap-2 sm:px-3.5 sm:text-sm dark:border-gray-700 dark:bg-slate-800 dark:text-gray-200 dark:hover:border-primary-500/40 dark:hover:bg-primary-500/10 dark:hover:text-primary-300"
                     >
                         <Icon :name="action.icon" class="text-base" />
-                        <span class="hidden sm:inline">{{ action.label }}</span>
+                        <span>{{ action.label }}</span>
                     </Link>
                 </template>
             </PageHeader>
 
             <section v-if="healthAlerts.length" class="space-y-3">
                 <DashboardSectionHeading title="Action Required" />
-                <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <div class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
                     <div
                         v-for="alert in healthAlerts"
                         :key="alert.label"
@@ -61,19 +61,19 @@
                     :href="route('users.index')"
                     link-text="All merchants"
                 />
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <Link :href="route('users.index')" class="block h-full">
+                <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                    <Link :href="route('users.index')" class="block h-full min-w-0">
                         <StatCard
                             title="Merchants"
                             :value="overview.merchants_total"
                             icon="PhUsers"
-                            :subtitle="`${overview.merchants_new_month} new this month`"
-                            :badge="`${overview.merchants_growth_pct}%`"
+                            :subtitle="merchantSubtitle"
+                            :badge="merchantBadge"
                             badge-label="vs last month"
                             :badge-positive="overview.merchants_growth_positive"
                         />
                     </Link>
-                    <Link :href="route('packagePayments.index')" class="block h-full">
+                    <Link :href="route('packagePayments.index')" class="block h-full min-w-0">
                         <StatCard
                             title="Pending Payments"
                             :value="overview.pending_payments"
@@ -85,18 +85,18 @@
                             icon-class="text-emerald-600 dark:text-emerald-400"
                         />
                     </Link>
-                    <Link :href="route('tokenLedger')" class="block h-full">
+                    <Link :href="route('tokenLedger')" class="block h-full min-w-0">
                         <StatCard
                             title="Platform Revenue"
                             :value="overview.platform_revenue"
                             icon="PhCoins"
-                            :subtitle="`${overview.token_remaining} orders remaining`"
+                            subtitle="All-time plan sales"
                             accent-class="bg-amber-500"
                             icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
                             icon-class="text-amber-600 dark:text-amber-400"
                         />
                     </Link>
-                    <Link :href="route('subscriptionAlerts.index')" class="block h-full">
+                    <Link :href="route('subscriptionAlerts.index')" class="block h-full min-w-0">
                         <StatCard
                             title="Active Plans"
                             :value="overview.active_subscriptions"
@@ -107,6 +107,33 @@
                             icon-class="text-violet-600 dark:text-violet-400"
                         />
                     </Link>
+                </div>
+            </section>
+
+            <section class="space-y-4">
+                <DashboardSectionHeading title="At a glance" />
+                <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                    <component
+                        :is="item.href ? Link : 'div'"
+                        v-for="item in glanceItems"
+                        :key="item.label"
+                        :href="item.href || undefined"
+                        class="box-bg box-color box-border flex min-w-0 flex-col rounded-2xl border p-3.5 sm:p-4"
+                        :class="item.href ? 'transition hover:border-primary-300 hover:shadow-sm dark:hover:border-primary-500/40' : ''"
+                    >
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                {{ item.label }}
+                            </p>
+                            <Icon :name="item.icon" class="shrink-0 text-base text-gray-400 dark:text-gray-500" />
+                        </div>
+                        <p class="mt-2 break-words text-lg font-bold leading-tight text-gray-900 sm:text-xl dark:text-white">
+                            {{ item.value }}
+                        </p>
+                        <p class="mt-1 text-xs leading-snug text-gray-500 dark:text-gray-400">
+                            {{ item.detail }}
+                        </p>
+                    </component>
                 </div>
             </section>
 
@@ -125,7 +152,7 @@
                     :href="hasAttentionItems ? route('packagePayments.index') : undefined"
                     :link-text="hasAttentionItems ? 'Review items' : undefined"
                 />
-                <div v-if="hasAttentionItems" class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <div v-if="hasAttentionItems" class="grid grid-cols-1 gap-4 xl:grid-cols-2 [&>*]:min-w-0">
                     <PaymentRequestsPanel
                         v-if="(paymentRequests.summary?.pending ?? 0) > 0"
                         :data="paymentRequests"
@@ -166,7 +193,7 @@
                     :href="route('webhooks.index')"
                     link-text="Webhook log"
                 />
-                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2 [&>*]:min-w-0">
                     <WebhookActivityPanel
                         v-if="showWebhookPanel"
                         :data="webhooks"
@@ -180,7 +207,7 @@
 
             <section v-if="showSmsSection" class="space-y-4">
                 <DashboardSectionHeading title="SMS" />
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="grid grid-cols-1 gap-3 min-[480px]:grid-cols-3">
                     <Widget
                         title="User Balance"
                         :value="`${sms.total_balance} TK`"
@@ -228,6 +255,7 @@ import type { IconName } from "@/types";
 type OverviewData = {
     merchants_total: number;
     merchants_new_month: number;
+    merchants_previous_month: number;
     merchants_growth_pct: string;
     merchants_growth_positive: boolean;
     pending_payments: number;
@@ -379,6 +407,7 @@ const getData = (key: string) => get(props.data, key);
 const overview = computed(() => get(props.data, "overview", {
     merchants_total: 0,
     merchants_new_month: 0,
+    merchants_previous_month: 0,
     merchants_growth_pct: "0.00",
     merchants_growth_positive: true,
     pending_payments: 0,
@@ -431,6 +460,99 @@ const paymentRequests = computed(() => get(props.data, "payment_requests", {
     summary: { total: 0, pending: 0, approved: 0, cancelled: 0, pending_amount: "0.00" },
     recent: [],
 }) as PaymentRequestData);
+
+const merchantSubtitle = computed(() => {
+    const current = overview.value.merchants_new_month;
+    const previous = overview.value.merchants_previous_month ?? 0;
+
+    return `${current} new this month · ${previous} last month`;
+});
+
+const merchantBadge = computed(() => {
+    const current = overview.value.merchants_new_month;
+    const previous = overview.value.merchants_previous_month ?? 0;
+
+    if (previous === 0 && current === 0) {
+        return undefined;
+    }
+
+    const pct = Number.parseFloat(overview.value.merchants_growth_pct);
+
+    if (!Number.isFinite(pct)) {
+        return undefined;
+    }
+
+    const rounded = Math.round(pct);
+    const sign = rounded > 0 ? "+" : "";
+
+    return `${sign}${rounded}%`;
+});
+
+const wholeNumber = (value: string | number) => {
+    const parsed = Number.parseFloat(String(value).replace(/,/g, ""));
+
+    if (!Number.isFinite(parsed)) {
+        return String(value);
+    }
+
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(parsed);
+};
+
+const glanceItems = computed(() => {
+    const failedWebhooks =
+        (webhooks.value.failed_count ?? 0) + (webhooks.value.orphan_count ?? 0);
+    const webhookTotal = webhooks.value.total_events ?? 0;
+    const notices = customerNotices.value.summary;
+
+    return [
+        {
+            label: "Orders left",
+            value: overview.value.token_remaining,
+            detail: `${overview.value.token_usage_percent}% of sold capacity used`,
+            icon: "PhPackage" as IconName,
+            href: route("tokenLedger"),
+        },
+        {
+            label: "API tokens",
+            value: `${expiredTokens.value.active ?? 0} active`,
+            detail: `${expiredTokens.value.expired ?? 0} expired · ${expiredTokens.value.expiring_soon ?? 0} soon`,
+            icon: "PhKey" as IconName,
+            href: route("users.index"),
+        },
+        {
+            label: "Webhooks",
+            value: webhookTotal > 0 ? `${webhooks.value.success_rate ?? 0}% delivered` : "No events",
+            detail: webhookTotal > 0
+                ? `${failedWebhooks} failed · ${webhooks.value.pending_retries ?? 0} retries waiting`
+                : "Courier updates will show here",
+            icon: "PhArrowClockwise" as IconName,
+            href: route("webhooks.index"),
+        },
+        {
+            label: "SMS balance",
+            value: `${sms.value.total_balance} TK`,
+            detail: `${wholeNumber(sms.value.total_sms_sent)} messages sent · ${sms.value.total_sms_recharge} TK recharged`,
+            icon: "PhPaperPlaneTilt" as IconName,
+            href: "",
+        },
+        {
+            label: "Notices",
+            value: `${notices?.live ?? 0} live`,
+            detail: `${notices?.scheduled ?? 0} scheduled · ${notices?.inactive ?? 0} inactive`,
+            icon: "PhMegaphone" as IconName,
+            href: route("customerNotices.index"),
+        },
+        {
+            label: "Plans expiring",
+            value: overview.value.expiring_subscriptions,
+            detail: overview.value.expiring_subscriptions > 0
+                ? "Within the next 7 days"
+                : "None due in the next 7 days",
+            icon: "PhHourglassMedium" as IconName,
+            href: route("subscriptionAlerts.index"),
+        },
+    ];
+});
 
 const subscriptionsSubtitle = computed(() => {
     const expiring = overview.value.expiring_subscriptions;
@@ -489,10 +611,10 @@ const greeting = computed(() => {
 
 const formattedDate = computed(() => {
     return new Intl.DateTimeFormat("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
+        weekday: "short",
+        month: "short",
         day: "numeric",
+        year: "numeric",
     }).format(new Date());
 });
 

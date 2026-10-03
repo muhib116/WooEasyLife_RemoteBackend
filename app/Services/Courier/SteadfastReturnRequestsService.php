@@ -30,6 +30,9 @@ class SteadfastReturnRequestsService
     /** Safety cap when walking SteadFast cancel-requests ?page=N links. */
     private const MAX_PORTAL_PAGES_PER_TAB = 40;
 
+    /** Cards on a full SteadFast cancel-request page. A short page is the end of that tab. */
+    private const PORTAL_TAB_PAGE_SIZE = 20;
+
     /** Soft deadline (seconds) so hub can return partial portal data before PHP/proxy kills the request. */
     private const PORTAL_LIST_DEADLINE_SECONDS = 100;
 
@@ -101,7 +104,7 @@ class SteadfastReturnRequestsService
      * @param  array{api_key: string, secret_key: string}  $apiConfig
      * @param  array{username?: string, password?: string}|null  $portalCredentials
      * @param  string|null  $mode  `quick` (active tabs) or `full` (all tabs/pages)
-     * @return array{items: list<array<string, mixed>>, counts: array<string, int>, source: string, mode: string}
+     * @return array{items: list<array<string, mixed>>, counts: array<string, int>, source: string, mode: string, authoritative_statuses: list<string>}
      */
     public function list(
         array $apiConfig,
@@ -119,6 +122,9 @@ class SteadfastReturnRequestsService
         $packzyOk = false;
         $portalOk = false;
         $lastError = null;
+        $portalError = null;
+        /** @var list<string> $authoritativeStatuses */
+        $authoritativeStatuses = [];
 
         // Packzy return-request API (different queue from portal cancel-requests).
         try {
@@ -182,13 +188,24 @@ class SteadfastReturnRequestsService
                     $byConsignment[$key] = $item;
                 }
                 $portalOk = true;
+                $authoritativeStatuses = array_values(array_filter(
+                    $portal['authoritative_statuses'] ?? [],
+                    static fn ($slug) => is_string($slug) && $slug !== ''
+                ));
             } catch (\Throwable $th) {
                 $lastError = $th;
+                $portalError = $th;
                 LogHelper::saveLog('Steadfast return list portal failed', $th->getMessage());
             }
         }
 
-        // Only fall back to Packzy-only rows when portal cancel-requests is unavailable.
+        // Portal login is saved, so a failed scrape must not look like a fresh
+        // Packzy list. Packzy is a different queue and was hiding the real error.
+        if ($portalError instanceof \Throwable) {
+            throw $portalError;
+        }
+
+        // Packzy remains the list only when no portal login is saved.
         if (! $portalOk) {
             $byConsignment = $packzyByConsignment;
         }
@@ -216,6 +233,7 @@ class SteadfastReturnRequestsService
             'counts' => $counts,
             'source' => $portalOk ? 'portal' : 'packzy',
             'mode' => $mode,
+            'authoritative_statuses' => $portalOk ? $authoritativeStatuses : [],
         ];
     }
 
@@ -716,7 +734,7 @@ class SteadfastReturnRequestsService
 
     /**
      * @param  array{username: string, password: string}  $credentials
-     * @return array{items: list<array<string, mixed>>, counts: array<string, int>}
+     * @return array{items: list<array<string, mixed>>, counts: array<string, int>, authoritative_statuses: list<string>}
      */
     private function listViaPortal(array $credentials, ?string $status, ?string $date, string $mode = 'full'): array
     {
@@ -729,7 +747,10 @@ class SteadfastReturnRequestsService
         ) use ($credentials, $status, $date, $mode) {
             $counts = $this->emptyCounts();
             $items = [];
+            /** @var list<string> $authoritative */
+            $authoritative = [];
             $targetStatus = $this->normalizeStatus($status);
+            $dated = $date !== null && $date !== '';
             $deadlineSeconds = $mode === 'quick'
                 ? self::PORTAL_QUICK_DEADLINE_SECONDS
                 : self::PORTAL_LIST_DEADLINE_SECONDS;
@@ -762,6 +783,11 @@ class SteadfastReturnRequestsService
                     );
                     $cookies = $tab['cookies'];
                     $rows = $tab['rows'];
+                    // A dated scrape is one day, not the whole tab, so it must not
+                    // authorize dropping local rows that fall on other days.
+                    if (! $dated && ($tab['complete'] ?? false) === true) {
+                        $authoritative[] = $slug;
+                    }
                 } catch (\Throwable $th) {
                     // Pending tab is required; other tabs are best-effort.
                     if ($index === 0) {
@@ -786,6 +812,7 @@ class SteadfastReturnRequestsService
             return [
                 'items' => $items,
                 'counts' => $counts,
+                'authoritative_statuses' => $authoritative,
             ];
         });
     }
@@ -795,7 +822,7 @@ class SteadfastReturnRequestsService
      *
      * @param  array{username: string, password: string}  $credentials
      * @param  array<string, string>  $cookies
-     * @return array{rows: list<array<string, mixed>>, cookies: array<string, string>}
+     * @return array{rows: list<array<string, mixed>>, cookies: array<string, string>, complete: bool}
      */
     private function fetchCancelRequestTabPages(
         SteadfastPortalSessionClient $client,
@@ -811,6 +838,9 @@ class SteadfastReturnRequestsService
         /** @var array<string, array<string, mixed>> $byConsignment */
         $byConsignment = [];
         $maxPage = 1;
+        $uncappedMax = 1;
+        $complete = true;
+        $lastPageCount = 0;
 
         for ($pageNum = 1; $pageNum <= $maxPage; $pageNum++) {
             if ($deadlineAt !== null && microtime(true) >= $deadlineAt) {
@@ -818,6 +848,7 @@ class SteadfastReturnRequestsService
                     'Steadfast cancel-requests page deadline reached',
                     $slug.' stopped at page '.$pageNum
                 );
+                $complete = false;
                 break;
             }
 
@@ -833,6 +864,7 @@ class SteadfastReturnRequestsService
                     'Steadfast cancel-requests page skipped',
                     $slug.' page '.$pageNum.': '.$th->getMessage()
                 );
+                $complete = false;
                 break;
             }
 
@@ -852,6 +884,7 @@ class SteadfastReturnRequestsService
                     'Steadfast cancel-requests page skipped',
                     $slug.' page '.$pageNum.': HTTP '.$response->status()
                 );
+                $complete = false;
                 break;
             }
 
@@ -859,13 +892,15 @@ class SteadfastReturnRequestsService
             $rows = $this->parseCancelRequestRows($body, $slug);
 
             // Page uses li.sf-creq-item, div.tbody-row, or <cancel-request> (not <tr>).
-            // If markers exist but parse yields nothing, treat as scrape failure so Packzy fallback can run.
+            // Markers with zero parsed rows are a scrape failure, not an empty queue.
             if ($rows === [] && $this->portalHtmlHasCancelRequestRows($body)) {
                 throw new RuntimeException(
                     'Failed to parse Steadfast cancel-requests rows for status '.$slug
                     .' (page '.$pageNum.').'
                 );
             }
+
+            $lastPageCount = count($rows);
 
             foreach ($rows as $row) {
                 $key = (string) ($row['consignment_id'] ?? '');
@@ -876,11 +911,16 @@ class SteadfastReturnRequestsService
             }
 
             if ($pageNum === 1) {
-                $maxPage = $this->detectCancelRequestsMaxPage($body);
+                $uncappedMax = $this->detectCancelRequestsMaxPage($body);
+                $maxPage = max(1, min($uncappedMax, self::MAX_PORTAL_PAGES_PER_TAB));
+                if ($uncappedMax > self::MAX_PORTAL_PAGES_PER_TAB) {
+                    $complete = false;
+                }
             }
 
             // Stop early when a page returns no rows (pagination lied / trailing empty).
             if ($pageNum > 1 && $rows === []) {
+                $complete = false;
                 break;
             }
 
@@ -889,9 +929,16 @@ class SteadfastReturnRequestsService
             }
         }
 
+        // A full page can sit in front of another page the first pager never linked.
+        // A short page is the end of the tab this walk actually reached.
+        if ($complete && $lastPageCount >= self::PORTAL_TAB_PAGE_SIZE) {
+            $complete = false;
+        }
+
         return [
             'rows' => array_values($byConsignment),
             'cookies' => $cookies,
+            'complete' => $complete,
         ];
     }
 
@@ -928,7 +975,7 @@ class SteadfastReturnRequestsService
             }
         }
 
-        return max(1, min($max, self::MAX_PORTAL_PAGES_PER_TAB));
+        return max(1, $max);
     }
 
     /**
