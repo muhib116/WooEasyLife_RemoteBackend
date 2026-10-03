@@ -177,21 +177,54 @@ class PluginsController extends Controller
         if (! $plugins) {
             abort(404);
         }
-        $plugins->increment('download_count');
-        $path = $plugins->path;
-        $path = storage_path($plugins->path);
 
-        if (! file_exists($path)) {
+        $path = storage_path($plugins->path);
+        if (! is_file($path) || ! is_readable($path)) {
             abort(404);
         }
-        $file = file_get_contents($path);
-        $type = mime_content_type($path);
-        $fileName = basename($path);
 
-        return Response::make($file, 200, [
+        $fileName = basename($path);
+        // Plugin packages are always zips. mime_content_type() can mis-detect
+        // edge files as text/plain and break WP download_url / upgraders.
+        $type = 'application/zip';
+        $detected = @mime_content_type($path);
+        if (is_string($detected) && strpos(strtolower($detected), 'zip') !== false) {
+            $type = $detected;
+        }
+        $size = filesize($path);
+
+        // Stream the zip — loading multi‑MB packages into memory stalls WP updaters
+        // and triggers retries that burn the shared IP rate limit.
+        $plugins->increment('download_count');
+
+        $headers = [
             'Content-Type' => $type,
-            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
-        ]);
+            'Cache-Control' => 'no-cache, private',
+        ];
+        if ($size !== false && $size >= 0) {
+            $headers['Content-Length'] = (string) $size;
+        }
+
+        return response()->streamDownload(function () use ($path) {
+            $handle = fopen($path, 'rb');
+            if ($handle === false) {
+                return;
+            }
+            try {
+                while (! feof($handle)) {
+                    $chunk = fread($handle, 1024 * 256);
+                    if ($chunk === false) {
+                        break;
+                    }
+                    echo $chunk;
+                    if (function_exists('fastcgi_finish_request') === false) {
+                        flush();
+                    }
+                }
+            } finally {
+                fclose($handle);
+            }
+        }, $fileName, $headers);
     }
 
     public function getMetadata()

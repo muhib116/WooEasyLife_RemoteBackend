@@ -46,7 +46,7 @@ class Kernel extends HttpKernel
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \App\Http\Middleware\ForceJsonResponse::class,
             // Cache/fraud runtime overrides load once in AppServiceProvider::boot (avoid per-request DB).
-            \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            \App\Http\Middleware\ApiThrottleUnlessPluginUpdate::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \Illuminate\Http\Middleware\HandleCors::class,
         ],
@@ -70,6 +70,7 @@ class Kernel extends HttpKernel
         'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'throttle.named' => \App\Http\Middleware\NamedThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'check.token' => \App\Http\Middleware\CustomAuthMiddleware::class,
         'check.tokenDomain' => \App\Http\Middleware\ValidateTokenDomain::class,

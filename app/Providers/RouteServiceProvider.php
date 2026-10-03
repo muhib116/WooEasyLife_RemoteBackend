@@ -28,8 +28,23 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Phase 1: keep existing api ceiling — do not raise capacity for live merchants.
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(100)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Dedicated buckets for WP plugin update endpoints (skipped by ApiThrottleUnlessPluginUpdate).
+        RateLimiter::for('plugin_metadata', function (Request $request) {
+            $token = $request->bearerToken();
+            $key = (is_string($token) && $token !== '')
+                ? 'lic:'.hash('sha256', $token)
+                : 'ip:'.$request->ip();
+
+            return Limit::perMinute(120)->by($key);
+        });
+
+        RateLimiter::for('plugin_download', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
         });
 
         $this->routes(function () {
