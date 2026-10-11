@@ -24,6 +24,22 @@ class MerchantSteadfastFraudCredentialResolver
         return $this->resolveFromRequest($request);
     }
 
+    /**
+     * Portal email/password only. API keys on the same courier row are not a login.
+     *
+     * @return array{username: string, password: string}|null
+     */
+    public function resolvePortalFromCurrentRequest(): ?array
+    {
+        $credentials = $this->resolveFromCurrentRequest();
+
+        if (! is_array($credentials)) {
+            return null;
+        }
+
+        return $this->credentialsFromSettings($credentials);
+    }
+
     public function resolveFromRequest(Request $request): ?array
     {
         if ($request->attributes->get(self::REQUEST_RESOLVED_FLAG, false)) {
@@ -64,9 +80,19 @@ class MerchantSteadfastFraudCredentialResolver
             return null;
         }
 
-        return $this->credentialsFromSettings(
+        $credentials = $this->credentialsFromSettings(
             is_array($configuration->settings) ? $configuration->settings : []
-        );
+        ) ?? [];
+
+        $apiKey = trim((string) $configuration->api_key);
+        $secretKey = trim((string) $configuration->secret_key);
+
+        if ($apiKey !== '' && $secretKey !== '') {
+            $credentials['api_key'] = $apiKey;
+            $credentials['secret_key'] = $secretKey;
+        }
+
+        return $credentials === [] ? null : $credentials;
     }
 
     /**

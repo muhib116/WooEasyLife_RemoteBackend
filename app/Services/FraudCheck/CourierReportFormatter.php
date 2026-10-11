@@ -51,6 +51,71 @@ class CourierReportFormatter
         ]);
     }
 
+    /**
+     * Packzy GET /fraud_check/score/{phone}.
+     *
+     * Ratios are whole percents of finished parcels. Null means unknown, not zero.
+     * Exact counts are present only while the merchant is booking regularly.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public static function fromSteadfastScore(array $payload): array
+    {
+        $delivered = $payload['delivered_count'] ?? null;
+        $cancelled = $payload['cancelled_count'] ?? null;
+        $deliveryRatio = $payload['delivery_ratio'] ?? null;
+        $cancellationRatio = $payload['cancellation_ratio'] ?? null;
+        $categories = is_array($payload['fraud_categories'] ?? null) ? $payload['fraud_categories'] : [];
+        $frauds = [];
+
+        foreach ($categories as $code => $times) {
+            $frauds[] = [
+                'type' => (string) $code,
+                'count' => (int) $times,
+            ];
+        }
+
+        $hasCounts = is_numeric($delivered) || is_numeric($cancelled);
+
+        if ($hasCounts) {
+            $report = self::fromCounts(
+                is_numeric($delivered) ? (int) $delivered : 0,
+                is_numeric($cancelled) ? (int) $cancelled : 0,
+                ['frauds' => $frauds],
+            );
+        } else {
+            $report = self::emptyReport([
+                'frauds' => $frauds,
+                'success_rate' => is_numeric($deliveryRatio)
+                    ? ((int) $deliveryRatio).'%'
+                    : 'No order history found!',
+            ]);
+        }
+
+        if (is_numeric($deliveryRatio)) {
+            $report['success_rate'] = ((int) $deliveryRatio).'%';
+        }
+
+        $report['delivery_ratio'] = is_numeric($deliveryRatio) ? (int) $deliveryRatio : null;
+        $report['cancellation_ratio'] = is_numeric($cancellationRatio) ? (int) $cancellationRatio : null;
+        $report['volume_band'] = $payload['volume_band'] ?? null;
+        $report['volume_range'] = $payload['volume_range'] ?? null;
+        $report['fraud_categories'] = $categories;
+        $report['frauds_count'] = (int) ($payload['total_reports'] ?? 0);
+        $report['doubtful_reports'] = (bool) ($payload['doubtful_reports'] ?? false);
+        $report['counts_hidden'] = ! $hasCounts;
+
+        if (! is_numeric($deliveryRatio) && ! is_numeric($cancellationRatio)) {
+            $report['history_unknown'] = true;
+            $report['message'] = 'Steadfast has no finished parcels for this number yet. That is not a clean record.';
+        } elseif (! $hasCounts) {
+            $report['message'] = 'Steadfast returned a delivery ratio. Exact parcel counts are hidden until this store is booking regularly.';
+        }
+
+        return $report;
+    }
+
     public static function fromPathao(array $pathaoResponse): array
     {
         $data = self::extractPathaoData($pathaoResponse);

@@ -14,6 +14,8 @@ return [
     'steadfast' => [
         'user' => env('STEADFAST_USER'),
         'password' => env('STEADFAST_PASSWORD'),
+        'api_key' => env('STEADFAST_API_KEY'),
+        'secret_key' => env('STEADFAST_SECRET_KEY'),
     ],
 
     'paperfly' => [

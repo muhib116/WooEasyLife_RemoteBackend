@@ -40,7 +40,71 @@ it('resolves merchant steadfast portal credentials from courier configuration', 
     expect($credentials)->toBe([
         'username' => 'merchant@steadfast.test',
         'password' => 'portal-password',
+        'api_key' => 'api-key-123',
+        'secret_key' => 'secret-key-456',
     ]);
+});
+
+it('reads steadfast delivery ratio from the packzy score api', function () {
+    Cache::flush();
+
+    Http::fake([
+        'https://portal.packzy.com/api/v1/fraud_check/score/01712345678' => Http::response([
+            'status' => 200,
+            'phone' => '01712345678',
+            'delivery_ratio' => 92,
+            'cancellation_ratio' => 7,
+            'volume_band' => 'high',
+            'volume_range' => '50+',
+            'delivered_count' => 58,
+            'cancelled_count' => 5,
+            'total_reports' => 0,
+            'fraud_categories' => [],
+            'score' => null,
+            'level' => null,
+            'reasons' => [],
+            'scoring_disabled' => true,
+            'doubtful_reports' => false,
+        ], 200),
+    ]);
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678', [
+        'api_key' => 'merchant-api-key',
+        'secret_key' => 'merchant-secret-key',
+    ]);
+
+    expect($report['api_success'] ?? false)->toBeTrue();
+    expect($report['confirmed'])->toBe(58);
+    expect($report['cancel'])->toBe(5);
+    expect($report['success_rate'])->toBe('92%');
+    expect($report['delivery_ratio'])->toBe(92);
+    expect($report['volume_band'])->toBe('high');
+
+    Http::assertSent(function ($request) {
+        return $request->method() === 'GET'
+            && str_contains($request->url(), '/fraud_check/score/01712345678')
+            && $request->hasHeader('Api-Key', 'merchant-api-key')
+            && $request->hasHeader('Secret-Key', 'merchant-secret-key');
+    });
+
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), '/login'));
+});
+
+it('does not treat a null steadfast ratio as a clean record', function () {
+    $report = \App\Services\FraudCheck\CourierReportFormatter::fromSteadfastScore([
+        'status' => 200,
+        'delivery_ratio' => null,
+        'cancellation_ratio' => null,
+        'delivered_count' => null,
+        'cancelled_count' => null,
+        'total_reports' => 0,
+        'fraud_categories' => [],
+    ]);
+
+    expect($report['history_unknown'])->toBeTrue();
+    expect($report['success_rate'])->toBe('No order history found!');
+    expect($report['confirmed'])->toBe(0);
+    expect($report['message'])->toContain('not a clean record');
 });
 
 it('uses different session cache keys when merchant password changes', function () {

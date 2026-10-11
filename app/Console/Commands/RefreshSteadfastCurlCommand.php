@@ -97,7 +97,13 @@ class RefreshSteadfastCurlCommand extends Command
             $this->cookiesToArray($loginResponse->cookies()->toArray())
         );
 
-        if (!isset($cookies['steadfast_courier_session'])) {
+        if (SteadfastFraudChecker::loginWasRejected($loginResponse->body(), (string) $loginResponse->header('Location'))) {
+            $this->warn('Steadfast rejected the portal login — update STEADFAST_USER and STEADFAST_PASSWORD');
+
+            return false;
+        }
+
+        if (! SteadfastFraudChecker::hasSessionCookie($cookies)) {
             $this->warn('Login did not return a session cookie — check STEADFAST credentials');
 
             return false;

@@ -430,7 +430,7 @@ class SteadFastController extends Controller
             return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
         }
 
-        $credentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        $credentials = $this->steadfastPortalCredentials->resolvePortalFromCurrentRequest();
         if ($credentials === null) {
             return $this->errorResponse(
                 'Steadfast portal username/password are not configured.',
@@ -486,7 +486,7 @@ class SteadFastController extends Controller
             return $this->errorResponse('Provide a note, address, COD amount, or customer details to update.', 422);
         }
 
-        $credentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        $credentials = $this->steadfastPortalCredentials->resolvePortalFromCurrentRequest();
         if ($credentials === null) {
             return $this->errorResponse(
                 'Steadfast portal username/password are not configured.',
@@ -577,7 +577,7 @@ class SteadFastController extends Controller
             return $fromRequest;
         }
 
-        $stored = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        $stored = $this->steadfastPortalCredentials->resolvePortalFromCurrentRequest();
         if ($stored === null) {
             return null;
         }
@@ -617,7 +617,7 @@ class SteadFastController extends Controller
             return $this->errorResponse('The SteadFast settings are not configured properly.', 422);
         }
 
-        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        $portalCredentials = $this->steadfastPortalCredentials->resolvePortalFromCurrentRequest();
 
         try {
             $data = $this->returnRequestsService->create(
@@ -670,7 +670,7 @@ class SteadFastController extends Controller
             return $this->errorResponse('The SteadFast settings are not configured properly.', 422);
         }
 
-        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        $portalCredentials = $this->steadfastPortalCredentials->resolvePortalFromCurrentRequest();
 
         try {
             $data = $this->returnRequestsService->list(
@@ -748,7 +748,7 @@ class SteadFastController extends Controller
             return $this->errorResponse($validator->errors()->first(), 422, $validator->errors());
         }
 
-        $portalCredentials = $this->steadfastPortalCredentials->resolveFromCurrentRequest();
+        $portalCredentials = $this->steadfastPortalCredentials->resolvePortalFromCurrentRequest();
         if ($portalCredentials === null) {
             return $this->errorResponse(
                 'Steadfast portal username/password are not configured. Add them in Config → Courier → Steadfast.',

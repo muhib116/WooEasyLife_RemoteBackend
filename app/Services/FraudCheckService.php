@@ -312,8 +312,10 @@ class FraudCheckService
         $report['status'] = 'unavailable';
         $report['message'] = match ($courier) {
             'Steadfast' => ! empty($report['credential_error'])
-                ? 'Steadfast portal credentials are invalid or expired. Update them in courier settings.'
-                : 'Steadfast session expired. Credentials will auto-refresh on next check.',
+                ? 'Steadfast API credentials were rejected. Check the API key and secret in courier settings.'
+                : (! empty($report['message'])
+                    ? (string) $report['message']
+                    : 'Steadfast session expired. Credentials will auto-refresh on next check.'),
             'Pathao' => 'Pathao returned no delivery data for this number.',
             'Paperfly' => 'Paperfly has no delivery records for this number.',
             'RedX' => $report['message'] ?? 'RedX returned no delivery data for this number.',

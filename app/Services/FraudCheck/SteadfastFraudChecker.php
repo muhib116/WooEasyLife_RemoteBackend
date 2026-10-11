@@ -13,6 +13,14 @@ class SteadfastFraudChecker
 {
     private const HOSTS = ['www.steadfast.com.bd', 'steadfast.com.bd'];
 
+    /**
+     * Steadfast renamed the portal session cookie. The new name is also set
+     * on the guest login page, so its presence alone is not proof of login.
+     *
+     * @var list<string>
+     */
+    private const SESSION_COOKIES = ['sfc_user_session', 'steadfast_courier_session'];
+
     /** @var array{username: string, password: string}|null */
     private ?array $credentials = null;
 
@@ -41,6 +49,16 @@ class SteadfastFraudChecker
 
     private function performCheck(string $phone): array
     {
+        $apiReport = $this->checkViaScoreApi($phone);
+
+        if (is_array($apiReport) && (
+            $this->isUsableReport($apiReport)
+            || ! empty($apiReport['credential_error'])
+            || ! empty($apiReport['rate_limited'])
+        )) {
+            return $apiReport;
+        }
+
         $report = $this->runCredentialCheck($phone);
 
         if ($this->isUsableReport($report)) {
@@ -113,6 +131,8 @@ class SteadfastFraudChecker
             }
 
             // Session expired / cold: pick a random account, then failover.
+            $credentialFailure = null;
+
             foreach ($this->partnerCredentials->loginCandidates('steadfast') as $candidate) {
                 $this->credentials = [
                     'username' => $candidate['identifier'],
@@ -125,6 +145,10 @@ class SteadfastFraudChecker
                         $this->partnerCredentials->markSuccess($candidate['id']);
 
                         return $report;
+                    }
+
+                    if (! empty($report['credential_error'])) {
+                        $credentialFailure = $report;
                     }
 
                     $this->partnerCredentials->markFailure($candidate['id'], 'Steadfast login/check failed');
@@ -141,7 +165,15 @@ class SteadfastFraudChecker
                 return $legacyReport;
             }
 
+            if (isset($credentialFailure)) {
+                return $credentialFailure;
+            }
+
             return $legacyReport;
+        }
+
+        if (isset($credentialFailure)) {
+            return $credentialFailure;
         }
 
         if (! $this->partnerCredentials->isConfigured('steadfast')) {
@@ -277,6 +309,115 @@ class SteadfastFraudChecker
         Cache::forget($this->sessionCacheKey());
     }
 
+    /**
+     * Official merchant API: GET https://portal.packzy.com/api/v1/fraud_check/score/{phone}
+     *
+     * @return array<string, mixed>|null Null when no API key pair is configured.
+     */
+    private function checkViaScoreApi(string $phone): ?array
+    {
+        $keys = $this->resolveApiCredentials();
+
+        if ($keys === null) {
+            return null;
+        }
+
+        $report = CourierReportFormatter::emptyReport(['frauds' => []]);
+        $digits = preg_replace('/\D/', '', $phone) ?? '';
+
+        if ($digits === '') {
+            return $report;
+        }
+
+        try {
+            $response = $this->client()
+                ->withHeaders([
+                    'Api-Key' => $keys['api_key'],
+                    'Secret-Key' => $keys['secret_key'],
+                    'Accept' => 'application/json',
+                ])
+                ->get('https://portal.packzy.com/api/v1/fraud_check/score/'.$digits);
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast fraud check error', 'Score API request failed: '.$th->getMessage());
+
+            return $report;
+        }
+
+        if ($response->status() === 401) {
+            LogHelper::saveLog('Steadfast fraud check error', 'Score API rejected the API key');
+
+            return array_merge($report, [
+                'auth_failed' => true,
+                'credential_error' => true,
+            ]);
+        }
+
+        if ($response->status() === 429) {
+            LogHelper::saveLog('Steadfast fraud check error', 'Score API rate limit reached');
+
+            return array_merge($report, [
+                'rate_limited' => true,
+                'message' => 'Steadfast fraud check limit reached for this store. Try again later.',
+            ]);
+        }
+
+        if (! $response->successful()) {
+            LogHelper::saveLog('Steadfast fraud check error', 'Score API failed with status '.$response->status());
+
+            return $report;
+        }
+
+        $payload = $response->json();
+
+        if (! is_array($payload)) {
+            return $report;
+        }
+
+        $status = $payload['status'] ?? null;
+        if ($status !== null && (int) $status !== 200) {
+            return $report;
+        }
+
+        return array_merge(CourierReportFormatter::fromSteadfastScore($payload), [
+            'api_success' => true,
+        ]);
+    }
+
+    /**
+     * Merchant courier keys win. Platform .env keys are used only when this
+     * check was not given a specific merchant account.
+     *
+     * @return array{api_key: string, secret_key: string}|null
+     */
+    private function resolveApiCredentials(): ?array
+    {
+        $apiKey = trim((string) ($this->credentials['api_key'] ?? ''));
+        $secretKey = trim((string) ($this->credentials['secret_key'] ?? ''));
+
+        if ($apiKey !== '' && $secretKey !== '') {
+            return [
+                'api_key' => $apiKey,
+                'secret_key' => $secretKey,
+            ];
+        }
+
+        if ($this->credentials !== null) {
+            return null;
+        }
+
+        $apiKey = trim((string) config('fraud-checker-bd-courier.steadfast.api_key'));
+        $secretKey = trim((string) config('fraud-checker-bd-courier.steadfast.secret_key'));
+
+        if ($apiKey === '' || $secretKey === '') {
+            return null;
+        }
+
+        return [
+            'api_key' => $apiKey,
+            'secret_key' => $secretKey,
+        ];
+    }
+
     private function checkViaCachedSession(string $phone): array
     {
         $report = CourierReportFormatter::emptyReport(['frauds' => []]);
@@ -389,7 +530,16 @@ class SteadfastFraudChecker
             $this->cookiesToArray($loginResponse->cookies()->toArray())
         );
 
-        if (!isset($sessionCookies['steadfast_courier_session'])) {
+        if (self::loginWasRejected($loginResponse->body(), (string) $loginResponse->header('Location'))) {
+            LogHelper::saveLog('Steadfast fraud check error', "Steadfast rejected the portal login on {$host}");
+
+            return array_merge($report, [
+                'auth_failed' => true,
+                'credential_error' => true,
+            ]);
+        }
+
+        if (! self::hasSessionCookie($sessionCookies)) {
             LogHelper::saveLog('Steadfast fraud check error', "Login on {$host} did not create a session cookie");
 
             return array_merge($report, ['auth_failed' => true]);
@@ -516,10 +666,60 @@ class SteadfastFraudChecker
         return $raw;
     }
 
+    /**
+     * @param  array<string, string>  $cookies
+     */
+    public static function hasSessionCookie(array $cookies): bool
+    {
+        foreach (self::SESSION_COOKIES as $name) {
+            if (filled($cookies[$name] ?? null)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A guest session cookie is set before login. Rejection is the login
+     * form itself, or a redirect back to /login.
+     */
+    public static function loginWasRejected(string $body, string $location = ''): bool
+    {
+        if (self::looksLikeLoginPage($body)) {
+            return true;
+        }
+
+        $path = parse_url($location, PHP_URL_PATH);
+        $path = is_string($path) && $path !== '' ? $path : $location;
+        $path = rtrim($path, '/');
+
+        return $path === '/login' || str_ends_with($path, '/login');
+    }
+
+    public static function looksLikeLoginPage(string $html): bool
+    {
+        $html = strtolower($html);
+
+        if (str_starts_with(ltrim($html), '{') || str_starts_with(ltrim($html), '[')) {
+            return false;
+        }
+
+        return str_contains($html, 'name="email"')
+            && str_contains($html, 'name="password"')
+            && (str_contains($html, 'merchant login') || str_contains($html, '/login') || str_contains($html, 'remember me'));
+    }
+
     private function client(): PendingRequest
     {
         return Http::timeout(25)
             ->connectTimeout(10)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
             ->retry(3, 1500, fn ($exception) => $this->isRetryableError($exception), throw: false)
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -531,6 +731,12 @@ class SteadfastFraudChecker
     {
         return Http::timeout(25)
             ->connectTimeout(10)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
             ->retry(3, 1500, fn ($exception) => $this->isRetryableError($exception), throw: false)
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',

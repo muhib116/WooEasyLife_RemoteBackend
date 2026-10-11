@@ -184,7 +184,7 @@ class SteadfastPortalSessionClient
             $this->cookiesToArray($response->cookies()->toArray())
         );
 
-        if ($credentials !== null && isset($merged['steadfast_courier_session'])) {
+        if ($credentials !== null && SteadfastFraudChecker::hasSessionCookie($merged)) {
             $this->storeSession($credentials, $host, $merged);
         }
 
@@ -356,16 +356,7 @@ class SteadfastPortalSessionClient
 
     public function looksLikeLoginPage(string $html): bool
     {
-        $html = strtolower($html);
-
-        // Avoid false positives on JSON API error bodies.
-        if (str_starts_with(ltrim($html), '{') || str_starts_with(ltrim($html), '[')) {
-            return false;
-        }
-
-        return str_contains($html, 'name="email"')
-            && str_contains($html, 'name="password"')
-            && (str_contains($html, 'merchant login') || str_contains($html, '/login') || str_contains($html, 'remember me'));
+        return SteadfastFraudChecker::looksLikeLoginPage($html);
     }
 
     private function isSessionFailure(\Throwable $th): bool
@@ -461,13 +452,15 @@ class SteadfastPortalSessionClient
             $this->cookiesToArray($loginResponse->cookies()->toArray())
         );
 
-        if (! isset($sessionCookies['steadfast_courier_session'])) {
-            if ($this->responseLooksRateLimited($responseBody) || $this->looksLikeLoginPage($responseBody)) {
-                if ($this->responseLooksRateLimited($responseBody)) {
-                    $this->throwRateLimited($credentials);
-                }
+        if (SteadfastFraudChecker::loginWasRejected($responseBody, (string) $loginResponse->header('Location'))) {
+            if ($this->responseLooksRateLimited($responseBody)) {
+                $this->throwRateLimited($credentials);
             }
 
+            throw new RuntimeException('Steadfast rejected the portal login. Check the email and password.');
+        }
+
+        if (! SteadfastFraudChecker::hasSessionCookie($sessionCookies)) {
             throw new RuntimeException("Login on {$host} did not create a session cookie.");
         }
 
