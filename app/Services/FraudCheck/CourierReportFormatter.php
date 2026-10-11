@@ -34,6 +34,21 @@ class CourierReportFormatter
 
     public static function fromSteadfast(array $payload): array
     {
+        if (self::usesSteadfastScoreShape($payload)) {
+            $normalized = $payload;
+            if (! array_key_exists('total_reports', $normalized) && array_key_exists('fraud_reports', $payload)) {
+                $normalized['total_reports'] = $payload['fraud_reports'];
+            }
+
+            $report = self::fromSteadfastScore($normalized);
+
+            if (isset($payload['frauds']) && is_array($payload['frauds']) && array_is_list($payload['frauds'])) {
+                $report['frauds'] = $payload['frauds'];
+            }
+
+            return $report;
+        }
+
         $confirmed = (int) ($payload['total_delivered'] ?? $payload['delivered'] ?? 0);
         $cancel = (int) ($payload['total_cancelled'] ?? $payload['cancelled'] ?? $payload['cancel'] ?? 0);
         $total = (int) ($payload['total_order'] ?? $payload['total'] ?? 0);
@@ -49,6 +64,23 @@ class CourierReportFormatter
         return self::fromCounts($confirmed, $cancel, [
             'frauds' => $payload['frauds'] ?? [],
         ]);
+    }
+
+    /**
+     * The portal fraud-check JSON now matches the score API. Older sessions
+     * still send total_delivered / total_cancelled.
+     */
+    private static function usesSteadfastScoreShape(array $payload): bool
+    {
+        foreach (['total_delivered', 'delivered', 'total_cancelled', 'cancelled', 'cancel', 'total_order', 'total'] as $field) {
+            if (array_key_exists($field, $payload)) {
+                return false;
+            }
+        }
+
+        return array_key_exists('delivered_count', $payload)
+            || array_key_exists('cancelled_count', $payload)
+            || array_key_exists('delivery_ratio', $payload);
     }
 
     /**

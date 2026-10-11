@@ -141,17 +141,33 @@
                 </div>
 
                 <div class="space-y-1.5">
-                    <label class="text-sm font-medium">
+                    <label class="text-sm font-medium" for="credential-password">
                         Password
-                        <span v-if="editingId" class="font-normal text-slate-400">(leave blank to keep)</span>
                     </label>
-                    <Password
-                        v-model="form.secret"
-                        class="w-full"
-                        input-class="w-full"
-                        :feedback="false"
-                        toggle-mask
-                    />
+                    <div class="flex gap-2">
+                        <InputText
+                            id="credential-password"
+                            v-model="form.secret"
+                            class="w-full font-mono"
+                            autocomplete="off"
+                            :placeholder="loadingSecret ? 'Loading saved password...' : 'Password'"
+                            :disabled="loadingSecret"
+                        />
+                        <Button
+                            type="button"
+                            label="Copy"
+                            icon="pi pi-copy"
+                            severity="secondary"
+                            outlined
+                            class="shrink-0"
+                            :disabled="!form.secret"
+                            @click="copySecret"
+                        />
+                    </div>
+                    <p v-if="copied" class="text-xs text-emerald-600 dark:text-emerald-400">Copied</p>
+                    <p v-else-if="editingId" class="text-xs text-slate-500 dark:text-slate-400">
+                        The saved password is shown so you can copy it. Clear the field to keep the current one.
+                    </p>
                 </div>
 
                 <div class="space-y-1.5">
@@ -234,6 +250,8 @@ const dialogVisible = ref(false);
 const editingId = ref<number | null>(null);
 const saving = ref(false);
 const deletingId = ref<number | null>(null);
+const loadingSecret = ref(false);
+const copied = ref(false);
 const formError = ref("");
 
 const form = reactive({
@@ -296,10 +314,11 @@ const resetForm = () => {
 const openCreate = () => {
     editingId.value = null;
     resetForm();
+    copied.value = false;
     dialogVisible.value = true;
 };
 
-const openEdit = (row: CredentialRow) => {
+const openEdit = async (row: CredentialRow) => {
     editingId.value = row.id;
     form.courier = row.courier;
     form.label = row.label || "";
@@ -308,7 +327,39 @@ const openEdit = (row: CredentialRow) => {
     form.priority = row.priority;
     form.is_active = row.is_active;
     formError.value = "";
+    copied.value = false;
     dialogVisible.value = true;
+
+    if (!row.id) {
+        return;
+    }
+
+    loadingSecret.value = true;
+
+    try {
+        const { data } = await axios.get(route("frauds.credentials.secret", row.id));
+
+        if (editingId.value === row.id) {
+            form.secret = data.secret || "";
+        }
+    } catch {
+        formError.value = "Could not load the saved password.";
+    } finally {
+        loadingSecret.value = false;
+    }
+};
+
+const copySecret = async () => {
+    if (!form.secret) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(form.secret);
+        copied.value = true;
+    } catch {
+        formError.value = "Could not copy the password.";
+    }
 };
 
 const saveCredential = async () => {

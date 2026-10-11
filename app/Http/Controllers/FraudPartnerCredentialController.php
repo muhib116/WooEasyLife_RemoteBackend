@@ -48,6 +48,21 @@ class FraudPartnerCredentialController extends Controller
         ], 201);
     }
 
+    public function secret(FraudPartnerCredential $credential): JsonResponse
+    {
+        $password = $credential->password;
+
+        if (! filled($password)) {
+            return response()->json([
+                'message' => 'Saved password could not be read.',
+            ], 422);
+        }
+
+        return response()->json([
+            'secret' => $password,
+        ]);
+    }
+
     public function update(Request $request, FraudPartnerCredential $credential): JsonResponse
     {
         $data = $this->validated($request, creating: false, existingId: $credential->id);

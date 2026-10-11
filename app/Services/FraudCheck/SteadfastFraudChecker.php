@@ -26,6 +26,7 @@ class SteadfastFraudChecker
 
     public function __construct(
         private FraudPartnerCredentialResolver $partnerCredentials,
+        private SteadfastFraudApiCredentialStore $apiCredentials,
     ) {}
 
     public function isConfigured(): bool
@@ -53,7 +54,6 @@ class SteadfastFraudChecker
 
         if (is_array($apiReport) && (
             $this->isUsableReport($apiReport)
-            || ! empty($apiReport['credential_error'])
             || ! empty($apiReport['rate_limited'])
         )) {
             return $apiReport;
@@ -81,10 +81,14 @@ class SteadfastFraudChecker
                     return $fallbackReport;
                 }
 
-                return $fallbackReport;
+                $report = $fallbackReport;
             } finally {
                 $this->credentials = $merchantCredentials;
             }
+        }
+
+        if (is_array($apiReport) && ! empty($apiReport['credential_error'])) {
+            return $apiReport;
         }
 
         return $report;
@@ -403,6 +407,11 @@ class SteadfastFraudChecker
 
         if ($this->credentials !== null) {
             return null;
+        }
+
+        $stored = $this->apiCredentials->pair();
+        if ($stored !== null) {
+            return $stored;
         }
 
         $apiKey = trim((string) config('fraud-checker-bd-courier.steadfast.api_key'));

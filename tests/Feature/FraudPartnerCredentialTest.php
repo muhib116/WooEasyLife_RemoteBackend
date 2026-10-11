@@ -122,7 +122,12 @@ it('requires platform admin auth for credential routes', function () {
         ->assertJsonPath('credential.is_active', false);
 
     $this->actingAs($admin)->get(route('frauds.credentials'))
-        ->assertOk();
+        ->assertOk()
+        ->assertDontSee('secret-pass');
+
+    $this->actingAs($admin)->getJson(route('frauds.credentials.secret', $id))
+        ->assertOk()
+        ->assertJsonPath('secret', 'secret-pass');
 
     $this->actingAs($admin)->deleteJson(route('frauds.credentials.destroy', $id))
         ->assertOk();

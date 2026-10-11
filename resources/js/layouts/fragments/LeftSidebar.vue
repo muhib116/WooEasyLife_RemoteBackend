@@ -469,6 +469,12 @@ const allSections: NavSection[] = [
                         permission: "merchants.view",
                     },
                     {
+                        title: "Steadfast API",
+                        name: "frauds.steadfastApi",
+                        icon: "PhKey",
+                        permission: "merchants.view",
+                    },
+                    {
                         title: "Token & CURL",
                         name: "frauds.expire",
                         icon: "PhGear",

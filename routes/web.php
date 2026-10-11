@@ -61,6 +61,7 @@ use App\Http\Controllers\PublicDownloadGateController;
 use App\Http\Controllers\PublicFraudCheckController;
 use App\Http\Controllers\PublicStorageController;
 use App\Http\Controllers\SmsController;
+use App\Http\Controllers\SteadfastFraudApiCredentialController;
 use App\Services\LandingPageService;
 use App\Services\LandingSettingsService;
 use App\Services\PublicSubscriptionService;
@@ -854,7 +855,11 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::put('/runtime-config', [FraudCheckController::class, 'updateRuntimeConfig'])->name('updateRuntimeConfig');
         Route::post('/runtime-config/reset', [FraudCheckController::class, 'resetRuntimeConfig'])->name('resetRuntimeConfig');
 
+        Route::get('/steadfast-api', [SteadfastFraudApiCredentialController::class, 'index'])->name('steadfastApi');
+        Route::put('/steadfast-api', [SteadfastFraudApiCredentialController::class, 'update'])->name('steadfastApi.update');
+
         Route::get('/credentials', [FraudPartnerCredentialController::class, 'index'])->name('credentials');
+        Route::get('/credentials/{credential}/secret', [FraudPartnerCredentialController::class, 'secret'])->name('credentials.secret');
         Route::post('/credentials', [FraudPartnerCredentialController::class, 'store'])->name('credentials.store');
         Route::put('/credentials/{credential}', [FraudPartnerCredentialController::class, 'update'])->name('credentials.update');
         Route::delete('/credentials/{credential}', [FraudPartnerCredentialController::class, 'destroy'])->name('credentials.destroy');

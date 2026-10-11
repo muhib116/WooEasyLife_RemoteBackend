@@ -109,6 +109,27 @@ it('parses steadfast and paperfly payloads into combined totals', function () {
     expect($totals['cancel'])->toBe(5);
 });
 
+it('parses the current steadfast portal payload', function () {
+    $report = CourierReportFormatter::fromSteadfast([
+        'delivery_ratio' => 78,
+        'cancellation_ratio' => 21,
+        'volume_band' => 'high',
+        'volume_range' => '25+',
+        'fraud_reports' => 0,
+        'fraud_categories' => [],
+        'frauds' => [],
+        'delivered_count' => 26,
+        'cancelled_count' => 7,
+    ]);
+
+    expect($report['confirmed'])->toBe(26);
+    expect($report['cancel'])->toBe(7);
+    expect($report['total_order'])->toBe(33);
+    expect($report['success_rate'])->toBe('78%');
+    expect($report['volume_band'])->toBe('high');
+    expect($report['frauds_count'])->toBe(0);
+});
+
 it('excludes pathao rating-only data from combined totals', function () {
     $steadfast = CourierReportFormatter::fromSteadfast([
         'total_delivered' => 7,
