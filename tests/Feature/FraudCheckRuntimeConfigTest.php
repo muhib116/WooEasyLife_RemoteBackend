@@ -3,6 +3,7 @@
 use App\Models\PlatformSetting;
 use App\Models\User;
 use App\Services\OrderIntelligence\FraudCheckRuntimeConfig;
+use App\Services\OrderIntelligence\PlatformSufficiencyChecker;
 use Illuminate\Support\Facades\Hash;
 
 function createRuntimeConfigAdmin(): User
@@ -63,6 +64,86 @@ it('applies runtime fraud check overrides without changing env', function () {
 
     expect(config('order_intelligence.fraud_check.mode'))->toBe('hybrid')
         ->and(PlatformSetting::query()->where('key', 'like', 'order_intelligence.fraud_check.%')->count())->toBe(0);
+});
+
+it('applies a saved fraud check mode again on the next request in the same process', function () {
+    $service = app(FraudCheckRuntimeConfig::class);
+
+    $service->update(['mode' => 'external_only']);
+
+    config(['order_intelligence.fraud_check.mode' => 'hybrid']);
+
+    $service->applyOverrides();
+
+    expect(config('order_intelligence.fraud_check.mode'))->toBe('external_only');
+});
+
+it('chooses cache or live couriers from the fraud check mode', function () {
+    config(['order_intelligence.enabled' => true]);
+
+    $checker = app(PlatformSufficiencyChecker::class);
+    $useful = [
+        'courier_stats' => [[
+            'courier' => 'steadfast',
+            'total_order' => 10,
+            'confirmed' => 8,
+            'cancel' => 2,
+            'fetch_failed' => false,
+            'fetched_at' => now()->toDateTimeString(),
+        ]],
+        'courier_fraud_notes' => [],
+        'platform_intelligence' => ['total_orders' => 0],
+    ];
+    $failedOnly = [
+        'courier_stats' => [[
+            'courier' => 'steadfast',
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'fetch_failed' => true,
+            'fetched_at' => now()->subHours(6)->toDateTimeString(),
+        ]],
+        'courier_fraud_notes' => [],
+        'platform_intelligence' => ['total_orders' => 0],
+    ];
+
+    config([
+        'order_intelligence.fraud_check.mode' => 'hybrid',
+        'order_intelligence.fraud_check.stale_while_revalidate' => true,
+    ]);
+    expect($checker->shouldUsePlatform($useful))->toBeTrue()
+        ->and($checker->shouldUsePlatform($failedOnly))->toBeFalse();
+
+    config(['order_intelligence.fraud_check.mode' => 'external_only']);
+    expect($checker->shouldUsePlatform($useful))->toBeFalse();
+
+    config([
+        'order_intelligence.fraud_check.mode' => 'platform_first',
+        'order_intelligence.fraud_check.min_platform_orders' => 3,
+    ]);
+    expect($checker->shouldUsePlatform($failedOnly))->toBeFalse()
+        ->and($checker->shouldUsePlatform($useful))->toBeTrue()
+        ->and($checker->shouldUsePlatform([
+            'courier_stats' => [],
+            'courier_fraud_notes' => [],
+            'platform_intelligence' => ['total_orders' => 2],
+        ]))->toBeFalse()
+        ->and($checker->shouldUsePlatform([
+            'courier_stats' => [],
+            'courier_fraud_notes' => [],
+            'platform_intelligence' => ['total_orders' => 3],
+        ]))->toBeTrue();
+
+    config([
+        'order_intelligence.fraud_check.mode' => 'hybrid',
+        'order_intelligence.fraud_check.stale_while_revalidate' => true,
+        'order_intelligence.fraud_check.min_platform_orders' => 3,
+    ]);
+    expect($checker->shouldUsePlatform([
+        'courier_stats' => [],
+        'courier_fraud_notes' => [],
+        'platform_intelligence' => ['total_orders' => 2],
+    ]))->toBeFalse();
 });
 
 it('requires auth for runtime config endpoints', function () {

@@ -355,7 +355,7 @@ it('serves platform cache when only one courier snapshot failed', function () {
     expect($report['source'])->toBe('platform')
         ->and($report['total_order'])->toBe(67)
         ->and($report['confirmed'])->toBe(51)
-        ->and($refreshCalledWith)->toBe(['carrybee']);
+        ->and($refreshCalledWith)->toBe(['pathao', 'carrybee']);
 });
 
 it('partial refresh only calls failed or stale couriers', function () {
@@ -484,6 +484,70 @@ it('preserves useful courier snapshots when a partner fetch fails', function () 
         ->and($steadfast->cancel)->toBe(23)
         ->and($pathao->total_order)->toBe(2)
         ->and($redx->total_order)->toBe(1);
+});
+
+it('uses the preserve snapshot switch on the live fraud-check response', function () {
+    config([
+        'order_intelligence.enabled' => true,
+        'order_intelligence.fraud_check.mode' => 'external_only',
+        'order_intelligence.fraud_check.preserve_snapshot_on_failure' => true,
+    ]);
+
+    createOrderIntelligenceToken();
+    $customer = app(CustomerResolver::class)->resolve('01770001122', 'Response Preserve');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01770001122',
+        'courier' => 'steadfast',
+        'total_order' => 83,
+        'confirmed' => 60,
+        'cancel' => 23,
+        'success_rate' => '73%',
+        'frauds_count' => 0,
+        'fetched_at' => now(),
+    ]);
+
+    $this->mock(FraudCheckService::class, function ($mock) {
+        $mock->shouldReceive('normalizePhone')->andReturn('01770001122');
+        $mock->shouldReceive('getReport')->twice()->andReturn([
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'success_rate' => 'No order history found!',
+            'frauds' => [],
+            'courier' => [[
+                'title' => 'Stead Fast',
+                'report' => [
+                    'total_order' => 0,
+                    'confirmed' => 0,
+                    'cancel' => 0,
+                    'unavailable' => true,
+                    'message' => 'Steadfast login failed',
+                ],
+            ]],
+        ]);
+    });
+
+    $request = Request::create('/api/fraud-check', 'POST', [
+        'phone' => '01770001122',
+    ]);
+
+    $kept = app(FraudCheckCoordinator::class)->checkSingle($request, $request->all());
+    $keptReport = $kept['courier'][0]['report'];
+
+    expect($keptReport['cached_fallback'] ?? false)->toBeTrue()
+        ->and($keptReport['total_order'])->toBe(83)
+        ->and($keptReport['confirmed'])->toBe(60);
+
+    config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => false]);
+
+    $live = app(FraudCheckCoordinator::class)->checkSingle($request, $request->all());
+    $liveReport = $live['courier'][0]['report'];
+
+    expect($liveReport['cached_fallback'] ?? false)->toBeFalse()
+        ->and($liveReport['unavailable'] ?? false)->toBeTrue()
+        ->and($liveReport['total_order'])->toBe(0);
 });
 
 it('stores failed courier fetches as refreshable placeholders instead of fresh empty success', function () {

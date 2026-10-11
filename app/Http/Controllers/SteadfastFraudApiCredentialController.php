@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\FraudCheck\SteadfastFraudApiCredentialStore;
+use App\Services\FraudCheck\SteadfastFraudChecker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +22,101 @@ class SteadfastFraudApiCredentialController extends Controller
         return Inertia::render('FraudCheck/SteadfastApi', [
             'credential' => $this->credentials->adminState(),
         ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'label' => ['nullable', 'string', 'max:80'],
+            'api_key' => ['required', 'string', 'max:255'],
+            'secret_key' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $this->credentials->add($data['api_key'], $data['secret_key'], $data['label'] ?? null);
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'api_key' => $e->getMessage(),
+            ]);
+        }
+
+        return back()->with('success', 'Steadfast API key added.');
+    }
+
+    public function updateAccount(Request $request, string $account): RedirectResponse
+    {
+        $data = $request->validate([
+            'label' => ['nullable', 'string', 'max:180'],
+            'api_key' => ['required', 'string', 'max:255'],
+            'secret_key' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $this->credentials->updateAccount(
+                $account,
+                $data['api_key'],
+                $data['secret_key'],
+                $data['label'] ?? null,
+            );
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'api_key' => $e->getMessage(),
+            ]);
+        }
+
+        return back()->with('success', 'Steadfast API key saved.');
+    }
+
+    public function importMerchants(): RedirectResponse
+    {
+        $result = $this->credentials->importMerchantKeys();
+
+        $parts = [
+            $result['added'].' merchant '.($result['added'] === 1 ? 'key' : 'keys').' added.',
+        ];
+
+        if (($result['updated'] ?? 0) > 0) {
+            $parts[] = $result['updated'].' '.($result['updated'] === 1 ? 'key' : 'keys').' updated.';
+        }
+
+        if ($result['already_saved'] > 0) {
+            $parts[] = $result['already_saved'].' already in the list.';
+        }
+
+        if ($result['missing_keys'] > 0) {
+            $parts[] = $result['missing_keys'].' '.($result['missing_keys'] === 1 ? 'merchant has' : 'merchants have').' no Steadfast API pair.';
+        }
+
+        return back()->with('success', implode(' ', $parts));
+    }
+
+    public function test(string $account, SteadfastFraudChecker $checker): RedirectResponse
+    {
+        $saved = $this->credentials->find($account);
+
+        if ($saved === null) {
+            return back()->with('success', 'That Steadfast API key is no longer in the list.');
+        }
+
+        $result = $checker->probeApiKey($saved['api_key'], $saved['secret_key']);
+
+        if ($result['ok']) {
+            $this->credentials->recordOutcome($saved['api_key'], null);
+
+            return back()->with('success', 'This key works again. Hub checks can use it.');
+        }
+
+        $message = $result['error'] ?: 'Steadfast rejected this API key or secret.';
+        $this->credentials->recordOutcome($saved['api_key'], $message);
+
+        return back()->with('success', 'Test failed. This key stays off. '.$message);
+    }
+
+    public function destroy(string $account): RedirectResponse
+    {
+        $this->credentials->remove($account);
+
+        return back()->with('success', 'Steadfast API key removed.');
     }
 
     public function update(Request $request): RedirectResponse

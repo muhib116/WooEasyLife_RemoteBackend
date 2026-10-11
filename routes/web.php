@@ -54,6 +54,7 @@ use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\DeployController;
 use App\Http\Controllers\FraudCheckController;
+use App\Http\Controllers\FraudCheckQuotaController;
 use App\Http\Controllers\FraudPartnerCredentialController;
 use App\Http\Controllers\PageBuilder;
 use App\Http\Controllers\ProfileController;
@@ -856,7 +857,16 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::post('/runtime-config/reset', [FraudCheckController::class, 'resetRuntimeConfig'])->name('resetRuntimeConfig');
 
         Route::get('/steadfast-api', [SteadfastFraudApiCredentialController::class, 'index'])->name('steadfastApi');
+        Route::post('/steadfast-api/import-merchants', [SteadfastFraudApiCredentialController::class, 'importMerchants'])->name('steadfastApi.importMerchants');
+        Route::post('/steadfast-api', [SteadfastFraudApiCredentialController::class, 'store'])->name('steadfastApi.store');
+        Route::post('/steadfast-api/{account}/test', [SteadfastFraudApiCredentialController::class, 'test'])->name('steadfastApi.test');
+        Route::put('/steadfast-api/{account}', [SteadfastFraudApiCredentialController::class, 'updateAccount'])->name('steadfastApi.updateAccount');
         Route::put('/steadfast-api', [SteadfastFraudApiCredentialController::class, 'update'])->name('steadfastApi.update');
+        Route::delete('/steadfast-api/{account}', [SteadfastFraudApiCredentialController::class, 'destroy'])->name('steadfastApi.destroy');
+
+        Route::get('/daily-limits', [FraudCheckQuotaController::class, 'index'])->name('limits');
+        Route::put('/daily-limits', [FraudCheckQuotaController::class, 'update'])->name('limits.update');
+        Route::post('/daily-limits/reset', [FraudCheckQuotaController::class, 'reset'])->name('limits.reset');
 
         Route::get('/credentials', [FraudPartnerCredentialController::class, 'index'])->name('credentials');
         Route::get('/credentials/{credential}/secret', [FraudPartnerCredentialController::class, 'secret'])->name('credentials.secret');

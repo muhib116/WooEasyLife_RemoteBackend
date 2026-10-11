@@ -114,8 +114,19 @@ class MerchantSteadfastFraudCredentialResolver
         ];
     }
 
+    /**
+     * Unlimited plugin checks require this store's own Steadfast API key pair.
+     * Portal email/password alone does not lift the free limit.
+     */
     public function hasCredentialsForRequest(Request $request): bool
     {
-        return $this->resolveFromRequest($request) !== null;
+        $credentials = $this->resolveFromRequest($request);
+
+        if (! is_array($credentials)) {
+            return false;
+        }
+
+        return trim((string) ($credentials['api_key'] ?? '')) !== ''
+            && trim((string) ($credentials['secret_key'] ?? '')) !== '';
     }
 }

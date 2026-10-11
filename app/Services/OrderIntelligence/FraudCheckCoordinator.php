@@ -272,6 +272,12 @@ class FraudCheckCoordinator
      */
     private function mergeLastGoodCourierData(array $report, string $phoneNormalized, ?FraudCheckDecisionLog $log = null): array
     {
+        if (! config('order_intelligence.fraud_check.preserve_snapshot_on_failure', true)) {
+            $log?->add('fallback', 'Preserve snapshot on failure is off — live courier result kept');
+
+            return $report;
+        }
+
         $snapshots = CourierCustomerSnapshot::query()
             ->where('phone_normalized', $phoneNormalized)
             ->get()

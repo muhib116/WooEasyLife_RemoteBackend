@@ -185,10 +185,10 @@ class LandingPageService
         }
 
         if ($locale === 'en') {
-            return $this->applyEnglishLandingOverlays($payload, $paymentMethods);
+            $payload = $this->applyEnglishLandingOverlays($payload, $paymentMethods);
         }
 
-        return $payload;
+        return $this->withLiveFraudLimitCopy($payload, $locale);
     }
 
     /**
@@ -253,6 +253,51 @@ class LandingPageService
         }
 
         return $payload;
+    }
+
+    /**
+     * The benefit card states the public daily limit. Keep it on the same
+     * number the checker enforces, including an admin-panel override.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function withLiveFraudLimitCopy(array $payload, string $locale): array
+    {
+        $cards = $payload['fraudBenefitCards'] ?? null;
+        if (! is_array($cards) || ! is_array($cards['cards'] ?? null)) {
+            return $payload;
+        }
+
+        $limit = $this->publicFraudCheckService->dailyFreeLimit();
+        $isEn = $locale === 'en';
+
+        foreach ($cards['cards'] as $index => $card) {
+            if (! is_array($card)) {
+                continue;
+            }
+
+            $title = (string) ($card['title'] ?? '');
+            if ($title !== 'ফ্রি-তে কাস্টমারের Courier History দেখুন' && $title !== 'Free courier history checks') {
+                continue;
+            }
+
+            $cards['cards'][$index]['description'] = $isEn
+                ? 'Check by number without registration — '.$limit.' free checks per day.'
+                : 'রেজিস্ট্রেশন ছাড়াই নম্বর দিয়ে প্রতিদিন '.$this->bnDigits((string) $limit).'টি ফ্রি চেক করুন।';
+        }
+
+        $payload['fraudBenefitCards'] = $cards;
+
+        return $payload;
+    }
+
+    private function bnDigits(string $value): string
+    {
+        return strtr($value, [
+            '0' => '০', '1' => '১', '2' => '২', '3' => '৩', '4' => '৪',
+            '5' => '৫', '6' => '৬', '7' => '৭', '8' => '৮', '9' => '৯',
+        ]);
     }
 
     private function displayPhone(?string $phone): ?string

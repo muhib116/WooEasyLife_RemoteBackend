@@ -300,6 +300,9 @@
                                 >
                                     {{ item.report.confirmed }} delivered ·
                                     {{ item.report.cancel }} cancelled
+                                    <template v-if="Number(item.report.partial) > 0">
+                                        · {{ item.report.partial }} partial
+                                    </template>
                                     <span
                                         v-if="courierCacheLabel(item.report)"
                                         class="text-amber-600 dark:text-amber-400"

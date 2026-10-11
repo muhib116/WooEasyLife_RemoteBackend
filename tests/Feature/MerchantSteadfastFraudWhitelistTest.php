@@ -6,6 +6,7 @@ use App\Models\AccessToken;
 use App\Models\CourierConfiguration;
 use App\Models\User;
 use App\Models\WhitelistedDomain;
+use App\Services\FraudCheck\FraudCheckQuotaSettings;
 use App\Services\FraudCheckService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -103,6 +104,36 @@ class MerchantSteadfastFraudWhitelistTest extends TestCase
             ->assertJsonMissingPath('free_access');
     }
 
+    public function test_portal_login_without_api_keys_stays_on_the_ten_check_limit(): void
+    {
+        [$user, $plainToken] = $this->createMerchantWithToken('non-whitelisted.example.com');
+
+        CourierConfiguration::create([
+            'user_id' => $user->id,
+            'title' => 'Steadfast',
+            'slug' => 'steadfast',
+            'api_key' => '',
+            'secret_key' => '',
+            'is_active' => true,
+            'settings' => [
+                'username' => 'merchant@steadfast.test',
+                'password' => 'portal-password',
+            ],
+        ]);
+
+        $this->mockSuccessfulReport();
+
+        $response = $this->withHeaders($this->apiHeaders($plainToken, 'https://non-whitelisted.example.com'))
+            ->postJson('/api/fraud-check', [
+                'phone' => '01712345678',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('free_access.active', true)
+            ->assertJsonPath('free_access.free_check_limit', 10)
+            ->assertJsonPath('free_access.remaining_free_checks', 9);
+    }
+
     public function test_fraud_check_allows_free_tier_without_whitelist_or_steadfast_credentials(): void
     {
         [, $plainToken] = $this->createMerchantWithToken('non-whitelisted.example.com');
@@ -166,6 +197,45 @@ class MerchantSteadfastFraudWhitelistTest extends TestCase
             ->assertJsonPath('limited', true)
             ->assertJsonPath('reason', 'batch_too_large')
             ->assertJsonPath('remaining_free_checks', 1);
+    }
+
+    public function test_admin_saved_plugin_limit_blocks_the_next_api_and_stream_check(): void
+    {
+        FraudCheckQuotaSettings::clearMemoForTests();
+        config([
+            'landing.fraud_check.daily_free_limit' => 5,
+            'fraud_check.plugin_free_checks_without_steadfast' => 10,
+        ]);
+        app(FraudCheckQuotaSettings::class)->applyOverrides();
+        app(FraudCheckQuotaSettings::class)->update([
+            'landing_daily_free_limit' => 5,
+            'plugin_daily_free_limit' => 1,
+        ]);
+
+        [, $plainToken] = $this->createMerchantWithToken('quota-shop.example.com');
+        $this->mockSuccessfulReport();
+        $headers = $this->apiHeaders($plainToken, 'https://quota-shop.example.com');
+
+        $this->withHeaders($headers)
+            ->postJson('/api/fraud-check', ['phone' => '01712345678'])
+            ->assertOk()
+            ->assertJsonPath('free_access.free_check_limit', 1)
+            ->assertJsonPath('free_access.remaining_free_checks', 0);
+
+        $this->withHeaders($headers)
+            ->postJson('/api/fraud-check', ['phone' => '01712345679'])
+            ->assertStatus(429)
+            ->assertJsonPath('limited', true)
+            ->assertJsonPath('free_check_limit', 1);
+
+        $this->withHeaders($headers)
+            ->postJson('/api/fraud-check-stream', [
+                'data' => [
+                    ['id' => 1, 'phone' => '01712345680'],
+                ],
+            ])
+            ->assertStatus(429)
+            ->assertJsonPath('free_check_limit', 1);
     }
 
     public function test_whitelisted_domain_stays_unlimited_without_steadfast_credentials(): void

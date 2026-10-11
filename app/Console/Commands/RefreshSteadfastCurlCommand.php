@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\FraudCheck\CourierReportFormatter;
 use App\Services\FraudCheck\SteadfastCurlExporter;
+use App\Services\FraudCheck\SteadfastFraudChecker;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;

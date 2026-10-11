@@ -22,19 +22,12 @@ class PlatformSufficiencyChecker
         }
 
         if ($mode === 'platform_first') {
-            return $this->hasAnyPlatformSignal($platformData);
+            return $this->cacheIsEnoughWithoutLiveCall($platformData);
         }
 
         // hybrid: prefer cache to avoid hammering courier partners.
         if (config('order_intelligence.fraud_check.stale_while_revalidate', true)) {
-            // Serve cache whenever we have at least one successful courier snapshot.
-            // A single failed partner (e.g. Carrybee) must not force a full live re-check.
-            if ($this->hasUsefulSuccessfulSnapshots($platformData)) {
-                return true;
-            }
-
-            return $this->hasAnyPlatformSignal($platformData)
-                && ! $this->hasFailedSnapshots($platformData);
+            return $this->cacheIsEnoughWithoutLiveCall($platformData);
         }
 
         return $this->hasFreshCourierSnapshots($platformData)
@@ -169,13 +162,60 @@ class PlatformSufficiencyChecker
     }
 
     /**
+     * Skip live couriers when one partner already has usable history, when every
+     * saved courier row is a real result (including an authentic empty history),
+     * or when platform orders meet the admin minimum and nothing failed.
+     * A failed or empty-only row is not enough.
+     *
      * @param  array<string, mixed>  $platformData
      */
-    private function hasAnyPlatformSignal(array $platformData): bool
+    private function cacheIsEnoughWithoutLiveCall(array $platformData): bool
     {
-        return $this->platformOrderCount($platformData) > 0
-            || ($platformData['courier_stats'] ?? []) !== []
-            || ($platformData['courier_fraud_notes'] ?? []) !== [];
+        if ($this->hasUsefulSuccessfulSnapshots($platformData)) {
+            return true;
+        }
+
+        if ($this->hasSuccessfulSnapshots($platformData) && ! $this->hasFailedSnapshots($platformData)) {
+            return true;
+        }
+
+        return $this->hasEnoughPlatformOrders($platformData)
+            && ! $this->hasFailedSnapshots($platformData);
+    }
+
+    /**
+     * @param  array<string, mixed>  $platformData
+     */
+    private function hasSuccessfulSnapshots(array $platformData): bool
+    {
+        foreach ($platformData['courier_stats'] ?? [] as $snapshot) {
+            if (! is_array($snapshot) || ! empty($snapshot['fetch_failed'])) {
+                continue;
+            }
+
+            if (filled($snapshot['courier'] ?? null)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Zero turns this shortcut off. Otherwise the phone needs at least this
+     * many platform orders before those orders alone can skip a live check.
+     *
+     * @param  array<string, mixed>  $platformData
+     */
+    private function hasEnoughPlatformOrders(array $platformData): bool
+    {
+        $minOrders = (int) config('order_intelligence.fraud_check.min_platform_orders', 1);
+
+        if ($minOrders <= 0) {
+            return false;
+        }
+
+        return $this->platformOrderCount($platformData) >= $minOrders;
     }
 
     /**
@@ -184,10 +224,7 @@ class PlatformSufficiencyChecker
     private function hasFreshPlatformStats(array $platformData): bool
     {
         $intel = $platformData['platform_intelligence'] ?? [];
-        $totalOrders = (int) ($intel['total_orders'] ?? 0);
-        $minOrders = (int) config('order_intelligence.fraud_check.min_platform_orders', 1);
-
-        if ($totalOrders < $minOrders) {
+        if (! $this->hasEnoughPlatformOrders($platformData)) {
             return false;
         }
 

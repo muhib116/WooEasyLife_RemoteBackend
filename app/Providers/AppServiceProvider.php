@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\BlogAi\BlogAiRuntimeConfig;
 use App\Services\CacheRuntimeConfig;
+use App\Services\FraudCheck\FraudCheckQuotaSettings;
 use App\Services\OrderIntelligence\FraudCheckRuntimeConfig;
 use App\Services\SubscriptionNotificationRuntimeConfig;
 use App\WiseAi\Knowledge\Search\KnowledgeSearchManager;
@@ -34,6 +35,12 @@ class AppServiceProvider extends ServiceProvider
 
         try {
             $this->app->make(FraudCheckRuntimeConfig::class)->applyOverrides();
+        } catch (\Throwable) {
+            // Table may not exist yet during early migrate / install.
+        }
+
+        try {
+            $this->app->make(FraudCheckQuotaSettings::class)->applyOverrides();
         } catch (\Throwable) {
             // Table may not exist yet during early migrate / install.
         }

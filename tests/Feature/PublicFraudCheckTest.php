@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\FraudCheck\FraudCheckQuotaSettings;
 use App\Services\FraudCheckService;
 use App\Services\OrderIntelligence\FraudCheckCoordinator;
 use App\Services\PublicFraudCheckService;
@@ -19,6 +20,7 @@ class PublicFraudCheckTest extends TestCase
         parent::setUp();
 
         Cache::flush();
+        config(['landing.fraud_check.daily_free_limit' => 5]);
     }
 
     public function test_stats_endpoint_returns_meta(): void
@@ -109,6 +111,55 @@ class PublicFraudCheckTest extends TestCase
 
         $response->assertStatus(429)
             ->assertJsonPath('limited', true);
+    }
+
+    public function test_admin_saved_hub_limit_is_what_the_public_checker_enforces(): void
+    {
+        FraudCheckQuotaSettings::clearMemoForTests();
+        config([
+            'landing.fraud_check.daily_free_limit' => 5,
+            'fraud_check.plugin_free_checks_without_steadfast' => 10,
+        ]);
+        app(FraudCheckQuotaSettings::class)->applyOverrides();
+        app(FraudCheckQuotaSettings::class)->update([
+            'landing_daily_free_limit' => 2,
+            'plugin_daily_free_limit' => 10,
+        ]);
+
+        $this->mock(FraudCheckService::class, function ($mock) {
+            $mock->shouldReceive('normalizePhone')->andReturn('01770989591');
+        });
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) {
+            $mock->shouldReceive('checkSingle')->andReturn([
+                'total_order' => 0,
+                'confirmed' => 0,
+                'frauds' => [],
+                'cancel' => 0,
+                'success_rate' => 'No order history found!',
+                'courier' => [],
+            ]);
+        });
+
+        $ip = '203.0.113.44';
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson(route('landing.fraud-check.check'), ['phone' => '01770989591'])
+            ->assertOk()
+            ->assertJsonPath('meta.daily_free_limit', 2)
+            ->assertJsonPath('meta.remaining_searches', 1);
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson(route('landing.fraud-check.check'), ['phone' => '01770989591'])
+            ->assertOk()
+            ->assertJsonPath('meta.remaining_searches', 0);
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson(route('landing.fraud-check.check'), ['phone' => '01770989591'])
+            ->assertStatus(429)
+            ->assertJsonPath('limited', true)
+            ->assertJsonPath('meta.daily_free_limit', 2)
+            ->assertJsonPath('meta.remaining_searches', 0);
     }
 
     public function test_invalid_phone_returns_validation_error(): void

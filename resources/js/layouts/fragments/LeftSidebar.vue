@@ -475,6 +475,12 @@ const allSections: NavSection[] = [
                         permission: "merchants.view",
                     },
                     {
+                        title: "Daily limits",
+                        name: "frauds.limits",
+                        icon: "PhSlidersHorizontal",
+                        permission: "merchants.view",
+                    },
+                    {
                         title: "Token & CURL",
                         name: "frauds.expire",
                         icon: "PhGear",

@@ -28,13 +28,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Plugin free checks without Steadfast portal credentials
+    | Plugin free checks without a store Steadfast API key pair
     |--------------------------------------------------------------------------
     |
-    | Merchants who are not domain-whitelisted and have not connected Steadfast
-    | portal username/password get this many free courier-history checks per
-    | access token per day (same idea as the public landing free limit).
-    | After that the API returns an alert to connect Steadfast for full access.
+    | Merchants who are not domain-whitelisted and have not saved Steadfast
+    | API key + secret key get this many free courier-history checks per
+    | access token per day. The admin Daily limits page can override this.
+    | After that the API asks the store to add its own Steadfast keys.
     |
     */
     'plugin_free_checks_without_steadfast' => (int) env('FRAUD_CHECK_PLUGIN_FREE_WITHOUT_STEADFAST', 10),

@@ -3,6 +3,9 @@
 namespace App\Services\FraudCheck;
 
 use App\LogHelper;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -67,27 +70,26 @@ class RedxFraudChecker
                     ]);
             }
 
-            if (! $response->successful()) {
+            $stats = $this->readStats($response);
+            if (! $stats['ok']) {
                 LogHelper::saveLog('RedX fraud check error', 'Stats failed with status '.$response->status());
 
                 return CourierReportFormatter::emptyReport([
                     'unavailable' => true,
-                    'message' => 'RedX stats request failed (HTTP '.$response->status().').',
+                    'message' => $stats['message'] ?? ('RedX stats request failed (HTTP '.$response->status().').'),
                 ]);
             }
 
             $this->credentials->markSuccess($auth['credential_id']);
 
-            $data = $response->json('data', []);
-            $success = (int) ($data['deliveredParcels'] ?? 0);
-            $total = (int) ($data['totalParcels'] ?? 0);
-            $cancel = max(0, $total - $success);
+            if (! empty($stats['empty'])) {
+                return CourierReportFormatter::emptyReport([
+                    'api_success' => true,
+                    'message' => 'No delivery history found on RedX.',
+                ]);
+            }
 
-            return array_merge(CourierReportFormatter::fromCounts($success, $cancel), [
-                'customer_segment' => $data['customerSegment'] ?? null,
-                'return_percentage' => $data['returnPercentage'] ?? null,
-                'api_success' => true,
-            ]);
+            return $this->mapStats($stats['data']);
         } catch (Throwable $e) {
             LogHelper::saveLog('RedX fraud check error', $e->getMessage());
 
@@ -154,11 +156,117 @@ class RedxFraudChecker
         return null;
     }
 
-    private function client()
+    /**
+     * RedX answers this stats call with HTTP 400 even when the JSON envelope
+     * is a success (`code` 200, `isError` false, parcel counts present).
+     *
+     * @return array{ok: bool, empty?: bool, data?: array<string, mixed>, message?: string}
+     */
+    private function readStats(Response $response): array
+    {
+        $json = $response->json();
+        if (! is_array($json)) {
+            return [
+                'ok' => false,
+                'message' => 'RedX stats request failed (HTTP '.$response->status().').',
+            ];
+        }
+
+        if (($json['isError'] ?? false) === true) {
+            return [
+                'ok' => false,
+                'message' => $this->statsFailureMessage($response, $json),
+            ];
+        }
+
+        $data = is_array($json['data'] ?? null) ? $json['data'] : null;
+        $hasCounts = is_array($data) && (
+            array_key_exists('totalParcels', $data) || array_key_exists('deliveredParcels', $data)
+        );
+        $envelopeOk = array_key_exists('code', $json)
+            && (int) $json['code'] === 200
+            && ($json['isError'] ?? false) === false;
+
+        if ($response->status() === 401) {
+            return [
+                'ok' => false,
+                'message' => 'RedX token expired and re-login failed.',
+            ];
+        }
+
+        if ($response->successful()) {
+            if (! $hasCounts) {
+                return ['ok' => true, 'empty' => true];
+            }
+
+            return ['ok' => true, 'data' => $data];
+        }
+
+        if ($envelopeOk && $hasCounts) {
+            return ['ok' => true, 'data' => $data];
+        }
+
+        return [
+            'ok' => false,
+            'message' => $this->statsFailureMessage($response, $json),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function mapStats(array $data): array
+    {
+        $delivered = (int) ($data['deliveredParcels'] ?? 0);
+        $total = (int) ($data['totalParcels'] ?? 0);
+        if ($total < $delivered) {
+            $total = $delivered;
+        }
+        $cancel = max(0, $total - $delivered);
+
+        $report = array_merge(CourierReportFormatter::fromCounts($delivered, $cancel), [
+            'customer_segment' => filled($data['customerSegment'] ?? null) ? (string) $data['customerSegment'] : null,
+            'return_percentage' => $data['returnPercentage'] ?? null,
+            'api_success' => true,
+        ]);
+
+        if ($delivered === 0 && $cancel === 0) {
+            $report['message'] = 'No delivery history found on RedX.';
+        }
+
+        return $report;
+    }
+
+    /**
+     * @param  array<string, mixed>  $json
+     */
+    private function statsFailureMessage(Response $response, array $json): string
+    {
+        $message = trim((string) ($json['message'] ?? ''));
+        if (
+            $message !== ''
+            && strlen($message) <= 160
+            && ! str_contains($message, '<')
+            && ! preg_match('/(?:\+?88)?01[3-9]\d{8}/', $message)
+        ) {
+            return 'RedX stats request failed: '.$message;
+        }
+
+        return 'RedX stats request failed (HTTP '.$response->status().').';
+    }
+
+    private function client(): PendingRequest
     {
         return Http::timeout(30)
             ->connectTimeout(10)
-            ->retry(2, 800, throw: false)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
+            ->retry(2, 800, fn (Throwable $exception) => $exception instanceof ConnectionException, throw: false)
             ->acceptJson()
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',

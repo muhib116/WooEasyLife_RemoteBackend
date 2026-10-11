@@ -4,6 +4,9 @@ namespace App\Services\FraudCheck;
 
 use App\LogHelper;
 use GuzzleHttp\Cookie\CookieJar;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -56,8 +59,17 @@ class CarrybeeFraudChecker
                 $response = $this->fetchCustomer($phone, $auth['accessToken'], $auth['businessId']);
             }
 
+            if ($this->isCustomerMissing($response)) {
+                $this->credentials->markSuccess($auth['credential_id']);
+
+                return CourierReportFormatter::emptyReport([
+                    'api_success' => true,
+                    'message' => 'No delivery history found on Carrybee.',
+                ]);
+            }
+
             if (! $response->successful() || $response->json('error')) {
-                LogHelper::saveLog('Carrybee fraud check error', substr($response->body(), 0, 300));
+                LogHelper::saveLog('Carrybee fraud check error', 'Customer lookup failed with status '.$response->status());
 
                 return CourierReportFormatter::emptyReport([
                     'unavailable' => true,
@@ -81,7 +93,9 @@ class CarrybeeFraudChecker
 
             return CourierReportFormatter::emptyReport([
                 'unavailable' => true,
-                'message' => $e->getMessage(),
+                'message' => $e instanceof ConnectionException
+                    ? 'Carrybee is temporarily unreachable. Try again.'
+                    : 'Carrybee customer lookup failed.',
             ]);
         }
     }
@@ -253,11 +267,30 @@ class CarrybeeFraudChecker
         return null;
     }
 
-    private function client()
+    private function isCustomerMissing(Response $response): bool
+    {
+        if ($response->status() === 404) {
+            return true;
+        }
+
+        $message = strtolower(trim((string) $response->json('message')));
+
+        return $response->json('error') === true
+            && $response->clientError()
+            && str_contains($message, 'not found');
+    }
+
+    private function client(): PendingRequest
     {
         return Http::timeout(30)
             ->connectTimeout(10)
-            ->retry(2, 800, throw: false)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
+            ->retry(3, 800, fn (Throwable $exception) => $exception instanceof ConnectionException, throw: false)
             ->acceptJson();
     }
 }

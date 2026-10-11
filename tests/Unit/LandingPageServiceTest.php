@@ -64,6 +64,30 @@ class LandingPageServiceTest extends TestCase
         $this->assertCount(1, $payload['plans']);
     }
 
+    public function test_fraud_benefit_card_uses_the_live_daily_limit(): void
+    {
+        config(['landing.fraud_check.daily_free_limit' => 12]);
+
+        $bn = app(LandingPageService::class)->payload();
+        $bnCard = collect($bn['fraudBenefitCards']['cards'])
+            ->firstWhere('title', 'ফ্রি-তে কাস্টমারের Courier History দেখুন');
+
+        $this->assertSame(12, $bn['fraudCheck']['daily_free_limit']);
+        $this->assertSame(
+            'রেজিস্ট্রেশন ছাড়াই নম্বর দিয়ে প্রতিদিন ১২টি ফ্রি চেক করুন।',
+            $bnCard['description'] ?? null,
+        );
+
+        $en = app(LandingPageService::class)->payload(null, 'en');
+        $enCard = collect($en['fraudBenefitCards']['cards'])
+            ->firstWhere('title', 'Free courier history checks');
+
+        $this->assertSame(
+            'Check by number without registration — 12 free checks per day.',
+            $enCard['description'] ?? null,
+        );
+    }
+
     public function test_slim_payload_omits_homepage_unused_blobs(): void
     {
         PackageHub::create([

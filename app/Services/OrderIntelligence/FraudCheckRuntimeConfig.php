@@ -28,7 +28,7 @@ class FraudCheckRuntimeConfig
             'type' => 'enum',
             'options' => ['hybrid', 'external_only', 'platform_first'],
             'label' => 'Fraud check mode',
-            'help' => 'hybrid = serve cache first; external_only = always live; platform_first = prefer any platform signal',
+            'help' => 'hybrid and platform_first serve a usable courier cache, or platform orders that meet the minimum when nothing failed. external_only always calls couriers live. A failed snapshot alone never skips the live check.',
         ],
         'stale_while_revalidate' => [
             'type' => 'bool',
@@ -64,7 +64,7 @@ class FraudCheckRuntimeConfig
             'min' => 0,
             'max' => 1000,
             'label' => 'Min platform orders',
-            'help' => 'Minimum platform order count needed for platform-first style sufficiency checks',
+            'help' => 'When courier cache has no delivery counts, this many platform orders are required before skipping a live check. 0 turns that shortcut off.',
         ],
         'debug_trace' => [
             'type' => 'bool',
@@ -75,16 +75,13 @@ class FraudCheckRuntimeConfig
 
     public function applyOverrides(): void
     {
-        // Idempotent within one PHP lifecycle (boot may be followed by snapshot/update).
-        if (self::$overridesApplied) {
-            return;
-        }
-
+        // Capture .env defaults once, before any DB override is written into config.
+        // Re-read the database on every call so a saved mode applies on the next
+        // request. PHP-FPM and `php artisan serve` keep static flags alive, so a
+        // one-time guard would leave later checks on the old mode.
         $this->captureOriginalDefaults();
 
         if (! $this->tableReady()) {
-            self::$overridesApplied = true;
-
             return;
         }
 

@@ -9,8 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Plugin merchants without Steadfast portal credentials (and not domain-whitelisted)
- * get a landing-style free courier-history quota, then an upgrade alert.
+ * Plugin merchants without their own Steadfast API key pair (and not domain-whitelisted)
+ * may use the admin Steadfast keys for a limited number of checks, then an upgrade alert.
  */
 class PluginFraudCheckFreeQuota
 {
@@ -140,8 +140,8 @@ class PluginFraudCheckFreeQuota
             'code' => 'steadfast_credentials_required',
             'title' => 'ফ্রি চেক শেষ',
             'title_en' => 'Free checks used up',
-            'message' => "আজকের {$limit}টি ফ্রি কাস্টমার হিস্ট্রি চেক শেষ। আনলিমিটেড চেকের জন্য Courier → Steadfast-এ portal username/password যোগ করুন।",
-            'message_en' => "You've used today's {$limit} free customer history checks. Add Steadfast portal username/password under Courier → Steadfast for unlimited checks.",
+            'message' => "আজকের {$limit}টি ফ্রি কাস্টমার হিস্ট্রি চেক শেষ। আনলিমিটেড চেকের জন্য Courier → Steadfast-এ API key এবং secret key যোগ করুন।",
+            'message_en' => "You've used today's {$limit} free customer history checks. Add the Steadfast API key and secret key under Courier → Steadfast for unlimited checks.",
             'free_check_limit' => $limit,
             'used_free_checks' => $this->used($request),
             'remaining_free_checks' => 0,
@@ -149,8 +149,8 @@ class PluginFraudCheckFreeQuota
                 'type' => 'connect_steadfast_credentials',
                 'route' => 'courierTab',
                 'tab' => 'steadfast',
-                'label' => 'Steadfast credential যোগ করুন',
-                'label_en' => 'Add Steadfast credentials',
+                'label' => 'Steadfast API key যোগ করুন',
+                'label_en' => 'Add Steadfast API key',
             ],
         ];
     }
@@ -169,8 +169,8 @@ class PluginFraudCheckFreeQuota
             'reason' => 'batch_too_large',
             'title' => 'ফ্রি চেক কম আছে',
             'title_en' => 'Not enough free checks',
-            'message' => "আজ আর {$remaining}টি ফ্রি চেক বাকি (লিমিট {$limit})। এখন {$needed}টি সিলেক্ট করা হয়েছে — কম অর্ডার সিলেক্ট করুন, অথবা Steadfast credential যোগ করে আনলিমিটেড নিন।",
-            'message_en' => "Only {$remaining} free check(s) left today (limit {$limit}). You selected {$needed}. Select fewer orders, or add Steadfast credentials for unlimited access.",
+            'message' => "আজ আর {$remaining}টি ফ্রি চেক বাকি (লিমিট {$limit})। এখন {$needed}টি সিলেক্ট করা হয়েছে — কম অর্ডার সিলেক্ট করুন, অথবা Steadfast API key ও secret key যোগ করে আনলিমিটেড নিন।",
+            'message_en' => "Only {$remaining} free check(s) left today (limit {$limit}). You selected {$needed}. Select fewer orders, or add the Steadfast API key and secret key for unlimited access.",
             'free_check_limit' => $limit,
             'used_free_checks' => $this->used($request),
             'remaining_free_checks' => $remaining,
@@ -179,8 +179,8 @@ class PluginFraudCheckFreeQuota
                 'type' => 'connect_steadfast_credentials',
                 'route' => 'courierTab',
                 'tab' => 'steadfast',
-                'label' => 'Steadfast credential যোগ করুন',
-                'label_en' => 'Add Steadfast credentials',
+                'label' => 'Steadfast API key যোগ করুন',
+                'label_en' => 'Add Steadfast API key',
             ],
         ];
     }
@@ -208,20 +208,20 @@ class PluginFraudCheckFreeQuota
             'low' => $low,
             'notice' => $remaining > 0
                 ? ($low
-                    ? "ফ্রি চেক প্রায় শেষ — বাকি {$remaining}/{$limit}। আনলিমিটেডের জন্য Steadfast credential যোগ করুন।"
-                    : "ফ্রি চেক বাকি {$remaining}/{$limit}। আনলিমিটেড অ্যাক্সেসের জন্য Steadfast credential যোগ করুন।")
-                : 'ফ্রি চেক শেষ। Steadfast credential যোগ করে ফুল অ্যাক্সেস নিন।',
+                    ? "ফ্রি চেক প্রায় শেষ — বাকি {$remaining}/{$limit}। আনলিমিটেডের জন্য Steadfast API key ও secret key যোগ করুন।"
+                    : "ফ্রি চেক বাকি {$remaining}/{$limit}। আনলিমিটেড অ্যাক্সেসের জন্য Steadfast API key ও secret key যোগ করুন।")
+                : 'ফ্রি চেক শেষ। Steadfast API key ও secret key যোগ করে ফুল অ্যাক্সেস নিন।',
             'notice_en' => $remaining > 0
                 ? ($low
-                    ? "Almost out of free checks — {$remaining}/{$limit} left. Add Steadfast credentials for unlimited access."
-                    : "{$remaining}/{$limit} free checks left today. Add Steadfast credentials for unlimited access.")
-                : 'Free checks used up. Add Steadfast credentials for full access.',
+                    ? "Almost out of free checks — {$remaining}/{$limit} left. Add the Steadfast API key and secret key for unlimited access."
+                    : "{$remaining}/{$limit} free checks left today. Add the Steadfast API key and secret key for unlimited access.")
+                : 'Free checks used up. Add the Steadfast API key and secret key for full access.',
             'action' => [
                 'type' => 'connect_steadfast_credentials',
                 'route' => 'courierTab',
                 'tab' => 'steadfast',
-                'label' => 'Steadfast credential যোগ করুন',
-                'label_en' => 'Add Steadfast credentials',
+                'label' => 'Steadfast API key যোগ করুন',
+                'label_en' => 'Add Steadfast API key',
             ],
         ];
 

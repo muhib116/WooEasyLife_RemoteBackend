@@ -6,11 +6,14 @@ use App\LogHelper;
 use Enan\PathaoCourier\Facades\PathaoCourier;
 use Enan\PathaoCourier\Requests\PathaoUserSuccessRateRequest;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class PathaoFraudChecker
 {
+    private const MERCHANT_TOKEN_MINUTES = 50;
+
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
     ) {}
@@ -81,6 +84,10 @@ class PathaoFraudChecker
                 ]);
 
             $cleared = $updated > 0;
+        }
+
+        if ($this->credentials->forgetSessionCaches('pathao') > 0) {
+            $cleared = true;
         }
 
         return $cleared;
@@ -184,45 +191,71 @@ class PathaoFraudChecker
     private function checkViaMerchantPortal(string $phone): array
     {
         try {
+            $skipFreshLogin = [];
+            $pathaoBusy = false;
+
+            foreach ($this->credentials->candidates('pathao') as $candidate) {
+                $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
+                $token = Cache::get($cacheKey);
+
+                if (! is_string($token) || trim($token) === '') {
+                    continue;
+                }
+
+                $result = $this->readMerchantSuccess($phone, $token);
+
+                if ($result['unauthorized']) {
+                    Cache::forget($cacheKey);
+
+                    continue;
+                }
+
+                if ($result['ok']) {
+                    $this->credentials->markSuccess($candidate['id']);
+
+                    return $result['report'];
+                }
+
+                $this->credentials->markFailure($candidate['id'], 'Merchant success API failed');
+                $skipFreshLogin[$candidate['identifier']] = true;
+                $pathaoBusy = $pathaoBusy || $result['busy'];
+            }
+
+            if ($pathaoBusy) {
+                return CourierReportFormatter::emptyReport();
+            }
+
             foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
-                $loginResponse = Http::timeout(30)
-                    ->acceptJson()
-                    ->post('https://merchant.pathao.com/api/v1/login', [
-                        'username' => $candidate['identifier'],
-                        'password' => $candidate['password'],
-                    ]);
+                if (isset($skipFreshLogin[$candidate['identifier']])) {
+                    continue;
+                }
 
-                $accessToken = trim((string) $loginResponse->json('access_token'));
+                $token = $this->loginMerchant($candidate);
 
-                if (! $loginResponse->successful() || $accessToken === '') {
-                    $this->credentials->markFailure($candidate['id'], 'Merchant login failed');
-                    LogHelper::saveLog('Pathao fraud check error', $loginResponse->body());
+                if ($token === null) {
+                    continue;
+                }
+
+                $result = $this->readMerchantSuccess($phone, $token);
+
+                if ($result['unauthorized']) {
+                    Cache::forget($this->credentials->sessionCacheKey('pathao', $candidate['identifier']));
+                    $this->credentials->markFailure($candidate['id'], 'Merchant token rejected');
 
                     continue;
                 }
 
-                $successResponse = Http::timeout(30)
-                    ->acceptJson()
-                    ->withToken($accessToken)
-                    ->post('https://merchant.pathao.com/api/v1/user/success', [
-                        'phone' => $phone,
-                    ]);
+                if ($result['ok']) {
+                    $this->credentials->markSuccess($candidate['id']);
 
-                if (! $successResponse->successful()) {
-                    $this->credentials->markFailure(
-                        $candidate['id'],
-                        'Merchant success API failed HTTP '.$successResponse->status(),
-                    );
-                    LogHelper::saveLog('Pathao fraud check error', 'Merchant success API failed with status '.$successResponse->status());
-
-                    continue;
+                    return $result['report'];
                 }
 
-                $this->credentials->markSuccess($candidate['id']);
+                $this->credentials->markFailure($candidate['id'], 'Merchant success API failed');
 
-                return $this->mapPathaoPayload([
-                    'data' => $successResponse->json('data', []),
-                ]);
+                if ($result['busy']) {
+                    return CourierReportFormatter::emptyReport();
+                }
             }
 
             return CourierReportFormatter::emptyReport();
@@ -231,6 +264,79 @@ class PathaoFraudChecker
 
             return CourierReportFormatter::emptyReport();
         }
+    }
+
+    /**
+     * @param  array{id: int|null, identifier: string, password: string}  $candidate
+     */
+    private function loginMerchant(array $candidate): ?string
+    {
+        $response = Http::timeout(30)
+            ->acceptJson()
+            ->post('https://merchant.pathao.com/api/v1/login', [
+                'username' => $candidate['identifier'],
+                'password' => $candidate['password'],
+            ]);
+
+        $token = trim((string) $response->json('access_token'));
+
+        if (! $response->successful() || $token === '') {
+            $this->credentials->markFailure($candidate['id'], 'Merchant login failed');
+            LogHelper::saveLog('Pathao fraud check error', 'Merchant login failed for '.$candidate['identifier'].' (HTTP '.$response->status().').');
+
+            return null;
+        }
+
+        Cache::put(
+            $this->credentials->sessionCacheKey('pathao', $candidate['identifier']),
+            $token,
+            now()->addMinutes(self::MERCHANT_TOKEN_MINUTES),
+        );
+        $this->credentials->markUsed($candidate['id']);
+
+        return $token;
+    }
+
+    /**
+     * @return array{ok: bool, unauthorized: bool, busy: bool, report: array<string, mixed>}
+     */
+    private function readMerchantSuccess(string $phone, string $token): array
+    {
+        $response = Http::timeout(30)
+            ->acceptJson()
+            ->withToken($token)
+            ->post('https://merchant.pathao.com/api/v1/user/success', [
+                'phone' => $phone,
+            ]);
+
+        if ($response->status() === 401) {
+            return [
+                'ok' => false,
+                'unauthorized' => true,
+                'busy' => false,
+                'report' => [],
+            ];
+        }
+
+        if (! $response->successful()) {
+            LogHelper::saveLog('Pathao fraud check error', 'Merchant success API failed with status '.$response->status());
+
+            return [
+                'ok' => false,
+                'unauthorized' => false,
+                'busy' => $response->status() === 429 || $response->status() >= 500,
+                'report' => [],
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'unauthorized' => false,
+            'busy' => false,
+            'report' => $this->mapPathaoPayload([
+                'data' => $response->json('data', []),
+            ]),
+        ];
     }
 
     private function mapPathaoPayload(array $pathaoResponse): array

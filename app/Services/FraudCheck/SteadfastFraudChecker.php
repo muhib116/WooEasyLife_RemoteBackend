@@ -14,6 +14,12 @@ class SteadfastFraudChecker
     private const HOSTS = ['www.steadfast.com.bd', 'steadfast.com.bd'];
 
     /**
+     * One hub check must not walk the whole saved-key list. A rejected key
+     * counts toward Steadfast's lockout, so stop after a few tries.
+     */
+    private const MAX_SCORE_API_ATTEMPTS = 3;
+
+    /**
      * Steadfast renamed the portal session cookie. The new name is also set
      * on the guest login page, so its presence alone is not proof of login.
      *
@@ -320,31 +326,162 @@ class SteadfastFraudChecker
      */
     private function checkViaScoreApi(string $phone): ?array
     {
-        $keys = $this->resolveApiCredentials();
+        $fromPool = false;
+        $candidates = $this->scoreApiCandidates($fromPool);
 
-        if ($keys === null) {
+        if ($candidates === []) {
             return null;
         }
 
-        $report = CourierReportFormatter::emptyReport(['frauds' => []]);
         $digits = preg_replace('/\D/', '', $phone) ?? '';
-
         if ($digits === '') {
-            return $report;
+            return CourierReportFormatter::emptyReport(['frauds' => []]);
+        }
+
+        $credentialError = null;
+        $rateLimited = null;
+        $lastReport = CourierReportFormatter::emptyReport(['frauds' => []]);
+        $outcomes = [];
+
+        foreach ($candidates as $keys) {
+            $report = $this->requestScoreApi($digits, $keys);
+
+            if ($fromPool) {
+                $error = isset($report['key_error']) ? trim((string) $report['key_error']) : '';
+                $outcomes[$keys['api_key']] = $error;
+            }
+
+            unset($report['key_error']);
+
+            if ($this->isUsableReport($report)) {
+                $this->flushPoolOutcomes($fromPool, $outcomes, $keys['api_key']);
+
+                return $report;
+            }
+
+            if (! empty($report['credential_error'])) {
+                $credentialError = $report;
+
+                continue;
+            }
+
+            if (! empty($report['rate_limited'])) {
+                $rateLimited = $report;
+
+                continue;
+            }
+
+            $lastReport = $report;
+        }
+
+        $this->flushPoolOutcomes($fromPool, $outcomes);
+
+        if (is_array($credentialError)) {
+            return $credentialError;
+        }
+
+        if (is_array($rateLimited)) {
+            return $rateLimited;
+        }
+
+        return $lastReport;
+    }
+
+    /**
+     * A store's own API key pair is used alone. Hub checks shuffle saved
+     * pairs that have no error and try the next one when a key fails.
+     * A key with an error is not tried again. The .env pair is used only
+     * when the panel list is empty.
+     *
+     * @return list<array{api_key: string, secret_key: string}>
+     */
+    private function scoreApiCandidates(bool &$fromPool = false): array
+    {
+        $fromPool = false;
+        $apiKey = trim((string) ($this->credentials['api_key'] ?? ''));
+        $secretKey = trim((string) ($this->credentials['secret_key'] ?? ''));
+
+        if ($apiKey !== '' && $secretKey !== '') {
+            return [[
+                'api_key' => $apiKey,
+                'secret_key' => $secretKey,
+            ]];
+        }
+
+        if ($this->apiCredentials->hasAccounts()) {
+            $fromPool = true;
+
+            return $this->apiCredentials->hubCandidates(self::MAX_SCORE_API_ATTEMPTS);
+        }
+
+        $apiKey = trim((string) config('fraud-checker-bd-courier.steadfast.api_key'));
+        $secretKey = trim((string) config('fraud-checker-bd-courier.steadfast.secret_key'));
+
+        if ($apiKey === '' || $secretKey === '') {
+            return [];
+        }
+
+        return [[
+            'api_key' => $apiKey,
+            'secret_key' => $secretKey,
+        ]];
+    }
+
+    /**
+     * @param  array<string, string>  $outcomes
+     */
+    private function flushPoolOutcomes(bool $fromPool, array $outcomes, ?string $usedApiKey = null): void
+    {
+        if (! $fromPool || ($outcomes === [] && trim((string) $usedApiKey) === '')) {
+            return;
         }
 
         try {
-            $response = $this->client()
+            $this->apiCredentials->recordOutcomes($outcomes, $usedApiKey);
+        } catch (\Throwable $exception) {
+            LogHelper::saveLog('Steadfast fraud check error', 'Could not save key status: '.$exception->getMessage());
+        }
+    }
+
+    /**
+     * @return array{ok: bool, error: string|null}
+     */
+    public function probeApiKey(string $apiKey, string $secretKey): array
+    {
+        $report = $this->requestScoreApi('01700000000', [
+            'api_key' => trim($apiKey),
+            'secret_key' => trim($secretKey),
+        ]);
+
+        $error = trim((string) ($report['key_error'] ?? ''));
+
+        return [
+            'ok' => $error === '' && $this->isUsableReport($report),
+            'error' => $error !== '' ? $error : null,
+        ];
+    }
+
+    /**
+     * @param  array{api_key: string, secret_key: string}  $keys
+     * @return array<string, mixed>
+     */
+    private function requestScoreApi(string $digits, array $keys): array
+    {
+        $report = CourierReportFormatter::emptyReport(['frauds' => []]);
+
+        try {
+            $response = $this->scoreClient()
                 ->withHeaders([
                     'Api-Key' => $keys['api_key'],
                     'Secret-Key' => $keys['secret_key'],
-                    'Accept' => 'application/json',
                 ])
                 ->get('https://portal.packzy.com/api/v1/fraud_check/score/'.$digits);
         } catch (\Throwable $th) {
             LogHelper::saveLog('Steadfast fraud check error', 'Score API request failed: '.$th->getMessage());
 
-            return $report;
+            return array_merge($report, [
+                'key_error' => 'Could not reach Steadfast. Another saved key is tried automatically.',
+            ]);
         }
 
         if ($response->status() === 401) {
@@ -353,6 +490,7 @@ class SteadfastFraudChecker
             return array_merge($report, [
                 'auth_failed' => true,
                 'credential_error' => true,
+                'key_error' => 'Steadfast rejected this API key or secret.',
             ]);
         }
 
@@ -362,69 +500,36 @@ class SteadfastFraudChecker
             return array_merge($report, [
                 'rate_limited' => true,
                 'message' => 'Steadfast fraud check limit reached for this store. Try again later.',
+                'key_error' => 'Steadfast rate limit reached for this key.',
             ]);
         }
 
         if (! $response->successful()) {
             LogHelper::saveLog('Steadfast fraud check error', 'Score API failed with status '.$response->status());
 
-            return $report;
+            return array_merge($report, [
+                'key_error' => 'Steadfast request failed (HTTP '.$response->status().').',
+            ]);
         }
 
         $payload = $response->json();
 
         if (! is_array($payload)) {
-            return $report;
+            return array_merge($report, [
+                'key_error' => 'Steadfast returned an unreadable response.',
+            ]);
         }
 
         $status = $payload['status'] ?? null;
         if ($status !== null && (int) $status !== 200) {
-            return $report;
+            return array_merge($report, [
+                'key_error' => 'Steadfast returned status '.$status.'.',
+            ]);
         }
 
         return array_merge(CourierReportFormatter::fromSteadfastScore($payload), [
             'api_success' => true,
         ]);
-    }
-
-    /**
-     * Merchant courier keys win. Platform .env keys are used only when this
-     * check was not given a specific merchant account.
-     *
-     * @return array{api_key: string, secret_key: string}|null
-     */
-    private function resolveApiCredentials(): ?array
-    {
-        $apiKey = trim((string) ($this->credentials['api_key'] ?? ''));
-        $secretKey = trim((string) ($this->credentials['secret_key'] ?? ''));
-
-        if ($apiKey !== '' && $secretKey !== '') {
-            return [
-                'api_key' => $apiKey,
-                'secret_key' => $secretKey,
-            ];
-        }
-
-        if ($this->credentials !== null) {
-            return null;
-        }
-
-        $stored = $this->apiCredentials->pair();
-        if ($stored !== null) {
-            return $stored;
-        }
-
-        $apiKey = trim((string) config('fraud-checker-bd-courier.steadfast.api_key'));
-        $secretKey = trim((string) config('fraud-checker-bd-courier.steadfast.secret_key'));
-
-        if ($apiKey === '' || $secretKey === '') {
-            return null;
-        }
-
-        return [
-            'api_key' => $apiKey,
-            'secret_key' => $secretKey,
-        ];
     }
 
     private function checkViaCachedSession(string $phone): array
@@ -717,6 +822,23 @@ class SteadfastFraudChecker
         return str_contains($html, 'name="email"')
             && str_contains($html, 'name="password"')
             && (str_contains($html, 'merchant login') || str_contains($html, '/login') || str_contains($html, 'remember me'));
+    }
+
+    private function scoreClient(): PendingRequest
+    {
+        return Http::timeout(12)
+            ->connectTimeout(5)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept' => 'application/json',
+                'Accept-Language' => 'en-US,en;q=0.9',
+            ]);
     }
 
     private function client(): PendingRequest
