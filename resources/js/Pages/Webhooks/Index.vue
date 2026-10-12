@@ -10,17 +10,19 @@
             >
                 <template #actions>
                     <Button
-                        label="Test Courier Webhook"
+                        label="Test webhook"
                         icon="pi pi-send"
                         severity="info"
                         size="small"
+                        class="w-full sm:w-auto"
                         @click="openCourierTestDialog"
                     />
                     <Button
-                        label="Process Due Retries"
+                        label="Process waiting"
                         icon="pi pi-play"
                         severity="help"
                         size="small"
+                        class="w-full sm:w-auto"
                         :loading="processingRetries"
                         @click="handleProcessRetries"
                     />
@@ -30,6 +32,7 @@
                         severity="secondary"
                         outlined
                         size="small"
+                        class="w-full sm:w-auto"
                         :loading="loading"
                         @click="reloadAll"
                     />
@@ -64,7 +67,7 @@
                         title="Pending Retries"
                         :value="summary.pending_retries"
                         icon="PhClock"
-                        :subtitle="`${eventStats.retry_queued_count} queued events`"
+                        :subtitle="`${eventStats.queued_count + eventStats.forwarding_count} waiting to forward`"
                         accent-class="bg-amber-500"
                         icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
                         icon-class="text-amber-600 dark:text-amber-400"
@@ -81,10 +84,10 @@
                 </template>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm dark:border-gray-700 dark:bg-slate-900/60">
+            <div class="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm dark:border-gray-700 dark:bg-slate-900/60">
                 <button
                     type="button"
-                    class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors"
                     :class="
                         activeTab === 'events'
                             ? 'bg-violet-600 text-white shadow-sm'
@@ -102,7 +105,7 @@
                 </button>
                 <button
                     type="button"
-                    class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors"
                     :class="
                         activeTab === 'retries'
                             ? 'bg-violet-600 text-white shadow-sm'
@@ -133,17 +136,15 @@
                 </template>
 
                 <div class="space-y-0 border-b border-gray-100 dark:border-gray-800">
-                    <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <div class="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-2 xl:grid-cols-4">
                         <Select
                             v-model="eventFilters.partner"
                             :options="partnerOptions"
                             optionLabel="label"
                             optionValue="value"
                             placeholder="All partners"
-                            filter
-                            filterPlaceholder="Search partner..."
                             showClear
-                            class="min-w-[11rem]"
+                            class="w-full"
                             @update:model-value="handleEventFiltersChange"
                         />
                         <Select
@@ -155,7 +156,7 @@
                             filter
                             filterPlaceholder="Search store..."
                             showClear
-                            class="min-w-[14rem] max-w-[18rem]"
+                            class="w-full"
                             @update:model-value="handleEventFiltersChange"
                         />
                         <Select
@@ -164,10 +165,8 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="All environments"
-                            filter
-                            filterPlaceholder="Search environment..."
                             showClear
-                            class="min-w-[11rem]"
+                            class="w-full"
                             @update:model-value="handleEventFiltersChange"
                         />
                         <Select
@@ -176,13 +175,11 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="All statuses"
-                            filter
-                            filterPlaceholder="Search status..."
                             showClear
-                            class="min-w-[11rem]"
+                            class="w-full"
                             @update:model-value="handleEventFiltersChange"
                         />
-                        <span class="relative w-full min-w-[220px] flex-1 sm:max-w-xs">
+                        <span class="relative sm:col-span-2 xl:col-span-3">
                             <InputText
                                 v-model="eventFilters.search"
                                 placeholder="Search consignment, site, order..."
@@ -202,23 +199,11 @@
                             label="Clear filters"
                             icon="pi pi-filter-slash"
                             severity="secondary"
-                            text
+                            outlined
                             size="small"
+                            class="w-full sm:w-auto"
                             @click="clearEventFilters"
                         />
-                        <div class="ml-auto flex items-center gap-2">
-                            <label class="text-xs text-gray-500 dark:text-gray-400">
-                                Per page
-                            </label>
-                            <Select
-                                v-model="eventsPerPage"
-                                :options="pageSizeOptions"
-                                optionLabel="label"
-                                optionValue="value"
-                                class="w-[110px]"
-                                @update:model-value="handleEventsPageSizeChange"
-                            />
-                        </div>
                     </div>
 
                     <div
@@ -277,11 +262,123 @@
                         <i class="pi pi-spin pi-spinner" />
                         Loading webhook events...
                     </div>
-                    <TableSkeletonLoader :columns="eventSkeletonColumns" :rows="7" />
+                    <TableSkeletonLoader class="hidden md:block" :columns="eventSkeletonColumns" :rows="7" />
                 </div>
 
+                <template v-else-if="events.data.length">
+                    <div class="space-y-3 p-3 md:hidden">
+                        <article
+                            v-for="data in events.data"
+                            :key="data.id"
+                            class="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-slate-900"
+                        >
+                            <div class="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    class="mt-1 h-4 w-4 shrink-0"
+                                    :checked="isEventSelected(data)"
+                                    :aria-label="`Select event ${data.consignment_id || data.id}`"
+                                    @change="toggleEventSelection(data)"
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-medium text-gray-800 dark:text-gray-100">
+                                                {{ formatDate(data.created_at) }}
+                                            </p>
+                                            <p class="mt-0.5 font-mono text-xs text-gray-500">
+                                                {{ data.event_type || "—" }}
+                                            </p>
+                                        </div>
+                                        <Tag
+                                            :value="statusLabel(data.forward_status)"
+                                            :severity="statusSeverity(data.forward_status)"
+                                        />
+                                    </div>
+                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                        <span
+                                            class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
+                                            :class="partnerBadgeClass(data.partner)"
+                                        >
+                                            {{ data.partner }}
+                                        </span>
+                                        <span class="text-xs text-gray-500">{{ data.environment }}</span>
+                                        <Tag
+                                            v-if="data.is_admin_test"
+                                            value="Admin test"
+                                            severity="info"
+                                        />
+                                    </div>
+                                    <p class="mt-2 text-sm font-medium text-gray-800 dark:text-gray-100">
+                                        {{ data.consignment_id || "—" }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        Order #{{ data.wc_order_id || "—" }}
+                                    </p>
+                                    <p class="mt-1 break-all text-xs text-gray-500">
+                                        {{ data.site_url || "—" }}
+                                    </p>
+                                    <p
+                                        v-if="data.forward_message"
+                                        class="mt-1 text-xs text-gray-500"
+                                    >
+                                        {{ data.forward_message }}
+                                    </p>
+                                    <div class="mt-3">
+                                        <TableActions align="left">
+                                            <TableActionButton
+                                                v-if="canTestPlugin(data)"
+                                                action="link"
+                                                tooltip="Test plugin"
+                                                :loading="testingEventId === data.id"
+                                                @click="handleTestPlugin(data.id)"
+                                            />
+                                            <TableActionButton
+                                                v-if="canRetryEvent(data)"
+                                                action="retry"
+                                                tooltip="Retry forward"
+                                                :loading="retryingEventId === data.id"
+                                                @click="handleRetryEvent(data.id)"
+                                            />
+                                            <TableActionButton
+                                                action="delete"
+                                                tooltip="Delete event"
+                                                :loading="deletingEventId === data.id"
+                                                @click="confirmDeleteSingleEvent(data)"
+                                            />
+                                        </TableActions>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                        <div class="flex items-center justify-between gap-2 pt-1">
+                            <Button
+                                label="Previous"
+                                icon="pi pi-chevron-left"
+                                severity="secondary"
+                                outlined
+                                size="small"
+                                :disabled="events.current_page <= 1"
+                                @click="fetchEvents(events.current_page - 1)"
+                            />
+                            <span class="text-xs text-gray-500">
+                                {{ events.current_page }} / {{ pageCount(events.total, events.per_page) }}
+                            </span>
+                            <Button
+                                label="Next"
+                                icon="pi pi-chevron-right"
+                                iconPos="right"
+                                severity="secondary"
+                                outlined
+                                size="small"
+                                :disabled="events.current_page >= pageCount(events.total, events.per_page)"
+                                @click="fetchEvents(events.current_page + 1)"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="hidden md:block">
                 <DataTable
-                    v-else-if="events.data.length"
                     v-model:selection="selectedEvents"
                     :value="events.data"
                     dataKey="id"
@@ -290,27 +387,31 @@
                     :first="(events.current_page - 1) * eventsPerPage"
                     lazy
                     paginator
-                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    paginatorTemplate="RowsPerPageDropdown PrevPageLink CurrentPageReport NextPageLink"
                     :rowsPerPageOptions="pageSizeValues"
                     currentPageReportTemplate="{first}–{last} of {totalRecords}"
-                    class="professional-table text-sm"
+                    class="webhook-activity-table professional-table text-sm"
                     @page="onEventPage"
                     @update:selection="handleEventSelectionChange"
                 >
                     <Column selectionMode="multiple" headerStyle="width:3rem" />
-                    <Column header="SL" headerStyle="width:3rem">
-                        <template #body="slotProps">
-                            {{ (events.current_page - 1) * eventsPerPage + slotProps.index + 1 }}
-                        </template>
-                    </Column>
-                    <Column header="Received" style="min-width: 9rem">
+                    <Column header="Received" style="min-width: 8.5rem">
                         <template #body="{ data }">
                             <div class="font-medium text-gray-800 dark:text-gray-100">
                                 {{ formatDate(data.created_at) }}
                             </div>
+                            <div class="mt-1 font-mono text-xs text-gray-500">
+                                {{ data.event_type || "—" }}
+                            </div>
+                            <Tag
+                                v-if="data.is_admin_test"
+                                value="Admin test"
+                                severity="info"
+                                class="mt-1"
+                            />
                         </template>
                     </Column>
-                    <Column header="Partner" style="min-width: 8rem">
+                    <Column header="Partner" style="min-width: 7rem">
                         <template #body="{ data }">
                             <span
                                 class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
@@ -321,49 +422,32 @@
                             <div class="mt-1 text-xs text-gray-500">{{ data.environment }}</div>
                         </template>
                     </Column>
-                    <Column header="Shipment" style="min-width: 10rem">
+                    <Column header="Shipment" style="min-width: 9rem">
                         <template #body="{ data }">
                             <div class="font-medium">{{ data.consignment_id || "—" }}</div>
                             <div class="text-xs text-gray-500">
                                 Order #{{ data.wc_order_id || "—" }}
                             </div>
-                        </template>
-                    </Column>
-                    <Column header="Site" style="min-width: 11rem">
-                        <template #body="{ data }">
-                            <span class="line-clamp-2 break-all text-xs text-gray-600 dark:text-gray-300">
+                            <div class="mt-1 line-clamp-2 break-all text-xs text-gray-500">
                                 {{ data.site_url || "—" }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column header="Event" style="min-width: 8rem">
-                        <template #body="{ data }">
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                <span class="font-mono text-xs">{{ data.event_type || "—" }}</span>
-                                <Tag
-                                    v-if="data.is_admin_test"
-                                    value="Admin test"
-                                    severity="info"
-                                />
                             </div>
                         </template>
                     </Column>
-                    <Column header="Forward Status" style="min-width: 8rem">
+                    <Column header="Status" style="min-width: 7.5rem">
                         <template #body="{ data }">
                             <Tag
-                                :value="data.forward_status"
+                                :value="statusLabel(data.forward_status)"
                                 :severity="statusSeverity(data.forward_status)"
                             />
+                            <p
+                                v-if="data.forward_message"
+                                class="mt-1 line-clamp-2 text-xs text-gray-500"
+                            >
+                                {{ data.forward_message }}
+                            </p>
                         </template>
                     </Column>
-                    <Column header="Message" style="min-width: 10rem">
-                        <template #body="{ data }">
-                            <span class="line-clamp-2 text-xs text-gray-600 dark:text-gray-300">
-                                {{ data.forward_message || "—" }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column header="Action" header-class="text-right" headerStyle="width:9rem">
+                    <Column header="Action" header-class="text-right" headerStyle="width:7.5rem">
                         <template #body="{ data }">
                             <TableActions>
                                 <TableActionButton
@@ -390,6 +474,8 @@
                         </template>
                     </Column>
                 </DataTable>
+                    </div>
+                </template>
 
                 <EmptyState
                     v-else
@@ -421,22 +507,9 @@
                 no-padding
             >
                 <template #actions>
-                    <div class="flex items-center gap-2">
-                        <label class="text-xs text-gray-500 dark:text-gray-400">
-                            Per page
-                        </label>
-                        <Select
-                            v-model="retriesPerPage"
-                            :options="pageSizeOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            class="w-[110px]"
-                            @update:model-value="handleRetriesPageSizeChange"
-                        />
-                        <span class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ retries.total }} total
-                        </span>
-                    </div>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ retries.total }} total
+                    </span>
                 </template>
 
                 <div
@@ -497,11 +570,110 @@
                         <i class="pi pi-spin pi-spinner" />
                         Loading retry queue...
                     </div>
-                    <TableSkeletonLoader :columns="retrySkeletonColumns" :rows="5" />
+                    <TableSkeletonLoader class="hidden md:block" :columns="retrySkeletonColumns" :rows="5" />
                 </div>
 
+                <template v-else-if="retries.data.length">
+                    <div class="space-y-3 p-3 md:hidden">
+                        <article
+                            v-for="data in retries.data"
+                            :key="data.id"
+                            class="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-slate-900"
+                        >
+                            <div class="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    class="mt-1 h-4 w-4 shrink-0"
+                                    :checked="isRetrySelected(data)"
+                                    :aria-label="`Select retry ${data.consignment_id || data.id}`"
+                                    @change="toggleRetrySelection(data)"
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div>
+                                            <span
+                                                v-if="data.partner"
+                                                class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
+                                                :class="partnerBadgeClass(data.partner)"
+                                            >
+                                                {{ data.partner }}
+                                            </span>
+                                            <span v-else class="text-sm text-gray-500">—</span>
+                                            <p class="mt-1 text-xs text-gray-500">
+                                                {{ data.attempts }} / {{ data.max_attempts }} attempts
+                                            </p>
+                                        </div>
+                                        <Tag :value="retryStatusLabel(data.status)" :severity="retrySeverity(data.status)" />
+                                    </div>
+                                    <p class="mt-2 text-sm font-medium text-gray-800 dark:text-gray-100">
+                                        {{ data.consignment_id || "—" }}
+                                    </p>
+                                    <p class="mt-1 break-all text-xs text-gray-500">
+                                        {{ data.site_url || "—" }}
+                                    </p>
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        {{ data.next_retry_at ? formatDate(data.next_retry_at) : "No next retry" }}
+                                    </p>
+                                    <p
+                                        v-if="data.last_error"
+                                        class="mt-1 text-xs text-rose-600 dark:text-rose-400"
+                                    >
+                                        {{ data.last_error }}
+                                    </p>
+                                    <div class="mt-3">
+                                        <TableActions align="left">
+                                            <TableActionButton
+                                                action="link"
+                                                tooltip="Test plugin"
+                                                :loading="testingRetryId === data.id"
+                                                @click="handleTestRetryPlugin(data.id, data.event_id)"
+                                            />
+                                            <TableActionButton
+                                                v-if="data.status !== 'completed'"
+                                                action="retry"
+                                                tooltip="Retry now"
+                                                :loading="retryingRetryId === data.id"
+                                                @click="handleRetryForward(data.id)"
+                                            />
+                                            <TableActionButton
+                                                action="delete"
+                                                tooltip="Delete retry"
+                                                :loading="deletingRetryId === data.id"
+                                                @click="confirmDeleteSingleRetry(data)"
+                                            />
+                                        </TableActions>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                        <div class="flex items-center justify-between gap-2 pt-1">
+                            <Button
+                                label="Previous"
+                                icon="pi pi-chevron-left"
+                                severity="secondary"
+                                outlined
+                                size="small"
+                                :disabled="retries.current_page <= 1"
+                                @click="fetchRetries(retries.current_page - 1)"
+                            />
+                            <span class="text-xs text-gray-500">
+                                {{ retries.current_page }} / {{ pageCount(retries.total, retries.per_page) }}
+                            </span>
+                            <Button
+                                label="Next"
+                                icon="pi pi-chevron-right"
+                                iconPos="right"
+                                severity="secondary"
+                                outlined
+                                size="small"
+                                :disabled="retries.current_page >= pageCount(retries.total, retries.per_page)"
+                                @click="fetchRetries(retries.current_page + 1)"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="hidden md:block">
                 <DataTable
-                    v-else-if="retries.data.length"
                     v-model:selection="selectedRetries"
                     :value="retries.data"
                     dataKey="id"
@@ -510,19 +682,14 @@
                     :first="(retries.current_page - 1) * retriesPerPage"
                     lazy
                     paginator
-                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    paginatorTemplate="RowsPerPageDropdown PrevPageLink CurrentPageReport NextPageLink"
                     :rowsPerPageOptions="pageSizeValues"
                     currentPageReportTemplate="{first}–{last} of {totalRecords}"
-                    class="professional-table text-sm"
+                    class="webhook-activity-table professional-table text-sm"
                     @page="onRetryPage"
                     @update:selection="handleRetrySelectionChange"
                 >
                     <Column selectionMode="multiple" headerStyle="width:3rem" />
-                    <Column header="SL" headerStyle="width:3rem">
-                        <template #body="slotProps">
-                            {{ (retries.current_page - 1) * retriesPerPage + slotProps.index + 1 }}
-                        </template>
-                    </Column>
                     <Column header="Partner" style="min-width: 7rem">
                         <template #body="{ data }">
                             <span
@@ -533,37 +700,34 @@
                                 {{ data.partner }}
                             </span>
                             <span v-else>—</span>
+                            <div class="mt-1 text-xs text-gray-500">
+                                {{ data.attempts }} / {{ data.max_attempts }} attempts
+                            </div>
                         </template>
                     </Column>
-                    <Column header="Consignment" field="consignment_id" style="min-width: 9rem" />
-                    <Column header="Site" style="min-width: 11rem">
+                    <Column header="Shipment" style="min-width: 9rem">
                         <template #body="{ data }">
-                            <span class="line-clamp-2 break-all text-xs">{{ data.site_url || "—" }}</span>
+                            <div class="font-medium">{{ data.consignment_id || "—" }}</div>
+                            <div class="mt-1 line-clamp-2 break-all text-xs text-gray-500">
+                                {{ data.site_url || "—" }}
+                            </div>
+                            <p
+                                v-if="data.last_error"
+                                class="mt-1 line-clamp-2 text-xs text-rose-600 dark:text-rose-400"
+                            >
+                                {{ data.last_error }}
+                            </p>
                         </template>
                     </Column>
                     <Column header="Status" style="min-width: 7rem">
                         <template #body="{ data }">
-                            <Tag :value="data.status" :severity="retrySeverity(data.status)" />
+                            <Tag :value="retryStatusLabel(data.status)" :severity="retrySeverity(data.status)" />
+                            <div class="mt-1 text-xs text-gray-500">
+                                {{ data.next_retry_at ? formatDate(data.next_retry_at) : "No next retry" }}
+                            </div>
                         </template>
                     </Column>
-                    <Column header="Attempts" style="min-width: 6rem">
-                        <template #body="{ data }">
-                            {{ data.attempts }} / {{ data.max_attempts }}
-                        </template>
-                    </Column>
-                    <Column header="Next Retry" style="min-width: 9rem">
-                        <template #body="{ data }">
-                            {{ data.next_retry_at ? formatDate(data.next_retry_at) : "—" }}
-                        </template>
-                    </Column>
-                    <Column header="Last Error" style="min-width: 10rem">
-                        <template #body="{ data }">
-                            <span class="line-clamp-2 text-xs text-rose-600 dark:text-rose-400">
-                                {{ data.last_error || "—" }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column header="Action" header-class="text-right" headerStyle="width:9rem">
+                    <Column header="Action" header-class="text-right" headerStyle="width:7.5rem">
                         <template #body="{ data }">
                             <TableActions>
                                 <TableActionButton
@@ -589,6 +753,8 @@
                         </template>
                     </Column>
                 </DataTable>
+                    </div>
+                </template>
 
                 <EmptyState
                     v-else
@@ -602,7 +768,7 @@
         <AdminDialog
             v-model:visible="testDialogVisible"
             header="Plugin Reachability Test"
-            :style="{ width: '34rem' }"
+            :style="{ width: 'min(34rem, calc(100vw - 1.5rem))' }"
         >
             <div v-if="testResult" class="space-y-4 text-sm">
                 <div
@@ -665,7 +831,7 @@
         <AdminDialog
             v-model:visible="courierTestDialogVisible"
             header="Test Courier Webhook"
-            :style="{ width: '36rem' }"
+            :style="{ width: 'min(36rem, calc(100vw - 1.5rem))' }"
         >
             <div class="space-y-4 text-sm">
                 <p class="text-gray-500 dark:text-gray-400">
@@ -893,6 +1059,8 @@ const eventStats = reactive({
     success_count: 0,
     failed_count: 0,
     retry_queued_count: 0,
+    queued_count: 0,
+    forwarding_count: 0,
     orphan_count: 0,
 });
 
@@ -967,43 +1135,31 @@ const environmentOptions = [
 ];
 
 const statusOptions = [
-    { label: "Received", value: "received" },
+    { label: "Queued", value: "queued" },
+    { label: "Forwarding", value: "forwarding" },
     { label: "Success", value: "success" },
-    { label: "Retry Queued", value: "retry_queued" },
+    { label: "Retry queued", value: "retry_queued" },
     { label: "Failed", value: "failed" },
     { label: "Orphan", value: "orphan" },
+    { label: "Received", value: "received" },
 ];
 
 const pageSizeValues = [10, 20, 25, 50, 100];
 
-const pageSizeOptions = pageSizeValues.map((value) => ({
-    label: String(value),
-    value,
-}));
-
 const eventSkeletonColumns = [
     { width: "1.25rem", variant: "checkbox" as const },
-    { width: "2rem", variant: "bar" as const },
-    { width: "7rem", variant: "bar" as const },
+    { width: "7rem", variant: "stack" as const, subWidth: "4rem" },
     { width: "5.5rem", variant: "stack" as const, subWidth: "3.5rem" },
-    { width: "6.5rem", variant: "stack" as const, subWidth: "4rem" },
-    { width: "8rem", variant: "bar" as const, heightClass: "h-3" },
-    { width: "5rem", variant: "bar" as const },
+    { width: "7rem", variant: "stack" as const, subWidth: "5rem" },
     { width: "4.5rem", variant: "badge" as const },
-    { width: "7rem", variant: "bar" as const, heightClass: "h-3" },
     { width: "5.5rem", variant: "actions" as const },
 ];
 
 const retrySkeletonColumns = [
     { width: "1.25rem", variant: "checkbox" as const },
-    { width: "2rem", variant: "bar" as const },
+    { width: "5rem", variant: "stack" as const, subWidth: "4rem" },
+    { width: "7rem", variant: "stack" as const, subWidth: "5rem" },
     { width: "4.5rem", variant: "badge" as const },
-    { width: "6rem", variant: "bar" as const },
-    { width: "8rem", variant: "bar" as const, heightClass: "h-3" },
-    { width: "4rem", variant: "badge" as const },
-    { width: "3.5rem", variant: "bar" as const },
-    { width: "6rem", variant: "bar" as const },
-    { width: "7rem", variant: "bar" as const, heightClass: "h-3" },
     { width: "5.5rem", variant: "actions" as const },
 ];
 
@@ -1223,10 +1379,16 @@ const formatDate = (value?: string | null) => {
     }
 };
 
+const statusLabel = (status: string) => {
+    return statusOptions.find((option) => option.value === status)?.label || status || "—";
+};
+
 const statusSeverity = (status: string) => {
     switch (status) {
         case "success":
             return "success";
+        case "queued":
+        case "forwarding":
         case "retry_queued":
             return "warn";
         case "failed":
@@ -1234,6 +1396,19 @@ const statusSeverity = (status: string) => {
             return "danger";
         default:
             return "secondary";
+    }
+};
+
+const retryStatusLabel = (status: string) => {
+    switch (status) {
+        case "pending":
+            return "Pending";
+        case "completed":
+            return "Completed";
+        case "failed":
+            return "Failed";
+        default:
+            return status || "—";
     }
 };
 
@@ -1256,6 +1431,34 @@ const canRetryEvent = (event: { forward_status: string; wc_order_id?: number | n
 
 const canTestPlugin = (event: { site_url?: string | null; wc_order_id?: number | null }) => {
     return Boolean(event.site_url || event.wc_order_id);
+};
+
+const pageCount = (total: number, perPage: number) => {
+    const size = Number(perPage) || 20;
+
+    return Math.max(1, Math.ceil((Number(total) || 0) / size));
+};
+
+const isEventSelected = (event: { id: number }) => {
+    return selectedEvents.value.some((row) => row.id === event.id);
+};
+
+const toggleEventSelection = (event: { id: number }) => {
+    selectedEvents.value = isEventSelected(event)
+        ? selectedEvents.value.filter((row) => row.id !== event.id)
+        : [...selectedEvents.value, event];
+    handleEventSelectionChange();
+};
+
+const isRetrySelected = (retry: { id: number }) => {
+    return selectedRetries.value.some((row) => row.id === retry.id);
+};
+
+const toggleRetrySelection = (retry: { id: number }) => {
+    selectedRetries.value = isRetrySelected(retry)
+        ? selectedRetries.value.filter((row) => row.id !== retry.id)
+        : [...selectedRetries.value, retry];
+    handleRetrySelectionChange();
 };
 
 const fetchSummary = async () => {
@@ -1318,14 +1521,6 @@ const fetchRetries = async (page = retries.value.current_page) => {
 
 const handleEventFiltersChange = () => {
     fetchEvents(1);
-};
-
-const handleEventsPageSizeChange = () => {
-    fetchEvents(1);
-};
-
-const handleRetriesPageSizeChange = () => {
-    fetchRetries(1);
 };
 
 const clearEventFilters = () => {
@@ -1588,10 +1783,11 @@ const handleProcessRetries = async () => {
 
     try {
         const { data } = await axios.post(route("webhooks.processRetries"));
+        const recovered = Number(data.recovered?.processed || 0);
         toast.add({
             severity: "success",
-            summary: "Retries processed",
-            detail: `Processed ${data.result.processed}, succeeded ${data.result.succeeded}, failed ${data.result.failed}`,
+            summary: "Waiting events processed",
+            detail: `Claimed ${recovered} waiting. Retries processed ${data.result.processed}, succeeded ${data.result.succeeded}, failed ${data.result.failed}`,
             life: 4000,
         });
         await reloadAll();
@@ -1788,3 +1984,19 @@ const handleTestCourierWebhook = async () => {
     }
 };
 </script>
+
+<style scoped>
+@media (max-width: 767px) {
+    .webhook-activity-table :deep(.p-datatable-thead > tr > th),
+    .webhook-activity-table :deep(.p-datatable-tbody > tr > td) {
+        padding: 0.65rem 0.55rem;
+    }
+
+    .webhook-activity-table :deep(.p-paginator) {
+        flex-wrap: wrap;
+        justify-content: center;
+        row-gap: 0.35rem;
+        padding: 0.75rem 0.5rem;
+    }
+}
+</style>

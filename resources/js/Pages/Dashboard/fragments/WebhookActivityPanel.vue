@@ -235,6 +235,8 @@ const statusClass = (status: string) => {
         case "success":
             return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
         case "retry_queued":
+        case "queued":
+        case "forwarding":
             return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
         case "failed":
         case "orphan":

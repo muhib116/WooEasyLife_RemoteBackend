@@ -2,9 +2,6 @@
 
 namespace App\Services\Courier;
 
-use App\Models\AccessToken;
-use App\Models\CourierAccount;
-use App\Models\CourierConfiguration;
 use App\Models\CourierHubToken;
 use App\Models\CourierShipment;
 use App\Models\LicenseCourierAccount;
@@ -14,8 +11,7 @@ class CourierWebhookSettingsService
 {
     public function __construct(
         protected CourierAccountService $accountService
-    ) {
-    }
+    ) {}
 
     public function buildSettings(string $partner, Request $request, array $context = []): array
     {
@@ -45,7 +41,7 @@ class CourierWebhookSettingsService
             }
 
             if ($redxToken !== '') {
-                $callbackUrl .= (str_contains($callbackUrl, '?') ? '&' : '?') . 'token=' . urlencode($redxToken);
+                $callbackUrl .= (str_contains($callbackUrl, '?') ? '&' : '?').'token='.urlencode($redxToken);
             }
         }
 
@@ -72,7 +68,7 @@ class CourierWebhookSettingsService
         }
 
         $authHints = [
-            'steadfast' => 'Use your Steadfast API Key as the Bearer token in Steadfast webhook settings.',
+            'steadfast' => 'Paste the WooEasyLife Bearer token into Steadfast as the Auth token. Do not use Steadfast Generate unless you save that exact value back on the hub. The same token is the Bearer header and the X-Signature key. Letters, digits, and - _ . = only.',
             'pathao' => 'Use your Client Webhook Secret in Woo Easy Life. Pathao signs requests with X-PATHAO-Signature.',
             'redx' => 'Register the full callback URL including the token query parameter shown below.',
         ];
@@ -91,7 +87,7 @@ class CourierWebhookSettingsService
         }
 
         if ($partner === 'steadfast') {
-            $setupSteps[] = 'In Steadfast webhook settings, paste your API Key as the Bearer auth token (Auth Token).';
+            $setupSteps[] = 'In Steadfast webhook settings, paste the WooEasyLife Bearer token as the Auth token. Do not use Steadfast Generate unless you save that exact value back on the hub.';
             $setupSteps[] = 'Steadfast sends delivery_status and tracking_update notifications — both are handled automatically.';
         }
 
@@ -106,10 +102,10 @@ class CourierWebhookSettingsService
         $mappingCount = $this->shipmentMappingCount($accessToken?->id, $partner, $environment);
         $hubReady = $mappingCount > 0;
 
-        $actionRequired = $credentialsChanged || $callbackUrl === '' || !$hubReady;
+        $actionRequired = $credentialsChanged || $callbackUrl === '' || ! $hubReady;
         $actionMessage = null;
 
-        if (!$hubReady) {
+        if (! $hubReady) {
             $actionMessage = 'If you already have courier orders on this store, run Sync existing orders before registering this callback URL in your courier portal.';
         } elseif ($credentialsChanged && $inFlight > 0) {
             $actionMessage = 'Register this callback URL in your new courier merchant portal. Keep it on the old account until in-flight orders finish.';
@@ -141,7 +137,7 @@ class CourierWebhookSettingsService
 
     public function shipmentMappingCount(?int $accessTokenId, string $partner, string $environment = 'live'): int
     {
-        if (!$accessTokenId) {
+        if (! $accessTokenId) {
             return 0;
         }
 
@@ -155,12 +151,12 @@ class CourierWebhookSettingsService
     public function callbackUrl(string $partner, string $environment = 'live'): string
     {
         $partner = strtolower(trim($partner));
-        $path = '/api/webhooks/' . $partner;
+        $path = '/api/webhooks/'.$partner;
 
         if ($environment === 'sandbox') {
             $path .= '/sandbox';
         }
 
-        return rtrim((string) config('app.url'), '/') . $path;
+        return rtrim((string) config('app.url'), '/').$path;
     }
 }

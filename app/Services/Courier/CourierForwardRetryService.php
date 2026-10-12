@@ -12,8 +12,7 @@ class CourierForwardRetryService
 
     public function __construct(
         protected WordPressCourierForwarder $forwarder
-    ) {
-    }
+    ) {}
 
     public function queueRetry(CourierShipment $shipment, array $payload, ?CourierWebhookEvent $event = null, string $error = ''): void
     {
@@ -23,22 +22,34 @@ class CourierForwardRetryService
             ->first();
 
         if ($existing) {
+            $existingAt = is_array($existing->payload) ? (string) ($existing->payload['updated_at'] ?? '') : '';
+            $incomingAt = (string) ($payload['updated_at'] ?? '');
+
+            if ($this->timestampIsNewer($incomingAt, $existingAt)) {
+                $existing->payload = $this->pluginPayload($payload);
+                $existing->webhook_event_id = $event?->id ?? $existing->webhook_event_id;
+                $existing->attempts = 0;
+                $existing->next_retry_at = now()->addSeconds(self::RETRY_DELAYS_SECONDS[0]);
+                $existing->last_error = $this->clip($error);
+                $existing->save();
+            }
+
             return;
         }
 
         CourierForwardRetry::query()->create([
             'shipment_id' => $shipment->id,
             'webhook_event_id' => $event?->id,
-            'payload' => $payload,
+            'payload' => $this->pluginPayload($payload),
             'attempts' => 0,
             'max_attempts' => count(self::RETRY_DELAYS_SECONDS),
             'next_retry_at' => now()->addSeconds(self::RETRY_DELAYS_SECONDS[0]),
-            'last_error' => substr($error, 0, 255),
+            'last_error' => $this->clip($error),
             'status' => 'pending',
         ]);
     }
 
-    public function processDueRetries(int $limit = 25): array
+    public function processDueRetries(int $limit = 25, ?int $stopAfterSeconds = null): array
     {
         $rows = CourierForwardRetry::query()
             ->where('status', 'pending')
@@ -53,25 +64,31 @@ class CourierForwardRetryService
         $processed = 0;
         $succeeded = 0;
         $failed = 0;
+        $deadline = $stopAfterSeconds !== null ? microtime(true) + max(1, $stopAfterSeconds) : null;
 
         foreach ($rows as $retry) {
+            if ($deadline !== null && microtime(true) >= $deadline) {
+                break;
+            }
+
             $processed++;
             $shipment = CourierShipment::query()->find($retry->shipment_id);
 
-            if (!$shipment) {
+            if (! $shipment) {
                 $retry->status = 'failed';
                 $retry->last_error = 'shipment_missing';
                 $retry->save();
                 $failed++;
+
                 continue;
             }
 
-            $payload = is_array($retry->payload) ? $retry->payload : [];
+            $payload = $this->pluginPayload(is_array($retry->payload) ? $retry->payload : []);
             $result = $this->forwarder->forward($shipment, $payload);
             $retry->attempts = (int) $retry->attempts + 1;
             $retry->last_attempt_at = now();
 
-            if (!empty($result['success'])) {
+            if (! empty($result['success'])) {
                 $retry->status = 'completed';
                 $retry->last_error = null;
                 $retry->next_retry_at = null;
@@ -91,11 +108,12 @@ class CourierForwardRetryService
                 }
 
                 $succeeded++;
+
                 continue;
             }
 
             $error = (string) ($result['message'] ?? 'forward_failed');
-            $retry->last_error = substr($error, 0, 255);
+            $retry->last_error = $this->clip($error);
 
             if ($retry->attempts >= (int) $retry->max_attempts) {
                 $retry->status = 'failed';
@@ -107,11 +125,12 @@ class CourierForwardRetryService
                         ->where('id', $retry->webhook_event_id)
                         ->update([
                             'forward_status' => 'failed',
-                            'forward_message' => $error,
+                            'forward_message' => $this->clip($error),
                         ]);
                 }
 
                 $failed++;
+
                 continue;
             }
 
@@ -126,6 +145,26 @@ class CourierForwardRetryService
             'succeeded' => $succeeded,
             'failed' => $failed,
         ];
+    }
+
+    private function timestampIsNewer(string $incoming, string $existing): bool
+    {
+        if ($incoming === '') {
+            return false;
+        }
+
+        if ($existing === '') {
+            return true;
+        }
+
+        $incomingTs = strtotime($incoming);
+        $existingTs = strtotime($existing);
+
+        if ($incomingTs !== false && $existingTs !== false) {
+            return $incomingTs > $existingTs;
+        }
+
+        return $incoming > $existing;
     }
 
     public function pendingCount(?int $accessTokenId = null): int
@@ -162,6 +201,10 @@ class CourierForwardRetryService
             return ['success' => false, 'message' => 'no_shipment_mapping'];
         }
 
+        if (in_array($event->forward_status, ['queued', 'forwarding'], true)) {
+            return ['success' => false, 'message' => 'already_in_progress'];
+        }
+
         $existingRetry = CourierForwardRetry::query()
             ->where('webhook_event_id', $event->id)
             ->whereIn('status', ['pending', 'failed'])
@@ -176,16 +219,19 @@ class CourierForwardRetryService
             return $this->executeRetry($existingRetry);
         }
 
-        $payload = is_array($event->payload_summary) ? $event->payload_summary : [];
+        $summary = is_array($event->payload_summary) ? $event->payload_summary : [];
+        $stored = is_array($summary['forward_payload'] ?? null) ? $summary['forward_payload'] : $summary;
         $forwardPayload = array_merge([
             'partner' => $event->partner,
             'raw_status' => $event->event_type ?? 'webhook',
-            'updated_at' => now()->toDateTimeString(),
+            'updated_at' => (string) ($summary['updated_at'] ?? now()->toDateTimeString()),
             'tracking_message' => '',
-        ], $payload, [
+        ], $stored, [
             'order_id' => (int) $shipment->wc_order_id,
             'courier_account_id' => (int) $shipment->courier_account_id,
         ]);
+        unset($forwardPayload['forward_payload'], $forwardPayload['consignment_id']);
+        $forwardPayload = $this->pluginPayload($forwardPayload);
 
         $result = $this->forwarder->forward($shipment, $forwardPayload);
 
@@ -203,7 +249,7 @@ class CourierForwardRetryService
 
         $error = (string) ($result['message'] ?? 'forward_failed');
         $event->forward_status = 'retry_queued';
-        $event->forward_message = $error;
+        $event->forward_message = $this->clip($error);
         $event->save();
 
         $this->queueRetry($shipment, $forwardPayload, $event, $error);
@@ -226,7 +272,7 @@ class CourierForwardRetryService
             return ['success' => false, 'message' => 'shipment_missing'];
         }
 
-        $payload = is_array($retry->payload) ? $retry->payload : [];
+        $payload = $this->pluginPayload(is_array($retry->payload) ? $retry->payload : []);
         $result = $this->forwarder->forward($shipment, $payload);
         $retry->attempts = (int) $retry->attempts + 1;
         $retry->last_attempt_at = now();
@@ -254,7 +300,7 @@ class CourierForwardRetryService
         }
 
         $error = (string) ($result['message'] ?? 'forward_failed');
-        $retry->last_error = substr($error, 0, 255);
+        $retry->last_error = $this->clip($error);
 
         if ($retry->attempts >= (int) $retry->max_attempts) {
             $retry->status = 'failed';
@@ -266,7 +312,7 @@ class CourierForwardRetryService
                     ->where('id', $retry->webhook_event_id)
                     ->update([
                         'forward_status' => 'failed',
-                        'forward_message' => $error,
+                        'forward_message' => $this->clip($error),
                     ]);
             }
 
@@ -282,10 +328,26 @@ class CourierForwardRetryService
                 ->where('id', $retry->webhook_event_id)
                 ->update([
                     'forward_status' => 'retry_queued',
-                    'forward_message' => $error,
+                    'forward_message' => $this->clip($error),
                 ]);
         }
 
         return ['success' => false, 'message' => $error];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function pluginPayload(array $payload): array
+    {
+        unset($payload['consignment_id'], $payload['forward_payload']);
+
+        return $payload;
+    }
+
+    private function clip(string $message): string
+    {
+        return mb_substr($message, 0, 255);
     }
 }

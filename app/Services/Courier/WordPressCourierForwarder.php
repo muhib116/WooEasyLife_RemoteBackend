@@ -11,15 +11,15 @@ use Illuminate\Support\Facades\Log;
 
 class WordPressCourierForwarder extends Controller
 {
-    public function forward(CourierShipment $shipment, array $payload): array
+    public function forward(CourierShipment $shipment, array $payload, int $timeoutSeconds = 20): array
     {
         $accessToken = AccessToken::query()->find($shipment->access_token_id);
-        if (!$accessToken || !$accessToken->access_key) {
+        if (! $accessToken || ! $accessToken->access_key) {
             return ['success' => false, 'message' => 'missing_access_token'];
         }
 
         $plainToken = $this->decodeToken($accessToken->access_key);
-        if (!$plainToken) {
+        if (! $plainToken) {
             return ['success' => false, 'message' => 'invalid_access_token'];
         }
 
@@ -33,10 +33,10 @@ class WordPressCourierForwarder extends Controller
         $lastResult = ['success' => false, 'message' => 'forward_failed'];
 
         foreach ($candidates as $candidate) {
-            $endpoint = rtrim($candidate, '/') . '/wp-json/wooeasylife/v1/courier-status/apply';
+            $endpoint = rtrim($candidate, '/').'/wp-json/wooeasylife/v1/courier-status/apply';
 
             try {
-                $response = Http::timeout(20)
+                $response = Http::timeout(max(1, $timeoutSeconds))
                     ->withHeaders([
                         'Content-Type' => 'application/json',
                         'X-WEL-Internal-Token' => $signature,
@@ -88,7 +88,7 @@ class WordPressCourierForwarder extends Controller
 
     public function probeReachability(?CourierShipment $shipment, ?AccessToken $accessToken = null): array
     {
-        if (!$shipment) {
+        if (! $shipment) {
             return [
                 'forward_reachable' => null,
                 'forward_probe_status' => 'no_shipments',
@@ -108,7 +108,7 @@ class WordPressCourierForwarder extends Controller
         }
 
         foreach ($candidates as $candidate) {
-            $endpoint = rtrim($candidate, '/') . '/wp-json/wooeasylife/v1/license-status';
+            $endpoint = rtrim($candidate, '/').'/wp-json/wooeasylife/v1/license-status';
 
             try {
                 $response = Http::timeout(8)->get($endpoint);
@@ -131,7 +131,7 @@ class WordPressCourierForwarder extends Controller
         return [
             'forward_reachable' => false,
             'forward_probe_status' => 'unreachable',
-            'forward_probe_url' => rtrim($candidates[0], '/') . '/wp-json/wooeasylife/v1/license-status',
+            'forward_probe_url' => rtrim($candidates[0], '/').'/wp-json/wooeasylife/v1/license-status',
         ];
     }
 
@@ -194,7 +194,7 @@ class WordPressCourierForwarder extends Controller
     private function probeLicenseEndpoint(array $candidates): array
     {
         foreach ($candidates as $candidate) {
-            $endpoint = rtrim($candidate, '/') . '/wp-json/wooeasylife/v1/license-status';
+            $endpoint = rtrim($candidate, '/').'/wp-json/wooeasylife/v1/license-status';
 
             try {
                 $response = Http::timeout(10)->get($endpoint);
@@ -229,7 +229,7 @@ class WordPressCourierForwarder extends Controller
         return [
             'success' => false,
             'status' => 'unreachable',
-            'url' => rtrim($candidates[0], '/') . '/wp-json/wooeasylife/v1/license-status',
+            'url' => rtrim($candidates[0], '/').'/wp-json/wooeasylife/v1/license-status',
             'http_status' => null,
             'site_url' => $candidates[0],
             'detail' => 'Could not connect to the plugin license endpoint.',
@@ -293,7 +293,7 @@ class WordPressCourierForwarder extends Controller
         ];
 
         foreach ($candidates as $candidate) {
-            $endpoint = rtrim($candidate, '/') . '/wp-json/wooeasylife/v1/courier-status/apply';
+            $endpoint = rtrim($candidate, '/').'/wp-json/wooeasylife/v1/courier-status/apply';
 
             try {
                 $response = Http::timeout(15)
@@ -371,9 +371,9 @@ class WordPressCourierForwarder extends Controller
         if ($domain !== '') {
             $derived = str_starts_with($domain, 'http://') || str_starts_with($domain, 'https://')
                 ? rtrim($domain, '/')
-                : 'https://' . rtrim($domain, '/');
+                : 'https://'.rtrim($domain, '/');
 
-            if (!in_array($derived, $candidates, true)) {
+            if (! in_array($derived, $candidates, true)) {
                 $candidates[] = $derived;
             }
         }

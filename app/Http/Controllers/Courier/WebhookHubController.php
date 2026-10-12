@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Courier;
 use App\Http\Controllers\Controller;
 use App\Models\CourierAccount;
 use App\Models\CourierHubToken;
-use App\Models\CourierShipment;
 use App\Services\Courier\CourierForwardRetryService;
 use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\CourierWebhookEventService;
+use App\Services\Courier\SteadfastWebhookProcessor;
 use App\Services\Courier\WordPressCourierForwarder;
 use App\Services\OrderIntelligence\WebhookOrderIngestor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WebhookHubController extends Controller
 {
@@ -24,8 +25,8 @@ class WebhookHubController extends Controller
         protected CourierWebhookEventService $eventService,
         protected CourierForwardRetryService $retryService,
         protected WebhookOrderIngestor $webhookOrderIngestor,
-    ) {
-    }
+        protected SteadfastWebhookProcessor $steadfastWebhooks,
+    ) {}
 
     public function pathao(Request $request, string $environment = 'live')
     {
@@ -36,11 +37,11 @@ class WebhookHubController extends Controller
             return $this->pathaoAcceptedResponse();
         }
 
-        if (!$this->verifyPathaoSignature($request, $environment)) {
+        if (! $this->verifyPathaoSignature($request, $environment)) {
             return $this->pathaoResponse(['status' => 'error', 'message' => 'Unauthorized.'], 401);
         }
 
-        if (!$this->isPathaoOrderEvent((string) ($payload['event'] ?? ''))) {
+        if (! $this->isPathaoOrderEvent((string) ($payload['event'] ?? ''))) {
             return $this->pathaoAcceptedResponse();
         }
 
@@ -59,49 +60,18 @@ class WebhookHubController extends Controller
 
     public function steadfast(Request $request, string $environment = 'live')
     {
-        if (!$this->verifySteadfastAuth($request, $environment)) {
+        if (! $this->verifySteadfastAuth($request, $environment)) {
             return $this->steadfastErrorResponse('Unauthorized.', 401);
         }
 
-        $payload = $request->all();
-        $notificationType = strtolower((string) ($payload['notification_type'] ?? 'delivery_status'));
-        $consignmentId = trim((string) ($payload['consignment_id'] ?? ''));
-        $invoice = trim((string) ($payload['invoice'] ?? ''));
+        $this->steadfastWebhooks->receive($request, $environment);
 
-        if ($consignmentId === '') {
-            return $this->steadfastSuccessResponse();
-        }
-
-        if ($notificationType === 'tracking_update') {
-            return $this->forwardShipmentUpdate('steadfast', $consignmentId, [
-                'partner' => 'steadfast',
-                'notification_type' => 'tracking_update',
-                'tracking_message' => (string) ($payload['tracking_message'] ?? ''),
-                'updated_at' => (string) ($payload['updated_at'] ?? now()->toDateTimeString()),
-                'invoice' => $invoice,
-            ], $environment, $invoice);
-        }
-
-        $rawStatus = $this->normalizeSteadfastWebhookStatus((string) ($payload['status'] ?? ''));
-        if ($rawStatus === '') {
-            return $this->steadfastSuccessResponse();
-        }
-
-        return $this->forwardShipmentUpdate('steadfast', $consignmentId, [
-            'partner' => 'steadfast',
-            'notification_type' => 'delivery_status',
-            'raw_status' => $rawStatus,
-            'updated_at' => (string) ($payload['updated_at'] ?? now()->toDateTimeString()),
-            'tracking_message' => (string) ($payload['tracking_message'] ?? ''),
-            'invoice' => $invoice,
-            'cod_amount' => $payload['cod_amount'] ?? null,
-            'delivery_charge' => $payload['delivery_charge'] ?? null,
-        ], $environment, $invoice);
+        return $this->steadfastSuccessResponse();
     }
 
     public function redx(Request $request, string $environment = 'live')
     {
-        if (!$this->verifyRedxToken($request, $environment)) {
+        if (! $this->verifyRedxToken($request, $environment)) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized.'], 401);
         }
 
@@ -126,7 +96,7 @@ class WebhookHubController extends Controller
         $messageBn = trim((string) ($payload['message_bn'] ?? ''));
         $trackingMessage = $messageEn;
         if ($messageBn !== '' && $messageBn !== $messageEn) {
-            $trackingMessage = $messageEn !== '' ? $messageEn . ' / ' . $messageBn : $messageBn;
+            $trackingMessage = $messageEn !== '' ? $messageEn.' / '.$messageBn : $messageBn;
         }
 
         return $this->forwardShipmentUpdate('redx', $trackingNumber, [
@@ -167,7 +137,7 @@ class WebhookHubController extends Controller
             ],
         ]);
 
-        if (!$shipment || !$shipment->wc_order_id) {
+        if (! $shipment || ! $shipment->wc_order_id) {
             $event->forward_status = 'orphan';
             $event->forward_message = 'mapping_not_found';
             $event->save();
@@ -187,7 +157,7 @@ class WebhookHubController extends Controller
 
         $result = $this->forwarder->forward($shipment, $forwardPayload);
 
-        if (!empty($result['success'])) {
+        if (! empty($result['success'])) {
             $shipment->status = (string) ($payload['raw_status'] ?? $shipment->status);
             $shipment->last_webhook_at = now();
             $shipment->save();
@@ -251,11 +221,59 @@ class WebhookHubController extends Controller
 
     private function verifySteadfastAuth(Request $request, string $environment): bool
     {
-        $auth = trim((string) $request->bearerToken());
-        if ($auth === '') {
+        $bearer = trim((string) $request->bearerToken());
+        $signature = strtolower(trim((string) $request->header('X-Signature', '')));
+
+        if ($bearer === '' && $signature === '') {
             return false;
         }
 
+        $consignmentId = trim((string) $request->input('consignment_id', ''));
+        $rawBody = (string) $request->getContent();
+        $secrets = $this->steadfastSecrets($request, $environment);
+        $bearerMatched = false;
+
+        foreach ($secrets as $secret) {
+            $signatureMatches = $signature !== '' && $this->steadfastSignatureMatches($rawBody, $secret, $signature);
+            $bearerMatches = $bearer !== ''
+                && strlen($bearer) === strlen($secret)
+                && hash_equals($secret, $bearer);
+
+            if ($signature === '') {
+                if ($bearerMatches) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($signatureMatches && ($bearer === '' || $bearerMatches)) {
+                return true;
+            }
+
+            if ($bearerMatches) {
+                $bearerMatched = true;
+            }
+        }
+
+        if ($signature !== '' && $bearerMatched) {
+            Log::warning('steadfast_signature_mismatch', [
+                'partner' => 'steadfast',
+                'consignment_id' => $consignmentId,
+                'signature_header_present' => true,
+            ]);
+
+            return ! config('courier.steadfast_enforce_webhook_signature');
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function steadfastSecrets(Request $request, string $environment): array
+    {
         $consignmentId = trim((string) $request->input('consignment_id', ''));
         $account = null;
 
@@ -266,21 +284,27 @@ class WebhookHubController extends Controller
             }
         }
 
-        $candidates = CourierAccount::query()
+        return CourierAccount::query()
             ->where('partner', 'steadfast')
             ->where('environment', $environment === 'sandbox' ? 'sandbox' : 'live')
             ->where('is_active', true)
             ->when($account, fn ($query) => $query->where('id', $account->id))
-            ->get();
+            ->pluck('webhook_verify_secret')
+            ->map(fn ($secret) => trim((string) $secret))
+            ->filter(fn ($secret) => $secret !== '')
+            ->values()
+            ->all();
+    }
 
-        foreach ($candidates as $candidate) {
-            $secret = trim((string) $candidate->webhook_verify_secret);
-            if ($secret !== '' && hash_equals($secret, $auth)) {
-                return true;
-            }
+    private function steadfastSignatureMatches(string $rawBody, string $secret, string $signature): bool
+    {
+        $expected = hash_hmac('sha256', $rawBody, $secret);
+
+        if (strlen($signature) !== strlen($expected)) {
+            return false;
         }
 
-        return false;
+        return hash_equals($expected, $signature);
     }
 
     private function verifyRedxToken(Request $request, string $environment = 'live'): bool
@@ -394,27 +418,6 @@ class WebhookHubController extends Controller
                 'assigned_for_delivery', 'in_transit', 'out_for_delivery',
                 'return_initiated', 'return_completed',
             ], true);
-    }
-
-    private function normalizeSteadfastWebhookStatus(string $status): string
-    {
-        $raw = strtolower(trim($status));
-        if ($raw === '') {
-            return '';
-        }
-
-        $raw = preg_replace('/[\s-]+/', '_', $raw) ?? $raw;
-
-        $aliases = [
-            'complete' => 'delivered',
-            'completed' => 'delivered',
-            'returned' => 'returned',
-            'partial_delivery' => 'partial_delivered',
-            'partially_delivered' => 'partial_delivered',
-            'canceled' => 'cancelled',
-        ];
-
-        return $aliases[$raw] ?? $raw;
     }
 
     /**

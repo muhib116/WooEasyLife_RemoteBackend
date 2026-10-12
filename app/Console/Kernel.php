@@ -19,7 +19,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('subscriptions:apply-expiry')->dailyAt('07:55');
         $schedule->command('subscriptions:check-alerts')->dailyAt('08:00');
         $schedule->command('subscriptions:notify')->dailyAt('08:05');
-        $schedule->command('courier:retry-webhook-forwards')->everyMinute();
+        $schedule->command('courier:retry-webhook-forwards')
+            ->everyMinute()
+            ->withoutOverlapping(5);
         $schedule->command('messenger:retry-webhook-forwards')->everyMinute();
         $schedule->command('seo:weekly-report')
             ->weeklyOn(0, '09:00') // Sunday — Step 9 authority metrics (Asia/Dhaka)

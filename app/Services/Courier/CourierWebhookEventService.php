@@ -2,7 +2,6 @@
 
 namespace App\Services\Courier;
 
-use App\Models\CourierShipment;
 use App\Models\CourierWebhookEvent;
 
 class CourierWebhookEventService
@@ -21,6 +20,7 @@ class CourierWebhookEventService
             'site_url' => $context['site_url'] ?? null,
             'wc_order_id' => $context['wc_order_id'] ?? null,
             'event_type' => $context['event_type'] ?? null,
+            'idempotency_key' => $context['idempotency_key'] ?? null,
             'forward_status' => $context['forward_status'] ?? 'received',
             'forward_message' => $context['forward_message'] ?? null,
             'payload_summary' => $context['payload_summary'] ?? null,

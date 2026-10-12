@@ -15,6 +15,7 @@ class CourierWebhookEvent extends Model
         'site_url',
         'wc_order_id',
         'event_type',
+        'idempotency_key',
         'forward_status',
         'forward_message',
         'payload_summary',

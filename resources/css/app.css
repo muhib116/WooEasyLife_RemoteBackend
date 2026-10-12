@@ -442,11 +442,28 @@
     .admin-confirm-dialog.p-confirmdialog .p-dialog-footer,
     .p-confirmdialog .p-dialog-footer {
         display: flex;
+        flex-wrap: wrap;
         justify-content: flex-end;
         gap: 0.5rem;
         background: rgb(248 250 252 / 0.9);
         border-top: 1px solid rgb(241 245 249);
         padding: 0.875rem 1.25rem;
+    }
+
+    @media (max-width: 640px) {
+        .admin-dialog.p-dialog {
+            width: calc(100vw - 1.5rem) !important;
+            max-width: calc(100vw - 1.5rem);
+        }
+
+        .admin-dialog .p-dialog-footer {
+            flex-direction: column-reverse;
+        }
+
+        .admin-dialog .p-dialog-footer .p-button {
+            width: 100%;
+            margin: 0;
+        }
     }
 
     .admin-confirm-dialog.p-confirmdialog .p-dialog-footer,

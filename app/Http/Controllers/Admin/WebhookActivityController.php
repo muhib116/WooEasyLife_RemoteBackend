@@ -11,6 +11,7 @@ use App\Models\CourierShipment;
 use App\Models\CourierWebhookEvent;
 use App\Services\Courier\CourierForwardRetryService;
 use App\Services\Courier\CourierWebhookEventService;
+use App\Services\Courier\SteadfastWebhookProcessor;
 use App\Services\Courier\WordPressCourierForwarder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,8 +29,7 @@ class WebhookActivityController extends Controller
         protected CourierWebhookEventService $eventService,
         protected CourierForwardRetryService $retryService,
         protected WordPressCourierForwarder $forwarder
-    ) {
-    }
+    ) {}
 
     public function index(): Response
     {
@@ -161,12 +161,17 @@ class WebhookActivityController extends Controller
 
     public function processRetries(Request $request): JsonResponse
     {
-        $limit = max(1, min(100, (int) $request->input('limit', 25)));
-        $result = $this->retryService->processDueRetries($limit);
+        $limit = max(1, min(5, (int) $request->input('limit', 5)));
+        $budgetSeconds = 15;
+        $started = microtime(true);
+        $recovered = app(SteadfastWebhookProcessor::class)->recoverStuck($limit, $budgetSeconds);
+        $remaining = max(1, $budgetSeconds - (int) floor(microtime(true) - $started));
+        $result = $this->retryService->processDueRetries($limit, $remaining);
 
         return response()->json([
             'message' => 'Due retries processed.',
             'result' => $result,
+            'recovered' => $recovered,
         ]);
     }
 
@@ -586,17 +591,34 @@ class WebhookActivityController extends Controller
      *     success_count: int,
      *     failed_count: int,
      *     retry_queued_count: int,
+     *     queued_count: int,
+     *     forwarding_count: int,
      *     orphan_count: int
      * }
      */
     private function buildEventStats($query): array
     {
+        $builder = (clone $query)->reorder()->setEagerLoads([]);
+        $builder->getQuery()->columns = null;
+
+        $row = $builder
+            ->selectRaw('COUNT(*) as total_events')
+            ->selectRaw("COALESCE(SUM(CASE WHEN forward_status = 'success' THEN 1 ELSE 0 END), 0) as success_count")
+            ->selectRaw("COALESCE(SUM(CASE WHEN forward_status = 'failed' THEN 1 ELSE 0 END), 0) as failed_count")
+            ->selectRaw("COALESCE(SUM(CASE WHEN forward_status = 'retry_queued' THEN 1 ELSE 0 END), 0) as retry_queued_count")
+            ->selectRaw("COALESCE(SUM(CASE WHEN forward_status = 'queued' THEN 1 ELSE 0 END), 0) as queued_count")
+            ->selectRaw("COALESCE(SUM(CASE WHEN forward_status = 'forwarding' THEN 1 ELSE 0 END), 0) as forwarding_count")
+            ->selectRaw("COALESCE(SUM(CASE WHEN forward_status = 'orphan' THEN 1 ELSE 0 END), 0) as orphan_count")
+            ->first();
+
         return [
-            'total_events' => (clone $query)->count(),
-            'success_count' => (clone $query)->where('forward_status', 'success')->count(),
-            'failed_count' => (clone $query)->where('forward_status', 'failed')->count(),
-            'retry_queued_count' => (clone $query)->where('forward_status', 'retry_queued')->count(),
-            'orphan_count' => (clone $query)->where('forward_status', 'orphan')->count(),
+            'total_events' => (int) ($row->total_events ?? 0),
+            'success_count' => (int) ($row->success_count ?? 0),
+            'failed_count' => (int) ($row->failed_count ?? 0),
+            'retry_queued_count' => (int) ($row->retry_queued_count ?? 0),
+            'queued_count' => (int) ($row->queued_count ?? 0),
+            'forwarding_count' => (int) ($row->forwarding_count ?? 0),
+            'orphan_count' => (int) ($row->orphan_count ?? 0),
         ];
     }
 
