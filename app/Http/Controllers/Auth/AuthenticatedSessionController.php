@@ -87,11 +87,17 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $merchant = in_array($request->user()?->role, ['user', 'merchant_staff'], true);
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();
+
+        if ($merchant) {
+            return redirect()->route('merchant.login');
+        }
 
         return redirect('/');
     }

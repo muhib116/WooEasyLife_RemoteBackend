@@ -39,10 +39,14 @@ class EnsureActiveAuthenticatedUser
 
     private function logout(Request $request, string $message): Response
     {
+        $merchant = in_array($request->user()?->role, ['user', 'merchant_staff'], true);
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('error', $message);
+        return redirect()
+            ->route($merchant ? 'merchant.login' : 'login')
+            ->with('error', $message);
     }
 }

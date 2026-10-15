@@ -102,12 +102,6 @@
                         </div>
                         <p class="text-xs" style="color: var(--mp-muted)">Couriers are answering one by one</p>
                     </div>
-                    <div class="mt-4 grid grid-cols-3 gap-2">
-                        <div v-for="n in 3" :key="`tile-${n}`" class="skeleton-block h-16 rounded-xl" />
-                    </div>
-                    <div class="mt-3 space-y-2">
-                        <div v-for="n in 5" :key="`courier-${n}`" class="skeleton-block h-12 rounded-xl" />
-                    </div>
                 </div>
 
                 <div class="max-w-full overflow-x-auto">

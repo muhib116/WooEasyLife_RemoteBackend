@@ -590,6 +590,48 @@ class MerchantPortalTest extends TestCase
         $this->assertTrue(Hash::check('new-secure-pass', $merchant->password));
     }
 
+    public function test_merchant_logout_returns_to_the_merchant_login_page(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant Logout',
+            'email' => 'merchant-logout@example.com',
+            'phone' => '01700000991',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->actingAs($merchant)
+            ->post('/logout')
+            ->assertRedirect(route('merchant.login'));
+
+        $this->assertGuest();
+    }
+
+    public function test_merchant_staff_logout_returns_to_the_merchant_login_page(): void
+    {
+        $staff = User::create([
+            'name' => 'Staff Logout',
+            'email' => 'staff-logout@example.com',
+            'phone' => '01700000992',
+            'password' => Hash::make('password'),
+            'role' => 'merchant_staff',
+            'status' => true,
+        ]);
+
+        $this->actingAs($staff)
+            ->post('/logout')
+            ->assertRedirect(route('merchant.login'));
+
+        $this->assertGuest();
+    }
+
+    public function test_guest_portal_opens_the_merchant_login_page(): void
+    {
+        $this->get('/portal')->assertRedirect(route('merchant.login'));
+        $this->get('/dashboard')->assertRedirect(route('login'));
+    }
+
     public function test_merchant_login_rejects_a_value_that_is_neither_email_nor_phone(): void
     {
         $this->post('/marchent/login', [
