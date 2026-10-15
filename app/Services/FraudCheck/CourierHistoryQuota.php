@@ -16,7 +16,18 @@ class CourierHistoryQuota
     {
         $enabled = (bool) $merchant->courier_history_enabled;
         $limit = max(0, (int) $merchant->courier_history_daily_limit);
-        $used = $this->usedToday($merchant);
+
+        try {
+            $used = $this->usedToday($merchant);
+        } catch (QueryException $exception) {
+            if (! $this->schemaMissing($exception)) {
+                throw $exception;
+            }
+
+            $enabled = false;
+            $limit = 0;
+            $used = 0;
+        }
 
         return [
             'enabled' => $enabled,
@@ -72,5 +83,12 @@ class CourierHistoryQuota
     private function today(): Carbon
     {
         return Carbon::now('Asia/Dhaka');
+    }
+
+    private function schemaMissing(QueryException $exception): bool
+    {
+        $state = (string) ($exception->errorInfo[0] ?? '');
+
+        return in_array($state, ['42S02', '42S22'], true);
     }
 }

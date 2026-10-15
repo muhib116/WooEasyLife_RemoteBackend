@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('bulk_fraud_batches')) {
         Schema::create('bulk_fraud_batches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -20,7 +21,9 @@ return new class extends Migration
 
             $table->index(['user_id', 'created_at']);
         });
+        }
 
+        if (! Schema::hasTable('bulk_fraud_daily_results')) {
         Schema::create('bulk_fraud_daily_results', function (Blueprint $table) {
             $table->id();
             $table->string('phone', 20);
@@ -38,7 +41,9 @@ return new class extends Migration
 
             $table->unique(['phone', 'checked_on']);
         });
+        }
 
+        if (! Schema::hasTable('bulk_fraud_batch_items')) {
         Schema::create('bulk_fraud_batch_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('batch_id')->constrained('bulk_fraud_batches')->cascadeOnDelete();
@@ -59,6 +64,7 @@ return new class extends Migration
 
             $table->index(['batch_id', 'status', 'position']);
         });
+        }
     }
 
     public function down(): void
