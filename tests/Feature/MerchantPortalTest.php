@@ -323,4 +323,282 @@ class MerchantPortalTest extends TestCase
             ->has('websites', 1)
             ->where('websites.0.domain', 'shop-a.example.com'));
     }
+
+    public function test_merchant_can_login_with_phone_number(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'phone-merchant@example.com',
+            'phone' => '01700000021',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '01700000021',
+            'password' => 'password',
+        ])->assertRedirect('/portal');
+
+        $this->assertAuthenticatedAs($merchant);
+    }
+
+    public function test_merchant_can_login_with_international_phone_format(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'intl-phone-merchant@example.com',
+            'phone' => '01700000022',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '+880 1700-000022',
+            'password' => 'password',
+        ])->assertRedirect('/portal');
+
+        $this->assertAuthenticatedAs($merchant);
+    }
+
+    public function test_merchant_phone_login_matches_stored_international_number(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'stored-intl-merchant@example.com',
+            'phone' => '+880 1700-000023',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '01700000023',
+            'password' => 'password',
+        ])->assertRedirect('/portal');
+
+        $this->assertAuthenticatedAs($merchant);
+    }
+
+    public function test_merchant_staff_can_login_with_phone_number(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'staff-owner@example.com',
+            'phone' => '01700000030',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $viewerRole = Role::query()
+            ->where('slug', 'merchant-viewer')
+            ->where('scope', 'merchant')
+            ->firstOrFail();
+
+        app(MerchantEmployeeService::class)->create($merchant, [
+            'name' => 'Phone Staff',
+            'email' => 'phone-staff@example.com',
+            'phone' => '01700000031',
+            'role_id' => $viewerRole->id,
+            'status' => true,
+            'grant_portal_access' => true,
+            'portal_password' => 'password123',
+        ]);
+
+        $staff = User::where('email', 'phone-staff@example.com')->firstOrFail();
+
+        $this->post('/marchent/login', [
+            'email' => '01700000031',
+            'password' => 'password123',
+        ])->assertRedirect('/portal');
+
+        $this->assertAuthenticatedAs($staff);
+    }
+
+    public function test_merchant_phone_login_rejects_wrong_password(): void
+    {
+        User::create([
+            'name' => 'Merchant',
+            'email' => 'wrong-phone-merchant@example.com',
+            'phone' => '01700000024',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '01700000024',
+            'password' => 'wrong-password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_disabled_merchant_cannot_login_with_phone(): void
+    {
+        User::create([
+            'name' => 'Merchant',
+            'email' => 'disabled-phone-merchant@example.com',
+            'phone' => '01700000025',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => false,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '01700000025',
+            'password' => 'password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_admin_cannot_login_to_merchant_portal_with_phone(): void
+    {
+        User::create([
+            'name' => 'Admin',
+            'email' => 'admin-phone@example.com',
+            'phone' => '01700000026',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '01700000026',
+            'password' => 'password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_duplicate_phone_with_same_password_asks_for_email(): void
+    {
+        User::create([
+            'name' => 'Merchant A',
+            'email' => 'dup-a@example.com',
+            'phone' => '01700000027',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        User::create([
+            'name' => 'Merchant B',
+            'email' => 'dup-b@example.com',
+            'phone' => '+8801700000027',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '01700000027',
+            'password' => 'password',
+        ])->assertSessionHasErrors([
+            'email' => 'More than one account uses this number. Sign in with your email instead.',
+        ]);
+
+        $this->assertGuest();
+    }
+
+    public function test_duplicate_phone_logs_into_the_account_with_matching_password(): void
+    {
+        User::create([
+            'name' => 'Merchant A',
+            'email' => 'split-a@example.com',
+            'phone' => '01700000028',
+            'password' => Hash::make('password-a'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $merchantB = User::create([
+            'name' => 'Merchant B',
+            'email' => 'split-b@example.com',
+            'phone' => '8801700000028',
+            'password' => Hash::make('password-b'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->post('/marchent/login', [
+            'email' => '01700000028',
+            'password' => 'password-b',
+        ])->assertRedirect('/portal');
+
+        $this->assertAuthenticatedAs($merchantB);
+    }
+
+    public function test_merchant_can_open_password_settings_and_change_password(): void
+    {
+        $merchant = User::create([
+            'name' => 'Merchant',
+            'email' => 'merchant-password@example.com',
+            'phone' => '01700000040',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+            'must_change_password' => true,
+        ]);
+
+        $this->actingAs($merchant)
+            ->get(route('portal.settings.password'))
+            ->assertRedirect(route('portal.password.force'));
+
+        $merchant->forceFill(['must_change_password' => false])->save();
+
+        $this->actingAs($merchant)
+            ->get(route('portal.settings.password'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Portal/Settings/Password'));
+
+        $this->actingAs($merchant)
+            ->from(route('portal.settings.password'))
+            ->put(route('portal.settings.password.update'), [
+                'current_password' => 'wrong-password',
+                'password' => 'new-secure-pass',
+                'password_confirmation' => 'new-secure-pass',
+            ])
+            ->assertRedirect(route('portal.settings.password'))
+            ->assertSessionHasErrors('current_password');
+
+        $this->actingAs($merchant)
+            ->from(route('portal.settings.password'))
+            ->put(route('portal.settings.password.update'), [
+                'current_password' => 'password',
+                'password' => 'new-secure-pass',
+                'password_confirmation' => 'does-not-match',
+            ])
+            ->assertRedirect(route('portal.settings.password'))
+            ->assertSessionHasErrors('password');
+
+        $this->actingAs($merchant)
+            ->from(route('portal.settings.password'))
+            ->put(route('portal.settings.password.update'), [
+                'current_password' => 'password',
+                'password' => 'new-secure-pass',
+                'password_confirmation' => 'new-secure-pass',
+            ])
+            ->assertRedirect(route('portal.settings.password'))
+            ->assertSessionHas('success', 'Password updated.');
+
+        $merchant->refresh();
+        $this->assertFalse($merchant->must_change_password);
+        $this->assertTrue(Hash::check('new-secure-pass', $merchant->password));
+    }
+
+    public function test_merchant_login_rejects_a_value_that_is_neither_email_nor_phone(): void
+    {
+        $this->post('/marchent/login', [
+            'email' => 'not-a-login',
+            'password' => 'password',
+        ])->assertSessionHasErrors([
+            'email' => 'Enter a valid email address or mobile number.',
+        ]);
+
+        $this->assertGuest();
+    }
 }

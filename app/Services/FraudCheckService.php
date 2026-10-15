@@ -29,7 +29,7 @@ class FraudCheckService
         $phone = preg_replace('/\D/', '', (string) $phone);
 
         if (str_starts_with($phone, '880')) {
-            $phone = '0' . substr($phone, 2);
+            $phone = substr($phone, 2);
         }
 
         if (! preg_match('/^01[3-9]\d{8}$/', $phone)) {

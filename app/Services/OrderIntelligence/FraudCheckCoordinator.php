@@ -7,6 +7,7 @@ use App\Models\AccessToken;
 use App\Models\OrderIntelligence\CourierCustomerSnapshot;
 use App\Services\Courier\CourierAccountService;
 use App\Services\FraudCheck\CourierReportFormatter;
+use App\Services\FraudCheck\RedxStaticSample;
 use App\Services\FraudCheckService;
 use Illuminate\Http\Request;
 
@@ -56,11 +57,15 @@ class FraudCheckCoordinator
             'snapshots' => $snapshotSummary,
         ]);
 
-        $usePlatform = $this->sufficiencyChecker->shouldUsePlatform($platformData);
-        $log->add('decision', $usePlatform
-            ? 'Serving from platform cache (skip live courier calls for response)'
-            : 'Cache insufficient — running live courier checks', [
+        $forceLive = filter_var($payload['refresh'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $usePlatform = ! $forceLive && $this->sufficiencyChecker->shouldUsePlatform($platformData);
+        $log->add('decision', $forceLive
+            ? 'Row refresh requested — running live courier checks'
+            : ($usePlatform
+                ? 'Serving from platform cache (skip live courier calls for response)'
+                : 'Cache insufficient — running live courier checks'), [
             'should_use_platform' => $usePlatform,
+            'refresh' => $forceLive,
             'mode' => $mode,
         ]);
 
@@ -387,6 +392,10 @@ class FraudCheckCoordinator
 
     private function snapshotHasUsefulData(CourierCustomerSnapshot $snapshot): bool
     {
+        if (RedxStaticSample::matchesSnapshot($snapshot)) {
+            return false;
+        }
+
         return (int) $snapshot->total_order > 0
             || (int) $snapshot->confirmed > 0
             || (int) $snapshot->cancel > 0

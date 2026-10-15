@@ -166,6 +166,15 @@ html.dark .app-page-skeleton__panel {
     overflow: hidden;
 }
 
+.app-page-skeleton__panel-head {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+html.dark .app-page-skeleton__panel-head {
+    border-bottom-color: #1e293b;
+}
+
 .app-page-skeleton-block {
     position: relative;
     overflow: hidden;

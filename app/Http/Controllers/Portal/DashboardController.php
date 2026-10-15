@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\PackagePaymentRequest;
 use App\Models\UserPackage;
+use App\Models\User;
+use App\Services\FraudCheck\CourierHistoryQuota;
 use App\Services\MerchantPortalContext;
 use App\Services\SubscriptionAlertService;
 use App\Services\WebsiteAggregatorService;
@@ -19,7 +21,11 @@ class DashboardController extends Controller
         WebsiteAggregatorService $websiteAggregator,
         SubscriptionAlertService $subscriptionAlertService
     ) {
-        $merchant = $portalContext->resolveMerchant($request->user());
+        $merchant = User::query()->findOrFail(
+            $portalContext->resolveMerchant($request->user())->id
+        );
+        $courierHistory = app(CourierHistoryQuota::class)->snapshot($merchant);
+        $courierHistory['merchant_name'] = $merchant->name;
         $websites = $portalContext->filterWebsitesForUser(
             $request->user(),
             $websiteAggregator->forUser($merchant)
@@ -49,6 +55,7 @@ class DashboardController extends Controller
             ],
             'websites' => collect($websites)->take(4)->values(),
             'alerts' => collect($alerts)->take(5)->values(),
+            'courierHistory' => $courierHistory,
         ]);
     }
 }

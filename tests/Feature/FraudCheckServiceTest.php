@@ -281,7 +281,7 @@ it('preserves courier-specific empty messages when api_success is set', function
 });
 
 it('maps carrybee customer payload using success_rate instead of treating pending as delivered', function () {
-    $checker = new CarrybeeFraudChecker();
+    $checker = app(CarrybeeFraudChecker::class);
     $method = new ReflectionMethod(CarrybeeFraudChecker::class, 'mapCustomerPayload');
     $method->setAccessible(true);
 

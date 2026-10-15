@@ -19,6 +19,7 @@ use App\Models\Website;
 use App\Services\ApiAccessTokenResolver;
 use App\Services\Courier\CourierLicenseSyncService;
 use App\Services\DomainNormalizer;
+use App\Services\FraudCheck\CourierHistoryQuota;
 use App\Services\MerchantSetupService;
 use App\Services\PackagePaymentService;
 use App\Services\PackagePlanResolver;
@@ -250,7 +251,29 @@ class UserController extends Controller
                 ->all();
         }
 
-        return Inertia::render('Users/View', compact('user', 'report', 'setup', 'websiteHealth'));
+        $courierHistory = ($user && $user->role === 'user')
+            ? app(CourierHistoryQuota::class)->snapshot($user)
+            : null;
+
+        return Inertia::render('Users/View', compact('user', 'report', 'setup', 'websiteHealth', 'courierHistory'));
+    }
+
+    public function updateCourierHistory(Request $request, $userId)
+    {
+        $user = User::query()->findOrFail($userId);
+        abort_unless($user->role === 'user', 404);
+
+        $data = $request->validate([
+            'courier_history_enabled' => ['required', 'boolean'],
+            'courier_history_daily_limit' => ['required', 'integer', 'min:0', 'max:100000'],
+        ]);
+
+        $user->update([
+            'courier_history_enabled' => $request->boolean('courier_history_enabled'),
+            'courier_history_daily_limit' => (int) $data['courier_history_daily_limit'],
+        ]);
+
+        return back()->with('success', 'Courier history updated.');
     }
 
     public function store(Request $request)

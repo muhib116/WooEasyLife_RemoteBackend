@@ -38,4 +38,17 @@ return [
     |
     */
     'plugin_free_checks_without_steadfast' => (int) env('FRAUD_CHECK_PLUGIN_FREE_WITHOUT_STEADFAST', 10),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Merchant bulk check
+    |--------------------------------------------------------------------------
+    |
+    | One live courier check per phone per Asia/Dhaka day. A failed check is
+    | retried before it is saved, and a failed result is not reused.
+    |
+    */
+    'bulk_max_numbers' => 1000,
+    'bulk_retry_attempts' => 3,
+    'bulk_retry_pause_ms' => 300,
 ];

@@ -3,10 +3,10 @@
         <div class="space-y-5">
             <PageHeader
                 title="Account Settings"
-                description="Manage your profile, password, and account security"
+                description="Update your name and email address"
                 icon="PhUserCircle"
-                icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
-                icon-class="text-sky-600 dark:text-sky-400"
+                icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                icon-class="text-primary-600 dark:text-primary-400"
             />
 
             <PageCard title="Profile Information" description="Update your name and email address">
@@ -16,10 +16,6 @@
                     update-route="portal.profile.update"
                     class="max-w-xl"
                 />
-            </PageCard>
-
-            <PageCard title="Password" description="Ensure your account uses a strong password">
-                <UpdatePasswordForm class="max-w-xl" />
             </PageCard>
 
             <PageCard title="Delete Account" description="Permanently remove your account and data">
@@ -32,7 +28,6 @@
 <script setup>
 import MerchantPortalLayout from "@/layouts/MerchantPortalLayout.vue";
 import DeleteUserForm from "@/Pages/Profile/Partials/DeleteUserForm.vue";
-import UpdatePasswordForm from "@/Pages/Profile/Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "@/Pages/Profile/Partials/UpdateProfileInformationForm.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";

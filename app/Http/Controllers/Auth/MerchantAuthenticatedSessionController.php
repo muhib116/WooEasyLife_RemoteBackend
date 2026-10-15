@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\MerchantLoginRequest;
 use App\Providers\RouteServiceProvider;
 use App\Services\MerchantPortalContext;
 use App\Services\MerchantSocialAuthService;
@@ -41,7 +41,7 @@ class MerchantAuthenticatedSessionController extends Controller
     /**
      * Handle an incoming merchant authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(MerchantLoginRequest $request): RedirectResponse
     {
         $request->authenticate();
 

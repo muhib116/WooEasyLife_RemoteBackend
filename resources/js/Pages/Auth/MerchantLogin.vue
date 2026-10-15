@@ -55,7 +55,7 @@
 
             <div class="relative flex items-center gap-3 py-1">
                 <div class="h-px flex-1 bg-white/10" />
-                <span class="text-xs text-slate-500">or sign in with email</span>
+                <span class="text-xs text-slate-500">or sign in with email or phone</span>
                 <div class="h-px flex-1 bg-white/10" />
             </div>
         </div>
@@ -63,19 +63,21 @@
         <form class="space-y-5" @submit.prevent="submit">
             <div class="space-y-2">
                 <label for="email" class="text-sm font-medium text-slate-300">
-                    Email address
+                    Email or phone
                 </label>
                 <IconField class="w-full">
-                    <InputIcon class="pi pi-envelope text-slate-500" />
+                    <InputIcon :class="[loginIcon, 'text-slate-500']" />
                     <InputText
                         id="email"
                         v-model="form.email"
-                        type="email"
+                        type="text"
                         class="w-full"
-                        placeholder="you@store.com"
+                        placeholder="you@store.com or 01XXXXXXXXX"
                         required
                         autofocus
                         autocomplete="username"
+                        autocapitalize="none"
+                        spellcheck="false"
                         :invalid="!!form.errors.email"
                     />
                 </IconField>
@@ -170,6 +172,12 @@ const form = useForm({
     password: '',
     remember: false,
 });
+
+const loginIcon = computed(() => (
+    form.email.trim() !== '' && !form.email.includes('@')
+        ? 'pi pi-phone'
+        : 'pi pi-envelope'
+));
 
 const oauthError = computed(() => {
     if (form.errors.email) {

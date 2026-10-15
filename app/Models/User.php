@@ -109,5 +109,7 @@ class User extends Authenticatable
         'status' => 'boolean',
         'must_change_password' => 'boolean',
         'is_test' => 'boolean',
+        'courier_history_enabled' => 'boolean',
+        'courier_history_daily_limit' => 'integer',
     ];
 }

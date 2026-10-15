@@ -1,0 +1,407 @@
+/* Merchant portal only. Landing gold (#ffc107) on warm light and black dark. */
+
+html.merchant-theme {
+    --p-primary-50: #fff8e1;
+    --p-primary-100: #ffecb3;
+    --p-primary-200: #ffe082;
+    --p-primary-300: #ffd54f;
+    --p-primary-400: #ffca28;
+    --p-primary-500: #ffc107;
+    --p-primary-600: #e6a800;
+    --p-primary-700: #c49000;
+    --p-primary-800: #8d6a00;
+    --p-primary-900: #5c4500;
+    --p-primary-950: #2a1f00;
+    --p-primary-contrast-color: #0a0a0a;
+}
+
+.merchant-portal {
+    --p-primary-50: #fff8e1;
+    --p-primary-100: #ffecb3;
+    --p-primary-200: #ffe082;
+    --p-primary-300: #ffd54f;
+    --p-primary-400: #ffca28;
+    --p-primary-500: #ffc107;
+    --p-primary-600: #e6a800;
+    --p-primary-700: #c49000;
+    --p-primary-800: #8d6a00;
+    --p-primary-900: #5c4500;
+    --p-primary-950: #2a1f00;
+    --p-primary-contrast-color: #0a0a0a;
+    --mp-bg: #ffffff;
+    --mp-surface: #ffffff;
+    --mp-ink: #1a1408;
+    --mp-muted: #6b5e48;
+    --mp-line: rgba(198, 138, 0, 0.22);
+    color: var(--mp-ink);
+    color-scheme: light;
+    background-color: #ffffff;
+    background-image:
+        radial-gradient(720px 300px at -4% -10%, rgba(255, 193, 7, 0.22), transparent 70%),
+        radial-gradient(560px 260px at 104% -8%, rgba(255, 213, 79, 0.16), transparent 68%),
+        linear-gradient(180deg, #fff6dc 0%, #ffffff 160px);
+}
+
+html.merchant-theme:not(.dark),
+html.merchant-theme:not(.dark) body {
+    background-color: #ffffff;
+}
+
+.dark .merchant-portal {
+    --mp-bg: #0a0a0a;
+    --mp-surface: #161616;
+    --mp-ink: #f7f3ea;
+    --mp-muted: #c4b8a2;
+    --mp-line: rgba(255, 193, 7, 0.22);
+    color: var(--mp-ink);
+    color-scheme: dark;
+    background:
+        radial-gradient(ellipse 65% 42% at 0% -10%, rgba(255, 193, 7, 0.16), transparent 55%),
+        radial-gradient(ellipse 36% 28% at 100% 0%, rgba(230, 168, 0, 0.08), transparent 48%),
+        var(--mp-bg);
+}
+
+.merchant-sidebar,
+.merchant-header,
+.merchant-tabbar {
+    background: rgba(255, 255, 255, 0.76);
+    border-color: var(--mp-line);
+    backdrop-filter: blur(18px);
+}
+
+.dark .merchant-sidebar,
+.dark .merchant-header,
+.dark .merchant-tabbar {
+    background: rgba(17, 17, 17, 0.94);
+}
+
+.merchant-portal .box-bg {
+    background-color: #ffffff;
+    box-shadow:
+        0 1px 2px rgba(26, 20, 8, 0.04),
+        0 18px 40px -28px rgba(198, 138, 0, 0.55);
+}
+
+.dark .merchant-portal .box-bg {
+    background-color: #161616;
+    box-shadow: none;
+}
+
+.merchant-portal .box-border,
+.dark .merchant-portal .box-border {
+    border-color: var(--mp-line);
+}
+
+.merchant-nav-link {
+    color: var(--mp-muted);
+}
+
+.merchant-nav-link:hover {
+    background: rgba(255, 193, 7, 0.12);
+    color: var(--mp-ink);
+}
+
+.merchant-nav-icon {
+    background: rgba(255, 193, 7, 0.12);
+    color: #8d6a00;
+}
+
+.dark .merchant-nav-icon {
+    color: #ffd54f;
+}
+
+.merchant-nav-group-active,
+.merchant-nav-group-active:hover {
+    background: rgba(255, 193, 7, 0.18);
+    color: var(--mp-ink);
+}
+
+.merchant-nav-active,
+.merchant-nav-active:hover {
+    background: #ffc107;
+    color: #0a0a0a;
+}
+
+.merchant-nav-active .merchant-nav-icon {
+    background: rgba(10, 10, 10, 0.12);
+    color: #0a0a0a;
+}
+
+.merchant-tab {
+    color: var(--mp-muted);
+}
+
+.merchant-tab-active {
+    color: #8d6a00;
+}
+
+.dark .merchant-tab-active {
+    color: #ffc107;
+}
+
+.merchant-field {
+    border: 1px solid rgba(198, 138, 0, 0.45);
+    background: #fff;
+    color: #1a1408;
+}
+
+.merchant-field:focus {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.28);
+}
+
+.dark .merchant-field {
+    border-color: rgba(255, 193, 7, 0.4);
+    background: #111111;
+    color: #f7f3ea;
+}
+
+.merchant-portal .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-warn):not(.p-button-info):not(.p-button-help):not(.p-button-contrast) {
+    background: linear-gradient(90deg, #f59e0b, #eab308);
+    border-color: #e6a800;
+    color: #0a0a0a;
+}
+
+.merchant-portal .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-warn):not(.p-button-info):not(.p-button-help):not(.p-button-contrast):not(:disabled):hover {
+    background: linear-gradient(90deg, #fbbf24, #facc15);
+    border-color: #ffc107;
+    color: #0a0a0a;
+}
+
+.merchant-portal .p-inputtext,
+.merchant-portal .p-textarea,
+.merchant-portal .p-select,
+.merchant-portal .p-password,
+.merchant-portal .p-password-input {
+    border-color: rgba(198, 138, 0, 0.4);
+}
+
+.merchant-portal .p-password,
+.merchant-portal .p-password-input {
+    width: 100%;
+}
+
+.dark .merchant-portal .p-inputtext,
+.dark .merchant-portal .p-textarea,
+.dark .merchant-portal .p-select,
+.dark .merchant-portal .p-password-input {
+    background: #111111;
+    color: #f7f3ea;
+    border-color: rgba(255, 193, 7, 0.35);
+}
+
+.merchant-portal .skeleton-block,
+.merchant-portal .p-skeleton {
+    background: rgba(255, 193, 7, 0.22) !important;
+}
+
+.dark .merchant-portal .skeleton-block,
+.dark .merchant-portal .p-skeleton {
+    background: rgba(255, 193, 7, 0.16) !important;
+}
+
+.merchant-portal .skeleton-block::after,
+.merchant-portal .p-skeleton::after {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 213, 79, 0.72) 50%, transparent 100%);
+}
+
+.dark .merchant-portal .skeleton-block::after,
+.dark .merchant-portal .p-skeleton::after {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 193, 7, 0.42) 50%, transparent 100%);
+}
+
+.merchant-portal [role="status"] .rounded-2xl,
+.merchant-portal .table-skeleton-loader,
+.dark .merchant-portal .table-skeleton-loader,
+.merchant-portal .table-skeleton-header,
+.dark .merchant-portal .table-skeleton-header {
+    background: var(--mp-surface);
+    border-color: var(--mp-line);
+}
+
+.merchant-portal .table-skeleton-header,
+.merchant-portal .table-skeleton-row {
+    border-color: var(--mp-line);
+}
+
+/* Shared profile fields inherit the shell color. In dark mode that is light text on a white box. */
+.merchant-portal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+.merchant-portal textarea,
+.merchant-portal select {
+    background-color: #fff;
+    color: #1a1408;
+    border-color: rgba(198, 138, 0, 0.45);
+}
+
+.dark .merchant-portal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+.dark .merchant-portal textarea,
+.dark .merchant-portal select {
+    background-color: #111111;
+    color: #f7f3ea;
+    border-color: rgba(255, 193, 7, 0.4);
+}
+
+.merchant-portal input:focus,
+.merchant-portal textarea:focus,
+.merchant-portal select:focus {
+    border-color: #ffc107;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.28);
+}
+
+.merchant-portal .text-gray-900,
+.merchant-portal .text-gray-800 {
+    color: var(--mp-ink);
+}
+
+.merchant-portal .text-gray-700,
+.merchant-portal .text-gray-600,
+.merchant-portal .text-gray-500,
+.merchant-portal .text-gray-400 {
+    color: var(--mp-muted);
+}
+
+.merchant-portal button.bg-\[\#fec14a\] {
+    color: #0a0a0a;
+}
+
+.merchant-portal button.bg-\[\#fec14a\]:hover,
+.merchant-portal button.bg-\[\#fec14a\]:focus {
+    background-color: #ffd54f;
+    color: #0a0a0a;
+}
+
+.merchant-portal .professional-table .p-datatable-thead > tr > th {
+    background: #fff8e8;
+    color: #6b5e48;
+    border-color: var(--mp-line);
+}
+
+.dark .merchant-portal .professional-table .p-datatable-thead > tr > th {
+    background: #111111;
+    color: #c4b8a2;
+    border-color: rgba(255, 193, 7, 0.18);
+}
+
+.merchant-portal .professional-table .p-datatable-tbody > tr > td {
+    background: #fff;
+    color: #1a1408;
+    border-color: var(--mp-line);
+}
+
+.dark .merchant-portal .professional-table .p-datatable-tbody > tr > td {
+    background: #161616;
+    color: #f7f3ea;
+    border-color: rgba(255, 193, 7, 0.14);
+}
+
+.merchant-portal .professional-table .p-datatable-tbody > tr:hover > td {
+    background: #fff8e8;
+}
+
+.dark .merchant-portal .professional-table .p-datatable-tbody > tr:hover > td {
+    background: #1c1c1c;
+}
+
+.merchant-portal .professional-table .p-paginator,
+.dark .merchant-portal .professional-table .p-paginator {
+    background: var(--mp-surface);
+    color: var(--mp-ink);
+    border-top-color: var(--mp-line);
+}
+
+.merchant-portal .p-paginator .p-paginator-page,
+.merchant-portal .p-paginator .p-paginator-next,
+.merchant-portal .p-paginator .p-paginator-prev,
+.merchant-portal .p-paginator .p-paginator-first,
+.merchant-portal .p-paginator .p-paginator-last {
+    color: var(--mp-ink);
+}
+
+.merchant-portal .p-selectbutton .p-togglebutton {
+    background: transparent;
+    color: var(--mp-muted);
+    border-color: var(--mp-line);
+}
+
+.merchant-portal .p-selectbutton .p-togglebutton[aria-pressed="true"],
+.merchant-portal .p-selectbutton .p-togglebutton[data-p-checked="true"] {
+    background: #ffc107;
+    border-color: #e6a800;
+    color: #0a0a0a;
+}
+
+/* Dialogs and menus are teleported to body, outside .merchant-portal. */
+html.merchant-theme .p-dialog,
+html.merchant-theme .p-confirmdialog {
+    background: #fffdf8;
+    color: #1a1408;
+    border-color: #e6c56a;
+}
+
+html.dark.merchant-theme .p-dialog,
+html.dark.merchant-theme .p-confirmdialog {
+    background: #111111 !important;
+    color: #f7f3ea !important;
+    border-color: rgba(255, 193, 7, 0.28) !important;
+}
+
+html.merchant-theme .p-dialog .p-dialog-header,
+html.merchant-theme .p-dialog .p-dialog-content,
+html.merchant-theme .p-dialog .p-dialog-footer,
+html.merchant-theme .p-confirmdialog .p-dialog-header,
+html.merchant-theme .p-confirmdialog .p-dialog-content,
+html.merchant-theme .p-confirmdialog .p-dialog-footer {
+    background: transparent;
+    color: inherit;
+}
+
+html.dark.merchant-theme .p-dialog .p-dialog-header,
+html.dark.merchant-theme .p-dialog .p-dialog-content,
+html.dark.merchant-theme .p-confirmdialog .p-dialog-header,
+html.dark.merchant-theme .p-confirmdialog .p-dialog-content {
+    background: transparent !important;
+    color: #f7f3ea !important;
+    border-color: rgba(255, 193, 7, 0.16) !important;
+}
+
+html.merchant-theme .p-dialog .p-inputtext,
+html.merchant-theme .p-dialog .p-textarea,
+html.merchant-theme .p-dialog .p-select,
+html.merchant-theme .p-dialog .p-password-input {
+    border-color: rgba(198, 138, 0, 0.45);
+    color: #1a1408;
+    background: #fff;
+}
+
+html.dark.merchant-theme .p-dialog .p-inputtext,
+html.dark.merchant-theme .p-dialog .p-textarea,
+html.dark.merchant-theme .p-dialog .p-select,
+html.dark.merchant-theme .p-dialog .p-password-input {
+    background: #111111;
+    color: #f7f3ea;
+    border-color: rgba(255, 193, 7, 0.35);
+}
+
+html.merchant-theme .p-select-overlay,
+html.merchant-theme .p-multiselect-overlay,
+html.merchant-theme .p-popover {
+    background: #fffdf8;
+    color: #1a1408;
+    border: 1px solid #e6c56a;
+}
+
+html.dark.merchant-theme .p-select-overlay,
+html.dark.merchant-theme .p-multiselect-overlay,
+html.dark.merchant-theme .p-popover {
+    background: #161616;
+    color: #f7f3ea;
+    border-color: rgba(255, 193, 7, 0.28);
+}
+
+html.merchant-theme .p-dialog .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-warn):not(.p-button-info):not(.p-button-help):not(.p-button-contrast),
+html.merchant-theme .p-confirmdialog .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-warn):not(.p-button-info):not(.p-button-help):not(.p-button-contrast) {
+    background: linear-gradient(90deg, #f59e0b, #eab308);
+    border-color: #e6a800;
+    color: #0a0a0a;
+}

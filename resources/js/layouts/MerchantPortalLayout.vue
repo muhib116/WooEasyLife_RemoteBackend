@@ -1,15 +1,15 @@
 <template>
     <Head :title="title" />
 
-    <div class="admin-shell flex min-h-svh bg-slate-100 dark:bg-slate-950">
+    <div class="merchant-portal admin-shell flex min-h-svh">
         <div
             v-if="sidebarOpen"
-            class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+            class="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm lg:hidden"
             @click="sidebarOpen = false"
         />
 
         <div
-            class="fixed inset-y-0 left-0 z-50 h-svh w-[272px] -translate-x-full border-r border-gray-200/80 bg-white transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shrink-0 dark:border-gray-800 dark:bg-slate-900"
+            class="merchant-sidebar fixed inset-y-0 left-0 z-50 h-svh w-[272px] -translate-x-full border-r backdrop-blur-md transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shrink-0"
             :class="{ '!translate-x-0': sidebarOpen }"
         >
             <MerchantPortalSidebar @close="sidebarOpen = false" />
@@ -27,18 +27,16 @@
                 </div>
             </main>
 
-            <nav
-                class="sticky bottom-0 z-20 flex border-t border-gray-200/80 bg-white/95 backdrop-blur lg:hidden dark:border-gray-800 dark:bg-slate-900/95"
-            >
+            <nav class="merchant-tabbar sticky bottom-0 z-20 flex border-t backdrop-blur lg:hidden">
                 <Link
-                    v-for="item in navItems"
+                    v-for="item in tabItems"
                     :key="item.name"
                     :href="route(item.name)"
-                    class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium"
+                    class="merchant-tab flex flex-1 flex-col items-center gap-1 border-t-2 py-2.5 text-[10px] font-medium"
                     :class="
-                        route().current(item.name)
-                            ? 'text-primary-600 dark:text-primary-400'
-                            : 'text-gray-500 dark:text-gray-400'
+                        route().current(item.active ?? item.name)
+                            ? 'merchant-tab-active border-[#ffc107]'
+                            : 'border-transparent'
                     "
                 >
                     <Icon :name="item.icon" class="text-lg" />
@@ -63,7 +61,8 @@ import { useMerchantPortalNav } from "@/composables/useMerchantPortalNav";
 import { Icon } from "@/plugins";
 import { Head, Link } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
-import { ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import "../../css/merchant-portal.css";
 
 defineProps<{
     title: string;
@@ -71,7 +70,10 @@ defineProps<{
 
 const sidebarOpen = ref(false);
 const pageLoading = useInertiaPageLoading();
-const { navItems } = useMerchantPortalNav();
+const { tabItems } = useMerchantPortalNav();
+
+onMounted(() => document.documentElement.classList.add("merchant-theme"));
+onBeforeUnmount(() => document.documentElement.classList.remove("merchant-theme"));
 
 useInertiaFlashToasts();
 </script>

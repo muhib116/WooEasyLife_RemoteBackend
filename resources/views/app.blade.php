@@ -237,6 +237,15 @@
             overflow: hidden;
         }
 
+        .app-page-skeleton__panel-head {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        html.dark .app-page-skeleton__panel-head {
+            border-bottom-color: #1e293b;
+        }
+
         .app-page-skeleton-block {
             position: relative;
             overflow: hidden;
@@ -716,10 +725,10 @@
                             </div>
                         </div>
                         <div class="app-page-skeleton__panel">
-                            <div style="padding:1rem 1.25rem;border-bottom:1px solid #e2e8f0">
+                            <div class="app-page-skeleton__panel-head">
                                 <div class="app-page-skeleton-block" style="width:16rem;height:2.25rem;border-radius:0.5rem"></div>
                             </div>
-                            <div class="app-page-skeleton-block" style="height:3.1rem;border-radius:0;background:#f8fafc"></div>
+                            <div class="app-page-skeleton-block" style="height:3.1rem;border-radius:0"></div>
                             <div class="app-page-skeleton-block" style="height:3.5rem;border-radius:0;margin:0.15rem 1.25rem"></div>
                             <div class="app-page-skeleton-block" style="height:3.5rem;border-radius:0;margin:0.15rem 1.25rem"></div>
                             <div class="app-page-skeleton-block" style="height:3.5rem;border-radius:0;margin:0.15rem 1.25rem"></div>

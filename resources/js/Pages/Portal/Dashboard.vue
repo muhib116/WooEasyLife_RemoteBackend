@@ -32,6 +32,27 @@
                 />
             </div>
 
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <StatCard
+                    title="Daily limit"
+                    :value="courierHistory.daily_limit"
+                    :subtitle="courierHistory.enabled ? `Saved for ${courierHistory.merchant_name}` : 'Not enabled'"
+                    icon="PhPackage"
+                />
+                <StatCard
+                    title="Used today"
+                    :value="courierHistory.used_today"
+                    subtitle="Completed checks"
+                    icon="PhCheckCircle"
+                />
+                <StatCard
+                    title="Left today"
+                    :value="courierHistory.remaining"
+                    :subtitle="courierHistory.enabled ? 'Resets at midnight' : 'Turn on courier history first'"
+                    icon="PhClockCounterClockwise"
+                />
+            </div>
+
             <BillingAlertsPanel :alerts="alerts">
                 <template v-if="canViewBilling" #actions>
                     <Link :href="route('portal.billing')">
@@ -86,6 +107,7 @@ import StatusBadge from "@/Pages/Users/fragments/StatusBadge.vue";
 import BillingAlertsPanel from "@/Pages/Portal/fragments/BillingAlertsPanel.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import { Link, usePage } from "@inertiajs/vue3";
+import Button from "primevue/button";
 import { computed } from "vue";
 
 const props = defineProps<{
@@ -103,10 +125,18 @@ const props = defineProps<{
         message: string;
         domain?: string;
     }>;
+    courierHistory: {
+        enabled: boolean;
+        daily_limit: number;
+        used_today: number;
+        remaining: number;
+        merchant_name: string;
+    };
 }>();
 
 const page = usePage();
 const portal = computed(() => (page.props.auth as any)?.portal);
+const courierHistory = computed(() => props.courierHistory);
 const { can } = usePermissions();
 const canViewBilling = computed(() => can("billing.view"));
 

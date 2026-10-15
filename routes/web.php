@@ -485,6 +485,7 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
             Route::post('/store', [BusinessController::class, 'store'])->name('store');
         });
         Route::get('view', [UserController::class, 'view'])->name('view');
+        Route::post('courier-history', [UserController::class, 'updateCourierHistory'])->name('courier-history.update');
         Route::get('setup', [UserController::class, 'setup'])->name('setup');
         Route::post('setup/validate-domain', [UserController::class, 'validateSetupDomain'])->name('setup.validateDomain');
         Route::post('setup/generate-license', [UserController::class, 'setupGenerateLicense'])->name('setup.generateLicense');

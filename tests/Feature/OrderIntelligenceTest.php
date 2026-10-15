@@ -580,6 +580,59 @@ it('stores failed courier fetches as refreshable placeholders instead of fresh e
         ->and($steadfast->fetched_at->lt(now()->subHours(5)))->toBeTrue();
 });
 
+it('replaces a stored RedX static sample instead of keeping it as last known history', function () {
+    config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
+
+    $customer = app(CustomerResolver::class)->resolve('01779012389', 'RedX Sample User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01779012389',
+        'courier' => 'redx',
+        'total_order' => 10,
+        'confirmed' => 6,
+        'cancel' => 4,
+        'success_rate' => '60%',
+        'frauds_count' => 0,
+        'raw_report' => [
+            'total_order' => 10,
+            'confirmed' => 6,
+            'cancel' => 4,
+            'success_rate' => '60%',
+            'customer_segment' => 'Normal Customer',
+            'return_percentage' => '4',
+            'api_success' => true,
+        ],
+        'fetched_at' => now()->subHour(),
+    ]);
+
+    app(\App\Services\OrderIntelligence\CourierIntelPersister::class)->persistFromFraudCheckReports(
+        customer: $customer,
+        phoneNormalized: '01779012389',
+        steadfastReport: [],
+        pathaoReport: [],
+        paperflyReport: [],
+        redxReport: [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'success_rate' => 'No order history found!',
+            'unavailable' => true,
+            'message' => 'RedX did not return this number\'s delivery history.',
+        ],
+    );
+
+    $redx = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'redx')
+        ->first();
+
+    expect($redx->total_order)->toBe(0)
+        ->and($redx->confirmed)->toBe(0)
+        ->and($redx->cancel)->toBe(0)
+        ->and($redx->raw_report['fetch_failed'] ?? false)->toBeTrue();
+});
+
 it('allows authentic empty courier responses to overwrite previous snapshot data', function () {
     config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
 

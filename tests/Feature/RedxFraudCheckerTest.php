@@ -31,10 +31,10 @@ it('reads parcel counts when RedX returns the success envelope with HTTP 400', f
             'data' => ['accessToken' => 'redx-token'],
         ], 200),
         'https://redx.com.bd/*' => Http::response(redxStatsEnvelope([
-            'successRate' => 60,
-            'totalParcels' => '10',
-            'deliveredParcels' => '6',
-            'returnPercentage' => '4',
+            'successRate' => 80,
+            'totalParcels' => '5',
+            'deliveredParcels' => '4',
+            'returnPercentage' => '20',
             'customerSegment' => 'regular',
         ]), 400),
     ]);
@@ -43,10 +43,10 @@ it('reads parcel counts when RedX returns the success envelope with HTTP 400', f
 
     expect($report['unavailable'] ?? false)->toBeFalse()
         ->and($report['api_success'])->toBeTrue()
-        ->and($report['total_order'])->toBe(10)
-        ->and($report['confirmed'])->toBe(6)
-        ->and($report['cancel'])->toBe(4)
-        ->and($report['success_rate'])->toBe('60%')
+        ->and($report['total_order'])->toBe(5)
+        ->and($report['confirmed'])->toBe(4)
+        ->and($report['cancel'])->toBe(1)
+        ->and($report['success_rate'])->toBe('80%')
         ->and($report['customer_segment'])->toBe('regular');
 
     Http::assertSent(function ($request) {
@@ -56,6 +56,32 @@ it('reads parcel counts when RedX returns the success envelope with HTTP 400', f
     Http::assertSent(function ($request) {
         return str_contains($request->url(), 'phoneNumber=8801770989591');
     });
+});
+
+it('does not treat the fixed RedX sample payload as delivery history', function () {
+    configureRedxFraudCredentials();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://api.redx.com.bd/v4/auth/login' => Http::response([
+            'data' => ['accessToken' => 'redx-token'],
+        ], 200),
+        'https://redx.com.bd/*' => Http::response(redxStatsEnvelope([
+            'successRate' => 60,
+            'totalParcels' => '10',
+            'deliveredParcels' => '6',
+            'returnPercentage' => '4',
+            'customerSegment' => 'Normal Customer',
+        ]), 400),
+    ]);
+
+    $report = app(RedxFraudChecker::class)->check('01300000000');
+
+    expect($report['unavailable'] ?? false)->toBeTrue()
+        ->and($report['api_success'] ?? false)->toBeFalse()
+        ->and($report['total_order'])->toBe(0)
+        ->and($report['confirmed'])->toBe(0)
+        ->and($report['cancel'])->toBe(0)
+        ->and($report['message'])->toBe('RedX did not return this number\'s delivery history.');
 });
 
 it('still reads a normal HTTP 200 RedX stats response', function () {

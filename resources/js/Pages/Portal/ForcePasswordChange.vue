@@ -33,7 +33,7 @@ const submit = () => {
             </div>
 
             <form
-                class="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-slate-900"
+                class="box-bg box-border space-y-4 rounded-2xl border p-5 shadow-sm"
                 @submit.prevent="submit"
             >
                 <div>

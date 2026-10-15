@@ -180,6 +180,46 @@
             </div>
 
             <PageCard
+                v-if="user?.role === 'user' && courierHistory"
+                :title="`Courier history · ${user?.name}`"
+                description="This is the limit that merchant sees on their dashboard. It is saved on this account only."
+            >
+                <form class="space-y-4" @submit.prevent="saveCourierHistory">
+                    <label class="flex items-center gap-3 text-sm font-medium text-gray-800 dark:text-gray-100">
+                        <ToggleSwitch v-model="historyForm.courier_history_enabled" />
+                        Enabled
+                    </label>
+                    <div class="max-w-xs">
+                        <label for="courier-history-limit" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                            Daily successful checks
+                        </label>
+                        <InputNumber
+                            v-model="historyForm.courier_history_daily_limit"
+                            input-id="courier-history-limit"
+                            :min="0"
+                            :max="100000"
+                            :use-grouping="false"
+                            class="w-full"
+                            input-class="w-full"
+                        />
+                        <p v-if="historyForm.errors.courier_history_daily_limit" class="mt-1 text-sm text-rose-600">
+                            {{ historyForm.errors.courier_history_daily_limit }}
+                        </p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Used today: {{ courierHistory.used_today }}. Failed and invalid numbers are not counted. The count resets at midnight in Bangladesh.
+                        </p>
+                    </div>
+                    <Button
+                        type="submit"
+                        label="Save courier history"
+                        icon="pi pi-save"
+                        size="small"
+                        :loading="historyForm.processing"
+                    />
+                </form>
+            </PageCard>
+
+            <PageCard
                 v-if="websiteHealth.length"
                 title="Website health"
                 :description="`${websiteHealth.length} store${websiteHealth.length === 1 ? '' : 's'}`"
@@ -243,7 +283,7 @@
 
 <script setup lang="ts">
 import { Icon } from "@/plugins";
-import { Link } from "@inertiajs/vue3";
+import { Link, useForm } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 import type { IconName } from "@/types";
 import UserLayout from "./UserLayout.vue";
@@ -280,7 +320,24 @@ const props = defineProps<{
         expires_at?: string | null;
         couriers?: Array<{ partner: string; label: string; scope: string }>;
     }>;
+    courierHistory?: {
+        enabled: boolean;
+        daily_limit: number;
+        used_today: number;
+        remaining: number;
+    } | null;
 }>();
+
+const historyForm = useForm({
+    courier_history_enabled: Boolean(props.courierHistory?.enabled),
+    courier_history_daily_limit: props.courierHistory?.daily_limit ?? 0,
+});
+
+const saveCourierHistory = () => {
+    historyForm.post(route("users.courier-history.update", props.user.id), {
+        preserveScroll: true,
+    });
+};
 
 const websiteHealth = computed(() => props.websiteHealth ?? []);
 

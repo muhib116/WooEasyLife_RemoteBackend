@@ -5,6 +5,7 @@ namespace App\Services\OrderIntelligence;
 use App\Models\OrderIntelligence\CourierCustomerSnapshot;
 use App\Models\OrderIntelligence\CourierFraudReport;
 use App\Models\OrderIntelligence\PlatformCustomer;
+use App\Services\FraudCheck\RedxStaticSample;
 use Carbon\Carbon;
 
 class CourierIntelPersister
@@ -217,6 +218,10 @@ class CourierIntelPersister
 
     private function snapshotHasUsefulData(CourierCustomerSnapshot $snapshot): bool
     {
+        if (RedxStaticSample::matchesSnapshot($snapshot)) {
+            return false;
+        }
+
         return (int) $snapshot->total_order > 0
             || (int) $snapshot->confirmed > 0
             || (int) $snapshot->cancel > 0

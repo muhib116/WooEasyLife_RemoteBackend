@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\MerchantEmployee;
 use App\Models\User;
+use App\Services\FraudCheck\CourierHistoryQuota;
 
 class MerchantPortalContext
 {
@@ -134,6 +135,7 @@ class MerchantPortalContext
             'is_staff' => $this->isMerchantStaff($user),
             'merchant_id' => $merchant->id,
             'merchant_name' => $merchant->name,
+            'courier_history' => app(CourierHistoryQuota::class)->snapshot($merchant),
             'employee' => $employee ? [
                 'id' => $employee->id,
                 'name' => $employee->name,

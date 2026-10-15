@@ -71,6 +71,13 @@ class RedxFraudChecker
             }
 
             $stats = $this->readStats($response);
+            if (! empty($stats['placeholder'])) {
+                return CourierReportFormatter::emptyReport([
+                    'unavailable' => true,
+                    'message' => RedxStaticSample::MESSAGE,
+                ]);
+            }
+
             if (! $stats['ok']) {
                 LogHelper::saveLog('RedX fraud check error', 'Stats failed with status '.$response->status());
 
@@ -183,6 +190,14 @@ class RedxFraudChecker
         $hasCounts = is_array($data) && (
             array_key_exists('totalParcels', $data) || array_key_exists('deliveredParcels', $data)
         );
+
+        if ($hasCounts && RedxStaticSample::matchesApi($data)) {
+            return [
+                'ok' => false,
+                'placeholder' => true,
+                'message' => RedxStaticSample::MESSAGE,
+            ];
+        }
         $envelopeOk = array_key_exists('code', $json)
             && (int) $json['code'] === 200
             && ($json['isError'] ?? false) === false;

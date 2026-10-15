@@ -6,6 +6,7 @@ use App\Models\OrderIntelligence\CourierCustomerSnapshot;
 use App\Models\OrderIntelligence\CourierFraudReport;
 use App\Models\OrderIntelligence\MerchantCustomerStats;
 use App\Models\OrderIntelligence\PlatformCustomerStats;
+use App\Services\FraudCheck\RedxStaticSample;
 
 class PlatformIntelligenceReader
 {
@@ -74,17 +75,21 @@ class PlatformIntelligenceReader
             ->where('phone_normalized', $phoneNormalized)
             ->orderBy('courier')
             ->get()
-            ->map(fn (CourierCustomerSnapshot $snapshot) => [
-                'courier' => $snapshot->courier,
-                'total_order' => $snapshot->total_order,
-                'confirmed' => $snapshot->confirmed,
-                'cancel' => $snapshot->cancel,
-                'success_rate' => $snapshot->success_rate,
-                'customer_rating' => $snapshot->customer_rating,
-                'frauds_count' => $snapshot->frauds_count,
-                'fetched_at' => optional($snapshot->fetched_at)?->toIso8601String(),
-                'fetch_failed' => $this->snapshotFetchFailed($snapshot),
-            ])
+            ->map(function (CourierCustomerSnapshot $snapshot) {
+                $staticSample = RedxStaticSample::matchesSnapshot($snapshot);
+
+                return [
+                    'courier' => $snapshot->courier,
+                    'total_order' => $staticSample ? 0 : $snapshot->total_order,
+                    'confirmed' => $staticSample ? 0 : $snapshot->confirmed,
+                    'cancel' => $staticSample ? 0 : $snapshot->cancel,
+                    'success_rate' => $staticSample ? 'No order history found!' : $snapshot->success_rate,
+                    'customer_rating' => $staticSample ? null : $snapshot->customer_rating,
+                    'frauds_count' => $staticSample ? 0 : $snapshot->frauds_count,
+                    'fetched_at' => optional($snapshot->fetched_at)?->toIso8601String(),
+                    'fetch_failed' => $staticSample || $this->snapshotFetchFailed($snapshot),
+                ];
+            })
             ->values()
             ->all();
     }
