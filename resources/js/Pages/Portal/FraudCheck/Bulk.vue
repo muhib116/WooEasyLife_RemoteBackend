@@ -9,7 +9,7 @@
                 icon-class="text-primary-600 dark:text-primary-400"
             />
 
-            <PageCard title="New batch" description="One phone number per line. 017…, 880…, and +880… of the same number count once.">
+            <PageCard title="New batch" description="One phone number per line, or upload a CSV. 017…, 880…, and +880… of the same number count once.">
                 <div class="space-y-4">
                     <div class="space-y-1.5">
                         <label for="batch-name" class="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -26,9 +26,27 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label for="bulk-phones" class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                            Phone numbers (one per row)
-                        </label>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <label for="bulk-phones" class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                Phone numbers (one per row)
+                            </label>
+                            <button
+                                type="button"
+                                class="inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                                style="border-color: var(--mp-line); color: var(--mp-ink)"
+                                :disabled="starting"
+                                @click="fileInput?.click()"
+                            >
+                                Upload CSV
+                            </button>
+                            <input
+                                ref="fileInput"
+                                type="file"
+                                accept=".csv,.txt,text/csv,text/plain"
+                                class="sr-only"
+                                @change="onFile"
+                            />
+                        </div>
                         <textarea
                             id="bulk-phones"
                             v-model="rawPhones"
@@ -37,13 +55,16 @@
                             class="bulk-phones merchant-field w-full rounded-xl px-3 py-2.5 font-mono text-sm outline-none"
                             :disabled="starting"
                         />
-                        <p class="text-xs" :class="overLimit ? 'text-rose-600' : 'text-gray-500 dark:text-gray-400'">
-                            {{ parsed.unique }} / {{ maxNumbers }} unique
+                        <p class="text-xs" :class="countTone">
+                            {{ parsed.unique }} / {{ todayCap }} unique
                             <span v-if="parsed.duplicates"> · {{ parsed.duplicates }} duplicate{{ parsed.duplicates === 1 ? '' : 's' }} will be skipped</span>
+                            <span v-if="overDaily"> · {{ parsed.unique - quota.remaining }} more than today's limit. Those stay waiting.</span>
                         </p>
                         <p class="text-xs" :class="quota.remaining < 1 ? 'text-rose-600' : 'text-gray-500 dark:text-gray-400'">
                             {{ quota.remaining }} of {{ quota.daily_limit }} successful checks left today. The same number is counted once.
                         </p>
+                        <p v-if="fileNote" class="text-xs text-emerald-700 dark:text-emerald-300">{{ fileNote }}</p>
+                        <p v-if="fileError" class="text-sm text-rose-600">{{ fileError }}</p>
                         <p v-if="formError" class="text-sm text-rose-600">{{ formError }}</p>
                     </div>
 
@@ -83,6 +104,9 @@ const batchName = ref(defaultBatchName());
 const rawPhones = ref("");
 const starting = ref(false);
 const formError = ref("");
+const fileInput = ref(null);
+const fileNote = ref("");
+const fileError = ref("");
 
 const page = usePage();
 const quota = computed(() => page.props.auth?.portal?.courier_history ?? {
@@ -92,7 +116,10 @@ const quota = computed(() => page.props.auth?.portal?.courier_history ?? {
     enabled: false,
 });
 const parsed = computed(() => parsePhones(rawPhones.value));
+const todayCap = computed(() => Math.min(props.maxNumbers, Number(quota.value.remaining ?? 0)));
 const overLimit = computed(() => parsed.value.unique > props.maxNumbers);
+const overDaily = computed(() => parsed.value.unique > Number(quota.value.remaining ?? 0));
+const countTone = computed(() => (overLimit.value || overDaily.value ? "text-rose-600" : "text-gray-500 dark:text-gray-400"));
 
 function defaultBatchName() {
     const parts = new Intl.DateTimeFormat("en-GB", {
@@ -106,6 +133,72 @@ function defaultBatchName() {
     }).formatToParts(new Date());
     const get = (type) => parts.find((part) => part.type === type)?.value ?? "00";
     return `Bulk-${get("day")}-${get("month")}-${get("year")}-${get("hour")}-${get("minute")}`;
+}
+
+function onFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    fileNote.value = "";
+    fileError.value = "";
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+        fileError.value = "That file is larger than 1 MB.";
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        const phones = phonesFromFile(String(reader.result || ""));
+        if (!phones.length) {
+            fileError.value = "No phone numbers found in that file.";
+            return;
+        }
+        rawPhones.value = phones.join("\n");
+        fileNote.value = `Loaded ${phones.length} numbers from ${file.name}.`;
+    };
+    reader.onerror = () => {
+        fileError.value = "Could not read that file.";
+    };
+    reader.readAsText(file);
+}
+
+function phonesFromFile(text) {
+    const phones = [];
+    const body = text.replace(/^\uFEFF/, "");
+    for (const rawLine of body.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (line === "") continue;
+        for (const cell of splitRow(line)) {
+            const value = cell.trim().replace(/^["']|["']$/g, "").trim();
+            if (looksLikePhone(value)) phones.push(value);
+        }
+    }
+    return phones;
+}
+
+function splitRow(line) {
+    const cells = [];
+    let current = "";
+    let quoted = false;
+    for (const char of line) {
+        if (char === '"') {
+            quoted = !quoted;
+            continue;
+        }
+        if (!quoted && (char === "," || char === ";" || char === "\t")) {
+            cells.push(current);
+            current = "";
+            continue;
+        }
+        current += char;
+    }
+    cells.push(current);
+    return cells;
+}
+
+function looksLikePhone(value) {
+    let digits = value.replace(/\D/g, "");
+    if (digits.startsWith("880")) digits = digits.slice(2);
+    return digits.length >= 10 && digits.length <= 13;
 }
 
 function parsePhones(raw) {

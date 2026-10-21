@@ -62,7 +62,69 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Portal/FraudCheck/Batches')
                 ->has('batches.data', 1)
-                ->where('batches.data.0.name', 'Morning list'));
+                ->where('batches.data.0.name', 'Morning list')
+                ->where('filters.q', ''));
+    }
+
+    public function test_a_merchant_can_search_rename_and_delete_their_batches(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->never();
+        });
+
+        $merchant = $this->merchant('bulk-manage@example.com', '01700000062');
+        $other = $this->merchant('bulk-manage-other@example.com', '01700000063');
+
+        $morning = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'name' => 'Morning list',
+                'phones' => '01711111111',
+            ])
+            ->assertOk()
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'name' => 'Evening list',
+                'phones' => '01722222222',
+            ])
+            ->assertOk();
+
+        $this->actingAs($merchant)
+            ->get(route('portal.fraud-check.batches.index', ['q' => 'Morning']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('batches.data', 1)
+                ->where('batches.data.0.name', 'Morning list')
+                ->where('filters.q', 'Morning'));
+
+        $this->actingAs($merchant)
+            ->patch(route('portal.fraud-check.batches.update', $morning), ['name' => '  '])
+            ->assertSessionHasErrors('name');
+
+        $this->actingAs($merchant)
+            ->patch(route('portal.fraud-check.batches.update', $morning), ['name' => 'Afternoon list'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('bulk_fraud_batches', [
+            'id' => $morning,
+            'name' => 'Afternoon list',
+        ]);
+
+        $this->actingAs($other)
+            ->patch(route('portal.fraud-check.batches.update', $morning), ['name' => 'Stolen'])
+            ->assertNotFound();
+
+        $this->actingAs($other)
+            ->delete(route('portal.fraud-check.batches.destroy', $morning))
+            ->assertNotFound();
+
+        $this->actingAs($merchant)
+            ->delete(route('portal.fraud-check.batches.destroy', $morning))
+            ->assertRedirect(route('portal.fraud-check.batches.index'));
+
+        $this->assertDatabaseMissing('bulk_fraud_batches', ['id' => $morning]);
+        $this->assertDatabaseMissing('bulk_fraud_batch_items', ['batch_id' => $morning]);
     }
 
     public function test_admin_is_sent_away_from_the_merchant_bulk_check(): void

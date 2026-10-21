@@ -10,7 +10,9 @@ use App\Services\FraudCheck\MerchantBulkFraudCheck;
 use App\Services\FraudCheck\MerchantBulkFraudCsv;
 use App\Services\MerchantPortalContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -49,9 +51,13 @@ class BulkFraudCheckController extends Controller
     public function batches(Request $request, MerchantPortalContext $portalContext): Response
     {
         $merchant = $portalContext->resolveMerchant($request->user());
+        $search = trim((string) $request->query('q', ''));
 
         $batches = BulkFraudBatch::query()
             ->where('user_id', $merchant->id)
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where('name', 'like', '%'.addcslashes($search, '%_\\').'%');
+            })
             ->latest()
             ->paginate(20)
             ->withQueryString()
@@ -66,7 +72,43 @@ class BulkFraudCheckController extends Controller
 
         return Inertia::render('Portal/FraudCheck/Batches', [
             'batches' => $batches,
+            'filters' => ['q' => $search],
         ]);
+    }
+
+    public function update(
+        Request $request,
+        BulkFraudBatch $batch,
+        MerchantPortalContext $portalContext,
+    ): RedirectResponse {
+        $this->owns($request, $portalContext, $batch);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+        ]);
+        $name = trim($data['name']);
+        if ($name === '') {
+            throw ValidationException::withMessages([
+                'name' => 'Give this batch a name.',
+            ]);
+        }
+
+        $batch->name = $name;
+        $batch->save();
+
+        return back();
+    }
+
+    public function destroy(
+        Request $request,
+        BulkFraudBatch $batch,
+        MerchantPortalContext $portalContext,
+    ): RedirectResponse {
+        $this->owns($request, $portalContext, $batch);
+        $batch->delete();
+
+        return redirect()->route('portal.fraud-check.batches.index', array_filter([
+            'q' => trim((string) $request->input('q', '')),
+        ]));
     }
 
     public function store(

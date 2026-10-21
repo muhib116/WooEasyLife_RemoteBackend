@@ -67,6 +67,25 @@
                         size="small"
                         @click="continueBatch"
                     />
+                    <label class="results-search">
+                        <span class="sr-only">Search phone number</span>
+                        <i class="pi pi-search results-search-icon" />
+                        <input
+                            v-model="phoneQuery"
+                            type="text"
+                            inputmode="tel"
+                            placeholder="Search number"
+                        />
+                        <button
+                            v-if="phoneQuery"
+                            type="button"
+                            class="results-search-clear"
+                            aria-label="Clear search"
+                            @click="phoneQuery = ''"
+                        >
+                            <i class="pi pi-times" />
+                        </button>
+                    </label>
                 </template>
 
                 <div class="mb-4 flex flex-wrap gap-2 text-xs font-medium">
@@ -92,7 +111,7 @@
                         {{ chip.label }} {{ chip.count }}
                     </button>
                 </div>
-                <p v-if="rowFilter" class="mb-4 text-xs" style="color: var(--mp-muted)">
+                <p v-if="rowFilter || phoneQueryActive" class="mb-4 text-xs" style="color: var(--mp-muted)">
                     Showing {{ sortedItems.length }} of {{ items.length }}
                 </p>
 
@@ -118,7 +137,7 @@
                             @click="sortOpen = !sortOpen; pageSizeOpen = false"
                         >
                             <span class="truncate">{{ sortLabel }}</span>
-                            <i class="pi pi-chevron-down text-xs" style="color: var(--mp-muted)" />
+                            <i class="pi pi-chevron-down results-caret" style="color: var(--mp-muted)" />
                         </button>
                         <div
                             v-if="sortOpen"
@@ -154,7 +173,7 @@
                             @click="pageSizeOpen = !pageSizeOpen; sortOpen = false"
                         >
                             <span>{{ pageSize }} per page</span>
-                            <i class="pi pi-chevron-down text-xs" style="color: var(--mp-muted)" />
+                            <i class="pi pi-chevron-down results-caret" style="color: var(--mp-muted)" />
                         </button>
                         <div
                             v-if="pageSizeOpen"
@@ -212,7 +231,7 @@
                         <tbody>
                             <tr v-if="!sortedItems.length">
                                 <td colspan="8" class="px-3 py-8 text-center text-sm" style="color: var(--mp-muted)">
-                                    {{ rowFilter ? "No numbers match this filter." : "No numbers in this batch." }}
+                                    {{ items.length ? "No numbers match." : "No numbers in this batch." }}
                                 </td>
                             </tr>
                             <tr v-for="row in pagedItems" :key="row.id" class="border-b" style="border-color: var(--mp-line)">
@@ -585,9 +604,15 @@ const progressLabel = computed(() => {
 });
 
 const rowFilter = ref(null);
+const phoneQuery = ref("");
+const phoneQueryDigits = computed(() => String(phoneQuery.value || "").replace(/\D/g, ""));
+const phoneQueryActive = computed(() => String(phoneQuery.value || "").trim() !== "");
 const filterChips = computed(() => [
     { value: "found", label: "Found", count: countStatus("found"), className: "bg-violet-100 text-violet-800 ring-violet-400 dark:bg-violet-500/15 dark:text-violet-200" },
     { value: "not_found", label: "Not found", count: countStatus("not_found"), className: "bg-slate-100 text-slate-600 ring-slate-400 dark:bg-white/10 dark:text-slate-300" },
+    { value: "error", label: "Failed", count: countStatus("error"), className: "bg-rose-100 text-rose-800 ring-rose-400 dark:bg-rose-500/15 dark:text-rose-200" },
+    { value: "invalid", label: "Invalid", count: countStatus("invalid"), className: "bg-amber-100 text-amber-800 ring-amber-400 dark:bg-amber-500/15 dark:text-amber-200" },
+    { value: "waiting", label: "Waiting", count: countWaiting(), className: "bg-gray-100 text-gray-600 ring-gray-400 dark:bg-white/10 dark:text-gray-300" },
     { value: "safe", label: "Safe", count: countRisk("safe"), className: "bg-emerald-100 text-emerald-800 ring-emerald-500 dark:bg-emerald-500/15 dark:text-emerald-200" },
     { value: "review", label: "Review", count: countRisk("review"), className: "bg-amber-100 text-amber-800 ring-amber-400 dark:bg-amber-500/15 dark:text-amber-200" },
     { value: "high", label: "High risk", count: countRisk("high"), className: "bg-rose-100 text-rose-800 ring-rose-400 dark:bg-rose-500/15 dark:text-rose-200" },
@@ -599,10 +624,21 @@ function chooseFilter(value) {
 }
 
 function rowMatchesFilter(row) {
-    if (rowFilter.value === "found" || rowFilter.value === "not_found") return row.status === rowFilter.value;
+    if (rowFilter.value === "found" || rowFilter.value === "not_found" || rowFilter.value === "error" || rowFilter.value === "invalid") {
+        return row.status === rowFilter.value;
+    }
+    if (rowFilter.value === "waiting") return row.status === "pending" || row.status === "checking";
     if (rowFilter.value === "safe" || rowFilter.value === "review" || rowFilter.value === "high") return row.risk === rowFilter.value;
     if (rowFilter.value === "today") return row.source === "cache";
     return true;
+}
+
+function rowMatchesSearch(row) {
+    if (!phoneQueryActive.value) return true;
+    const query = phoneQueryDigits.value.replace(/^880/, "");
+    if (!query) return false;
+    const local = String(row.phone || "").replace(/\D/g, "").replace(/^880/, "");
+    return local.includes(query);
 }
 
 const sortBy = ref("none");
@@ -622,7 +658,7 @@ function rateSortValue(row) {
 }
 
 const sortedItems = computed(() => {
-    const rows = items.value.filter(rowMatchesFilter);
+    const rows = items.value.filter((row) => rowMatchesFilter(row) && rowMatchesSearch(row));
     if (sortBy.value === "none") return rows;
     const direction = sortBy.value === "high" ? -1 : 1;
     return rows.slice().sort((left, right) => {
@@ -691,7 +727,7 @@ watch([rowFilter, () => sortedItems.value.length], () => {
     if (page.value > pageCount.value) page.value = pageCount.value;
 });
 
-watch(rowFilter, () => {
+watch([rowFilter, phoneQuery], () => {
     page.value = 1;
 });
 
@@ -976,6 +1012,10 @@ function countStatus(status) {
     return items.value.filter((row) => row.status === status).length;
 }
 
+function countWaiting() {
+    return items.value.filter((row) => row.status === "pending" || row.status === "checking").length;
+}
+
 function countRisk(risk) {
     return items.value.filter((row) => row.risk === risk).length;
 }
@@ -1043,6 +1083,74 @@ function wait(ms) {
 </script>
 
 <style scoped>
+.results-caret {
+    font-size: 9.6px;
+    line-height: 1;
+}
+
+.results-search {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.results-search input {
+    width: 100%;
+    height: 38px;
+    border-radius: 999px;
+    border: 1px solid var(--mp-line);
+    background: #fff;
+    color: var(--mp-ink);
+    padding: 0 34px 0 36px;
+    font-size: 13px;
+    outline: none;
+    box-shadow: 0 1px 2px rgba(20, 16, 8, 0.04);
+}
+
+.results-search input:focus {
+    border-color: #e6a800;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.28);
+}
+
+.results-search-icon,
+.results-search-clear {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--mp-muted);
+    font-size: 13px;
+    line-height: 1;
+}
+
+.results-search-icon {
+    left: 13px;
+    pointer-events: none;
+}
+
+.results-search-clear {
+    right: 8px;
+    display: inline-flex;
+    height: 22px;
+    width: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+}
+
+.results-search-clear:hover {
+    background: rgba(20, 16, 8, 0.06);
+}
+
+:global(.dark) .results-search input {
+    background: #161616;
+}
+
+@media (min-width: 640px) {
+    .results-search {
+        width: 16.5rem;
+    }
+}
+
 .bulk-progress-fill {
     position: relative;
     min-width: 0;
