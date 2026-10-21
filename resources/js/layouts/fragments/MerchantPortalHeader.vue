@@ -6,9 +6,11 @@
                 type="button"
                 class="inline-flex h-10 w-10 items-center justify-center rounded-xl border transition hover:bg-[#ffc107]/15 lg:hidden"
                 style="border-color: var(--mp-line); color: var(--mp-ink)"
+                :aria-label="sidebarCollapsed ? 'Expand sidebar' : 'Toggle sidebar'"
+                :title="sidebarCollapsed ? 'Expand sidebar' : 'Toggle sidebar'"
                 @click="$emit('toggleSidebar')"
             >
-                <Icon name="PhList" class="text-xl" />
+                <Icon :name="sidebarCollapsed ? 'PhSidebarSimple' : 'PhList'" class="text-xl" />
             </button>
             <div class="min-w-0">
                 <p class="truncate text-base font-semibold" style="color: var(--mp-ink)">
@@ -49,12 +51,16 @@
             </button>
         </div>
         </div>
-        <nav v-if="sectionTabs.length" class="flex gap-2 px-4 pb-3 md:hidden" aria-label="Section">
+        <nav
+            v-if="sectionTabs.length"
+            class="flex gap-2 overflow-x-auto px-4 pb-3 md:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Section"
+        >
             <Link
                 v-for="tab in sectionTabs"
                 :key="tab.href"
                 :href="tab.href"
-                class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                class="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition"
                 :class="tab.active ? 'bg-[#ffc107] text-[#0a0a0a]' : 'hover:bg-[#ffc107]/15'"
                 :style="tab.active ? undefined : { color: 'var(--mp-ink)' }"
             >
@@ -72,6 +78,7 @@ import { computed } from "vue";
 
 defineProps<{
     title: string;
+    sidebarCollapsed?: boolean;
 }>();
 
 defineEmits<{
@@ -89,6 +96,11 @@ const sectionTabs = computed(() => {
     }
 
     return [
+        {
+            title: "Search",
+            href: route("portal.fraud-check.search"),
+            active: route().current("portal.fraud-check.search"),
+        },
         {
             title: "New batch",
             href: route("portal.fraud-check"),

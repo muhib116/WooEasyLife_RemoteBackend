@@ -1,6 +1,9 @@
 <template>
     <aside class="flex h-svh flex-col overflow-hidden">
-        <div class="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200/80 bg-white px-5 dark:border-gray-800 dark:bg-slate-900">
+        <div
+            class="sticky top-0 z-10 flex h-16 shrink-0 items-center border-b border-gray-200/80 bg-white dark:border-gray-800 dark:bg-slate-900"
+            :class="collapsed ? 'justify-center px-2' : 'gap-3 px-5'"
+        >
             <div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl">
                 <img
                     src="/app-logo"
@@ -8,7 +11,7 @@
                     class="h-full w-full object-cover"
                 />
             </div>
-            <div class="min-w-0 flex-1">
+            <div v-show="!collapsed" class="min-w-0 flex-1">
                 <p class="truncate text-sm font-bold text-gray-900 dark:text-white">
                     WooEasyLife Platform
                 </p>
@@ -19,15 +22,20 @@
             <button
                 type="button"
                 class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 lg:hidden dark:hover:bg-slate-800"
+                aria-label="Close menu"
                 @click="$emit('close')"
             >
                 <Icon name="PhX" />
             </button>
         </div>
 
-        <nav class="admin-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 pb-8">
+        <nav
+            class="admin-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-4 pb-8"
+            :class="collapsed ? 'px-2' : 'px-3'"
+            @scroll="flyout = null"
+        >
             <p
-                v-if="reorderMode"
+                v-if="reorderMode && !collapsed"
                 class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"
             >
                 Drag items using the handle, then confirm to save the new order for all admins.
@@ -44,10 +52,10 @@
                 @end="onSectionDragEnd"
             >
                 <template #item="{ element: section }">
-                    <div class="mb-5">
-                        <div class="mb-2 flex items-center gap-1 px-1">
+                    <div :class="collapsed ? 'mb-1' : 'mb-5'">
+                        <div v-show="!collapsed" class="mb-2 flex items-center gap-1 px-1">
                             <button
-                                v-if="reorderMode"
+                                v-if="reorderMode && !collapsed"
                                 type="button"
                                 class="section-drag-handle inline-flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 active:cursor-grabbing dark:hover:bg-slate-800"
                                 aria-label="Drag section"
@@ -83,7 +91,7 @@
                                             "
                                         >
                                             <button
-                                                v-if="reorderMode"
+                                                v-if="reorderMode && !collapsed"
                                                 type="button"
                                                 class="item-drag-handle ml-1 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-gray-400 hover:bg-gray-200/80 hover:text-gray-600 active:cursor-grabbing dark:hover:bg-slate-700"
                                                 aria-label="Drag menu item"
@@ -93,8 +101,14 @@
                                             <button
                                                 type="button"
                                                 class="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-sm font-medium"
-                                                :class="reorderMode ? 'pl-1' : ''"
-                                                @click="!reorderMode && toggleGroup(item.title)"
+                                                :class="[
+                                                    reorderMode ? 'pl-1' : '',
+                                                    collapsed ? 'justify-center !px-1.5' : '',
+                                                ]"
+                                                :title="collapsed ? item.title : undefined"
+                                                :aria-label="item.title"
+                                                data-sidebar-flyout-trigger
+                                                @click="onGroupActivate($event, item)"
                                             >
                                                 <span
                                                     class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors"
@@ -106,8 +120,9 @@
                                                 >
                                                     <Icon :name="item.icon" class="text-lg" />
                                                 </span>
-                                                <span class="truncate">{{ item.title }}</span>
+                                                <span v-show="!collapsed" class="truncate">{{ item.title }}</span>
                                                 <span
+                                                    v-show="!collapsed"
                                                     class="ml-auto flex h-6 w-6 items-center justify-center rounded-md transition-colors"
                                                     :class="
                                                         isGroupActive(item)
@@ -133,7 +148,7 @@
                                             leave-to-class="opacity-0 -translate-y-1 max-h-0"
                                         >
                                             <div
-                                                v-show="expandedGroups[item.title] || reorderMode"
+                                                v-show="!collapsed && (expandedGroups[item.title] || reorderMode)"
                                                 class="ml-3 overflow-hidden rounded-xl border border-gray-100 bg-gray-50/90 p-1.5 dark:border-gray-800 dark:bg-slate-800/60"
                                             >
                                                 <draggable
@@ -149,7 +164,7 @@
                                                     <template #item="{ element: child }">
                                                         <div class="flex items-center gap-1">
                                                             <button
-                                                                v-if="reorderMode"
+                                                                v-if="reorderMode && !collapsed"
                                                                 type="button"
                                                                 class="child-drag-handle inline-flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded text-gray-400 hover:bg-white hover:text-gray-600 active:cursor-grabbing dark:hover:bg-slate-900"
                                                                 aria-label="Drag submenu item"
@@ -206,7 +221,7 @@
                                         "
                                     >
                                         <button
-                                            v-if="reorderMode"
+                                            v-if="reorderMode && !collapsed"
                                             type="button"
                                             class="item-drag-handle ml-1 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-gray-400 hover:bg-gray-200/80 hover:text-gray-600 active:cursor-grabbing dark:hover:bg-slate-700"
                                             aria-label="Drag menu item"
@@ -221,7 +236,12 @@
                                                     : { href: route(item.name) }
                                             "
                                             class="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-sm font-medium"
-                                            :class="reorderMode ? 'pl-1' : ''"
+                                            :class="[
+                                                reorderMode ? 'pl-1' : '',
+                                                collapsed ? 'justify-center !px-1.5' : '',
+                                            ]"
+                                            :title="collapsed ? item.title : undefined"
+                                            :aria-label="item.title"
                                             @click="!reorderMode && $emit('close')"
                                         >
                                             <span
@@ -234,9 +254,9 @@
                                             >
                                                 <Icon :name="item.icon" class="text-lg" />
                                             </span>
-                                            <span class="truncate">{{ item.title }}</span>
+                                            <span v-show="!collapsed" class="truncate">{{ item.title }}</span>
                                             <span
-                                                v-if="isActive(item.name)"
+                                                v-if="isActive(item.name) && !collapsed"
                                                 class="ml-auto h-1.5 w-1.5 rounded-full bg-primary-500"
                                             />
                                         </component>
@@ -249,7 +269,10 @@
             </draggable>
         </nav>
 
-        <div class="sticky bottom-0 z-10 shrink-0 border-t border-gray-200/80 bg-white p-4 dark:border-gray-800 dark:bg-slate-900">
+        <div
+            v-show="!collapsed"
+            class="sticky bottom-0 z-10 shrink-0 border-t border-gray-200/80 bg-white p-4 dark:border-gray-800 dark:bg-slate-900"
+        >
             <div
                 v-if="canReorder"
                 class="mb-3 flex gap-2"
@@ -289,6 +312,43 @@
                 </p>
             </div>
         </div>
+
+        <Teleport to="body">
+            <div
+                v-if="collapsed && flyout"
+                ref="flyoutRef"
+                class="fixed z-[70] max-h-[min(24rem,calc(100vh-16px))] w-56 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-700 dark:bg-slate-900"
+                :style="{ top: `${flyout.top}px`, left: '84px' }"
+            >
+                <p class="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    {{ flyout.title }}
+                </p>
+                <Link
+                    v-for="child in flyout.children"
+                    :key="child.name"
+                    :href="route(child.name)"
+                    class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors"
+                    :class="
+                        isActive(child.name)
+                            ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-slate-800'
+                    "
+                    @click="closeFlyout"
+                >
+                    <span
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
+                        :class="
+                            isActive(child.name)
+                                ? 'bg-primary-100 text-primary-600 dark:bg-primary-500/25 dark:text-primary-300'
+                                : 'bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-gray-400'
+                        "
+                    >
+                        <Icon :name="child.icon" class="text-base" />
+                    </span>
+                    <span class="min-w-0 flex-1 truncate">{{ child.title }}</span>
+                </Link>
+            </div>
+        </Teleport>
     </aside>
 </template>
 
@@ -299,10 +359,19 @@ import { useConfirm } from "primevue";
 import Button from "primevue/button";
 import { useToast } from "primevue/usetoast";
 import axios from "axios";
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import draggable from "vuedraggable";
 import { usePermissions } from "@/composables/usePermissions";
 import type { IconName } from "@/types";
+
+const props = withDefaults(
+    defineProps<{
+        collapsed?: boolean;
+    }>(),
+    {
+        collapsed: false,
+    },
+);
 
 defineEmits<{
     close: [];
@@ -687,7 +756,7 @@ const confirmOpen = ref(false);
 const draftSections = ref<NavSection[]>([]);
 const snapshotBeforeDrag = ref<NavSection[]>([]);
 const dragDisabled = computed(
-    () => !reorderMode.value || confirmOpen.value || saving.value,
+    () => props.collapsed || !reorderMode.value || confirmOpen.value || saving.value,
 );
 
 const navOrder = ref<NavOrder | null>(
@@ -958,6 +1027,85 @@ const expandedGroups = reactive<Record<string, boolean>>({
 const toggleGroup = (title: string) => {
     expandedGroups[title] = !expandedGroups[title];
 };
+
+const flyout = ref<{ title: string; top: number; children: NavChild[] } | null>(null);
+const flyoutRef = ref<HTMLElement | null>(null);
+
+const closeFlyout = () => {
+    flyout.value = null;
+};
+
+const openFlyout = (event: MouseEvent, item: NavItem) => {
+    if (!item.children?.length) {
+        return;
+    }
+
+    if (flyout.value?.title === item.title) {
+        closeFlyout();
+        return;
+    }
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const estimated = 48 + item.children.length * 40;
+    const top = Math.max(8, Math.min(rect.top, window.innerHeight - estimated - 8));
+    flyout.value = { title: item.title, top, children: item.children };
+};
+
+const onGroupActivate = (event: MouseEvent, item: NavItem) => {
+    if (reorderMode.value) {
+        return;
+    }
+
+    if (props.collapsed) {
+        openFlyout(event, item);
+        return;
+    }
+
+    toggleGroup(item.title);
+};
+
+const onDocumentPointerDown = (event: MouseEvent) => {
+    if (!flyout.value) {
+        return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+        return;
+    }
+
+    if (flyoutRef.value?.contains(target) || target.closest("[data-sidebar-flyout-trigger]")) {
+        return;
+    }
+
+    closeFlyout();
+};
+
+const onEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+        closeFlyout();
+    }
+};
+
+watch(
+    () => props.collapsed,
+    () => closeFlyout(),
+);
+
+watch(
+    () => page.url,
+    () => closeFlyout(),
+);
+
+onMounted(() => {
+    document.addEventListener("pointerdown", onDocumentPointerDown);
+    document.addEventListener("keydown", onEscape);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener("pointerdown", onDocumentPointerDown);
+    document.removeEventListener("keydown", onEscape);
+});
 
 const isActive = (name: string) => route().current(name);
 

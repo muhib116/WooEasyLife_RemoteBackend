@@ -23,6 +23,11 @@ Route::middleware(['auth', 'auth.active', 'merchant.portal'])
             Route::get('/', DashboardController::class)->name('dashboard');
 
             Route::middleware('courier.history')->group(function () {
+                Route::get('/fraud-check/search', [BulkFraudCheckController::class, 'searchPage'])
+                    ->name('fraud-check.search');
+                Route::post('/fraud-check/search', [BulkFraudCheckController::class, 'search'])
+                    ->middleware('throttle:30,1')
+                    ->name('fraud-check.search.store');
                 Route::get('/fraud-check', [BulkFraudCheckController::class, 'index'])
                     ->name('fraud-check');
                 Route::get('/fraud-check/batches', [BulkFraudCheckController::class, 'batches'])

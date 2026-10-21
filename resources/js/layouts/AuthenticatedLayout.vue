@@ -9,16 +9,29 @@
         />
 
         <div
-            class="fixed inset-y-0 left-0 z-50 h-svh w-[272px] -translate-x-full border-r border-gray-200/80 bg-white transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shrink-0 dark:border-gray-800 dark:bg-slate-900"
-            :class="{ '!translate-x-0': sidebarOpen }"
+            class="fixed inset-y-0 left-0 z-50 h-svh w-[272px] -translate-x-full border-r border-gray-200/80 bg-white transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shrink-0 dark:border-gray-800 dark:bg-slate-900"
+            :class="{
+                '!translate-x-0': sidebarOpen,
+                'lg:w-[76px]': rail,
+            }"
         >
-            <LeftSidebar @close="sidebarOpen = false" />
+            <button
+                type="button"
+                class="absolute -right-3 top-5 z-[60] hidden h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm hover:bg-gray-50 lg:inline-flex dark:border-gray-700 dark:bg-slate-900 dark:text-gray-300 dark:hover:bg-slate-800"
+                :aria-label="rail ? 'Expand sidebar' : 'Collapse sidebar'"
+                :title="rail ? 'Expand sidebar' : 'Collapse sidebar'"
+                @click="toggleSidebar"
+            >
+                <Icon :name="rail ? 'PhCaretRight' : 'PhCaretLeft'" class="text-xs" />
+            </button>
+            <LeftSidebar :collapsed="rail" @close="sidebarOpen = false" />
         </div>
 
         <div class="flex min-w-0 flex-1 flex-col">
             <AppHeader
                 :title="title"
-                @toggle-sidebar="sidebarOpen = !sidebarOpen"
+                :sidebar-collapsed="rail"
+                @toggle-sidebar="toggleSidebar"
                 @open-theme="themeDialog = true"
             />
 
@@ -75,8 +88,10 @@ import AdminConfirmDialog from "@/Pages/Users/fragments/AdminConfirmDialog.vue";
 import AdminPageSkeleton from "@/components/AdminPageSkeleton.vue";
 import LeftSidebar from "./fragments/LeftSidebar.vue";
 import AppHeader from "./fragments/AppHeader.vue";
+import { useCollapsibleSidebar } from "@/composables/useCollapsibleSidebar";
 import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";
 import { useInertiaPageLoading } from "@/composables/useInertiaPageLoading";
+import { Icon } from "@/plugins";
 import { Head, router, usePage } from "@inertiajs/vue3";
 import { useTheme } from "@/composable";
 import { computed, onMounted, ref } from "vue";
@@ -102,7 +117,10 @@ onMounted(() => {
     }
 });
 
-const sidebarOpen = ref(false);
+const { sidebarOpen, sidebarCollapsed, isDesktop, toggleSidebar } = useCollapsibleSidebar(
+    "admin-sidebar-collapsed",
+);
+const rail = computed(() => sidebarCollapsed.value && isDesktop.value);
 const themeDialog = ref(false);
 const pageLoading = useInertiaPageLoading();
 const { colors, primaryTheme, changePrimaryColor } = useTheme();

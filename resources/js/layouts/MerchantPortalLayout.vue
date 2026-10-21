@@ -9,14 +9,30 @@
         />
 
         <div
-            class="merchant-sidebar fixed inset-y-0 left-0 z-50 h-svh w-[272px] -translate-x-full border-r backdrop-blur-md transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:shrink-0"
-            :class="{ '!translate-x-0': sidebarOpen }"
+            class="merchant-sidebar fixed inset-y-0 left-0 z-50 h-svh w-[272px] -translate-x-full border-r backdrop-blur-md transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:z-40 lg:translate-x-0 lg:shrink-0"
+            :class="{
+                '!translate-x-0': sidebarOpen,
+                'lg:w-[72px]': rail,
+            }"
         >
-            <MerchantPortalSidebar @close="sidebarOpen = false" />
+            <button
+                type="button"
+                class="merchant-rail-toggle"
+                :aria-label="rail ? 'Expand sidebar' : 'Collapse sidebar'"
+                :title="rail ? 'Expand sidebar' : 'Collapse sidebar'"
+                @click="toggleSidebar"
+            >
+                <Icon :name="rail ? 'PhCaretRight' : 'PhCaretLeft'" :size="12" />
+            </button>
+            <MerchantPortalSidebar :collapsed="rail" @close="sidebarOpen = false" />
         </div>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <MerchantPortalHeader :title="title" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+            <MerchantPortalHeader
+                :title="title"
+                :sidebar-collapsed="rail"
+                @toggle-sidebar="toggleSidebar"
+            />
 
             <main class="admin-scrollbar flex-1 overflow-auto px-4 py-5 lg:px-6 lg:py-6">
                 <div class="mx-auto w-full max-w-[1200px]">
@@ -55,20 +71,24 @@ import AdminConfirmDialog from "@/Pages/Users/fragments/AdminConfirmDialog.vue";
 import AdminPageSkeleton from "@/components/AdminPageSkeleton.vue";
 import MerchantPortalHeader from "./fragments/MerchantPortalHeader.vue";
 import MerchantPortalSidebar from "./fragments/MerchantPortalSidebar.vue";
+import { useCollapsibleSidebar } from "@/composables/useCollapsibleSidebar";
 import { useInertiaFlashToasts } from "@/composables/useInertiaFlashToasts";
 import { useInertiaPageLoading } from "@/composables/useInertiaPageLoading";
 import { useMerchantPortalNav } from "@/composables/useMerchantPortalNav";
 import { Icon } from "@/plugins";
 import { Head, Link } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted } from "vue";
 import "../../css/merchant-portal.css";
 
 defineProps<{
     title: string;
 }>();
 
-const sidebarOpen = ref(false);
+const { sidebarOpen, sidebarCollapsed, isDesktop, toggleSidebar } = useCollapsibleSidebar(
+    "merchant-sidebar-collapsed",
+);
+const rail = computed(() => sidebarCollapsed.value && isDesktop.value);
 const pageLoading = useInertiaPageLoading();
 const { tabItems } = useMerchantPortalNav();
 

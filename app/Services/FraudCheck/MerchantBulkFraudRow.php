@@ -227,11 +227,44 @@ class MerchantBulkFraudRow
         }
 
         $message = trim((string) ($courierReport['message'] ?? ''));
-        if ($message !== '' && ! str_contains($message, '<') && mb_strlen($message) <= 240) {
+        if ($message !== '' && ! str_contains($message, '<') && mb_strlen($message) <= 240 && ! self::isInternalCourierMessage($message)) {
             $notes[] = $message;
         }
 
         return array_values(array_unique($notes));
+    }
+
+    /**
+     * Courier transport and login failures are not customer fraud.
+     */
+    private static function isInternalCourierMessage(string $message): bool
+    {
+        $lower = strtolower($message);
+
+        foreach ([
+            'login failed',
+            're-login',
+            'token expired',
+            'session expired',
+            'credential',
+            'curl error',
+            'connection reset',
+            'sqlstate',
+            'stack trace',
+            'smart-check failed',
+            'stats request failed',
+            'customer lookup failed',
+            'http 4',
+            'http 5',
+            'vendor/',
+            '.php',
+        ] as $needle) {
+            if (str_contains($lower, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function ratePercent(mixed $raw, int $received, int $cancelled): ?int

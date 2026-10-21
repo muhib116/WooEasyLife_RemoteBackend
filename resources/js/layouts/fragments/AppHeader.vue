@@ -5,10 +5,12 @@
         <div class="flex min-w-0 items-center gap-3">
             <button
                 type="button"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-gray-50 lg:hidden dark:border-gray-700 dark:text-gray-300 dark:hover:bg-slate-800"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-slate-800"
+                :aria-label="sidebarCollapsed ? 'Expand sidebar' : 'Toggle sidebar'"
+                :title="sidebarCollapsed ? 'Expand sidebar' : 'Toggle sidebar'"
                 @click="$emit('toggleSidebar')"
             >
-                <Icon name="PhList" class="text-xl" />
+                <Icon :name="sidebarCollapsed ? 'PhSidebarSimple' : 'PhList'" class="text-xl" />
             </button>
             <div class="min-w-0">
                 <p
@@ -119,9 +121,15 @@ import { useTheme } from "@/composable";
 import { usePermissions } from "@/composables/usePermissions";
 import { Link, router, usePage } from "@inertiajs/vue3";
 
-defineProps<{
-    title?: string;
-}>();
+withDefaults(
+    defineProps<{
+        title?: string;
+        sidebarCollapsed?: boolean;
+    }>(),
+    {
+        sidebarCollapsed: false,
+    },
+);
 
 const { isDarkMode } = useTheme();
 

@@ -300,14 +300,12 @@ class MerchantBulkFraudCheckTest extends TestCase
 
         $preview->assertOk()
             ->assertJsonPath('headers', [
-                'Phone',
-                'Delivery Status',
-                'Total',
-                'Received',
+                'Phone Number',
+                'Status',
+                'Total Orders',
+                'Successful',
                 'Cancelled',
-                'Partial',
-                'Rate',
-                'Risk',
+                'Success Rate',
             ])
             ->assertJsonPath('rows.0', [
                 '01733333333',
@@ -315,9 +313,7 @@ class MerchantBulkFraudCheckTest extends TestCase
                 4,
                 1,
                 1,
-                2,
-                '50%',
-                'Review',
+                '50.0%',
             ]);
 
         $csv = $this->actingAs($merchant)
@@ -326,7 +322,7 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->streamedContent();
 
         $this->assertStringContainsString('01733333333', $csv);
-        $this->assertStringContainsString('50%', $csv);
+        $this->assertStringContainsString('50.0%', $csv);
         $this->assertStringNotContainsString('Refused at the gate', $csv);
         $this->assertStringNotContainsString('Hidden Customer', $csv);
         $this->assertStringNotContainsString('Paper Fly', $csv);
@@ -808,10 +804,61 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertHeader('content-type', 'text/csv; charset=UTF-8')
             ->streamedContent();
 
-        $this->assertStringContainsString('Phone,"Delivery Status",Total,Received,Cancelled,Partial,Rate,Risk', $csv);
+        $this->assertStringContainsString('"Phone Number",Status,"Total Orders",Successful,Cancelled,"Success Rate"', $csv);
         $this->assertStringContainsString("'=CMD()", $csv);
         $this->assertStringNotContainsString('Notes', $csv);
         $this->assertDoesNotMatchRegularExpression('/(^|[\r\n,])=/', $csv);
+    }
+
+    public function test_csv_is_sorted_by_success_rate_high_to_low(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->andReturnUsing(function ($request, array $payload) {
+                return match ($payload['phone']) {
+                    '01711111111' => $this->report(2, 1, 1, '50%'),
+                    '01722222222' => $this->report(0, 0, 0, null),
+                    '01733333333' => $this->report(4, 4, 0, '100%'),
+                    '01744444444' => $this->report(5, 4, 1, '80%'),
+                    default => $this->report(1, 0, 1, '0%'),
+                };
+            });
+        });
+
+        $merchant = $this->merchant('csv-sort@example.com', '01700000095');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'phones' => "01711111111\n01722222222\n01733333333\n01744444444",
+            ])
+            ->json('batch.id');
+
+        for ($step = 0; $step < 4; $step++) {
+            $this->actingAs($merchant)
+                ->postJson(route('portal.fraud-check.batches.next', $batch))
+                ->assertOk();
+        }
+
+        $this->actingAs($merchant)
+            ->getJson(route('portal.fraud-check.batches.preview', $batch))
+            ->assertOk()
+            ->assertJsonPath('rows.0.0', '01733333333')
+            ->assertJsonPath('rows.0.5', '100.0%')
+            ->assertJsonPath('rows.1.0', '01744444444')
+            ->assertJsonPath('rows.1.5', '80.0%')
+            ->assertJsonPath('rows.2.0', '01711111111')
+            ->assertJsonPath('rows.2.5', '50.0%')
+            ->assertJsonPath('rows.3.0', '01722222222')
+            ->assertJsonPath('rows.3.5', '');
+
+        $csv = $this->actingAs($merchant)
+            ->get(route('portal.fraud-check.batches.export', $batch))
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertMatchesRegularExpression(
+            '/100\.0%.*80\.0%.*50\.0%/s',
+            $csv,
+        );
+        $this->assertGreaterThan(strpos($csv, '01733333333'), strpos($csv, '01722222222'));
     }
 
     public function test_an_extreme_courier_rate_is_stored_as_a_percent(): void
@@ -849,6 +896,113 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertJsonPath('item.cancelled', 2)
             ->assertJsonPath('item.partial', 0)
             ->assertJsonPath('item.success_rate', 100);
+    }
+
+    public function test_single_phone_search_shows_the_courier_breakdown_and_uses_one_daily_slot(): void
+    {
+        $calls = 0;
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls): void {
+            $mock->shouldReceive('checkSingle')->andReturnUsing(function () use (&$calls) {
+                $calls++;
+
+                return [
+                    'total_order' => 5,
+                    'confirmed' => 4,
+                    'cancel' => 1,
+                    'success_rate' => '80%',
+                    'courier' => [
+                        [
+                            'title' => 'Pathao',
+                            'report' => [
+                                'total_order' => 4,
+                                'confirmed' => 4,
+                                'cancel' => 0,
+                                'success_rate' => '100%',
+                                'status' => 'ok',
+                                'api_success' => true,
+                            ],
+                        ],
+                        [
+                            'title' => 'Stead Fast',
+                            'report' => [
+                                'total_order' => 1,
+                                'confirmed' => 0,
+                                'cancel' => 1,
+                                'success_rate' => '0%',
+                                'status' => 'ok',
+                                'api_success' => true,
+                                'frauds' => [['details' => 'Customer refused the parcel']],
+                            ],
+                        ],
+                        [
+                            'title' => 'RedX',
+                            'report' => [
+                                'total_order' => 0,
+                                'confirmed' => 0,
+                                'cancel' => 0,
+                                'status' => 'unavailable',
+                                'message' => 'RedX login failed with configured credentials.',
+                            ],
+                        ],
+                    ],
+                ];
+            });
+        });
+
+        $merchant = $this->merchant('single-search@example.com', '01700000093');
+
+        $this->actingAs($merchant)
+            ->get(route('portal.fraud-check.search'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Portal/FraudCheck/Search'));
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '01876426700'])
+            ->assertOk()
+            ->assertJsonPath('result.phone', '01876426700')
+            ->assertJsonPath('result.status', 'found')
+            ->assertJsonPath('result.risk', 'safe')
+            ->assertJsonPath('result.success_rate', 80)
+            ->assertJsonPath('result.total_orders', 5)
+            ->assertJsonPath('result.received', 4)
+            ->assertJsonPath('result.cancelled', 1)
+            ->assertJsonPath('result.couriers.0.title', 'Pathao')
+            ->assertJsonPath('result.couriers.1.title', 'Stead Fast')
+            ->assertJsonPath('result.couriers.1.notes.0', 'Customer refused the parcel')
+            ->assertJsonPath('result.couriers.2.notes', [])
+            ->assertJsonPath('source', 'live')
+            ->assertJsonPath('quota.used_today', 1)
+            ->assertJsonPath('quota.remaining', 999);
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '+8801876426700'])
+            ->assertOk()
+            ->assertJsonPath('source', 'cache')
+            ->assertJsonPath('quota.used_today', 1);
+
+        $this->assertSame(1, $calls);
+        $this->assertSame(1, CourierHistoryUse::query()->where('user_id', $merchant->id)->count());
+    }
+
+    public function test_single_phone_search_rejects_an_invalid_number_and_a_used_up_limit(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->never();
+        });
+
+        $merchant = $this->merchant('single-search-limit@example.com', '01700000094');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '12345'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('phone');
+
+        $merchant->update(['courier_history_daily_limit' => 0]);
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '01711111111'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('phone');
     }
 
     public function test_staff_checks_use_the_owner_daily_limit(): void
@@ -889,6 +1043,18 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertJsonPath('item.status', 'found')
             ->assertJsonPath('quota.used_today', 1)
             ->assertJsonPath('quota.remaining', 0);
+
+        $this->actingAs($staff)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '01711111111'])
+            ->assertOk()
+            ->assertJsonPath('source', 'cache')
+            ->assertJsonPath('quota.used_today', 1)
+            ->assertJsonPath('quota.remaining', 0);
+
+        $this->actingAs($staff)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '01722222222'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('phone');
 
         $this->assertSame(1, CourierHistoryUse::query()->where('user_id', $owner->id)->count());
         $this->assertSame(0, CourierHistoryUse::query()->where('user_id', $staff->id)->count());

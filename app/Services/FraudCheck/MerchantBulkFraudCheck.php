@@ -407,6 +407,58 @@ class MerchantBulkFraudCheck
     }
 
     /**
+     * Check one phone for the merchant portal. The same number on the same day
+     * reuses the saved courier result and does not take another daily slot.
+     *
+     * @return array{result: array<string, mixed>, source: string|null}
+     */
+    public function search(Request $request, User $merchant, string $phone): array
+    {
+        if (! $merchant->courier_history_enabled) {
+            throw ValidationException::withMessages([
+                'phone' => 'Courier history is not enabled for this account.',
+            ]);
+        }
+
+        try {
+            $phone = $this->fraudCheckService->normalizePhone($phone);
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'phone' => $exception->getMessage(),
+            ]);
+        }
+
+        $guard = $this->guardedResolve($merchant, $phone, fn () => $this->resolvePhone($request, $phone));
+
+        if ($guard['limit']) {
+            throw ValidationException::withMessages([
+                'phone' => "Today's courier history limit is used up.",
+            ]);
+        }
+
+        if ($guard['busy']) {
+            throw ValidationException::withMessages([
+                'phone' => 'Courier history is busy right now. Try again in a moment.',
+            ]);
+        }
+
+        if ($guard['failed'] || ! is_array($guard['resolved'])) {
+            throw ValidationException::withMessages([
+                'phone' => 'Could not check this number. Try again.',
+            ]);
+        }
+
+        $resolved = $guard['resolved'];
+        $row = $resolved['row'];
+        $row['phone'] = $phone;
+
+        return [
+            'result' => $row,
+            'source' => $resolved['source'] ?? null,
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function summary(BulkFraudBatch $batch): array

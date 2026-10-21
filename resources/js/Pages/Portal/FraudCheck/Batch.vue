@@ -90,6 +90,45 @@
                     {{ previewError }}
                 </p>
 
+                <div class="relative mb-4 flex items-center gap-2">
+                    <span class="text-sm" style="color: var(--mp-muted)">Sort by</span>
+                    <div ref="sortRoot" class="relative">
+                        <button
+                            type="button"
+                            class="inline-flex max-w-[16rem] items-center gap-2 rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm dark:bg-[#161616]"
+                            style="border-color: var(--mp-line); color: var(--mp-ink)"
+                            aria-haspopup="listbox"
+                            :aria-expanded="sortOpen"
+                            @click="sortOpen = !sortOpen"
+                        >
+                            <span class="truncate">{{ sortLabel }}</span>
+                            <i class="pi pi-chevron-down text-xs" style="color: var(--mp-muted)" />
+                        </button>
+                        <div
+                            v-if="sortOpen"
+                            class="absolute left-0 top-full z-20 mt-1 w-64 overflow-hidden rounded-xl border bg-white py-1 shadow-lg dark:bg-[#161616]"
+                            style="border-color: var(--mp-line)"
+                            role="listbox"
+                        >
+                            <button
+                                v-for="option in sortOptions"
+                                :key="option.value"
+                                type="button"
+                                class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+                                :class="sortBy === option.value
+                                    ? 'bg-violet-50 text-violet-900 dark:bg-violet-500/15 dark:text-violet-100'
+                                    : 'text-[var(--mp-ink)]'"
+                                role="option"
+                                :aria-selected="sortBy === option.value"
+                                @click="chooseSort(option.value)"
+                            >
+                                <i class="pi pi-check text-xs" :class="sortBy === option.value ? 'visible' : 'invisible'" />
+                                <span>{{ option.label }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div
                     v-if="checkingRow"
                     class="mb-4 rounded-2xl border p-4"
@@ -105,46 +144,39 @@
                 </div>
 
                 <div class="max-w-full overflow-x-auto">
-                    <table class="w-full min-w-[920px] text-left text-sm">
+                    <table class="w-full min-w-[40rem] text-left text-sm">
                         <thead>
-                            <tr class="border-b text-xs uppercase tracking-wide text-gray-500" style="border-color: var(--mp-line)">
-                                <th class="whitespace-nowrap px-2 py-2 font-medium">Phone</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Delivery Status</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Total</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Received</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Cancelled</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Partial</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Rate</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Risk</th>
-                                <th class="w-px whitespace-nowrap px-2 py-2 font-medium">Details</th>
+                            <tr class="border-b text-xs font-medium" style="border-color: var(--mp-line); color: var(--mp-muted)">
+                                <th class="whitespace-nowrap px-3 py-2.5 font-medium">Phone Number</th>
+                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Status</th>
+                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Total Orders</th>
+                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Successful</th>
+                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Cancelled</th>
+                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Success Rate</th>
+                                <th class="whitespace-nowrap px-3 py-2.5 text-right font-medium">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in items" :key="row.id" class="border-b" style="border-color: var(--mp-line)">
-                                <td class="whitespace-nowrap px-2 py-2.5">
-                                    <p class="font-mono" style="color: var(--mp-ink)">{{ row.phone }}</p>
+                            <tr v-for="row in sortedItems" :key="row.id" class="border-b" style="border-color: var(--mp-line)">
+                                <td class="whitespace-nowrap px-3 py-2.5">
+                                    <span class="font-mono" style="color: var(--mp-ink)">{{ row.phone }}</span>
                                     <p v-if="checkingId === row.id" class="text-[11px] text-emerald-700 dark:text-emerald-300">Checking now</p>
                                     <p v-else-if="row.source === 'cache'" class="text-[11px] text-sky-700 dark:text-sky-300">Already checked today</p>
                                     <p v-else-if="row.status === 'error'" class="text-[11px] text-rose-600">Tried {{ row.attempts }} times</p>
                                     <p v-else-if="row.status === 'pending'" class="text-[11px] text-gray-400">Waiting</p>
                                 </td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5">
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     <span v-if="checkingId === row.id" class="skeleton-block inline-block h-5 w-16 rounded-full" />
-                                    <span v-else class="inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium" :class="statusClass(row.status)">
+                                    <span v-else class="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusClass(row.status)">
                                         {{ statusLabel(row.status) }}
                                     </span>
                                 </td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5">{{ row.total_orders }}</td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5 text-emerald-700 dark:text-emerald-300">{{ row.received }}</td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5 text-rose-700 dark:text-rose-300">{{ row.cancelled }}</td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5 text-amber-700 dark:text-amber-300">{{ row.partial }}</td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5 font-medium" :class="rateClass(row)">{{ rateLabel(row) }}</td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5">
-                                    <span v-if="row.risk" class="whitespace-nowrap text-xs font-medium" :class="rateClass(row)">{{ riskLabel(row.risk) }}</span>
-                                    <span v-else class="text-gray-400">—</span>
-                                </td>
-                                <td class="w-px whitespace-nowrap px-2 py-2.5">
-                                    <div class="flex flex-nowrap items-center gap-1.5">
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums" style="color: var(--mp-ink)">{{ row.total_orders }}</td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-violet-600 dark:text-violet-300">{{ row.received }}</td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-rose-600 dark:text-rose-300">{{ row.cancelled }}</td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center font-medium tabular-nums" :class="rateClass(row)">{{ tableRate(row) }}</td>
+                                <td class="whitespace-nowrap px-3 py-2.5">
+                                    <div class="flex flex-nowrap items-center justify-end gap-1.5">
                                         <button
                                             type="button"
                                             class="rounded-lg border border-[#e6a800]/50 bg-[#ffc107]/15 px-2.5 py-1 text-xs font-semibold text-[#5c4500] dark:border-[#ffc107]/40 dark:bg-[#ffc107]/10 dark:text-[#ffd54f]"
@@ -194,7 +226,7 @@
                 <div class="flex items-center justify-between gap-3 border-b px-4 py-3" style="border-color: var(--mp-line)">
                     <div>
                         <p id="csv-preview-title" class="text-sm font-semibold" style="color: var(--mp-ink)">CSV preview</p>
-                        <p class="text-xs" style="color: var(--mp-muted)">{{ preview.rows.length }} rows · same columns as the results table</p>
+                        <p class="text-xs" style="color: var(--mp-muted)">{{ preview.rows.length }} rows · success rate, high to low</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <a
@@ -259,15 +291,41 @@
             >
                 <div class="mb-4 flex items-center justify-between gap-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-[#8d6a00] dark:text-slate-400">Checked number</p>
-                    <button
-                        type="button"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#6b5e48] transition hover:bg-[#ffc107]/20 hover:text-[#1a1408] dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-                        aria-label="Close"
-                        @click="selected = null"
-                    >
-                        <i class="pi pi-times" />
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button
+                            v-if="canRefresh(selected)"
+                            type="button"
+                            class="rounded-lg border border-sky-600/40 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
+                            :disabled="running || refreshingId !== null || retryingId !== null"
+                            @click="refreshRow(selected)"
+                        >
+                            {{ refreshingId === selected.id ? "Refreshing" : "Refresh" }}
+                        </button>
+                        <button
+                            v-if="selected.status === 'error'"
+                            type="button"
+                            class="rounded-lg border border-emerald-600/40 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                            :disabled="running || limitBlocked || retryingId !== null || refreshingId !== null"
+                            @click="retryRow(selected)"
+                        >
+                            {{ retryingId === selected.id ? "Retrying" : "Retry" }}
+                        </button>
+                        <button
+                            type="button"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#6b5e48] transition hover:bg-[#ffc107]/20 hover:text-[#1a1408] dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+                            aria-label="Close"
+                            @click="selected = null"
+                        >
+                            <i class="pi pi-times" />
+                        </button>
+                    </div>
                 </div>
+                <p v-if="refreshNotice" class="mb-3 rounded-xl border border-rose-600/30 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                    {{ refreshNotice }}
+                </p>
+                <p v-if="limitNotice" class="mb-3 rounded-xl border border-rose-600/30 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                    {{ limitNotice }}
+                </p>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e6c56a]/80 bg-[#fff8e8] px-4 py-3 dark:border-white/10 dark:bg-white/5">
                     <p id="bulk-detail-phone" class="font-mono text-xl font-bold tracking-wide">{{ selected.phone }}</p>
@@ -411,8 +469,52 @@ const progressLabel = computed(() => {
     return `${batchState.value.status} · ${done} of ${items.value.length} checked`;
 });
 
+const sortBy = ref("none");
+const sortOpen = ref(false);
+const sortRoot = ref(null);
+const sortOptions = [
+    { value: "none", label: "No sorting" },
+    { value: "high", label: "Success Rate: High to Low" },
+    { value: "low", label: "Success Rate: Low to High" },
+];
+const sortLabel = computed(() => sortOptions.find((option) => option.value === sortBy.value)?.label ?? "No sorting");
+
+function rateSortValue(row) {
+    if (row.success_rate === null || row.success_rate === undefined || row.success_rate === "") return null;
+    const value = Number(row.success_rate);
+    return Number.isFinite(value) ? value : null;
+}
+
+const sortedItems = computed(() => {
+    if (sortBy.value === "none") return items.value;
+    const direction = sortBy.value === "high" ? -1 : 1;
+    return items.value.slice().sort((left, right) => {
+        const leftRate = rateSortValue(left);
+        const rightRate = rateSortValue(right);
+        if (leftRate === null && rightRate === null) return 0;
+        if (leftRate === null) return 1;
+        if (rightRate === null) return -1;
+        if (leftRate === rightRate) return 0;
+        return leftRate < rightRate ? -direction : direction;
+    });
+});
+
+function chooseSort(value) {
+    sortBy.value = value;
+    sortOpen.value = false;
+}
+
+function onDocumentClick(event) {
+    if (!sortOpen.value || !sortRoot.value) return;
+    if (!sortRoot.value.contains(event.target)) sortOpen.value = false;
+}
+
 function onEscape(event) {
     if (event.key !== "Escape") return;
+    if (sortOpen.value) {
+        sortOpen.value = false;
+        return;
+    }
     if (preview.value) {
         preview.value = null;
         return;
@@ -436,6 +538,7 @@ async function openPreview() {
 
 onMounted(() => {
     window.addEventListener("keydown", onEscape);
+    document.addEventListener("click", onDocumentClick);
     const hasPending = items.value.some((row) => row.status === "pending");
     if (limitBlocked.value && hasPending) {
         limitNotice.value = "Today's courier history limit is used up. Pending numbers were not checked.";
@@ -449,6 +552,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener("keydown", onEscape);
+    document.removeEventListener("click", onDocumentClick);
 });
 
 function openDetails(row) {
@@ -501,10 +605,34 @@ function detailNotes(row) {
     const notes = [];
     for (const courier of row.couriers || []) {
         for (const text of courier.notes || []) {
+            if (!isCustomerFraudNote(text)) continue;
             notes.push({ courier: courier.title, text });
         }
     }
     return notes;
+}
+
+function isCustomerFraudNote(text) {
+    const lower = String(text || "").trim().toLowerCase();
+    if (lower === "") return false;
+    return ![
+        "login failed",
+        "re-login",
+        "token expired",
+        "session expired",
+        "credential",
+        "curl error",
+        "connection reset",
+        "sqlstate",
+        "stack trace",
+        "smart-check failed",
+        "stats request failed",
+        "customer lookup failed",
+        "http 4",
+        "http 5",
+        "vendor/",
+        ".php",
+    ].some((needle) => lower.includes(needle));
 }
 
 function notesEmptyLabel(row) {
@@ -690,6 +818,12 @@ function riskLabel(risk) {
 
 function rateLabel(row) {
     return row.success_rate === null || row.success_rate === undefined ? "—" : `${row.success_rate}%`;
+}
+
+function tableRate(row) {
+    if (row.success_rate === null || row.success_rate === undefined || row.success_rate === "") return "-";
+    const value = Number(row.success_rate);
+    return Number.isFinite(value) ? `${value.toFixed(1)}%` : "-";
 }
 
 function rateClass(row) {

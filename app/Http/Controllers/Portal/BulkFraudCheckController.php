@@ -24,6 +24,28 @@ class BulkFraudCheckController extends Controller
         ]);
     }
 
+    public function searchPage(): Response
+    {
+        return Inertia::render('Portal/FraudCheck/Search');
+    }
+
+    public function search(
+        Request $request,
+        MerchantPortalContext $portalContext,
+        MerchantBulkFraudCheck $bulk,
+    ): JsonResponse {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:32'],
+        ]);
+
+        $merchant = $portalContext->resolveMerchant($request->user());
+
+        return response()->json($this->withQuota(
+            $request,
+            $bulk->search($request, $merchant, $data['phone']),
+        ));
+    }
+
     public function batches(Request $request, MerchantPortalContext $portalContext): Response
     {
         $merchant = $portalContext->resolveMerchant($request->user());

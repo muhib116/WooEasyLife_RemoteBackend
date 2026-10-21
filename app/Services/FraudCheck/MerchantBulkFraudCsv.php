@@ -15,27 +15,23 @@ class MerchantBulkFraudCsv
         $batch->loadMissing('items');
 
         $headers = [
-            'Phone',
-            'Delivery Status',
-            'Total',
-            'Received',
+            'Phone Number',
+            'Status',
+            'Total Orders',
+            'Successful',
             'Cancelled',
-            'Partial',
-            'Rate',
-            'Risk',
+            'Success Rate',
         ];
 
         $rows = [];
-        foreach ($batch->items as $item) {
+        foreach ($this->bySuccessRate($batch) as $item) {
             $rows[] = [
                 $item->phone,
                 $this->statusLabel((string) $item->status),
                 (int) $item->total_orders,
                 (int) $item->received,
                 (int) $item->cancelled,
-                (int) $item->partial,
                 $this->percent($item->success_rate),
-                $this->riskLabel($item->risk),
             ];
         }
 
@@ -64,6 +60,32 @@ class MerchantBulkFraudCsv
         }, substr($filename, 0, 80).'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /**
+     * Highest success rate first. Numbers with no rate stay at the bottom,
+     * and equal rates keep the original batch order.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\BulkFraudBatchItem>
+     */
+    private function bySuccessRate(BulkFraudBatch $batch)
+    {
+        return $batch->items
+            ->sort(function ($left, $right): int {
+                $leftMissing = $left->success_rate === null || $left->success_rate === '';
+                $rightMissing = $right->success_rate === null || $right->success_rate === '';
+
+                if ($leftMissing !== $rightMissing) {
+                    return $leftMissing <=> $rightMissing;
+                }
+
+                if (! $leftMissing && (float) $left->success_rate !== (float) $right->success_rate) {
+                    return (float) $right->success_rate <=> (float) $left->success_rate;
+                }
+
+                return ((int) $left->position) <=> ((int) $right->position);
+            })
+            ->values();
+    }
+
     private function csvSafe(mixed $value): mixed
     {
         if (! is_string($value) || $value === '') {
@@ -83,7 +105,7 @@ class MerchantBulkFraudCsv
             return '';
         }
 
-        return ((int) $value).'%';
+        return number_format((float) $value, 1).'%';
     }
 
     private function statusLabel(string $status): string
@@ -98,13 +120,4 @@ class MerchantBulkFraudCsv
         };
     }
 
-    private function riskLabel(?string $risk): string
-    {
-        return match ($risk) {
-            'safe' => 'Safe',
-            'review' => 'Review',
-            'high' => 'High risk',
-            default => '',
-        };
-    }
 }
