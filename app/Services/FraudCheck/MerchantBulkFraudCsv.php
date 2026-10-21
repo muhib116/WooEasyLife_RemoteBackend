@@ -21,6 +21,7 @@ class MerchantBulkFraudCsv
             'Successful',
             'Cancelled',
             'Success Rate',
+            'Risk',
         ];
 
         $rows = [];
@@ -32,6 +33,7 @@ class MerchantBulkFraudCsv
                 (int) $item->received,
                 (int) $item->cancelled,
                 $this->percent($item->success_rate),
+                $this->riskLabel($item->risk),
             ];
         }
 
@@ -106,6 +108,16 @@ class MerchantBulkFraudCsv
         }
 
         return number_format((float) $value, 1).'%';
+    }
+
+    private function riskLabel(?string $risk): string
+    {
+        return match ($risk) {
+            'safe' => 'Safe',
+            'review' => 'Review',
+            'high' => 'High risk',
+            default => '',
+        };
     }
 
     private function statusLabel(string $status): string

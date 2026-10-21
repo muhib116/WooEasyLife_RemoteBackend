@@ -306,6 +306,7 @@ class MerchantBulkFraudCheckTest extends TestCase
                 'Successful',
                 'Cancelled',
                 'Success Rate',
+                'Risk',
             ])
             ->assertJsonPath('rows.0', [
                 '01733333333',
@@ -314,6 +315,7 @@ class MerchantBulkFraudCheckTest extends TestCase
                 1,
                 1,
                 '50.0%',
+                'Review',
             ]);
 
         $csv = $this->actingAs($merchant)
@@ -804,7 +806,7 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertHeader('content-type', 'text/csv; charset=UTF-8')
             ->streamedContent();
 
-        $this->assertStringContainsString('"Phone Number",Status,"Total Orders",Successful,Cancelled,"Success Rate"', $csv);
+        $this->assertStringContainsString('"Phone Number",Status,"Total Orders",Successful,Cancelled,"Success Rate",Risk', $csv);
         $this->assertStringContainsString("'=CMD()", $csv);
         $this->assertStringNotContainsString('Notes', $csv);
         $this->assertDoesNotMatchRegularExpression('/(^|[\r\n,])=/', $csv);
@@ -842,12 +844,16 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertOk()
             ->assertJsonPath('rows.0.0', '01733333333')
             ->assertJsonPath('rows.0.5', '100.0%')
+            ->assertJsonPath('rows.0.6', 'Safe')
             ->assertJsonPath('rows.1.0', '01744444444')
             ->assertJsonPath('rows.1.5', '80.0%')
+            ->assertJsonPath('rows.1.6', 'Safe')
             ->assertJsonPath('rows.2.0', '01711111111')
             ->assertJsonPath('rows.2.5', '50.0%')
+            ->assertJsonPath('rows.2.6', 'Review')
             ->assertJsonPath('rows.3.0', '01722222222')
-            ->assertJsonPath('rows.3.5', '');
+            ->assertJsonPath('rows.3.5', '')
+            ->assertJsonPath('rows.3.6', '');
 
         $csv = $this->actingAs($merchant)
             ->get(route('portal.fraud-check.batches.export', $batch))

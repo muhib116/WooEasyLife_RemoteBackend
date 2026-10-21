@@ -70,15 +70,31 @@
                 </template>
 
                 <div class="mb-4 flex flex-wrap gap-2 text-xs font-medium">
-                    <span class="rounded-full bg-[#ffc107]/20 px-3 py-1 text-[#5c4500] dark:text-[#ffd54f]">Total {{ items.length }}</span>
+                    <button
+                        type="button"
+                        class="rounded-full bg-[#ffc107]/20 px-3 py-1 text-[#5c4500] ring-offset-2 ring-offset-white transition dark:text-[#ffd54f] dark:ring-offset-[#161616]"
+                        :class="rowFilter === null ? 'ring-2 ring-[#e6a800]' : 'hover:bg-[#ffc107]/35'"
+                        :aria-pressed="rowFilter === null"
+                        @click="chooseFilter(null)"
+                    >
+                        Total {{ items.length }}
+                    </button>
                     <span v-if="batchState.duplicates_removed" class="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-white/10 dark:text-slate-300">Duplicates removed {{ batchState.duplicates_removed }}</span>
-                    <span class="rounded-full bg-violet-100 px-3 py-1 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200">Found {{ countStatus('found') }}</span>
-                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-white/10 dark:text-slate-300">Not found {{ countStatus('not_found') }}</span>
-                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">Safe {{ countRisk('safe') }}</span>
-                    <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">Review {{ countRisk('review') }}</span>
-                    <span class="rounded-full bg-rose-100 px-3 py-1 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200">High risk {{ countRisk('high') }}</span>
-                    <span class="rounded-full bg-sky-100 px-3 py-1 text-sky-800 dark:bg-sky-500/15 dark:text-sky-200">From today {{ countSource('cache') }}</span>
+                    <button
+                        v-for="chip in filterChips"
+                        :key="chip.value"
+                        type="button"
+                        class="rounded-full px-3 py-1 ring-offset-2 ring-offset-white transition dark:ring-offset-[#161616]"
+                        :class="[chip.className, rowFilter === chip.value ? 'ring-2' : 'hover:brightness-95']"
+                        :aria-pressed="rowFilter === chip.value"
+                        @click="chooseFilter(chip.value)"
+                    >
+                        {{ chip.label }} {{ chip.count }}
+                    </button>
                 </div>
+                <p v-if="rowFilter" class="mb-4 text-xs" style="color: var(--mp-muted)">
+                    Showing {{ sortedItems.length }} of {{ items.length }}
+                </p>
 
                 <p v-if="limitNotice" class="mb-4 rounded-xl border border-rose-600/30 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
                     {{ limitNotice }}
@@ -90,7 +106,7 @@
                     {{ previewError }}
                 </p>
 
-                <div class="relative mb-4 flex items-center gap-2">
+                <div class="relative mb-4 flex flex-wrap items-center gap-2">
                     <span class="text-sm" style="color: var(--mp-muted)">Sort by</span>
                     <div ref="sortRoot" class="relative">
                         <button
@@ -99,7 +115,7 @@
                             style="border-color: var(--mp-line); color: var(--mp-ink)"
                             aria-haspopup="listbox"
                             :aria-expanded="sortOpen"
-                            @click="sortOpen = !sortOpen"
+                            @click="sortOpen = !sortOpen; pageSizeOpen = false"
                         >
                             <span class="truncate">{{ sortLabel }}</span>
                             <i class="pi pi-chevron-down text-xs" style="color: var(--mp-muted)" />
@@ -124,6 +140,42 @@
                             >
                                 <i class="pi pi-check text-xs" :class="sortBy === option.value ? 'visible' : 'invisible'" />
                                 <span>{{ option.label }}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div ref="pageSizeRoot" class="relative ml-auto flex items-center gap-2">
+                        <span class="text-sm" style="color: var(--mp-muted)">Per page</span>
+                        <button
+                            type="button"
+                            class="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm dark:bg-[#161616]"
+                            style="border-color: var(--mp-line); color: var(--mp-ink)"
+                            aria-haspopup="listbox"
+                            :aria-expanded="pageSizeOpen"
+                            @click="pageSizeOpen = !pageSizeOpen; sortOpen = false"
+                        >
+                            <span>{{ pageSize }} per page</span>
+                            <i class="pi pi-chevron-down text-xs" style="color: var(--mp-muted)" />
+                        </button>
+                        <div
+                            v-if="pageSizeOpen"
+                            class="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border bg-white py-1 shadow-lg dark:bg-[#161616]"
+                            style="border-color: var(--mp-line)"
+                            role="listbox"
+                        >
+                            <button
+                                v-for="size in pageSizeOptions"
+                                :key="size"
+                                type="button"
+                                class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+                                :class="pageSize === size
+                                    ? 'bg-violet-50 text-violet-900 dark:bg-violet-500/15 dark:text-violet-100'
+                                    : 'text-[var(--mp-ink)]'"
+                                role="option"
+                                :aria-selected="pageSize === size"
+                                @click="choosePageSize(size)"
+                            >
+                                <i class="pi pi-check text-xs" :class="pageSize === size ? 'visible' : 'invisible'" />
+                                <span>{{ size }} per page</span>
                             </button>
                         </div>
                     </div>
@@ -153,11 +205,17 @@
                                 <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Successful</th>
                                 <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Cancelled</th>
                                 <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Success Rate</th>
+                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Risk</th>
                                 <th class="whitespace-nowrap px-3 py-2.5 text-right font-medium">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in sortedItems" :key="row.id" class="border-b" style="border-color: var(--mp-line)">
+                            <tr v-if="!sortedItems.length">
+                                <td colspan="8" class="px-3 py-8 text-center text-sm" style="color: var(--mp-muted)">
+                                    {{ rowFilter ? "No numbers match this filter." : "No numbers in this batch." }}
+                                </td>
+                            </tr>
+                            <tr v-for="row in pagedItems" :key="row.id" class="border-b" style="border-color: var(--mp-line)">
                                 <td class="whitespace-nowrap px-3 py-2.5">
                                     <span class="font-mono" style="color: var(--mp-ink)">{{ row.phone }}</span>
                                     <p v-if="checkingId === row.id" class="text-[11px] text-emerald-700 dark:text-emerald-300">Checking now</p>
@@ -175,6 +233,20 @@
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-violet-600 dark:text-violet-300">{{ row.received }}</td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-rose-600 dark:text-rose-300">{{ row.cancelled }}</td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center font-medium tabular-nums" :class="rateClass(row)">{{ tableRate(row) }}</td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
+                                    <span
+                                        v-if="checkingId === row.id"
+                                        class="skeleton-block inline-block h-5 w-16 rounded-full"
+                                    />
+                                    <span
+                                        v-else-if="riskLabel(row.risk)"
+                                        class="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                        :class="riskClass(row.risk)"
+                                    >
+                                        {{ riskLabel(row.risk) }}
+                                    </span>
+                                    <span v-else class="text-gray-400">—</span>
+                                </td>
                                 <td class="whitespace-nowrap px-3 py-2.5">
                                     <div class="flex flex-nowrap items-center justify-end gap-1.5">
                                         <button
@@ -207,6 +279,49 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div
+                    v-if="sortedItems.length"
+                    class="mt-4 flex flex-wrap items-center justify-between gap-3"
+                >
+                    <p class="text-sm tabular-nums" style="color: var(--mp-muted)">
+                        {{ pageFrom }}–{{ pageTo }} of {{ sortedItems.length }}
+                    </p>
+                    <div class="flex flex-wrap items-center gap-1">
+                        <button
+                            type="button"
+                            class="inline-flex h-8 items-center rounded-lg border px-2.5 text-sm disabled:opacity-40"
+                            style="border-color: var(--mp-line); color: var(--mp-ink)"
+                            :disabled="page <= 1"
+                            @click="goToPage(page - 1)"
+                        >
+                            Previous
+                        </button>
+                        <template v-for="(entry, index) in pageButtons" :key="`${entry}-${index}`">
+                            <span v-if="entry === '…'" class="px-1 text-sm" style="color: var(--mp-muted)">…</span>
+                            <button
+                                v-else
+                                type="button"
+                                class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-sm tabular-nums"
+                                :class="page === entry ? 'border-[#e6a800] bg-[#ffc107] font-semibold text-[#111]' : ''"
+                                :style="page === entry ? undefined : 'border-color: var(--mp-line); color: var(--mp-ink)'"
+                                :aria-current="page === entry ? 'page' : undefined"
+                                @click="goToPage(entry)"
+                            >
+                                {{ entry }}
+                            </button>
+                        </template>
+                        <button
+                            type="button"
+                            class="inline-flex h-8 items-center rounded-lg border px-2.5 text-sm disabled:opacity-40"
+                            style="border-color: var(--mp-line); color: var(--mp-ink)"
+                            :disabled="page >= pageCount"
+                            @click="goToPage(page + 1)"
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             </PageCard>
         </div>
@@ -428,7 +543,7 @@ import PageHeader from "@/components/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import axios from "axios";
 import Button from "primevue/button";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps({
     batch: { type: Object, required: true },
@@ -469,6 +584,27 @@ const progressLabel = computed(() => {
     return `${batchState.value.status} · ${done} of ${items.value.length} checked`;
 });
 
+const rowFilter = ref(null);
+const filterChips = computed(() => [
+    { value: "found", label: "Found", count: countStatus("found"), className: "bg-violet-100 text-violet-800 ring-violet-400 dark:bg-violet-500/15 dark:text-violet-200" },
+    { value: "not_found", label: "Not found", count: countStatus("not_found"), className: "bg-slate-100 text-slate-600 ring-slate-400 dark:bg-white/10 dark:text-slate-300" },
+    { value: "safe", label: "Safe", count: countRisk("safe"), className: "bg-emerald-100 text-emerald-800 ring-emerald-500 dark:bg-emerald-500/15 dark:text-emerald-200" },
+    { value: "review", label: "Review", count: countRisk("review"), className: "bg-amber-100 text-amber-800 ring-amber-400 dark:bg-amber-500/15 dark:text-amber-200" },
+    { value: "high", label: "High risk", count: countRisk("high"), className: "bg-rose-100 text-rose-800 ring-rose-400 dark:bg-rose-500/15 dark:text-rose-200" },
+    { value: "today", label: "From today", count: countSource("cache"), className: "bg-sky-100 text-sky-800 ring-sky-400 dark:bg-sky-500/15 dark:text-sky-200" },
+]);
+
+function chooseFilter(value) {
+    rowFilter.value = rowFilter.value === value ? null : value;
+}
+
+function rowMatchesFilter(row) {
+    if (rowFilter.value === "found" || rowFilter.value === "not_found") return row.status === rowFilter.value;
+    if (rowFilter.value === "safe" || rowFilter.value === "review" || rowFilter.value === "high") return row.risk === rowFilter.value;
+    if (rowFilter.value === "today") return row.source === "cache";
+    return true;
+}
+
 const sortBy = ref("none");
 const sortOpen = ref(false);
 const sortRoot = ref(null);
@@ -486,9 +622,10 @@ function rateSortValue(row) {
 }
 
 const sortedItems = computed(() => {
-    if (sortBy.value === "none") return items.value;
+    const rows = items.value.filter(rowMatchesFilter);
+    if (sortBy.value === "none") return rows;
     const direction = sortBy.value === "high" ? -1 : 1;
-    return items.value.slice().sort((left, right) => {
+    return rows.slice().sort((left, right) => {
         const leftRate = rateSortValue(left);
         const rightRate = rateSortValue(right);
         if (leftRate === null && rightRate === null) return 0;
@@ -502,17 +639,72 @@ const sortedItems = computed(() => {
 function chooseSort(value) {
     sortBy.value = value;
     sortOpen.value = false;
+    page.value = 1;
 }
 
+const pageSizeOptions = [100, 200, 300, 400, 500];
+const pageSize = ref(100);
+const page = ref(1);
+const pageSizeOpen = ref(false);
+const pageSizeRoot = ref(null);
+
+const pageCount = computed(() => Math.max(1, Math.ceil(sortedItems.value.length / pageSize.value)));
+
+const pagedItems = computed(() => {
+    const start = (page.value - 1) * pageSize.value;
+    return sortedItems.value.slice(start, start + pageSize.value);
+});
+
+const pageFrom = computed(() => (sortedItems.value.length ? (page.value - 1) * pageSize.value + 1 : 0));
+const pageTo = computed(() => Math.min(page.value * pageSize.value, sortedItems.value.length));
+
+const pageButtons = computed(() => {
+    const last = pageCount.value;
+    const current = page.value;
+    if (last <= 7) return Array.from({ length: last }, (_, index) => index + 1);
+    const pages = [1, last, current - 2, current - 1, current, current + 1, current + 2]
+        .filter((number, index, list) => number >= 1 && number <= last && list.indexOf(number) === index)
+        .sort((left, right) => left - right);
+    const buttons = [];
+    let previous = 0;
+    for (const number of pages) {
+        if (previous && number - previous > 1) buttons.push("…");
+        buttons.push(number);
+        previous = number;
+    }
+    return buttons;
+});
+
+function choosePageSize(size) {
+    pageSize.value = size;
+    pageSizeOpen.value = false;
+    page.value = 1;
+}
+
+function goToPage(next) {
+    const pageNumber = Number(next);
+    if (!Number.isFinite(pageNumber)) return;
+    page.value = Math.min(pageCount.value, Math.max(1, pageNumber));
+}
+
+watch([rowFilter, () => sortedItems.value.length], () => {
+    if (page.value > pageCount.value) page.value = pageCount.value;
+});
+
+watch(rowFilter, () => {
+    page.value = 1;
+});
+
 function onDocumentClick(event) {
-    if (!sortOpen.value || !sortRoot.value) return;
-    if (!sortRoot.value.contains(event.target)) sortOpen.value = false;
+    if (sortOpen.value && sortRoot.value && !sortRoot.value.contains(event.target)) sortOpen.value = false;
+    if (pageSizeOpen.value && pageSizeRoot.value && !pageSizeRoot.value.contains(event.target)) pageSizeOpen.value = false;
 }
 
 function onEscape(event) {
     if (event.key !== "Escape") return;
-    if (sortOpen.value) {
+    if (sortOpen.value || pageSizeOpen.value) {
         sortOpen.value = false;
+        pageSizeOpen.value = false;
         return;
     }
     if (preview.value) {
@@ -813,6 +1005,13 @@ function riskLabel(risk) {
     if (risk === "safe") return "Safe";
     if (risk === "review") return "Review";
     if (risk === "high") return "High risk";
+    return "";
+}
+
+function riskClass(risk) {
+    if (risk === "safe") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200";
+    if (risk === "review") return "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200";
+    if (risk === "high") return "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200";
     return "";
 }
 
