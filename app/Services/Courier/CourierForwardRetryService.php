@@ -180,6 +180,39 @@ class CourierForwardRetryService
         return (int) $query->count();
     }
 
+    /**
+     * Make every queued forward for one store due now. Recently exhausted rows
+     * are revived too, because they only failed while the signing key was wrong.
+     */
+    public function releaseForAccessToken(int $accessTokenId): int
+    {
+        if ($accessTokenId <= 0) {
+            return 0;
+        }
+
+        $scope = function ($query) use ($accessTokenId) {
+            $query->where('access_token_id', $accessTokenId);
+        };
+
+        $released = CourierForwardRetry::query()
+            ->where('status', 'pending')
+            ->whereHas('shipment', $scope)
+            ->update(['next_retry_at' => now()]);
+
+        $revived = CourierForwardRetry::query()
+            ->where('status', 'failed')
+            ->where('updated_at', '>=', now()->subDays(7))
+            ->whereIn('last_error', ['auth_rejected', 'forward_failed', 'forward_exception'])
+            ->whereHas('shipment', $scope)
+            ->update([
+                'status' => 'pending',
+                'attempts' => 0,
+                'next_retry_at' => now(),
+            ]);
+
+        return (int) $released + (int) $revived;
+    }
+
     public function retryNow(CourierForwardRetry $retry): array
     {
         if ($retry->status === 'completed') {

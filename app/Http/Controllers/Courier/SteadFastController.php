@@ -54,6 +54,35 @@ class SteadFastController extends Controller
         return $config;
     }
 
+    /**
+     * Steadfast's own service check. No merchant keys: a 200 means their API
+     * answered, and a 500 is their outage rather than a bad credential.
+     */
+    public function ping()
+    {
+        try {
+            $response = Http::timeout(15)
+                ->acceptJson()
+                ->get($this->baseUrl.'/ping');
+        } catch (\Throwable $th) {
+            return $this->errorResponse('Could not reach Steadfast. '.$th->getMessage());
+        }
+
+        $status = $response->status();
+        $body = $response->json();
+        $reachable = $status >= 200 && $status < 300;
+        $theirMessage = is_array($body) ? trim((string) ($body['message'] ?? '')) : '';
+
+        return $this->successResponse([
+            'reachable' => $reachable,
+            'http_status' => $status,
+            'message' => $theirMessage !== '' ? $theirMessage : null,
+            'time' => is_array($body) ? ($body['time'] ?? null) : null,
+        ], $reachable
+            ? 'Steadfast API is reachable.'
+            : 'Steadfast API returned HTTP '.$status.'.');
+    }
+
     public function checkStatus(Request $request)
     {
         $config = $this->getConfig();

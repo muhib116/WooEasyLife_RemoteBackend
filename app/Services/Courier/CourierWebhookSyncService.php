@@ -7,6 +7,7 @@ use App\Models\CourierAccount;
 use App\Models\CourierHubToken;
 use App\Models\CourierShipment;
 use App\Models\LicenseCourierAccount;
+use App\Services\Store\StoreForwardSigner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -31,6 +32,14 @@ class CourierWebhookSyncService
         $accessToken = $this->accountService->resolveAccessToken($request);
         if (!$accessToken) {
             throw new \InvalidArgumentException('Missing or invalid license token.');
+        }
+
+        $secretSaved = app(StoreForwardSigner::class)->remember(
+            $accessToken,
+            (string) $request->input('store_forward_secret', '')
+        );
+        if ($secretSaved) {
+            app(CourierForwardRetryService::class)->releaseForAccessToken((int) $accessToken->id);
         }
 
         $this->updateAccessTokenSite($accessToken, $request);
@@ -72,6 +81,7 @@ class CourierWebhookSyncService
             'callback_url' => $callbackUrl,
             'store_forward_url' => trim((string) $request->input('store_forward_url', '')),
             'site_url' => trim((string) $request->input('site_url', '')),
+            'forward_secret_set' => app(StoreForwardSigner::class)->plain($accessToken) !== null,
             'webhook_verify_secret_set' => $verifySecret !== '',
             'redx_webhook_token' => $redxToken !== '' ? $redxToken : null,
             'hub_ready' => $this->settingsService->shipmentMappingCount($accessToken->id, $partner, $environment) > 0,

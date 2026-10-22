@@ -218,13 +218,21 @@ class CourierLicenseSyncService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function resolveSaveTarget(int $userId, string $slug, ?int $requestedId, array $data): array
+    public function resolveSaveTarget(int $userId, string $slug, ?int $requestedId, array $data, bool $detach = false): array
     {
         $slug = $this->normalizeSlug($slug);
         $token = $this->currentToken($userId);
         $presented = $this->present($userId, $slug);
 
-        if ($presented['synced'] && $this->credentialsMatch($presented['configuration'], $data)) {
+        // Same API key on a linked site is "still using the primary login".
+        // Use separate credentials (detach) or a portal/active change must
+        // store this website's own row instead of discarding the save.
+        if (
+            $presented['synced']
+            && ! $detach
+            && $this->credentialsMatch($presented['configuration'], $data)
+            && $this->sharedSettingsUnchanged($presented['configuration'], $data)
+        ) {
             return ['action' => 'noop', 'configuration' => $presented['configuration']];
         }
 
@@ -383,6 +391,42 @@ class CourierLicenseSyncService
         $sameSecret = $nextSecret === '' || $nextSecret === $currentSecret;
 
         return $sameKey && $sameSecret;
+    }
+
+    /**
+     * Portal login and the active flag. An empty password means "leave it",
+     * so a resave of the shared keys does not look like a new login.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function sharedSettingsUnchanged(?CourierConfiguration $configuration, array $data): bool
+    {
+        if (! $configuration) {
+            return false;
+        }
+
+        if (array_key_exists('is_active', $data) && $data['is_active'] !== null && (bool) $data['is_active'] !== (bool) $configuration->is_active) {
+            return false;
+        }
+
+        $next = is_array($data['settings'] ?? null) ? $data['settings'] : null;
+        if ($next === null) {
+            return true;
+        }
+
+        $current = is_array($configuration->settings) ? $configuration->settings : [];
+        $nextUser = trim((string) ($next['username'] ?? ''));
+        $currentUser = trim((string) ($current['username'] ?? ''));
+        if ($nextUser !== $currentUser) {
+            return false;
+        }
+
+        $nextPassword = trim((string) ($next['password'] ?? ''));
+        if ($nextPassword !== '' && $nextPassword !== trim((string) ($current['password'] ?? ''))) {
+            return false;
+        }
+
+        return true;
     }
 
     private function linkFor(AccessToken $token, string $slug): ?CourierLicenseLink

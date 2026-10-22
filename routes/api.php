@@ -209,6 +209,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/sync-configuration', [ConfigurationController::class, 'syncConfiguration']);
             Route::get('/webhook-settings', [ConfigurationController::class, 'getWebhookSettings']);
             Route::post('/webhook-sync', [CourierWebhookOpsController::class, 'webhookSync']);
+            Route::post('/store-forward-secret', [CourierWebhookOpsController::class, 'storeForwardSecret']);
             Route::get('/webhook-health', [CourierWebhookOpsController::class, 'webhookHealth']);
             Route::get('/webhook-events', [CourierWebhookOpsController::class, 'webhookEvents']);
             Route::post('/backfill-shipments', [CourierWebhookOpsController::class, 'backfillShipments']);
@@ -217,6 +218,7 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::get('check-courier-balance', [SteadFastController::class, 'checkCourierBalance']);
 
         Route::group(['as' => 'steadfast.', 'prefix' => 'steadfast'], function () {
+            Route::post('/ping', [SteadFastController::class, 'ping']);
             Route::post('/create-order', [SteadFastController::class, 'createOrder']);
             Route::post('/create-bulk-order', [SteadFastController::class, 'createBulkOrder']);
             Route::post('/check-status', [SteadFastController::class, 'checkStatus']);

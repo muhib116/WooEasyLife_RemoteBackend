@@ -69,7 +69,7 @@ class WordPressMessengerForwarder
             return ['success' => false, 'message' => 'missing_access_token'];
         }
 
-        $plainToken = decodeToken($accessToken->access_key);
+        $plainToken = app(\App\Services\Store\StoreForwardSigner::class)->signingKey($accessToken);
         if (! $plainToken) {
             return ['success' => false, 'message' => 'invalid_access_token'];
         }

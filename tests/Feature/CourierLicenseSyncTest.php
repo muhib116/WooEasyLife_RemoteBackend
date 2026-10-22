@@ -223,6 +223,158 @@ class CourierLicenseSyncTest extends TestCase
             ->assertJsonPath('data.steadfast.has_other_sites', true);
     }
 
+    public function test_detach_keeps_separate_credentials_even_when_the_api_key_matches(): void
+    {
+        $user = $this->createMerchant('Detach Same Key');
+        [$primaryPlain] = $this->addWebsite($user, 'primary-detach.test', true);
+        [$secondPlain] = $this->addWebsite($user, 'second-detach.test', false);
+
+        $this->withHeaders($this->headers($primaryPlain, 'primary-detach.test'))
+            ->postJson('/api/courier/save-configuration', [
+                'title' => 'Steadfast',
+                'slug' => 'steadfast',
+                'api_key' => 'shared-api-key',
+                'secret_key' => 'shared-secret',
+                'is_active' => true,
+                'settings' => [
+                    'username' => 'primary@steadfast.test',
+                    'password' => 'primary-pass',
+                ],
+            ])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($secondPlain, 'second-detach.test'))
+            ->postJson('/api/courier/sync-configuration', ['slug' => 'steadfast'])
+            ->assertOk()
+            ->assertJsonPath('data.synced', true);
+
+        $this->withHeaders($this->headers($secondPlain, 'second-detach.test'))
+            ->postJson('/api/courier/save-configuration', [
+                'title' => 'Steadfast',
+                'slug' => 'steadfast',
+                'api_key' => 'shared-api-key',
+                'secret_key' => 'shared-secret',
+                'is_active' => true,
+                'detach' => true,
+                'settings' => [
+                    'username' => 'second@steadfast.test',
+                    'password' => 'second-pass',
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.synced', false)
+            ->assertJsonPath('data.can_sync', true)
+            ->assertJsonPath('data.api_key', 'shared-api-key')
+            ->assertJsonPath('data.settings.username', 'second@steadfast.test');
+
+        $this->assertSame(2, CourierConfiguration::query()->where('user_id', $user->id)->where('slug', 'steadfast')->count());
+
+        $primary = CourierConfiguration::query()
+            ->where('user_id', $user->id)
+            ->where('slug', 'steadfast')
+            ->where('api_key', 'shared-api-key')
+            ->orderBy('id')
+            ->first();
+        $this->assertNotNull($primary);
+        $this->assertSame('primary@steadfast.test', $primary->settings['username'] ?? null);
+        $this->assertSame('primary-pass', $primary->settings['password'] ?? null);
+
+        $this->withHeaders($this->headers($secondPlain, 'second-detach.test'))
+            ->postJson('/api/courier/get-configuration')
+            ->assertOk()
+            ->assertJsonPath('data.steadfast.synced', false)
+            ->assertJsonPath('data.steadfast.can_sync', true)
+            ->assertJsonPath('data.steadfast.settings.username', 'second@steadfast.test');
+
+        $this->withHeaders($this->headers($primaryPlain, 'primary-detach.test'))
+            ->postJson('/api/courier/get-configuration')
+            ->assertOk()
+            ->assertJsonPath('data.steadfast.synced', false)
+            ->assertJsonPath('data.steadfast.settings.username', 'primary@steadfast.test');
+    }
+
+    public function test_portal_login_change_on_a_synced_site_is_stored_as_its_own_row(): void
+    {
+        $user = $this->createMerchant('Portal Only');
+        [$primaryPlain] = $this->addWebsite($user, 'primary-portal.test', true);
+        [$secondPlain] = $this->addWebsite($user, 'second-portal.test', false);
+
+        $this->withHeaders($this->headers($primaryPlain, 'primary-portal.test'))
+            ->postJson('/api/courier/save-configuration', [
+                'title' => 'Steadfast',
+                'slug' => 'steadfast',
+                'api_key' => 'shared-api-key',
+                'secret_key' => 'shared-secret',
+                'is_active' => true,
+                'settings' => [
+                    'username' => 'primary@steadfast.test',
+                ],
+            ])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($secondPlain, 'second-portal.test'))
+            ->postJson('/api/courier/sync-configuration', ['slug' => 'steadfast'])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($secondPlain, 'second-portal.test'))
+            ->postJson('/api/courier/save-configuration', [
+                'title' => 'Steadfast',
+                'slug' => 'steadfast',
+                'api_key' => 'shared-api-key',
+                'secret_key' => 'shared-secret',
+                'is_active' => true,
+                'settings' => [
+                    'username' => 'second@steadfast.test',
+                    'password' => 'second-pass',
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.synced', false)
+            ->assertJsonPath('data.settings.username', 'second@steadfast.test');
+
+        $primary = CourierConfiguration::query()
+            ->where('user_id', $user->id)
+            ->where('slug', 'steadfast')
+            ->orderBy('id')
+            ->first();
+        $this->assertSame('primary@steadfast.test', $primary->settings['username'] ?? null);
+    }
+
+    public function test_resaving_the_same_shared_keys_stays_synced(): void
+    {
+        $user = $this->createMerchant('Stay Synced');
+        [$primaryPlain] = $this->addWebsite($user, 'primary-stay.test', true);
+        [$secondPlain] = $this->addWebsite($user, 'second-stay.test', false);
+
+        $this->withHeaders($this->headers($primaryPlain, 'primary-stay.test'))
+            ->postJson('/api/courier/save-configuration', [
+                'title' => 'Steadfast',
+                'slug' => 'steadfast',
+                'api_key' => 'shared-api-key',
+                'secret_key' => 'shared-secret',
+                'is_active' => true,
+            ])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($secondPlain, 'second-stay.test'))
+            ->postJson('/api/courier/sync-configuration', ['slug' => 'steadfast'])
+            ->assertOk();
+
+        $this->withHeaders($this->headers($secondPlain, 'second-stay.test'))
+            ->postJson('/api/courier/save-configuration', [
+                'title' => 'Steadfast',
+                'slug' => 'steadfast',
+                'api_key' => 'shared-api-key',
+                'secret_key' => 'shared-secret',
+                'is_active' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.synced', true)
+            ->assertJsonMissingPath('data.id');
+
+        $this->assertSame(1, CourierConfiguration::query()->where('user_id', $user->id)->where('slug', 'steadfast')->count());
+    }
+
     public function test_existing_second_website_stays_synced_after_backfill(): void
     {
         $user = $this->createMerchant('Grandfather');
@@ -254,5 +406,54 @@ class CourierLicenseSyncTest extends TestCase
             ->assertJsonPath('data.steadfast.can_sync', false)
             ->assertJsonPath('data.steadfast.is_primary_website', true)
             ->assertJsonPath('data.steadfast.has_other_sites', true);
+    }
+
+    public function test_steadfast_ping_reports_a_reachable_api_without_sending_merchant_keys(): void
+    {
+        $user = $this->createMerchant('Ping Store');
+        [$plain] = $this->addWebsite($user, 'ping-store.test', true);
+
+        Http::fake([
+            'https://portal.packzy.com/api/v1/ping' => Http::response([
+                'status' => 200,
+                'message' => 'Welcome',
+                'time' => '2026-10-22T11:37:00+06:00',
+            ], 200),
+        ]);
+
+        $this->withHeaders($this->headers($plain, 'ping-store.test'))
+            ->postJson('/api/steadfast/ping')
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.reachable', true)
+            ->assertJsonPath('data.http_status', 200)
+            ->assertJsonPath('message', 'Steadfast API is reachable.');
+
+        Http::assertSent(function ($request) {
+            return $request->method() === 'GET'
+                && $request->url() === 'https://portal.packzy.com/api/v1/ping'
+                && ! $request->hasHeader('Api-Key')
+                && ! $request->hasHeader('Secret-Key');
+        });
+    }
+
+    public function test_steadfast_ping_reports_their_http_500(): void
+    {
+        $user = $this->createMerchant('Ping Down');
+        [$plain] = $this->addWebsite($user, 'ping-down.test', true);
+
+        Http::fake([
+            'https://portal.packzy.com/api/v1/ping' => Http::response([
+                'message' => 'Server Error',
+            ], 500),
+        ]);
+
+        $this->withHeaders($this->headers($plain, 'ping-down.test'))
+            ->postJson('/api/steadfast/ping')
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonPath('data.reachable', false)
+            ->assertJsonPath('data.http_status', 500)
+            ->assertJsonPath('message', 'Steadfast API returned HTTP 500.');
     }
 }

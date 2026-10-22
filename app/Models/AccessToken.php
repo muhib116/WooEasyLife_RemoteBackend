@@ -31,6 +31,7 @@ class AccessToken extends Model implements HasAbilities
         'title',
         'description',
         'access_key',
+        'store_forward_secret',
         'api_key',
         'domain',
         'website_id',
@@ -49,6 +50,7 @@ class AccessToken extends Model implements HasAbilities
      */
     protected $hidden = [
         'token',
+        'store_forward_secret',
     ];
 
     /**

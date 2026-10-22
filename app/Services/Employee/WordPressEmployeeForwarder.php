@@ -63,7 +63,7 @@ class WordPressEmployeeForwarder
             ];
         }
 
-        $plainToken = decodeToken($accessToken->access_key);
+        $plainToken = app(\App\Services\Store\StoreForwardSigner::class)->signingKey($accessToken);
 
         if (! $plainToken) {
             return [

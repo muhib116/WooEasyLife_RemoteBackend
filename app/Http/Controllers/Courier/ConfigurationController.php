@@ -279,7 +279,8 @@ class ConfigurationController extends Controller
             (int) Auth::id(),
             (string) $data['slug'],
             $request->filled('id') ? (int) $request->id : null,
-            $data
+            $data,
+            $request->boolean('detach')
         );
 
         if (($target['action'] ?? '') === 'reject') {

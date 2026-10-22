@@ -10,8 +10,10 @@ use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\CourierWebhookEventService;
 use App\Services\Courier\WordPressCourierForwarder;
 use App\Services\Courier\CourierWebhookSyncService;
+use App\Services\Store\StoreForwardSigner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class CourierWebhookOpsController extends Controller
@@ -33,6 +35,7 @@ class CourierWebhookOpsController extends Controller
             'environment' => 'nullable|string|in:live,sandbox',
             'site_url' => 'nullable|string|max:512',
             'store_forward_url' => 'nullable|string|max:512',
+            'store_forward_secret' => 'nullable|string|max:255',
             'callback_url' => 'nullable|string|max:512',
             'webhook_secret' => 'nullable|string|max:255',
             'webhook_token' => 'nullable|string|max:128',
@@ -53,6 +56,43 @@ class CourierWebhookOpsController extends Controller
         } catch (\InvalidArgumentException $exception) {
             return $this->errorResponse($exception->getMessage(), 401);
         }
+    }
+
+    /**
+     * Store the per-site HMAC key the plugin verifies forwards with.
+     *
+     * Separate from webhookSync so a store can hand over its key without
+     * touching courier accounts, environment, or callback registration.
+     */
+    public function storeForwardSecret(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'store_forward_secret' => 'required|string|min:32|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse($validator->errors());
+        }
+
+        $accessToken = $this->accountService->resolveAccessToken($request);
+        if (! $accessToken) {
+            return $this->errorResponse('Missing or invalid license token.', 401);
+        }
+
+        if (! Schema::hasColumn('personal_access_tokens', 'store_forward_secret')) {
+            return $this->errorResponse('Store forward secret storage is not migrated yet.', 503);
+        }
+
+        $signer = app(StoreForwardSigner::class);
+        $updated = $signer->remember($accessToken, (string) $request->input('store_forward_secret'));
+        $released = $updated ? $this->retryService->releaseForAccessToken((int) $accessToken->id) : 0;
+
+        return $this->successResponse([
+            'forward_secret_set' => $signer->plain($accessToken) !== null,
+            'secret_updated' => $updated,
+            'released_forwards' => $released,
+            'pending_retries' => $this->retryService->pendingCount($accessToken->id),
+        ], 'Store forward secret stored.');
     }
 
     public function webhookHealth(Request $request)

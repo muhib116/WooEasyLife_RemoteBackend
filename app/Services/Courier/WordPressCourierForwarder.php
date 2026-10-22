@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AccessToken;
 use App\Models\CourierShipment;
 use App\Models\Website;
+use App\Services\Store\StoreForwardSigner;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -18,7 +19,7 @@ class WordPressCourierForwarder extends Controller
             return ['success' => false, 'message' => 'missing_access_token'];
         }
 
-        $plainToken = $this->decodeToken($accessToken->access_key);
+        $plainToken = app(StoreForwardSigner::class)->signingKey($accessToken);
         if (! $plainToken) {
             return ['success' => false, 'message' => 'invalid_access_token'];
         }
@@ -66,7 +67,8 @@ class WordPressCourierForwarder extends Controller
 
                 $lastResult = [
                     'success' => false,
-                    'message' => 'forward_failed',
+                    // 401 means the store received the call and refused the HMAC.
+                    'message' => $response->status() === 401 ? 'auth_rejected' : 'forward_failed',
                     'http_status' => $response->status(),
                 ];
             } catch (\Throwable $exception) {
@@ -88,15 +90,18 @@ class WordPressCourierForwarder extends Controller
 
     public function probeReachability(?CourierShipment $shipment, ?AccessToken $accessToken = null): array
     {
+        $accessToken = $accessToken ?: ($shipment ? AccessToken::query()->find($shipment->access_token_id) : null);
+        $secretSet = app(StoreForwardSigner::class)->plain($accessToken) !== null;
+
         if (! $shipment) {
             return [
                 'forward_reachable' => null,
                 'forward_probe_status' => 'no_shipments',
                 'forward_probe_url' => null,
+                'forward_secret_set' => $secretSet,
             ];
         }
 
-        $accessToken = $accessToken ?: AccessToken::query()->find($shipment->access_token_id);
         $candidates = $this->resolveSiteUrlCandidates($shipment, $accessToken);
 
         if ($candidates === []) {
@@ -104,20 +109,26 @@ class WordPressCourierForwarder extends Controller
                 'forward_reachable' => false,
                 'forward_probe_status' => 'missing_site_url',
                 'forward_probe_url' => null,
+                'forward_secret_set' => $secretSet,
             ];
         }
 
+        // Read-only probe. An HTTP answer of any status means the store is up;
+        // /license-status requires an admin session, so 401 is a healthy reply.
+        // Never POST to courier-status/apply from here — that is a live mutation
+        // route, and older plugin builds have no test_ping short-circuit.
         foreach ($candidates as $candidate) {
             $endpoint = rtrim($candidate, '/').'/wp-json/wooeasylife/v1/license-status';
 
             try {
                 $response = Http::timeout(8)->get($endpoint);
 
-                if ($response->successful()) {
+                if ($response->status() >= 100) {
                     return [
                         'forward_reachable' => true,
-                        'forward_probe_status' => 'reachable',
+                        'forward_probe_status' => $secretSet ? 'reachable' : 'awaiting_secret',
                         'forward_probe_url' => $endpoint,
+                        'forward_secret_set' => $secretSet,
                     ];
                 }
             } catch (\Throwable $exception) {
@@ -132,6 +143,7 @@ class WordPressCourierForwarder extends Controller
             'forward_reachable' => false,
             'forward_probe_status' => 'unreachable',
             'forward_probe_url' => rtrim($candidates[0], '/').'/wp-json/wooeasylife/v1/license-status',
+            'forward_secret_set' => $secretSet,
         ];
     }
 
@@ -256,7 +268,7 @@ class WordPressCourierForwarder extends Controller
             ];
         }
 
-        $plainToken = $this->decodeToken($accessToken->access_key);
+        $plainToken = app(StoreForwardSigner::class)->signingKey($accessToken);
         if (! $plainToken) {
             return [
                 'success' => false,
