@@ -76,6 +76,66 @@
                     icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
                     icon-class="text-amber-600 dark:text-amber-400"
                 />
+                <Link
+                    :href="route('users.licenses', { state: 'all' })"
+                    class="block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                    <StatCard
+                        title="Total Licenses"
+                        :value="formatCount(stats.licenses.total)"
+                        icon="PhKey"
+                        compact
+                        subtitle="Open the full list"
+                        accent-class="bg-primary-500"
+                        icon-bg-class="bg-primary-50 dark:bg-primary-500/15"
+                        icon-class="text-primary-600 dark:text-primary-400"
+                    />
+                </Link>
+                <Link
+                    :href="route('users.licenses', { state: 'active' })"
+                    class="block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                    <StatCard
+                        title="Active Licenses"
+                        :value="formatCount(stats.licenses.active)"
+                        icon="PhCheckCircle"
+                        compact
+                        subtitle="Open the active list"
+                        accent-class="bg-emerald-500"
+                        icon-bg-class="bg-emerald-50 dark:bg-emerald-500/15"
+                        icon-class="text-emerald-600 dark:text-emerald-400"
+                    />
+                </Link>
+                <Link
+                    :href="route('users.licenses', { state: 'inactive' })"
+                    class="block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                    <StatCard
+                        title="Inactive Licenses"
+                        :value="formatCount(stats.licenses.inactive)"
+                        icon="PhProhibit"
+                        compact
+                        subtitle="Open the inactive list"
+                        accent-class="bg-slate-500"
+                        icon-bg-class="bg-slate-100 dark:bg-slate-500/15"
+                        icon-class="text-slate-600 dark:text-slate-300"
+                    />
+                </Link>
+                <Link
+                    :href="route('users.licenses', { state: 'expired' })"
+                    class="block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                    <StatCard
+                        title="Expired Licenses"
+                        :value="formatCount(stats.licenses.expired)"
+                        icon="PhClock"
+                        compact
+                        subtitle="Open the expired list"
+                        accent-class="bg-rose-500"
+                        icon-bg-class="bg-rose-50 dark:bg-rose-500/15"
+                        icon-class="text-rose-600 dark:text-rose-400"
+                    />
+                </Link>
             </div>
 
             <PageCard
@@ -520,6 +580,12 @@ const props = withDefaults(
             disabled: number;
             needsAttention: number;
             remainingOrders: number;
+            licenses?: {
+                total: number;
+                active: number;
+                inactive: number;
+                expired: number;
+            };
         } | null;
     }>(),
     {
@@ -566,9 +632,22 @@ const merchantTableSkeletonColumns = [
     { width: "7rem", headerWidth: "4.5rem", variant: "actions" as const },
 ];
 
+const emptyLicenses = {
+    total: 0,
+    active: 0,
+    inactive: 0,
+    expired: 0,
+};
+
 const stats = computed(() => {
     if (props.stats) {
-        return props.stats;
+        return {
+            ...props.stats,
+            licenses: {
+                ...emptyLicenses,
+                ...(props.stats.licenses ?? {}),
+            },
+        };
     }
 
     const merchants = (props.users || []).filter((u) => u.role === "user");
@@ -582,6 +661,7 @@ const stats = computed(() => {
             (sum, u) => sum + (Number(u.remaining_order) || 0),
             0,
         ),
+        licenses: { ...emptyLicenses },
     };
 });
 

@@ -92,7 +92,14 @@ class UserController extends Controller
     }
 
     /**
-     * @return array{total: int, active: int, disabled: int, needsAttention: int, remainingOrders: int}
+     * @return array{
+     *     total: int,
+     *     active: int,
+     *     disabled: int,
+     *     needsAttention: int,
+     *     remainingOrders: int,
+     *     licenses: array{total: int, active: int, inactive: int, expired: int}
+     * }
      */
     private function merchantListStats(bool $onlyTrashed): array
     {
@@ -114,7 +121,176 @@ class UserController extends Controller
                 ->where('is_active', 1)
                 ->whereIn('user_id', $merchantIds)
                 ->sum('remaining_order'),
+            'licenses' => $this->licenseStats($merchantIds),
         ];
+    }
+
+    /**
+     * Plugin license keys for merchant accounts.
+     * Expired wins over the on/off flag, so a key past its end date is not also inactive.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $merchantIds
+     * @return array{total: int, active: int, inactive: int, expired: int}
+     */
+    private function licenseStats($merchantIds): array
+    {
+        $base = $this->merchantLicenseQuery($merchantIds);
+
+        return [
+            'total' => (clone $base)->count(),
+            'active' => $this->licenseStateQuery($base, 'active')->count(),
+            'inactive' => $this->licenseStateQuery($base, 'inactive')->count(),
+            'expired' => $this->licenseStateQuery($base, 'expired')->count(),
+        ];
+    }
+
+    public function licenses(Request $request)
+    {
+        $state = (string) $request->query('state', 'all');
+        if (! in_array($state, ['all', 'active', 'inactive', 'expired'], true)) {
+            $state = 'all';
+        }
+
+        $merchantIds = User::query()->where('role', 'user')->select('id');
+
+        return Inertia::render('Users/Licenses', [
+            'state' => $state,
+            'counts' => $this->licenseStats($merchantIds),
+            'licenses' => $this->licenseRows($state, $merchantIds),
+        ]);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $merchantIds
+     */
+    private function merchantLicenseQuery($merchantIds)
+    {
+        return AccessToken::query()
+            ->where('tokenable_type', User::class)
+            ->whereIn('tokenable_id', $merchantIds);
+    }
+
+    private function licenseStateQuery($base, string $state)
+    {
+        $query = clone $base;
+        $now = now();
+        $notExpired = function ($inner) use ($now) {
+            $inner->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
+        };
+
+        if ($state === 'expired') {
+            return $query->whereNotNull('expires_at')->where('expires_at', '<', $now);
+        }
+
+        if ($state === 'active') {
+            return $query->where('status', true)->where($notExpired);
+        }
+
+        if ($state === 'inactive') {
+            return $query
+                ->where(function ($inner) {
+                    $inner->where('status', false)->orWhereNull('status');
+                })
+                ->where($notExpired);
+        }
+
+        return $query;
+    }
+
+    private function licenseState(AccessToken $token): string
+    {
+        if ($token->expires_at && $token->expires_at->lt(now())) {
+            return 'expired';
+        }
+
+        return $token->status ? 'active' : 'inactive';
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $merchantIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function licenseRows(string $state, $merchantIds): array
+    {
+        $tokens = $this->licenseStateQuery($this->merchantLicenseQuery($merchantIds), $state)
+            ->orderByDesc('id')
+            ->get();
+
+        $userIds = $tokens->pluck('tokenable_id')->unique()->filter()->values();
+        $users = app(MerchantOpsSummaryService::class)->appendToUsers(
+            User::query()->whereIn('id', $userIds)->get()
+        )->keyBy('id');
+
+        $packages = UserPackage::query()
+            ->whereIn('user_id', $userIds)
+            ->orderByDesc('id')
+            ->get();
+        $packagesById = $packages->keyBy('id');
+        $packagesByUser = $packages->groupBy('user_id');
+
+        $rows = $tokens->map(function (AccessToken $token) use ($users, $packagesById, $packagesByUser) {
+            $user = $users->get($token->tokenable_id);
+            $package = $this->packageForLicense($token, $packagesById, $packagesByUser);
+            $attention = is_array($user?->attention) ? $user->attention : null;
+
+            return [
+                'id' => $token->id,
+                'title' => $token->title ?: ($token->name ?: 'License key'),
+                'domain' => $token->domain,
+                'state' => $this->licenseState($token),
+                'status' => (bool) $token->status,
+                'expires_at' => $token->expires_at?->toIso8601String(),
+                'last_used_at' => $token->last_used_at?->toIso8601String(),
+                'last_used_ago' => $token->last_used_at?->diffForHumans(),
+                'merchant' => [
+                    'id' => (int) $token->tokenable_id,
+                    'name' => $user?->name ?: 'Unknown merchant',
+                    'email' => $user?->email,
+                    'phone' => $user?->phone,
+                    'status' => (bool) ($user?->status),
+                    'attention' => $attention['label'] ?? null,
+                ],
+                'plan' => $package ? [
+                    'title' => $package->title,
+                    'is_active' => (bool) $package->is_active,
+                    'remaining_order' => (int) $package->remaining_order,
+                    'total_order_can_handle' => (int) $package->total_order_can_handle,
+                    'expires_at' => $package->expires_at?->toIso8601String(),
+                    'domain' => $package->domain,
+                ] : null,
+            ];
+        })->collect();
+
+        $rank = ['expired' => 0, 'inactive' => 1, 'active' => 2];
+
+        return $rows->sort(function (array $left, array $right) use ($rank) {
+            $byState = ($rank[$left['state']] ?? 9) <=> ($rank[$right['state']] ?? 9);
+            if ($byState !== 0) {
+                return $byState;
+            }
+
+            return strcmp((string) ($left['expires_at'] ?? '9999'), (string) ($right['expires_at'] ?? '9999'));
+        })->values()->all();
+    }
+
+    private function packageForLicense(AccessToken $token, $packagesById, $packagesByUser): ?UserPackage
+    {
+        if ($token->user_package_id && $packagesById->has($token->user_package_id)) {
+            return $packagesById->get($token->user_package_id);
+        }
+
+        $candidates = $packagesByUser->get($token->tokenable_id, collect());
+        $domain = strtolower(trim((string) $token->domain));
+        if ($domain !== '') {
+            $match = $candidates->first(
+                fn (UserPackage $package) => strtolower(trim((string) $package->domain)) === $domain
+            );
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return $candidates->first();
     }
 
     public function getUser(Request $request)

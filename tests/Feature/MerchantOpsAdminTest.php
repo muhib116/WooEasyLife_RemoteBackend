@@ -152,6 +152,127 @@ class MerchantOpsAdminTest extends TestCase
             );
     }
 
+    public function test_merchant_list_counts_licenses_by_state(): void
+    {
+        $admin = $this->createAdmin();
+        $merchant = User::create([
+            'name' => 'License Shop',
+            'email' => 'licenses-' . uniqid() . '@example.com',
+            'phone' => '01755556666',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $make = function (array $extra) use ($merchant) {
+            AccessToken::unguarded(function () use ($merchant, $extra) {
+                AccessToken::create(array_merge([
+                    'tokenable_type' => User::class,
+                    'tokenable_id' => $merchant->id,
+                    'name' => 'License',
+                    'token' => hash('sha256', uniqid('license', true)),
+                    'domain' => 'shop.example.com',
+                    'status' => true,
+                ], $extra));
+            });
+        };
+
+        $make(['status' => true, 'expires_at' => now()->addMonth()]);
+        $make(['status' => true]);
+        $make(['status' => false, 'expires_at' => now()->addMonth()]);
+        $make(['status' => true, 'expires_at' => now()->subDay()]);
+        $make(['status' => false, 'expires_at' => now()->subDay()]);
+
+        $this->actingAs($admin)
+            ->get(route('users.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('stats.licenses.total', 5)
+                ->where('stats.licenses.active', 2)
+                ->where('stats.licenses.inactive', 1)
+                ->where('stats.licenses.expired', 2)
+            );
+    }
+
+    public function test_license_list_filters_by_state_and_hides_the_key(): void
+    {
+        $admin = $this->createAdmin();
+        $merchant = User::create([
+            'name' => 'Follow Up Shop',
+            'email' => 'followup-' . uniqid() . '@example.com',
+            'phone' => '01755556666',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $secret = hash('sha256', 'license-secret-' . uniqid());
+
+        $package = UserPackage::create([
+            'title' => 'Growth',
+            'domain' => 'followup.example.com',
+            'user_id' => $merchant->id,
+            'package_hub_id' => 1,
+            'total_order_can_handle' => 100,
+            'remaining_order' => 40,
+            'total_order_handled' => 60,
+            'per_order_rate' => 1,
+            'total_cost' => 100,
+            'transaction_charge' => 0,
+            'is_active' => true,
+            'expires_at' => now()->addMonth(),
+        ]);
+
+        AccessToken::unguarded(function () use ($merchant, $secret, $package) {
+            AccessToken::create([
+                'tokenable_type' => User::class,
+                'tokenable_id' => $merchant->id,
+                'name' => 'License',
+                'title' => 'Shop key',
+                'token' => $secret,
+                'domain' => 'followup.example.com',
+                'status' => false,
+                'expires_at' => now()->subDay(),
+                'user_package_id' => $package->id,
+            ]);
+            AccessToken::create([
+                'tokenable_type' => User::class,
+                'tokenable_id' => $merchant->id,
+                'name' => 'License',
+                'title' => 'Live key',
+                'token' => hash('sha256', 'live-' . uniqid()),
+                'domain' => 'live.example.com',
+                'status' => true,
+                'expires_at' => now()->addMonth(),
+            ]);
+        });
+
+        $this->actingAs($admin)
+            ->get(route('users.licenses', ['state' => 'expired']))
+            ->assertOk()
+            ->assertDontSee($secret)
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Users/Licenses')
+                ->where('state', 'expired')
+                ->where('counts.expired', 1)
+                ->where('counts.active', 1)
+                ->has('licenses', 1)
+                ->where('licenses.0.domain', 'followup.example.com')
+                ->where('licenses.0.state', 'expired')
+                ->where('licenses.0.merchant.phone', '01755556666')
+                ->where('licenses.0.plan.title', 'Growth')
+                ->missing('licenses.0.token')
+            );
+
+        $this->actingAs($admin)
+            ->get(route('users.licenses', ['state' => 'not-a-state']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('state', 'all')
+                ->has('licenses', 2)
+            );
+    }
+
     public function test_subscription_alerts_page_lists_expired_plan(): void
     {
         $admin = $this->createAdmin();

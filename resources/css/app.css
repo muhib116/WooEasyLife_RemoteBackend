@@ -277,6 +277,19 @@
         box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
     }
 
+    .license-follow-up-dialog.p-dialog .p-dialog-header {
+        align-items: flex-start;
+    }
+
+    .license-follow-up-dialog.p-dialog .p-dialog-content {
+        padding-top: 1.25rem !important;
+    }
+
+    .license-follow-up-dialog.p-dialog .p-dialog-header-actions,
+    .license-follow-up-dialog.p-dialog .p-dialog-header .p-dialog-close-button {
+        margin-top: 0.125rem;
+    }
+
     .admin-dialog .p-dialog-header,
     .admin-confirm-dialog.p-confirmdialog .p-dialog-header,
     .p-confirmdialog .p-dialog-header {

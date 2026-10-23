@@ -460,6 +460,7 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
 
     Route::group(['as' => 'users.', 'prefix' => 'users'], function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/licenses', [UserController::class, 'licenses'])->name('licenses');
         Route::get('/trashed', [UserController::class, 'trashed'])->name('trashed');
         Route::post('/store', [UserController::class, 'store'])->name('store');
         Route::post('/{user_id}/restore', [UserController::class, 'restore'])->name('restore');
