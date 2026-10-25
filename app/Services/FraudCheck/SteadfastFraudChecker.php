@@ -100,9 +100,14 @@ class SteadfastFraudChecker
                 },
                 'read' => function (Response $response) use ($fromPool, $keys): ?array {
                     $report = $this->scoreReportFromResponse($response);
-                    unset($report['key_error']);
+                    $cooldown = (int) ($report['key_cooldown'] ?? 0);
+                    unset($report['key_error'], $report['key_cooldown']);
 
                     if (! $this->isUsableReport($report)) {
+                        if ($fromPool && $cooldown > 0) {
+                            $this->apiCredentials->coolDown($keys['api_key'], $cooldown);
+                        }
+
                         return null;
                     }
 
@@ -411,11 +416,10 @@ class SteadfastFraudChecker
             $report = $this->requestScoreApi($digits, $keys);
 
             if ($fromPool) {
-                $error = isset($report['key_error']) ? trim((string) $report['key_error']) : '';
-                $outcomes[$keys['api_key']] = $error;
+                $this->noteHubKeyOutcome($report, $keys['api_key'], $outcomes);
             }
 
-            unset($report['key_error']);
+            unset($report['key_error'], $report['key_cooldown']);
 
             if ($this->isUsableReport($report)) {
                 $this->flushPoolOutcomes($fromPool, $outcomes, $keys['api_key']);
@@ -492,6 +496,27 @@ class SteadfastFraudChecker
     }
 
     /**
+     * Only a rejected key is saved as a key error, which keeps it out of
+     * hub checks until an admin test. A rate limit or a Steadfast outage
+     * only rests the key for a few minutes.
+     *
+     * @param  array<string, mixed>  $report
+     * @param  array<string, string>  $outcomes
+     */
+    private function noteHubKeyOutcome(array $report, string $apiKey, array &$outcomes): void
+    {
+        $cooldown = (int) ($report['key_cooldown'] ?? 0);
+
+        if ($cooldown > 0) {
+            $this->apiCredentials->coolDown($apiKey, $cooldown);
+
+            return;
+        }
+
+        $outcomes[$apiKey] = isset($report['key_error']) ? trim((string) $report['key_error']) : '';
+    }
+
+    /**
      * @param  array<string, string>  $outcomes
      */
     private function flushPoolOutcomes(bool $fromPool, array $outcomes, ?string $usedApiKey = null): void
@@ -541,10 +566,11 @@ class SteadfastFraudChecker
                 ])
                 ->get('https://portal.packzy.com/api/v1/fraud_check/score/'.$digits);
         } catch (\Throwable $th) {
-            LogHelper::saveLog('Steadfast fraud check error', 'Score API request failed: '.$th->getMessage());
+            LogHelper::saveLog('Steadfast fraud check error', 'Score API request failed: '.CourierTransport::safeMessage($th));
 
             return array_merge($report, [
                 'key_error' => 'Could not reach Steadfast. Another saved key is tried automatically.',
+                'key_cooldown' => 60,
             ]);
         }
 
@@ -575,15 +601,17 @@ class SteadfastFraudChecker
                 'rate_limited' => true,
                 'message' => 'Steadfast fraud check limit reached for this store. Try again later.',
                 'key_error' => 'Steadfast rate limit reached for this key.',
+                'key_cooldown' => 900,
             ]);
         }
 
         if (! $response->successful()) {
             LogHelper::saveLog('Steadfast fraud check error', 'Score API failed with status '.$response->status());
 
-            return array_merge($report, [
+            return array_merge($report, array_filter([
                 'key_error' => 'Steadfast request failed (HTTP '.$response->status().').',
-            ]);
+                'key_cooldown' => $response->serverError() ? 120 : null,
+            ], fn ($value) => $value !== null));
         }
 
         $payload = $response->json();
@@ -591,6 +619,7 @@ class SteadfastFraudChecker
         if (! is_array($payload)) {
             return array_merge($report, [
                 'key_error' => 'Steadfast returned an unreadable response.',
+                'key_cooldown' => 120,
             ]);
         }
 
@@ -908,6 +937,7 @@ class SteadfastFraudChecker
                     CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                 ],
             ])
+            ->retry(2, 400, fn ($exception) => CourierTransport::shouldRetry($exception), throw: false)
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'Accept' => 'application/json',
@@ -954,7 +984,7 @@ class SteadfastFraudChecker
 
     private function isRetryableError(\Throwable $exception): bool
     {
-        if ($exception instanceof ConnectionException) {
+        if ($exception instanceof ConnectionException || CourierTransport::shouldRetry($exception)) {
             return true;
         }
 

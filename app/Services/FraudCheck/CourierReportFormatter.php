@@ -152,10 +152,6 @@ class CourierReportFormatter
     {
         $data = self::extractPathaoData($pathaoResponse);
 
-        if (Arr::get($data, 'is_new', false)) {
-            return self::emptyReport();
-        }
-
         if (is_array($customer = Arr::get($data, 'customer'))) {
             $report = self::fromPathaoCustomer($customer);
 
@@ -164,8 +160,15 @@ class CourierReportFormatter
             }
         }
 
-        if (self::pathaoHasDeliveryCounts($data)) {
-            return self::fromPathaoCustomer($data);
+        if (self::pathaoHasDeliveryCounts($data) && ($report = self::fromPathaoCustomer($data)) !== null) {
+            return $report;
+        }
+
+        if (self::pathaoConfirmsNoHistory($data)) {
+            return self::emptyReport([
+                'api_success' => true,
+                'message' => 'No delivery history found on Pathao.',
+            ]);
         }
 
         if ($rating = Arr::get($data, 'customer_rating')) {
@@ -375,6 +378,16 @@ class CourierReportFormatter
             'show_count' => Arr::get($data, 'show_count', false),
             'estimated_success_rate' => $estimated === null ? null : $estimated . '%',
         ]));
+    }
+
+    /**
+     * Visible counts that are all zero mean Pathao has never delivered to
+     * this number. A rating without visible counts (even new_customer) is
+     * not proof of an empty history.
+     */
+    private static function pathaoConfirmsNoHistory(array $data): bool
+    {
+        return Arr::get($data, 'show_count') === true && is_array(Arr::get($data, 'customer'));
     }
 
     private static function pathaoHasDeliveryCounts(array $data): bool

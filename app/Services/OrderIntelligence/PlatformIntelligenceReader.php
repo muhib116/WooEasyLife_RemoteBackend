@@ -77,6 +77,7 @@ class PlatformIntelligenceReader
             ->get()
             ->map(function (CourierCustomerSnapshot $snapshot) {
                 $staticSample = RedxStaticSample::matchesSnapshot($snapshot);
+                $raw = is_array($snapshot->raw_report) ? $snapshot->raw_report : [];
 
                 return [
                     'courier' => $snapshot->courier,
@@ -88,6 +89,10 @@ class PlatformIntelligenceReader
                     'frauds_count' => $staticSample ? 0 : $snapshot->frauds_count,
                     'fetched_at' => optional($snapshot->fetched_at)?->toIso8601String(),
                     'fetch_failed' => $staticSample || $this->snapshotFetchFailed($snapshot),
+                    'retryable' => ! $staticSample
+                        && ($raw['retryable'] ?? true) !== false
+                        && empty($raw['credential_error']),
+                    'rate_limited' => ! empty($raw['rate_limited']),
                 ];
             })
             ->values()

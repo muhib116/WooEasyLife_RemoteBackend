@@ -3,8 +3,10 @@
 namespace App\Services\OrderIntelligence;
 
 use App\Jobs\OrderIntelligence\RefreshCourierSnapshotsJob;
+use App\LogHelper;
 use App\Models\AccessToken;
 use App\Models\OrderIntelligence\CourierCustomerSnapshot;
+use App\Models\OrderIntelligence\PlatformCustomer;
 use App\Services\Courier\CourierAccountService;
 use App\Services\FraudCheck\CourierReportFormatter;
 use App\Services\FraudCheck\RedxStaticSample;
@@ -20,6 +22,7 @@ class FraudCheckCoordinator
         private PlatformSufficiencyChecker $sufficiencyChecker,
         private LegacyReportFormatter $legacyReportFormatter,
         private CourierAccountService $courierAccountService,
+        private CourierIntelPersister $courierIntelPersister,
     ) {}
 
     /**
@@ -73,28 +76,20 @@ class FraudCheckCoordinator
             $report = $this->legacyReportFormatter->format($platformData);
             $this->fraudCheckIngestor->ingestOrderContext($context);
 
-            $pathaoUpgraded = false;
-            if ($this->pathaoReportNeedsCountUpgrade($report)) {
-                $log->add('pathao_upgrade', 'Pathao rating-only in cache — live Pathao fetch for delivery counts');
-                $before = $report;
-                $report = $this->upgradePathaoCountsInReport(
-                    $report,
-                    $phoneNormalized,
-                    $accessToken,
-                    $payload,
-                    $log,
-                );
-                $pathaoUpgraded = $report !== $before
-                    && ! $this->pathaoReportNeedsCountUpgrade($report);
-            }
+            $filledNow = $this->fillBlockingCouriers(
+                $report,
+                $this->sufficiencyChecker->couriersBlockingTheResponse($platformData),
+                $phoneNormalized,
+                $accessToken,
+                $payload,
+                $log,
+            );
+            $report = $filledNow['report'];
 
-            $needRefresh = $this->sufficiencyChecker->couriersNeedingRefresh($platformData);
-            if ($pathaoUpgraded) {
-                $needRefresh = array_values(array_filter(
-                    $needRefresh,
-                    static fn (string $courier): bool => $courier !== 'pathao',
-                ));
-            }
+            $needRefresh = array_values(array_filter(
+                $this->sufficiencyChecker->couriersNeedingRefresh($platformData),
+                static fn (string $courier): bool => ! in_array($courier, $filledNow['couriers'], true),
+            ));
             if ($needRefresh !== []) {
                 $queue = (string) config('queue.default', 'sync');
                 $log->add('background_refresh', 'Scheduled background refresh for stale/failed couriers', [
@@ -401,6 +396,143 @@ class FraudCheckCoordinator
             || (int) $snapshot->cancel > 0
             || (int) $snapshot->frauds_count > 0
             || filled($snapshot->customer_rating);
+    }
+
+    /**
+     * Fetch couriers that are missing, failed, or Pathao rating-only before
+     * the response goes out. check() creates a session when one is not saved.
+     *
+     * @param  array<string, mixed>  $report
+     * @param  list<string>  $couriers
+     * @param  array<string, mixed>  $payload
+     * @return array{report: array<string, mixed>, couriers: list<string>}
+     */
+    private function fillBlockingCouriers(
+        array $report,
+        array $couriers,
+        string $phoneNormalized,
+        ?AccessToken $accessToken,
+        array $payload,
+        FraudCheckDecisionLog $log,
+    ): array {
+        if ($couriers === []) {
+            return ['report' => $report, 'couriers' => []];
+        }
+
+        $log->add('live_fill', 'Fetching couriers that did not answer before sending the result', [
+            'couriers' => $couriers,
+        ]);
+
+        $saved = [
+            'steadfast' => [],
+            'pathao' => [],
+            'paperfly' => [],
+            'redx' => [],
+            'carrybee' => [],
+        ];
+
+        foreach ($couriers as $courier) {
+            if ($courier === 'pathao') {
+                $report = $this->upgradePathaoCountsInReport(
+                    $report,
+                    $phoneNormalized,
+                    $accessToken,
+                    $payload,
+                    $log,
+                );
+
+                continue;
+            }
+
+            try {
+                $live = $this->fraudCheckService->checkCourier($courier, $phoneNormalized);
+            } catch (\Throwable $exception) {
+                $log->add('live_fill', 'Courier fill failed', [
+                    'courier' => $courier,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                continue;
+            }
+
+            if (! is_array($live)) {
+                continue;
+            }
+
+            $live['source'] = 'live_fill';
+            $live['from_cache'] = false;
+            $saved[$courier] = $live;
+            $report = $this->replaceCourierReport($report, $courier, $live);
+        }
+
+        $report = $this->recalculateTotalsFromCourier($report);
+        $this->persistFilledCouriers($phoneNormalized, $accessToken?->id, $saved);
+
+        return ['report' => $report, 'couriers' => $couriers];
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     * @param  array<string, mixed>  $live
+     * @return array<string, mixed>
+     */
+    private function replaceCourierReport(array $report, string $courier, array $live): array
+    {
+        $needle = match ($courier) {
+            'steadfast' => 'stead',
+            'paperfly' => 'paper',
+            'redx' => 'red',
+            'carrybee' => 'carry',
+            default => $courier,
+        };
+
+        foreach ($report['courier'] ?? [] as $index => $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $title = strtolower(trim((string) ($entry['title'] ?? '')));
+            if (! str_contains($title, $needle)) {
+                continue;
+            }
+
+            $report['courier'][$index]['report'] = $live;
+
+            break;
+        }
+
+        return $report;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $saved
+     */
+    private function persistFilledCouriers(string $phoneNormalized, ?int $accessTokenId, array $saved): void
+    {
+        if ($saved === [] || ! array_filter($saved)) {
+            return;
+        }
+
+        $customer = PlatformCustomer::query()->where('phone_normalized', $phoneNormalized)->first();
+
+        if ($customer === null) {
+            return;
+        }
+
+        try {
+            $this->courierIntelPersister->persistFromFraudCheckReports(
+                customer: $customer,
+                phoneNormalized: $phoneNormalized,
+                steadfastReport: $saved['steadfast'] ?? [],
+                pathaoReport: $saved['pathao'] ?? [],
+                paperflyReport: $saved['paperfly'] ?? [],
+                redxReport: $saved['redx'] ?? [],
+                carrybeeReport: $saved['carrybee'] ?? [],
+                sourceAccessTokenId: $accessTokenId,
+            );
+        } catch (\Throwable $exception) {
+            LogHelper::saveLog('Fraud check courier fill persist failed', $exception->getMessage());
+        }
     }
 
     /**

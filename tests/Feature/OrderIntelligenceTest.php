@@ -328,18 +328,45 @@ it('serves platform cache when only one courier snapshot failed', function () {
 
     app(StatsProjector::class)->project($customer->id);
 
-    $this->mock(FraudCheckService::class, function ($mock) {
+    $checked = [];
+    $this->mock(FraudCheckService::class, function ($mock) use (&$checked) {
         $mock->shouldReceive('normalizePhone')->andReturnUsing(fn ($phone) => $phone);
         $mock->shouldNotReceive('getReport');
+        $mock->shouldReceive('checkCourier')->andReturnUsing(function (string $courier) use (&$checked) {
+            $checked[] = $courier;
+
+            if ($courier === 'pathao') {
+                return [
+                    'total_order' => 10,
+                    'confirmed' => 8,
+                    'cancel' => 2,
+                    'api_success' => true,
+                    'status' => 'ok',
+                ];
+            }
+
+            if ($courier === 'carrybee') {
+                return [
+                    'total_order' => 4,
+                    'confirmed' => 3,
+                    'cancel' => 1,
+                    'api_success' => true,
+                    'status' => 'ok',
+                ];
+            }
+
+            return [
+                'total_order' => 0,
+                'confirmed' => 0,
+                'cancel' => 0,
+                'api_success' => true,
+                'status' => 'ok',
+            ];
+        });
     });
 
-    $refreshCalledWith = null;
-    $this->mock(\App\Services\OrderIntelligence\CourierSnapshotRefresher::class, function ($mock) use (&$refreshCalledWith) {
-        $mock->shouldReceive('refresh')->once()->andReturnUsing(function ($phone, $tokenId, $couriers) use (&$refreshCalledWith) {
-            $refreshCalledWith = $couriers;
-
-            return true;
-        });
+    $this->mock(\App\Services\OrderIntelligence\CourierSnapshotRefresher::class, function ($mock) {
+        $mock->shouldNotReceive('refresh');
     });
 
     $request = Request::create('/api/fraud-check', 'POST', ['phone' => '01799880011']);
@@ -353,9 +380,9 @@ it('serves platform cache when only one courier snapshot failed', function () {
     app()->terminate();
 
     expect($report['source'])->toBe('platform')
-        ->and($report['total_order'])->toBe(67)
-        ->and($report['confirmed'])->toBe(51)
-        ->and($refreshCalledWith)->toBe(['pathao', 'carrybee']);
+        ->and($report['total_order'])->toBe(81)
+        ->and($report['confirmed'])->toBe(62)
+        ->and($checked)->toBe(['pathao', 'carrybee']);
 });
 
 it('partial refresh only calls failed or stale couriers', function () {

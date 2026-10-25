@@ -3,60 +3,89 @@
 namespace App\Services\FraudCheck;
 
 use App\LogHelper;
-use Enan\PathaoCourier\Facades\PathaoCourier;
-use Enan\PathaoCourier\Requests\PathaoUserSuccessRateRequest;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class PathaoFraudChecker
 {
     private const MERCHANT_TOKEN_MINUTES = 50;
 
+    private const LOGIN_URL = 'https://merchant.pathao.com/api/v1/login';
+
+    private const SUCCESS_URL = 'https://merchant.pathao.com/api/v1/user/success';
+
+    private const ISSUE_TOKEN_URL = 'https://api-hermes.pathao.com/aladdin/api/v1/issue-token';
+
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
     ) {}
 
+    /**
+     * Merchant logins first, then the Hermes token, then a fresh Hermes token.
+     * Every source asks the same merchant success endpoint. A rating-only
+     * answer is kept while the next source is asked for counts.
+     */
     public function check(string $phone): array
     {
+        $hasMerchant = $this->hasMerchantCredentials();
+        $hasHermesToken = $this->hasHermesTokenInDatabase();
+
+        if (! $hasMerchant && ! $hasHermesToken) {
+            LogHelper::saveLog('Pathao fraud check skipped', 'Pathao credentials are not configured.');
+
+            return CourierReportFormatter::emptyReport([
+                'retryable' => false,
+                'message' => 'Pathao is not set up for fraud checks.',
+            ]);
+        }
+
         $ratingFallback = null;
+        $rateLimited = false;
+        $hermesTokenRejected = ! $hasHermesToken;
 
-        if ($this->hasMerchantCredentials()) {
-            $report = $this->checkViaMerchantPortal($phone);
+        if ($hasMerchant) {
+            $outcome = $this->checkViaMerchantPortal($phone);
+            $rateLimited = $outcome['rate_limited'];
 
-            if (CourierReportFormatter::hasDeliveryCounts($report)) {
-                return $report;
-            }
+            if ($outcome['report'] !== null) {
+                if (! CourierReportFormatter::isRatingOnly($outcome['report'])) {
+                    return $outcome['report'];
+                }
 
-            if (CourierReportFormatter::isRatingOnly($report)) {
-                $ratingFallback = $report;
-            }
-        }
-
-        if ($this->hasHermesTokenInDatabase()) {
-            $report = $this->checkViaHermes($phone);
-
-            if (CourierReportFormatter::hasDeliveryCounts($report)) {
-                return $report;
-            }
-
-            if ($ratingFallback === null && CourierReportFormatter::isRatingOnly($report)) {
-                $ratingFallback = $report;
+                $ratingFallback = $outcome['report'];
             }
         }
 
-        if ($this->hasHermesIssueTokenCredentials()) {
-            $report = $this->checkViaHermesIssueToken($phone);
+        if (! $rateLimited && $hasHermesToken) {
+            $outcome = $this->checkViaHermesToken($phone);
+            $rateLimited = $outcome['rate_limited'];
+            $hermesTokenRejected = $outcome['unauthorized'];
 
-            if (CourierReportFormatter::hasDeliveryCounts($report)) {
-                return $report;
+            if ($outcome['report'] !== null) {
+                if (! CourierReportFormatter::isRatingOnly($outcome['report'])) {
+                    return $outcome['report'];
+                }
+
+                $ratingFallback ??= $outcome['report'];
             }
+        }
 
-            if ($ratingFallback === null && CourierReportFormatter::isRatingOnly($report)) {
-                $ratingFallback = $report;
+        if (! $rateLimited && $hermesTokenRejected && $this->hasHermesIssueTokenCredentials()) {
+            $outcome = $this->checkViaHermesIssueToken($phone);
+            $rateLimited = $outcome['rate_limited'];
+
+            if ($outcome['report'] !== null) {
+                if (! CourierReportFormatter::isRatingOnly($outcome['report'])) {
+                    return $outcome['report'];
+                }
+
+                $ratingFallback ??= $outcome['report'];
             }
         }
 
@@ -64,14 +93,14 @@ class PathaoFraudChecker
             return $ratingFallback;
         }
 
-        LogHelper::saveLog('Pathao fraud check skipped', 'Pathao credentials are not configured or returned no data.');
+        LogHelper::saveLog('Pathao fraud check error', 'No Pathao login answered this lookup.');
 
-        return CourierReportFormatter::emptyReport();
+        return $this->unavailableReport($rateLimited);
     }
 
     /**
      * Pool the merchant success call when a Pathao token is already cached.
-     * Login and Hermes fallbacks stay on check().
+     * Login, Hermes, and rating-only answers stay on check().
      *
      * @return array{send: callable, read: callable}|null
      */
@@ -88,7 +117,8 @@ class PathaoFraudChecker
             return [
                 'send' => function (Pool $pool, string $name) use ($phone, $token): void {
                     $pool->as($name)
-                        ->timeout(30)
+                        ->timeout(25)
+                        ->connectTimeout(8)
                         ->acceptJson()
                         ->withToken($token)
                         ->withOptions([
@@ -97,20 +127,32 @@ class PathaoFraudChecker
                                 CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                             ],
                         ])
-                        ->post('https://merchant.pathao.com/api/v1/user/success', [
+                        ->post(self::SUCCESS_URL, [
                             'phone' => $phone,
                         ]);
                 },
-                'read' => function (Response $response) use ($candidate): ?array {
+                'read' => function (Response $response) use ($candidate, $cacheKey): ?array {
                     $result = $this->interpretMerchantHttp($response);
 
-                    if (! $result['ok'] || ! CourierReportFormatter::hasDeliveryCounts($result['report'])) {
+                    if ($result['unauthorized']) {
+                        Cache::forget($cacheKey);
+
+                        return null;
+                    }
+
+                    if ($result['rate_limited']) {
+                        return $this->unavailableReport(true);
+                    }
+
+                    $report = $result['report'];
+
+                    if ($report === null || CourierReportFormatter::isRatingOnly($report)) {
                         return null;
                     }
 
                     $this->credentials->markSuccess($candidate['id']);
 
-                    return $result['report'];
+                    return $report;
                 },
             ];
         }
@@ -146,14 +188,23 @@ class PathaoFraudChecker
 
     private function hasHermesTokenInDatabase(): bool
     {
-        if (! filled(config('pathao-courier.pathao_secret_token'))) {
-            return false;
+        return $this->hermesDatabaseToken() !== null;
+    }
+
+    private function hermesDatabaseToken(): ?string
+    {
+        $secretToken = config('pathao-courier.pathao_secret_token');
+
+        if (! filled($secretToken)) {
+            return null;
         }
 
-        return DB::table(config('pathao-courier.pathao_db_table_name'))
-            ->where('secret_token', config('pathao-courier.pathao_secret_token'))
+        $token = DB::table(config('pathao-courier.pathao_db_table_name'))
+            ->where('secret_token', $secretToken)
             ->whereNotNull('token')
-            ->exists();
+            ->value('token');
+
+        return is_string($token) && trim($token) !== '' ? $token : null;
     }
 
     private function hasHermesIssueTokenCredentials(): bool
@@ -168,153 +219,172 @@ class PathaoFraudChecker
         return $this->credentials->isConfigured('pathao');
     }
 
-    private function checkViaHermes(string $phone): array
-    {
-        try {
-            $request = new PathaoUserSuccessRateRequest();
-            $request->merge(['phone' => $phone]);
-
-            return $this->mapPathaoPayload(PathaoCourier::GET_USER_SUCCESS_RATE($request));
-        } catch (\Throwable $th) {
-            LogHelper::saveLog('Pathao fraud check error', $th->getMessage());
-
-            return CourierReportFormatter::emptyReport();
-        }
-    }
-
-    private function checkViaHermesIssueToken(string $phone): array
-    {
-        try {
-            foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
-                $tokenResponse = Http::timeout(30)
-                    ->acceptJson()
-                    ->post('https://api-hermes.pathao.com/aladdin/api/v1/issue-token', [
-                        'client_id' => config('pathao-courier.pathao_client_id'),
-                        'client_secret' => config('pathao-courier.pathao_client_secret'),
-                        'grant_type' => config('pathao-courier.pathao_grant_type_password'),
-                        'username' => $candidate['identifier'],
-                        'password' => $candidate['password'],
-                    ]);
-
-                $tokenBody = $tokenResponse->json();
-                $accessToken = Arr::get($tokenBody, 'access_token');
-
-                if (! $tokenResponse->successful() || empty($accessToken)) {
-                    $this->credentials->markFailure($candidate['id'], 'Hermes issue-token failed');
-                    LogHelper::saveLog('Pathao fraud check error', json_encode($tokenBody));
-
-                    continue;
-                }
-
-                $this->persistHermesToken($tokenBody);
-                $this->credentials->markSuccess($candidate['id']);
-
-                $successResponse = Http::timeout(30)
-                    ->acceptJson()
-                    ->withToken($accessToken)
-                    ->post('https://api-hermes.pathao.com/api/v1/user/success', [
-                        'phone' => $phone,
-                    ]);
-
-                if (! $successResponse->successful()) {
-                    $this->credentials->markFailure(
-                        $candidate['id'],
-                        'Hermes success API failed HTTP '.$successResponse->status(),
-                    );
-                    LogHelper::saveLog('Pathao fraud check error', 'Hermes success API failed with status '.$successResponse->status());
-
-                    continue;
-                }
-
-                return $this->mapPathaoPayload([
-                    'data' => $successResponse->json(),
-                ]);
-            }
-
-            return CourierReportFormatter::emptyReport();
-        } catch (\Throwable $th) {
-            LogHelper::saveLog('Pathao fraud check error', $th->getMessage());
-
-            return CourierReportFormatter::emptyReport();
-        }
-    }
-
+    /**
+     * @return array{report: array<string, mixed>|null, rate_limited: bool}
+     */
     private function checkViaMerchantPortal(string $phone): array
     {
-        try {
-            $skipFreshLogin = [];
-            $pathaoBusy = false;
+        $tried = [];
+        $serverError = false;
 
-            foreach ($this->credentials->candidates('pathao') as $candidate) {
-                $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
-                $token = Cache::get($cacheKey);
+        foreach ($this->credentials->candidates('pathao') as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
+            $token = Cache::get($cacheKey);
 
-                if (! is_string($token) || trim($token) === '') {
-                    continue;
-                }
+            if (! is_string($token) || trim($token) === '') {
+                continue;
+            }
 
-                $result = $this->readMerchantSuccess($phone, $token);
+            $result = $this->askMerchantApi($phone, $token);
 
-                if ($result['unauthorized']) {
+            if ($result['unauthorized']) {
+                Cache::forget($cacheKey);
+
+                continue;
+            }
+
+            if ($result['report'] !== null) {
+                $this->credentials->markSuccess($candidate['id']);
+
+                return ['report' => $result['report'], 'rate_limited' => false];
+            }
+
+            if ($result['rate_limited']) {
+                return ['report' => null, 'rate_limited' => true];
+            }
+
+            if ($result['server_error']) {
+                $serverError = true;
+
+                continue;
+            }
+
+            // A dropped connection, or HTTP 200 with no customer payload, is not
+            // an answer. Drop the saved token and log in again below.
+            if ($result['status'] === null || $result['status'] === 200) {
+                if ($result['status'] === 200) {
                     Cache::forget($cacheKey);
-
-                    continue;
                 }
 
-                if ($result['ok']) {
-                    $this->credentials->markSuccess($candidate['id']);
-
-                    return $result['report'];
-                }
-
-                $this->credentials->markFailure($candidate['id'], 'Merchant success API failed');
-                $skipFreshLogin[$candidate['identifier']] = true;
-                $pathaoBusy = $pathaoBusy || $result['busy'];
+                continue;
             }
 
-            if ($pathaoBusy) {
-                return CourierReportFormatter::emptyReport();
-            }
-
-            foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
-                if (isset($skipFreshLogin[$candidate['identifier']])) {
-                    continue;
-                }
-
-                $token = $this->loginMerchant($candidate);
-
-                if ($token === null) {
-                    continue;
-                }
-
-                $result = $this->readMerchantSuccess($phone, $token);
-
-                if ($result['unauthorized']) {
-                    Cache::forget($this->credentials->sessionCacheKey('pathao', $candidate['identifier']));
-                    $this->credentials->markFailure($candidate['id'], 'Merchant token rejected');
-
-                    continue;
-                }
-
-                if ($result['ok']) {
-                    $this->credentials->markSuccess($candidate['id']);
-
-                    return $result['report'];
-                }
-
-                $this->credentials->markFailure($candidate['id'], 'Merchant success API failed');
-
-                if ($result['busy']) {
-                    return CourierReportFormatter::emptyReport();
-                }
-            }
-
-            return CourierReportFormatter::emptyReport();
-        } catch (\Throwable $th) {
-            LogHelper::saveLog('Pathao fraud check error', $th->getMessage());
-
-            return CourierReportFormatter::emptyReport();
+            $this->credentials->markFailure($candidate['id'], 'Merchant success API failed (HTTP '.$result['status'].')');
+            $tried[$candidate['identifier']] = true;
         }
+
+        // Pathao is failing on its side; fresh logins would not help.
+        if ($serverError) {
+            return ['report' => null, 'rate_limited' => false];
+        }
+
+        foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
+            if (isset($tried[$candidate['identifier']])) {
+                continue;
+            }
+
+            $token = $this->loginMerchant($candidate);
+
+            if ($token === null) {
+                continue;
+            }
+
+            $result = $this->askMerchantApi($phone, $token);
+
+            if ($result['unauthorized']) {
+                Cache::forget($this->credentials->sessionCacheKey('pathao', $candidate['identifier']));
+                $this->credentials->markFailure($candidate['id'], 'Merchant token rejected');
+
+                continue;
+            }
+
+            if ($result['report'] !== null) {
+                $this->credentials->markSuccess($candidate['id']);
+
+                return ['report' => $result['report'], 'rate_limited' => false];
+            }
+
+            if ($result['status'] !== null && ! $result['rate_limited'] && ! $result['server_error']) {
+                $this->credentials->markFailure($candidate['id'], 'Merchant success API failed (HTTP '.$result['status'].')');
+            }
+
+            if ($result['rate_limited'] || $result['server_error']) {
+                return ['report' => null, 'rate_limited' => $result['rate_limited']];
+            }
+        }
+
+        return ['report' => null, 'rate_limited' => false];
+    }
+
+    /**
+     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool}
+     */
+    private function checkViaHermesToken(string $phone): array
+    {
+        $token = $this->hermesDatabaseToken();
+
+        if ($token === null) {
+            return ['report' => null, 'unauthorized' => true, 'rate_limited' => false];
+        }
+
+        $result = $this->askMerchantApi($phone, $token);
+
+        return [
+            'report' => $result['report'],
+            'unauthorized' => $result['unauthorized'],
+            'rate_limited' => $result['rate_limited'],
+        ];
+    }
+
+    /**
+     * The Hermes token only works for lookups on the merchant host.
+     * api-hermes.pathao.com/api/v1/user/success answers 404.
+     *
+     * @return array{report: array<string, mixed>|null, rate_limited: bool}
+     */
+    private function checkViaHermesIssueToken(string $phone): array
+    {
+        foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
+            try {
+                $tokenResponse = $this->client()->post(self::ISSUE_TOKEN_URL, [
+                    'client_id' => config('pathao-courier.pathao_client_id'),
+                    'client_secret' => config('pathao-courier.pathao_client_secret'),
+                    'grant_type' => config('pathao-courier.pathao_grant_type_password'),
+                    'username' => $candidate['identifier'],
+                    'password' => $candidate['password'],
+                ]);
+            } catch (Throwable $exception) {
+                LogHelper::saveLog('Pathao fraud check error', 'Hermes issue-token unreachable: '.CourierTransport::safeMessage($exception));
+
+                continue;
+            }
+
+            $tokenBody = $tokenResponse->json();
+            $accessToken = is_array($tokenBody) ? trim((string) Arr::get($tokenBody, 'access_token')) : '';
+
+            if (! $tokenResponse->successful() || $accessToken === '') {
+                $this->credentials->markFailure($candidate['id'], 'Hermes issue-token failed');
+                LogHelper::saveLog('Pathao fraud check error', 'Hermes issue-token failed (HTTP '.$tokenResponse->status().').');
+
+                continue;
+            }
+
+            $this->persistHermesToken($tokenBody);
+
+            $result = $this->askMerchantApi($phone, $accessToken);
+
+            if ($result['report'] !== null) {
+                $this->credentials->markSuccess($candidate['id']);
+
+                return ['report' => $result['report'], 'rate_limited' => false];
+            }
+
+            if ($result['rate_limited']) {
+                return ['report' => null, 'rate_limited' => true];
+            }
+        }
+
+        return ['report' => null, 'rate_limited' => false];
     }
 
     /**
@@ -322,12 +392,16 @@ class PathaoFraudChecker
      */
     private function loginMerchant(array $candidate): ?string
     {
-        $response = Http::timeout(30)
-            ->acceptJson()
-            ->post('https://merchant.pathao.com/api/v1/login', [
+        try {
+            $response = $this->client()->post(self::LOGIN_URL, [
                 'username' => $candidate['identifier'],
                 'password' => $candidate['password'],
             ]);
+        } catch (Throwable $exception) {
+            LogHelper::saveLog('Pathao fraud check error', 'Merchant login unreachable: '.CourierTransport::safeMessage($exception));
+
+            return null;
+        }
 
         $token = trim((string) $response->json('access_token'));
 
@@ -349,58 +423,99 @@ class PathaoFraudChecker
     }
 
     /**
-     * @return array{ok: bool, unauthorized: bool, busy: bool, report: array<string, mixed>}
+     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool, server_error: bool, status: int|null}
      */
-    private function readMerchantSuccess(string $phone, string $token): array
+    private function askMerchantApi(string $phone, string $token): array
     {
-        $response = Http::timeout(30)
-            ->acceptJson()
-            ->withToken($token)
-            ->post('https://merchant.pathao.com/api/v1/user/success', [
-                'phone' => $phone,
-            ]);
+        try {
+            $response = $this->client()
+                ->withToken($token)
+                ->post(self::SUCCESS_URL, [
+                    'phone' => $phone,
+                ]);
+        } catch (Throwable $exception) {
+            LogHelper::saveLog('Pathao fraud check error', 'Merchant success API unreachable: '.CourierTransport::safeMessage($exception));
+
+            return [
+                'report' => null,
+                'unauthorized' => false,
+                'rate_limited' => false,
+                'server_error' => false,
+                'status' => null,
+            ];
+        }
 
         return $this->interpretMerchantHttp($response);
     }
 
     /**
-     * @return array{ok: bool, unauthorized: bool, busy: bool, report: array<string, mixed>}
+     * A report is returned only when Pathao answered for this number:
+     * delivery counts, a confirmed empty history, or a rating.
+     *
+     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool, server_error: bool, status: int|null}
      */
     private function interpretMerchantHttp(Response $response): array
     {
-        if ($response->status() === 401) {
-            return [
-                'ok' => false,
-                'unauthorized' => true,
-                'busy' => false,
-                'report' => [],
-            ];
-        }
+        $status = $response->status();
+        $outcome = [
+            'report' => null,
+            'unauthorized' => $status === 401,
+            'rate_limited' => $status === 429,
+            'server_error' => $status >= 500,
+            'status' => $status,
+        ];
 
         if (! $response->successful()) {
-            LogHelper::saveLog('Pathao fraud check error', 'Merchant success API failed with status '.$response->status());
+            if ($status !== 401) {
+                LogHelper::saveLog('Pathao fraud check error', 'Merchant success API failed with status '.$status);
+            }
 
-            return [
-                'ok' => false,
-                'unauthorized' => false,
-                'busy' => $response->status() === 429 || $response->status() >= 500,
-                'report' => [],
-            ];
+            return $outcome;
         }
 
-        return [
-            'ok' => true,
-            'unauthorized' => false,
-            'busy' => false,
-            'report' => $this->mapPathaoPayload([
-                'data' => $response->json('data', []),
-            ]),
-        ];
+        $report = CourierReportFormatter::fromPathao([
+            'data' => $response->json('data', []),
+        ]);
+
+        if (
+            CourierReportFormatter::hasDeliveryCounts($report)
+            || ! empty($report['api_success'])
+            || CourierReportFormatter::isRatingOnly($report)
+        ) {
+            $outcome['report'] = $report;
+        } else {
+            LogHelper::saveLog('Pathao fraud check error', 'Merchant success API answered without customer data.');
+        }
+
+        return $outcome;
     }
 
-    private function mapPathaoPayload(array $pathaoResponse): array
+    /**
+     * @return array<string, mixed>
+     */
+    private function unavailableReport(bool $rateLimited): array
     {
-        return CourierReportFormatter::fromPathao($pathaoResponse);
+        return CourierReportFormatter::emptyReport(array_filter([
+            'unavailable' => true,
+            'rate_limited' => $rateLimited ?: null,
+            'message' => $rateLimited
+                ? 'Pathao asked us to slow down. This number is checked again shortly.'
+                : 'Pathao did not answer this time. This number is checked again automatically.',
+        ], fn ($value) => $value !== null));
+    }
+
+    private function client(): PendingRequest
+    {
+        return Http::timeout(25)
+            ->connectTimeout(8)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
+            ->retry(3, 500, fn (Throwable $exception) => CourierTransport::shouldRetry($exception), throw: false)
+            ->acceptJson();
     }
 
     private function persistHermesToken(array $tokenBody): void

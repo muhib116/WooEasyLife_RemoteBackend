@@ -52,6 +52,31 @@ return [
     'bulk_retry_attempts' => 3,
     'bulk_retry_pause_ms' => 300,
 
+    // A saved result where one courier did not answer is checked again
+    // after this many seconds instead of being reused all day.
+    'bulk_failed_courier_recheck_seconds' => (int) env('FRAUD_CHECK_BULK_FAILED_COURIER_RECHECK_SECONDS', 120),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Second attempt for a courier that did not answer
+    |--------------------------------------------------------------------------
+    |
+    | A dropped connection or a courier server error is asked once more
+    | before the answer goes out. When that second attempt also fails,
+    | that courier is not retried again for cooldown_seconds, so an outage
+    | does not slow every check. Rate limits, rejected credentials, and
+    | missing setup are never retried right away. A bulk result where one
+    | courier did not answer is checked again after
+    | bulk_failed_courier_recheck_seconds.
+    |
+    */
+    'courier_retry' => [
+        'enabled' => (bool) env('FRAUD_CHECK_COURIER_RETRY', true),
+        'pause_ms' => (int) env('FRAUD_CHECK_COURIER_RETRY_PAUSE_MS', 700),
+        'budget_seconds' => (int) env('FRAUD_CHECK_COURIER_RETRY_BUDGET_SECONDS', 20),
+        'cooldown_seconds' => (int) env('FRAUD_CHECK_COURIER_RETRY_COOLDOWN_SECONDS', 60),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Parallel courier calls for one phone

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Services\FraudCheck\CarrybeeFraudChecker;
 use App\Services\FraudCheck\CourierReportFormatter;
+use App\Services\FraudCheck\CourierTransport;
 use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\FraudCheck\PaperflyFraudChecker;
 use App\Services\FraudCheck\PathaoFraudChecker;
@@ -13,6 +14,7 @@ use App\Services\FraudCheck\SteadfastCurlExporter;
 use App\Services\FraudCheck\SteadfastFraudChecker;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
@@ -116,6 +118,7 @@ class FraudCheckService
      */
     private function fetchCourierReports(string $phone, ?array $steadfastCredentials): array
     {
+        $startedAt = microtime(true);
         $jobs = [
             'steadfast' => [$this->steadfastFraudChecker, 'check', [$phone, $steadfastCredentials]],
             'pathao' => [$this->pathaoFraudChecker, 'check', [$phone]],
@@ -166,7 +169,79 @@ class FraudCheckService
             }
         }
 
+        return $this->retryFailedCouriers($jobs, $reports, $startedAt);
+    }
+
+    /**
+     * Ask a courier once more after a failure that can pass, like a dropped
+     * connection or a server error. When that retry fails too, the courier
+     * is not retried for a short while, so an outage does not slow every check.
+     *
+     * @param  array<string, array{0: object, 1: string, 2: array<int, mixed>}>  $jobs
+     * @param  array<string, array<string, mixed>>  $reports
+     * @return array<string, array<string, mixed>>
+     */
+    private function retryFailedCouriers(array $jobs, array $reports, float $startedAt): array
+    {
+        if (! config('fraud_check.courier_retry.enabled', true)) {
+            return $reports;
+        }
+
+        $budgetSeconds = (float) config('fraud_check.courier_retry.budget_seconds', 20);
+        $pauseMs = max(0, (int) config('fraud_check.courier_retry.pause_ms', 700));
+        $cooldownSeconds = max(1, (int) config('fraud_check.courier_retry.cooldown_seconds', 60));
+        $paused = false;
+
+        foreach ($jobs as $key => [$checker, $method, $args]) {
+            if (! self::isTransientFailure($reports[$key] ?? [])) {
+                continue;
+            }
+
+            if (microtime(true) - $startedAt >= $budgetSeconds) {
+                break;
+            }
+
+            $coolingKey = 'fraud_check_courier_retry_cooling:'.$key;
+            if (Cache::has($coolingKey)) {
+                continue;
+            }
+
+            if (! $paused && $pauseMs > 0) {
+                usleep($pauseMs * 1000);
+                $paused = true;
+            }
+
+            try {
+                $retried = $checker->{$method}(...$args);
+            } catch (Throwable $exception) {
+                LogHelper::saveLog('Fraud check courier retry failed', $key.': '.CourierTransport::safeMessage($exception));
+                $retried = null;
+            }
+
+            if (is_array($retried) && empty($retried['unavailable'])) {
+                $reports[$key] = $retried;
+
+                continue;
+            }
+
+            Cache::put($coolingKey, true, now()->addSeconds($cooldownSeconds));
+        }
+
         return $reports;
+    }
+
+    /**
+     * A courier that failed in a way a later attempt can fix. Rate limits,
+     * rejected credentials, missing setup, and RedX's fixed sample are not.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    public static function isTransientFailure(array $report): bool
+    {
+        return ! empty($report['unavailable'])
+            && ($report['retryable'] ?? true) !== false
+            && empty($report['rate_limited'])
+            && empty($report['credential_error']);
     }
 
     /**
@@ -412,18 +487,18 @@ class FraudCheckService
             return $report;
         }
 
+        // A failed lookup is never a clean record. The flag keeps it out of
+        // the platform cache as a fresh result.
         $report['status'] = 'unavailable';
-        $report['message'] = match ($courier) {
-            'Steadfast' => ! empty($report['credential_error'])
-                ? 'Steadfast API credentials were rejected. Check the API key and secret in courier settings.'
-                : (! empty($report['message'])
-                    ? (string) $report['message']
-                    : 'Steadfast session expired. Credentials will auto-refresh on next check.'),
-            'Pathao' => 'Pathao returned no delivery data for this number.',
-            'Paperfly' => 'Paperfly has no delivery records for this number.',
-            'RedX' => $report['message'] ?? 'RedX returned no delivery data for this number.',
-            'Carrybee' => $report['message'] ?? 'Carrybee returned no data for this number.',
-            default => 'No data returned.',
+        $report['unavailable'] = true;
+        if (! array_key_exists('retryable', $report)) {
+            $report['retryable'] = empty($report['credential_error']);
+        }
+        $report['message'] = match (true) {
+            $courier === 'Steadfast' && ! empty($report['credential_error']) => 'Steadfast API credentials were rejected. Check the API key and secret in courier settings.',
+            ! empty($report['message']) => (string) $report['message'],
+            $courier === 'Steadfast' => 'Steadfast session expired. Credentials will auto-refresh on next check.',
+            default => $courier.' did not answer this time. This number is checked again automatically.',
         };
 
         return $report;

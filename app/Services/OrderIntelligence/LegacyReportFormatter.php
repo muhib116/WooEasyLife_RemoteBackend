@@ -102,11 +102,27 @@ class LegacyReportFormatter
     private function snapshotToReport(array $snapshot): array
     {
         if ($snapshot === []) {
-            return CourierReportFormatter::emptyReport(['source' => 'platform_cache']);
+            return CourierReportFormatter::emptyReport([
+                'source' => 'platform_cache',
+                'unavailable' => true,
+                'not_checked' => true,
+            ]);
         }
 
         $courier = (string) ($snapshot['courier'] ?? '');
         $fraudsCount = (int) ($snapshot['frauds_count'] ?? 0);
+
+        // A courier that did not answer last time has no history to show.
+        // Saved counts from an earlier good answer are still shown.
+        if (! empty($snapshot['fetch_failed']) && ! $this->snapshotHasHistory($snapshot)) {
+            return CourierReportFormatter::emptyReport(array_filter([
+                'source' => 'platform_cache',
+                'unavailable' => true,
+                'retryable' => ($snapshot['retryable'] ?? true) !== false,
+                'rate_limited' => ! empty($snapshot['rate_limited']) ? true : null,
+                'fetched_at' => $snapshot['fetched_at'] ?? null,
+            ], fn ($value) => $value !== null));
+        }
 
         if ($courier === 'carrybee' && (int) ($snapshot['total_order'] ?? 0) === 0 && $fraudsCount > 0) {
             return CourierReportFormatter::emptyReport([
@@ -137,6 +153,18 @@ class LegacyReportFormatter
             (int) ($snapshot['cancel'] ?? 0),
             $extra,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function snapshotHasHistory(array $snapshot): bool
+    {
+        return (int) ($snapshot['total_order'] ?? 0) > 0
+            || (int) ($snapshot['confirmed'] ?? 0) > 0
+            || (int) ($snapshot['cancel'] ?? 0) > 0
+            || (int) ($snapshot['frauds_count'] ?? 0) > 0
+            || filled($snapshot['customer_rating'] ?? null);
     }
 
     /**
@@ -233,6 +261,18 @@ class LegacyReportFormatter
     {
         $report['source'] = $report['source'] ?? 'platform_cache';
         $report['from_cache'] = true;
+
+        if (! empty($report['unavailable'])) {
+            $report['status'] = 'unavailable';
+            $report['cache_label'] = 'platform cache';
+            $report['message'] = match (true) {
+                ! empty($report['not_checked']) => $courier.' has not been checked for this number yet. It is checked automatically.',
+                ($report['retryable'] ?? true) === false => $courier.' did not return delivery history for this number.',
+                default => $courier.' did not answer last time. This number is checked again automatically.',
+            };
+
+            return $report;
+        }
 
         if (
             ($report['total_order'] ?? 0) > 0

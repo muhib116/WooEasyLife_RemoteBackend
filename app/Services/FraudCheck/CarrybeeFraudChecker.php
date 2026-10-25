@@ -33,7 +33,10 @@ class CarrybeeFraudChecker
         if (! $this->isConfigured()) {
             LogHelper::saveLog('Carrybee fraud check skipped', 'No Carrybee credentials configured in admin or .env.');
 
-            return CourierReportFormatter::emptyReport();
+            return CourierReportFormatter::emptyReport([
+                'retryable' => false,
+                'message' => 'Carrybee is not set up for fraud checks.',
+            ]);
         }
 
         try {
@@ -94,7 +97,7 @@ class CarrybeeFraudChecker
 
             return CourierReportFormatter::emptyReport([
                 'unavailable' => true,
-                'message' => $e instanceof ConnectionException
+                'message' => $e instanceof ConnectionException || CourierTransport::shouldRetry($e)
                     ? 'Carrybee is temporarily unreachable. Try again.'
                     : 'Carrybee customer lookup failed.',
             ]);
@@ -155,7 +158,9 @@ class CarrybeeFraudChecker
                     ->get('https://api-merchant.carrybee.com/api/v2/businesses/'.$auth['businessId'].'/customers/'.$phone);
             },
             'read' => function (Response $response) use ($auth): ?array {
-                if ($response->status() === 401) {
+                if (in_array($response->status(), [401, 403], true)) {
+                    Cache::forget($auth['cache_key']);
+
                     return null;
                 }
 
@@ -171,10 +176,7 @@ class CarrybeeFraudChecker
                 if (! $response->successful() || $response->json('error')) {
                     LogHelper::saveLog('Carrybee fraud check error', 'Customer lookup failed with status '.$response->status());
 
-                    return CourierReportFormatter::emptyReport([
-                        'unavailable' => true,
-                        'message' => 'Carrybee customer lookup failed (HTTP '.$response->status().').',
-                    ]);
+                    return null;
                 }
 
                 $this->credentials->markSuccess($auth['credential_id']);
@@ -382,7 +384,7 @@ class CarrybeeFraudChecker
                     CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                 ],
             ])
-            ->retry(3, 800, fn (Throwable $exception) => $exception instanceof ConnectionException, throw: false)
+            ->retry(3, 800, fn (Throwable $exception) => CourierTransport::shouldRetry($exception), throw: false)
             ->acceptJson();
     }
 }

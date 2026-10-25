@@ -53,7 +53,8 @@ class SteadfastFraudApiCredentialStore
 
     /**
      * Hub checks only use keys that have not failed. A failed key stays out
-     * until an admin test clears the error.
+     * until an admin test clears the error. A key that hit a rate limit or
+     * a Steadfast outage sits out only until its cooldown ends.
      *
      * @return list<array{api_key: string, secret_key: string}>
      */
@@ -62,7 +63,7 @@ class SteadfastFraudApiCredentialStore
         $healthy = [];
 
         foreach ($this->readAccounts() as $account) {
-            if (($account['last_error'] ?? '') !== '') {
+            if (($account['last_error'] ?? '') !== '' || $this->isCoolingDown($account['api_key'])) {
                 continue;
             }
 
@@ -167,12 +168,46 @@ class SteadfastFraudApiCredentialStore
         $this->recordOutcomes([$apiKey => $error]);
     }
 
+    public function coolDown(string $apiKey, int $seconds): void
+    {
+        $apiKey = trim($apiKey);
+
+        if ($apiKey === '' || $seconds <= 0) {
+            return;
+        }
+
+        Cache::put($this->cooldownKey($apiKey), true, now()->addSeconds($seconds));
+    }
+
+    public function isCoolingDown(string $apiKey): bool
+    {
+        $apiKey = trim($apiKey);
+
+        return $apiKey !== '' && Cache::has($this->cooldownKey($apiKey));
+    }
+
+    private function cooldownKey(string $apiKey): string
+    {
+        return 'fraud_check_steadfast_key_cooldown:'.hash('sha256', $apiKey);
+    }
+
     /**
      * @param  array<string, string|null>  $outcomes
      */
     public function recordOutcomes(array $outcomes, ?string $usedApiKey = null): void
     {
         $usedApiKey = trim((string) $usedApiKey);
+
+        $answered = $outcomes;
+        if ($usedApiKey !== '') {
+            $answered[$usedApiKey] = '';
+        }
+
+        foreach ($answered as $apiKey => $error) {
+            if (trim((string) $apiKey) !== '' && trim((string) $error) === '') {
+                Cache::forget($this->cooldownKey(trim((string) $apiKey)));
+            }
+        }
 
         if (($outcomes === [] && $usedApiKey === '') || ! $this->tableReady()) {
             return;

@@ -235,6 +235,89 @@ class MerchantBulkFraudCheckTest extends TestCase
         $this->assertSame(1, BulkFraudDailyResult::query()->count());
     }
 
+    public function test_a_saved_row_with_a_missing_courier_is_checked_again_after_the_recheck_window(): void
+    {
+        $calls = 0;
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls): void {
+            $mock->shouldReceive('checkSingle')->andReturnUsing(function () use (&$calls) {
+                $calls++;
+
+                return [
+                    'total_order' => 10,
+                    'confirmed' => 8,
+                    'cancel' => 2,
+                    'success_rate' => '80%',
+                    'frauds' => [],
+                    'courier' => [
+                        [
+                            'title' => 'Stead Fast',
+                            'report' => [
+                                'total_order' => 10,
+                                'confirmed' => 8,
+                                'cancel' => 2,
+                                'status' => 'ok',
+                                'api_success' => true,
+                            ],
+                        ],
+                        [
+                            'title' => 'Pathao',
+                            'report' => [
+                                'total_order' => 0,
+                                'confirmed' => 0,
+                                'cancel' => 0,
+                                'status' => 'unavailable',
+                                'unavailable' => true,
+                                'message' => 'Pathao returned no delivery data',
+                            ],
+                        ],
+                    ],
+                ];
+            });
+        });
+
+        config(['fraud_check.bulk_failed_courier_recheck_seconds' => 120]);
+
+        $first = $this->merchant('recheck-one@example.com', '01700000031');
+        $batch = $this->actingAs($first)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'phones' => '01733333333',
+            ])->json('batch.id');
+
+        $this->actingAs($first)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.source', 'live');
+
+        $second = $this->merchant('recheck-two@example.com', '01700000032');
+        $this->actingAs($second)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'phones' => '01733333333',
+            ])
+            ->assertOk()
+            ->assertJsonPath('items.0.source', 'cache');
+
+        $saved = BulkFraudDailyResult::query()->first();
+        $saved->timestamps = false;
+        $saved->updated_at = now()->subSeconds(180);
+        $saved->save();
+
+        $third = $this->merchant('recheck-three@example.com', '01700000033');
+        $again = $this->actingAs($third)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'phones' => '01733333333',
+            ]);
+
+        $again->assertOk()
+            ->assertJsonPath('batch.pending', 1);
+
+        $this->actingAs($third)
+            ->postJson(route('portal.fraud-check.batches.next', $again->json('batch.id')))
+            ->assertOk()
+            ->assertJsonPath('item.source', 'live');
+
+        $this->assertSame(2, $calls);
+    }
+
     public function test_a_failed_check_is_retried_and_is_not_saved_for_the_rest_of_the_day(): void
     {
         $calls = 0;

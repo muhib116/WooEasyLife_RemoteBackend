@@ -122,6 +122,66 @@ it('does not log in again when Pathao rate-limits the cached merchant token', fu
     expect(pathaoLoginCount())->toBe(1);
 });
 
+it('logs in again when the cached Pathao token answers without customer data', function () {
+    configurePathaoFraudCredentials();
+    silencePathaoHermes();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::response([
+            'access_token' => 'fresh-pathao-token',
+        ], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::sequence()
+            ->push(['message' => 'user success rate', 'type' => 'success', 'code' => 200, 'data' => []], 200)
+            ->push(pathaoSuccessBody(), 200),
+    ]);
+
+    $resolver = app(FraudPartnerCredentialResolver::class);
+    Cache::put(
+        $resolver->sessionCacheKey('pathao', 'merchant@pathao.test'),
+        'stale-token',
+        now()->addMinutes(50),
+    );
+
+    $report = app(PathaoFraudChecker::class)->check('01770989591');
+
+    expect($report['total_order'])->toBe(11)
+        ->and($report['confirmed'])->toBe(7)
+        ->and($report['cancel'])->toBe(4)
+        ->and(pathaoLoginCount())->toBe(1);
+});
+
+it('reads Pathao counts nested under the customer object', function () {
+    configurePathaoFraudCredentials();
+    silencePathaoHermes();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::response([
+            'access_token' => 'pathao-merchant-token',
+        ], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::response([
+            'message' => 'user success rate',
+            'type' => 'success',
+            'code' => 200,
+            'data' => [
+                'show_count' => true,
+                'customer_rating' => 'new_customer',
+                'customer' => [
+                    'total_delivery' => 3,
+                    'successful_delivery' => 1,
+                    'failed_delivery' => 2,
+                ],
+            ],
+        ], 200),
+    ]);
+
+    $report = app(PathaoFraudChecker::class)->check('01770989591');
+
+    expect($report['total_order'])->toBe(3)
+        ->and($report['confirmed'])->toBe(1)
+        ->and($report['cancel'])->toBe(2)
+        ->and($report['unavailable'] ?? false)->toBeFalse();
+});
+
 it('logs in a different Pathao account after the cached one is forbidden', function () {
     Cache::flush();
     silencePathaoOutsideMerchant();

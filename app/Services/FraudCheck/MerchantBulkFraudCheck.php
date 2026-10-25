@@ -111,7 +111,7 @@ class MerchantBulkFraudCheck
                     if ($entry['invalid']) {
                         $this->applyRow($item, MerchantBulkFraudRow::invalid($entry['phone']), null, null);
                         $item->status = 'invalid';
-                    } elseif ($daily = $cached->get($entry['phone'])) {
+                    } elseif (($daily = $cached->get($entry['phone'])) && ! $this->dailyResultNeedsRecheck($daily)) {
                         $counts = $daily->counts();
                         $successful = in_array($counts['status'] ?? '', ['found', 'not_found'], true);
 
@@ -540,7 +540,7 @@ class MerchantBulkFraudCheck
     private function resolvePhone(Request $request, string $phone, bool $refresh = false): array
     {
         if (! $refresh) {
-            $existing = $this->dailyResult($phone);
+            $existing = $this->reusableDailyResult($phone);
 
             if ($existing) {
                 return [
@@ -557,7 +557,7 @@ class MerchantBulkFraudCheck
 
         try {
             if (! $refresh) {
-                $existing = $this->dailyResult($phone);
+                $existing = $this->reusableDailyResult($phone);
 
                 if ($existing) {
                     return [
@@ -594,7 +594,8 @@ class MerchantBulkFraudCheck
             ];
 
             try {
-                $daily = $refresh
+                $alreadySaved = $this->dailyResult($phone) !== null;
+                $daily = ($refresh || $alreadySaved)
                     ? BulkFraudDailyResult::query()->updateOrCreate(
                         [
                             'phone' => $phone,
@@ -671,6 +672,43 @@ class MerchantBulkFraudCheck
             ->where('phone', $phone)
             ->where('checked_on', $this->today()->toDateString())
             ->first();
+    }
+
+    /**
+     * A saved row is reused for the rest of the day only when every courier
+     * answered. A courier that did not answer is asked again after the
+     * recheck window, without using another daily quota slot.
+     */
+    private function reusableDailyResult(string $phone): ?BulkFraudDailyResult
+    {
+        $existing = $this->dailyResult($phone);
+
+        if ($existing === null || $this->dailyResultNeedsRecheck($existing)) {
+            return null;
+        }
+
+        return $existing;
+    }
+
+    private function dailyResultNeedsRecheck(BulkFraudDailyResult $existing): bool
+    {
+        $incomplete = false;
+
+        foreach ($existing->couriers ?? [] as $courier) {
+            if (is_array($courier) && array_key_exists('available', $courier) && $courier['available'] === false) {
+                $incomplete = true;
+
+                break;
+            }
+        }
+
+        if (! $incomplete) {
+            return false;
+        }
+
+        $seconds = max(0, (int) config('fraud_check.bulk_failed_courier_recheck_seconds', 120));
+
+        return $existing->updated_at === null || $existing->updated_at->lte(now()->subSeconds($seconds));
     }
 
     /**

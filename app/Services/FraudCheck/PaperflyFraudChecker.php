@@ -3,7 +3,6 @@
 namespace App\Services\FraudCheck;
 
 use App\LogHelper;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
@@ -35,17 +34,20 @@ class PaperflyFraudChecker
         if (! $this->isConfigured()) {
             LogHelper::saveLog('Paperfly fraud check skipped', 'No Paperfly credentials configured in admin or .env.');
 
-            return CourierReportFormatter::emptyReport();
+            return CourierReportFormatter::emptyReport([
+                'retryable' => false,
+                'message' => 'Paperfly is not set up for fraud checks.',
+            ]);
         }
 
         try {
             return $this->fetchSmartCheck($phone);
         } catch (\Throwable $th) {
-            LogHelper::saveLog('Paperfly fraud check error', $th->getMessage());
+            LogHelper::saveLog('Paperfly fraud check error', CourierTransport::safeMessage($th));
 
             return CourierReportFormatter::emptyReport([
                 'unavailable' => true,
-                'message' => $th->getMessage(),
+                'message' => 'Paperfly did not answer this time. This number is checked again automatically.',
             ]);
         }
     }
@@ -108,7 +110,9 @@ class PaperflyFraudChecker
                     ]);
             },
             'read' => function (Response $response) use ($auth): ?array {
-                if ($response->status() === 401) {
+                if (in_array($response->status(), [401, 403], true)) {
+                    Cache::forget($auth['cache_key']);
+
                     return null;
                 }
 
@@ -116,10 +120,7 @@ class PaperflyFraudChecker
                 if (! $stats['ok']) {
                     LogHelper::saveLog('Paperfly fraud check error', 'Smart check failed with status '.$response->status());
 
-                    return CourierReportFormatter::emptyReport([
-                        'unavailable' => true,
-                        'message' => $stats['message'] ?? ('Paperfly smart-check failed (HTTP '.$response->status().').'),
-                    ]);
+                    return null;
                 }
 
                 $this->credentials->markSuccess($auth['credential_id']);
@@ -283,7 +284,7 @@ class PaperflyFraudChecker
                     CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                 ],
             ])
-            ->retry(2, 800, fn (Throwable $exception) => $exception instanceof ConnectionException, throw: false)
+            ->retry(2, 800, fn (Throwable $exception) => CourierTransport::shouldRetry($exception), throw: false)
             ->acceptJson()
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',

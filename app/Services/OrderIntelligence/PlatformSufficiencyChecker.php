@@ -106,6 +106,52 @@ class PlatformSufficiencyChecker
     }
 
     /**
+     * Couriers the customer must see in this response. A missing row, a failed
+     * fetch with no saved counts, or a Pathao rating with no counts is fetched
+     * now. A stale success, or a failed fetch that still has last-good counts,
+     * can wait for the background refresh.
+     *
+     * @param  array<string, mixed>|null  $platformData
+     * @return list<string>
+     */
+    public function couriersBlockingTheResponse(?array $platformData): array
+    {
+        $required = $this->configuredCouriers();
+
+        if ($platformData === null) {
+            return $required;
+        }
+
+        $byCourier = [];
+        foreach ($platformData['courier_stats'] ?? [] as $snapshot) {
+            if (is_array($snapshot) && filled($snapshot['courier'] ?? null)) {
+                $byCourier[(string) $snapshot['courier']] = $snapshot;
+            }
+        }
+
+        $blocking = [];
+
+        foreach ($required as $courier) {
+            $snapshot = $byCourier[$courier] ?? null;
+            $failedWithoutHistory = is_array($snapshot)
+                && ! empty($snapshot['fetch_failed'])
+                && ! $this->snapshotHasDeliveryHistory($snapshot);
+
+            if ($snapshot === null || $failedWithoutHistory) {
+                $blocking[] = $courier;
+
+                continue;
+            }
+
+            if ($courier === 'pathao' && $this->snapshotIsRatingOnly($snapshot)) {
+                $blocking[] = $courier;
+            }
+        }
+
+        return $blocking;
+    }
+
+    /**
      * @return list<string>
      */
     public function configuredCouriers(): array
@@ -262,6 +308,20 @@ class PlatformSufficiencyChecker
     private function isWithinHours(string $timestamp, int $hours): bool
     {
         return Carbon::parse($timestamp)->greaterThanOrEqualTo(now()->subHours($hours));
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     */
+    /**
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function snapshotHasDeliveryHistory(array $snapshot): bool
+    {
+        return (int) ($snapshot['total_order'] ?? 0) > 0
+            || (int) ($snapshot['confirmed'] ?? 0) > 0
+            || (int) ($snapshot['cancel'] ?? 0) > 0
+            || (int) ($snapshot['frauds_count'] ?? 0) > 0;
     }
 
     /**
