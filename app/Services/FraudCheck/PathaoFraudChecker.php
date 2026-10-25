@@ -5,6 +5,8 @@ namespace App\Services\FraudCheck;
 use App\LogHelper;
 use Enan\PathaoCourier\Facades\PathaoCourier;
 use Enan\PathaoCourier\Requests\PathaoUserSuccessRateRequest;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +67,55 @@ class PathaoFraudChecker
         LogHelper::saveLog('Pathao fraud check skipped', 'Pathao credentials are not configured or returned no data.');
 
         return CourierReportFormatter::emptyReport();
+    }
+
+    /**
+     * Pool the merchant success call when a Pathao token is already cached.
+     * Login and Hermes fallbacks stay on check().
+     *
+     * @return array{send: callable, read: callable}|null
+     */
+    public function poolPlan(string $phone, ?array $credentials = null): ?array
+    {
+        foreach ($this->credentials->candidates('pathao') as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
+            $token = Cache::get($cacheKey);
+
+            if (! is_string($token) || trim($token) === '') {
+                continue;
+            }
+
+            return [
+                'send' => function (Pool $pool, string $name) use ($phone, $token): void {
+                    $pool->as($name)
+                        ->timeout(30)
+                        ->acceptJson()
+                        ->withToken($token)
+                        ->withOptions([
+                            'curl' => [
+                                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                            ],
+                        ])
+                        ->post('https://merchant.pathao.com/api/v1/user/success', [
+                            'phone' => $phone,
+                        ]);
+                },
+                'read' => function (Response $response) use ($candidate): ?array {
+                    $result = $this->interpretMerchantHttp($response);
+
+                    if (! $result['ok'] || ! CourierReportFormatter::hasDeliveryCounts($result['report'])) {
+                        return null;
+                    }
+
+                    $this->credentials->markSuccess($candidate['id']);
+
+                    return $result['report'];
+                },
+            ];
+        }
+
+        return null;
     }
 
     public function expireSession(): bool
@@ -309,6 +360,14 @@ class PathaoFraudChecker
                 'phone' => $phone,
             ]);
 
+        return $this->interpretMerchantHttp($response);
+    }
+
+    /**
+     * @return array{ok: bool, unauthorized: bool, busy: bool, report: array<string, mixed>}
+     */
+    private function interpretMerchantHttp(Response $response): array
+    {
         if ($response->status() === 401) {
             return [
                 'ok' => false,

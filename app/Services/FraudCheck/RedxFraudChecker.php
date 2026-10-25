@@ -5,6 +5,7 @@ namespace App\Services\FraudCheck;
 use App\LogHelper;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -105,6 +106,97 @@ class RedxFraudChecker
                 'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Pool the stats call when a RedX token is already cached.
+     * Login stays on check().
+     *
+     * @return array{send: callable, read: callable}|null
+     */
+    public function poolPlan(string $phone, ?array $credentials = null): ?array
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        $auth = null;
+        foreach ($this->credentials->candidates('redx') as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey('redx', $candidate['identifier']);
+            $cached = Cache::get($cacheKey);
+            if (! is_string($cached) || $cached === '') {
+                continue;
+            }
+
+            $auth = [
+                'token' => $cached,
+                'cache_key' => $cacheKey,
+                'credential_id' => $candidate['id'],
+            ];
+            break;
+        }
+
+        if ($auth === null) {
+            return null;
+        }
+
+        return [
+            'send' => function (Pool $pool, string $name) use ($auth, $phone): void {
+                $pool->as($name)
+                    ->timeout(30)
+                    ->connectTimeout(10)
+                    ->withOptions([
+                        'curl' => [
+                            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        ],
+                    ])
+                    ->acceptJson()
+                    ->withHeaders([
+                        'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                        'Accept' => 'application/json, text/plain, */*',
+                        'Origin' => 'https://redx.com.bd',
+                        'Referer' => 'https://redx.com.bd/',
+                    ])
+                    ->withToken($auth['token'])
+                    ->get(self::STATS_URL, [
+                        'phoneNumber' => '88'.$phone,
+                    ]);
+            },
+            'read' => function (Response $response) use ($auth): ?array {
+                if ($response->status() === 401) {
+                    return null;
+                }
+
+                $stats = $this->readStats($response);
+                if (! empty($stats['placeholder'])) {
+                    return CourierReportFormatter::emptyReport([
+                        'unavailable' => true,
+                        'message' => RedxStaticSample::MESSAGE,
+                    ]);
+                }
+
+                if (! $stats['ok']) {
+                    LogHelper::saveLog('RedX fraud check error', 'Stats failed with status '.$response->status());
+
+                    return CourierReportFormatter::emptyReport([
+                        'unavailable' => true,
+                        'message' => $stats['message'] ?? ('RedX stats request failed (HTTP '.$response->status().').'),
+                    ]);
+                }
+
+                $this->credentials->markSuccess($auth['credential_id']);
+
+                if (! empty($stats['empty'])) {
+                    return CourierReportFormatter::emptyReport([
+                        'api_success' => true,
+                        'message' => 'No delivery history found on RedX.',
+                    ]);
+                }
+
+                return $this->mapStats($stats['data']);
+            },
+        ];
     }
 
     /**

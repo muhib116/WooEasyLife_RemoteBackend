@@ -6,6 +6,7 @@ use App\LogHelper;
 use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -98,6 +99,97 @@ class CarrybeeFraudChecker
                     : 'Carrybee customer lookup failed.',
             ]);
         }
+    }
+
+    /**
+     * Pool the customer lookup when a Carrybee session is already cached.
+     * Login stays on check().
+     *
+     * @return array{send: callable, read: callable}|null
+     */
+    public function poolPlan(string $phone, ?array $credentials = null): ?array
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        $auth = null;
+        foreach ($this->credentials->candidates('carrybee') as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey('carrybee', $candidate['identifier']);
+            $cached = Cache::get($cacheKey);
+            if (! is_array($cached) || ! filled($cached['accessToken'] ?? null) || ! filled($cached['businessId'] ?? null)) {
+                continue;
+            }
+
+            $auth = [
+                'accessToken' => (string) $cached['accessToken'],
+                'businessId' => (string) $cached['businessId'],
+                'cache_key' => $cacheKey,
+                'credential_id' => $candidate['id'],
+            ];
+            break;
+        }
+
+        if ($auth === null) {
+            return null;
+        }
+
+        return [
+            'send' => function (Pool $pool, string $name) use ($auth, $phone): void {
+                $pool->as($name)
+                    ->timeout(30)
+                    ->connectTimeout(10)
+                    ->withOptions([
+                        'curl' => [
+                            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        ],
+                    ])
+                    ->acceptJson()
+                    ->withToken($auth['accessToken'])
+                    ->withHeaders([
+                        'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                        'Origin' => 'https://merchant.carrybee.com',
+                        'Referer' => 'https://merchant.carrybee.com/',
+                    ])
+                    ->get('https://api-merchant.carrybee.com/api/v2/businesses/'.$auth['businessId'].'/customers/'.$phone);
+            },
+            'read' => function (Response $response) use ($auth): ?array {
+                if ($response->status() === 401) {
+                    return null;
+                }
+
+                if ($this->isCustomerMissing($response)) {
+                    $this->credentials->markSuccess($auth['credential_id']);
+
+                    return CourierReportFormatter::emptyReport([
+                        'api_success' => true,
+                        'message' => 'No delivery history found on Carrybee.',
+                    ]);
+                }
+
+                if (! $response->successful() || $response->json('error')) {
+                    LogHelper::saveLog('Carrybee fraud check error', 'Customer lookup failed with status '.$response->status());
+
+                    return CourierReportFormatter::emptyReport([
+                        'unavailable' => true,
+                        'message' => 'Carrybee customer lookup failed (HTTP '.$response->status().').',
+                    ]);
+                }
+
+                $this->credentials->markSuccess($auth['credential_id']);
+
+                $data = $response->json('data');
+                if (! is_array($data)) {
+                    return CourierReportFormatter::emptyReport([
+                        'api_success' => true,
+                        'message' => 'No delivery history found on Carrybee.',
+                    ]);
+                }
+
+                return $this->mapCustomerPayload($data);
+            },
+        ];
     }
 
     /**

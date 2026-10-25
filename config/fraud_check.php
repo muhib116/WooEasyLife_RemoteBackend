@@ -51,4 +51,17 @@ return [
     'bulk_max_numbers' => 1000,
     'bulk_retry_attempts' => 3,
     'bulk_retry_pause_ms' => 300,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Parallel courier calls for one phone
+    |--------------------------------------------------------------------------
+    |
+    | Steadfast, Pathao, Paperfly, RedX, and Carrybee do not depend on each
+    | other. When a saved session or API key is already available, those
+    | lookups run together. A courier that still needs a login, or whose
+    | pooled response is unusable, falls back to its existing check().
+    |
+    */
+    'parallel_couriers' => (bool) env('FRAUD_CHECK_PARALLEL_COURIERS', true),
 ];

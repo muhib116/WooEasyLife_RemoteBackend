@@ -5,7 +5,9 @@ namespace App\Services\FraudCheck;
 use App\LogHelper;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -49,6 +51,68 @@ class SteadfastFraudChecker
 
         try {
             return $this->performCheck($phone);
+        } finally {
+            $this->credentials = null;
+        }
+    }
+
+    /**
+     * Pool the official score request when a key pair is already known.
+     * A response that is not usable falls back to check(), which still tries
+     * the remaining keys and the portal session.
+     *
+     * @param  array{username?: string, password?: string, api_key?: string, secret_key?: string}|null  $credentials
+     * @return array{send: callable, read: callable}|null
+     */
+    public function poolPlan(string $phone, ?array $credentials = null): ?array
+    {
+        $this->credentials = $credentials;
+
+        try {
+            $fromPool = false;
+            $candidates = $this->scoreApiCandidates($fromPool);
+            $keys = $candidates[0] ?? null;
+            $digits = preg_replace('/\D/', '', $phone) ?? '';
+
+            if (! is_array($keys) || $digits === '') {
+                return null;
+            }
+
+            return [
+                'send' => function (Pool $pool, string $name) use ($keys, $digits): void {
+                    $pool->as($name)
+                        ->timeout(12)
+                        ->connectTimeout(5)
+                        ->withOptions([
+                            'curl' => [
+                                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                            ],
+                        ])
+                        ->withHeaders([
+                            'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                            'Accept' => 'application/json',
+                            'Accept-Language' => 'en-US,en;q=0.9',
+                            'Api-Key' => $keys['api_key'],
+                            'Secret-Key' => $keys['secret_key'],
+                        ])
+                        ->get('https://portal.packzy.com/api/v1/fraud_check/score/'.$digits);
+                },
+                'read' => function (Response $response) use ($fromPool, $keys): ?array {
+                    $report = $this->scoreReportFromResponse($response);
+                    unset($report['key_error']);
+
+                    if (! $this->isUsableReport($report)) {
+                        return null;
+                    }
+
+                    if ($fromPool) {
+                        $this->flushPoolOutcomes(true, [], $keys['api_key']);
+                    }
+
+                    return $report;
+                },
+            ];
         } finally {
             $this->credentials = null;
         }
@@ -483,6 +547,16 @@ class SteadfastFraudChecker
                 'key_error' => 'Could not reach Steadfast. Another saved key is tried automatically.',
             ]);
         }
+
+        return $this->scoreReportFromResponse($response);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function scoreReportFromResponse(Response $response): array
+    {
+        $report = CourierReportFormatter::emptyReport(['frauds' => []]);
 
         if ($response->status() === 401) {
             LogHelper::saveLog('Steadfast fraud check error', 'Score API rejected the API key');

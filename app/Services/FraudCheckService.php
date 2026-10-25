@@ -8,10 +8,15 @@ use App\Services\FraudCheck\MerchantSteadfastFraudCredentialResolver;
 use App\Services\FraudCheck\PaperflyFraudChecker;
 use App\Services\FraudCheck\PathaoFraudChecker;
 use App\Services\FraudCheck\RedxFraudChecker;
+use App\LogHelper;
 use App\Services\FraudCheck\SteadfastCurlExporter;
 use App\Services\FraudCheck\SteadfastFraudChecker;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
+use Throwable;
 
 class FraudCheckService
 {
@@ -47,18 +52,11 @@ class FraudCheckService
             $steadfastCredentials = $this->steadfastCredentialResolver->resolveFromCurrentRequest();
         }
 
-        $steadfastResponse = $this->withCourierStatus(
-            $this->steadfastFraudChecker->check($phone, $steadfastCredentials),
-            'Steadfast',
-        );
-        $pathaoResponse = $this->withCourierStatus(
-            $this->pathaoFraudChecker->check($phone),
-            'Pathao',
-        );
-        $paperFlyResponse = $this->withCourierStatus(
-            $this->paperflyFraudChecker->check($phone),
-            'Paperfly',
-        );
+        $raw = $this->fetchCourierReports($phone, $steadfastCredentials);
+
+        $steadfastResponse = $this->withCourierStatus($raw['steadfast'], 'Steadfast');
+        $pathaoResponse = $this->withCourierStatus($raw['pathao'], 'Pathao');
+        $paperFlyResponse = $this->withCourierStatus($raw['paperfly'], 'Paperfly');
 
         $courier = [
             ['title' => 'Stead Fast', 'report' => $steadfastResponse],
@@ -71,10 +69,7 @@ class FraudCheckService
         $carrybeeResponse = null;
 
         if (config('fraud_check.include_redx', true)) {
-            $redxResponse = $this->withCourierStatus(
-                $this->redxFraudChecker->check($phone),
-                'RedX',
-            );
+            $redxResponse = $this->withCourierStatus($raw['redx'], 'RedX');
             $courier[] = ['title' => 'RedX', 'report' => $redxResponse];
             $successRateReports[] = $redxResponse;
 
@@ -84,10 +79,7 @@ class FraudCheckService
         }
 
         if (config('fraud_check.include_carrybee', true)) {
-            $carrybeeResponse = $this->withCourierStatus(
-                $this->carrybeeFraudChecker->check($phone),
-                'Carrybee',
-            );
+            $carrybeeResponse = $this->withCourierStatus($raw['carrybee'], 'Carrybee');
             $courier[] = ['title' => 'Carrybee', 'report' => $carrybeeResponse];
             $successRateReports[] = $carrybeeResponse;
 
@@ -112,6 +104,117 @@ class FraudCheckService
             'carrybee_frauds_count' => $carrybeeFraudsCount,
             'courier' => $courier,
         ];
+    }
+
+    /**
+     * Run independent courier lookups together when each one already has a
+     * saved session or API key. Anything that cannot be pooled uses check(),
+     * which is the same path a single fraud check used before.
+     *
+     * @param  array{username?: string, password?: string, api_key?: string, secret_key?: string}|null  $steadfastCredentials
+     * @return array<string, array<string, mixed>>
+     */
+    private function fetchCourierReports(string $phone, ?array $steadfastCredentials): array
+    {
+        $jobs = [
+            'steadfast' => [$this->steadfastFraudChecker, 'check', [$phone, $steadfastCredentials]],
+            'pathao' => [$this->pathaoFraudChecker, 'check', [$phone]],
+            'paperfly' => [$this->paperflyFraudChecker, 'check', [$phone]],
+        ];
+
+        if (config('fraud_check.include_redx', true)) {
+            $jobs['redx'] = [$this->redxFraudChecker, 'check', [$phone]];
+        }
+
+        if (config('fraud_check.include_carrybee', true)) {
+            $jobs['carrybee'] = [$this->carrybeeFraudChecker, 'check', [$phone]];
+        }
+
+        $plans = [];
+        if (config('fraud_check.parallel_couriers', true)) {
+            foreach ($jobs as $key => [$checker]) {
+                $plan = $this->poolPlanFor($checker, $phone, $steadfastCredentials);
+                if ($plan !== null) {
+                    $plans[$key] = $plan;
+                }
+            }
+        }
+
+        $reports = [];
+        if ($plans !== []) {
+            try {
+                $responses = Http::pool(function (Pool $pool) use ($plans) {
+                    foreach ($plans as $key => $plan) {
+                        $plan['send']($pool, $key);
+                    }
+                });
+
+                foreach ($plans as $key => $plan) {
+                    $parsed = $this->readPooled($plan, is_array($responses) ? ($responses[$key] ?? null) : null);
+                    if (is_array($parsed)) {
+                        $reports[$key] = $parsed;
+                    }
+                }
+            } catch (Throwable $exception) {
+                LogHelper::saveLog('Fraud check parallel courier fetch failed', $exception->getMessage());
+            }
+        }
+
+        foreach ($jobs as $key => [$checker, $method, $args]) {
+            if (! array_key_exists($key, $reports)) {
+                $reports[$key] = $checker->{$method}(...$args);
+            }
+        }
+
+        return $reports;
+    }
+
+    /**
+     * @return array{send: callable, read: callable}|null
+     */
+    private function poolPlanFor(object $checker, string $phone, ?array $steadfastCredentials): ?array
+    {
+        if (! method_exists($checker, 'poolPlan')) {
+            return null;
+        }
+
+        try {
+            $plan = $checker->poolPlan($phone, $steadfastCredentials);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (
+            ! is_array($plan)
+            || ! isset($plan['send'], $plan['read'])
+            || ! is_callable($plan['send'])
+            || ! is_callable($plan['read'])
+        ) {
+            return null;
+        }
+
+        return $plan;
+    }
+
+    /**
+     * @param  array{send: callable, read: callable}  $plan
+     * @return array<string, mixed>|null
+     */
+    private function readPooled(array $plan, mixed $response): ?array
+    {
+        if (! $response instanceof Response) {
+            return null;
+        }
+
+        try {
+            $parsed = $plan['read']($response);
+        } catch (Throwable $exception) {
+            LogHelper::saveLog('Fraud check parallel courier fetch failed', $exception->getMessage());
+
+            return null;
+        }
+
+        return is_array($parsed) ? $parsed : null;
     }
 
     /**
