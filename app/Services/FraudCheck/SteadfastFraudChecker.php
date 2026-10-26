@@ -103,7 +103,7 @@ class SteadfastFraudChecker
                     $cooldown = (int) ($report['key_cooldown'] ?? 0);
                     unset($report['key_error'], $report['key_cooldown']);
 
-                    if (! $this->isUsableReport($report)) {
+                    if (! $this->isUsableReport($report) || $this->hasHiddenCounts($report)) {
                         if ($fromPool && $cooldown > 0) {
                             $this->apiCredentials->coolDown($keys['api_key'], $cooldown);
                         }
@@ -126,17 +126,23 @@ class SteadfastFraudChecker
     private function performCheck(string $phone): array
     {
         $apiReport = $this->checkViaScoreApi($phone);
+        $hiddenCountsFallback = null;
 
-        if (is_array($apiReport) && (
-            $this->isUsableReport($apiReport)
-            || ! empty($apiReport['rate_limited'])
-        )) {
-            return $apiReport;
+        if (is_array($apiReport)) {
+            if ($this->isUsableReport($apiReport) && ! $this->hasHiddenCounts($apiReport)) {
+                return $apiReport;
+            }
+
+            if ($this->hasHiddenCounts($apiReport)) {
+                $hiddenCountsFallback = $apiReport;
+            } elseif (! empty($apiReport['rate_limited']) && $this->credentials === null) {
+                return $apiReport;
+            }
         }
 
         $report = $this->runCredentialCheck($phone);
 
-        if ($this->isUsableReport($report)) {
+        if ($this->isUsableReport($report) && (! $this->hasHiddenCounts($report) || $hiddenCountsFallback === null)) {
             return $report;
         }
 
@@ -150,9 +156,20 @@ class SteadfastFraudChecker
             $this->credentials = null;
 
             try {
+                $platformApiReport = $this->checkViaScoreApi($phone);
+                if (is_array($platformApiReport)) {
+                    if ($this->isUsableReport($platformApiReport) && ! $this->hasHiddenCounts($platformApiReport)) {
+                        return $platformApiReport;
+                    }
+
+                    if ($this->hasHiddenCounts($platformApiReport)) {
+                        $hiddenCountsFallback ??= $platformApiReport;
+                    }
+                }
+
                 $fallbackReport = $this->runCredentialCheck($phone);
 
-                if ($this->isUsableReport($fallbackReport)) {
+                if ($this->isUsableReport($fallbackReport) && (! $this->hasHiddenCounts($fallbackReport) || $hiddenCountsFallback === null)) {
                     return $fallbackReport;
                 }
 
@@ -162,7 +179,15 @@ class SteadfastFraudChecker
             }
         }
 
+        if ($hiddenCountsFallback !== null) {
+            return $hiddenCountsFallback;
+        }
+
         if (is_array($apiReport) && ! empty($apiReport['credential_error'])) {
+            return $apiReport;
+        }
+
+        if (is_array($apiReport) && ! empty($apiReport['rate_limited'])) {
             return $apiReport;
         }
 
@@ -171,8 +196,8 @@ class SteadfastFraudChecker
 
     private function runCredentialCheck(string $phone): array
     {
-        // Explicit merchant credentials (plugin/API token path): single account.
-        if ($this->credentials !== null) {
+        // Explicit merchant portal credentials (plugin/API token path): single account.
+        if ($this->credentials !== null && $this->hasPortalCredentials()) {
             if ($this->hasCredentials()) {
                 $report = $this->checkViaCachedSession($phone);
 
@@ -192,6 +217,8 @@ class SteadfastFraudChecker
                 ]);
             }
         } elseif ($this->partnerCredentials->isConfigured('steadfast')) {
+            $previousCredentials = $this->credentials;
+
             // Platform multi-cred: reuse any warm session first.
             foreach ($this->partnerCredentials->candidates('steadfast') as $candidate) {
                 $this->credentials = [
@@ -205,7 +232,7 @@ class SteadfastFraudChecker
                         return $report;
                     }
                 } finally {
-                    $this->credentials = null;
+                    $this->credentials = $previousCredentials;
                 }
             }
 
@@ -232,7 +259,7 @@ class SteadfastFraudChecker
 
                     $this->partnerCredentials->markFailure($candidate['id'], 'Steadfast login/check failed');
                 } finally {
-                    $this->credentials = null;
+                    $this->credentials = $previousCredentials;
                 }
             }
         }
@@ -267,9 +294,44 @@ class SteadfastFraudChecker
         return $this->hasDeliveryData($report) || ! empty($report['api_success']);
     }
 
+    /**
+     * When Steadfast knows parcels exist (delivery_ratio / cancellation_ratio is numeric)
+     * but hides delivered_count and cancelled_count for an inactive API key, keep looking
+     * for an active key or portal session that returns exact counts.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    private function hasHiddenCounts(array $report): bool
+    {
+        return ! empty($report['counts_hidden'])
+            && empty($report['history_unknown'])
+            && ! $this->hasDeliveryData($report);
+    }
+
+    private function hasPortalCredentials(): bool
+    {
+        return filled($this->credentials['username'] ?? null)
+            && filled($this->credentials['password'] ?? null);
+    }
+
+    private function hasHubScoreApiCredentials(): bool
+    {
+        return $this->apiCredentials->hasAccounts()
+            || (filled(config('fraud-checker-bd-courier.steadfast.api_key'))
+                && filled(config('fraud-checker-bd-courier.steadfast.secret_key')));
+    }
+
     private function platformCredentialsDifferFromMerchant(): bool
     {
-        if (! $this->isConfigured() || $this->credentials === null) {
+        if ($this->credentials === null) {
+            return false;
+        }
+
+        if ($this->hasHubScoreApiCredentials()) {
+            return true;
+        }
+
+        if (! $this->isConfigured()) {
             return false;
         }
 
@@ -409,6 +471,7 @@ class SteadfastFraudChecker
 
         $credentialError = null;
         $rateLimited = null;
+        $hiddenCountsFallback = null;
         $lastReport = CourierReportFormatter::emptyReport(['frauds' => []]);
         $outcomes = [];
 
@@ -424,7 +487,13 @@ class SteadfastFraudChecker
             if ($this->isUsableReport($report)) {
                 $this->flushPoolOutcomes($fromPool, $outcomes, $keys['api_key']);
 
-                return $report;
+                if (! $this->hasHiddenCounts($report)) {
+                    return $report;
+                }
+
+                $hiddenCountsFallback ??= $report;
+
+                continue;
             }
 
             if (! empty($report['credential_error'])) {
@@ -443,6 +512,10 @@ class SteadfastFraudChecker
         }
 
         $this->flushPoolOutcomes($fromPool, $outcomes);
+
+        if (is_array($hiddenCountsFallback)) {
+            return $hiddenCountsFallback;
+        }
 
         if (is_array($credentialError)) {
             return $credentialError;

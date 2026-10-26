@@ -141,25 +141,25 @@
                                     <span class="truncate font-medium" style="color: var(--mp-ink)">{{ courier.title }}</span>
                                 </div>
                                 <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold" :class="courierRateClass(courier)">
-                                    {{ percentLabel(courier.success_rate) }}
+                                    {{ courierRateText(courier) }}
                                 </span>
                             </div>
                             <dl class="mt-3 grid gap-2 text-center" :class="showPartial ? 'grid-cols-4' : 'grid-cols-3'">
                                 <div class="rounded-xl px-1 py-2" style="background: rgba(255, 193, 7, 0.08)">
                                     <dt class="text-[10px] uppercase tracking-wide" style="color: var(--mp-muted)">Total</dt>
-                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courierTotal(courier))">{{ courierTotal(courier) }}</dd>
+                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courierTotal(courier))">{{ courierCountCell(courier, courierTotal(courier)) }}</dd>
                                 </div>
                                 <div class="rounded-xl px-1 py-2" style="background: rgba(255, 193, 7, 0.08)">
                                     <dt class="text-[10px] uppercase tracking-wide" style="color: var(--mp-muted)">Success</dt>
-                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courier.received, 'text-emerald-700 dark:text-emerald-300')">{{ courier.received }}</dd>
+                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courier.received, 'text-emerald-700 dark:text-emerald-300')">{{ courierCountCell(courier, courier.received) }}</dd>
                                 </div>
                                 <div class="rounded-xl px-1 py-2" style="background: rgba(255, 193, 7, 0.08)">
                                     <dt class="text-[10px] uppercase tracking-wide" style="color: var(--mp-muted)">Cancel</dt>
-                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courier.cancelled, 'text-rose-700 dark:text-rose-300')">{{ courier.cancelled }}</dd>
+                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courier.cancelled, 'text-rose-700 dark:text-rose-300')">{{ courierCountCell(courier, courier.cancelled) }}</dd>
                                 </div>
                                 <div v-if="showPartial" class="rounded-xl px-1 py-2" style="background: rgba(255, 193, 7, 0.08)">
                                     <dt class="text-[10px] uppercase tracking-wide" style="color: var(--mp-muted)">Partial</dt>
-                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courier.partial, 'text-amber-700 dark:text-amber-300')">{{ courier.partial }}</dd>
+                                    <dd class="mt-0.5 text-sm font-semibold tabular-nums" :class="countClass(courier.partial, 'text-amber-700 dark:text-amber-300')">{{ courierCountCell(courier, courier.partial) }}</dd>
                                 </div>
                             </dl>
                         </li>
@@ -217,13 +217,13 @@
                                     </td>
                                     <td class="px-3 py-2.5 text-right">
                                         <span class="inline-block min-w-12 rounded-full px-2 py-0.5 text-xs font-semibold" :class="courierRateClass(courier)">
-                                            {{ percentLabel(courier.success_rate) }}
+                                            {{ courierRateText(courier) }}
                                         </span>
                                     </td>
-                                    <td class="px-3 py-2.5 text-right tabular-nums" :class="countClass(courierTotal(courier))">{{ courierTotal(courier) }}</td>
-                                    <td class="px-3 py-2.5 text-right tabular-nums" :class="countClass(courier.received, 'text-emerald-700 dark:text-emerald-300')">{{ courier.received }}</td>
-                                    <td class="px-3 py-2.5 text-right tabular-nums" :class="countClass(courier.cancelled, 'text-rose-700 dark:text-rose-300')">{{ courier.cancelled }}</td>
-                                    <td v-if="showPartial" class="px-3 py-2.5 text-right tabular-nums sm:pr-5" :class="countClass(courier.partial, 'text-amber-700 dark:text-amber-300')">{{ courier.partial }}</td>
+                                    <td class="px-3 py-2.5 text-right tabular-nums" :class="countClass(courierTotal(courier))">{{ courierCountCell(courier, courierTotal(courier)) }}</td>
+                                    <td class="px-3 py-2.5 text-right tabular-nums" :class="countClass(courier.received, 'text-emerald-700 dark:text-emerald-300')">{{ courierCountCell(courier, courier.received) }}</td>
+                                    <td class="px-3 py-2.5 text-right tabular-nums" :class="countClass(courier.cancelled, 'text-rose-700 dark:text-rose-300')">{{ courierCountCell(courier, courier.cancelled) }}</td>
+                                    <td v-if="showPartial" class="px-3 py-2.5 text-right tabular-nums sm:pr-5" :class="countClass(courier.partial, 'text-amber-700 dark:text-amber-300')">{{ courierCountCell(courier, courier.partial) }}</td>
                                 </tr>
                                 <tr v-if="!result.couriers?.length">
                                     <td :colspan="showPartial ? 6 : 5" class="px-4 py-8 text-center text-sm" style="color: var(--mp-muted)">
@@ -401,11 +401,42 @@ function isCustomerFraudNote(text) {
         "http 5",
         "vendor/",
         ".php",
+        "no delivery history",
+        "no delivery records",
+        "no order history",
+        "no fraud reports",
+        "did not answer",
+        "did not return",
+        "not been checked",
+        "not set up for fraud",
+        "asked us to slow down",
+        "limit reached for this store",
+        "temporarily unreachable",
+        "temporarily unavailable",
+        "showing last known good data",
+        "exact parcel counts are hidden",
+        "no finished parcels for this number",
+        "platform cache",
+        "no delivery detail rows",
     ].some((needle) => lower.includes(needle));
 }
 
 function percentLabel(value) {
     return value === null || value === undefined || value === "" ? "—" : `${value}%`;
+}
+
+function courierRateText(courier) {
+    if (courier && courier.available === false && courierTotal(courier) === 0 && (courier.success_rate === null || courier.success_rate === undefined || courier.success_rate === "")) {
+        return "Unavailable";
+    }
+    return percentLabel(courier?.success_rate);
+}
+
+function courierCountCell(courier, count) {
+    if (courier && courier.available === false && courierTotal(courier) === 0) {
+        return "—";
+    }
+    return count;
 }
 
 function sharePercent(part, other) {

@@ -141,7 +141,7 @@ class PathaoFraudChecker
                     }
 
                     if ($result['rate_limited']) {
-                        return $this->unavailableReport(true);
+                        return null;
                     }
 
                     $report = $result['report'];
@@ -226,6 +226,8 @@ class PathaoFraudChecker
     {
         $tried = [];
         $serverError = false;
+        $rateLimited = false;
+        $ratingFallback = null;
 
         foreach ($this->credentials->candidates('pathao') as $candidate) {
             $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
@@ -246,11 +248,21 @@ class PathaoFraudChecker
             if ($result['report'] !== null) {
                 $this->credentials->markSuccess($candidate['id']);
 
-                return ['report' => $result['report'], 'rate_limited' => false];
+                if (! CourierReportFormatter::isRatingOnly($result['report'])) {
+                    return ['report' => $result['report'], 'rate_limited' => false];
+                }
+
+                $ratingFallback ??= $result['report'];
+                $tried[$candidate['identifier']] = true;
+
+                continue;
             }
 
             if ($result['rate_limited']) {
-                return ['report' => null, 'rate_limited' => true];
+                $rateLimited = true;
+                $tried[$candidate['identifier']] = true;
+
+                continue;
             }
 
             if ($result['server_error']) {
@@ -275,7 +287,7 @@ class PathaoFraudChecker
 
         // Pathao is failing on its side; fresh logins would not help.
         if ($serverError) {
-            return ['report' => null, 'rate_limited' => false];
+            return ['report' => $ratingFallback, 'rate_limited' => $rateLimited];
         }
 
         foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
@@ -301,19 +313,31 @@ class PathaoFraudChecker
             if ($result['report'] !== null) {
                 $this->credentials->markSuccess($candidate['id']);
 
-                return ['report' => $result['report'], 'rate_limited' => false];
+                if (! CourierReportFormatter::isRatingOnly($result['report'])) {
+                    return ['report' => $result['report'], 'rate_limited' => false];
+                }
+
+                $ratingFallback ??= $result['report'];
+
+                continue;
             }
 
             if ($result['status'] !== null && ! $result['rate_limited'] && ! $result['server_error']) {
                 $this->credentials->markFailure($candidate['id'], 'Merchant success API failed (HTTP '.$result['status'].')');
             }
 
-            if ($result['rate_limited'] || $result['server_error']) {
-                return ['report' => null, 'rate_limited' => $result['rate_limited']];
+            if ($result['rate_limited']) {
+                $rateLimited = true;
+
+                continue;
+            }
+
+            if ($result['server_error']) {
+                return ['report' => $ratingFallback, 'rate_limited' => $rateLimited];
             }
         }
 
-        return ['report' => null, 'rate_limited' => false];
+        return ['report' => $ratingFallback, 'rate_limited' => $rateLimited];
     }
 
     /**

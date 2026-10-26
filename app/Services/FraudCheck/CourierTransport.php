@@ -38,4 +38,18 @@ final class CourierTransport
 
         return mb_substr($message, 0, 200);
     }
+
+    /**
+     * Mask a phone number for privacy-safe diagnostics (never log full customer phone numbers).
+     */
+    public static function maskPhone(?string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone) ?? '';
+
+        if (strlen($digits) < 6) {
+            return '***';
+        }
+
+        return substr($digits, 0, 3).'*****'.substr($digits, -3);
+    }
 }

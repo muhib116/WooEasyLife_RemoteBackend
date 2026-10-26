@@ -5,6 +5,7 @@ namespace App\Services\OrderIntelligence;
 use App\Models\OrderIntelligence\CourierCustomerSnapshot;
 use App\Models\OrderIntelligence\CourierFraudReport;
 use App\Models\OrderIntelligence\PlatformCustomer;
+use App\Services\FraudCheck\CourierReportFormatter;
 use App\Services\FraudCheck\RedxStaticSample;
 use Carbon\Carbon;
 
@@ -204,6 +205,10 @@ class CourierIntelPersister
             return true;
         }
 
+        if ($this->snapshotHasDeliveryCounts($existing) && $this->isDegradedWithoutCounts($report)) {
+            return true;
+        }
+
         if ($this->reportHasUsefulData($report)) {
             return false;
         }
@@ -227,6 +232,36 @@ class CourierIntelPersister
             || (int) $snapshot->cancel > 0
             || (int) $snapshot->frauds_count > 0
             || filled($snapshot->customer_rating);
+    }
+
+    private function snapshotHasDeliveryCounts(CourierCustomerSnapshot $snapshot): bool
+    {
+        if (RedxStaticSample::matchesSnapshot($snapshot)) {
+            return false;
+        }
+
+        return (int) $snapshot->total_order > 0
+            || (int) $snapshot->confirmed > 0
+            || (int) $snapshot->cancel > 0;
+    }
+
+    /**
+     * A rating-only Pathao response or a hidden-counts Steadfast score response
+     * must not wipe out previously saved exact delivery counts.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    private function isDegradedWithoutCounts(array $report): bool
+    {
+        if (CourierReportFormatter::hasDeliveryCounts($report)) {
+            return false;
+        }
+
+        if (CourierReportFormatter::isRatingOnly($report)) {
+            return true;
+        }
+
+        return ! empty($report['counts_hidden']) && empty($report['history_unknown']);
     }
 
     /**

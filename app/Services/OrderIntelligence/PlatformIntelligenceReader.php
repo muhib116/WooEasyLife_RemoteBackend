@@ -79,13 +79,24 @@ class PlatformIntelligenceReader
                 $staticSample = RedxStaticSample::matchesSnapshot($snapshot);
                 $raw = is_array($snapshot->raw_report) ? $snapshot->raw_report : [];
 
+                $partial = max(0, (int) ($raw['partial'] ?? 0));
+
                 return [
                     'courier' => $snapshot->courier,
                     'total_order' => $staticSample ? 0 : $snapshot->total_order,
                     'confirmed' => $staticSample ? 0 : $snapshot->confirmed,
                     'cancel' => $staticSample ? 0 : $snapshot->cancel,
+                    'partial' => $staticSample ? 0 : $partial,
                     'success_rate' => $staticSample ? 'No order history found!' : $snapshot->success_rate,
                     'customer_rating' => $staticSample ? null : $snapshot->customer_rating,
+                    'estimated_success_rate' => $staticSample ? null : ($raw['estimated_success_rate'] ?? null),
+                    'data_type' => $staticSample ? 'delivery' : ($raw['data_type'] ?? null),
+                    'delivery_ratio' => $staticSample ? null : ($raw['delivery_ratio'] ?? null),
+                    'cancellation_ratio' => $staticSample ? null : ($raw['cancellation_ratio'] ?? null),
+                    'counts_hidden' => $staticSample ? false : ! empty($raw['counts_hidden']),
+                    'history_unknown' => $staticSample ? false : ! empty($raw['history_unknown']),
+                    'api_success' => ! $staticSample && ! empty($raw['api_success']),
+                    'frauds' => $staticSample ? [] : (is_array($raw['frauds'] ?? null) ? $raw['frauds'] : []),
                     'frauds_count' => $staticSample ? 0 : $snapshot->frauds_count,
                     'fetched_at' => optional($snapshot->fetched_at)?->toIso8601String(),
                     'fetch_failed' => $staticSample || $this->snapshotFetchFailed($snapshot),

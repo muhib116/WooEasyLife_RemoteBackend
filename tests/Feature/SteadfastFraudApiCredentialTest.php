@@ -618,3 +618,53 @@ it('updates one steadfast api key and leaves the other key alone', function () {
         ])
         ->assertSessionHasErrors('api_key');
 });
+
+it('falls back to platform hub steadfast api keys when a store api key is rejected or hides counts', function () {
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('hub-active-key', 'hub-active-secret', 'Active Hub Key');
+
+    Cache::flush();
+
+    Http::fake(function ($request) {
+        if (! str_contains($request->url(), '/fraud_check/score/')) {
+            return Http::response('', 404);
+        }
+
+        if ($request->hasHeader('Api-Key', 'store-inactive-key')) {
+            return Http::response([
+                'status' => 200,
+                'delivery_ratio' => 85,
+                'cancellation_ratio' => 15,
+                'delivered_count' => null,
+                'cancelled_count' => null,
+                'total_reports' => 0,
+                'fraud_categories' => [],
+            ], 200);
+        }
+
+        if ($request->hasHeader('Api-Key', 'hub-active-key')) {
+            return Http::response([
+                'status' => 200,
+                'delivery_ratio' => 85,
+                'cancellation_ratio' => 15,
+                'delivered_count' => 17,
+                'cancelled_count' => 3,
+                'total_reports' => 0,
+                'fraud_categories' => [],
+            ], 200);
+        }
+
+        return Http::response(['message' => 'Unauthenticated'], 401);
+    });
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678', [
+        'api_key' => 'store-inactive-key',
+        'secret_key' => 'store-inactive-secret',
+    ]);
+
+    expect($report['api_success'] ?? false)->toBeTrue()
+        ->and($report['confirmed'])->toBe(17)
+        ->and($report['cancel'])->toBe(3)
+        ->and($report['total_order'])->toBe(20)
+        ->and($report['counts_hidden'])->toBeFalse();
+});

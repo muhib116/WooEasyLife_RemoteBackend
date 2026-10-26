@@ -58,7 +58,7 @@ class MerchantBulkFraudCheck
                 'phones' => 'Courier history is busy right now. Try again in a moment.',
             ]);
         } catch (\Throwable $exception) {
-            LogHelper::saveLog('Merchant bulk fraud check error', $exception->getMessage());
+            LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
 
             throw ValidationException::withMessages([
                 'phones' => 'Courier history is busy right now. Try again in a moment.',
@@ -500,10 +500,22 @@ class MerchantBulkFraudCheck
             }
 
             $submitted++;
-            $digits = preg_replace('/\D/', '', $line) ?? '';
+            $normalizedLine = strtr($line, [
+                '০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4',
+                '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9',
+                '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+                '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            ]);
+            $digits = preg_replace('/\D/', '', $normalizedLine) ?? '';
 
-            if (str_starts_with($digits, '880')) {
+            if (str_starts_with($digits, '00880')) {
+                $digits = substr($digits, 4);
+            } elseif (str_starts_with($digits, '880')) {
                 $digits = substr($digits, 2);
+            } elseif (strlen($digits) === 12 && preg_match('/^881[3-9]\d{8}$/', $digits)) {
+                $digits = '0'.substr($digits, 2);
+            } elseif (strlen($digits) === 10 && preg_match('/^1[3-9]\d{8}$/', $digits)) {
+                $digits = '0'.$digits;
             }
 
             try {
@@ -655,7 +667,7 @@ class MerchantBulkFraudCheck
                     return ['report' => $report, 'attempts' => $attempt];
                 }
             } catch (\Throwable $exception) {
-                LogHelper::saveLog('Merchant bulk fraud check error', $exception->getMessage());
+                LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
             }
 
             if ($attempt < $attempts && $pauseMs > 0) {
@@ -692,6 +704,11 @@ class MerchantBulkFraudCheck
 
     private function dailyResultNeedsRecheck(BulkFraudDailyResult $existing): bool
     {
+        $hasOrders = ((int) $existing->total_orders + (int) $existing->received + (int) $existing->cancelled + (int) $existing->partial) > 0;
+        if ($existing->status === 'found' && ! $hasOrders && (int) ($existing->success_rate ?? 0) === 0) {
+            return true;
+        }
+
         $incomplete = false;
 
         foreach ($existing->couriers ?? [] as $courier) {
@@ -778,7 +795,7 @@ class MerchantBulkFraudCheck
         } catch (LockTimeoutException) {
             return ['limit' => false, 'busy' => true, 'failed' => false, 'resolved' => null];
         } catch (\Throwable $exception) {
-            LogHelper::saveLog('Merchant bulk fraud check error', $exception->getMessage());
+            LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
 
             return ['limit' => false, 'busy' => true, 'failed' => false, 'resolved' => null];
         }
@@ -801,7 +818,7 @@ class MerchantBulkFraudCheck
                     'resolved' => $resolved,
                 ];
             } catch (\Throwable $exception) {
-                LogHelper::saveLog('Merchant bulk fraud check error', $exception->getMessage());
+                LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
 
                 return ['limit' => false, 'busy' => false, 'failed' => true, 'resolved' => null];
             }

@@ -195,9 +195,23 @@ function splitRow(line) {
     return cells;
 }
 
+function normalizePhoneDigits(rawValue) {
+    const ascii = String(rawValue || "").replace(/[০-৯٠-٩]/g, (ch) => {
+        const bn = "০১২৩৪৫৬৭৮৯".indexOf(ch);
+        if (bn !== -1) return String(bn);
+        const ar = "٠١٢٣٤٥٦٧٨٩".indexOf(ch);
+        return ar !== -1 ? String(ar) : ch;
+    });
+    let digits = ascii.replace(/\D/g, "");
+    if (digits.startsWith("00880")) digits = digits.slice(4);
+    else if (digits.startsWith("880")) digits = digits.slice(2);
+    else if (digits.length === 12 && /^881[3-9]\d{8}$/.test(digits)) digits = "0" + digits.slice(2);
+    else if (digits.length === 10 && /^1[3-9]\d{8}$/.test(digits)) digits = "0" + digits;
+    return digits;
+}
+
 function looksLikePhone(value) {
-    let digits = value.replace(/\D/g, "");
-    if (digits.startsWith("880")) digits = digits.slice(2);
+    const digits = normalizePhoneDigits(value);
     return digits.length >= 10 && digits.length <= 13;
 }
 
@@ -205,11 +219,10 @@ function parsePhones(raw) {
     const seen = new Set();
     let submitted = 0;
     for (const line of String(raw).split(/\r?\n/)) {
-        let phone = line.trim().replace(/\D/g, "");
         if (line.trim() === "") continue;
         submitted += 1;
-        if (phone.startsWith("880")) phone = phone.slice(2);
-        const key = phone || line.trim();
+        const phone = normalizePhoneDigits(line);
+        const key = /^01[3-9]\d{8}$/.test(phone) ? phone : `invalid:${phone || line.trim()}`;
         seen.add(key);
     }
     return { unique: seen.size, duplicates: submitted - seen.size };

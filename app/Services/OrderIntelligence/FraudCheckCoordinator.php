@@ -5,13 +5,18 @@ namespace App\Services\OrderIntelligence;
 use App\Jobs\OrderIntelligence\RefreshCourierSnapshotsJob;
 use App\LogHelper;
 use App\Models\AccessToken;
+use App\Models\BulkFraudDailyResult;
 use App\Models\OrderIntelligence\CourierCustomerSnapshot;
 use App\Models\OrderIntelligence\PlatformCustomer;
 use App\Services\Courier\CourierAccountService;
 use App\Services\FraudCheck\CourierReportFormatter;
+use App\Services\FraudCheck\CourierTransport;
+use App\Services\FraudCheck\MerchantBulkFraudRow;
 use App\Services\FraudCheck\RedxStaticSample;
 use App\Services\FraudCheckService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class FraudCheckCoordinator
 {
@@ -45,7 +50,7 @@ class FraudCheckCoordinator
         $mode = (string) config('order_intelligence.fraud_check.mode', 'hybrid');
 
         $log->add('start', 'Fraud check started', [
-            'phone' => $phoneNormalized,
+            'phone' => CourierTransport::maskPhone($phoneNormalized),
             'mode' => $mode,
             'stale_while_revalidate' => (bool) config('order_intelligence.fraud_check.stale_while_revalidate', true),
             'max_snapshot_staleness_hours' => (int) config('order_intelligence.fraud_check.max_snapshot_staleness_hours', 10),
@@ -103,6 +108,8 @@ class FraudCheckCoordinator
                 ]);
             }
 
+            $this->syncDailyResultIfPresent($phoneNormalized, $report);
+
             return $this->withDebug($report, $log, $attachDebug);
         }
 
@@ -114,8 +121,11 @@ class FraudCheckCoordinator
         $this->ingestExternalReport($accessToken, $payload, $report);
         $log->add('persist', 'Ingested live courier results into platform snapshots');
 
+        $enriched = $this->attachPlatformData($report, $phoneNormalized, $accessToken?->id);
+        $this->syncDailyResultIfPresent($phoneNormalized, $enriched);
+
         return $this->withDebug(
-            $this->attachPlatformData($report, $phoneNormalized, $accessToken?->id),
+            $enriched,
             $log,
             $attachDebug,
         );
@@ -195,14 +205,57 @@ class FraudCheckCoordinator
         $users = [];
 
         foreach ($items as $item) {
-            if (! is_array($item) || empty($item['phone'])) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            if (empty($item['phone'])) {
+                $users[] = [
+                    ...$item,
+                    'report' => [
+                        'total_order' => 0,
+                        'confirmed' => 0,
+                        'frauds' => [],
+                        'cancel' => 0,
+                        'success_rate' => 'No order history found!',
+                        'courier' => [],
+                        'error' => 'Missing phone',
+                    ],
+                ];
+
                 continue;
             }
 
             $itemPayload = [...$item, 'phone' => (string) $item['phone']];
+
+            try {
+                $report = $this->checkSingle($request, $itemPayload);
+            } catch (InvalidArgumentException $e) {
+                $report = [
+                    'total_order' => 0,
+                    'confirmed' => 0,
+                    'frauds' => [],
+                    'cancel' => 0,
+                    'success_rate' => 'No order history found!',
+                    'courier' => [],
+                    'error' => $e->getMessage(),
+                ];
+            } catch (\Throwable $e) {
+                LogHelper::saveLog('Fraud check multiple item error', CourierTransport::safeMessage($e));
+                $report = [
+                    'total_order' => 0,
+                    'confirmed' => 0,
+                    'frauds' => [],
+                    'cancel' => 0,
+                    'success_rate' => 'No order history found!',
+                    'courier' => [],
+                    'error' => 'Unable to complete fraud check.',
+                ];
+            }
+
             $users[] = [
                 ...$item,
-                'report' => $this->checkSingle($request, $itemPayload),
+                'report' => $report,
             ];
         }
 
@@ -312,16 +365,26 @@ class FraudCheckCoordinator
                 continue;
             }
 
-            $live = $entry['report'];
-            if (! $this->isFailedLiveCourierReport($live)) {
-                continue;
-            }
-
             /** @var CourierCustomerSnapshot $snapshot */
             $snapshot = $snapshots->get($key);
             if (! $this->snapshotHasUsefulData($snapshot)) {
                 continue;
             }
+
+            $live = $entry['report'];
+            $failedLive = $this->isFailedLiveCourierReport($live);
+            $degradedCounts = ! $failedLive
+                && $this->snapshotHasDeliveryCounts($snapshot)
+                && $this->isDegradedReportWithoutCounts($live);
+
+            if (! $failedLive && ! $degradedCounts) {
+                continue;
+            }
+
+            $rawSnapshot = is_array($snapshot->raw_report) ? $snapshot->raw_report : [];
+            $snapshotFrauds = is_array($rawSnapshot['frauds'] ?? null) ? $rawSnapshot['frauds'] : [];
+            $liveFrauds = is_array($live['frauds'] ?? null) ? $live['frauds'] : [];
+            $partial = max(0, (int) ($rawSnapshot['partial'] ?? 0));
 
             $failureMessage = (string) ($live['message'] ?? 'Courier temporarily unavailable.');
             $merged = CourierReportFormatter::fromCounts(
@@ -329,12 +392,14 @@ class FraudCheckCoordinator
                 (int) $snapshot->cancel,
                 array_filter([
                     'total_order' => (int) $snapshot->total_order,
+                    'partial' => $partial > 0 ? $partial : null,
                     'success_rate' => $snapshot->success_rate,
                     'customer_rating' => $snapshot->customer_rating,
                     'frauds_count' => (int) $snapshot->frauds_count,
-                    'frauds' => is_array($live['frauds'] ?? null) ? $live['frauds'] : [],
-                    'status' => 'degraded',
-                    'unavailable' => true,
+                    'frauds' => $liveFrauds !== [] ? $liveFrauds : $snapshotFrauds,
+                    'status' => $failedLive ? 'degraded' : 'ok',
+                    'unavailable' => $failedLive ? true : null,
+                    'api_success' => ! $failedLive ? true : null,
                     'source' => 'platform_cache',
                     'message' => $failureMessage.' Showing last known good data.',
                     'cached_fallback' => true,
@@ -396,6 +461,33 @@ class FraudCheckCoordinator
             || (int) $snapshot->cancel > 0
             || (int) $snapshot->frauds_count > 0
             || filled($snapshot->customer_rating);
+    }
+
+    private function snapshotHasDeliveryCounts(CourierCustomerSnapshot $snapshot): bool
+    {
+        if (RedxStaticSample::matchesSnapshot($snapshot)) {
+            return false;
+        }
+
+        return (int) $snapshot->total_order > 0
+            || (int) $snapshot->confirmed > 0
+            || (int) $snapshot->cancel > 0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     */
+    private function isDegradedReportWithoutCounts(array $report): bool
+    {
+        if (CourierReportFormatter::hasDeliveryCounts($report)) {
+            return false;
+        }
+
+        if (CourierReportFormatter::isRatingOnly($report)) {
+            return true;
+        }
+
+        return ! empty($report['counts_hidden']) && empty($report['history_unknown']);
     }
 
     /**
@@ -671,11 +763,94 @@ class FraudCheckCoordinator
         $report['confirmed'] = $confirmOrder;
         $report['cancel'] = $cancelOrder;
         $report['carrybee_frauds_count'] = $carrybeeFraudsCount;
-        $report['success_rate'] = $totalOrder > 0
-            ? ceil(($confirmOrder / $totalOrder) * 100).'%'
-            : ($report['success_rate'] ?? 'No order history found!');
+        $report['success_rate'] = $this->resolveSuccessRateFromCourierEntries(
+            $totalOrder,
+            $confirmOrder,
+            $report['courier'] ?? [],
+        );
 
         return $report;
+    }
+
+    /**
+     * @param  array<int, mixed>  $courierEntries
+     */
+    private function resolveSuccessRateFromCourierEntries(int $totalOrder, int $confirmOrder, array $courierEntries): string
+    {
+        if ($totalOrder > 0) {
+            return ceil(($confirmOrder / $totalOrder) * 100).'%';
+        }
+
+        foreach ($courierEntries as $entry) {
+            if (! is_array($entry) || ! is_array($entry['report'] ?? null)) {
+                continue;
+            }
+
+            $courierReport = $entry['report'];
+
+            if (($courierReport['data_type'] ?? 'delivery') === 'fraud_reports') {
+                continue;
+            }
+
+            if (! empty($courierReport['customer_rating'])) {
+                return CourierReportFormatter::formatRating((string) $courierReport['customer_rating']);
+            }
+
+            $rate = (string) ($courierReport['success_rate'] ?? '');
+
+            if ($rate !== '' && $rate !== 'No order history found!') {
+                return $rate;
+            }
+        }
+
+        return 'No order history found!';
+    }
+
+    /**
+     * Keep today's BulkFraudDailyResult row in sync when a phone number is checked
+     * or refreshed via Admin, Plugin, or Portal so merchant and admin views never diverge.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    private function syncDailyResultIfPresent(string $phoneNormalized, array $report): void
+    {
+        if (! MerchantBulkFraudRow::isUsable($report)) {
+            return;
+        }
+
+        try {
+            $today = Carbon::now('Asia/Dhaka')->toDateString();
+            $existing = BulkFraudDailyResult::query()
+                ->where('phone', $phoneNormalized)
+                ->where('checked_on', $today)
+                ->first();
+
+            if (! $existing) {
+                return;
+            }
+
+            $row = MerchantBulkFraudRow::fromReport($phoneNormalized, $report);
+
+            $existingOrders = (int) $existing->total_orders + (int) $existing->received + (int) $existing->cancelled + (int) $existing->partial;
+            $newOrders = (int) ($row['total_orders'] ?? 0) + (int) ($row['received'] ?? 0) + (int) ($row['cancelled'] ?? 0) + (int) ($row['partial'] ?? 0);
+
+            if ($existingOrders > 0 && $newOrders === 0) {
+                return;
+            }
+
+            $existing->update([
+                'status' => $row['status'],
+                'total_orders' => $row['total_orders'],
+                'received' => $row['received'],
+                'cancelled' => $row['cancelled'],
+                'partial' => $row['partial'],
+                'success_rate' => $row['success_rate'],
+                'risk' => $row['risk'],
+                'couriers' => $row['couriers'],
+            ]);
+        } catch (\Throwable) {
+            // Best-effort sync; never interrupt the fraud check response.
+        }
     }
 
     /**
@@ -702,6 +877,7 @@ class FraudCheckCoordinator
                         'details' => $note['details'] ?? '',
                         'consignment_id' => $note['consignment_id'] ?? null,
                         'created_at' => $note['created_at'] ?? null,
+                        'courier' => $note['courier'] ?? null,
                     ],
                     $platformData['courier_fraud_notes'],
                 );

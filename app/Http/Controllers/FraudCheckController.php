@@ -274,8 +274,8 @@ class FraudCheckController extends Controller
                 $progress = $total > 0 ? ($processed / $total) * 100 : 100;
                 $this->sendEvent('user_report', json_encode([
                     'data' => [
-                        'id' => $number['id'],
-                        'phone' => $number['phone'],
+                        'id' => is_array($number) ? ($number['id'] ?? null) : null,
+                        'phone' => is_array($number) ? ($number['phone'] ?? null) : null,
                         'report' => $report,
                     ],
                     'progress' => [

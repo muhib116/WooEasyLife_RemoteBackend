@@ -6,6 +6,7 @@ use App\Domain\OrderIntelligence\OrderStatus;
 use App\Jobs\OrderIntelligence\ProjectCustomerStatsJob;
 use App\Models\AccessToken;
 use App\Models\OrderIntelligence\PlatformCustomer;
+use App\Services\FraudCheck\CourierTransport;
 use Illuminate\Support\Facades\Log;
 
 class FraudCheckIngestor
@@ -60,8 +61,8 @@ class FraudCheckIngestor
             ProjectCustomerStatsJob::dispatch($customer->id);
         } catch (\Throwable $exception) {
             Log::warning('Order intelligence fraud check ingest failed.', [
-                'phone' => $context->phone,
-                'message' => $exception->getMessage(),
+                'phone' => CourierTransport::maskPhone($context->phone),
+                'message' => CourierTransport::safeMessage($exception),
             ]);
         }
     }
@@ -82,8 +83,8 @@ class FraudCheckIngestor
             }
         } catch (\Throwable $exception) {
             Log::warning('Order intelligence order context ingest failed.', [
-                'phone' => $context->phone,
-                'message' => $exception->getMessage(),
+                'phone' => CourierTransport::maskPhone($context->phone),
+                'message' => CourierTransport::safeMessage($exception),
             ]);
         }
     }

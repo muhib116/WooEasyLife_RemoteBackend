@@ -221,6 +221,48 @@ it('logs in a different Pathao account after the cached one is forbidden', funct
         && $request['username'] === 'backup@pathao.test');
 });
 
+it('tries the next cached Pathao account when the first account returns rating only', function () {
+    Cache::flush();
+    silencePathaoOutsideMerchant();
+
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'rating-only@pathao.test',
+        'secret' => 'first-password',
+        'is_active' => true,
+        'priority' => 1,
+    ]);
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'counts@pathao.test',
+        'secret' => 'second-password',
+        'is_active' => true,
+        'priority' => 2,
+    ]);
+
+    $resolver = app(FraudPartnerCredentialResolver::class);
+    Cache::put($resolver->sessionCacheKey('pathao', 'rating-only@pathao.test'), 'token-rating', now()->addMinutes(50));
+    Cache::put($resolver->sessionCacheKey('pathao', 'counts@pathao.test'), 'token-counts', now()->addMinutes(50));
+
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/user/success' => Http::sequence()
+            ->push([
+                'data' => [
+                    'show_count' => false,
+                    'customer_rating' => 'good_customer',
+                ],
+            ], 200)
+            ->push(pathaoSuccessBody(), 200),
+    ]);
+
+    $report = app(PathaoFraudChecker::class)->check('01770989591');
+
+    expect($report['total_order'])->toBe(11)
+        ->and($report['confirmed'])->toBe(7)
+        ->and($report['cancel'])->toBe(4);
+});
+
 function silencePathaoHermes(): void
 {
     config()->set('pathao-courier.pathao_client_id', null);

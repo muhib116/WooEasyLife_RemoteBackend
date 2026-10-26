@@ -3,6 +3,7 @@
 namespace App\Services\OrderIntelligence;
 
 use App\Models\OrderIntelligence\PlatformCustomer;
+use App\Services\FraudCheck\CourierTransport;
 use App\Services\FraudCheckService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -62,9 +63,9 @@ class CourierSnapshotRefresher
                 $attempted[] = $courier;
             } catch (\Throwable $exception) {
                 Log::warning('Courier snapshot refresh failed for partner.', [
-                    'phone' => $phoneNormalized,
+                    'phone' => CourierTransport::maskPhone($phoneNormalized),
                     'courier' => $courier,
-                    'message' => $exception->getMessage(),
+                    'message' => CourierTransport::safeMessage($exception),
                 ]);
             }
         }
@@ -88,15 +89,15 @@ class CourierSnapshotRefresher
             $this->cache->forget($phoneNormalized, $accessTokenId);
 
             Log::info('Courier snapshot refresh completed.', [
-                'phone' => $phoneNormalized,
+                'phone' => CourierTransport::maskPhone($phoneNormalized),
                 'couriers' => $attempted,
             ]);
 
             return true;
         } catch (\Throwable $exception) {
             Log::warning('Courier snapshot refresh persist failed.', [
-                'phone' => $phoneNormalized,
-                'message' => $exception->getMessage(),
+                'phone' => CourierTransport::maskPhone($phoneNormalized),
+                'message' => CourierTransport::safeMessage($exception),
             ]);
 
             return false;

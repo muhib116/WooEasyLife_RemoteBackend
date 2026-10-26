@@ -32,13 +32,15 @@ class LegacyReportFormatter
         $confirmOrder = (int) ceil($totals['confirmed']);
         $cancelOrder = (int) ceil($totals['cancel']);
 
-        if ($totalOrder === 0) {
+        if ($totalOrder === 0 && ! $this->hasCheckedCourierSnapshots($courierStats)) {
             [$totalOrder, $confirmOrder, $cancelOrder] = $this->totalsFromPlatformCounts(
                 $platformData['platform_intelligence']['counts'] ?? [],
             );
         }
 
         $frauds = $this->formatFrauds($platformData['courier_fraud_notes'] ?? []);
+        $steadfast = $this->attachCourierFrauds($steadfast, $frauds, 'steadfast');
+        $carrybee = $this->attachCourierFrauds($carrybee, $frauds, 'carrybee');
         $carrybeeFraudsCount = (int) ($carrybee['frauds_count'] ?? 0);
         $successRate = $this->resolveSuccessRate(
             $totalOrder,
@@ -135,16 +137,34 @@ class LegacyReportFormatter
             ]);
         }
 
+        $partial = (int) ($snapshot['partial'] ?? 0);
+        $rating = isset($snapshot['customer_rating']) && filled($snapshot['customer_rating'])
+            ? (string) $snapshot['customer_rating']
+            : null;
+        $estimatedRate = $snapshot['estimated_success_rate'] ?? null;
+        if ($estimatedRate === null && $rating !== null) {
+            $estimatedPercent = CourierReportFormatter::estimatedSuccessPercent($rating);
+            $estimatedRate = $estimatedPercent !== null ? $estimatedPercent.'%' : null;
+        }
+
         $extra = array_filter([
             'total_order' => (int) ($snapshot['total_order'] ?? 0),
-            'success_rate' => $snapshot['success_rate'] ?? null,
-            'customer_rating' => $snapshot['customer_rating'] ?? null,
+            'partial' => $partial > 0 ? $partial : null,
+            'success_rate' => $snapshot['success_rate'] ?? ($rating !== null ? CourierReportFormatter::formatRating($rating) : null),
+            'customer_rating' => $rating,
+            'estimated_success_rate' => $estimatedRate,
+            'delivery_ratio' => $snapshot['delivery_ratio'] ?? null,
+            'cancellation_ratio' => $snapshot['cancellation_ratio'] ?? null,
+            'counts_hidden' => ! empty($snapshot['counts_hidden']) ? true : null,
+            'history_unknown' => ! empty($snapshot['history_unknown']) ? true : null,
+            'api_success' => ! empty($snapshot['api_success']) ? true : null,
+            'frauds' => ! empty($snapshot['frauds']) && is_array($snapshot['frauds']) ? $snapshot['frauds'] : null,
             'frauds_count' => $fraudsCount > 0 ? $fraudsCount : null,
             'source' => 'platform_cache',
             'fetched_at' => $snapshot['fetched_at'] ?? null,
         ], fn ($value) => $value !== null);
 
-        if (! empty($snapshot['customer_rating']) && (int) ($snapshot['total_order'] ?? 0) === 0) {
+        if ($rating !== null && (int) ($snapshot['total_order'] ?? 0) === 0) {
             $extra['data_type'] = 'rating';
         }
 
@@ -168,24 +188,60 @@ class LegacyReportFormatter
     }
 
     /**
+     * @param  array<int, array<string, mixed>>  $snapshots
+     */
+    private function hasCheckedCourierSnapshots(array $snapshots): bool
+    {
+        foreach ($snapshots as $snapshot) {
+            if (is_array($snapshot) && empty($snapshot['fetch_failed']) && filled($snapshot['courier'] ?? null)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $report
+     * @param  array<int, array<string, mixed>>  $frauds
+     * @return array<string, mixed>
+     */
+    private function attachCourierFrauds(array $report, array $frauds, string $courier): array
+    {
+        $matched = array_values(array_filter(
+            $frauds,
+            static fn (array $fraud): bool => strtolower((string) ($fraud['courier'] ?? 'steadfast')) === $courier,
+        ));
+
+        if ($matched === []) {
+            return $report;
+        }
+
+        $existing = is_array($report['frauds'] ?? null) ? $report['frauds'] : [];
+        $report['frauds'] = $existing !== [] ? $existing : $matched;
+
+        return $report;
+    }
+
+    /**
      * @param  array<string, int>  $counts
      * @return array{0: int, 1: int, 2: int}
      */
     private function totalsFromPlatformCounts(array $counts): array
     {
-        $newOrder = (int) ($counts['new_order'] ?? 0);
-        $courierEntry = (int) ($counts['courier_entry'] ?? 0)
-            + (int) ($counts['courier_handover'] ?? 0)
-            + (int) ($counts['delivered'] ?? 0)
-            + (int) ($counts['partially_delivered'] ?? 0)
-            + (int) ($counts['returned'] ?? 0);
         $delivered = (int) ($counts['delivered'] ?? 0) + (int) ($counts['partially_delivered'] ?? 0);
         $returned = (int) ($counts['returned'] ?? 0);
         $canceled = (int) ($counts['canceled'] ?? 0);
-
-        $total = max($newOrder, array_sum($counts));
-        $confirmed = max($courierEntry, $delivered);
+        $confirmed = $delivered;
         $cancel = $returned + $canceled;
+
+        // A freshly created order (new_order) that has not finished delivery or return
+        // is not completed courier history and must not fabricate a 0% delivery rate.
+        if (($confirmed + $cancel) === 0) {
+            return [0, 0, 0];
+        }
+
+        $total = $confirmed + $cancel;
 
         return [$total, $confirmed, $cancel];
     }
@@ -228,10 +284,6 @@ class LegacyReportFormatter
     ): string {
         if ($totalOrder > 0) {
             return ceil(($confirmOrder / $totalOrder) * 100) . '%';
-        }
-
-        if (! empty($rates['delivery_rate'])) {
-            return (string) $rates['delivery_rate'];
         }
 
         foreach ([$steadfast, $pathao, $paperfly, $redx, $carrybee] as $report) {

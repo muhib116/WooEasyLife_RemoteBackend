@@ -33,10 +33,23 @@ class FraudCheckService
 
     public function normalizePhone(?string $phone): string
     {
-        $phone = preg_replace('/\D/', '', (string) $phone);
+        $raw = strtr((string) $phone, [
+            '০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4',
+            '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ]);
 
-        if (str_starts_with($phone, '880')) {
+        $phone = preg_replace('/\D/', '', $raw) ?? '';
+
+        if (str_starts_with($phone, '00880')) {
+            $phone = substr($phone, 4);
+        } elseif (str_starts_with($phone, '880')) {
             $phone = substr($phone, 2);
+        } elseif (strlen($phone) === 12 && preg_match('/^881[3-9]\d{8}$/', $phone)) {
+            $phone = '0'.substr($phone, 2);
+        } elseif (strlen($phone) === 10 && preg_match('/^1[3-9]\d{8}$/', $phone)) {
+            $phone = '0'.$phone;
         }
 
         if (! preg_match('/^01[3-9]\d{8}$/', $phone)) {
@@ -339,13 +352,45 @@ class FraudCheckService
         $users = [];
 
         foreach ($numbers as $number) {
-            $phone = is_array($number) ? ($number['phone'] ?? null) : null;
-
-            if (! $phone) {
+            if (! is_array($number)) {
                 continue;
             }
 
-            $users[] = [...$number, 'report' => $this->getReport($phone)];
+            $phone = $number['phone'] ?? null;
+
+            if (! $phone) {
+                $users[] = [
+                    ...$number,
+                    'report' => [
+                        'total_order' => 0,
+                        'confirmed' => 0,
+                        'frauds' => [],
+                        'cancel' => 0,
+                        'success_rate' => 'No order history found!',
+                        'courier' => [],
+                        'error' => 'Missing phone',
+                    ],
+                ];
+
+                continue;
+            }
+
+            try {
+                $users[] = [...$number, 'report' => $this->getReport((string) $phone)];
+            } catch (InvalidArgumentException $e) {
+                $users[] = [
+                    ...$number,
+                    'report' => [
+                        'total_order' => 0,
+                        'confirmed' => 0,
+                        'frauds' => [],
+                        'cancel' => 0,
+                        'success_rate' => 'No order history found!',
+                        'courier' => [],
+                        'error' => $e->getMessage(),
+                    ],
+                ];
+            }
         }
 
         return $users;

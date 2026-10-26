@@ -30,7 +30,7 @@ class BulkFraudDailyResult extends Model
      */
     public function counts(): array
     {
-        return [
+        return \App\Services\FraudCheck\MerchantBulkFraudRow::sanitizeStoredRow([
             'status' => $this->status,
             'total_orders' => (int) $this->total_orders,
             'received' => (int) $this->received,
@@ -40,6 +40,6 @@ class BulkFraudDailyResult extends Model
             'risk' => $this->risk,
             'couriers' => $this->couriers ?? [],
             'attempts' => (int) $this->attempts,
-        ];
+        ]);
     }
 }

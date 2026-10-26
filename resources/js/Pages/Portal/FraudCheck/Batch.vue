@@ -779,6 +779,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    stopRequested = true;
     window.removeEventListener("keydown", onEscape);
     document.removeEventListener("click", onDocumentClick);
 });
@@ -815,7 +816,10 @@ function courierLogo(title) {
 
 function courierLine(courier) {
     if (!courier.available && !courier.received && !courier.cancelled && !courier.partial) {
-        return "No delivery data";
+        return "Data unavailable";
+    }
+    if (!courier.received && !courier.cancelled && !courier.partial && courier.success_rate !== null && courier.success_rate !== undefined) {
+        return "Ratio / rating only (counts hidden)";
     }
     const parts = [`${courier.received} delivered`, `${courier.cancelled} returned`];
     if (courier.partial) parts.push(`${courier.partial} partial`);
@@ -860,6 +864,23 @@ function isCustomerFraudNote(text) {
         "http 5",
         "vendor/",
         ".php",
+        "no delivery history",
+        "no delivery records",
+        "no order history",
+        "no fraud reports",
+        "did not answer",
+        "did not return",
+        "not been checked",
+        "not set up for fraud",
+        "asked us to slow down",
+        "limit reached for this store",
+        "temporarily unreachable",
+        "temporarily unavailable",
+        "showing last known good data",
+        "exact parcel counts are hidden",
+        "no finished parcels for this number",
+        "platform cache",
+        "no delivery detail rows",
     ].some((needle) => lower.includes(needle));
 }
 

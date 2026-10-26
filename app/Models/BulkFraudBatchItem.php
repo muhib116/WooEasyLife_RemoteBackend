@@ -43,7 +43,7 @@ class BulkFraudBatchItem extends Model
      */
     public function toPortalRow(): array
     {
-        return [
+        return \App\Services\FraudCheck\MerchantBulkFraudRow::sanitizeStoredRow([
             'id' => $this->id,
             'phone' => $this->phone,
             'status' => $this->status === 'checking' ? 'pending' : $this->status,
@@ -56,6 +56,6 @@ class BulkFraudBatchItem extends Model
             'success_rate' => $this->success_rate === null ? null : (int) $this->success_rate,
             'risk' => $this->risk,
             'couriers' => $this->couriers ?? [],
-        ];
+        ]);
     }
 }

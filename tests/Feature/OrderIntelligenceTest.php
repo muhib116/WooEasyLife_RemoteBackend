@@ -970,3 +970,126 @@ it('scores higher risk for customers with fraud reports', function () {
 
     expect($withFraud['risk_score'])->toBeGreaterThan($base['risk_score']);
 });
+
+it('preserves existing pathao delivery counts when a later lookup returns rating only', function () {
+    config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
+
+    $customer = app(CustomerResolver::class)->resolve('01712121212', 'Pathao Preserve User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01712121212',
+        'courier' => 'pathao',
+        'total_order' => 25,
+        'confirmed' => 22,
+        'cancel' => 3,
+        'success_rate' => '88%',
+        'frauds_count' => 0,
+        'fetched_at' => now()->subHours(2),
+    ]);
+
+    app(\App\Services\OrderIntelligence\CourierIntelPersister::class)->persistFromFraudCheckReports(
+        customer: $customer,
+        phoneNormalized: '01712121212',
+        steadfastReport: [],
+        pathaoReport: [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'data_type' => 'rating',
+            'customer_rating' => 'good_customer',
+            'success_rate' => 'Good Customer',
+            'estimated_success_rate' => '85%',
+        ],
+        paperflyReport: [],
+    );
+
+    $pathao = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'pathao')
+        ->first();
+
+    expect($pathao->total_order)->toBe(25)
+        ->and($pathao->confirmed)->toBe(22)
+        ->and($pathao->cancel)->toBe(3);
+});
+
+it('preserves existing steadfast delivery counts when a later score lookup hides counts', function () {
+    config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
+
+    $customer = app(CustomerResolver::class)->resolve('01713131313', 'Steadfast Preserve User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01713131313',
+        'courier' => 'steadfast',
+        'total_order' => 40,
+        'confirmed' => 36,
+        'cancel' => 4,
+        'success_rate' => '90%',
+        'frauds_count' => 0,
+        'fetched_at' => now()->subHours(2),
+    ]);
+
+    app(\App\Services\OrderIntelligence\CourierIntelPersister::class)->persistFromFraudCheckReports(
+        customer: $customer,
+        phoneNormalized: '01713131313',
+        steadfastReport: [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'delivery_ratio' => 90,
+            'cancellation_ratio' => 10,
+            'counts_hidden' => true,
+            'api_success' => true,
+            'success_rate' => '90%',
+        ],
+        pathaoReport: [],
+        paperflyReport: [],
+    );
+
+    $steadfast = CourierCustomerSnapshot::query()
+        ->where('platform_customer_id', $customer->id)
+        ->where('courier', 'steadfast')
+        ->first();
+
+    expect($steadfast->total_order)->toBe(40)
+        ->and($steadfast->confirmed)->toBe(36)
+        ->and($steadfast->cancel)->toBe(4);
+});
+
+it('handles invalid phones in checkMultiple without failing the batch or shifting indices', function () {
+    $this->mock(FraudCheckService::class, function ($mock) {
+        $mock->shouldReceive('normalizePhone')->andReturnUsing(function ($phone) {
+            if ($phone === '01711111111') {
+                return '01711111111';
+            }
+
+            throw new \InvalidArgumentException('Invalid BD phone');
+        });
+        $mock->shouldReceive('getReport')->once()->with('01711111111')->andReturn([
+            'total_order' => 5,
+            'confirmed' => 4,
+            'cancel' => 1,
+            'frauds' => [],
+            'success_rate' => '80%',
+            'courier' => [],
+        ]);
+    });
+
+    $request = Request::create('/api/fraud-check', 'POST');
+    $results = app(FraudCheckCoordinator::class)->checkMultiple($request, [
+        ['id' => 101, 'phone' => 'invalid-phone'],
+        ['id' => 102, 'phone' => ''],
+        ['id' => 103, 'phone' => '01711111111'],
+    ]);
+
+    expect($results)->toHaveCount(3)
+        ->and($results[0]['id'])->toBe(101)
+        ->and($results[0]['report']['error'])->toBe('Invalid BD phone')
+        ->and($results[1]['id'])->toBe(102)
+        ->and($results[1]['report']['error'])->toBe('Missing phone')
+        ->and($results[2]['id'])->toBe(103)
+        ->and($results[2]['report']['total_order'])->toBe(5)
+        ->and($results[2]['report']['confirmed'])->toBe(4);
+});

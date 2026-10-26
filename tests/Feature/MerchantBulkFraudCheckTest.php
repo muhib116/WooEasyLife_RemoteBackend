@@ -1211,6 +1211,318 @@ class MerchantBulkFraudCheckTest extends TestCase
         $this->assertSame(0, CourierHistoryUse::query()->where('user_id', $staff->id)->count());
     }
 
+    public function test_excel_ten_digit_and_bengali_phone_numbers_normalize_and_deduplicate(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->never();
+        });
+
+        $merchant = $this->merchant('excel-phones@example.com', '01700000096');
+
+        $response = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'name' => 'Excel CSV',
+                'phones' => "1712345678\n01712345678\n+8801712345678\n008801712345678\n০১৭১২৩৪৫৬৭৮\n1812345678",
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('batch.submitted_count', 6)
+            ->assertJsonPath('batch.unique_count', 2)
+            ->assertJsonPath('batch.duplicates_removed', 4);
+
+        $items = $response->json('items');
+        $this->assertSame(['01712345678', '01812345678'], array_column($items, 'phone'));
+    }
+
+    public function test_zero_history_customer_in_platform_cache_stays_not_found_and_never_becomes_zero_percent_high_risk(): void
+    {
+        config([
+            'order_intelligence.enabled' => true,
+            'order_intelligence.fraud_check.mode' => 'hybrid',
+            'order_intelligence.fraud_check.stale_while_revalidate' => true,
+            'fraud_check.include_redx' => true,
+            'fraud_check.include_carrybee' => true,
+        ]);
+
+        $this->mock(FraudCheckService::class, function ($mock): void {
+            $mock->shouldReceive('normalizePhone')->andReturnUsing(fn ($phone) => '01799001122');
+            $mock->shouldReceive('getReport')->once()->andReturn([
+                'total_order' => 0,
+                'confirmed' => 0,
+                'cancel' => 0,
+                'frauds' => [],
+                'success_rate' => 'No order history found!',
+                'carrybee_frauds_count' => 0,
+                'courier' => [
+                    [
+                        'title' => 'Stead Fast',
+                        'report' => [
+                            'total_order' => 0,
+                            'confirmed' => 0,
+                            'cancel' => 0,
+                            'success_rate' => 'No order history found!',
+                            'status' => 'ok',
+                            'api_success' => true,
+                            'message' => 'No delivery history found on Steadfast.',
+                        ],
+                    ],
+                    [
+                        'title' => 'Pathao',
+                        'report' => [
+                            'total_order' => 0,
+                            'confirmed' => 0,
+                            'cancel' => 0,
+                            'success_rate' => 'No order history found!',
+                            'status' => 'ok',
+                            'api_success' => true,
+                            'message' => 'No delivery history found on Pathao.',
+                        ],
+                    ],
+                    [
+                        'title' => 'Paper Fly',
+                        'report' => [
+                            'total_order' => 0,
+                            'confirmed' => 0,
+                            'cancel' => 0,
+                            'success_rate' => 'No order history found!',
+                            'status' => 'ok',
+                            'api_success' => true,
+                            'message' => 'No delivery records found on Paperfly.',
+                        ],
+                    ],
+                    [
+                        'title' => 'RedX',
+                        'report' => [
+                            'total_order' => 0,
+                            'confirmed' => 0,
+                            'cancel' => 0,
+                            'success_rate' => 'No order history found!',
+                            'status' => 'ok',
+                            'api_success' => true,
+                            'message' => 'No delivery history found on RedX.',
+                        ],
+                    ],
+                    [
+                        'title' => 'Carrybee',
+                        'report' => [
+                            'total_order' => 0,
+                            'confirmed' => 0,
+                            'cancel' => 0,
+                            'success_rate' => 'No order history found!',
+                            'status' => 'ok',
+                            'api_success' => true,
+                            'message' => 'No delivery history found on Carrybee.',
+                        ],
+                    ],
+                ],
+            ]);
+        });
+
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'consistency-admin@example.com',
+            'phone' => '01700000097',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        // 1. Admin checks the phone first (populates PlatformCustomerStats with delivery_rate = '0%' and CourierCustomerSnapshots).
+        $adminResponse = $this->actingAs($admin)
+            ->postJson(route('frauds.adminFraudCheck'), ['phone' => '01799001122'])
+            ->assertOk();
+
+        $this->assertSame(0, $adminResponse->json('total_order'));
+        $this->assertSame('No order history found!', $adminResponse->json('success_rate'));
+
+        // 2. Admin checks a second time (served from platform cache via LegacyReportFormatter).
+        $adminCached = $this->actingAs($admin)
+            ->postJson(route('frauds.adminFraudCheck'), ['phone' => '01799001122'])
+            ->assertOk();
+
+        $this->assertSame('platform', $adminCached->json('source'));
+        $this->assertSame(0, $adminCached->json('total_order'));
+        $this->assertSame('No order history found!', $adminCached->json('success_rate'));
+
+        // 3. Merchant checks the same phone in Bulk Fraud Checker (served from platform cache).
+        $merchant = $this->merchant('consistency-merchant@example.com', '01700000098');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01799001122'])
+            ->assertOk()
+            ->json('batch.id');
+
+        $bulkItem = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.status', 'not_found')
+            ->assertJsonPath('item.total_orders', 0)
+            ->assertJsonPath('item.received', 0)
+            ->assertJsonPath('item.cancelled', 0)
+            ->assertJsonPath('item.success_rate', null)
+            ->assertJsonPath('item.risk', null)
+            ->json('item');
+
+        foreach ($bulkItem['couriers'] as $courier) {
+            $this->assertSame([], $courier['notes'], "Courier {$courier['title']} should have no fake fraud notes.");
+        }
+    }
+
+    public function test_platform_cached_check_preserves_fraud_notes_and_partial_counts_between_admin_and_merchant_bulk(): void
+    {
+        config([
+            'order_intelligence.enabled' => true,
+            'order_intelligence.fraud_check.mode' => 'hybrid',
+            'order_intelligence.fraud_check.stale_while_revalidate' => true,
+            'fraud_check.include_redx' => false,
+            'fraud_check.include_carrybee' => false,
+        ]);
+
+        $this->mock(FraudCheckService::class, function ($mock): void {
+            $mock->shouldReceive('normalizePhone')->andReturnUsing(fn ($phone) => '01788112233');
+            $mock->shouldReceive('getReport')->once()->andReturn([
+                'total_order' => 12,
+                'confirmed' => 9,
+                'cancel' => 3,
+                'frauds' => [
+                    ['name' => 'Shop A', 'details' => 'Refused COD at doorstep', 'courier' => 'steadfast'],
+                ],
+                'success_rate' => '75%',
+                'carrybee_frauds_count' => 0,
+                'courier' => [
+                    [
+                        'title' => 'Stead Fast',
+                        'report' => [
+                            'total_order' => 10,
+                            'confirmed' => 8,
+                            'cancel' => 2,
+                            'success_rate' => '80%',
+                            'status' => 'ok',
+                            'api_success' => true,
+                            'frauds' => [
+                                ['name' => 'Shop A', 'details' => 'Refused COD at doorstep'],
+                            ],
+                        ],
+                    ],
+                    [
+                        'title' => 'Pathao',
+                        'report' => [
+                            'total_order' => 0,
+                            'confirmed' => 0,
+                            'cancel' => 0,
+                            'success_rate' => 'No order history found!',
+                            'status' => 'ok',
+                            'api_success' => true,
+                            'message' => 'No delivery history found on Pathao.',
+                        ],
+                    ],
+                    [
+                        'title' => 'Paper Fly',
+                        'report' => [
+                            'total_order' => 2,
+                            'confirmed' => 1,
+                            'cancel' => 1,
+                            'partial' => 3,
+                            'success_rate' => '50%',
+                            'status' => 'ok',
+                            'api_success' => true,
+                        ],
+                    ],
+                ],
+            ]);
+        });
+
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'cache-notes-admin@example.com',
+            'phone' => '01700000101',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        // Admin runs live check first, populating platform cache.
+        $this->actingAs($admin)
+            ->postJson(route('frauds.adminFraudCheck'), ['phone' => '01788112233'])
+            ->assertOk()
+            ->assertJsonPath('total_order', 12)
+            ->assertJsonPath('confirmed', 9)
+            ->assertJsonPath('cancel', 3)
+            ->assertJsonPath('frauds.0.details', 'Refused COD at doorstep');
+
+        // Merchant runs Bulk Fraud Check (served from platform cache via LegacyReportFormatter).
+        $merchant = $this->merchant('cache-notes-merchant@example.com', '01700000102');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01788112233'])
+            ->assertOk()
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.status', 'found')
+            ->assertJsonPath('item.received', 9)
+            ->assertJsonPath('item.cancelled', 3)
+            ->assertJsonPath('item.partial', 3)
+            ->assertJsonPath('item.total_orders', 15)
+            ->assertJsonPath('item.success_rate', 75)
+            ->assertJsonPath('item.risk', 'review')
+            ->assertJsonPath('item.couriers.0.notes', ['Refused COD at doorstep'])
+            ->assertJsonPath('item.couriers.1.notes', [])
+            ->assertJsonPath('item.couriers.2.partial', 3);
+    }
+
+    public function test_admin_check_syncs_existing_daily_bulk_result_for_merchant(): void
+    {
+        $calls = 0;
+        $this->mock(FraudCheckService::class, function ($mock) use (&$calls): void {
+            $mock->shouldReceive('normalizePhone')->andReturnUsing(fn ($phone) => '01766554433');
+            $mock->shouldReceive('getReport')->andReturnUsing(function () use (&$calls) {
+                $calls++;
+
+                if ($calls === 1) {
+                    return $this->report(5, 3, 2, '60%');
+                }
+
+                return $this->report(20, 18, 2, '90%', 'Verified customer note');
+            });
+        });
+
+        config(['order_intelligence.fraud_check.mode' => 'external_only']);
+
+        $merchant = $this->merchant('sync-daily-merchant@example.com', '01700000103');
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '01766554433'])
+            ->assertOk()
+            ->assertJsonPath('result.received', 3)
+            ->assertJsonPath('result.risk', 'review');
+
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'sync-daily-admin@example.com',
+            'phone' => '01700000104',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        // Admin checks the same number live and gets updated counts.
+        $this->actingAs($admin)
+            ->postJson(route('frauds.adminFraudCheck'), ['phone' => '01766554433'])
+            ->assertOk()
+            ->assertJsonPath('confirmed', 18);
+
+        // Merchant searches the same number again today and sees the synced result from cache.
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '01766554433'])
+            ->assertOk()
+            ->assertJsonPath('source', 'cache')
+            ->assertJsonPath('result.received', 18)
+            ->assertJsonPath('result.cancelled', 2)
+            ->assertJsonPath('result.success_rate', 90)
+            ->assertJsonPath('result.risk', 'safe')
+            ->assertJsonPath('result.couriers.0.notes.0', 'Verified customer note');
+    }
+
     private function merchant(string $email = 'bulk-merchant@example.com', string $phone = '01700000021'): User
     {
         return User::create([
