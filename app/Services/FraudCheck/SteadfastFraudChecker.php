@@ -303,9 +303,13 @@ class SteadfastFraudChecker
      */
     private function hasHiddenCounts(array $report): bool
     {
+        // Fraud notes are not delivery counts. A ratio-only answer with fraud
+        // categories must still fall through to a key or portal that has counts.
         return ! empty($report['counts_hidden'])
             && empty($report['history_unknown'])
-            && ! $this->hasDeliveryData($report);
+            && (int) ($report['total_order'] ?? 0) === 0
+            && (int) ($report['confirmed'] ?? 0) === 0
+            && (int) ($report['cancel'] ?? 0) === 0;
     }
 
     private function hasPortalCredentials(): bool

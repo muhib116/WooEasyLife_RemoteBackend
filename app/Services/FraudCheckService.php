@@ -182,7 +182,7 @@ class FraudCheckService
             }
         }
 
-        return $this->retryFailedCouriers($jobs, $reports, $startedAt);
+        return $this->retryFailedCouriers($jobs, $reports, $startedAt, $phone);
     }
 
     /**
@@ -194,7 +194,7 @@ class FraudCheckService
      * @param  array<string, array<string, mixed>>  $reports
      * @return array<string, array<string, mixed>>
      */
-    private function retryFailedCouriers(array $jobs, array $reports, float $startedAt): array
+    private function retryFailedCouriers(array $jobs, array $reports, float $startedAt, string $phone): array
     {
         if (! config('fraud_check.courier_retry.enabled', true)) {
             return $reports;
@@ -214,7 +214,7 @@ class FraudCheckService
                 break;
             }
 
-            $coolingKey = 'fraud_check_courier_retry_cooling:'.$key;
+            $coolingKey = 'fraud_check_courier_retry_cooling:'.$key.':'.$phone;
             if (Cache::has($coolingKey)) {
                 continue;
             }

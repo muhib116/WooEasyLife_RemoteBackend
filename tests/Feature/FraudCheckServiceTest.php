@@ -8,6 +8,7 @@ use App\Services\FraudCheck\PathaoFraudChecker;
 use App\Services\FraudCheck\RedxFraudChecker;
 use App\Services\FraudCheck\SteadfastFraudChecker;
 use App\Services\FraudCheckService;
+use Illuminate\Support\Facades\Cache;
 
 function fraudCheckServiceWithMocks(
     $steadfast,
@@ -311,4 +312,60 @@ it('maps carrybee customer payload using success_rate instead of treating pendin
     expect($allCancelled['confirmed'])->toBe(0);
     expect($allCancelled['cancel'])->toBe(1);
     expect($allCancelled['success_rate'])->toBe('0%');
+});
+
+it('retries a failed courier on the next phone instead of cooling every number', function () {
+    Cache::flush();
+    config([
+        'fraud_check.parallel_couriers' => false,
+        'fraud_check.courier_retry.enabled' => true,
+        'fraud_check.courier_retry.pause_ms' => 0,
+        'fraud_check.courier_retry.budget_seconds' => 30,
+        'fraud_check.courier_retry.cooldown_seconds' => 60,
+    ]);
+
+    $calls = [];
+    $pathao = Mockery::mock(PathaoFraudChecker::class);
+    $pathao->shouldReceive('check')->andReturnUsing(function (string $phone) use (&$calls) {
+        $calls[$phone] = ($calls[$phone] ?? 0) + 1;
+
+        if ($phone === '01711111111' || $calls[$phone] === 1) {
+            return [
+                'total_order' => 0,
+                'confirmed' => 0,
+                'cancel' => 0,
+                'unavailable' => true,
+                'success_rate' => 'No order history found!',
+            ];
+        }
+
+        return [
+            'total_order' => 2,
+            'confirmed' => 2,
+            'cancel' => 0,
+            'api_success' => true,
+            'success_rate' => '100%',
+        ];
+    });
+
+    $answered = [
+        'total_order' => 0,
+        'confirmed' => 0,
+        'cancel' => 0,
+        'api_success' => true,
+        'success_rate' => 'No order history found!',
+    ];
+    $steadfast = Mockery::mock(SteadfastFraudChecker::class);
+    $steadfast->shouldReceive('check')->andReturn($answered);
+    $paperfly = Mockery::mock(PaperflyFraudChecker::class);
+    $paperfly->shouldReceive('check')->andReturn($answered);
+
+    $service = fraudCheckServiceWithMocks($steadfast, $pathao, $paperfly);
+
+    $service->getReport('01711111111');
+    $second = $service->getReport('01722222222');
+
+    expect($calls['01711111111'])->toBe(2)
+        ->and($calls['01722222222'])->toBe(2)
+        ->and($second['confirmed'])->toBe(2);
 });

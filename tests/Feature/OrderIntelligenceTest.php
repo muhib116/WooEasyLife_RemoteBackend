@@ -3,6 +3,9 @@
 use App\Domain\OrderIntelligence\OrderStatus;
 use App\Jobs\OrderIntelligence\RefreshCourierSnapshotsJob;
 use App\Models\AccessToken;
+use App\Models\BulkFraudBatch;
+use App\Models\BulkFraudBatchItem;
+use App\Models\BulkFraudDailyResult;
 use App\Models\CourierShipment;
 use App\Models\OrderIntelligence\CourierCustomerSnapshot;
 use App\Models\OrderIntelligence\CourierFraudReport;
@@ -439,6 +442,108 @@ it('partial refresh only calls failed or stale couriers', function () {
     expect($carrybee)->not->toBeNull()
         ->and($steadfast->total_order)->toBe(10)
         ->and($steadfast->confirmed)->toBe(8);
+});
+
+it('writes a refreshed courier back onto todays bulk row and batch line', function () {
+    config([
+        'order_intelligence.fraud_check.partial_refresh' => true,
+        'fraud_check.include_redx' => false,
+        'fraud_check.include_carrybee' => false,
+    ]);
+
+    Illuminate\Support\Facades\Cache::flush();
+
+    [$user] = createOrderIntelligenceToken();
+    $customer = app(CustomerResolver::class)->resolve('01744556677', 'Bulk Sync User');
+
+    CourierCustomerSnapshot::query()->create([
+        'platform_customer_id' => $customer->id,
+        'phone_normalized' => '01744556677',
+        'courier' => 'steadfast',
+        'total_order' => 2,
+        'confirmed' => 2,
+        'cancel' => 0,
+        'success_rate' => '100%',
+        'fetched_at' => now(),
+        'raw_report' => [
+            'total_order' => 2,
+            'confirmed' => 2,
+            'cancel' => 0,
+            'api_success' => true,
+            'status' => 'ok',
+            'success_rate' => '100%',
+        ],
+    ]);
+
+    $couriers = [
+        ['title' => 'Stead Fast', 'received' => 2, 'cancelled' => 0, 'partial' => 0, 'success_rate' => 100, 'available' => true, 'notes' => []],
+        ['title' => 'Pathao', 'received' => 0, 'cancelled' => 0, 'partial' => 0, 'success_rate' => null, 'available' => false, 'notes' => []],
+    ];
+
+    $daily = BulkFraudDailyResult::query()->create([
+        'phone' => '01744556677',
+        'checked_on' => now('Asia/Dhaka')->toDateString(),
+        'status' => 'found',
+        'total_orders' => 2,
+        'received' => 2,
+        'cancelled' => 0,
+        'partial' => 0,
+        'success_rate' => 100,
+        'risk' => 'safe',
+        'couriers' => $couriers,
+        'attempts' => 1,
+    ]);
+
+    $batch = BulkFraudBatch::query()->create([
+        'user_id' => $user->id,
+        'name' => 'Sync',
+        'status' => 'completed',
+        'submitted_count' => 1,
+        'unique_count' => 1,
+        'duplicates_removed' => 0,
+    ]);
+
+    $item = BulkFraudBatchItem::query()->create([
+        'batch_id' => $batch->id,
+        'position' => 0,
+        'phone' => '01744556677',
+        'status' => 'found',
+        'daily_result_id' => $daily->id,
+        'total_orders' => 2,
+        'received' => 2,
+        'cancelled' => 0,
+        'partial' => 0,
+        'success_rate' => 100,
+        'risk' => 'safe',
+        'couriers' => $couriers,
+    ]);
+
+    $this->mock(FraudCheckService::class, function ($mock) {
+        $mock->shouldReceive('checkCourier')
+            ->once()
+            ->with('pathao', '01744556677')
+            ->andReturn([
+                'total_order' => 1,
+                'confirmed' => 1,
+                'cancel' => 0,
+                'api_success' => true,
+                'status' => 'ok',
+                'success_rate' => '100%',
+            ]);
+    });
+
+    expect(app(\App\Services\OrderIntelligence\CourierSnapshotRefresher::class)
+        ->refresh('01744556677', null, ['pathao']))->toBeTrue();
+
+    $daily->refresh();
+    $item->refresh();
+    $pathao = collect($daily->couriers)->first(fn ($courier) => str_contains(strtolower((string) ($courier['title'] ?? '')), 'pathao'));
+
+    expect($daily->received)->toBe(3)
+        ->and($pathao['available'] ?? false)->toBeTrue()
+        ->and($pathao['received'] ?? 0)->toBe(1)
+        ->and($item->received)->toBe(3)
+        ->and(collect($item->couriers)->first(fn ($courier) => str_contains(strtolower((string) ($courier['title'] ?? '')), 'pathao'))['received'] ?? 0)->toBe(1);
 });
 
 it('preserves useful courier snapshots when a partner fetch fails', function () {

@@ -4,6 +4,7 @@ namespace App\Services\OrderIntelligence;
 
 use App\Models\OrderIntelligence\PlatformCustomer;
 use App\Services\FraudCheck\CourierTransport;
+use App\Services\FraudCheck\MerchantBulkDailySync;
 use App\Services\FraudCheckService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +16,9 @@ class CourierSnapshotRefresher
         private CourierIntelPersister $courierIntelPersister,
         private IntelligenceCache $cache,
         private PlatformSufficiencyChecker $sufficiencyChecker,
+        private PlatformIntelligenceReader $platformIntelligenceReader,
+        private LegacyReportFormatter $legacyReportFormatter,
+        private MerchantBulkDailySync $merchantBulkDailySync,
     ) {}
 
     /**
@@ -87,6 +91,7 @@ class CourierSnapshotRefresher
             );
 
             $this->cache->forget($phoneNormalized, $accessTokenId);
+            $this->syncBulkRow($phoneNormalized, $accessTokenId);
 
             Log::info('Courier snapshot refresh completed.', [
                 'phone' => CourierTransport::maskPhone($phoneNormalized),
@@ -101,6 +106,27 @@ class CourierSnapshotRefresher
             ]);
 
             return false;
+        }
+    }
+
+    private function syncBulkRow(string $phoneNormalized, ?int $accessTokenId): void
+    {
+        try {
+            $platform = $this->platformIntelligenceReader->forPhone($phoneNormalized, $accessTokenId);
+
+            if (! is_array($platform)) {
+                return;
+            }
+
+            $this->merchantBulkDailySync->syncIfPresent(
+                $phoneNormalized,
+                $this->legacyReportFormatter->format($platform),
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('Courier snapshot refresh did not update the bulk row.', [
+                'phone' => CourierTransport::maskPhone($phoneNormalized),
+                'message' => CourierTransport::safeMessage($exception),
+            ]);
         }
     }
 

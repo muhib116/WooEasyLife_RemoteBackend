@@ -5,16 +5,14 @@ namespace App\Services\OrderIntelligence;
 use App\Jobs\OrderIntelligence\RefreshCourierSnapshotsJob;
 use App\LogHelper;
 use App\Models\AccessToken;
-use App\Models\BulkFraudDailyResult;
 use App\Models\OrderIntelligence\CourierCustomerSnapshot;
 use App\Models\OrderIntelligence\PlatformCustomer;
 use App\Services\Courier\CourierAccountService;
 use App\Services\FraudCheck\CourierReportFormatter;
 use App\Services\FraudCheck\CourierTransport;
-use App\Services\FraudCheck\MerchantBulkFraudRow;
+use App\Services\FraudCheck\MerchantBulkDailySync;
 use App\Services\FraudCheck\RedxStaticSample;
 use App\Services\FraudCheckService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 
@@ -28,6 +26,7 @@ class FraudCheckCoordinator
         private LegacyReportFormatter $legacyReportFormatter,
         private CourierAccountService $courierAccountService,
         private CourierIntelPersister $courierIntelPersister,
+        private MerchantBulkDailySync $merchantBulkDailySync,
     ) {}
 
     /**
@@ -522,6 +521,7 @@ class FraudCheckCoordinator
             'redx' => [],
             'carrybee' => [],
         ];
+        $filled = [];
 
         foreach ($couriers as $courier) {
             try {
@@ -558,12 +558,15 @@ class FraudCheckCoordinator
             $live['from_cache'] = false;
             $saved[$courier] = $live;
             $report = $this->replaceCourierReport($report, $courier, $live);
+            $filled[] = $courier;
         }
 
         $report = $this->recalculateTotalsFromCourier($report);
         $this->persistFilledCouriers($phoneNormalized, $accessToken?->id, $saved);
 
-        return ['report' => $report, 'couriers' => $couriers];
+        // Only couriers that actually answered are done. A failed fill stays
+        // eligible for the background refresh.
+        return ['report' => $report, 'couriers' => $filled];
     }
 
     /**
@@ -722,43 +725,7 @@ class FraudCheckCoordinator
      */
     private function syncDailyResultIfPresent(string $phoneNormalized, array $report): void
     {
-        if (! MerchantBulkFraudRow::isUsable($report)) {
-            return;
-        }
-
-        try {
-            $today = Carbon::now('Asia/Dhaka')->toDateString();
-            $existing = BulkFraudDailyResult::query()
-                ->where('phone', $phoneNormalized)
-                ->where('checked_on', $today)
-                ->first();
-
-            if (! $existing) {
-                return;
-            }
-
-            $row = MerchantBulkFraudRow::fromReport($phoneNormalized, $report);
-
-            $existingOrders = (int) $existing->total_orders + (int) $existing->received + (int) $existing->cancelled + (int) $existing->partial;
-            $newOrders = (int) ($row['total_orders'] ?? 0) + (int) ($row['received'] ?? 0) + (int) ($row['cancelled'] ?? 0) + (int) ($row['partial'] ?? 0);
-
-            if ($existingOrders > 0 && $newOrders === 0) {
-                return;
-            }
-
-            $existing->update([
-                'status' => $row['status'],
-                'total_orders' => $row['total_orders'],
-                'received' => $row['received'],
-                'cancelled' => $row['cancelled'],
-                'partial' => $row['partial'],
-                'success_rate' => $row['success_rate'],
-                'risk' => $row['risk'],
-                'couriers' => $row['couriers'],
-            ]);
-        } catch (\Throwable) {
-            // Best-effort sync; never interrupt the fraud check response.
-        }
+        $this->merchantBulkDailySync->syncIfPresent($phoneNormalized, $report);
     }
 
     /**
