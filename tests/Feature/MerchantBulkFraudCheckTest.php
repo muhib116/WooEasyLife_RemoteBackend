@@ -235,18 +235,61 @@ class MerchantBulkFraudCheckTest extends TestCase
         $this->assertSame(1, BulkFraudDailyResult::query()->count());
     }
 
-    public function test_a_saved_row_with_a_missing_courier_is_checked_again_after_the_recheck_window(): void
+    public function test_a_saved_row_with_missing_pathao_is_not_reused_from_todays_cache(): void
     {
         $calls = 0;
         $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls): void {
             $mock->shouldReceive('checkSingle')->andReturnUsing(function () use (&$calls) {
                 $calls++;
 
+                if ($calls < 3) {
+                    return [
+                        'total_order' => 10,
+                        'confirmed' => 8,
+                        'cancel' => 2,
+                        'success_rate' => '80%',
+                        'frauds' => [],
+                        'courier' => [
+                            [
+                                'title' => 'Stead Fast',
+                                'report' => [
+                                    'total_order' => 10,
+                                    'confirmed' => 8,
+                                    'cancel' => 2,
+                                    'status' => 'ok',
+                                    'api_success' => true,
+                                ],
+                            ],
+                            [
+                                'title' => 'Pathao',
+                                'report' => [
+                                    'total_order' => 0,
+                                    'confirmed' => 0,
+                                    'cancel' => 0,
+                                    'status' => 'unavailable',
+                                    'unavailable' => true,
+                                    'message' => 'Pathao returned no delivery data',
+                                ],
+                            ],
+                            [
+                                'title' => 'Paperfly',
+                                'report' => [
+                                    'total_order' => 0,
+                                    'confirmed' => 0,
+                                    'cancel' => 0,
+                                    'status' => 'ok',
+                                    'api_success' => true,
+                                ],
+                            ],
+                        ],
+                    ];
+                }
+
                 return [
-                    'total_order' => 10,
-                    'confirmed' => 8,
+                    'total_order' => 12,
+                    'confirmed' => 10,
                     'cancel' => 2,
-                    'success_rate' => '80%',
+                    'success_rate' => '83%',
                     'frauds' => [],
                     'courier' => [
                         [
@@ -262,12 +305,21 @@ class MerchantBulkFraudCheckTest extends TestCase
                         [
                             'title' => 'Pathao',
                             'report' => [
+                                'total_order' => 2,
+                                'confirmed' => 2,
+                                'cancel' => 0,
+                                'status' => 'ok',
+                                'api_success' => true,
+                            ],
+                        ],
+                        [
+                            'title' => 'Paperfly',
+                            'report' => [
                                 'total_order' => 0,
                                 'confirmed' => 0,
                                 'cancel' => 0,
-                                'status' => 'unavailable',
-                                'unavailable' => true,
-                                'message' => 'Pathao returned no delivery data',
+                                'status' => 'ok',
+                                'api_success' => true,
                             ],
                         ],
                     ],
@@ -275,7 +327,7 @@ class MerchantBulkFraudCheckTest extends TestCase
             });
         });
 
-        config(['fraud_check.bulk_failed_courier_recheck_seconds' => 120]);
+        config(['fraud_check.bulk_retry_attempts' => 3, 'fraud_check.bulk_retry_pause_ms' => 0]);
 
         $first = $this->merchant('recheck-one@example.com', '01700000031');
         $batch = $this->actingAs($first)
@@ -286,7 +338,10 @@ class MerchantBulkFraudCheckTest extends TestCase
         $this->actingAs($first)
             ->postJson(route('portal.fraud-check.batches.next', $batch))
             ->assertOk()
-            ->assertJsonPath('item.source', 'live');
+            ->assertJsonPath('item.source', 'live')
+            ->assertJsonPath('item.received', 10);
+
+        $this->assertSame(3, $calls);
 
         $second = $this->merchant('recheck-two@example.com', '01700000032');
         $this->actingAs($second)
@@ -294,28 +349,8 @@ class MerchantBulkFraudCheckTest extends TestCase
                 'phones' => '01733333333',
             ])
             ->assertOk()
-            ->assertJsonPath('items.0.source', 'cache');
-
-        $saved = BulkFraudDailyResult::query()->first();
-        $saved->timestamps = false;
-        $saved->updated_at = now()->subSeconds(180);
-        $saved->save();
-
-        $third = $this->merchant('recheck-three@example.com', '01700000033');
-        $again = $this->actingAs($third)
-            ->postJson(route('portal.fraud-check.batches.store'), [
-                'phones' => '01733333333',
-            ]);
-
-        $again->assertOk()
-            ->assertJsonPath('batch.pending', 1);
-
-        $this->actingAs($third)
-            ->postJson(route('portal.fraud-check.batches.next', $again->json('batch.id')))
-            ->assertOk()
-            ->assertJsonPath('item.source', 'live');
-
-        $this->assertSame(2, $calls);
+            ->assertJsonPath('items.0.source', 'cache')
+            ->assertJsonPath('items.0.received', 10);
     }
 
     public function test_a_failed_check_is_retried_and_is_not_saved_for_the_rest_of_the_day(): void
@@ -385,6 +420,8 @@ class MerchantBulkFraudCheckTest extends TestCase
 
     public function test_partial_courier_counts_are_stored(): void
     {
+        config(['fraud_check.bulk_retry_attempts' => 1, 'fraud_check.bulk_retry_pause_ms' => 0]);
+
         $this->mock(FraudCheckCoordinator::class, function ($mock): void {
             $mock->shouldReceive('checkSingle')->once()->andReturn([
                 'total_order' => 0,

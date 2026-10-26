@@ -654,17 +654,32 @@ class MerchantBulkFraudCheck
         $attempts = max(1, (int) config('fraud_check.bulk_retry_attempts', 3));
         $pauseMs = max(0, (int) config('fraud_check.bulk_retry_pause_ms', 300));
         $payload = ['phone' => $phone];
+        $best = null;
 
         if ($refresh) {
             $payload['refresh'] = true;
         }
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            // After a partial answer (e.g. SteadFast Found, Pathao missing), force a
+            // live pass so Pathao is not left as "Data unavailable" until Refresh.
+            if ($refresh || $attempt > 1) {
+                $payload['refresh'] = true;
+            }
+
             try {
                 $report = $this->coordinator->checkSingle($request, $payload);
 
-                if (is_array($report) && MerchantBulkFraudRow::isUsable($report)) {
+                if (! is_array($report) || ! MerchantBulkFraudRow::isUsable($report)) {
+                    // keep trying
+                } elseif (MerchantBulkFraudRow::coreCouriersAnswered($report)) {
                     return ['report' => $report, 'attempts' => $attempt];
+                } else {
+                    $best = $report;
+
+                    if ($attempt >= $attempts) {
+                        return ['report' => $report, 'attempts' => $attempt];
+                    }
                 }
             } catch (\Throwable $exception) {
                 LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
@@ -675,7 +690,7 @@ class MerchantBulkFraudCheck
             }
         }
 
-        return ['report' => null, 'attempts' => $attempts];
+        return ['report' => $best, 'attempts' => $attempts];
     }
 
     private function dailyResult(string $phone): ?BulkFraudDailyResult
@@ -709,23 +724,20 @@ class MerchantBulkFraudCheck
             return true;
         }
 
-        $incomplete = false;
-
         foreach ($existing->couriers ?? [] as $courier) {
-            if (is_array($courier) && array_key_exists('available', $courier) && $courier['available'] === false) {
-                $incomplete = true;
+            if (! is_array($courier) || ! array_key_exists('available', $courier) || $courier['available'] !== false) {
+                continue;
+            }
 
-                break;
+            $key = MerchantBulkFraudRow::courierKeyFromTitle((string) ($courier['title'] ?? ''));
+            // Missing Pathao/SteadFast/Paperfly must not be reused — that is the
+            // "Found overall, Pathao Data unavailable until Refresh" bug.
+            if (in_array($key, ['steadfast', 'pathao', 'paperfly'], true)) {
+                return true;
             }
         }
 
-        if (! $incomplete) {
-            return false;
-        }
-
-        $seconds = max(0, (int) config('fraud_check.bulk_failed_courier_recheck_seconds', 120));
-
-        return $existing->updated_at === null || $existing->updated_at->lte(now()->subSeconds($seconds));
+        return false;
     }
 
     /**

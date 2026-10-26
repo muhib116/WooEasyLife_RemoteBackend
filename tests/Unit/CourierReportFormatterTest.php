@@ -21,6 +21,26 @@ it('parses pathao delivery counts from customer object', function () {
     expect($report['data_type'])->toBe('delivery');
 });
 
+it('parses pathao merchant ui processed delivered returned fields', function () {
+    $report = CourierReportFormatter::fromPathao([
+        'data' => [
+            'show_count' => true,
+            'customer_rating' => 'new_customer',
+            'customer' => [
+                'processed' => 2,
+                'delivered' => 2,
+                'returned' => 0,
+            ],
+        ],
+    ]);
+
+    expect($report['total_order'])->toBe(2)
+        ->and($report['confirmed'])->toBe(2)
+        ->and($report['cancel'])->toBe(0)
+        ->and(CourierReportFormatter::hasDeliveryCounts($report))->toBeTrue()
+        ->and(CourierReportFormatter::isRatingOnly($report))->toBeFalse();
+});
+
 it('parses pathao delivery counts when only total and success are provided', function () {
     $report = CourierReportFormatter::fromPathao([
         'data' => [

@@ -524,18 +524,6 @@ class FraudCheckCoordinator
         ];
 
         foreach ($couriers as $courier) {
-            if ($courier === 'pathao') {
-                $report = $this->upgradePathaoCountsInReport(
-                    $report,
-                    $phoneNormalized,
-                    $accessToken,
-                    $payload,
-                    $log,
-                );
-
-                continue;
-            }
-
             try {
                 $live = $this->fraudCheckService->checkCourier($courier, $phoneNormalized);
             } catch (\Throwable $exception) {
@@ -548,6 +536,21 @@ class FraudCheckCoordinator
             }
 
             if (! is_array($live)) {
+                continue;
+            }
+
+            // Keep the cache row only when live Pathao/etc. still did not answer.
+            // Rating-only and real counts both replace "Data unavailable".
+            if (
+                ! empty($live['unavailable'])
+                && ! CourierReportFormatter::hasDeliveryCounts($live)
+                && ! CourierReportFormatter::isRatingOnly($live)
+                && empty($live['api_success'])
+            ) {
+                $log->add('live_fill', 'Courier still unavailable after live fill', [
+                    'courier' => $courier,
+                ]);
+
                 continue;
             }
 
@@ -625,101 +628,6 @@ class FraudCheckCoordinator
         } catch (\Throwable $exception) {
             LogHelper::saveLog('Fraud check courier fill persist failed', $exception->getMessage());
         }
-    }
-
-    /**
-     * @param  array<string, mixed>  $report
-     */
-    private function pathaoReportNeedsCountUpgrade(array $report): bool
-    {
-        foreach ($report['courier'] ?? [] as $entry) {
-            if (! is_array($entry) || ! is_array($entry['report'] ?? null)) {
-                continue;
-            }
-
-            $title = strtolower(trim((string) ($entry['title'] ?? '')));
-            if (! str_contains($title, 'pathao')) {
-                continue;
-            }
-
-            return CourierReportFormatter::isRatingOnly($entry['report']);
-        }
-
-        return false;
-    }
-
-    /**
-     * When cache only has Pathao rating (Good Customer / Rating only), try live sources
-     * that may still return delivery counts (Hermes), then rebuild aggregates.
-     *
-     * @param  array<string, mixed>  $report
-     * @param  array<string, mixed>  $payload
-     * @return array<string, mixed>
-     */
-    private function upgradePathaoCountsInReport(
-        array $report,
-        string $phoneNormalized,
-        ?AccessToken $accessToken,
-        array $payload,
-        FraudCheckDecisionLog $log,
-    ): array {
-        try {
-            $livePathao = $this->fraudCheckService->checkCourier('pathao', $phoneNormalized);
-        } catch (\Throwable $e) {
-            $log->add('pathao_upgrade', 'Live Pathao upgrade failed', [
-                'message' => $e->getMessage(),
-            ]);
-
-            return $report;
-        }
-
-        if (! CourierReportFormatter::hasDeliveryCounts($livePathao)) {
-            $log->add('pathao_upgrade', 'Live Pathao still rating-only or empty — keeping cache row', [
-                'data_type' => $livePathao['data_type'] ?? null,
-                'status' => $livePathao['status'] ?? null,
-            ]);
-
-            return $report;
-        }
-
-        $livePathao['source'] = 'live_upgrade';
-        $livePathao['from_cache'] = false;
-        unset($livePathao['cache_label']);
-
-        $courier = $report['courier'] ?? [];
-        foreach ($courier as $index => $entry) {
-            if (! is_array($entry)) {
-                continue;
-            }
-            $title = strtolower(trim((string) ($entry['title'] ?? '')));
-            if (! str_contains($title, 'pathao')) {
-                continue;
-            }
-            $courier[$index]['report'] = $livePathao;
-            break;
-        }
-
-        $report['courier'] = $courier;
-        $report = $this->recalculateTotalsFromCourier($report);
-
-        // Persist upgraded Pathao so the next plugin hit is not rating-only.
-        try {
-            $this->ingestExternalReport($accessToken, [
-                ...$payload,
-                'phone' => $phoneNormalized,
-            ], $report);
-            $log->add('pathao_upgrade', 'Upgraded Pathao to delivery counts and persisted snapshot', [
-                'total_order' => $livePathao['total_order'] ?? 0,
-                'confirmed' => $livePathao['confirmed'] ?? 0,
-                'cancel' => $livePathao['cancel'] ?? 0,
-            ]);
-        } catch (\Throwable $e) {
-            $log->add('pathao_upgrade', 'Pathao counts upgraded in response but persist failed', [
-                'message' => $e->getMessage(),
-            ]);
-        }
-
-        return $report;
     }
 
     /**

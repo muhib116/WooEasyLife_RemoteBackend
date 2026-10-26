@@ -346,6 +346,7 @@ class CourierReportFormatter
         $total = self::firstInt($customer, [
             'total_delivery',
             'total_order',
+            'processed',
             'total',
         ]);
 
@@ -402,6 +403,9 @@ class CourierReportFormatter
             'failed_delivery',
             'cancelled_delivery',
             'returned_delivery',
+            'processed',
+            'delivered',
+            'returned',
             'total',
             'success',
             'cancel',

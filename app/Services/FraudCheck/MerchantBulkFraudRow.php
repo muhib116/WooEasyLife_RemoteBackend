@@ -41,6 +41,43 @@ class MerchantBulkFraudRow
     }
 
     /**
+     * SteadFast / Pathao / Paperfly rows that are present must each have answered.
+     * Otherwise merchants see Found from one courier while Pathao still says
+     * "Data unavailable" until a manual refresh.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    public static function coreCouriersAnswered(array $report): bool
+    {
+        foreach ($report['courier'] ?? [] as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $key = self::courierKeyFromTitle((string) ($entry['title'] ?? ''));
+            if (! in_array($key, ['steadfast', 'pathao', 'paperfly'], true)) {
+                continue;
+            }
+
+            $courier = is_array($entry['report'] ?? null) ? $entry['report'] : [];
+            $status = (string) ($courier['status'] ?? '');
+
+            if (
+                in_array($status, ['ok', 'rating_only'], true)
+                || ! empty($courier['api_success'])
+                || (int) ($courier['total_order'] ?? 0) > 0
+                || self::partialCount($courier) > 0
+            ) {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * @param  array<string, mixed>  $report
      * @return array<string, mixed>
      */
@@ -293,7 +330,7 @@ class MerchantBulkFraudRow
         return $byCourier;
     }
 
-    private static function courierKeyFromTitle(string $title): ?string
+    public static function courierKeyFromTitle(string $title): ?string
     {
         $lower = strtolower(trim($title));
 
