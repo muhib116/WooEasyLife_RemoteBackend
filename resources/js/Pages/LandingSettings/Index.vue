@@ -46,7 +46,7 @@
                                 OpenAI API key
                             </label>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Used for AI blog post writing and image generation. Leave blank to clear and fall back to .env.
+                                Used for AI blog post writing, image generation, and the store landing page generator. Leave blank to clear and fall back to .env.
                                 <span
                                     v-if="settings.openai_api_key_source !== 'none'"
                                     class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
@@ -229,6 +229,93 @@
                                 {{ form.errors.blog_ai_daily_token_cap }}
                             </p>
                         </div>
+
+                        <div class="border-t border-gray-100 pt-5 dark:border-gray-800">
+                            <p class="text-sm font-semibold text-gray-800 dark:text-white/90">
+                                Store landing page generator
+                            </p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Writes the full landing page from the WEL Elementor widget (Config → AI content). Stores never enter a key; the hub uses the key above.
+                            </p>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between gap-3">
+                                <label
+                                    for="openai_landing_model"
+                                    class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                                >
+                                    Landing page model
+                                </label>
+                                <Button
+                                    type="button"
+                                    label="Refresh list"
+                                    icon="pi pi-refresh"
+                                    size="small"
+                                    text
+                                    :loading="refreshingModels"
+                                    :disabled="refreshingModels"
+                                    @click="refreshModels"
+                                />
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {{ landingModelNote }}
+                                <span
+                                    v-if="settings.openai_landing_model_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.openai_landing_model_source }}
+                                </span>
+                            </p>
+                            <Select
+                                id="openai_landing_model"
+                                v-model="form.openai_landing_model"
+                                :options="landingModelOptions"
+                                option-label="label"
+                                option-value="value"
+                                class="mt-2 w-full"
+                            />
+                            <p
+                                v-if="form.errors.openai_landing_model"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.openai_landing_model }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="landing_ai_daily_limit"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Generations per store per day
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Each Generate click counts once per store license. Failed runs do not count.
+                                <span
+                                    v-if="settings.landing_ai_daily_limit_source !== 'none'"
+                                    class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                >
+                                    active: {{ settings.landing_ai_daily_limit_source }}
+                                </span>
+                            </p>
+                            <InputText
+                                id="landing_ai_daily_limit"
+                                v-model="form.landing_ai_daily_limit"
+                                type="number"
+                                min="1"
+                                max="500"
+                                step="1"
+                                class="mt-2 w-full"
+                                placeholder="20"
+                            />
+                            <p
+                                v-if="form.errors.landing_ai_daily_limit"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ form.errors.landing_ai_daily_limit }}
+                            </p>
+                        </div>
                     </template>
 
                     <template v-else-if="activeTab === 'notifications'">
@@ -318,7 +405,7 @@ import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import { Icon } from "@/plugins";
 import type { IconName } from "@/types";
-import { useForm } from "@inertiajs/vue3";
+import { router, useForm } from "@inertiajs/vue3";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
@@ -356,6 +443,15 @@ type LandingSettings = {
     openai_image_model_source: string;
     blog_ai_daily_token_cap: number;
     blog_ai_daily_token_cap_source: string;
+    openai_landing_model: string | null;
+    openai_landing_model_source: string;
+    landing_ai_daily_limit: number;
+    landing_ai_daily_limit_source: string;
+    landing_model_options?: { value: string; label: string }[];
+    landing_model_best?: string;
+    landing_model_list_source?: string;
+    landing_model_list_error?: string | null;
+    landing_model_list_fetched_at?: string | null;
     blog_model_options: string[];
     blog_planning_model_options: string[];
     blog_writing_model_options: string[];
@@ -380,6 +476,8 @@ type FormFields = {
     openai_blog_writing_model: string;
     openai_image_model: string;
     blog_ai_daily_token_cap: string;
+    openai_landing_model: string;
+    landing_ai_daily_limit: string;
     sms_expiry: boolean;
 };
 
@@ -484,6 +582,8 @@ const blogPlanningModelOptions = props.settings.blog_planning_model_options ?? b
 const blogWritingModelOptions = props.settings.blog_writing_model_options ?? blogModelOptions;
 const imageModelOptions = props.settings.image_model_options ?? [];
 const defaultTokenCap = props.settings.blog_ai_daily_token_cap ?? 400000;
+// PrimeVue Select treats "" as empty, so Auto uses a sentinel that is cleared on save.
+const AUTO_MODEL = "auto";
 
 const form = useForm({
     app_download_url: props.settings.app_download_url ?? "",
@@ -505,8 +605,51 @@ const form = useForm({
     openai_image_model: props.settings.openai_image_model ?? "gpt-image-1",
     // Always include the effective cap so saving other tabs does not clear a DB override.
     blog_ai_daily_token_cap: String(props.settings.blog_ai_daily_token_cap ?? 400000),
+    openai_landing_model: props.settings.openai_landing_model || AUTO_MODEL,
+    landing_ai_daily_limit: String(props.settings.landing_ai_daily_limit ?? 20),
     sms_expiry: props.settings.sms_expiry !== false,
 });
+
+const refreshingModels = ref(false);
+
+const landingModelOptions = computed(() => {
+    const options = (props.settings.landing_model_options ?? []).map((option) =>
+        option.value === "" ? { ...option, value: AUTO_MODEL } : option,
+    );
+    const current = form.openai_landing_model;
+
+    if (current && !options.some((option) => option.value === current)) {
+        options.push({ value: current, label: `${current} (saved)` });
+    }
+
+    return options;
+});
+
+const landingModelNote = computed(() => {
+    if (props.settings.landing_model_list_error) {
+        return props.settings.landing_model_list_error;
+    }
+
+    if (props.settings.landing_model_list_source === "live") {
+        return "Latest text models from your OpenAI account. Auto always uses the best one.";
+    }
+
+    return "Built-in list. Auto always uses the best one.";
+});
+
+const refreshModels = () => {
+    router.reload({
+        only: ["settings"],
+        data: { refresh_models: 1 },
+        preserveScroll: true,
+        onStart: () => {
+            refreshingModels.value = true;
+        },
+        onFinish: () => {
+            refreshingModels.value = false;
+        },
+    });
+};
 
 const activeFields = computed(() => {
     if (activeTab.value === "payments") {
@@ -570,7 +713,7 @@ const tabForError = (field: string): TabValue | null => {
         return "contact";
     }
 
-    if (["openai_api_key", "openai_blog_model", "openai_blog_planning_model", "openai_blog_writing_model", "openai_image_model", "blog_ai_daily_token_cap"].includes(field)) {
+    if (["openai_api_key", "openai_blog_model", "openai_blog_planning_model", "openai_blog_writing_model", "openai_image_model", "blog_ai_daily_token_cap", "openai_landing_model", "landing_ai_daily_limit"].includes(field)) {
         return "ai";
     }
 
@@ -599,8 +742,13 @@ watch(
 );
 
 const submit = () => {
-    form.put(route("landingSettings.update"), {
-        preserveScroll: true,
-    });
+    form
+        .transform((data) => ({
+            ...data,
+            openai_landing_model: data.openai_landing_model === AUTO_MODEL ? "" : data.openai_landing_model,
+        }))
+        .put(route("landingSettings.update"), {
+            preserveScroll: true,
+        });
 };
 </script>

@@ -154,7 +154,7 @@ class PluginUploadApiTest extends TestCase
         $this->assertFileExists(storage_path('app/private/wpsalehub-1.4.0.zip'));
     }
 
-    public function test_uploaded_version_becomes_latest_metadata(): void
+    public function test_a_new_upload_stays_held_until_rollout_is_global(): void
     {
         $this->withHeaders($this->authHeaders())
             ->post('/api/admin/plugins/versions', [
@@ -164,9 +164,23 @@ class PluginUploadApiTest extends TestCase
             ])
             ->assertCreated();
 
+        $this->getJson('/get-metadata')->assertNotFound();
+
+        $this->withHeaders($this->authHeaders())
+            ->post('/api/admin/plugins/versions', [
+                'version' => '1.5.1',
+                'settings' => json_encode(array_merge(
+                    json_decode($this->validSettings('1.5.1'), true),
+                    ['rollout' => ['mode' => 'global']]
+                )),
+                'file' => UploadedFile::fake()->create('plugin.zip', 100, 'application/zip'),
+            ])
+            ->assertCreated();
+
         $this->getJson('/get-metadata')
             ->assertOk()
-            ->assertJsonPath('version', '1.5.0')
+            ->assertJsonPath('version', '1.5.1')
+            ->assertJsonPath('rollout.mode', 'global')
             ->assertJsonPath('name', 'WooEasyLife');
     }
 }

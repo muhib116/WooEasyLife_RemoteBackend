@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PluginsVersion;
 use App\Services\Plugin\PluginLogoUrl;
+use App\Services\Plugin\PluginReleaseGate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
@@ -41,7 +43,7 @@ class PluginsController extends Controller
         $this->storeNewPluginVersion(
             $request->version,
             $request->file('file'),
-            $this->normalizePluginSettings($request->settings),
+            PluginReleaseGate::holdUnlessSpecified($this->normalizePluginSettings($request->settings)),
             Auth::id()
         );
 
@@ -66,7 +68,7 @@ class PluginsController extends Controller
             $version = $this->storeNewPluginVersion(
                 $request->version,
                 $request->file('file'),
-                $this->normalizePluginSettings($request->settings),
+                PluginReleaseGate::holdUnlessSpecified($this->normalizePluginSettings($request->settings)),
                 null
             );
         } catch (\Throwable $th) {
@@ -99,6 +101,10 @@ class PluginsController extends Controller
         if ($file) {
             $data['path'] = $this->storePluginZip($request->version, $file);
             $this->deletePluginZipIfOrphaned($pluginsVersion->path, $data['path']);
+            $absolute = storage_path($data['path']);
+            if (is_file($absolute)) {
+                $data['settings']['sha256'] = hash_file('sha256', $absolute);
+            }
         }
 
         // In-place ZIP replace keeps the same path; version/settings may be unchanged too.
@@ -171,9 +177,9 @@ class PluginsController extends Controller
         ]);
     }
 
-    public function downloadApp()
+    public function downloadApp(Request $request)
     {
-        $plugins = PluginsVersion::orderBy('created_at', 'desc')->first();
+        $plugins = $this->eligiblePluginVersion($request);
         if (! $plugins) {
             abort(404);
         }
@@ -227,17 +233,48 @@ class PluginsController extends Controller
         }, $fileName, $headers);
     }
 
-    public function getMetadata()
+    public function getMetadata(Request $request)
     {
-        $plugins = PluginsVersion::orderBy('created_at', 'desc')->first();
+        $plugins = $this->eligiblePluginVersion($request);
         if (! $plugins) {
             abort(404);
         }
 
         $settings = $this->normalizePluginSettings($plugins->settings);
         $settings['icons'] = PluginLogoUrl::resolve($settings['icons'] ?? null);
+        $settings['version'] = $settings['version'] ?? $plugins->version;
 
         return $settings;
+    }
+
+    private function eligiblePluginVersion(Request $request): ?PluginsVersion
+    {
+        $caller = PluginReleaseGate::caller(
+            $request->header('Authorization'),
+            $request->header('origin'),
+            $request->query()
+        );
+        $rows = [];
+        foreach (PluginsVersion::query()->get() as $row) {
+            $rows[] = [
+                'id' => $row->id,
+                'version' => (string) $row->version,
+                'created_at' => $row->created_at ? $row->created_at->getTimestamp() : 0,
+                'settings' => $this->normalizePluginSettings($row->settings),
+                'path' => (string) $row->path,
+            ];
+        }
+
+        $chosen = PluginReleaseGate::select($rows, $caller);
+        if ($chosen === null) {
+            Log::info('plugin.release', PluginReleaseGate::audit(['version' => '', 'settings' => []], $caller, false));
+
+            return null;
+        }
+
+        Log::info('plugin.release', PluginReleaseGate::audit($chosen, $caller, true));
+
+        return PluginsVersion::query()->find($chosen['id'] ?? 0);
     }
 
     /**
@@ -365,9 +402,15 @@ class PluginsController extends Controller
         array $settings,
         ?int $createdBy
     ): PluginsVersion {
+        $path = $this->storePluginZip($version, $file);
+        $absolute = storage_path($path);
+        if (is_file($absolute)) {
+            $settings['sha256'] = hash_file('sha256', $absolute);
+        }
+
         return PluginsVersion::create([
             'version' => $version,
-            'path' => $this->storePluginZip($version, $file),
+            'path' => $path,
             'download_count' => 0,
             'created_by' => $createdBy,
             'settings' => $settings,

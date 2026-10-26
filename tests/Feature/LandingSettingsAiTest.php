@@ -3,7 +3,15 @@
 use App\Models\User;
 use App\Services\LandingSettingsService;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(function () {
+    // config/cache.php reads CACHE_DRIVER, so phpunit's CACHE_STORE=array does not apply.
+    config(['cache.default' => 'array']);
+    // The settings page lists landing models from OpenAI; keep tests offline.
+    Http::fake(['api.openai.com/*' => Http::response(['data' => []])]);
+});
 
 function createLandingSettingsAdmin(): User
 {

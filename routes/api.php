@@ -18,6 +18,7 @@ use App\Http\Controllers\Messenger\MessengerWebhookController;
 use App\Http\Controllers\Meta\MetaConnectionController;
 use App\Http\Controllers\OrderIntelligenceController;
 use App\Http\Controllers\Plugin\EmployeeController as PluginEmployeeController;
+use App\Http\Controllers\Plugin\LandingAiController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -170,6 +171,14 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
 
         // use of package order limit
         Route::post('package-order-use', [HubController::class, 'hubUse']);
+
+        // WEL Elementor widget → Config → AI content (hub owns the OpenAI key + model).
+        Route::post('landing-ai/generate', [LandingAiController::class, 'generate'])
+            ->middleware('throttle:10,1')
+            ->name('landingAiGenerate');
+        Route::get('landing-ai/jobs/{job}', [LandingAiController::class, 'show'])
+            ->whereUuid('job')
+            ->name('landingAiJob');
 
         Route::get('employees', [PluginEmployeeController::class, 'index']);
         Route::get('employees/{employee_id}', [PluginEmployeeController::class, 'show'])

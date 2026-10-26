@@ -50,6 +50,10 @@ class LandingSettingsService
 
     public const BLOG_AI_DAILY_TOKEN_CAP_KEY = 'landing.blog_ai_daily_token_cap';
 
+    public const OPENAI_LANDING_MODEL_KEY = 'landing.openai_landing_model';
+
+    public const LANDING_AI_DAILY_LIMIT_KEY = 'landing.landing_ai_daily_limit';
+
     /**
      * Chat models allowed for blog research / outline / writing.
      *
@@ -154,6 +158,10 @@ class LandingSettingsService
             'openai_image_model_source' => $this->sourceWithConfig(self::OPENAI_IMAGE_MODEL_KEY, 'landing.openai_image_model'),
             'blog_ai_daily_token_cap' => $this->blogAiDailyTokenCap(),
             'blog_ai_daily_token_cap_source' => $this->sourceWithConfig(self::BLOG_AI_DAILY_TOKEN_CAP_KEY, 'blog_ai.daily_token_cap'),
+            'openai_landing_model' => $this->openaiLandingModel(),
+            'openai_landing_model_source' => $this->sourceWithConfig(self::OPENAI_LANDING_MODEL_KEY, 'landing_ai.model'),
+            'landing_ai_daily_limit' => $this->landingAiDailyLimit(),
+            'landing_ai_daily_limit_source' => $this->sourceWithConfig(self::LANDING_AI_DAILY_LIMIT_KEY, 'landing_ai.daily_limit'),
             'blog_model_options' => self::BLOG_MODELS,
             'blog_planning_model_options' => self::BLOG_PLANNING_MODELS,
             'blog_writing_model_options' => self::BLOG_WRITING_MODELS,
@@ -290,6 +298,28 @@ class LandingSettingsService
     }
 
     /**
+     * Store landing generator model. Null means "best model on the account".
+     */
+    public function openaiLandingModel(): ?string
+    {
+        return $this->resolve(self::OPENAI_LANDING_MODEL_KEY, config('landing_ai.model'));
+    }
+
+    /**
+     * Landing page generations allowed per store license per day.
+     */
+    public function landingAiDailyLimit(): int
+    {
+        $stored = $this->getStored(self::LANDING_AI_DAILY_LIMIT_KEY);
+
+        if ($stored !== null && is_numeric($stored)) {
+            return max(1, (int) $stored);
+        }
+
+        return max(1, (int) config('landing_ai.daily_limit', 20));
+    }
+
+    /**
      * @return array{
      *     meta_pixel_id: string|null,
      *     meta_pixel_id_source: string,
@@ -343,6 +373,7 @@ class LandingSettingsService
             'openai_blog_planning_model' => self::OPENAI_BLOG_PLANNING_MODEL_KEY,
             'openai_blog_writing_model' => self::OPENAI_BLOG_WRITING_MODEL_KEY,
             'openai_image_model' => self::OPENAI_IMAGE_MODEL_KEY,
+            'openai_landing_model' => self::OPENAI_LANDING_MODEL_KEY,
         ] as $field => $key) {
             if (array_key_exists($field, $data)) {
                 $this->put($key, $this->normalizeText($data[$field] ?? null));
@@ -351,6 +382,10 @@ class LandingSettingsService
 
         if (array_key_exists('blog_ai_daily_token_cap', $data)) {
             $this->put(self::BLOG_AI_DAILY_TOKEN_CAP_KEY, $this->normalizePositiveInt($data['blog_ai_daily_token_cap'] ?? null));
+        }
+
+        if (array_key_exists('landing_ai_daily_limit', $data)) {
+            $this->put(self::LANDING_AI_DAILY_LIMIT_KEY, $this->normalizePositiveInt($data['landing_ai_daily_limit'] ?? null));
         }
     }
 

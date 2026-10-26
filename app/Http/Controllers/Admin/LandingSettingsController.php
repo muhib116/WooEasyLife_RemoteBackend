@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\LandingAi\OpenAiModelCatalog;
 use App\Services\LandingSettingsService;
 use App\Services\SubscriptionNotificationRuntimeConfig;
 use Illuminate\Http\Request;
@@ -13,17 +14,24 @@ class LandingSettingsController extends Controller
     public function __construct(
         private LandingSettingsService $landingSettings,
         private SubscriptionNotificationRuntimeConfig $subscriptionNotifications,
+        private OpenAiModelCatalog $landingModels,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
         $settings = $this->landingSettings->all();
         $smsExpiry = $this->subscriptionNotifications->snapshot();
+        $catalog = $this->landingModels->catalog($request->boolean('refresh_models'));
 
         return Inertia::render('LandingSettings/Index', [
             'settings' => array_merge($settings, [
                 'sms_expiry' => $smsExpiry['sms_expiry'],
                 'sms_expiry_source' => $smsExpiry['source'],
+                'landing_model_options' => $this->landingModels->options(),
+                'landing_model_best' => $catalog['best'],
+                'landing_model_list_source' => $catalog['source'],
+                'landing_model_list_error' => $catalog['error'],
+                'landing_model_list_fetched_at' => $catalog['fetched_at'],
             ]),
         ]);
     }
@@ -45,6 +53,7 @@ class LandingSettingsController extends Controller
             'openai_blog_planning_model',
             'openai_blog_writing_model',
             'openai_image_model',
+            'openai_landing_model',
         ];
 
         $merged = [];
@@ -57,6 +66,10 @@ class LandingSettingsController extends Controller
 
         $merged['blog_ai_daily_token_cap'] = $request->filled('blog_ai_daily_token_cap')
             ? $request->integer('blog_ai_daily_token_cap')
+            : null;
+
+        $merged['landing_ai_daily_limit'] = $request->filled('landing_ai_daily_limit')
+            ? $request->integer('landing_ai_daily_limit')
             : null;
 
         $request->merge($merged);
@@ -76,7 +89,18 @@ class LandingSettingsController extends Controller
             'openai_blog_planning_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::BLOG_MODELS)],
             'openai_blog_writing_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::BLOG_MODELS)],
             'openai_image_model' => ['nullable', 'string', 'in:'.implode(',', LandingSettingsService::IMAGE_MODELS)],
+            'openai_landing_model' => [
+                'nullable',
+                'string',
+                'max:80',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! in_array($value, $this->landingModels->selectableModels(), true)) {
+                        $fail('Choose a model from the list.');
+                    }
+                },
+            ],
             'blog_ai_daily_token_cap' => ['nullable', 'integer', 'min:1000', 'max:10000000'],
+            'landing_ai_daily_limit' => ['nullable', 'integer', 'min:1', 'max:500'],
         ]);
 
         $this->landingSettings->update($validated);
