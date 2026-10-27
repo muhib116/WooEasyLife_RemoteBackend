@@ -300,6 +300,9 @@ const verdict = computed(() => {
     if (row.status === "not_found" || row.risk === null) {
         return { title: "No history", detail: "No courier orders were found for this number." };
     }
+    if (row.risk === "incomplete") {
+        return { title: "Incomplete", detail: "A courier did not answer. Do not treat this number as safe until Refresh brings that courier in." };
+    }
     if (row.risk === "safe") {
         return { title: "Safe", detail: `Strong delivery success rate (${rateLabel.value}).` };
     }
@@ -314,7 +317,7 @@ const bannerClass = computed(() => {
     if (!row || row.status === "error" || row.risk === "high") {
         return "border-rose-600/30 bg-rose-50 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100";
     }
-    if (row.risk === "review") {
+    if (row.risk === "review" || row.risk === "incomplete") {
         return "border-amber-600/30 bg-amber-50 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100";
     }
     if (row.risk === "safe") {
@@ -326,14 +329,14 @@ const bannerClass = computed(() => {
 const badgeClass = computed(() => {
     const row = result.value;
     if (!row || row.status === "error" || row.risk === "high") return "bg-rose-600 text-white";
-    if (row.risk === "review") return "bg-amber-500 text-[#1a1408]";
+    if (row.risk === "review" || row.risk === "incomplete") return "bg-amber-500 text-[#1a1408]";
     if (row.risk === "safe") return "bg-emerald-600 text-white";
     return "bg-slate-500 text-white";
 });
 
 const rateClass = computed(() => {
     if (result.value?.risk === "safe") return "text-emerald-700 dark:text-emerald-300";
-    if (result.value?.risk === "review") return "text-amber-700 dark:text-amber-300";
+    if (result.value?.risk === "review" || result.value?.risk === "incomplete") return "text-amber-700 dark:text-amber-300";
     if (result.value?.risk === "high") return "text-rose-700 dark:text-rose-300";
     return "text-gray-500";
 });

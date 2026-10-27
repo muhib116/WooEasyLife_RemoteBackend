@@ -499,6 +499,9 @@
                 </div>
                 <div v-else class="mt-4 space-y-2">
                     <p class="text-xs font-semibold uppercase tracking-wide text-[#8d6a00] dark:text-slate-400">Courier breakdown</p>
+                    <p v-if="selected.risk === 'incomplete'" class="rounded-xl border border-amber-600/30 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                        A courier did not answer, so this is not a Safe result. Refresh tries that courier again.
+                    </p>
                     <div
                         v-for="courier in selected.couriers"
                         :key="courier.title"
@@ -578,6 +581,7 @@ const selected = ref(null);
 const checkingId = ref(null);
 const retryingId = ref(null);
 const refreshingId = ref(null);
+const autoRefreshed = new Set();
 const refreshNotice = ref("");
 const limitNotice = ref("");
 const preview = ref(null);
@@ -795,7 +799,7 @@ function detailBadge(row) {
 
 function detailBadgeClass(row) {
     if (row.risk === "safe") return "border-emerald-600/30 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300";
-    if (row.risk === "review" || row.status === "invalid") return "border-amber-600/40 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300";
+    if (row.risk === "review" || row.risk === "incomplete" || row.status === "invalid") return "border-amber-600/40 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300";
     if (row.risk === "high" || row.status === "error") return "border-rose-600/30 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300";
     return "border-[#e6c56a] bg-white text-[#6b5e48] dark:border-white/15 dark:bg-white/5 dark:text-slate-300";
 }
@@ -918,6 +922,11 @@ async function runPending() {
             if (data.batch) batchState.value = data.batch;
             if (data.quota) quotaState.value = data.quota;
             if (data.item) replaceItem(data.item);
+            if (data.item && coreCourierMissing(data.item) && !autoRefreshed.has(data.item.id)) {
+                autoRefreshed.add(data.item.id);
+                await wait(2000);
+                await refreshRow(data.item, true);
+            }
             if (data.limit_reached) {
                 limitNotice.value = "Today's courier history limit is used up. Pending numbers were not checked.";
                 break;
@@ -951,8 +960,16 @@ function canRefresh(row) {
     return ["found", "not_found", "error"].includes(row.status);
 }
 
-async function refreshRow(row) {
-    if (running.value || refreshingId.value || retryingId.value || !canRefresh(row)) return;
+function coreCourierMissing(row) {
+    return (row?.couriers || []).some((courier) => {
+        if (courier.available !== false) return false;
+        const title = String(courier.title || "").toLowerCase();
+        return title.includes("pathao") || title.includes("stead") || title.includes("paper");
+    });
+}
+
+async function refreshRow(row, duringRun = false) {
+    if ((!duringRun && running.value) || refreshingId.value || retryingId.value || !canRefresh(row)) return;
     refreshingId.value = row.id;
     checkingId.value = row.id;
     refreshNotice.value = "";
@@ -1065,13 +1082,14 @@ function statusClass(status) {
 function riskLabel(risk) {
     if (risk === "safe") return "Safe";
     if (risk === "review") return "Review";
+    if (risk === "incomplete") return "Incomplete";
     if (risk === "high") return "High risk";
     return "";
 }
 
 function riskClass(risk) {
     if (risk === "safe") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200";
-    if (risk === "review") return "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200";
+    if (risk === "review" || risk === "incomplete") return "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200";
     if (risk === "high") return "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200";
     return "";
 }

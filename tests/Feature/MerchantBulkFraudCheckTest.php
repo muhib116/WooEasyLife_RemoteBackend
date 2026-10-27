@@ -475,6 +475,7 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertJsonPath('item.couriers.0.notes.0', 'Refused at the gate')
             ->assertJsonPath('item.couriers.0.notes.1', 'Fake order × 2')
             ->assertJsonPath('item.couriers.1.available', false)
+            ->assertJsonPath('item.risk', 'incomplete')
             ->assertJsonMissing(['name' => 'Hidden Customer']);
 
         $preview = $this->actingAs($merchant)
@@ -497,7 +498,7 @@ class MerchantBulkFraudCheckTest extends TestCase
                 1,
                 1,
                 '50.0%',
-                'Review',
+                'Incomplete',
             ]);
 
         $csv = $this->actingAs($merchant)

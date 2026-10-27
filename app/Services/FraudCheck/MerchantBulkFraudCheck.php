@@ -685,8 +685,14 @@ class MerchantBulkFraudCheck
                 LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
             }
 
-            if ($attempt < $attempts && $pauseMs > 0) {
-                usleep($pauseMs * 1000);
+            if ($attempt < $attempts) {
+                $wait = $pauseMs;
+                if (is_array($best) && ! MerchantBulkFraudRow::coreCouriersAnswered($best)) {
+                    $wait = max($wait, 1500);
+                }
+                if ($wait > 0) {
+                    usleep($wait * 1000);
+                }
             }
         }
 

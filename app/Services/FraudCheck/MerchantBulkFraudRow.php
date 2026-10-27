@@ -102,6 +102,10 @@ class MerchantBulkFraudRow
         }
 
         $total = max($reportedTotal, $received + $cancelled) + $partial;
+        $risk = self::risk($rate);
+        if (self::missingCoreCourier($couriers)) {
+            $risk = 'incomplete';
+        }
 
         return self::row(
             $phone,
@@ -111,7 +115,7 @@ class MerchantBulkFraudRow
             $cancelled,
             $partial,
             $rate,
-            self::risk($rate),
+            $risk,
             $couriers,
         );
     }
@@ -481,7 +485,32 @@ class MerchantBulkFraudRow
             $row['risk'] = null;
         }
 
+        if (self::missingCoreCourier($couriers) && in_array($row['status'] ?? '', ['found', 'not_found'], true)) {
+            $row['risk'] = 'incomplete';
+        }
+
         return $row;
+    }
+
+    /**
+     * SteadFast, Pathao, or Paperfly failed to answer. The rate from the other
+     * couriers must not be shown as Safe.
+     *
+     * @param  list<array<string, mixed>>  $couriers
+     */
+    private static function missingCoreCourier(array $couriers): bool
+    {
+        foreach ($couriers as $courier) {
+            if (! is_array($courier) || ($courier['available'] ?? null) !== false) {
+                continue;
+            }
+
+            if (in_array(self::courierKeyFromTitle((string) ($courier['title'] ?? '')), ['steadfast', 'pathao', 'paperfly'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

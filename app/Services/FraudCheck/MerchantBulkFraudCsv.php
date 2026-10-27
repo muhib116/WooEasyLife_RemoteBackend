@@ -116,6 +116,7 @@ class MerchantBulkFraudCsv
             'safe' => 'Safe',
             'review' => 'Review',
             'high' => 'High risk',
+            'incomplete' => 'Incomplete',
             default => '',
         };
     }
