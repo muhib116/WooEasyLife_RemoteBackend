@@ -47,14 +47,27 @@ return [
     | One live courier check per phone per Asia/Dhaka day. A failed check is
     | retried before it is saved, and a failed result is not reused.
     |
+    | bulk_workers numbers of one merchant are checked at the same time.
+    | When SteadFast, Pathao, or Paperfly did not answer, only that courier
+    | is asked again (bulk_missing_courier_retries times). No new attempt
+    | starts after bulk_number_budget_seconds. A number still "checking"
+    | after bulk_stale_check_seconds is handed to the next request.
+    | A saved Incomplete row is asked again up to bulk_incomplete_retries
+    | times, bulk_incomplete_retry_gap_seconds apart, without holding a
+    | worker slot. The admin Daily limits page can override these.
+    |
     */
     'bulk_max_numbers' => 1000,
     'bulk_retry_attempts' => 3,
     'bulk_retry_pause_ms' => 300,
-
-    // A saved result where one courier did not answer is checked again
-    // after this many seconds instead of being reused all day.
-    'bulk_failed_courier_recheck_seconds' => (int) env('FRAUD_CHECK_BULK_FAILED_COURIER_RECHECK_SECONDS', 120),
+    'bulk_workers' => (int) env('FRAUD_CHECK_BULK_WORKERS', 3),
+    'bulk_missing_courier_retries' => (int) env('FRAUD_CHECK_BULK_MISSING_COURIER_RETRIES', 1),
+    'bulk_number_budget_seconds' => (int) env('FRAUD_CHECK_BULK_NUMBER_BUDGET_SECONDS', 60),
+    'bulk_stale_check_seconds' => (int) env('FRAUD_CHECK_BULK_STALE_CHECK_SECONDS', 150),
+    // Extra live checks for a row that stayed Incomplete. These run one at a
+    // time, after the gap, and do not take a bulk worker slot.
+    'bulk_incomplete_retries' => (int) env('FRAUD_CHECK_BULK_INCOMPLETE_RETRIES', 5),
+    'bulk_incomplete_retry_gap_seconds' => (int) env('FRAUD_CHECK_BULK_INCOMPLETE_RETRY_GAP_SECONDS', 5),
 
     /*
     |--------------------------------------------------------------------------
@@ -62,12 +75,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | A dropped connection or a courier server error is asked once more
-    | before the answer goes out. When that second attempt also fails,
-    | that courier is not retried again for cooldown_seconds, so an outage
-    | does not slow every check. Rate limits, rejected credentials, and
-    | missing setup are never retried right away. A bulk result where one
-    | courier did not answer is checked again after
-    | bulk_failed_courier_recheck_seconds.
+    | before the answer goes out. When that second attempt also fails, the
+    | same number is not retried on that courier for cooldown_seconds.
+    | After pause_after_failures failed retries in a row (any numbers), the
+    | courier is not retried at all for cooldown_seconds, so an outage does
+    | not slow every check. Rate limits, rejected credentials, and missing
+    | setup are never retried right away.
     |
     */
     'courier_retry' => [
@@ -75,6 +88,7 @@ return [
         'pause_ms' => (int) env('FRAUD_CHECK_COURIER_RETRY_PAUSE_MS', 700),
         'budget_seconds' => (int) env('FRAUD_CHECK_COURIER_RETRY_BUDGET_SECONDS', 20),
         'cooldown_seconds' => (int) env('FRAUD_CHECK_COURIER_RETRY_COOLDOWN_SECONDS', 60),
+        'pause_after_failures' => (int) env('FRAUD_CHECK_COURIER_RETRY_PAUSE_AFTER_FAILURES', 3),
     ],
 
     /*

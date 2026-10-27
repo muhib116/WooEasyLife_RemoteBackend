@@ -187,8 +187,10 @@ class FraudCheckService
 
     /**
      * Ask a courier once more after a failure that can pass, like a dropped
-     * connection or a server error. When that retry fails too, the courier
-     * is not retried for a short while, so an outage does not slow every check.
+     * connection or a server error. When that retry fails too, the same
+     * number is not retried on that courier for a short while, and a courier
+     * that keeps failing its retries is skipped for every number, so an
+     * outage does not slow every check.
      *
      * @param  array<string, array{0: object, 1: string, 2: array<int, mixed>}>  $jobs
      * @param  array<string, array<string, mixed>>  $reports
@@ -215,7 +217,7 @@ class FraudCheckService
             }
 
             $coolingKey = 'fraud_check_courier_retry_cooling:'.$key.':'.$phone;
-            if (Cache::has($coolingKey)) {
+            if (Cache::has($coolingKey) || self::courierRetryPaused($key)) {
                 continue;
             }
 
@@ -233,14 +235,60 @@ class FraudCheckService
 
             if (is_array($retried) && empty($retried['unavailable'])) {
                 $reports[$key] = $retried;
+                self::noteCourierRetry($key, true);
 
                 continue;
             }
 
             Cache::put($coolingKey, true, now()->addSeconds($cooldownSeconds));
+            self::noteCourierRetry($key, false);
         }
 
         return $reports;
+    }
+
+    /**
+     * True while a courier is skipped for retries after it failed several
+     * retries in a row.
+     */
+    public static function courierRetryPaused(string $courier): bool
+    {
+        try {
+            return Cache::has('fraud_check_courier_retry_paused:'.$courier);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Count a retry result. An answer clears the count. After
+     * pause_after_failures failures in a row the courier is skipped for
+     * cooldown_seconds.
+     */
+    public static function noteCourierRetry(string $courier, bool $answered): void
+    {
+        $failuresKey = 'fraud_check_courier_retry_failures:'.$courier;
+
+        try {
+            if ($answered) {
+                Cache::forget($failuresKey);
+
+                return;
+            }
+
+            $cooldownSeconds = max(1, (int) config('fraud_check.courier_retry.cooldown_seconds', 60));
+            $limit = max(1, (int) config('fraud_check.courier_retry.pause_after_failures', 3));
+
+            Cache::add($failuresKey, 0, now()->addSeconds($cooldownSeconds));
+            $failures = (int) Cache::increment($failuresKey);
+
+            if ($failures >= $limit) {
+                Cache::put('fraud_check_courier_retry_paused:'.$courier, true, now()->addSeconds($cooldownSeconds));
+                Cache::forget($failuresKey);
+            }
+        } catch (Throwable $exception) {
+            LogHelper::saveLog('Fraud check courier retry count failed', $courier.': '.CourierTransport::safeMessage($exception));
+        }
     }
 
     /**

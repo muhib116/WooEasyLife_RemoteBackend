@@ -65,6 +65,7 @@
                         label="Continue"
                         icon="pi pi-play"
                         size="small"
+                        :disabled="refreshingIncomplete"
                         @click="continueBatch"
                     />
                     <label class="results-search">
@@ -114,7 +115,46 @@
                 <p v-if="rowFilter || phoneQueryActive" class="mb-4 text-xs" style="color: var(--mp-muted)">
                     Showing {{ sortedItems.length }} of {{ items.length }}
                 </p>
+                <div
+                    v-if="rowFilter === 'incomplete' || refreshingIncomplete"
+                    class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-600/30 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+                >
+                    <p>
+                        <template v-if="refreshingIncomplete">
+                            Refreshing incomplete {{ incompleteRefresh.done }} of {{ incompleteRefresh.total }}.
+                        </template>
+                        <template v-else-if="incompleteTargets.length">
+                            {{ incompleteTargets.length }} incomplete {{ incompleteTargets.length === 1 ? "number" : "numbers" }} can be checked again. A courier did not answer, so these are not Safe.
+                        </template>
+                        <template v-else>
+                            No incomplete numbers can be refreshed.
+                        </template>
+                    </p>
+                    <button
+                        v-if="refreshingIncomplete"
+                        type="button"
+                        class="rounded-lg border border-amber-700/30 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 dark:border-amber-400/30 dark:bg-transparent dark:text-amber-100"
+                        @click="stopIncompleteRefresh"
+                    >
+                        Stop
+                    </button>
+                    <button
+                        v-else
+                        type="button"
+                        class="rounded-lg border border-sky-600/40 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
+                        :disabled="!incompleteTargets.length || running || followingIncomplete || refreshingId !== null || retryingId !== null"
+                        @click="refreshIncompleteRows"
+                    >
+                        Refresh incomplete
+                    </button>
+                </div>
 
+                <p
+                    v-if="followingIncomplete"
+                    class="mb-4 rounded-xl border border-amber-600/30 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+                >
+                    Incomplete numbers are being checked again, one at a time, {{ incompleteRetryGapLabel }} seconds apart. The other numbers keep going.
+                </p>
                 <p v-if="limitNotice" class="mb-4 rounded-xl border border-rose-600/30 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
                     {{ limitNotice }}
                 </p>
@@ -201,16 +241,20 @@
                 </div>
 
                 <div
-                    v-if="checkingRow"
+                    v-if="checkingRows.length"
                     class="mb-4 rounded-2xl border p-4"
                     style="border-color: var(--mp-line); background: var(--mp-surface)"
                 >
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Checking now</p>
-                            <p class="mt-1 font-mono text-lg font-bold" style="color: var(--mp-ink)">{{ checkingRow.phone }}</p>
+                            <p class="mt-1 flex flex-wrap gap-x-4 font-mono text-lg font-bold" style="color: var(--mp-ink)">
+                                <span v-for="row in checkingRows" :key="row.id">{{ row.phone }}</span>
+                            </p>
                         </div>
-                        <p class="text-xs" style="color: var(--mp-muted)">Couriers are answering one by one</p>
+                        <p class="text-xs" style="color: var(--mp-muted)">
+                            {{ checkingRows.length > 1 ? `${checkingRows.length} numbers at a time` : "Couriers are answering one by one" }}
+                        </p>
                     </div>
                 </div>
 
@@ -237,13 +281,13 @@
                             <tr v-for="row in pagedItems" :key="row.id" class="border-b" style="border-color: var(--mp-line)">
                                 <td class="whitespace-nowrap px-3 py-2.5">
                                     <span class="font-mono" style="color: var(--mp-ink)">{{ row.phone }}</span>
-                                    <p v-if="checkingId === row.id" class="text-[11px] text-emerald-700 dark:text-emerald-300">Checking now</p>
+                                    <p v-if="isChecking(row)" class="text-[11px] text-emerald-700 dark:text-emerald-300">Checking now</p>
                                     <p v-else-if="row.source === 'cache'" class="text-[11px] text-sky-700 dark:text-sky-300">Already checked today</p>
                                     <p v-else-if="row.status === 'error'" class="text-[11px] text-rose-600">Tried {{ row.attempts }} times</p>
                                     <p v-else-if="row.status === 'pending'" class="text-[11px] text-gray-400">Waiting</p>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
-                                    <span v-if="checkingId === row.id" class="skeleton-block inline-block h-5 w-16 rounded-full" />
+                                    <span v-if="isChecking(row)" class="skeleton-block inline-block h-5 w-16 rounded-full" />
                                     <span v-else class="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusClass(row.status)">
                                         {{ statusLabel(row.status) }}
                                     </span>
@@ -254,7 +298,7 @@
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center font-medium tabular-nums" :class="rateClass(row)">{{ tableRate(row) }}</td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     <span
-                                        v-if="checkingId === row.id"
+                                        v-if="isChecking(row)"
                                         class="skeleton-block inline-block h-5 w-16 rounded-full"
                                     />
                                     <span
@@ -279,7 +323,7 @@
                                             v-if="canRefresh(row)"
                                             type="button"
                                             class="rounded-lg border border-sky-600/40 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
-                                            :disabled="running || refreshingId !== null || retryingId !== null"
+                                            :disabled="running || refreshingIncomplete || refreshingId !== null || retryingId !== null"
                                             @click="refreshRow(row)"
                                         >
                                             {{ refreshingId === row.id ? "Refreshing" : "Refresh" }}
@@ -288,7 +332,7 @@
                                             v-if="row.status === 'error'"
                                             type="button"
                                             class="rounded-lg border border-emerald-600/40 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
-                                            :disabled="running || limitBlocked || retryingId !== null || refreshingId !== null"
+                                            :disabled="running || refreshingIncomplete || limitBlocked || retryingId !== null || refreshingId !== null"
                                             @click="retryRow(row)"
                                         >
                                             {{ retryingId === row.id ? "Retrying" : "Retry" }}
@@ -430,7 +474,7 @@
                             v-if="canRefresh(selected)"
                             type="button"
                             class="rounded-lg border border-sky-600/40 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
-                            :disabled="running || refreshingId !== null || retryingId !== null"
+                            :disabled="running || refreshingIncomplete || refreshingId !== null || retryingId !== null"
                             @click="refreshRow(selected)"
                         >
                             {{ refreshingId === selected.id ? "Refreshing" : "Refresh" }}
@@ -439,7 +483,7 @@
                             v-if="selected.status === 'error'"
                             type="button"
                             class="rounded-lg border border-emerald-600/40 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
-                            :disabled="running || limitBlocked || retryingId !== null || refreshingId !== null"
+                            :disabled="running || refreshingIncomplete || limitBlocked || retryingId !== null || refreshingId !== null"
                             @click="retryRow(selected)"
                         >
                             {{ retryingId === selected.id ? "Retrying" : "Retry" }}
@@ -571,6 +615,9 @@ const props = defineProps({
     batch: { type: Object, required: true },
     items: { type: Array, default: () => [] },
     quota: { type: Object, default: null },
+    workers: { type: Number, default: 1 },
+    incompleteRetries: { type: Number, default: 5 },
+    incompleteRetryGapSeconds: { type: Number, default: 5 },
 });
 
 const batchState = ref({ ...props.batch });
@@ -578,23 +625,43 @@ const items = ref(props.items.map((row) => ({ ...row })));
 const quotaState = ref(props.quota);
 const running = ref(false);
 const selected = ref(null);
-const checkingId = ref(null);
+const checkingIds = ref([]);
 const retryingId = ref(null);
 const refreshingId = ref(null);
-const autoRefreshed = new Set();
+const refreshingIncomplete = ref(false);
+const followingIncomplete = ref(false);
+const incompleteRefresh = ref({ done: 0, total: 0 });
+let stopIncompleteRequested = false;
 const refreshNotice = ref("");
 const limitNotice = ref("");
 const preview = ref(null);
 const previewLoading = ref(false);
 const previewError = ref("");
 let stopRequested = false;
+let runToken = 0;
+
+const incompleteRetryMax = computed(() => Math.min(5, Math.max(0, Number(props.incompleteRetries ?? 5))));
+const incompleteRetryGapMs = computed(() => Math.min(30, Math.max(3, Number(props.incompleteRetryGapSeconds) || 5)) * 1000);
+const incompleteRetryGapLabel = computed(() => Math.round(incompleteRetryGapMs.value / 1000));
 
 const doneCount = computed(() => items.value.filter((row) => row.status !== "pending").length);
 const percent = computed(() => {
     if (!items.value.length) return 0;
     return Math.round((doneCount.value / items.value.length) * 100);
 });
-const checkingRow = computed(() => items.value.find((row) => row.id === checkingId.value) ?? null);
+const checkingRows = computed(() => items.value.filter((row) => checkingIds.value.includes(row.id)));
+
+function isChecking(row) {
+    return checkingIds.value.includes(row.id);
+}
+
+function markChecking(id) {
+    if (!checkingIds.value.includes(id)) checkingIds.value = [...checkingIds.value, id];
+}
+
+function unmarkChecking(id) {
+    checkingIds.value = checkingIds.value.filter((value) => value !== id);
+}
 
 const limitBlocked = computed(() => Number(quotaState.value?.remaining ?? 0) < 1);
 
@@ -619,6 +686,7 @@ const filterChips = computed(() => [
     { value: "waiting", label: "Waiting", count: countWaiting(), className: "bg-gray-100 text-gray-600 ring-gray-400 dark:bg-white/10 dark:text-gray-300" },
     { value: "safe", label: "Safe", count: countRisk("safe"), className: "bg-emerald-100 text-emerald-800 ring-emerald-500 dark:bg-emerald-500/15 dark:text-emerald-200" },
     { value: "review", label: "Review", count: countRisk("review"), className: "bg-amber-100 text-amber-800 ring-amber-400 dark:bg-amber-500/15 dark:text-amber-200" },
+    { value: "incomplete", label: "Incomplete", count: countRisk("incomplete"), className: "bg-amber-100 text-amber-900 ring-amber-500 dark:bg-amber-500/20 dark:text-amber-100" },
     { value: "high", label: "High risk", count: countRisk("high"), className: "bg-rose-100 text-rose-800 ring-rose-400 dark:bg-rose-500/15 dark:text-rose-200" },
     { value: "today", label: "From today", count: countSource("cache"), className: "bg-sky-100 text-sky-800 ring-sky-400 dark:bg-sky-500/15 dark:text-sky-200" },
 ]);
@@ -632,7 +700,7 @@ function rowMatchesFilter(row) {
         return row.status === rowFilter.value;
     }
     if (rowFilter.value === "waiting") return row.status === "pending" || row.status === "checking";
-    if (rowFilter.value === "safe" || rowFilter.value === "review" || rowFilter.value === "high") return row.risk === rowFilter.value;
+    if (rowFilter.value === "safe" || rowFilter.value === "review" || rowFilter.value === "incomplete" || rowFilter.value === "high") return row.risk === rowFilter.value;
     if (rowFilter.value === "today") return row.source === "cache";
     return true;
 }
@@ -784,6 +852,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     stopRequested = true;
+    stopIncompleteRequested = true;
     window.removeEventListener("keydown", onEscape);
     document.removeEventListener("click", onDocumentClick);
 });
@@ -894,7 +963,7 @@ function notesEmptyLabel(row) {
 }
 
 async function continueBatch() {
-    if (running.value || limitBlocked.value) {
+    if (running.value || refreshingIncomplete.value || limitBlocked.value) {
         if (limitBlocked.value) {
             limitNotice.value = "Today's courier history limit is used up. Pending numbers were not checked.";
         }
@@ -914,65 +983,97 @@ async function continueBatch() {
 }
 
 async function runPending() {
-    let pauses = 0;
-    while (!stopRequested && items.value.some((row) => row.status === "pending")) {
-        checkingId.value = items.value.find((row) => row.status === "pending")?.id ?? null;
+    const run = { token: ++runToken, halted: false, stopFollow: false };
+    const workers = Math.min(5, Math.max(1, Number(props.workers) || 1));
+    running.value = true;
+    await Promise.all([
+        ...Array.from({ length: workers }, (_, index) => runWorker(run, index)),
+        followIncomplete(run),
+    ]);
+    if (run.token !== runToken) return;
+    if (items.value.some((row) => row.status === "pending") && !(batchState.value.pending > 0)) {
+        await syncItems();
+    }
+    checkingIds.value = [];
+    running.value = false;
+}
+
+// Each worker asks the server for the next number. The server hands every
+// number to one request only, so the row a worker marks is only a guess
+// until its answer arrives.
+async function runWorker(run, index) {
+    if (index > 0) await wait(index * 400);
+    let idleSince = 0;
+    while (run.token === runToken && !run.halted && !stopRequested) {
+        const guess = items.value.find((row) => row.status === "pending" && !isChecking(row));
+        if (!guess) break;
+        markChecking(guess.id);
+        let data = null;
         try {
-            const { data } = await axios.post(route("portal.fraud-check.batches.next", batchState.value.id), {}, { timeout: 180000 });
+            ({ data } = await axios.post(route("portal.fraud-check.batches.next", batchState.value.id), {}, { timeout: 180000 }));
+        } catch {
+            data = null;
+        } finally {
+            unmarkChecking(guess.id);
+        }
+        if (data) {
             if (data.batch) batchState.value = data.batch;
             if (data.quota) quotaState.value = data.quota;
             if (data.item) replaceItem(data.item);
-            if (data.item && coreCourierMissing(data.item) && !autoRefreshed.has(data.item.id)) {
-                autoRefreshed.add(data.item.id);
-                await wait(2000);
-                await refreshRow(data.item, true);
-            }
             if (data.limit_reached) {
                 limitNotice.value = "Today's courier history limit is used up. Pending numbers were not checked.";
+                run.halted = true;
+                run.stopFollow = true;
                 break;
             }
-            if (data.batch?.status === "stopped") break;
-            if (data.retry || (!data.item && !data.done)) {
-                pauses += 1;
-                if (pauses >= 100) {
-                    refreshNotice.value = "Checking paused. Press Continue to try the remaining numbers.";
-                    break;
-                }
-                await wait(1000);
+            if (data.batch?.status === "stopped") {
+                run.halted = true;
+                run.stopFollow = true;
+                break;
+            }
+            if (data.done) {
+                run.halted = true;
+                break;
+            }
+            if (data.item && !data.retry) {
+                idleSince = 0;
                 continue;
             }
-            pauses = 0;
-            if (data.done) break;
-        } catch {
-            pauses += 1;
-            if (pauses >= 100) {
-                refreshNotice.value = "Checking paused. Press Continue to try the remaining numbers.";
-                break;
-            }
-            await wait(1000);
         }
+        if (!idleSince) idleSince = Date.now();
+        if (Date.now() - idleSince > 240000) {
+            refreshNotice.value = "Checking paused. Press Continue to try the remaining numbers.";
+            run.halted = true;
+            run.stopFollow = true;
+            break;
+        }
+        await wait(1000 + index * 300);
     }
-    checkingId.value = null;
-    running.value = false;
+}
+
+async function syncItems() {
+    try {
+        const { data } = await axios.get(route("portal.fraud-check.batches.show", batchState.value.id), {
+            headers: { Accept: "application/json" },
+        });
+        applyPayload(data);
+        if (data.quota) quotaState.value = data.quota;
+    } catch {
+        // The table keeps the rows it already has.
+    }
 }
 
 function canRefresh(row) {
     return ["found", "not_found", "error"].includes(row.status);
 }
 
-function coreCourierMissing(row) {
-    return (row?.couriers || []).some((courier) => {
-        if (courier.available !== false) return false;
-        const title = String(courier.title || "").toLowerCase();
-        return title.includes("pathao") || title.includes("stead") || title.includes("paper");
-    });
-}
-
-async function refreshRow(row, duringRun = false) {
-    if ((!duringRun && running.value) || refreshingId.value || retryingId.value || !canRefresh(row)) return;
+async function refreshRow(row, duringRun = false, quiet = false) {
+    if ((!duringRun && (running.value || refreshingIncomplete.value || followingIncomplete.value)) || refreshingId.value || retryingId.value || !canRefresh(row)) {
+        return { skipped: true };
+    }
     refreshingId.value = row.id;
-    checkingId.value = row.id;
-    refreshNotice.value = "";
+    markChecking(row.id);
+    if (!quiet) refreshNotice.value = "";
     try {
         const { data } = await axios.post(
             route("portal.fraud-check.batches.refresh", { batch: batchState.value.id, item: row.id }),
@@ -983,27 +1084,150 @@ async function refreshRow(row, duringRun = false) {
         if (data.quota) quotaState.value = data.quota;
         if (data.item) replaceItem(data.item);
         if (data.limit_reached) {
-            refreshNotice.value = "Today's courier history limit is used up, so this number was not checked again.";
-        } else if (data.refreshed === false) {
-            refreshNotice.value = "Could not fetch new courier data for this number. The previous result is still shown.";
+            if (!quiet) refreshNotice.value = "Today's courier history limit is used up, so this number was not checked again.";
+            return { limit: true, refreshed: false };
         }
-    } catch {
-        refreshNotice.value = "Could not fetch new courier data for this number. The previous result is still shown.";
+        if (data.refreshed === false) {
+            if (!quiet) refreshNotice.value = "Could not fetch new courier data for this number. The previous result is still shown.";
+            return { refreshed: false };
+        }
+        return { refreshed: true };
+    } catch (error) {
+        if (error?.response?.status === 429) {
+            if (!quiet) refreshNotice.value = "Refreshing paused so the couriers are not asked too quickly. Press Refresh incomplete again for the rest.";
+            return { throttled: true, refreshed: false };
+        }
+        if (!quiet) refreshNotice.value = "Could not fetch new courier data for this number. The previous result is still shown.";
+        return { refreshed: false };
     } finally {
-        checkingId.value = null;
+        unmarkChecking(row.id);
         refreshingId.value = null;
     }
 }
 
+const incompleteTargets = computed(() => sortedItems.value.filter((row) => row.risk === "incomplete" && canRefresh(row)));
+
+function stopIncompleteRefresh() {
+    stopIncompleteRequested = true;
+}
+
+// Asks Incomplete rows again, one at a time, after the gap. It does not take a
+// bulk worker slot, so the numbers still waiting keep moving.
+async function followIncomplete(run) {
+    const maxTries = incompleteRetryMax.value;
+    const gapMs = incompleteRetryGapMs.value;
+    if (maxTries < 1) return;
+
+    const tries = new Map();
+    const readyAt = new Map();
+    followingIncomplete.value = true;
+
+    try {
+        while (run.token === runToken && !stopRequested && !run.stopFollow) {
+            const now = Date.now();
+            for (const row of items.value) {
+                if (row.risk !== "incomplete" || !canRefresh(row) || isChecking(row)) continue;
+                if (!readyAt.has(row.id) && (tries.get(row.id) ?? 0) < maxTries) {
+                    readyAt.set(row.id, now + gapMs);
+                }
+            }
+
+            if (refreshingId.value || retryingId.value || refreshingIncomplete.value) {
+                await wait(400);
+                continue;
+            }
+
+            const candidate = items.value.find((row) => {
+                if (row.risk !== "incomplete" || !canRefresh(row) || isChecking(row)) return false;
+                if ((tries.get(row.id) ?? 0) >= maxTries) return false;
+                return (readyAt.get(row.id) ?? Infinity) <= Date.now();
+            });
+            const mainStillGoing = !run.halted && items.value.some((row) => row.status === "pending" || row.status === "checking");
+            const waitingRetry = items.value.some((row) => row.risk === "incomplete" && canRefresh(row) && (tries.get(row.id) ?? 0) < maxTries);
+
+            if (!candidate) {
+                if (!mainStillGoing && !waitingRetry) break;
+                await wait(400);
+                continue;
+            }
+
+            const used = (tries.get(candidate.id) ?? 0) + 1;
+            tries.set(candidate.id, used);
+            readyAt.delete(candidate.id);
+            const result = await refreshRow(candidate, true, true);
+            if (run.token !== runToken || stopRequested || run.stopFollow) break;
+            if (result?.skipped) {
+                tries.set(candidate.id, used - 1);
+                readyAt.set(candidate.id, Date.now() + 1000);
+                await wait(400);
+                continue;
+            }
+            if (result?.limit) {
+                limitNotice.value = "Today's courier history limit is used up, so incomplete numbers were not checked again.";
+                break;
+            }
+            if (result?.throttled) {
+                refreshNotice.value = "Incomplete retries paused so the couriers are not asked too quickly. Press Refresh incomplete for the rest.";
+                break;
+            }
+            const updated = items.value.find((row) => row.id === candidate.id);
+            if (updated && updated.risk === "incomplete" && used < maxTries) {
+                readyAt.set(candidate.id, Date.now() + gapMs);
+            }
+        }
+    } finally {
+        if (run.token === runToken) followingIncomplete.value = false;
+    }
+}
+
+async function refreshIncompleteRows() {
+    if (running.value || followingIncomplete.value || refreshingIncomplete.value || refreshingId.value || retryingId.value) return;
+    const ids = incompleteTargets.value.map((row) => row.id);
+    if (!ids.length) return;
+
+    stopIncompleteRequested = false;
+    refreshingIncomplete.value = true;
+    incompleteRefresh.value = { done: 0, total: ids.length };
+    refreshNotice.value = "";
+    let failed = 0;
+    let halted = false;
+
+    try {
+        for (const id of ids) {
+            if (stopIncompleteRequested) break;
+            const row = items.value.find((item) => item.id === id);
+            if (!row || row.risk !== "incomplete" || !canRefresh(row)) {
+                incompleteRefresh.value.done += 1;
+                continue;
+            }
+            const result = await refreshRow(row, true);
+            incompleteRefresh.value.done += 1;
+            if (result?.limit || result?.throttled) {
+                halted = true;
+                break;
+            }
+            if (result && result.refreshed === false && !result.skipped) failed += 1;
+        }
+    } finally {
+        refreshingIncomplete.value = false;
+    }
+
+    if (!halted && !stopIncompleteRequested && failed > 0) {
+        refreshNotice.value = failed === 1
+            ? "1 number could not be fetched again. The previous result is still shown."
+            : `${failed} numbers could not be fetched again. The previous results are still shown.`;
+    }
+}
+
 async function retryRow(row) {
-    if (running.value || retryingId.value || limitBlocked.value) {
+    if (running.value || refreshingIncomplete.value || retryingId.value || limitBlocked.value) {
         if (limitBlocked.value) {
             limitNotice.value = "Today's courier history limit is used up, so this number was not checked again.";
         }
         return;
     }
     retryingId.value = row.id;
-    checkingId.value = row.id;
+    markChecking(row.id);
     try {
         const { data } = await axios.post(
             route("portal.fraud-check.batches.retry", { batch: batchState.value.id, item: row.id }),
@@ -1019,7 +1243,7 @@ async function retryRow(row) {
     } catch {
         // The row stays failed so it can be retried again.
     } finally {
-        checkingId.value = null;
+        unmarkChecking(row.id);
         retryingId.value = null;
     }
 }

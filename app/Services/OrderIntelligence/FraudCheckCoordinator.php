@@ -131,6 +131,42 @@ class FraudCheckCoordinator
     }
 
     /**
+     * Ask the named couriers once more and put each answer into the report.
+     * The merchant bulk check calls this when Pathao or another core courier
+     * did not answer, so the couriers that already answered are not called again.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $report
+     * @param  list<string>  $couriers
+     * @return array<string, mixed>
+     */
+    public function retryCouriers(Request $request, array $payload, array $report, array $couriers): array
+    {
+        if ($couriers === []) {
+            return $report;
+        }
+
+        $writeLog = (bool) config('order_intelligence.fraud_check.debug_trace', false);
+        $log = new FraudCheckDecisionLog(enabled: $writeLog, writeLaravelLog: $writeLog);
+        $phoneNormalized = $this->fraudCheckService->normalizePhone((string) ($payload['phone'] ?? ''));
+        $accessToken = $this->courierAccountService->resolveAccessToken($request);
+
+        $filled = $this->fillBlockingCouriers($report, $couriers, $phoneNormalized, $accessToken, $payload, $log);
+
+        foreach ($couriers as $courier) {
+            FraudCheckService::noteCourierRetry($courier, in_array($courier, $filled['couriers'], true));
+        }
+
+        if ($filled['couriers'] === []) {
+            return $report;
+        }
+
+        $this->syncDailyResultIfPresent($phoneNormalized, $filled['report']);
+
+        return $filled['report'];
+    }
+
+    /**
      * Debug trail is admin-web only. Never attach `_debug` to plugin/public API responses.
      *
      * @param  array<string, mixed>  $payload

@@ -369,3 +369,75 @@ it('retries a failed courier on the next phone instead of cooling every number',
         ->and($calls['01722222222'])->toBe(2)
         ->and($second['confirmed'])->toBe(2);
 });
+
+it('stops retrying a courier for every number after its retries keep failing', function () {
+    Cache::flush();
+    config([
+        'fraud_check.parallel_couriers' => false,
+        'fraud_check.courier_retry.enabled' => true,
+        'fraud_check.courier_retry.pause_ms' => 0,
+        'fraud_check.courier_retry.budget_seconds' => 30,
+        'fraud_check.courier_retry.cooldown_seconds' => 60,
+        'fraud_check.courier_retry.pause_after_failures' => 3,
+    ]);
+
+    $calls = [];
+    $pathao = Mockery::mock(PathaoFraudChecker::class);
+    $pathao->shouldReceive('check')->andReturnUsing(function (string $phone) use (&$calls) {
+        $calls[$phone] = ($calls[$phone] ?? 0) + 1;
+
+        return [
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'unavailable' => true,
+            'success_rate' => 'No order history found!',
+        ];
+    });
+
+    $answered = [
+        'total_order' => 0,
+        'confirmed' => 0,
+        'cancel' => 0,
+        'api_success' => true,
+        'success_rate' => 'No order history found!',
+    ];
+    $steadfast = Mockery::mock(SteadfastFraudChecker::class);
+    $steadfast->shouldReceive('check')->andReturn($answered);
+    $paperfly = Mockery::mock(PaperflyFraudChecker::class);
+    $paperfly->shouldReceive('check')->andReturn($answered);
+
+    $service = fraudCheckServiceWithMocks($steadfast, $pathao, $paperfly);
+
+    foreach (['01711111111', '01722222222', '01733333333', '01744444444'] as $phone) {
+        $service->getReport($phone);
+    }
+
+    expect($calls['01711111111'])->toBe(2)
+        ->and($calls['01722222222'])->toBe(2)
+        ->and($calls['01733333333'])->toBe(2)
+        ->and($calls['01744444444'])->toBe(1)
+        ->and(FraudCheckService::courierRetryPaused('pathao'))->toBeTrue()
+        ->and(FraudCheckService::courierRetryPaused('steadfast'))->toBeFalse();
+
+    Cache::flush();
+});
+
+it('clears the failure count when a courier retry answers', function () {
+    Cache::flush();
+    config(['fraud_check.courier_retry.pause_after_failures' => 3]);
+
+    FraudCheckService::noteCourierRetry('pathao', false);
+    FraudCheckService::noteCourierRetry('pathao', false);
+    FraudCheckService::noteCourierRetry('pathao', true);
+    FraudCheckService::noteCourierRetry('pathao', false);
+    FraudCheckService::noteCourierRetry('pathao', false);
+
+    expect(FraudCheckService::courierRetryPaused('pathao'))->toBeFalse();
+
+    FraudCheckService::noteCourierRetry('pathao', false);
+
+    expect(FraudCheckService::courierRetryPaused('pathao'))->toBeTrue();
+
+    Cache::flush();
+});

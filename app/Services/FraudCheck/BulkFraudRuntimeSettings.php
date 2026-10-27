@@ -1,0 +1,337 @@
+<?php
+
+namespace App\Services\FraudCheck;
+
+use App\Models\PlatformSetting;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * Admin-panel overrides for merchant bulk fraud-check speed.
+ * .env stays the fallback when a field is not saved here.
+ */
+class BulkFraudRuntimeSettings
+{
+    public const SETTING_KEY = 'fraud_check.bulk_runtime';
+
+    /**
+     * @var array<string, array{config: string, min: int, max: int, label: string, help: string}>
+     */
+    public const FIELDS = [
+        'bulk_workers' => [
+            'config' => 'fraud_check.bulk_workers',
+            'min' => 1,
+            'max' => 5,
+            'label' => 'Numbers checked at once',
+            'help' => 'How many numbers of one merchant are sent to the couriers at the same time. More is faster. 3 is the usual choice. 5 can make a courier rate-limit the store.',
+        ],
+        'bulk_incomplete_retries' => [
+            'config' => 'fraud_check.bulk_incomplete_retries',
+            'min' => 0,
+            'max' => 5,
+            'label' => 'Incomplete retries',
+            'help' => 'After a number is saved as Incomplete, it is asked again this many times. 0 turns that off. These retries do not pause the other numbers.',
+        ],
+        'bulk_incomplete_retry_gap_seconds' => [
+            'config' => 'fraud_check.bulk_incomplete_retry_gap_seconds',
+            'min' => 3,
+            'max' => 30,
+            'label' => 'Seconds between incomplete retries',
+            'help' => 'Wait this long before asking an Incomplete number again, so a courier that just failed is not hit immediately.',
+        ],
+        'bulk_missing_courier_retries' => [
+            'config' => 'fraud_check.bulk_missing_courier_retries',
+            'min' => 0,
+            'max' => 3,
+            'label' => 'Missing courier retries on the first check',
+            'help' => 'During the first check, how many times to ask only the courier that did not answer. This does not rerun the whole check.',
+        ],
+        'bulk_number_budget_seconds' => [
+            'config' => 'fraud_check.bulk_number_budget_seconds',
+            'min' => 15,
+            'max' => 180,
+            'label' => 'Seconds allowed for one number',
+            'help' => 'Stop waiting on one number after this many seconds so it cannot hold up the batch.',
+        ],
+        'bulk_stale_check_seconds' => [
+            'config' => 'fraud_check.bulk_stale_check_seconds',
+            'min' => 60,
+            'max' => 600,
+            'label' => 'Seconds before a stuck number is released',
+            'help' => 'A number left on Checking longer than this goes back to the queue for the next request.',
+        ],
+        'courier_retry_pause_after_failures' => [
+            'config' => 'fraud_check.courier_retry.pause_after_failures',
+            'min' => 1,
+            'max' => 10,
+            'label' => 'Courier failures before a pause',
+            'help' => 'After this many failed retries in a row, that courier is not retried for any number during the cooldown.',
+        ],
+        'courier_retry_cooldown_seconds' => [
+            'config' => 'fraud_check.courier_retry.cooldown_seconds',
+            'min' => 10,
+            'max' => 600,
+            'label' => 'Courier pause length (seconds)',
+            'help' => 'How long a courier that keeps failing is left alone before retries start again.',
+        ],
+    ];
+
+    /**
+     * @var array<string, int>|null
+     */
+    private static ?array $originalDefaults = null;
+
+    private static bool $overridesApplied = false;
+
+    private static ?bool $tableReady = null;
+
+    public function applyOverrides(): void
+    {
+        $this->captureOriginalDefaults();
+
+        if (! $this->tableReady()) {
+            return;
+        }
+
+        foreach ($this->storedOverrides() as $field => $value) {
+            Config::set(self::FIELDS[$field]['config'], $value);
+        }
+
+        self::$overridesApplied = true;
+    }
+
+    public static function clearMemoForTests(): void
+    {
+        self::$overridesApplied = false;
+        self::$tableReady = null;
+        self::$originalDefaults = null;
+    }
+
+    /**
+     * @return array{
+     *     values: array<string, int>,
+     *     defaults: array<string, int>,
+     *     overrides: array<string, int>,
+     *     fields: array<string, array<string, mixed>>
+     * }
+     */
+    public function snapshot(): array
+    {
+        $this->applyOverrides();
+
+        $defaults = $this->envDefaults();
+        $overrides = $this->storedOverrides();
+        $values = [];
+
+        foreach (array_keys(self::FIELDS) as $field) {
+            $values[$field] = array_key_exists($field, $overrides)
+                ? $overrides[$field]
+                : $defaults[$field];
+        }
+
+        return [
+            'values' => $values,
+            'defaults' => $defaults,
+            'overrides' => $overrides,
+            'fields' => self::FIELDS,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array{
+     *     values: array<string, int>,
+     *     defaults: array<string, int>,
+     *     overrides: array<string, int>,
+     *     fields: array<string, array<string, mixed>>
+     * }
+     */
+    public function update(array $input): array
+    {
+        if (! $this->tableReady()) {
+            throw ValidationException::withMessages([
+                'config' => 'Platform settings table is not available. Run migrations first.',
+            ]);
+        }
+
+        $this->captureOriginalDefaults();
+        $defaults = $this->envDefaults();
+        $overrides = $this->storedOverrides();
+
+        foreach (self::FIELDS as $field => $meta) {
+            if (! array_key_exists($field, $input)) {
+                continue;
+            }
+
+            $value = $this->normalizeInt($field, $input[$field], $meta);
+
+            if ($value === $defaults[$field]) {
+                unset($overrides[$field]);
+                Config::set($meta['config'], $defaults[$field]);
+
+                continue;
+            }
+
+            $overrides[$field] = $value;
+            Config::set($meta['config'], $value);
+        }
+
+        $this->persist($overrides);
+        self::$overridesApplied = true;
+
+        return $this->snapshot();
+    }
+
+    /**
+     * @return array{
+     *     values: array<string, int>,
+     *     defaults: array<string, int>,
+     *     overrides: array<string, int>,
+     *     fields: array<string, array<string, mixed>>
+     * }
+     */
+    public function resetToEnv(): array
+    {
+        if ($this->tableReady()) {
+            PlatformSetting::query()->where('key', self::SETTING_KEY)->delete();
+        }
+
+        foreach ($this->envDefaults() as $field => $value) {
+            Config::set(self::FIELDS[$field]['config'], $value);
+        }
+
+        self::$overridesApplied = true;
+
+        return $this->snapshot();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function envDefaults(): array
+    {
+        $this->captureOriginalDefaults();
+
+        return self::$originalDefaults ?? [];
+    }
+
+    private function captureOriginalDefaults(): void
+    {
+        if (self::$originalDefaults !== null) {
+            return;
+        }
+
+        $defaults = [];
+        foreach (self::FIELDS as $field => $meta) {
+            $defaults[$field] = max($meta['min'], min($meta['max'], (int) config($meta['config'], $meta['min'])));
+        }
+
+        self::$originalDefaults = $defaults;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function storedOverrides(): array
+    {
+        if (! $this->tableReady()) {
+            return [];
+        }
+
+        $row = PlatformSetting::query()->where('key', self::SETTING_KEY)->first();
+        $value = $row?->value;
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $overrides = [];
+        foreach (self::FIELDS as $field => $meta) {
+            if (! array_key_exists($field, $value)) {
+                continue;
+            }
+
+            $int = $this->storedInt($value[$field], $meta);
+            if ($int === null) {
+                continue;
+            }
+
+            $overrides[$field] = $int;
+        }
+
+        return $overrides;
+    }
+
+    /**
+     * @param  array<string, int>  $overrides
+     */
+    private function persist(array $overrides): void
+    {
+        if ($overrides === []) {
+            PlatformSetting::query()->where('key', self::SETTING_KEY)->delete();
+
+            return;
+        }
+
+        PlatformSetting::query()->updateOrCreate(
+            ['key' => self::SETTING_KEY],
+            ['value' => $overrides],
+        );
+    }
+
+    /**
+     * @param  array{min: int, max: int}  $meta
+     */
+    private function storedInt(mixed $value, array $meta): ?int
+    {
+        if (! is_numeric($value) || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+
+        $int = (int) $value;
+        if ($int < (int) $meta['min'] || $int > (int) $meta['max']) {
+            return null;
+        }
+
+        return $int;
+    }
+
+    /**
+     * @param  array{min: int, max: int, label: string}  $meta
+     */
+    private function normalizeInt(string $field, mixed $value, array $meta): int
+    {
+        if (! is_numeric($value) || (is_string($value) && trim($value) === '')) {
+            throw ValidationException::withMessages([
+                $field => "{$meta['label']} must be a whole number.",
+            ]);
+        }
+
+        $int = (int) $value;
+        $min = (int) $meta['min'];
+        $max = (int) $meta['max'];
+
+        if ($int < $min || $int > $max) {
+            throw ValidationException::withMessages([
+                $field => "{$meta['label']} must be between {$min} and {$max}.",
+            ]);
+        }
+
+        return $int;
+    }
+
+    private function tableReady(): bool
+    {
+        if (self::$tableReady !== null) {
+            return self::$tableReady;
+        }
+
+        try {
+            self::$tableReady = Schema::hasTable('platform_settings');
+        } catch (\Throwable) {
+            self::$tableReady = false;
+        }
+
+        return self::$tableReady;
+    }
+}

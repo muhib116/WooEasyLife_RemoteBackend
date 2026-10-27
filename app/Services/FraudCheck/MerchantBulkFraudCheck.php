@@ -12,6 +12,7 @@ use App\Services\OrderIntelligence\FraudCheckCoordinator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -157,23 +158,52 @@ class MerchantBulkFraudCheck
 
         $this->releaseStaleChecks($batch);
 
-        $item = DB::transaction(function () use ($batch): ?BulkFraudBatchItem {
-            $next = BulkFraudBatchItem::query()
-                ->where('batch_id', $batch->id)
-                ->where('status', 'pending')
-                ->orderBy('position')
-                ->lockForUpdate()
-                ->first();
+        $merchant = $this->merchant($batch);
+        $slot = $this->workerSlot($merchant);
 
-            if (! $next) {
-                return null;
-            }
+        if (! $slot) {
+            return [
+                'done' => false,
+                'retry' => true,
+                'batch' => $this->summary($batch),
+                'item' => null,
+            ];
+        }
 
-            $next->status = 'checking';
-            $next->save();
+        try {
+            return $this->checkNext($request, $batch, $merchant);
+        } finally {
+            $slot->release();
+        }
+    }
 
-            return $next;
-        });
+    /**
+     * Number of a merchant's numbers checked at the same time.
+     */
+    public function workers(): int
+    {
+        return max(1, min(5, (int) config('fraud_check.bulk_workers', 3)));
+    }
+
+    /**
+     * Extra live checks for one Incomplete row. These do not take a worker slot.
+     */
+    public function incompleteRetries(): int
+    {
+        return max(0, min(5, (int) config('fraud_check.bulk_incomplete_retries', 5)));
+    }
+
+    public function incompleteRetryGapSeconds(): int
+    {
+        return max(3, min(30, (int) config('fraud_check.bulk_incomplete_retry_gap_seconds', 5)));
+    }
+
+    /**
+     * @return array{done: bool, retry: bool, batch: array<string, mixed>, item: array<string, mixed>|null}
+     */
+    private function checkNext(Request $request, BulkFraudBatch $batch, User $merchant): array
+    {
+        $item = $this->claimNext($batch);
 
         if (! $item) {
             $this->finishIfIdle($batch);
@@ -181,18 +211,16 @@ class MerchantBulkFraudCheck
 
             return [
                 'done' => $fresh->status === 'completed',
-                'retry' => $fresh->items()->where('status', 'checking')->exists(),
+                'retry' => $fresh->items()->whereIn('status', ['pending', 'checking'])->exists(),
                 'batch' => $this->summary($fresh),
                 'item' => null,
             ];
         }
 
-        $merchant = $this->merchant($batch);
         $guard = $this->guardedResolve($merchant, $item->phone, fn () => $this->resolvePhone($request, $item->phone));
 
         if ($guard['busy'] || $guard['failed']) {
-            $item->status = 'pending';
-            $item->save();
+            $this->putBack($item);
 
             return [
                 'done' => false,
@@ -204,8 +232,7 @@ class MerchantBulkFraudCheck
         }
 
         if ($guard['limit']) {
-            $item->status = 'pending';
-            $item->save();
+            $this->putBack($item);
 
             return [
                 'done' => false,
@@ -564,7 +591,7 @@ class MerchantBulkFraudCheck
             }
         }
 
-        $lock = Cache::lock('bulk-fraud-daily:'.$phone.':'.$this->today()->toDateString(), 90);
+        $lock = Cache::lock('bulk-fraud-daily:'.$phone.':'.$this->today()->toDateString(), $this->staleSeconds() + 30);
         $lock->block(20);
 
         try {
@@ -653,50 +680,89 @@ class MerchantBulkFraudCheck
     {
         $attempts = max(1, (int) config('fraud_check.bulk_retry_attempts', 3));
         $pauseMs = max(0, (int) config('fraud_check.bulk_retry_pause_ms', 300));
+        $budgetSeconds = max(1, (int) config('fraud_check.bulk_number_budget_seconds', 60));
+        $startedAt = microtime(true);
         $payload = ['phone' => $phone];
-        $best = null;
 
         if ($refresh) {
             $payload['refresh'] = true;
         }
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
-            // After a partial answer (e.g. SteadFast Found, Pathao missing), force a
-            // live pass so Pathao is not left as "Data unavailable" until Refresh.
-            if ($refresh || $attempt > 1) {
-                $payload['refresh'] = true;
-            }
-
             try {
                 $report = $this->coordinator->checkSingle($request, $payload);
 
-                if (! is_array($report) || ! MerchantBulkFraudRow::isUsable($report)) {
-                    // keep trying
-                } elseif (MerchantBulkFraudRow::coreCouriersAnswered($report)) {
-                    return ['report' => $report, 'attempts' => $attempt];
-                } else {
-                    $best = $report;
-
-                    if ($attempt >= $attempts) {
-                        return ['report' => $report, 'attempts' => $attempt];
-                    }
+                if (is_array($report) && MerchantBulkFraudRow::isUsable($report)) {
+                    return [
+                        'report' => $this->askMissingCouriers($request, $payload, $report, $startedAt, $budgetSeconds),
+                        'attempts' => $attempt,
+                    ];
                 }
             } catch (\Throwable $exception) {
                 LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
             }
 
-            if ($attempt < $attempts) {
-                $wait = $pauseMs;
-                if (is_array($best) && ! MerchantBulkFraudRow::coreCouriersAnswered($best)) {
-                    $wait = max($wait, 1500);
-                }
-                if ($wait > 0) {
-                    usleep($wait * 1000);
-                }
+            if ($attempt >= $attempts || microtime(true) - $startedAt >= $budgetSeconds) {
+                return ['report' => null, 'attempts' => $attempt];
+            }
+
+            if ($pauseMs > 0) {
+                usleep($pauseMs * 1000);
             }
         }
 
-        return ['report' => $best, 'attempts' => $attempts];
+        return ['report' => null, 'attempts' => $attempts];
+    }
+
+    /**
+     * When SteadFast, Pathao, or Paperfly did not answer, ask only that
+     * courier again. Rate limits, rejected credentials, and a courier that
+     * keeps failing are not asked again; the row stays Incomplete.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $report
+     * @return array<string, mixed>
+     */
+    private function askMissingCouriers(Request $request, array $payload, array $report, float $startedAt, int $budgetSeconds): array
+    {
+        $retries = max(0, (int) config('fraud_check.bulk_missing_courier_retries', 1));
+        $pauseMs = max(0, (int) config('fraud_check.bulk_retry_pause_ms', 300));
+
+        for ($retry = 0; $retry < $retries; $retry++) {
+            if (microtime(true) - $startedAt >= $budgetSeconds) {
+                break;
+            }
+
+            $couriers = [];
+            foreach (MerchantBulkFraudRow::unansweredCoreCouriers($report) as $courier => $courierReport) {
+                if (
+                    ($courierReport['retryable'] ?? true) !== false
+                    && empty($courierReport['rate_limited'])
+                    && empty($courierReport['credential_error'])
+                    && ! FraudCheckService::courierRetryPaused($courier)
+                ) {
+                    $couriers[] = $courier;
+                }
+            }
+
+            if ($couriers === []) {
+                break;
+            }
+
+            if ($pauseMs > 0) {
+                usleep($pauseMs * 1000);
+            }
+
+            try {
+                $report = $this->coordinator->retryCouriers($request, $payload, $report, $couriers);
+            } catch (\Throwable $exception) {
+                LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
+
+                break;
+            }
+        }
+
+        return $report;
     }
 
     private function dailyResult(string $phone): ?BulkFraudDailyResult
@@ -768,8 +834,79 @@ class MerchantBulkFraudCheck
         BulkFraudBatchItem::query()
             ->where('batch_id', $batch->id)
             ->where('status', 'checking')
-            ->where('updated_at', '<', now()->subSeconds(90))
+            ->where('updated_at', '<', now()->subSeconds($this->staleSeconds()))
             ->update(['status' => 'pending']);
+    }
+
+    private function staleSeconds(): int
+    {
+        return max(60, (int) config('fraud_check.bulk_stale_check_seconds', 150));
+    }
+
+    /**
+     * Take the next pending number. Several requests can run at once, so
+     * the number is taken only if it is still pending.
+     */
+    private function claimNext(BulkFraudBatch $batch): ?BulkFraudBatchItem
+    {
+        for ($try = 0; $try < 5; $try++) {
+            $next = BulkFraudBatchItem::query()
+                ->where('batch_id', $batch->id)
+                ->where('status', 'pending')
+                ->orderBy('position')
+                ->first();
+
+            if (! $next) {
+                return null;
+            }
+
+            $claimed = BulkFraudBatchItem::query()
+                ->whereKey($next->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'checking']);
+
+            if ($claimed === 1) {
+                return $next->fresh();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Return a number to the queue unless another request already finished it.
+     */
+    private function putBack(BulkFraudBatchItem $item): void
+    {
+        BulkFraudBatchItem::query()
+            ->whereKey($item->id)
+            ->where('status', 'checking')
+            ->update(['status' => 'pending']);
+    }
+
+    /**
+     * At most workers() numbers of one merchant are checked at the same
+     * time, however many tabs run a batch.
+     */
+    private function workerSlot(User $merchant): ?Lock
+    {
+        $seconds = $this->staleSeconds() + 30;
+
+        for ($slot = 0; $slot < $this->workers(); $slot++) {
+            try {
+                $lock = Cache::lock('bulk-fraud-worker:'.$merchant->id.':'.$slot, $seconds);
+
+                if ($lock->get()) {
+                    return $lock;
+                }
+            } catch (\Throwable $exception) {
+                LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
+
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private function finishIfIdle(BulkFraudBatch $batch): void
@@ -806,7 +943,7 @@ class MerchantBulkFraudCheck
      */
     private function guardedResolve(User $merchant, string $phone, callable $resolve): array
     {
-        $lock = Cache::lock('courier-history-merchant:'.$merchant->id, 120);
+        $lock = Cache::lock('courier-history-merchant:'.$merchant->id, 30);
 
         try {
             $lock->block(8);
@@ -818,6 +955,8 @@ class MerchantBulkFraudCheck
             return ['limit' => false, 'busy' => true, 'failed' => false, 'resolved' => null];
         }
 
+        // Only the limit check and the slot are inside the merchant lock, so
+        // several numbers of one merchant can call the couriers at once.
         try {
             $fresh = $merchant->fresh() ?? $merchant;
 
@@ -825,39 +964,32 @@ class MerchantBulkFraudCheck
                 return ['limit' => true, 'busy' => false, 'failed' => false, 'resolved' => null];
             }
 
-            try {
-                $resolved = $resolve();
-                $this->recordResolved($fresh, $phone, $resolved);
-
-                return [
-                    'limit' => false,
-                    'busy' => false,
-                    'failed' => false,
-                    'resolved' => $resolved,
-                ];
-            } catch (\Throwable $exception) {
-                LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
-
-                return ['limit' => false, 'busy' => false, 'failed' => true, 'resolved' => null];
-            }
+            $reserved = $this->quota->reserve($fresh, $phone);
         } finally {
             $lock->release();
         }
-    }
 
-    /**
-     * Count the slot before the merchant lock is released, so a second
-     * request cannot pass the limit check for a different number.
-     *
-     * @param  array{row: array<string, mixed>, source: string, daily_id: int|null, attempts: int}  $resolved
-     */
-    private function recordResolved(User $merchant, string $phone, array $resolved): void
-    {
-        if (! in_array($resolved['row']['status'] ?? '', ['found', 'not_found'], true)) {
-            return;
+        try {
+            $resolved = $resolve();
+        } catch (\Throwable $exception) {
+            $this->quota->release($reserved);
+            LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
+
+            return ['limit' => false, 'busy' => false, 'failed' => true, 'resolved' => null];
         }
 
-        $this->quota->record($merchant, $phone);
+        if (in_array($resolved['row']['status'] ?? '', ['found', 'not_found'], true)) {
+            $this->quota->record($fresh, $phone);
+        } else {
+            $this->quota->release($reserved);
+        }
+
+        return [
+            'limit' => false,
+            'busy' => false,
+            'failed' => false,
+            'resolved' => $resolved,
+        ];
     }
 
     private function boundedAttempts(int $attempts): int

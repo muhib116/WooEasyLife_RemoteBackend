@@ -544,12 +544,6 @@ const allSections: NavSection[] = [
                         permission: "merchants.view",
                     },
                     {
-                        title: "Daily limits",
-                        name: "frauds.limits",
-                        icon: "PhSlidersHorizontal",
-                        permission: "merchants.view",
-                    },
-                    {
                         title: "Token & CURL",
                         name: "frauds.expire",
                         icon: "PhGear",
@@ -600,9 +594,22 @@ const allSections: NavSection[] = [
             },
             {
                 title: "Settings",
-                name: "landingSettings.index",
                 icon: "PhGearSix",
                 permission: "billing.manage",
+                children: [
+                    {
+                        title: "General",
+                        name: "landingSettings.index",
+                        icon: "PhGearSix",
+                        permission: "billing.manage",
+                    },
+                    {
+                        title: "Bulk check",
+                        name: "frauds.limits",
+                        icon: "PhSlidersHorizontal",
+                        permission: ["billing.manage", "merchants.view"],
+                    },
+                ],
             },
             {
                 title: "Tutorials",
@@ -1020,8 +1027,9 @@ const expandedGroups = reactive<Record<string, boolean>>({
             || route().current("orders.*")
             || route().current("customerNotices.*"),
     ),
-    "Fraud Checker": Boolean(route().current("frauds.*")),
+    "Fraud Checker": Boolean(route().current("frauds.*") && !route().current("frauds.limits")),
     "Blog Posts": Boolean(route().current("blogPosts.*")),
+    Settings: Boolean(route().current("landingSettings.*") || route().current("frauds.limits")),
 });
 
 const toggleGroup = (title: string) => {

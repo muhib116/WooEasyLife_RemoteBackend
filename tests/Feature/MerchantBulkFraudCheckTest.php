@@ -12,6 +12,7 @@ use App\Services\MerchantEmployeeService;
 use App\Services\OrderIntelligence\FraudCheckCoordinator;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -26,6 +27,13 @@ class MerchantBulkFraudCheckTest extends TestCase
             'fraud_check.bulk_retry_attempts' => 3,
             'fraud_check.bulk_retry_pause_ms' => 0,
         ]);
+
+        // The test cache store can outlive one test, so a paused courier from
+        // another test must not skip retries here.
+        foreach (['steadfast', 'pathao', 'paperfly', 'redx', 'carrybee'] as $courier) {
+            Cache::forget('fraud_check_courier_retry_paused:'.$courier);
+            Cache::forget('fraud_check_courier_retry_failures:'.$courier);
+        }
     }
 
     public function test_guest_cannot_open_bulk_fraud_check(): void
@@ -238,11 +246,19 @@ class MerchantBulkFraudCheckTest extends TestCase
     public function test_a_saved_row_with_missing_pathao_is_not_reused_from_todays_cache(): void
     {
         $calls = 0;
-        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls): void {
+        $retried = [];
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls, &$retried): void {
+            $mock->shouldReceive('retryCouriers')->once()->andReturnUsing(
+                function ($request, array $payload, array $report, array $couriers) use (&$retried): array {
+                    $retried = $couriers;
+
+                    return $report;
+                },
+            );
             $mock->shouldReceive('checkSingle')->andReturnUsing(function () use (&$calls) {
                 $calls++;
 
-                if ($calls < 3) {
+                if ($calls === 1) {
                     return [
                         'total_order' => 10,
                         'confirmed' => 8,
@@ -339,18 +355,290 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->postJson(route('portal.fraud-check.batches.next', $batch))
             ->assertOk()
             ->assertJsonPath('item.source', 'live')
-            ->assertJsonPath('item.received', 10);
+            ->assertJsonPath('item.received', 8)
+            ->assertJsonPath('item.risk', 'incomplete');
 
-        $this->assertSame(3, $calls);
+        $this->assertSame(1, $calls);
+        $this->assertSame(['pathao'], $retried);
 
         $second = $this->merchant('recheck-two@example.com', '01700000032');
+        $again = $this->actingAs($second)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'phones' => '01733333333',
+            ])
+            ->assertOk()
+            ->assertJsonPath('items.0.status', 'pending')
+            ->json('batch.id');
+
         $this->actingAs($second)
+            ->postJson(route('portal.fraud-check.batches.next', $again))
+            ->assertOk()
+            ->assertJsonPath('item.source', 'live')
+            ->assertJsonPath('item.received', 10)
+            ->assertJsonPath('item.risk', 'safe');
+
+        $this->assertSame(2, $calls);
+
+        $third = $this->merchant('recheck-three@example.com', '01700000033');
+        $this->actingAs($third)
             ->postJson(route('portal.fraud-check.batches.store'), [
                 'phones' => '01733333333',
             ])
             ->assertOk()
             ->assertJsonPath('items.0.source', 'cache')
             ->assertJsonPath('items.0.received', 10);
+    }
+
+    public function test_only_the_courier_that_did_not_answer_is_asked_again(): void
+    {
+        $missingPathao = $this->courierReport(['status' => 'unavailable', 'unavailable' => true, 'retryable' => true]);
+        $answeredPathao = $this->courierReport(['total_order' => 2, 'confirmed' => 2, 'success_rate' => '100%', 'status' => 'ok', 'api_success' => true]);
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use ($missingPathao, $answeredPathao): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturn($this->threeCourierReport($missingPathao));
+            $mock->shouldReceive('retryCouriers')
+                ->once()
+                ->withArgs(fn ($request, array $payload, array $report, array $couriers): bool => $couriers === ['pathao'] && $payload['phone'] === '01755555555')
+                ->andReturn($this->threeCourierReport($answeredPathao, 12, 10));
+        });
+
+        config(['fraud_check.bulk_retry_pause_ms' => 0]);
+
+        $merchant = $this->merchant('only-missing@example.com', '01700000034');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01755555555'])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.status', 'found')
+            ->assertJsonPath('item.received', 10)
+            ->assertJsonPath('item.couriers.1.title', 'Pathao')
+            ->assertJsonPath('item.couriers.1.received', 2)
+            ->assertJsonPath('item.risk', 'safe')
+            ->assertJsonPath('item.attempts', 1);
+    }
+
+    public function test_a_rate_limited_courier_is_not_asked_again_during_the_same_check(): void
+    {
+        $limitedPathao = $this->courierReport([
+            'status' => 'unavailable',
+            'unavailable' => true,
+            'rate_limited' => true,
+            'retryable' => false,
+        ]);
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use ($limitedPathao): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturn($this->threeCourierReport($limitedPathao));
+            $mock->shouldReceive('retryCouriers')->never();
+        });
+
+        config(['fraud_check.bulk_retry_pause_ms' => 0]);
+
+        $merchant = $this->merchant('rate-limited@example.com', '01700000035');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01766666666'])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.received', 8)
+            ->assertJsonPath('item.couriers.1.available', false)
+            ->assertJsonPath('item.risk', 'incomplete');
+    }
+
+    public function test_a_courier_that_keeps_failing_is_not_asked_again_for_the_next_number(): void
+    {
+        $missingPathao = $this->courierReport(['status' => 'unavailable', 'unavailable' => true, 'retryable' => true]);
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use ($missingPathao): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturn($this->threeCourierReport($missingPathao));
+            $mock->shouldReceive('retryCouriers')->never();
+        });
+
+        config(['fraud_check.bulk_retry_pause_ms' => 0, 'fraud_check.courier_retry.pause_after_failures' => 2]);
+        FraudCheckService::noteCourierRetry('pathao', false);
+        FraudCheckService::noteCourierRetry('pathao', false);
+        $this->assertTrue(FraudCheckService::courierRetryPaused('pathao'));
+
+        $merchant = $this->merchant('outage@example.com', '01700000036');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01777777777'])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.risk', 'incomplete');
+
+        Cache::forget('fraud_check_courier_retry_paused:pathao');
+    }
+
+    public function test_the_real_coordinator_asks_only_pathao_again_and_saves_its_counts(): void
+    {
+        $courierCalls = [];
+        $this->mock(FraudCheckService::class, function ($mock) use (&$courierCalls): void {
+            $mock->shouldReceive('normalizePhone')->andReturnUsing(fn ($phone) => '01788889999');
+            $mock->shouldReceive('getReport')->once()->andReturn($this->threeCourierReport(
+                $this->courierReport(['status' => 'unavailable', 'unavailable' => true, 'retryable' => true]),
+            ));
+            $mock->shouldReceive('checkCourier')->andReturnUsing(function (string $courier) use (&$courierCalls): array {
+                $courierCalls[] = $courier;
+
+                return $this->courierReport([
+                    'total_order' => 3,
+                    'confirmed' => 2,
+                    'cancel' => 1,
+                    'success_rate' => '67%',
+                    'status' => 'ok',
+                    'api_success' => true,
+                ]);
+            });
+        });
+
+        config([
+            'order_intelligence.fraud_check.mode' => 'external_only',
+            'fraud_check.include_redx' => false,
+            'fraud_check.include_carrybee' => false,
+            'fraud_check.bulk_retry_pause_ms' => 0,
+        ]);
+
+        $merchant = $this->merchant('real-coordinator@example.com', '01700000037');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01788889999'])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.status', 'found')
+            ->assertJsonPath('item.couriers.1.title', 'Pathao')
+            ->assertJsonPath('item.couriers.1.available', true)
+            ->assertJsonPath('item.couriers.1.received', 2)
+            ->assertJsonPath('item.couriers.1.cancelled', 1)
+            ->assertJsonPath('item.received', 10)
+            ->assertJsonPath('item.cancelled', 3);
+
+        $this->assertSame(['pathao'], $courierCalls);
+        $this->assertFalse(FraudCheckService::courierRetryPaused('pathao'));
+
+        $saved = BulkFraudDailyResult::query()->where('phone', '01788889999')->firstOrFail();
+        $this->assertSame(10, (int) $saved->received);
+    }
+
+    public function test_a_merchant_never_checks_more_numbers_at_once_than_the_worker_limit(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturn($this->report(2, 2, 0, '100%'));
+        });
+
+        config(['fraud_check.bulk_workers' => 2]);
+
+        $merchant = $this->merchant('worker-limit@example.com', '01700000038');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01711111111'])
+            ->json('batch.id');
+
+        $first = Cache::lock('bulk-fraud-worker:'.$merchant->id.':0', 60);
+        $second = Cache::lock('bulk-fraud-worker:'.$merchant->id.':1', 60);
+        $this->assertTrue($first->get());
+        $this->assertTrue($second->get());
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('retry', true)
+            ->assertJsonPath('item', null);
+
+        $this->assertSame('pending', BulkFraudBatchItem::query()->where('batch_id', $batch)->value('status'));
+
+        $second->release();
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.status', 'found');
+
+        $first->release();
+    }
+
+    public function test_a_number_another_request_is_checking_is_skipped(): void
+    {
+        $phones = [];
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$phones): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturnUsing(function ($request, array $payload) use (&$phones): array {
+                $phones[] = $payload['phone'];
+
+                return $this->report(2, 2, 0, '100%');
+            });
+        });
+
+        $merchant = $this->merchant('parallel-claim@example.com', '01700000039');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => "01711111111\n01722222222"])
+            ->json('batch.id');
+
+        BulkFraudBatchItem::query()->where('batch_id', $batch)->where('phone', '01711111111')->update(['status' => 'checking']);
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.phone', '01722222222')
+            ->assertJsonPath('item.status', 'found');
+
+        $this->assertSame(['01722222222'], $phones);
+        $this->assertSame('checking', BulkFraudBatchItem::query()->where('batch_id', $batch)->where('phone', '01711111111')->value('status'));
+    }
+
+    public function test_the_daily_slot_is_taken_before_the_couriers_are_called(): void
+    {
+        $merchant = $this->merchant('slot-first@example.com', '01700000040');
+        $merchant->update(['courier_history_daily_limit' => 1]);
+        $usedDuringCheck = null;
+
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$usedDuringCheck, $merchant): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturnUsing(function () use (&$usedDuringCheck, $merchant): array {
+                $usedDuringCheck = CourierHistoryUse::query()->where('user_id', $merchant->id)->count();
+
+                throw new \RuntimeException('courier down');
+            });
+        });
+
+        config(['fraud_check.bulk_retry_attempts' => 1]);
+
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01711111111'])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.status', 'error')
+            ->assertJsonPath('quota.used_today', 0);
+
+        $this->assertSame(1, $usedDuringCheck);
+        $this->assertSame(0, CourierHistoryUse::query()->where('user_id', $merchant->id)->count());
+    }
+
+    public function test_the_batch_page_gets_the_worker_count(): void
+    {
+        config(['fraud_check.bulk_workers' => 3]);
+
+        $merchant = $this->merchant('worker-prop@example.com', '01700000041');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01111111111'])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->get(route('portal.fraud-check.batches.show', $batch))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Portal/FraudCheck/Batch')
+                ->where('workers', 3)
+                ->where('incompleteRetries', 5)
+                ->where('incompleteRetryGapSeconds', 5));
     }
 
     public function test_a_failed_check_is_retried_and_is_not_saved_for_the_rest_of_the_day(): void
@@ -423,6 +711,7 @@ class MerchantBulkFraudCheckTest extends TestCase
         config(['fraud_check.bulk_retry_attempts' => 1, 'fraud_check.bulk_retry_pause_ms' => 0]);
 
         $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('retryCouriers')->once()->andReturnUsing(fn ($request, array $payload, array $report): array => $report);
             $mock->shouldReceive('checkSingle')->once()->andReturn([
                 'total_order' => 0,
                 'confirmed' => 0,
@@ -1603,6 +1892,52 @@ class MerchantBulkFraudCheckTest extends TestCase
                     'frauds' => $frauds,
                 ],
             ]],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function courierReport(array $overrides): array
+    {
+        return array_merge([
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'success_rate' => 'No order history found!',
+        ], $overrides);
+    }
+
+    /**
+     * SteadFast 8 of 10 delivered, Paperfly no history, and the given Pathao answer.
+     *
+     * @param  array<string, mixed>  $pathao
+     * @return array<string, mixed>
+     */
+    private function threeCourierReport(array $pathao, int $total = 10, int $received = 8): array
+    {
+        return [
+            'total_order' => $total,
+            'confirmed' => $received,
+            'cancel' => $total - $received,
+            'success_rate' => (int) round($received / $total * 100).'%',
+            'frauds' => [],
+            'courier' => [
+                [
+                    'title' => 'Stead Fast',
+                    'report' => $this->courierReport([
+                        'total_order' => 10,
+                        'confirmed' => 8,
+                        'cancel' => 2,
+                        'success_rate' => '80%',
+                        'status' => 'ok',
+                        'api_success' => true,
+                    ]),
+                ],
+                ['title' => 'Pathao', 'report' => $pathao],
+                ['title' => 'Paper Fly', 'report' => $this->courierReport(['status' => 'ok', 'api_success' => true])],
+            ],
         ];
     }
 }

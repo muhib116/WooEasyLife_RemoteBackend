@@ -49,6 +49,19 @@ class MerchantBulkFraudRow
      */
     public static function coreCouriersAnswered(array $report): bool
     {
+        return self::unansweredCoreCouriers($report) === [];
+    }
+
+    /**
+     * SteadFast / Pathao / Paperfly entries that did not answer, keyed by courier.
+     *
+     * @param  array<string, mixed>  $report
+     * @return array<string, array<string, mixed>>
+     */
+    public static function unansweredCoreCouriers(array $report): array
+    {
+        $missing = [];
+
         foreach ($report['courier'] ?? [] as $entry) {
             if (! is_array($entry)) {
                 continue;
@@ -71,10 +84,10 @@ class MerchantBulkFraudRow
                 continue;
             }
 
-            return false;
+            $missing[$key] = $courier;
         }
 
-        return true;
+        return $missing;
     }
 
     /**

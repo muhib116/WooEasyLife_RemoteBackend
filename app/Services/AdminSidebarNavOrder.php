@@ -72,6 +72,7 @@ class AdminSidebarNavOrder
                     'Topic Clusters',
                     'SEO & Learning',
                 ],
+                'Settings' => ['General', 'Bulk check'],
             ],
         ];
     }

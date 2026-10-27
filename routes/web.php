@@ -869,6 +869,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/daily-limits', [FraudCheckQuotaController::class, 'index'])->name('limits');
         Route::put('/daily-limits', [FraudCheckQuotaController::class, 'update'])->name('limits.update');
         Route::post('/daily-limits/reset', [FraudCheckQuotaController::class, 'reset'])->name('limits.reset');
+        Route::put('/daily-limits/bulk', [FraudCheckQuotaController::class, 'updateBulk'])->name('limits.bulk.update');
+        Route::post('/daily-limits/bulk/reset', [FraudCheckQuotaController::class, 'resetBulk'])->name('limits.bulk.reset');
 
         Route::get('/credentials', [FraudPartnerCredentialController::class, 'index'])->name('credentials');
         Route::get('/credentials/{credential}/secret', [FraudPartnerCredentialController::class, 'secret'])->name('credentials.secret');

@@ -42,7 +42,7 @@ Route::middleware(['auth', 'auth.active', 'merchant.portal'])
                 Route::delete('/fraud-check/batches/{batch}', [BulkFraudCheckController::class, 'destroy'])
                     ->name('fraud-check.batches.destroy');
                 Route::post('/fraud-check/batches/{batch}/next', [BulkFraudCheckController::class, 'next'])
-                    ->middleware('throttle:120,1')
+                    ->middleware('throttle:300,1')
                     ->name('fraud-check.batches.next');
                 Route::post('/fraud-check/batches/{batch}/stop', [BulkFraudCheckController::class, 'stop'])
                     ->name('fraud-check.batches.stop');

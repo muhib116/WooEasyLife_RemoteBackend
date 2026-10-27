@@ -80,6 +80,42 @@ class CourierHistoryQuota
         }
     }
 
+    /**
+     * Take today's slot before the courier check starts, so checks running
+     * at the same time cannot go past the daily limit. Returns null when the
+     * number already had a slot today; that slot is never given back.
+     */
+    public function reserve(User $merchant, string $phone): ?CourierHistoryUse
+    {
+        try {
+            $use = CourierHistoryUse::query()->firstOrCreate([
+                'user_id' => $merchant->id,
+                'phone' => $phone,
+                'checked_on' => $this->today()->toDateString(),
+            ]);
+        } catch (QueryException) {
+            return null;
+        }
+
+        return $use->wasRecentlyCreated ? $use : null;
+    }
+
+    /**
+     * Give back a slot from reserve() when the check did not finish.
+     */
+    public function release(?CourierHistoryUse $reserved): void
+    {
+        if ($reserved === null) {
+            return;
+        }
+
+        try {
+            $reserved->delete();
+        } catch (QueryException) {
+            // The slot stays used; the next check of this number reuses it.
+        }
+    }
+
     private function today(): Carbon
     {
         return Carbon::now('Asia/Dhaka');

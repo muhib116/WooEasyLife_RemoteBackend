@@ -135,6 +135,9 @@ class BulkFraudCheckController extends Controller
     ): Response|JsonResponse {
         $this->owns($request, $portalContext, $batch);
         $payload = $this->withQuota($request, $this->payload($bulk, $batch->load('items')));
+        $payload['workers'] = $bulk->workers();
+        $payload['incompleteRetries'] = $bulk->incompleteRetries();
+        $payload['incompleteRetryGapSeconds'] = $bulk->incompleteRetryGapSeconds();
 
         if ($request->header('X-Inertia')) {
             return Inertia::render('Portal/FraudCheck/Batch', $payload);

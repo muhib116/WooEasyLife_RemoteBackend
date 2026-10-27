@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\FraudCheck\BulkFraudRuntimeSettings;
 use App\Services\FraudCheck\FraudCheckQuotaSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,12 +13,14 @@ class FraudCheckQuotaController extends Controller
 {
     public function __construct(
         private FraudCheckQuotaSettings $quotas,
+        private BulkFraudRuntimeSettings $bulk,
     ) {}
 
     public function index(): Response
     {
         return Inertia::render('FraudCheck/Limits', [
             'quotas' => $this->quotas->snapshot(),
+            'bulk' => $this->bulk->snapshot(),
         ]);
     }
 
@@ -38,5 +41,24 @@ class FraudCheckQuotaController extends Controller
         $this->quotas->resetToEnv();
 
         return back()->with('success', 'Daily limits are back to the .env defaults.');
+    }
+
+    public function updateBulk(Request $request): RedirectResponse
+    {
+        $rules = [];
+        foreach (BulkFraudRuntimeSettings::FIELDS as $field => $meta) {
+            $rules[$field] = ['required', 'integer', 'min:'.$meta['min'], 'max:'.$meta['max']];
+        }
+
+        $this->bulk->update($request->validate($rules));
+
+        return back()->with('success', 'Bulk check settings saved.');
+    }
+
+    public function resetBulk(): RedirectResponse
+    {
+        $this->bulk->resetToEnv();
+
+        return back()->with('success', 'Bulk check settings are back to the .env defaults.');
     }
 }
