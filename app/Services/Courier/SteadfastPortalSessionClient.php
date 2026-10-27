@@ -4,6 +4,7 @@ namespace App\Services\Courier;
 
 use App\LogHelper;
 use App\Services\FraudCheck\SteadfastFraudChecker;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
@@ -18,6 +19,68 @@ class SteadfastPortalSessionClient
 
     /** How long to pause portal logins after Steadfast throttles the account. */
     private const LOGIN_COOLDOWN_SECONDS = 300;
+
+    /** A login can take two slow requests, so the lock outlives both. */
+    private const LOGIN_LOCK_SECONDS = 120;
+
+    private const LOGIN_WAIT_SECONDS = 25;
+
+    private bool $loginPosted = false;
+
+    /**
+     * The fraud checker logs in to the same accounts, so both share this lock.
+     *
+     * @param  array{username?: string, password?: string}  $credentials
+     */
+    public static function loginLockKeyFor(array $credentials): string
+    {
+        $username = trim((string) ($credentials['username'] ?? ''));
+        $password = trim((string) ($credentials['password'] ?? ''));
+
+        return 'steadfast_portal_login_lock_' . md5($username . '|' . $password);
+    }
+
+    /**
+     * @param  array{username?: string, password?: string}  $credentials
+     */
+    public static function loginCooldownActiveFor(array $credentials): bool
+    {
+        return is_numeric(Cache::get(self::loginCooldownKeyFor($credentials)));
+    }
+
+    /**
+     * Steadfast said "too many login attempts". Every client waits it out.
+     *
+     * @param  array{username?: string, password?: string}  $credentials
+     */
+    public static function coolDownLoginFor(array $credentials): void
+    {
+        Cache::put(
+            self::loginCooldownKeyFor($credentials),
+            time() + self::LOGIN_COOLDOWN_SECONDS,
+            self::LOGIN_COOLDOWN_SECONDS
+        );
+    }
+
+    public static function looksRateLimited(string $body): bool
+    {
+        $message = strtolower($body);
+
+        return str_contains($message, 'too many login attempts')
+            || str_contains($message, 'too many attempts')
+            || (str_contains($message, 'too many') && str_contains($message, 'try again in a few minutes'));
+    }
+
+    /**
+     * @param  array{username?: string, password?: string}  $credentials
+     */
+    private static function loginCooldownKeyFor(array $credentials): string
+    {
+        $username = strtolower(trim((string) ($credentials['username'] ?? '')));
+        $password = (string) ($credentials['password'] ?? '');
+
+        return 'steadfast_portal_login_cooldown_' . md5($username . '|' . $password);
+    }
 
     /**
      * Run $callback with an authenticated portal session for the given merchant credentials.
@@ -78,10 +141,10 @@ class SteadfastPortalSessionClient
 
         $this->assertLoginNotCooldowned($credentials);
 
-        $lockKey = 'steadfast_portal_login_lock_' . md5($username . '|' . $password);
+        $lockKey = self::loginLockKeyFor($credentials);
 
         try {
-            return Cache::lock($lockKey, 45)->block(20, function () use ($credentials, $username, $password) {
+            return Cache::lock($lockKey, self::LOGIN_LOCK_SECONDS)->block(self::LOGIN_WAIT_SECONDS, function () use ($credentials, $username, $password) {
                 $this->assertLoginNotCooldowned($credentials);
 
                 // Another request may have warmed the session while we waited for the lock.
@@ -94,6 +157,7 @@ class SteadfastPortalSessionClient
                 }
 
                 $lastError = 'Unable to authenticate with Steadfast portal.';
+                $this->loginPosted = false;
 
                 foreach (self::HOSTS as $host) {
                     try {
@@ -102,8 +166,9 @@ class SteadfastPortalSessionClient
                         $lastError = $th->getMessage();
                         LogHelper::saveLog('Steadfast portal login error', $host . ': ' . $lastError);
 
-                        // Rate-limit / auth errors must not fan out across hosts.
-                        if ($this->isRateLimitedMessage($lastError) || ! $this->isRetryableError($th)) {
+                        // Rate-limit / auth errors must not fan out across hosts, and a
+                        // sent login form may already have logged in.
+                        if ($this->loginPosted || $this->isRateLimitedMessage($lastError) || ! $this->isRetryableError($th)) {
                             break;
                         }
                     }
@@ -113,6 +178,18 @@ class SteadfastPortalSessionClient
             });
         } catch (RuntimeException $e) {
             throw $e;
+        } catch (LockTimeoutException) {
+            // Another worker is logging in to this account right now. A second
+            // login would only race it.
+            $cached = Cache::get($this->cacheKey($credentials));
+            if (is_array($cached) && ! empty($cached['host']) && ! empty($cached['cookies']) && is_array($cached['cookies'])) {
+                return [
+                    'host' => (string) $cached['host'],
+                    'cookies' => (array) $cached['cookies'],
+                ];
+            }
+
+            throw new RuntimeException('Steadfast login is already running. Please try again in a moment.');
         } catch (\Throwable $th) {
             LogHelper::saveLog('Steadfast portal login lock error', $th->getMessage());
 
@@ -128,12 +205,13 @@ class SteadfastPortalSessionClient
             }
 
             $lastError = 'Unable to authenticate with Steadfast portal.';
+            $this->loginPosted = false;
             foreach (self::HOSTS as $host) {
                 try {
                     return $this->attemptLogin($host, $username, $password, $credentials);
                 } catch (\Throwable $inner) {
                     $lastError = $inner->getMessage();
-                    if ($this->isRateLimitedMessage($lastError) || ! $this->isRetryableError($inner)) {
+                    if ($this->loginPosted || $this->isRateLimitedMessage($lastError) || ! $this->isRetryableError($inner)) {
                         break;
                     }
                 }
@@ -424,7 +502,10 @@ class SteadfastPortalSessionClient
 
         $cookies = $this->cookiesToArray($loginPage->cookies()->toArray());
 
-        $loginResponse = $this->browserClient()
+        $this->loginPosted = true;
+
+        // Sent once: a resend after a timeout is a second login on Steadfast.
+        $loginResponse = $this->browserClient(retry: false)
             ->withCookies($cookies, $host)
             ->asForm()
             ->withHeaders(['Referer' => $this->url('/login', $host)])
@@ -510,11 +591,7 @@ class SteadfastPortalSessionClient
      */
     private function markLoginCooldowned(array $credentials): void
     {
-        Cache::put(
-            $this->loginCooldownKey($credentials),
-            time() + self::LOGIN_COOLDOWN_SECONDS,
-            self::LOGIN_COOLDOWN_SECONDS
-        );
+        self::coolDownLoginFor($credentials);
 
         // Drop any half-broken session so we do not thrash with expired cookies.
         $this->forgetSession($credentials);
@@ -538,24 +615,17 @@ class SteadfastPortalSessionClient
      */
     private function loginCooldownKey(array $credentials): string
     {
-        $username = strtolower(trim((string) ($credentials['username'] ?? '')));
-        $password = (string) ($credentials['password'] ?? '');
-
-        return 'steadfast_portal_login_cooldown_' . md5($username . '|' . $password);
+        return self::loginCooldownKeyFor($credentials);
     }
 
     private function responseLooksRateLimited(string $body): bool
     {
-        return $this->isRateLimitedMessage($body);
+        return self::looksRateLimited($body);
     }
 
     private function isRateLimitedMessage(string $message): bool
     {
-        $message = strtolower($message);
-
-        return str_contains($message, 'too many login attempts')
-            || str_contains($message, 'too many attempts')
-            || (str_contains($message, 'too many') && str_contains($message, 'try again in a few minutes'));
+        return self::looksRateLimited($message);
     }
 
     /**
@@ -578,9 +648,9 @@ class SteadfastPortalSessionClient
         return SteadfastFraudChecker::sessionCacheKeyFor($credentials);
     }
 
-    private function browserClient(): PendingRequest
+    private function browserClient(bool $retry = true): PendingRequest
     {
-        return Http::timeout(30)
+        $client = Http::timeout(30)
             ->connectTimeout(12)
             // Steadfast intermittently resets TLS/HTTP2 negotiations from some hosts.
             // HTTP/1.1 + IPv4 is the stable path we observed in production scrapes.
@@ -590,8 +660,13 @@ class SteadfastPortalSessionClient
                     CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                     CURLOPT_TCP_KEEPALIVE => 1,
                 ],
-            ])
-            ->retry(3, 1500, fn ($exception) => $this->isRetryableError($exception), throw: false)
+            ]);
+
+        if ($retry) {
+            $client = $client->retry(3, 1500, fn ($exception) => $this->isRetryableError($exception), throw: false);
+        }
+
+        return $client
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',

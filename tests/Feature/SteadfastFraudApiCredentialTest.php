@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CourierConfiguration;
+use App\Models\PlatformSetting;
 use App\Models\User;
 use App\Models\Website;
 use App\Services\FraudCheck\SteadfastFraudApiCredentialStore;
@@ -11,6 +12,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
+
+// A portal fallback must never reach the real Steadfast and log in there.
+beforeEach(fn () => Http::preventStrayRequests());
 
 it('uses steadfast api keys saved in the admin panel before env', function () {
     config([
@@ -716,3 +720,834 @@ it('keeps looking for steadfast counts when a hidden-count key also has fraud no
         ->and($report['cancel'])->toBe(3)
         ->and($report['counts_hidden'])->toBeFalse();
 });
+
+it('rests a rate limited steadfast key instead of turning it off', function () {
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('limited-api-key', 'limited-secret', 'Limited shop');
+
+    Cache::flush();
+
+    $calls = 0;
+
+    Http::fake(function ($request) use (&$calls) {
+        if (! str_contains($request->url(), '/fraud_check/score/')) {
+            return Http::response('', 404);
+        }
+
+        $calls++;
+
+        if ($calls === 1) {
+            return Http::response(['message' => 'Too many requests'], 429);
+        }
+
+        return Http::response([
+            'status' => 200,
+            'delivery_ratio' => 80,
+            'cancellation_ratio' => 10,
+            'delivered_count' => 8,
+            'cancelled_count' => 2,
+            'total_reports' => 0,
+            'fraud_categories' => [],
+        ], 200);
+    });
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($report['rate_limited'] ?? false)->toBeTrue();
+    expect($store->accounts()[0]['last_error'])->toBe('');
+    expect($store->isCoolingDown('limited-api-key'))->toBeTrue();
+
+    app(SteadfastFraudChecker::class)->check('01712345679');
+    expect($calls)->toBe(1);
+
+    Cache::flush();
+
+    $again = app(SteadfastFraudChecker::class)->check('01712345670');
+
+    expect($again['confirmed'])->toBe(8);
+    Http::assertSent(fn ($request) => $request->hasHeader('Api-Key', 'limited-api-key'));
+});
+
+it('uses a steadfast key again when an old rate limit was saved on it', function () {
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('resting-api-key', 'resting-secret', 'Old limit');
+    plantSteadfastKeyError('Steadfast rate limit reached for this key.');
+
+    Cache::flush();
+
+    Http::fake([
+        'https://portal.packzy.com/api/v1/fraud_check/score/*' => Http::response([
+            'status' => 200,
+            'delivery_ratio' => 75,
+            'cancellation_ratio' => 10,
+            'delivered_count' => 6,
+            'cancelled_count' => 2,
+            'total_reports' => 0,
+            'fraud_categories' => [],
+        ], 200),
+    ]);
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($report['confirmed'])->toBe(6);
+    expect($store->accounts()[0]['last_error'])->toBe('');
+    Http::assertSent(fn ($request) => $request->hasHeader('Api-Key', 'resting-api-key'));
+});
+
+it('does not turn a steadfast key off when the admin test hits a rate limit', function () {
+    $admin = User::create([
+        'name' => 'Admin',
+        'email' => 'admin-rate-limit@example.com',
+        'phone' => '01700000444',
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'status' => true,
+    ]);
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('tested-api-key', 'tested-secret', 'Tested shop');
+    plantSteadfastKeyError('Steadfast rate limit reached for this key.');
+
+    Cache::flush();
+
+    Http::fake([
+        'https://portal.packzy.com/api/v1/fraud_check/score/*' => Http::response(['message' => 'Too many requests'], 429),
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('frauds.steadfastApi.test', $store->accounts()[0]['id']))
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Steadfast rate limit on this key. It rests for a few minutes, then checks use it again.');
+
+    expect($store->accounts()[0]['last_error'])->toBe('Steadfast rate limit reached for this key.');
+    expect($store->isCoolingDown('tested-api-key'))->toBeTrue();
+});
+
+it('retries a steadfast key after an http 500 and clears the error when it answers', function () {
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('outage-api-key', 'outage-secret', 'Outage shop');
+    plantSteadfastKeyError('Steadfast request failed (HTTP 500).');
+
+    Cache::flush();
+
+    Http::fake([
+        'https://portal.packzy.com/api/v1/fraud_check/score/*' => Http::sequence()
+            ->push(['message' => 'Server error'], 500)
+            ->push([
+                'status' => 200,
+                'delivery_ratio' => 88,
+                'cancellation_ratio' => 12,
+                'delivered_count' => 15,
+                'cancelled_count' => 2,
+                'total_reports' => 0,
+                'fraud_categories' => [],
+            ], 200),
+    ]);
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($store->accounts()[0]['last_error'])->toBe('Steadfast request failed (HTTP 500).');
+    expect($store->isCoolingDown('outage-api-key'))->toBeTrue();
+
+    Cache::flush();
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($report['confirmed'])->toBe(15);
+    expect($store->accounts()[0]['last_error'])->toBe('');
+    expect($store->accounts()[0]['use_count'])->toBe(1);
+});
+
+it('tries every steadfast api key for parcel counts before logging in', function () {
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('key-one', 'secret-one', 'One');
+    $store->add('key-two', 'secret-two', 'Two');
+    $store->add('key-three', 'secret-three', 'Three');
+    $store->add('key-four', 'secret-four', 'Four');
+
+    Cache::flush();
+
+    $calls = 0;
+
+    Http::fake(function ($request) use (&$calls) {
+        if (! str_contains($request->url(), '/fraud_check/score/')) {
+            return Http::response('', 404);
+        }
+
+        $calls++;
+
+        if ($calls < 4) {
+            return Http::response([
+                'status' => 200,
+                'delivery_ratio' => 80,
+                'cancellation_ratio' => 20,
+                'delivered_count' => null,
+                'cancelled_count' => null,
+                'total_reports' => 0,
+                'fraud_categories' => [],
+            ], 200);
+        }
+
+        return Http::response([
+            'status' => 200,
+            'delivery_ratio' => 84,
+            'cancellation_ratio' => 15,
+            'delivered_count' => 11,
+            'cancelled_count' => 2,
+            'total_reports' => 0,
+            'fraud_categories' => [],
+        ], 200);
+    });
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls)->toBe(4);
+    expect($report['confirmed'])->toBe(11);
+    expect($report['cancel'])->toBe(2);
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), '/login'));
+});
+
+it('logs in once after every steadfast api key hides parcel counts', function () {
+    config([
+        'fraud-checker-bd-courier.steadfast.user' => 'platform@steadfast.test',
+        'fraud-checker-bd-courier.steadfast.password' => 'platform-password',
+    ]);
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('ratio-key-a', 'ratio-secret-a', 'Ratio A');
+    $store->add('ratio-key-b', 'ratio-secret-b', 'Ratio B');
+
+    Cache::flush();
+
+    $logins = 0;
+
+    Http::fake(function ($request) use (&$logins) {
+        if (str_contains($request->url(), '/fraud_check/score/')) {
+            return Http::response([
+                'status' => 200,
+                'delivery_ratio' => 70,
+                'cancellation_ratio' => 30,
+                'delivered_count' => null,
+                'cancelled_count' => null,
+                'total_reports' => 0,
+                'fraud_categories' => [],
+            ], 200);
+        }
+
+        if (str_contains($request->url(), '/login') && $request->method() === 'GET') {
+            return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+        }
+
+        if (str_contains($request->url(), '/login') && $request->method() === 'POST') {
+            $logins++;
+
+            return Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+        }
+
+        if (str_contains($request->url(), '/user/frauds/check/')) {
+            return Http::response([
+                'delivery_ratio' => 78,
+                'cancellation_ratio' => 21,
+                'delivered_count' => 26,
+                'cancelled_count' => 7,
+                'frauds' => [],
+            ], 200);
+        }
+
+        return Http::response('', 404);
+    });
+
+    $report = app(SteadfastFraudChecker::class)->check('01752052358');
+
+    expect($logins)->toBe(1);
+    expect($report['confirmed'])->toBe(26);
+    expect($report['cancel'])->toBe(7);
+    Http::assertSent(fn ($request) => $request->hasHeader('Api-Key', 'ratio-key-a'));
+    Http::assertSent(fn ($request) => $request->hasHeader('Api-Key', 'ratio-key-b'));
+});
+
+it('does not log in again when a steadfast session is already stored', function () {
+    config([
+        'fraud-checker-bd-courier.steadfast.user' => 'platform@steadfast.test',
+        'fraud-checker-bd-courier.steadfast.password' => 'platform-password',
+    ]);
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('ratio-only-key', 'ratio-only-secret', 'Ratio only');
+
+    Cache::flush();
+
+    Cache::put(SteadfastFraudChecker::sessionCacheKeyFor([
+        'username' => 'platform@steadfast.test',
+        'password' => 'platform-password',
+    ]), [
+        'host' => 'www.steadfast.com.bd',
+        'cookies' => ['steadfast_courier_session' => 'abc123'],
+    ], now()->addMinutes(30));
+
+    Http::fake(function ($request) {
+        if (str_contains($request->url(), '/fraud_check/score/')) {
+            return Http::response([
+                'status' => 200,
+                'delivery_ratio' => 70,
+                'cancellation_ratio' => 30,
+                'delivered_count' => null,
+                'cancelled_count' => null,
+                'total_reports' => 0,
+                'fraud_categories' => [],
+            ], 200);
+        }
+
+        if (str_contains($request->url(), '/user/frauds/check/')) {
+            return Http::response([
+                'delivery_ratio' => 81,
+                'cancellation_ratio' => 18,
+                'delivered_count' => 13,
+                'cancelled_count' => 3,
+                'frauds' => [],
+            ], 200);
+        }
+
+        return Http::response('login should not run', 500);
+    });
+
+    $report = app(SteadfastFraudChecker::class)->check('01752052358');
+
+    expect($report['confirmed'])->toBe(13);
+    expect($report['cancel'])->toBe(3);
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), '/login'));
+});
+
+it('stops asking steadfast keys when steadfast itself is down and goes to the portal', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('down-key-a', 'down-secret-a', 'A');
+    $store->add('down-key-b', 'down-secret-b', 'B');
+    $store->add('down-key-c', 'down-secret-c', 'C');
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => Http::response('Bad gateway', 502));
+
+    $first = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect(count($calls['score']))->toBe(2)
+        ->and($first['confirmed'])->toBe(12)
+        ->and($calls['login_post'])->toBe(1);
+
+    $second = app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect(count($calls['score']))->toBe(2)
+        ->and($second['confirmed'])->toBe(12)
+        ->and($calls['login_post'])->toBe(1);
+    expect($store->accounts()[0]['last_error'])->toBe('');
+});
+
+it('does not rest a steadfast key when steadfast refuses the number itself', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('number-key-a', 'number-secret-a', 'A');
+    $store->add('number-key-b', 'number-secret-b', 'B');
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => Http::response(['message' => 'Invalid phone'], 422));
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect(count($calls['score']))->toBe(1);
+    expect($store->isCoolingDown('number-key-a'))->toBeFalse()
+        ->and($store->isCoolingDown('number-key-b'))->toBeFalse();
+    expect(collect($store->accounts())->pluck('last_error')->all())->toBe(['', '']);
+});
+
+it('asks the steadfast key that gave parcel counts first', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('ratio-first-a', 'ratio-secret-a', 'A');
+    $store->add('counts-key', 'counts-secret', 'Counts');
+    $store->add('ratio-first-b', 'ratio-secret-b', 'B');
+
+    Cache::flush();
+
+    $store->noteShape('ratio-first-a', false);
+    $store->noteShape('ratio-first-b', false);
+    $store->noteShape('counts-key', true);
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn ($request) => $request->hasHeader('Api-Key', 'counts-key')
+        ? steadfastCountsAnswer(9, 1)
+        : steadfastRatioOnlyAnswer());
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls['score'])->toBe(['counts-key'])
+        ->and($report['confirmed'])->toBe(9);
+});
+
+it('stops at the ratio-only steadfast keys once a ratio is in hand and logs in once', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('new-key', 'new-secret', 'New');
+    $store->add('known-ratio-a', 'known-secret-a', 'A');
+    $store->add('known-ratio-b', 'known-secret-b', 'B');
+
+    Cache::flush();
+
+    $store->noteShape('known-ratio-a', false);
+    $store->noteShape('known-ratio-b', false);
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => steadfastRatioOnlyAnswer());
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls['score'])->toBe(['new-key'])
+        ->and($calls['login_post'])->toBe(1)
+        ->and($report['confirmed'])->toBe(12);
+    expect($store->shape('new-key'))->toBe('ratio');
+});
+
+it('asks a rejected steadfast key again by itself after six hours', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('healed-key', 'healed-secret', 'Healed');
+    plantSteadfastKeyError('Steadfast rejected this API key or secret.', now()->subHours(7));
+
+    Cache::flush();
+
+    expect($store->adminState()['accounts'][0]['next_check_at'])->toBe('soon');
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => steadfastCountsAnswer(6, 2));
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls['score'])->toBe(['healed-key'])
+        ->and($report['confirmed'])->toBe(6);
+    expect($store->accounts()[0]['last_error'])->toBe('');
+});
+
+it('does not ask a freshly rejected steadfast key again before six hours', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('fresh-rejected-key', 'fresh-rejected-secret', 'Fresh');
+    plantSteadfastKeyError('Steadfast rejected this API key or secret.', now()->subHour());
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => steadfastCountsAnswer());
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls['score'] ?? [])->toBe([]);
+    expect($store->adminState()['accounts'][0]['next_check_at'])->not->toBe('soon')->not->toBeNull();
+});
+
+it('asks only one rejected steadfast key per gap across checks', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('old-rejected-a', 'old-secret-a', 'A');
+    $store->add('old-rejected-b', 'old-secret-b', 'B');
+    plantSteadfastKeyError('Steadfast rejected this API key or secret.', now()->subHours(8), 0);
+    plantSteadfastKeyError('Steadfast rejected this API key or secret.', now()->subHours(7), 1);
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => Http::response(['message' => 'Unauthenticated'], 401));
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+    app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($calls['score'])->toBe(['old-rejected-a']);
+    expect($store->adminState()['accounts'][0]['next_check_at'])->not->toBe('soon');
+    expect($store->adminState()['accounts'][1]['next_check_at'])->toBe('soon');
+});
+
+it('rests a steadfast key longer each time it keeps failing, up to an hour', function () {
+    $store = app(SteadfastFraudApiCredentialStore::class);
+
+    Cache::flush();
+
+    $rests = array_map(fn () => $store->rest('flaky-key', 120), range(1, 7));
+
+    expect($rests)->toBe([120, 240, 480, 960, 1920, 3600, 3600]);
+
+    $store->clearRest('flaky-key');
+
+    expect($store->isCoolingDown('flaky-key'))->toBeFalse()
+        ->and($store->rest('flaky-key', 120))->toBe(120);
+});
+
+it('asks a rejected steadfast key at the next check after the admin saves a new secret', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('fixed-key', 'old-secret', 'Fixed');
+    plantSteadfastKeyError('Steadfast rejected this API key or secret.', now());
+
+    Cache::flush();
+
+    $account = $store->accounts()[0];
+    $store->updateAccount($account['id'], 'fixed-key', 'new-secret', 'Fixed');
+
+    expect($store->accounts()[0]['last_error'])->toBe('Steadfast rejected this API key or secret.')
+        ->and($store->adminState()['accounts'][0]['next_check_at'])->toBe('soon');
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn ($request) => $request->hasHeader('Secret-Key', 'new-secret')
+        ? steadfastCountsAnswer(5, 1)
+        : Http::response(['message' => 'Unauthenticated'], 401));
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($report['confirmed'])->toBe(5);
+    expect($store->accounts()[0]['last_error'])->toBe('');
+});
+
+it('rests the store steadfast key after a rate limit instead of asking it on every number', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => Http::response(['message' => 'Too many requests'], 429));
+
+    $store = ['api_key' => 'store-limited-key', 'secret_key' => 'store-limited-secret'];
+
+    app(SteadfastFraudChecker::class)->check('01712345678', $store);
+    app(SteadfastFraudChecker::class)->check('01712345679', $store);
+
+    expect($calls['score'])->toBe(['store-limited-key']);
+    expect(app(SteadfastFraudApiCredentialStore::class)->isCoolingDown('store-limited-key'))->toBeTrue();
+});
+
+it('rests a rejected store steadfast key for half an hour and then asks it again', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => Http::response(['message' => 'Unauthenticated'], 401));
+
+    $store = ['api_key' => 'store-rejected-key', 'secret_key' => 'store-rejected-secret'];
+    $keys = app(SteadfastFraudApiCredentialStore::class);
+
+    app(SteadfastFraudChecker::class)->check('01712345678', $store);
+
+    $this->travel(29)->minutes();
+    expect($keys->isCoolingDown('store-rejected-key'))->toBeTrue();
+
+    $this->travel(2)->minutes();
+    expect($keys->isCoolingDown('store-rejected-key'))->toBeFalse();
+
+    app(SteadfastFraudChecker::class)->check('01712345679', $store);
+
+    expect($calls['score'])->toBe(['store-rejected-key', 'store-rejected-key']);
+});
+
+it('uses the wait time steadfast sends with a rate limit', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('retry-after-key', 'retry-after-secret', 'Retry after');
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => Http::response(['message' => 'Too many requests'], 429, ['Retry-After' => '120']));
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($store->isCoolingDown('retry-after-key'))->toBeTrue();
+
+    $this->travel(121)->seconds();
+
+    expect($store->isCoolingDown('retry-after-key'))->toBeFalse();
+});
+
+it('logs in to the steadfast portal when every key is resting', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('resting-only-key', 'resting-only-secret', 'Resting');
+
+    Cache::flush();
+
+    $store->coolDown('resting-only-key', 900);
+
+    $calls = [];
+    fakeSteadfastEverywhere($calls, fn () => steadfastCountsAnswer());
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls['score'] ?? [])->toBe([])
+        ->and($calls['login_post'])->toBe(1)
+        ->and($report['confirmed'])->toBe(12);
+});
+
+it('sends the steadfast login form once and rests after it times out', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        fn () => Http::failedConnection('cURL error 28: Operation timed out after 25001 milliseconds'),
+    );
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls['login_post'])->toBe(1)
+        ->and($calls['login_get'])->toBe(1);
+
+    app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($calls['login_post'])->toBe(1);
+});
+
+it('keeps the steadfast session when the portal has a server error and drops it after three misses', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    Cache::put(platformSteadfastSessionKey(), [
+        'host' => 'www.steadfast.com.bd',
+        'cookies' => ['steadfast_courier_session' => 'still-good'],
+    ], now()->addMinutes(30));
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        null,
+        fn () => Http::response('Server error', 500),
+    );
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+    app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($calls['frauds'])->toBe(2)
+        ->and($calls['login_post'] ?? 0)->toBe(0)
+        ->and(Cache::has(platformSteadfastSessionKey()))->toBeTrue();
+
+    app(SteadfastFraudChecker::class)->check('01712345670');
+
+    expect($calls['login_post'])->toBe(1);
+});
+
+it('drops the steadfast session and logs in once when the portal shows the login page', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    Cache::put(platformSteadfastSessionKey(), [
+        'host' => 'www.steadfast.com.bd',
+        'cookies' => ['steadfast_courier_session' => 'expired'],
+    ], now()->addMinutes(30));
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        null,
+        fn ($request, int $call) => $call === 1
+            ? Http::response('<form><input name="email"><input name="password"> Merchant Login</form>', 200)
+            : Http::response(['delivered_count' => 4, 'cancelled_count' => 1, 'frauds' => []], 200),
+    );
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($calls['login_post'])->toBe(1)
+        ->and($report['confirmed'])->toBe(4);
+});
+
+it('waits out a steadfast login lockout instead of logging in on every number', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        fn () => Http::response('Too many login attempts. Please try again in a few minutes.', 429),
+    );
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($report['rate_limited'] ?? false)->toBeTrue()
+        ->and(\App\Services\Courier\SteadfastPortalSessionClient::loginCooldownActiveFor([
+            'username' => 'platform@steadfast.test',
+            'password' => 'platform-password',
+        ]))->toBeTrue();
+
+    app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($calls['login_post'])->toBe(1);
+});
+
+it('does not log in again after steadfast rejects the portal password', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        fn () => Http::response('<form><input name="email"><input name="password"> Merchant Login</form>', 200),
+    );
+
+    app(SteadfastFraudChecker::class)->check('01712345678');
+    app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($calls['login_post'])->toBe(1);
+
+    $this->travel(16)->minutes();
+
+    app(SteadfastFraudChecker::class)->check('01712345670');
+
+    expect($calls['login_post'])->toBe(2);
+});
+
+it('does not call a merchant portal timeout a credential error', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        fn () => Http::failedConnection('cURL error 28: Operation timed out after 25001 milliseconds'),
+    );
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678', [
+        'username' => 'platform@steadfast.test',
+        'password' => 'platform-password',
+    ]);
+
+    expect($report['credential_error'] ?? false)->toBeFalse()
+        ->and($calls['login_post'])->toBe(1);
+});
+
+function useOnlyPlatformSteadfastPortal(): void
+{
+    config([
+        'fraud-checker-bd-courier.steadfast.user' => 'platform@steadfast.test',
+        'fraud-checker-bd-courier.steadfast.password' => 'platform-password',
+        'fraud-checker-bd-courier.steadfast.api_key' => '',
+        'fraud-checker-bd-courier.steadfast.secret_key' => '',
+    ]);
+}
+
+function platformSteadfastSessionKey(): string
+{
+    return SteadfastFraudChecker::sessionCacheKeyFor([
+        'username' => 'platform@steadfast.test',
+        'password' => 'platform-password',
+    ]);
+}
+
+/**
+ * Every Steadfast host answers from here, so nothing reaches the real one.
+ *
+ * @param  array<string, mixed>  $calls
+ */
+function fakeSteadfastEverywhere(array &$calls, callable $score, ?callable $loginPost = null, ?callable $frauds = null): void
+{
+    Http::fake(function ($request) use (&$calls, $score, $loginPost, $frauds) {
+        $url = $request->url();
+
+        if (str_contains($url, '/fraud_check/score/')) {
+            $calls['score'][] = $request->header('Api-Key')[0] ?? '';
+
+            return $score($request, count($calls['score']));
+        }
+
+        if (str_contains($url, '/login') && $request->method() === 'GET') {
+            $calls['login_get'] = ($calls['login_get'] ?? 0) + 1;
+
+            return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+        }
+
+        if (str_contains($url, '/login') && $request->method() === 'POST') {
+            $calls['login_post'] = ($calls['login_post'] ?? 0) + 1;
+
+            return $loginPost
+                ? $loginPost($request, $calls['login_post'])
+                : Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+        }
+
+        if (str_contains($url, '/user/frauds/check/')) {
+            $calls['frauds'] = ($calls['frauds'] ?? 0) + 1;
+
+            return $frauds
+                ? $frauds($request, $calls['frauds'])
+                : Http::response([
+                    'delivery_ratio' => 92,
+                    'cancellation_ratio' => 8,
+                    'delivered_count' => 12,
+                    'cancelled_count' => 1,
+                    'frauds' => [],
+                ], 200);
+        }
+
+        return Http::response('', 404);
+    });
+}
+
+function steadfastCountsAnswer(int $delivered = 8, int $cancelled = 2)
+{
+    return Http::response([
+        'status' => 200,
+        'delivery_ratio' => 80,
+        'cancellation_ratio' => 20,
+        'delivered_count' => $delivered,
+        'cancelled_count' => $cancelled,
+        'total_reports' => 0,
+        'fraud_categories' => [],
+    ], 200);
+}
+
+function steadfastRatioOnlyAnswer()
+{
+    return Http::response([
+        'status' => 200,
+        'delivery_ratio' => 70,
+        'cancellation_ratio' => 30,
+        'delivered_count' => null,
+        'cancelled_count' => null,
+        'total_reports' => 0,
+        'fraud_categories' => [],
+    ], 200);
+}
+
+function plantSteadfastKeyError(string $message, ?\Carbon\CarbonInterface $at = null, int $index = 0): void
+{
+    $setting = PlatformSetting::query()
+        ->where('key', SteadfastFraudApiCredentialStore::SETTING_KEY)
+        ->first();
+
+    $value = $setting->value;
+    $value['accounts'][$index]['last_error'] = $message;
+    $value['accounts'][$index]['last_error_at'] = ($at ?? now()->subDays(5))
+        ->timezone('Asia/Dhaka')
+        ->format('j M Y, g:i A');
+    $setting->value = $value;
+    $setting->save();
+}

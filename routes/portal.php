@@ -22,18 +22,21 @@ Route::middleware(['auth', 'auth.active', 'merchant.portal'])
         Route::middleware('password.changed')->group(function () {
             Route::get('/', DashboardController::class)->name('dashboard');
 
+            // Each throttle names its own counter. Without a name, every
+            // throttled route shares one count per user, so a bulk run's next
+            // calls would use up search, retry and refresh too.
             Route::middleware('courier.history')->group(function () {
                 Route::get('/fraud-check/search', [BulkFraudCheckController::class, 'searchPage'])
                     ->name('fraud-check.search');
                 Route::post('/fraud-check/search', [BulkFraudCheckController::class, 'search'])
-                    ->middleware('throttle:30,1')
+                    ->middleware('throttle:30,1,fraud-search')
                     ->name('fraud-check.search.store');
                 Route::get('/fraud-check', [BulkFraudCheckController::class, 'index'])
                     ->name('fraud-check');
                 Route::get('/fraud-check/batches', [BulkFraudCheckController::class, 'batches'])
                     ->name('fraud-check.batches.index');
                 Route::post('/fraud-check/batches', [BulkFraudCheckController::class, 'store'])
-                    ->middleware('throttle:20,1')
+                    ->middleware('throttle:20,1,fraud-batch')
                     ->name('fraud-check.batches.store');
                 Route::get('/fraud-check/batches/{batch}', [BulkFraudCheckController::class, 'show'])
                     ->name('fraud-check.batches.show');
@@ -42,17 +45,17 @@ Route::middleware(['auth', 'auth.active', 'merchant.portal'])
                 Route::delete('/fraud-check/batches/{batch}', [BulkFraudCheckController::class, 'destroy'])
                     ->name('fraud-check.batches.destroy');
                 Route::post('/fraud-check/batches/{batch}/next', [BulkFraudCheckController::class, 'next'])
-                    ->middleware('throttle:300,1')
+                    ->middleware('throttle:300,1,fraud-next')
                     ->name('fraud-check.batches.next');
                 Route::post('/fraud-check/batches/{batch}/stop', [BulkFraudCheckController::class, 'stop'])
                     ->name('fraud-check.batches.stop');
                 Route::post('/fraud-check/batches/{batch}/resume', [BulkFraudCheckController::class, 'resume'])
                     ->name('fraud-check.batches.resume');
                 Route::post('/fraud-check/batches/{batch}/items/{item}/retry', [BulkFraudCheckController::class, 'retry'])
-                    ->middleware('throttle:120,1')
+                    ->middleware('throttle:120,1,fraud-retry')
                     ->name('fraud-check.batches.retry');
                 Route::post('/fraud-check/batches/{batch}/items/{item}/refresh', [BulkFraudCheckController::class, 'refresh'])
-                    ->middleware('throttle:30,1')
+                    ->middleware('throttle:120,1,fraud-refresh')
                     ->name('fraud-check.batches.refresh');
                 Route::get('/fraud-check/batches/{batch}/preview', [BulkFraudCheckController::class, 'preview'])
                     ->name('fraud-check.batches.preview');

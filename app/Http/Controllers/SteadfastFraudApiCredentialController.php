@@ -106,10 +106,31 @@ class SteadfastFraudApiCredentialController extends Controller
             return back()->with('success', 'This key works again. Hub checks can use it.');
         }
 
+        if (! empty($result['temporary'])) {
+            $retryAfter = (int) ($result['retry_after'] ?? 0);
+            $seconds = (int) ($result['cooldown'] ?? 0);
+
+            if ($retryAfter > 0) {
+                $this->credentials->rest($saved['api_key'], $retryAfter, exact: true);
+            } elseif ($seconds > 0) {
+                $this->credentials->rest($saved['api_key'], $seconds, exact: true);
+            }
+
+            $message = ! empty($result['rate_limited'])
+                ? 'Steadfast rate limit on this key. It rests for a few minutes, then checks use it again.'
+                : 'Steadfast did not answer for this key. It rests for a few minutes, then checks use it again.';
+
+            return back()->with('success', $message);
+        }
+
         $message = $result['error'] ?: 'Steadfast rejected this API key or secret.';
         $this->credentials->recordOutcome($saved['api_key'], $message);
 
-        return back()->with('success', 'Test failed. This key stays off. '.$message);
+        return back()->with(
+            'success',
+            'Test failed. '.$message.' Checks ask this key again by themselves every '
+                .SteadfastFraudApiCredentialStore::RECHECK_AFTER_HOURS.' hours, and it comes back as soon as Steadfast accepts it.'
+        );
     }
 
     public function destroy(string $account): RedirectResponse

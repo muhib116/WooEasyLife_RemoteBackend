@@ -16,6 +16,7 @@ class CarrybeeFraudChecker
 {
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
+        private CourierLoginGuard $loginGuard = new CourierLoginGuard,
     ) {}
 
     public function isConfigured(): bool
@@ -51,7 +52,10 @@ class CarrybeeFraudChecker
             $response = $this->fetchCustomer($phone, $auth['accessToken'], $auth['businessId']);
 
             if ($response->status() === 401) {
-                Cache::forget($auth['cache_key']);
+                $this->loginGuard->forgetToken($auth['cache_key'], [
+                    'accessToken' => $auth['accessToken'],
+                    'businessId' => $auth['businessId'],
+                ]);
                 $auth = $this->authenticate(force: true);
                 if ($auth === null) {
                     return CourierReportFormatter::emptyReport([
@@ -159,7 +163,10 @@ class CarrybeeFraudChecker
             },
             'read' => function (Response $response) use ($auth): ?array {
                 if (in_array($response->status(), [401, 403], true)) {
-                    Cache::forget($auth['cache_key']);
+                    $this->loginGuard->forgetToken($auth['cache_key'], [
+                        'accessToken' => $auth['accessToken'],
+                        'businessId' => $auth['businessId'],
+                    ]);
 
                     return null;
                 }
@@ -283,82 +290,108 @@ class CarrybeeFraudChecker
         }
 
         // Session expired / no cache: random active credential, then failover.
+        // A rejected session was already dropped, so a session found here is
+        // one another worker just saved.
         foreach ($this->credentials->loginCandidates('carrybee') as $candidate) {
             $cacheKey = $this->credentials->sessionCacheKey('carrybee', $candidate['identifier']);
 
-            if ($force) {
-                Cache::forget($cacheKey);
-            }
+            $payload = $this->loginGuard->login(
+                'carrybee',
+                $candidate,
+                function () use ($cacheKey): ?array {
+                    $cached = Cache::get($cacheKey);
 
-            $jar = new CookieJar();
-            $headers = [
-                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-                'Accept' => 'application/json',
-                'Referer' => 'https://merchant.carrybee.com/login',
-                'Origin' => 'https://merchant.carrybee.com',
-            ];
+                    return is_array($cached) && filled($cached['accessToken'] ?? null) && filled($cached['businessId'] ?? null)
+                        ? $cached
+                        : null;
+                },
+                fn () => $this->loginWithPassword($candidate, $cacheKey),
+            );
 
-            $csrf = $this->client()
-                ->withOptions(['cookies' => $jar])
-                ->withHeaders($headers)
-                ->get('https://merchant.carrybee.com/api/auth/csrf');
-
-            $csrfToken = $csrf->json('csrfToken');
-            if (! $csrf->successful() || ! filled($csrfToken)) {
-                $this->credentials->markFailure($candidate['id'], 'CSRF fetch failed');
-
+            if ($payload === null) {
                 continue;
             }
-
-            $phone = (string) $candidate['identifier'];
-            $loginPhone = str_starts_with($phone, '+88') ? $phone : '+88'.$phone;
-
-            $this->client()
-                ->withOptions(['cookies' => $jar])
-                ->withHeaders($headers)
-                ->asForm()
-                ->post('https://merchant.carrybee.com/api/auth/callback/login?', [
-                    'phone' => $loginPhone,
-                    'password' => $candidate['password'],
-                    'csrfToken' => $csrfToken,
-                    'callbackUrl' => 'https://merchant.carrybee.com/login',
-                ]);
-
-            $session = $this->client()
-                ->withOptions(['cookies' => $jar])
-                ->withHeaders($headers)
-                ->get('https://merchant.carrybee.com/api/auth/session');
-
-            $accessToken = $session->json('accessToken');
-            $businessId = (string) ($session->json('user.selectedBusinessId') ?? '');
-
-            if (! $session->successful() || ! filled($accessToken) || ! filled($businessId)) {
-                $this->credentials->markFailure(
-                    $candidate['id'],
-                    'Session missing token/business: '.substr($session->body(), 0, 200),
-                );
-                LogHelper::saveLog('Carrybee fraud check error', 'Session missing token/business: '.substr($session->body(), 0, 300));
-
-                continue;
-            }
-
-            $payload = [
-                'accessToken' => (string) $accessToken,
-                'businessId' => $businessId,
-            ];
-
-            Cache::put($cacheKey, $payload, now()->addMinutes(50));
-            $this->credentials->markUsed($candidate['id']);
 
             return [
-                'accessToken' => (string) $accessToken,
-                'businessId' => $businessId,
+                'accessToken' => (string) $payload['accessToken'],
+                'businessId' => (string) $payload['businessId'],
                 'cache_key' => $cacheKey,
                 'credential_id' => $candidate['id'],
             ];
         }
 
         return null;
+    }
+
+    /**
+     * @param  array{id: int|null, identifier: string, password: string}  $candidate
+     * @return array{accessToken: string, businessId: string}|null
+     */
+    private function loginWithPassword(array $candidate, string $cacheKey): ?array
+    {
+        $jar = new CookieJar();
+        $headers = [
+            'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Accept' => 'application/json',
+            'Referer' => 'https://merchant.carrybee.com/login',
+            'Origin' => 'https://merchant.carrybee.com',
+        ];
+
+        $csrf = $this->client()
+            ->withOptions(['cookies' => $jar])
+            ->withHeaders($headers)
+            ->get('https://merchant.carrybee.com/api/auth/csrf');
+
+        $csrfToken = $csrf->json('csrfToken');
+        if (! $csrf->successful() || ! filled($csrfToken)) {
+            $this->credentials->markFailure($candidate['id'], 'CSRF fetch failed');
+            $this->loginGuard->restAfter('carrybee', $candidate, $csrf->successful() ? null : $csrf->status());
+
+            return null;
+        }
+
+        $phone = (string) $candidate['identifier'];
+        $loginPhone = str_starts_with($phone, '+88') ? $phone : '+88'.$phone;
+
+        $this->client()
+            ->withOptions(['cookies' => $jar])
+            ->withHeaders($headers)
+            ->asForm()
+            ->post('https://merchant.carrybee.com/api/auth/callback/login?', [
+                'phone' => $loginPhone,
+                'password' => $candidate['password'],
+                'csrfToken' => $csrfToken,
+                'callbackUrl' => 'https://merchant.carrybee.com/login',
+            ]);
+
+        $session = $this->client()
+            ->withOptions(['cookies' => $jar])
+            ->withHeaders($headers)
+            ->get('https://merchant.carrybee.com/api/auth/session');
+
+        $accessToken = $session->json('accessToken');
+        $businessId = (string) ($session->json('user.selectedBusinessId') ?? '');
+
+        if (! $session->successful() || ! filled($accessToken) || ! filled($businessId)) {
+            $this->credentials->markFailure(
+                $candidate['id'],
+                'Session missing token/business: '.substr($session->body(), 0, 200),
+            );
+            LogHelper::saveLog('Carrybee fraud check error', 'Session missing token/business: '.substr($session->body(), 0, 300));
+            $this->loginGuard->restAfter('carrybee', $candidate, $session->status());
+
+            return null;
+        }
+
+        $payload = [
+            'accessToken' => (string) $accessToken,
+            'businessId' => $businessId,
+        ];
+
+        Cache::put($cacheKey, $payload, now()->addMinutes(50));
+        $this->credentials->markUsed($candidate['id']);
+
+        return $payload;
     }
 
     private function isCustomerMissing(Response $response): bool

@@ -25,6 +25,17 @@ class SteadfastFraudApiCredentialStore
 
     private const MAX_ACCOUNTS = 500;
 
+    /** A rejected key is asked again after this long, one key at a time. */
+    public const RECHECK_AFTER_HOURS = 6;
+
+    private const RECHECK_GAP_SECONDS = 120;
+
+    private const MAX_REST_SECONDS = 3600;
+
+    private const STAMP_FORMAT = 'j M Y, g:i A';
+
+    private const STAMP_TIMEZONE = 'Asia/Dhaka';
+
     private int $lockDepth = 0;
 
     /**
@@ -52,30 +63,101 @@ class SteadfastFraudApiCredentialStore
     }
 
     /**
-     * Hub checks only use keys that have not failed. A failed key stays out
-     * until an admin test clears the error. A key that hit a rate limit or
-     * a Steadfast outage sits out only until its cooldown ends.
+     * Keys a hub check may use, best first: keys that gave parcel counts
+     * lately, then keys not asked yet, then keys that only gave a ratio.
+     * A resting key sits out until its rest ends. A rejected key sits out
+     * too, except one that is due for its automatic re-check; that key goes
+     * first and is marked `recheck`.
      *
-     * @return list<array{api_key: string, secret_key: string}>
+     * @return list<array{api_key: string, secret_key: string, shape: string|null, recheck?: bool}>
      */
-    public function hubCandidates(int $limit): array
+    public function hubCandidates(?int $limit = null): array
     {
-        $healthy = [];
+        $groups = ['counts' => [], 'unknown' => [], 'ratio' => []];
+        $due = null;
+        $dueSince = null;
 
         foreach ($this->readAccounts() as $account) {
-            if (($account['last_error'] ?? '') !== '' || $this->isCoolingDown($account['api_key'])) {
+            $apiKey = $account['api_key'];
+
+            if ($this->isCoolingDown($apiKey)) {
                 continue;
             }
 
-            $healthy[] = [
-                'api_key' => $account['api_key'],
+            if ($this->isRejectedError($account['last_error'])) {
+                $since = $this->stampTime($account['last_error_at']);
+
+                if ($this->recheckDue($since) && ($due === null || $since < $dueSince)) {
+                    $due = [
+                        'api_key' => $apiKey,
+                        'secret_key' => $account['secret_key'],
+                        'shape' => null,
+                        'recheck' => true,
+                    ];
+                    $dueSince = $since;
+                }
+
+                continue;
+            }
+
+            $shape = $this->shape($apiKey);
+            $groups[$shape ?? 'unknown'][] = [
+                'api_key' => $apiKey,
                 'secret_key' => $account['secret_key'],
+                'shape' => $shape,
             ];
         }
 
-        shuffle($healthy);
+        foreach ($groups as &$rows) {
+            shuffle($rows);
+        }
+        unset($rows);
 
-        return array_slice($healthy, 0, max(1, $limit));
+        $candidates = array_merge($due !== null ? [$due] : [], $groups['counts'], $groups['unknown'], $groups['ratio']);
+
+        if ($limit === null) {
+            return $candidates;
+        }
+
+        return array_slice($candidates, 0, max(1, $limit));
+    }
+
+    /**
+     * Only one rejected key is asked again per gap, across every worker.
+     */
+    public function claimRecheck(): bool
+    {
+        try {
+            return Cache::add('fraud_check_steadfast_key_recheck_gate', true, now()->addSeconds(self::RECHECK_GAP_SECONDS));
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Steadfast hides parcel counts on keys of stores that are not booking.
+     * That is a property of the key, so it is remembered for a while.
+     */
+    public function noteShape(string $apiKey, bool $hasCounts): void
+    {
+        $apiKey = trim($apiKey);
+
+        if ($apiKey === '') {
+            return;
+        }
+
+        Cache::put(
+            $this->shapeKey($apiKey),
+            $hasCounts ? 'counts' : 'ratio',
+            $hasCounts ? now()->addDay() : now()->addHours(6),
+        );
+    }
+
+    public function shape(string $apiKey): ?string
+    {
+        $value = Cache::get($this->shapeKey(trim($apiKey)));
+
+        return in_array($value, ['counts', 'ratio'], true) ? $value : null;
     }
 
     /**
@@ -151,6 +233,7 @@ class SteadfastFraudApiCredentialStore
             'env_configured' => filled(config('fraud-checker-bd-courier.steadfast.api_key'))
                 && filled(config('fraud-checker-bd-courier.steadfast.secret_key')),
             'merchant_key_count' => $this->merchantKeyCount(),
+            'recheck_after_hours' => self::RECHECK_AFTER_HOURS,
             'accounts' => array_map(fn (array $account) => [
                 'id' => $account['id'],
                 'label' => $account['label'],
@@ -158,6 +241,10 @@ class SteadfastFraudApiCredentialStore
                 'secret_key' => $account['secret_key'],
                 'last_error' => $account['last_error'],
                 'last_error_at' => $account['last_error_at'],
+                'error_temporary' => $this->isTemporaryError($account['last_error']),
+                'resting_until' => $this->restingUntil($account['api_key']),
+                'next_check_at' => $this->nextCheckAt($account),
+                'shape' => $this->shape($account['api_key']),
                 'use_count' => $account['use_count'],
             ], $accounts),
         ];
@@ -176,7 +263,92 @@ class SteadfastFraudApiCredentialStore
             return;
         }
 
-        Cache::put($this->cooldownKey($apiKey), true, now()->addSeconds($seconds));
+        $until = now()->addSeconds($seconds);
+
+        Cache::put($this->cooldownKey($apiKey), $until->toIso8601String(), $until);
+    }
+
+    /**
+     * Rest a key after a failure that can pass. Each failure in a row doubles
+     * the rest, up to an hour, so a key that keeps failing is asked less
+     * often but is never dropped. An answer clears the count.
+     */
+    public function rest(string $apiKey, int $seconds, bool $exact = false): int
+    {
+        $apiKey = trim($apiKey);
+
+        if ($apiKey === '' || $seconds <= 0) {
+            return 0;
+        }
+
+        if (! $exact) {
+            $strikesKey = $this->strikesKey($apiKey);
+
+            try {
+                Cache::add($strikesKey, 0, now()->addDay());
+                $strikes = max(1, (int) Cache::increment($strikesKey));
+            } catch (Throwable) {
+                $strikes = 1;
+            }
+
+            $seconds = (int) min(self::MAX_REST_SECONDS, $seconds * (2 ** min(10, $strikes - 1)));
+        }
+
+        $this->coolDown($apiKey, min(self::MAX_REST_SECONDS, $seconds));
+
+        return $seconds;
+    }
+
+    public function clearRest(string $apiKey): void
+    {
+        $apiKey = trim($apiKey);
+
+        if ($apiKey === '') {
+            return;
+        }
+
+        Cache::forget($this->cooldownKey($apiKey));
+        Cache::forget($this->strikesKey($apiKey));
+    }
+
+    /**
+     * Only a rejected key or secret stays off. Every other error (rate
+     * limit, outage, odd answer) only rests the key.
+     */
+    public function isRejectedError(string $error): bool
+    {
+        return str_contains(strtolower(trim($error)), 'rejected this api key');
+    }
+
+    public function isTemporaryError(string $error): bool
+    {
+        return trim($error) !== '' && ! $this->isRejectedError($error);
+    }
+
+    public function restingUntil(string $apiKey): ?string
+    {
+        $value = Cache::get($this->cooldownKey($apiKey));
+
+        if (! is_string($value) || trim($value) === '') {
+            return $this->isCoolingDown($apiKey) ? 'soon' : null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->timezone(self::STAMP_TIMEZONE)->format('g:i A');
+        } catch (\Throwable) {
+            return 'soon';
+        }
+    }
+
+    public function hasCoolingKey(): bool
+    {
+        foreach ($this->readAccounts() as $account) {
+            if ($this->isCoolingDown($account['api_key'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function isCoolingDown(string $apiKey): bool
@@ -186,9 +358,61 @@ class SteadfastFraudApiCredentialStore
         return $apiKey !== '' && Cache::has($this->cooldownKey($apiKey));
     }
 
+    /**
+     * @param  array{last_error: string, last_error_at: string}  $account
+     */
+    private function nextCheckAt(array $account): ?string
+    {
+        if (! $this->isRejectedError($account['last_error'])) {
+            return null;
+        }
+
+        $since = $this->stampTime($account['last_error_at']);
+
+        if ($this->recheckDue($since)) {
+            return 'soon';
+        }
+
+        return \Carbon\Carbon::createFromTimestamp($since + self::RECHECK_AFTER_HOURS * 3600, self::STAMP_TIMEZONE)
+            ->format('j M, g:i A');
+    }
+
+    private function recheckDue(int $since): bool
+    {
+        return $since <= time() - self::RECHECK_AFTER_HOURS * 3600;
+    }
+
+    /**
+     * An empty or unreadable stamp counts as old, so that key is due.
+     */
+    private function stampTime(string $stamp): int
+    {
+        $stamp = trim($stamp);
+
+        if ($stamp === '') {
+            return 0;
+        }
+
+        try {
+            return \Carbon\Carbon::createFromFormat(self::STAMP_FORMAT, $stamp, self::STAMP_TIMEZONE)->getTimestamp();
+        } catch (Throwable) {
+            return 0;
+        }
+    }
+
     private function cooldownKey(string $apiKey): string
     {
         return 'fraud_check_steadfast_key_cooldown:'.hash('sha256', $apiKey);
+    }
+
+    private function strikesKey(string $apiKey): string
+    {
+        return 'fraud_check_steadfast_key_strikes:'.hash('sha256', $apiKey);
+    }
+
+    private function shapeKey(string $apiKey): string
+    {
+        return 'fraud_check_steadfast_key_shape:'.hash('sha256', $apiKey);
     }
 
     /**
@@ -205,7 +429,7 @@ class SteadfastFraudApiCredentialStore
 
         foreach ($answered as $apiKey => $error) {
             if (trim((string) $apiKey) !== '' && trim((string) $error) === '') {
-                Cache::forget($this->cooldownKey(trim((string) $apiKey)));
+                $this->clearRest((string) $apiKey);
             }
         }
 
@@ -216,11 +440,17 @@ class SteadfastFraudApiCredentialStore
         $this->withLock(function () use ($outcomes, $usedApiKey): void {
             $accounts = $this->readAccounts();
             $changed = false;
-            $stampedAt = now()->timezone('Asia/Dhaka')->format('j M Y, g:i A');
+            $stampedAt = now()->timezone(self::STAMP_TIMEZONE)->format(self::STAMP_FORMAT);
 
             foreach ($accounts as &$account) {
                 if ($usedApiKey !== '' && $this->sameSecret($account['api_key'], $usedApiKey)) {
                     $account['use_count'] = (int) $account['use_count'] + 1;
+
+                    if ($account['last_error'] !== '' || $account['last_error_at'] !== '') {
+                        $account['last_error'] = '';
+                        $account['last_error_at'] = '';
+                    }
+
                     $changed = true;
                 }
 
@@ -230,6 +460,11 @@ class SteadfastFraudApiCredentialStore
                     }
 
                     $nextError = trim((string) $error);
+
+                    if ($this->isTemporaryError($nextError)) {
+                        $nextError = '';
+                    }
+
                     $nextAt = $nextError === '' ? '' : $stampedAt;
 
                     if ($account['last_error'] !== $nextError || $account['last_error_at'] !== $nextAt) {
@@ -350,10 +585,34 @@ class SteadfastFraudApiCredentialStore
             }
         }
 
+        $pairChanged = ! $this->sameSecret($accounts[$index]['api_key'], $apiKey)
+            || ! $this->sameSecret($accounts[$index]['secret_key'], $secretKey);
+
         $accounts[$index]['label'] = $label;
         $accounts[$index]['api_key'] = $apiKey;
         $accounts[$index]['secret_key'] = $secretKey;
+
+        if ($pairChanged) {
+            $this->askSoon($accounts[$index]);
+        }
+
         $this->writeAccounts($accounts);
+    }
+
+    /**
+     * A new key or secret is asked at the next re-check instead of waiting
+     * out the old rejection. The error text stays until Steadfast answers.
+     *
+     * @param  array{api_key: string, last_error: string, last_error_at: string}  $account
+     */
+    private function askSoon(array &$account): void
+    {
+        $this->clearRest($account['api_key']);
+        Cache::forget($this->shapeKey($account['api_key']));
+
+        if ($this->isRejectedError($account['last_error'])) {
+            $account['last_error_at'] = '';
+        }
     }
 
     /**
@@ -558,6 +817,7 @@ class SteadfastFraudApiCredentialStore
             $accounts[$index]['api_key'] = $keys['api_key'];
             $accounts[$index]['secret_key'] = $keys['secret_key'];
             $accounts[$index]['source_user_id'] = (int) $user->id;
+            $this->askSoon($accounts[$index]);
             $updated++;
             $dirty = true;
         }

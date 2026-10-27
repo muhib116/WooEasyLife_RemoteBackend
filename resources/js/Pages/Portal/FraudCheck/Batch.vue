@@ -326,7 +326,7 @@
                                             :disabled="running || refreshingIncomplete || refreshingId !== null || retryingId !== null"
                                             @click="refreshRow(row)"
                                         >
-                                            {{ refreshingId === row.id ? "Refreshing" : "Refresh" }}
+                                            {{ isChecking(row) ? "Refreshing" : "Refresh" }}
                                         </button>
                                         <button
                                             v-if="row.status === 'error'"
@@ -477,7 +477,7 @@
                             :disabled="running || refreshingIncomplete || refreshingId !== null || retryingId !== null"
                             @click="refreshRow(selected)"
                         >
-                            {{ refreshingId === selected.id ? "Refreshing" : "Refresh" }}
+                            {{ isChecking(selected) ? "Refreshing" : "Refresh" }}
                         </button>
                         <button
                             v-if="selected.status === 'error'"
@@ -640,6 +640,14 @@ const previewError = ref("");
 let stopRequested = false;
 let runToken = 0;
 
+// Every refresh shares one pace, so parallel lanes stay under the server's
+// limit (120 a minute) instead of hitting it and stopping.
+const REFRESH_GAP_MS = 600;
+const MAX_THROTTLED_TRIES = 5;
+const THROTTLE_WAIT_NOTICE = "Couriers were asked too quickly, so refreshing waits a few seconds and then continues.";
+let refreshSlotAt = 0;
+
+const bulkWorkers = computed(() => Math.min(5, Math.max(1, Number(props.workers) || 1)));
 const incompleteRetryMax = computed(() => Math.min(5, Math.max(0, Number(props.incompleteRetries ?? 5))));
 const incompleteRetryGapMs = computed(() => Math.min(30, Math.max(3, Number(props.incompleteRetryGapSeconds) || 5)) * 1000);
 const incompleteRetryGapLabel = computed(() => Math.round(incompleteRetryGapMs.value / 1000));
@@ -984,7 +992,7 @@ async function continueBatch() {
 
 async function runPending() {
     const run = { token: ++runToken, halted: false, stopFollow: false };
-    const workers = Math.min(5, Math.max(1, Number(props.workers) || 1));
+    const workers = bulkWorkers.value;
     running.value = true;
     await Promise.all([
         ...Array.from({ length: workers }, (_, index) => runWorker(run, index)),
@@ -1068,13 +1076,15 @@ function canRefresh(row) {
 }
 
 async function refreshRow(row, duringRun = false, quiet = false) {
-    if ((!duringRun && (running.value || refreshingIncomplete.value || followingIncomplete.value)) || refreshingId.value || retryingId.value || !canRefresh(row)) {
+    if (isChecking(row) || retryingId.value || !canRefresh(row)) return { skipped: true };
+    if (!duringRun && (running.value || refreshingIncomplete.value || followingIncomplete.value || refreshingId.value)) {
         return { skipped: true };
     }
-    refreshingId.value = row.id;
+    if (!duringRun) refreshingId.value = row.id;
     markChecking(row.id);
     if (!quiet) refreshNotice.value = "";
     try {
+        await takeRefreshSlot();
         const { data } = await axios.post(
             route("portal.fraud-check.batches.refresh", { batch: batchState.value.id, item: row.id }),
             {},
@@ -1094,15 +1104,34 @@ async function refreshRow(row, duringRun = false, quiet = false) {
         return { refreshed: true };
     } catch (error) {
         if (error?.response?.status === 429) {
+            const waitMs = retryAfterMs(error);
+            refreshSlotAt = Math.max(refreshSlotAt, Date.now() + waitMs);
             if (!quiet) refreshNotice.value = "Refreshing paused so the couriers are not asked too quickly. Press Refresh incomplete again for the rest.";
-            return { throttled: true, refreshed: false };
+            return { throttled: true, refreshed: false, waitMs };
         }
         if (!quiet) refreshNotice.value = "Could not fetch new courier data for this number. The previous result is still shown.";
         return { refreshed: false };
     } finally {
         unmarkChecking(row.id);
-        refreshingId.value = null;
+        if (!duringRun && refreshingId.value === row.id) refreshingId.value = null;
     }
+}
+
+async function takeRefreshSlot() {
+    const now = Date.now();
+    const slot = Math.max(now, refreshSlotAt);
+    refreshSlotAt = slot + REFRESH_GAP_MS;
+    if (slot > now) await wait(slot - now);
+}
+
+function retryAfterMs(error) {
+    const seconds = Number(error?.response?.headers?.["retry-after"]);
+    const ms = (Number.isFinite(seconds) && seconds > 0 ? seconds : 5) * 1000;
+    return Math.min(65000, Math.max(2000, ms));
+}
+
+function clearThrottleNotice() {
+    if (refreshNotice.value === THROTTLE_WAIT_NOTICE) refreshNotice.value = "";
 }
 
 const incompleteTargets = computed(() => sortedItems.value.filter((row) => row.risk === "incomplete" && canRefresh(row)));
@@ -1120,6 +1149,7 @@ async function followIncomplete(run) {
 
     const tries = new Map();
     const readyAt = new Map();
+    const throttled = new Map();
     followingIncomplete.value = true;
 
     try {
@@ -1167,9 +1197,16 @@ async function followIncomplete(run) {
                 break;
             }
             if (result?.throttled) {
-                refreshNotice.value = "Incomplete retries paused so the couriers are not asked too quickly. Press Refresh incomplete for the rest.";
-                break;
+                // The server asked us to slow down. Wait it out and go on; the
+                // try is given back so the number keeps its five chances.
+                const times = (throttled.get(candidate.id) ?? 0) + 1;
+                throttled.set(candidate.id, times);
+                if (times <= MAX_THROTTLED_TRIES) tries.set(candidate.id, used - 1);
+                readyAt.set(candidate.id, Date.now() + (result.waitMs ?? 5000));
+                refreshNotice.value = THROTTLE_WAIT_NOTICE;
+                continue;
             }
+            clearThrottleNotice();
             const updated = items.value.find((row) => row.id === candidate.id);
             if (updated && updated.risk === "incomplete" && used < maxTries) {
                 readyAt.set(candidate.id, Date.now() + gapMs);
@@ -1191,23 +1228,45 @@ async function refreshIncompleteRows() {
     refreshNotice.value = "";
     let failed = 0;
     let halted = false;
+    let cursor = 0;
+    const throttled = new Map();
 
-    try {
-        for (const id of ids) {
-            if (stopIncompleteRequested) break;
+    const lane = async (index) => {
+        if (index > 0) await wait(index * 400);
+        while (!stopIncompleteRequested && !halted) {
+            const id = ids[cursor];
+            cursor += 1;
+            if (id === undefined) return;
             const row = items.value.find((item) => item.id === id);
-            if (!row || row.risk !== "incomplete" || !canRefresh(row)) {
+            if (!row || row.risk !== "incomplete" || !canRefresh(row) || isChecking(row)) {
                 incompleteRefresh.value.done += 1;
                 continue;
             }
-            const result = await refreshRow(row, true);
+            const result = await refreshRow(row, true, true);
+            if (result?.throttled && (throttled.get(id) ?? 0) < MAX_THROTTLED_TRIES) {
+                // Asked again at the end of the list, after the server's wait.
+                throttled.set(id, (throttled.get(id) ?? 0) + 1);
+                ids.push(id);
+                refreshNotice.value = THROTTLE_WAIT_NOTICE;
+                continue;
+            }
             incompleteRefresh.value.done += 1;
             if (result?.limit || result?.throttled) {
+                if (result?.throttled) {
+                    refreshNotice.value = "Refreshing paused so the couriers are not asked too quickly. Press Refresh incomplete again for the rest.";
+                }
                 halted = true;
-                break;
+                stopIncompleteRequested = true;
+                return;
             }
+            clearThrottleNotice();
             if (result && result.refreshed === false && !result.skipped) failed += 1;
         }
+    };
+
+    try {
+        const lanes = Math.min(bulkWorkers.value, ids.length);
+        await Promise.all(Array.from({ length: lanes }, (_, index) => lane(index)));
     } finally {
         refreshingIncomplete.value = false;
     }

@@ -18,6 +18,7 @@ class RedxFraudChecker
 
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
+        private CourierLoginGuard $loginGuard = new CourierLoginGuard,
     ) {}
 
     public function isConfigured(): bool
@@ -57,7 +58,7 @@ class RedxFraudChecker
                 ]);
 
             if ($response->status() === 401) {
-                Cache::forget($auth['cache_key']);
+                $this->loginGuard->forgetToken($auth['cache_key'], $auth['token']);
                 $auth = $this->resolveToken(force: true);
                 if ($auth === null) {
                     return CourierReportFormatter::emptyReport([
@@ -168,7 +169,7 @@ class RedxFraudChecker
             },
             'read' => function (Response $response) use ($auth): ?array {
                 if (in_array($response->status(), [401, 403], true)) {
-                    Cache::forget($auth['cache_key']);
+                    $this->loginGuard->forgetToken($auth['cache_key'], $auth['token']);
 
                     return null;
                 }
@@ -221,32 +222,25 @@ class RedxFraudChecker
         }
 
         // Session expired / no cache: pick a random active credential, then failover.
+        // A rejected token was already dropped, so a token found here is one
+        // another worker just saved.
         foreach ($this->credentials->loginCandidates('redx') as $candidate) {
             $cacheKey = $this->credentials->sessionCacheKey('redx', $candidate['identifier']);
 
-            if ($force) {
-                Cache::forget($cacheKey);
-            }
+            $token = $this->loginGuard->login(
+                'redx',
+                $candidate,
+                function () use ($cacheKey): ?string {
+                    $cached = Cache::get($cacheKey);
 
-            $response = $this->client()->post(self::LOGIN_URL, [
-                'phone' => '88'.$candidate['identifier'],
-                'password' => $candidate['password'],
-            ]);
+                    return is_string($cached) && $cached !== '' ? $cached : null;
+                },
+                fn () => $this->loginWithPassword($candidate, $cacheKey),
+            );
 
-            $token = $response->json('data.accessToken');
-
-            if (! $response->successful() || ! filled($token)) {
-                $this->credentials->markFailure(
-                    $candidate['id'],
-                    'Login failed: '.substr($response->body(), 0, 200),
-                );
-                LogHelper::saveLog('RedX fraud check error', 'Login failed for '.$candidate['identifier'].': '.substr($response->body(), 0, 300));
-
+            if ($token === null) {
                 continue;
             }
-
-            Cache::put($cacheKey, $token, now()->addMinutes(50));
-            $this->credentials->markUsed($candidate['id']);
 
             return [
                 'token' => (string) $token,
@@ -256,6 +250,35 @@ class RedxFraudChecker
         }
 
         return null;
+    }
+
+    /**
+     * @param  array{id: int|null, identifier: string, password: string}  $candidate
+     */
+    private function loginWithPassword(array $candidate, string $cacheKey): ?string
+    {
+        $response = $this->client()->post(self::LOGIN_URL, [
+            'phone' => '88'.$candidate['identifier'],
+            'password' => $candidate['password'],
+        ]);
+
+        $token = $response->json('data.accessToken');
+
+        if (! $response->successful() || ! filled($token)) {
+            $this->credentials->markFailure(
+                $candidate['id'],
+                'Login failed: '.substr($response->body(), 0, 200),
+            );
+            LogHelper::saveLog('RedX fraud check error', 'Login failed for '.$candidate['identifier'].': '.substr($response->body(), 0, 300));
+            $this->loginGuard->restAfter('redx', $candidate, $response->status());
+
+            return null;
+        }
+
+        Cache::put($cacheKey, $token, now()->addMinutes(50));
+        $this->credentials->markUsed($candidate['id']);
+
+        return (string) $token;
     }
 
     /**

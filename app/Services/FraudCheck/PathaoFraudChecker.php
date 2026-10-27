@@ -24,6 +24,7 @@ class PathaoFraudChecker
 
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
+        private CourierLoginGuard $loginGuard = new CourierLoginGuard,
     ) {}
 
     /**
@@ -131,11 +132,11 @@ class PathaoFraudChecker
                             'phone' => $phone,
                         ]);
                 },
-                'read' => function (Response $response) use ($candidate, $cacheKey): ?array {
+                'read' => function (Response $response) use ($candidate, $cacheKey, $token): ?array {
                     $result = $this->interpretMerchantHttp($response);
 
                     if ($result['unauthorized']) {
-                        Cache::forget($cacheKey);
+                        $this->loginGuard->forgetToken($cacheKey, $token);
 
                         return null;
                     }
@@ -240,7 +241,7 @@ class PathaoFraudChecker
             $result = $this->askMerchantApi($phone, $token);
 
             if ($result['unauthorized']) {
-                Cache::forget($cacheKey);
+                $this->loginGuard->forgetToken($cacheKey, $token);
 
                 continue;
             }
@@ -271,12 +272,17 @@ class PathaoFraudChecker
                 continue;
             }
 
-            // A dropped connection, or HTTP 200 with no customer payload, is not
-            // an answer. Drop the saved token and log in again below.
-            if ($result['status'] === null || $result['status'] === 200) {
-                if ($result['status'] === 200) {
-                    Cache::forget($cacheKey);
-                }
+            // A dropped connection says nothing about the token, so this
+            // account is not logged in again for it. HTTP 200 with no customer
+            // payload is a broken token: drop it and log in again below.
+            if ($result['status'] === null) {
+                $tried[$candidate['identifier']] = true;
+
+                continue;
+            }
+
+            if ($result['status'] === 200) {
+                $this->loginGuard->forgetToken($cacheKey, $token);
 
                 continue;
             }
@@ -304,7 +310,7 @@ class PathaoFraudChecker
             $result = $this->askMerchantApi($phone, $token);
 
             if ($result['unauthorized']) {
-                Cache::forget($this->credentials->sessionCacheKey('pathao', $candidate['identifier']));
+                $this->loginGuard->forgetToken($this->credentials->sessionCacheKey('pathao', $candidate['identifier']), $token);
                 $this->credentials->markFailure($candidate['id'], 'Merchant token rejected');
 
                 continue;
@@ -369,6 +375,10 @@ class PathaoFraudChecker
     private function checkViaHermesIssueToken(string $phone): array
     {
         foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
+            if ($this->loginGuard->resting('pathao_hermes', $candidate)) {
+                continue;
+            }
+
             try {
                 $tokenResponse = $this->client()->post(self::ISSUE_TOKEN_URL, [
                     'client_id' => config('pathao-courier.pathao_client_id'),
@@ -379,6 +389,7 @@ class PathaoFraudChecker
                 ]);
             } catch (Throwable $exception) {
                 LogHelper::saveLog('Pathao fraud check error', 'Hermes issue-token unreachable: '.CourierTransport::safeMessage($exception));
+                $this->loginGuard->restAfter('pathao_hermes', $candidate, null);
 
                 continue;
             }
@@ -389,6 +400,7 @@ class PathaoFraudChecker
             if (! $tokenResponse->successful() || $accessToken === '') {
                 $this->credentials->markFailure($candidate['id'], 'Hermes issue-token failed');
                 LogHelper::saveLog('Pathao fraud check error', 'Hermes issue-token failed (HTTP '.$tokenResponse->status().').');
+                $this->loginGuard->restAfter('pathao_hermes', $candidate, $tokenResponse->status());
 
                 continue;
             }
@@ -416,6 +428,25 @@ class PathaoFraudChecker
      */
     private function loginMerchant(array $candidate): ?string
     {
+        $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
+
+        return $this->loginGuard->login(
+            'pathao',
+            $candidate,
+            function () use ($cacheKey): ?string {
+                $token = Cache::get($cacheKey);
+
+                return is_string($token) && trim($token) !== '' ? $token : null;
+            },
+            fn () => $this->performMerchantLogin($candidate, $cacheKey),
+        );
+    }
+
+    /**
+     * @param  array{id: int|null, identifier: string, password: string}  $candidate
+     */
+    private function performMerchantLogin(array $candidate, string $cacheKey): ?string
+    {
         try {
             $response = $this->client()->post(self::LOGIN_URL, [
                 'username' => $candidate['identifier'],
@@ -423,6 +454,7 @@ class PathaoFraudChecker
             ]);
         } catch (Throwable $exception) {
             LogHelper::saveLog('Pathao fraud check error', 'Merchant login unreachable: '.CourierTransport::safeMessage($exception));
+            $this->loginGuard->restAfter('pathao', $candidate, null);
 
             return null;
         }
@@ -432,15 +464,12 @@ class PathaoFraudChecker
         if (! $response->successful() || $token === '') {
             $this->credentials->markFailure($candidate['id'], 'Merchant login failed');
             LogHelper::saveLog('Pathao fraud check error', 'Merchant login failed for '.$candidate['identifier'].' (HTTP '.$response->status().').');
+            $this->loginGuard->restAfter('pathao', $candidate, $response->status());
 
             return null;
         }
 
-        Cache::put(
-            $this->credentials->sessionCacheKey('pathao', $candidate['identifier']),
-            $token,
-            now()->addMinutes(self::MERCHANT_TOKEN_MINUTES),
-        );
+        Cache::put($cacheKey, $token, now()->addMinutes(self::MERCHANT_TOKEN_MINUTES));
         $this->credentials->markUsed($candidate['id']);
 
         return $token;

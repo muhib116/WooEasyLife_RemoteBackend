@@ -17,6 +17,7 @@ class PaperflyFraudChecker
 
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
+        private CourierLoginGuard $loginGuard = new CourierLoginGuard,
     ) {}
 
     public function isConfigured(): bool
@@ -111,7 +112,7 @@ class PaperflyFraudChecker
             },
             'read' => function (Response $response) use ($auth): ?array {
                 if (in_array($response->status(), [401, 403], true)) {
-                    Cache::forget($auth['cache_key']);
+                    $this->loginGuard->forgetToken($auth['cache_key'], $auth['token']);
 
                     return null;
                 }
@@ -148,7 +149,7 @@ class PaperflyFraudChecker
             ]);
 
         if ($response->status() === 401 && ! $forceRefresh) {
-            Cache::forget($auth['cache_key']);
+            $this->loginGuard->forgetToken($auth['cache_key'], $auth['token']);
 
             return $this->fetchSmartCheck($phone, true);
         }
@@ -313,26 +314,25 @@ class PaperflyFraudChecker
         }
 
         // Session expired / no cache: random active credential, then failover.
+        // A rejected token was already dropped, so a token found here is one
+        // another worker just saved.
         foreach ($this->credentials->loginCandidates('paperfly') as $candidate) {
             $cacheKey = $this->credentials->sessionCacheKey('paperfly', $candidate['identifier']);
-            Cache::forget($cacheKey);
 
-            $response = $this->client()->post("{$this->baseUrl}/authentication/login_using_password.php", [
-                'username' => $candidate['identifier'],
-                'password' => $candidate['password'],
-            ]);
+            $token = $this->loginGuard->login(
+                'paperfly',
+                $candidate,
+                function () use ($cacheKey): ?string {
+                    $cached = Cache::get($cacheKey);
 
-            $token = $response->json('token');
+                    return is_string($cached) && $cached !== '' ? $cached : null;
+                },
+                fn () => $this->loginWithPassword($candidate, $cacheKey),
+            );
 
-            if (! $response->successful() || empty($token)) {
-                $this->credentials->markFailure($candidate['id'], 'Login failed');
-                LogHelper::saveLog('Paperfly fraud check error', 'Login failed for '.$candidate['identifier']);
-
+            if ($token === null) {
                 continue;
             }
-
-            Cache::put($cacheKey, $token, now()->addMinutes(30));
-            $this->credentials->markUsed($candidate['id']);
 
             return [
                 'token' => (string) $token,
@@ -342,5 +342,31 @@ class PaperflyFraudChecker
         }
 
         return null;
+    }
+
+    /**
+     * @param  array{id: int|null, identifier: string, password: string}  $candidate
+     */
+    private function loginWithPassword(array $candidate, string $cacheKey): ?string
+    {
+        $response = $this->client()->post("{$this->baseUrl}/authentication/login_using_password.php", [
+            'username' => $candidate['identifier'],
+            'password' => $candidate['password'],
+        ]);
+
+        $token = $response->json('token');
+
+        if (! $response->successful() || empty($token)) {
+            $this->credentials->markFailure($candidate['id'], 'Login failed');
+            LogHelper::saveLog('Paperfly fraud check error', 'Login failed for '.$candidate['identifier']);
+            $this->loginGuard->restAfter('paperfly', $candidate, $response->status());
+
+            return null;
+        }
+
+        Cache::put($cacheKey, $token, now()->addMinutes(30));
+        $this->credentials->markUsed($candidate['id']);
+
+        return (string) $token;
     }
 }

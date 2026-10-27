@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <PageHeader
                 title="Steadfast API"
-                description="Hub checks pick a saved pair at random. A key that returns an error is skipped until you test it again. Each store's plugin still uses that store's own Steadfast keys."
+                description="Hub checks use keys that gave parcel counts first. A rate limit or a Steadfast outage only rests a key for a few minutes. A key Steadfast rejects is checked again automatically, or when you press Test key. Each store's plugin still uses that store's own Steadfast keys."
                 icon="PhKey"
                 icon-bg-class="bg-amber-50 dark:bg-amber-500/15"
                 icon-class="text-amber-600 dark:text-amber-400"
@@ -57,9 +57,11 @@
                         v-for="(account, index) in accounts"
                         :key="account.id"
                         class="rounded-xl border px-4 py-3"
-                        :class="account.last_error
+                        :class="account.last_error && !account.error_temporary
                             ? 'border-rose-300 bg-rose-50/60 dark:border-rose-500/40 dark:bg-rose-500/10'
-                            : 'border-slate-200 dark:border-slate-600'"
+                            : account.resting_until || account.error_temporary
+                                ? 'border-amber-300 bg-amber-50/70 dark:border-amber-500/40 dark:bg-amber-500/10'
+                                : 'border-slate-200 dark:border-slate-600'"
                     >
                         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <div>
@@ -68,11 +70,13 @@
                                 </p>
                                 <p class="text-xs text-slate-500">
                                     Used {{ account.use_count || 0 }} {{ (account.use_count || 0) === 1 ? 'time' : 'times' }}
+                                    <span v-if="account.shape === 'counts'"> · Gives parcel counts</span>
+                                    <span v-else-if="account.shape === 'ratio'"> · Gives a ratio only, so it is asked last</span>
                                 </p>
                             </div>
                             <div class="flex gap-2">
                                 <Button
-                                    v-if="account.last_error"
+                                    v-if="account.last_error || account.resting_until"
                                     type="button"
                                     label="Test key"
                                     icon="pi pi-check"
@@ -151,11 +155,23 @@
                             </div>
                             <p v-if="rowErrorId === account.id && rowError" class="text-sm text-rose-600">{{ rowError }}</p>
                             <p
-                                v-if="account.last_error"
+                                v-if="account.last_error && !account.error_temporary"
                                 class="rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-slate-900 dark:text-rose-300"
                             >
                                 {{ account.last_error }}
                                 <span v-if="account.last_error_at" class="mt-1 block text-xs text-rose-500 dark:text-rose-300/80">{{ account.last_error_at }}</span>
+                                <span v-if="account.next_check_at && account.next_check_at !== 'soon'" class="mt-1 block text-xs text-rose-500 dark:text-rose-300/80">Checks ask this key again by themselves at {{ account.next_check_at }}. It comes back as soon as Steadfast accepts it.</span>
+                                <span v-else-if="account.next_check_at === 'soon'" class="mt-1 block text-xs text-rose-500 dark:text-rose-300/80">Checks ask this key again by themselves soon. It comes back as soon as Steadfast accepts it.</span>
+                            </p>
+                            <p
+                                v-else-if="account.error_temporary || account.resting_until"
+                                class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-slate-900 dark:text-amber-200"
+                            >
+                                <span v-if="account.last_error">{{ account.last_error }}</span>
+                                <span v-else>Steadfast asked this key to slow down.</span>
+                                <span v-if="account.resting_until && account.resting_until !== 'soon'" class="mt-1 block text-xs">This key is not off. Checks try it again at {{ account.resting_until }}.</span>
+                                <span v-else-if="account.resting_until === 'soon'" class="mt-1 block text-xs">This key is not off. Checks try it again soon.</span>
+                                <span v-else class="mt-1 block text-xs">This key is not off. The next check tries it again.</span>
                             </p>
                         </div>
                     </div>

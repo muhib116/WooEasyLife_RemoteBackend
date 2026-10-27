@@ -11,6 +11,7 @@ use App\Services\FraudCheckService;
 use App\Services\MerchantEmployeeService;
 use App\Services\OrderIntelligence\FraudCheckCoordinator;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -906,6 +907,67 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertJsonPath('items.0.received', 1);
 
         $this->assertSame(2, $calls);
+    }
+
+    public function test_a_fast_bulk_run_does_not_use_up_the_refresh_or_search_limit(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->andReturn($this->report(2, 2, 0, '100%'));
+        });
+
+        // Throttle counters live in the cache, which can outlive one test.
+        Cache::flush();
+        $limiter = new class(Cache::store()) extends RateLimiter
+        {
+            public array $keys = [];
+
+            public function hit($key, $decaySeconds = 60)
+            {
+                $this->keys[] = $key;
+
+                return parent::hit($key, $decaySeconds);
+            }
+        };
+        $this->app->instance(RateLimiter::class, $limiter);
+
+        $merchant = $this->merchant('busy-bulk-limits@example.com', '01700000985');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => "01711111111\n01722222222"])
+            ->json('batch.id');
+
+        $item = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->json('item.id');
+
+        // A stopped batch answers next at once, like workers on a fast run.
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.stop', $batch))
+            ->assertOk()
+            ->assertJsonPath('batch.status', 'stopped');
+
+        // More next calls in one minute than single search allows.
+        for ($call = 0; $call < 35; $call++) {
+            $this->actingAs($merchant)
+                ->postJson(route('portal.fraud-check.batches.next', $batch))
+                ->assertOk();
+        }
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.retry', ['batch' => $batch, 'item' => $item]))
+            ->assertOk();
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.refresh', ['batch' => $batch, 'item' => $item]))
+            ->assertOk()
+            ->assertJsonPath('refreshed', true);
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.search.store'), ['phone' => '01733333333'])
+            ->assertOk();
+
+        // store, next, retry, refresh and search each keep their own count.
+        $this->assertCount(5, array_unique($limiter->keys));
     }
 
     public function test_a_failed_refresh_keeps_the_previous_row(): void
