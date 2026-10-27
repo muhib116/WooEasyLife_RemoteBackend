@@ -160,13 +160,17 @@ class LandingAiSchema
      * @param  array{fields: list<array<string, mixed>>, lists: list<array<string, mixed>>}  $spec
      * @return array{settings: array<string, mixed>, notes: string, warnings: list<string>}
      */
-    public function sanitize(array $spec, mixed $answer): array
+    /**
+     * @param  array{allowed_price_literals?: list<string>}  $guardrails
+     */
+    public function sanitize(array $spec, mixed $answer, array $guardrails = []): array
     {
         $answer = is_array($answer) ? $answer : [];
         $texts = is_array($answer['texts'] ?? null) ? $answer['texts'] : [];
         $lists = is_array($answer['lists'] ?? null) ? $answer['lists'] : [];
         $settings = [];
         $warnings = [];
+        $allowedPrices = array_values(array_filter((array) ($guardrails['allowed_price_literals'] ?? []), fn ($v) => is_string($v) && $v !== ''));
 
         foreach ($spec['fields'] as $field) {
             $value = $texts[$field['key']] ?? null;
@@ -179,6 +183,11 @@ class LandingAiSchema
             }
             if ($field['placeholder'] === '{n}' && ! str_contains($value, '{n}')) {
                 $warnings[] = $field['label'].' was skipped because the live count {n} was missing.';
+
+                continue;
+            }
+            if ($allowedPrices !== [] && $this->mentionsUnknownPrice($value, $allowedPrices)) {
+                $warnings[] = $field['label'].' was skipped because it mentioned a price not in product facts.';
 
                 continue;
             }
@@ -207,6 +216,9 @@ class LandingAiSchema
                         continue;
                     }
                     $text = is_string($value) ? $this->cleanText($value, false, $sub['max']) : '';
+                    if ($text !== '' && $allowedPrices !== [] && $this->mentionsUnknownPrice($text, $allowedPrices)) {
+                        $text = '';
+                    }
                     if (isset($sub['options']) && ! in_array($text, $sub['options'], true)) {
                         $text = $sub['options'][count($clean) % count($sub['options'])];
                     } elseif ($text !== '') {
@@ -336,5 +348,37 @@ class LandingAiSchema
         $number = is_numeric($value) ? (int) $value : $min;
 
         return max($min, min($max, $number));
+    }
+
+    /**
+     * @param  list<string>  $allowedLiterals
+     */
+    private function mentionsUnknownPrice(string $text, array $allowedLiterals): bool
+    {
+        if (! preg_match('/(?:৳|টাকা|tk|price)/ui', $text)) {
+            return false;
+        }
+        if (! preg_match_all('/(\d[\d,]*(?:\.\d+)?)/u', $text, $matches)) {
+            return false;
+        }
+        $allowed = [];
+        foreach ($allowedLiterals as $literal) {
+            if (preg_match_all('/(\d[\d,]*(?:\.\d+)?)/u', $literal, $parts)) {
+                foreach ($parts[1] as $num) {
+                    $allowed[str_replace(',', '', $num)] = true;
+                }
+            }
+        }
+        if ($allowed === []) {
+            return false;
+        }
+        foreach ($matches[1] as $num) {
+            $norm = str_replace(',', '', $num);
+            if ($norm !== '' && ! isset($allowed[$norm])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

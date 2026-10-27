@@ -47,6 +47,8 @@ class LandingAiGenerator
             }
         }
 
+        $brief = $this->prompt->buildCopyBrief($input['store'], $input['products'], $input['context'], $pages);
+
         $content = [[
             'type' => 'input_text',
             'text' => $this->prompt->userMessage(
@@ -55,6 +57,7 @@ class LandingAiGenerator
                 $input['context'],
                 $pages,
                 count($input['images']),
+                $brief,
             ),
         ]];
         foreach ($input['images'] as $dataUrl) {
@@ -97,6 +100,11 @@ class LandingAiGenerator
             'request_meta' => array_merge($job->request_meta ?? [], [
                 'pages_read' => count(array_filter($pages, fn ($page) => $page['ok'])),
                 'pages_failed' => count(array_filter($pages, fn ($page) => ! $page['ok'])),
+                'allowed_prices' => $brief['allowed_price_literals'] ?? [],
+                'copy_brief' => [
+                    'chosen_angle' => $brief['chosen_angle'] ?? '',
+                    'review_mode' => $brief['review_mode'] ?? 'live',
+                ],
             ]),
         ])->save();
 
@@ -186,7 +194,12 @@ class LandingAiGenerator
                 return $this->fail($job, 'The AI answer could not be read. Please try again.');
             }
 
-            $clean = $this->schema->sanitize($job->spec ?? ['fields' => [], 'lists' => []], $decoded);
+            $allowed = is_array($job->request_meta['allowed_prices'] ?? null) ? $job->request_meta['allowed_prices'] : [];
+            $clean = $this->schema->sanitize(
+                $job->spec ?? ['fields' => [], 'lists' => []],
+                $decoded,
+                ['allowed_price_literals' => $allowed],
+            );
             if ($clean['settings'] === []) {
                 return $this->fail($job, 'The AI returned no usable text. Please try again.');
             }

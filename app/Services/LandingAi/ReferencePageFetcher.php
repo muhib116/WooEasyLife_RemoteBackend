@@ -314,6 +314,8 @@ class ReferencePageFetcher
             return ['url' => $url, 'ok' => false, 'error' => 'The page had no readable text (it may need JavaScript or a login)'];
         }
 
+        $intel = $this->extractSellingIntel($headings, $text);
+
         return [
             'url' => $url,
             'ok' => true,
@@ -321,6 +323,57 @@ class ReferencePageFetcher
             'description' => Str::limit($description, 400, '…'),
             'headings' => $headings,
             'text' => $text,
+            'selling_angles' => $intel['angles'],
+            'objections' => $intel['objections'],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $headings
+     * @return array{angles: list<string>, objections: list<string>}
+     */
+    private function extractSellingIntel(array $headings, string $text): array
+    {
+        $blob = mb_strtolower(implode("\n", $headings)."\n".$text);
+        $angles = [];
+        $objections = [];
+
+        $angleRules = [
+            '/cod|cash on delivery|ক্যাশ\s*অন|হাতে\s*প[eে]য়ে/u' => 'COD convenience and pay-on-delivery trust',
+            '/free delivery|ফ্রি\s*ডেলিভারি|ডেলিভারি\s*ফ্রি/u' => 'Delivery ease (only if merchant facts match)',
+            '/combo|pack|bundle|২\s*টি|২\s*টা|dual/u' => 'Multi-piece or combo value',
+            '/original|authentic|100%|pure|অরিজিনাল|খাঁটি/u' => 'Authenticity and quality assurance',
+            '/limited|stock|সীমিত|আজকের/u' => 'Urgency without fake scarcity',
+            '/result|benefit|works|ফলাফল|সুবিধা/u' => 'Outcome-led promise',
+        ];
+        $objectionRules = [
+            '/fake|নকল|copy|duplicate/u' => 'Is it original?',
+            '/side effect|safe|নিরাপদ|পার্শ্ব/u' => 'Safety and side effects',
+            '/return|refund|ফেরত/u' => 'Return or refund policy',
+            '/delivery|shipping|ডেলিভারি|ঢাকা/u' => 'Delivery time and charges',
+            '/how to use|ব্যবহার/u' => 'How to use correctly',
+        ];
+
+        foreach ($angleRules as $pattern => $label) {
+            if (preg_match($pattern, $blob)) {
+                $angles[] = $label;
+            }
+        }
+        foreach ($objectionRules as $pattern => $label) {
+            if (preg_match($pattern, $blob)) {
+                $objections[] = $label;
+            }
+        }
+        foreach (array_slice($headings, 0, 6) as $heading) {
+            $h = trim($heading);
+            if ($h !== '' && mb_strlen($h) <= 100) {
+                $angles[] = 'Section theme: '.$h;
+            }
+        }
+
+        return [
+            'angles' => array_values(array_unique(array_slice($angles, 0, 8))),
+            'objections' => array_values(array_unique(array_slice($objections, 0, 6))),
         ];
     }
 
