@@ -7,6 +7,7 @@ use App\Models\BulkFraudDailyResult;
 use App\Models\CourierHistoryUse;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\FraudCheck\MerchantBulkFraudCheck;
 use App\Services\FraudCheckService;
 use App\Services\MerchantEmployeeService;
 use App\Services\OrderIntelligence\FraudCheckCoordinator;
@@ -357,7 +358,8 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertOk()
             ->assertJsonPath('item.source', 'live')
             ->assertJsonPath('item.received', 8)
-            ->assertJsonPath('item.risk', 'incomplete');
+            ->assertJsonPath('item.risk', 'waiting')
+            ->assertJsonPath('item.waiting.pathao.tries', 0);
 
         $this->assertSame(1, $calls);
         $this->assertSame(['pathao'], $retried);
@@ -447,7 +449,9 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertOk()
             ->assertJsonPath('item.received', 8)
             ->assertJsonPath('item.couriers.1.available', false)
-            ->assertJsonPath('item.risk', 'incomplete');
+            ->assertJsonPath('item.couriers.1.reason', 'waiting')
+            ->assertJsonPath('item.waiting.pathao.reason', 'busy')
+            ->assertJsonPath('item.risk', 'waiting');
     }
 
     public function test_a_courier_that_keeps_failing_is_not_asked_again_for_the_next_number(): void
@@ -472,7 +476,7 @@ class MerchantBulkFraudCheckTest extends TestCase
         $this->actingAs($merchant)
             ->postJson(route('portal.fraud-check.batches.next', $batch))
             ->assertOk()
-            ->assertJsonPath('item.risk', 'incomplete');
+            ->assertJsonPath('item.risk', 'waiting');
 
         Cache::forget('fraud_check_courier_retry_paused:pathao');
     }
@@ -765,8 +769,10 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertJsonPath('item.couriers.0.notes.0', 'Refused at the gate')
             ->assertJsonPath('item.couriers.0.notes.1', 'Fake order × 2')
             ->assertJsonPath('item.couriers.1.available', false)
-            ->assertJsonPath('item.risk', 'incomplete')
+            ->assertJsonPath('item.risk', 'waiting')
             ->assertJsonMissing(['name' => 'Hidden Customer']);
+
+        $this->assertStringNotContainsString('Hidden Customer', json_encode(BulkFraudBatchItem::query()->firstOrFail()->fill_report));
 
         $preview = $this->actingAs($merchant)
             ->getJson(route('portal.fraud-check.batches.preview', $batch));
@@ -788,7 +794,7 @@ class MerchantBulkFraudCheckTest extends TestCase
                 1,
                 1,
                 '50.0%',
-                'Incomplete',
+                'Waiting for courier',
             ]);
 
         $csv = $this->actingAs($merchant)
@@ -1910,6 +1916,80 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertJsonPath('result.success_rate', 90)
             ->assertJsonPath('result.risk', 'safe')
             ->assertJsonPath('result.couriers.0.notes.0', 'Verified customer note');
+    }
+
+    public function test_pending_numbers_keep_going_after_the_page_is_left(): void
+    {
+        $calls = 0;
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls): void {
+            $mock->shouldReceive('checkSingle')->twice()->andReturnUsing(function () use (&$calls) {
+                $calls++;
+
+                return $this->report(2, 2, 0, '100%');
+            });
+        });
+
+        $merchant = $this->merchant('leave-page@example.com', '01700000077');
+        $batchId = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'phones' => "01711110001\n01711110002",
+            ])
+            ->assertOk()
+            ->json('batch.id');
+
+        $bulk = app(MerchantBulkFraudCheck::class);
+        $batch = \App\Models\BulkFraudBatch::query()->findOrFail($batchId);
+        $bulk->touchPage($batch);
+
+        $this->assertSame(['checked' => 0], $bulk->runUnattended(5));
+        $this->assertSame(0, $calls);
+
+        $this->travel(31)->seconds();
+
+        $this->assertSame(['checked' => 2], $bulk->runUnattended(30));
+        $this->assertSame(2, $calls);
+        $this->assertSame(0, BulkFraudBatchItem::query()->where('batch_id', $batchId)->where('status', 'pending')->count());
+    }
+
+    public function test_a_paused_batch_is_not_checked_when_its_page_is_closed(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->never();
+        });
+
+        $merchant = $this->merchant('paused-leave@example.com', '01700000078');
+        $batchId = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01711110003'])
+            ->assertOk()
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.stop', $batchId))
+            ->assertOk()
+            ->assertJsonPath('batch.status', 'stopped');
+
+        $this->travel(31)->seconds();
+
+        $this->assertSame(['checked' => 0], app(MerchantBulkFraudCheck::class)->runUnattended(5));
+        $this->assertSame('pending', BulkFraudBatchItem::query()->where('batch_id', $batchId)->value('status'));
+    }
+
+    public function test_the_unattended_command_checks_numbers_for_a_closed_page(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturn($this->report(1, 1, 0, '100%'));
+        });
+
+        $merchant = $this->merchant('leave-command@example.com', '01700000079');
+        $batchId = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01711110004'])
+            ->assertOk()
+            ->json('batch.id');
+
+        $this->artisan('fraud-check:advance-pending', ['--worker' => true, '--seconds' => 15])
+            ->assertSuccessful();
+
+        $this->assertSame(0, BulkFraudBatchItem::query()->where('batch_id', $batchId)->where('status', 'pending')->count());
     }
 
     private function merchant(string $email = 'bulk-merchant@example.com', string $phone = '01700000021'): User

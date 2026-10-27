@@ -22,6 +22,17 @@ class Kernel extends ConsoleKernel
         $schedule->command('courier:retry-webhook-forwards')
             ->everyMinute()
             ->withoutOverlapping(5);
+        $schedule->command('fraud-check:retest-steadfast-keys')
+            ->everyMinute()
+            ->withoutOverlapping(2);
+        $schedule->command('fraud-check:fill-waiting')
+            ->everyMinute()
+            ->withoutOverlapping(2)
+            ->runInBackground();
+        $schedule->command('fraud-check:advance-pending')
+            ->everyMinute()
+            ->withoutOverlapping(4)
+            ->runInBackground();
         $schedule->command('messenger:retry-webhook-forwards')->everyMinute();
         $schedule->command('seo:weekly-report')
             ->weeklyOn(0, '09:00') // Sunday — Step 9 authority metrics (Asia/Dhaka)

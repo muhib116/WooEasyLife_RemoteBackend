@@ -52,9 +52,10 @@ return [
     | is asked again (bulk_missing_courier_retries times). No new attempt
     | starts after bulk_number_budget_seconds. A number still "checking"
     | after bulk_stale_check_seconds is handed to the next request.
-    | A saved Incomplete row is asked again up to bulk_incomplete_retries
-    | times, bulk_incomplete_retry_gap_seconds apart, without holding a
-    | worker slot. The admin Daily limits page can override these.
+    | A courier that is still missing goes to the waiting lane below. It is
+    | asked again up to bulk_incomplete_retries times; after a failed try the
+    | next one waits bulk_incomplete_retry_gap_seconds, doubling each time.
+    | The admin Daily limits page can override these.
     |
     */
     'bulk_max_numbers' => 1000,
@@ -64,8 +65,6 @@ return [
     'bulk_missing_courier_retries' => (int) env('FRAUD_CHECK_BULK_MISSING_COURIER_RETRIES', 1),
     'bulk_number_budget_seconds' => (int) env('FRAUD_CHECK_BULK_NUMBER_BUDGET_SECONDS', 60),
     'bulk_stale_check_seconds' => (int) env('FRAUD_CHECK_BULK_STALE_CHECK_SECONDS', 150),
-    // Extra live checks for a row that stayed Incomplete. These run one at a
-    // time, after the gap, and do not take a bulk worker slot.
     'bulk_incomplete_retries' => (int) env('FRAUD_CHECK_BULK_INCOMPLETE_RETRIES', 5),
     'bulk_incomplete_retry_gap_seconds' => (int) env('FRAUD_CHECK_BULK_INCOMPLETE_RETRY_GAP_SECONDS', 5),
 
@@ -103,4 +102,84 @@ return [
     |
     */
     'parallel_couriers' => (bool) env('FRAUD_CHECK_PARALLEL_COURIERS', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Courier pace
+    |--------------------------------------------------------------------------
+    |
+    | Calls are counted per courier account over window_seconds. A live order
+    | check may use all per_window calls; bulk runs leave live_reserve of them
+    | free and space their own calls bulk_gap_seconds apart (null spreads them
+    | evenly over the window). A live check waits up to live_wait_seconds for
+    | a slot; bulk never waits and leaves the number to the waiting lane.
+    |
+    | Pathao answers about 5 lookups a minute per account. Its 429 is honored
+    | for at least rate_limit_rest_seconds, or longer when Retry-After says so.
+    |
+    | Paperfly blocks with HTTP 500 instead of 429. After block.after_errors
+    | errors in a row it is left alone for block.pause_minutes, doubling up
+    | to block.max_pause_minutes, and one lookup then checks whether it is back.
+    | The admin Daily limits page can override the per-minute, reserve, gap,
+    | and first pause numbers.
+    |
+    */
+    'pace' => [
+        'pathao' => [
+            'per_window' => (int) env('FRAUD_CHECK_PATHAO_PER_MINUTE', 5),
+            'window_seconds' => (int) env('FRAUD_CHECK_PATHAO_WINDOW_SECONDS', 62),
+            'live_reserve' => (int) env('FRAUD_CHECK_PATHAO_LIVE_RESERVE', 1),
+            'bulk_gap_seconds' => null,
+            'live_wait_seconds' => 8,
+            'bulk_wait_seconds' => 0,
+            'rate_limit_rest_seconds' => (int) env('FRAUD_CHECK_PATHAO_RATE_LIMIT_REST_SECONDS', 65),
+        ],
+        'paperfly' => [
+            'per_window' => 0,
+            'window_seconds' => 60,
+            'live_reserve' => 0,
+            'bulk_gap_seconds' => (int) env('FRAUD_CHECK_PAPERFLY_GAP_SECONDS', 4),
+            'live_wait_seconds' => 0,
+            'bulk_wait_seconds' => 0,
+            'block' => [
+                'enabled' => true,
+                'after_errors' => 2,
+                'pause_minutes' => (int) env('FRAUD_CHECK_PAPERFLY_PAUSE_MINUTES', 5),
+                'max_pause_minutes' => 30,
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | RedX fixed sample
+    |--------------------------------------------------------------------------
+    |
+    | RedX currently answers every number with the same sample. After
+    | after_samples of them in a row, RedX is not asked for skip_minutes.
+    | 0 minutes keeps asking every time.
+    |
+    */
+    'redx_sample' => [
+        'after_samples' => 3,
+        'skip_minutes' => (int) env('FRAUD_CHECK_REDX_SAMPLE_SKIP_MINUTES', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bulk waiting lane
+    |--------------------------------------------------------------------------
+    |
+    | A bulk number whose SteadFast, Pathao, or Paperfly answer is still
+    | missing shows "Waiting" instead of Incomplete. The scheduler asks only
+    | that courier again, when the courier has room. A try is counted only
+    | when the courier was really asked; after bulk_incomplete_retries tries,
+    | or after max_minutes, the number is saved as Incomplete. One Pathao
+    | account answers about 4 bulk numbers a minute, so 1000 numbers can
+    | wait over four hours.
+    |
+    */
+    'bulk_waiting' => [
+        'max_minutes' => (int) env('FRAUD_CHECK_BULK_WAITING_MAX_MINUTES', 360),
+    ],
 ];

@@ -221,7 +221,7 @@ class MerchantBulkFraudRow
 
             $extraFrauds = $courierKey !== null ? ($topLevelFraudsByCourier[$courierKey] ?? []) : [];
 
-            $rows[] = [
+            $row = [
                 'title' => $title,
                 'received' => $received,
                 'cancelled' => $cancelled,
@@ -230,9 +230,50 @@ class MerchantBulkFraudRow
                 'available' => $available,
                 'notes' => self::notes($courierReport, $extraFrauds),
             ];
+
+            if (! $available) {
+                $row['reason'] = self::unavailableReason($courierReport);
+            }
+
+            $rows[] = $row;
         }
 
         return $rows;
+    }
+
+    /**
+     * Why a courier has no answer on the row: sample, busy (not asked yet
+     * or asked to slow down), paused (blocking after errors), credentials,
+     * not_set_up, or no_answer.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    public static function unavailableReason(array $report): string
+    {
+        return match (true) {
+            ! empty($report['static_sample']) || ($report['message'] ?? null) === RedxStaticSample::MESSAGE => 'sample',
+            ! empty($report['deferred']) || ! empty($report['rate_limited']) => 'busy',
+            ! empty($report['retry_later']) => 'paused',
+            ! empty($report['credential_error']) => 'credentials',
+            ($report['retryable'] ?? true) === false => 'not_set_up',
+            default => 'no_answer',
+        };
+    }
+
+    /**
+     * Core couriers that did not answer but can be asked again later:
+     * not answered for lack of room, rate limited, paused, or failed.
+     * Missing setup and rejected credentials are not asked again.
+     *
+     * @param  array<string, mixed>  $report
+     * @return array<string, array<string, mixed>>
+     */
+    public static function couriersToAskLater(array $report): array
+    {
+        return array_filter(
+            self::unansweredCoreCouriers($report),
+            static fn (array $courier): bool => ! in_array(self::unavailableReason($courier), ['sample', 'credentials', 'not_set_up'], true),
+        );
     }
 
     /**
@@ -498,11 +539,25 @@ class MerchantBulkFraudRow
             $row['risk'] = null;
         }
 
-        if (self::missingCoreCourier($couriers) && in_array($row['status'] ?? '', ['found', 'not_found'], true)) {
+        if (
+            self::missingCoreCourier($couriers)
+            && in_array($row['status'] ?? '', ['found', 'not_found'], true)
+            && ($row['risk'] ?? null) !== 'waiting'
+        ) {
             $row['risk'] = 'incomplete';
         }
 
         return $row;
+    }
+
+    /**
+     * Every SteadFast, Pathao, and Paperfly line of a stored row answered.
+     *
+     * @param  array<int, mixed>  $couriers
+     */
+    public static function hasEveryCoreCourier(array $couriers): bool
+    {
+        return ! self::missingCoreCourier($couriers);
     }
 
     /**
@@ -559,6 +614,9 @@ class MerchantBulkFraudRow
             'not been checked',
             'not set up for fraud',
             'asked us to slow down',
+            'is busy, so this number',
+            'not asked yet',
+            'ask again in about',
             'limit reached for this store',
             'temporarily unreachable',
             'temporarily unavailable',

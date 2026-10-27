@@ -9,6 +9,7 @@ use App\Services\FraudCheck\CourierHistoryQuota;
 use App\Services\FraudCheck\MerchantBulkFraudCheck;
 use App\Services\FraudCheck\MerchantBulkFraudCsv;
 use App\Services\MerchantPortalContext;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -134,10 +135,13 @@ class BulkFraudCheckController extends Controller
         MerchantBulkFraudCheck $bulk,
     ): Response|JsonResponse {
         $this->owns($request, $portalContext, $batch);
+        $bulk->touchPage($batch);
+        $serverTime = now()->toIso8601String();
         $payload = $this->withQuota($request, $this->payload($bulk, $batch->load('items')));
         $payload['workers'] = $bulk->workers();
         $payload['incompleteRetries'] = $bulk->incompleteRetries();
         $payload['incompleteRetryGapSeconds'] = $bulk->incompleteRetryGapSeconds();
+        $payload['serverTime'] = $serverTime;
 
         if ($request->header('X-Inertia')) {
             return Inertia::render('Portal/FraudCheck/Batch', $payload);
@@ -157,6 +161,7 @@ class BulkFraudCheckController extends Controller
         MerchantBulkFraudCheck $bulk,
     ): JsonResponse {
         $this->owns($request, $portalContext, $batch);
+        $bulk->touchPage($batch);
 
         return response()->json($this->withQuota($request, $bulk->advance($request, $batch)));
     }
@@ -207,6 +212,28 @@ class BulkFraudCheckController extends Controller
         abort_unless($item->batch_id === $batch->id, 404);
 
         return response()->json($this->withQuota($request, $bulk->refresh($request, $batch, $item)));
+    }
+
+    public function changes(
+        Request $request,
+        BulkFraudBatch $batch,
+        MerchantPortalContext $portalContext,
+        MerchantBulkFraudCheck $bulk,
+    ): JsonResponse {
+        $this->owns($request, $portalContext, $batch);
+
+        $since = null;
+        $value = $request->query('since');
+
+        if (is_string($value) && $value !== '') {
+            try {
+                $since = Carbon::parse($value);
+            } catch (\Throwable) {
+                $since = null;
+            }
+        }
+
+        return response()->json($bulk->changes($batch, $since));
     }
 
     public function preview(

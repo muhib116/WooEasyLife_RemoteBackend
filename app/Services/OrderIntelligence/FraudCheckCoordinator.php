@@ -142,8 +142,23 @@ class FraudCheckCoordinator
      */
     public function retryCouriers(Request $request, array $payload, array $report, array $couriers): array
     {
+        return $this->askCouriers($request, $payload, $report, $couriers)['report'];
+    }
+
+    /**
+     * Ask only the named couriers and put each answer into the report. Also
+     * returns what every asked courier said, so a caller can tell a courier
+     * that was not asked yet from one that was asked and failed.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $report
+     * @param  list<string>  $couriers
+     * @return array{report: array<string, mixed>, answered: list<string>, live: array<string, array<string, mixed>>}
+     */
+    public function askCouriers(Request $request, array $payload, array $report, array $couriers): array
+    {
         if ($couriers === []) {
-            return $report;
+            return ['report' => $report, 'answered' => [], 'live' => []];
         }
 
         $writeLog = (bool) config('order_intelligence.fraud_check.debug_trace', false);
@@ -154,16 +169,22 @@ class FraudCheckCoordinator
         $filled = $this->fillBlockingCouriers($report, $couriers, $phoneNormalized, $accessToken, $payload, $log);
 
         foreach ($couriers as $courier) {
+            // A courier that was not asked, or asked us to slow down, did not fail.
+            $live = $filled['live'][$courier] ?? [];
+            if (! empty($live['deferred']) || ! empty($live['rate_limited'])) {
+                continue;
+            }
+
             FraudCheckService::noteCourierRetry($courier, in_array($courier, $filled['couriers'], true));
         }
 
         if ($filled['couriers'] === []) {
-            return $report;
+            return ['report' => $report, 'answered' => [], 'live' => $filled['live']];
         }
 
         $this->syncDailyResultIfPresent($phoneNormalized, $filled['report']);
 
-        return $filled['report'];
+        return ['report' => $filled['report'], 'answered' => $filled['couriers'], 'live' => $filled['live']];
     }
 
     /**
@@ -532,7 +553,7 @@ class FraudCheckCoordinator
      * @param  array<string, mixed>  $report
      * @param  list<string>  $couriers
      * @param  array<string, mixed>  $payload
-     * @return array{report: array<string, mixed>, couriers: list<string>}
+     * @return array{report: array<string, mixed>, couriers: list<string>, live: array<string, array<string, mixed>>}
      */
     private function fillBlockingCouriers(
         array $report,
@@ -543,7 +564,7 @@ class FraudCheckCoordinator
         FraudCheckDecisionLog $log,
     ): array {
         if ($couriers === []) {
-            return ['report' => $report, 'couriers' => []];
+            return ['report' => $report, 'couriers' => [], 'live' => []];
         }
 
         $log->add('live_fill', 'Fetching couriers that did not answer before sending the result', [
@@ -558,6 +579,7 @@ class FraudCheckCoordinator
             'carrybee' => [],
         ];
         $filled = [];
+        $answers = [];
 
         foreach ($couriers as $courier) {
             try {
@@ -574,6 +596,8 @@ class FraudCheckCoordinator
             if (! is_array($live)) {
                 continue;
             }
+
+            $answers[$courier] = $live;
 
             // Keep the cache row only when live Pathao/etc. still did not answer.
             // Rating-only and real counts both replace "Data unavailable".
@@ -602,7 +626,7 @@ class FraudCheckCoordinator
 
         // Only couriers that actually answered are done. A failed fill stays
         // eligible for the background refresh.
-        return ['report' => $report, 'couriers' => $filled];
+        return ['report' => $report, 'couriers' => $filled, 'live' => $answers];
     }
 
     /**

@@ -1,10 +1,12 @@
 <?php
 
 use App\Models\FraudPartnerCredential;
+use App\Services\FraudCheck\CourierCallContext;
 use App\Services\FraudCheck\FraudPartnerCredentialResolver;
 use App\Services\FraudCheck\PathaoFraudChecker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 
 function configurePathaoFraudCredentials(): void
 {
@@ -120,6 +122,144 @@ it('does not log in again when Pathao rate-limits the cached merchant token', fu
     expect($checker->check('01770989591')['total_order'])->toBe(11);
     expect($checker->check('01770989591')['total_order'])->toBe(0);
     expect(pathaoLoginCount())->toBe(1);
+});
+
+it('asks the next pathao account after a rate limit and rests the limited one', function () {
+    twoCachedPathaoAccounts();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::response(['access_token' => 'should-not-login'], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::sequence()
+            ->push(['message' => 'Too many requests'], 429, ['Retry-After' => '30'])
+            ->push(pathaoSuccessBody(), 200)
+            ->push(pathaoSuccessBody(), 200),
+    ]);
+
+    $checker = app(PathaoFraudChecker::class);
+
+    expect($checker->check('01576641352')['total_order'])->toBe(11)
+        ->and(pathaoSuccessTokens())->toBe(['token-first', 'token-second'])
+        ->and(pathaoLoginCount())->toBe(0);
+
+    // The first account rests, so the next lookup goes to the second one.
+    expect($checker->check('01576641352')['total_order'])->toBe(11)
+        ->and(pathaoSuccessTokens())->toBe(['token-first', 'token-second', 'token-second'])
+        ->and(pathaoLoginCount())->toBe(0);
+});
+
+it('does not ask another pathao account once the limit covers all of them', function () {
+    twoCachedPathaoAccounts();
+    Cache::put('courier_pace:pathao:shared', true, now()->addDay());
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::response(['access_token' => 'should-not-login'], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::response(['message' => 'Too many requests'], 429),
+    ]);
+
+    $checker = app(PathaoFraudChecker::class);
+    $report = $checker->check('01576641352');
+
+    expect($report['total_order'])->toBe(0)
+        ->and($report['rate_limited'])->toBeTrue()
+        ->and($report['retry_after'])->toBe(65)
+        ->and(pathaoSuccessCount())->toBe(1)
+        ->and(pathaoLoginCount())->toBe(0);
+
+    // Every account rests now: nothing is sent until the rest is over.
+    $later = $checker->check('01576641352');
+
+    expect($later['deferred'] ?? false)->toBeTrue()
+        ->and(pathaoSuccessCount())->toBe(1)
+        ->and($checker->nextSlotSeconds())->toBe(65);
+});
+
+it('rests pathao at least 65 seconds after a rate limit and asks again only after it', function () {
+    configurePathaoFraudCredentials();
+    silencePathaoHermes();
+    Sleep::fake(syncWithCarbon: true);
+    $this->freezeTime();
+    Cache::put(app(FraudPartnerCredentialResolver::class)->sessionCacheKey('pathao', 'merchant@pathao.test'), 'pathao-token', now()->addMinutes(50));
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/user/success' => Http::sequence()
+            ->push(['message' => 'Too many requests'], 429, ['Retry-After' => '10'])
+            ->push(pathaoSuccessBody(), 200),
+    ]);
+
+    $checker = app(PathaoFraudChecker::class);
+    $bulk = fn () => app(CourierCallContext::class)->asBulk(fn () => $checker->check('01576641352'));
+
+    $limited = $bulk();
+    expect($limited['rate_limited'])->toBeTrue()
+        ->and($limited['retry_after'])->toBe(65)
+        ->and($limited['message'])->toContain('slow down');
+
+    $this->travel(60)->seconds();
+    $early = $bulk();
+
+    expect($early['deferred'])->toBeTrue()
+        ->and($early['retry_after'])->toBe(5)
+        ->and($early['message'])->toContain('not asked yet')
+        ->and(pathaoSuccessCount())->toBe(1);
+
+    $this->travel(6)->seconds();
+
+    expect($bulk()['total_order'])->toBe(11)
+        ->and(pathaoSuccessCount())->toBe(2)
+        ->and(pathaoLoginCount())->toBe(0);
+});
+
+it('sends at most four bulk pathao lookups a minute per account and keeps one for a live check', function () {
+    configurePathaoFraudCredentials();
+    silencePathaoHermes();
+    Sleep::fake(syncWithCarbon: true);
+    $this->freezeTime();
+    Cache::put(app(FraudPartnerCredentialResolver::class)->sessionCacheKey('pathao', 'merchant@pathao.test'), 'pathao-token', now()->addMinutes(50));
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/user/success' => Http::response(pathaoSuccessBody(), 200),
+    ]);
+
+    $checker = app(PathaoFraudChecker::class);
+    $bulk = fn () => app(CourierCallContext::class)->asBulk(fn () => $checker->check('01576641352'));
+
+    expect($bulk()['total_order'])->toBe(11);
+
+    $busy = $bulk();
+    expect($busy['deferred'])->toBeTrue()
+        ->and($busy['retry_after'])->toBe(16)
+        ->and(pathaoSuccessCount())->toBe(1);
+
+    foreach (range(1, 3) as $call) {
+        $this->travel(16)->seconds();
+        expect($bulk()['total_order'])->toBe(11);
+    }
+
+    expect(pathaoSuccessCount())->toBe(4);
+
+    // A live order check right now still gets the fifth slot.
+    expect($checker->check('01576641352')['total_order'])->toBe(11)
+        ->and(pathaoSuccessCount())->toBe(5);
+
+    // Pathao has had five lookups in this minute, so nothing else is sent.
+    $full = $checker->check('01576641352');
+    expect($full['deferred'])->toBeTrue()
+        ->and(pathaoSuccessCount())->toBe(5)
+        ->and(pathaoLoginCount())->toBe(0);
+});
+
+it('counts the hermes token as its own lane in the pathao pace', function () {
+    configurePathaoFraudCredentials();
+    config()->set('pathao-courier.pathao_client_id', 'hermes-client');
+    config()->set('pathao-courier.pathao_client_secret', 'hermes-secret');
+    config()->set('pathao-courier.pathao_secret_token', null);
+
+    // The merchant account and the Hermes token: four bulk lookups a minute each.
+    expect(app(PathaoFraudChecker::class)->paceStatus()['per_minute'])->toBe(7.7);
+
+    silencePathaoHermes();
+
+    expect(app(PathaoFraudChecker::class)->paceStatus()['per_minute'])->toBe(3.9);
 });
 
 it('logs in again when the cached Pathao token answers without customer data', function () {
@@ -282,4 +422,48 @@ function pathaoLoginCount(): int
     return collect(Http::recorded())
         ->filter(fn ($pair) => str_contains($pair[0]->url(), '/api/v1/login'))
         ->count();
+}
+
+function pathaoSuccessCount(): int
+{
+    return collect(Http::recorded())
+        ->filter(fn ($pair) => str_contains($pair[0]->url(), '/user/success'))
+        ->count();
+}
+
+/**
+ * @return list<string>
+ */
+function pathaoSuccessTokens(): array
+{
+    return collect(Http::recorded())
+        ->filter(fn ($pair) => str_contains($pair[0]->url(), '/user/success'))
+        ->map(fn ($pair) => trim(str_replace('Bearer', '', $pair[0]->header('Authorization')[0] ?? '')))
+        ->values()
+        ->all();
+}
+
+function twoCachedPathaoAccounts(): void
+{
+    Cache::flush();
+    silencePathaoOutsideMerchant();
+
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'first@pathao.test',
+        'secret' => 'first-password',
+        'is_active' => true,
+        'priority' => 1,
+    ]);
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'second@pathao.test',
+        'secret' => 'second-password',
+        'is_active' => true,
+        'priority' => 2,
+    ]);
+
+    $resolver = app(FraudPartnerCredentialResolver::class);
+    Cache::put($resolver->sessionCacheKey('pathao', 'first@pathao.test'), 'token-first', now()->addMinutes(50));
+    Cache::put($resolver->sessionCacheKey('pathao', 'second@pathao.test'), 'token-second', now()->addMinutes(50));
 }

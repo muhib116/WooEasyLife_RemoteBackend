@@ -33,7 +33,7 @@ class MerchantBulkFraudCsv
                 (int) $item->received,
                 (int) $item->cancelled,
                 $this->percent($item->success_rate),
-                $this->riskLabel($item->risk),
+                $this->riskLabel($item->toPortalRow()['risk'] ?? null),
             ];
         }
 
@@ -117,6 +117,7 @@ class MerchantBulkFraudCsv
             'review' => 'Review',
             'high' => 'High risk',
             'incomplete' => 'Incomplete',
+            'waiting' => 'Waiting for courier',
             default => '',
         };
     }
@@ -127,7 +128,7 @@ class MerchantBulkFraudCsv
             'found' => 'Found',
             'not_found' => 'Not found',
             'invalid' => 'Invalid',
-            'pending', 'checking' => 'Waiting',
+            'pending', 'checking' => 'Not checked yet',
             'error' => 'Failed',
             default => $status,
         };

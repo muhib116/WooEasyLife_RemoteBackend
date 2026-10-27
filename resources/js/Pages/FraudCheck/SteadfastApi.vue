@@ -171,7 +171,7 @@
                                 <span v-else>Steadfast asked this key to slow down.</span>
                                 <span v-if="account.resting_until && account.resting_until !== 'soon'" class="mt-1 block text-xs">This key is not off. Checks try it again at {{ account.resting_until }}.</span>
                                 <span v-else-if="account.resting_until === 'soon'" class="mt-1 block text-xs">This key is not off. Checks try it again soon.</span>
-                                <span v-else class="mt-1 block text-xs">This key is not off. The next check tries it again.</span>
+                                <span v-else class="mt-1 block text-xs">This key is not off. It is asked again by itself, and this message goes away when Steadfast answers.</span>
                             </p>
                         </div>
                     </div>

@@ -16,15 +16,21 @@ use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Sleep;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class MerchantBulkFraudCheck
 {
+    /** The open batch page checks its own numbers. After this, the server takes over. */
+    private const PAGE_OPEN_SECONDS = 30;
+
     public function __construct(
         private FraudCheckService $fraudCheckService,
         private FraudCheckCoordinator $coordinator,
         private CourierHistoryQuota $quota,
+        private MerchantBulkWaitingLane $waitingLane,
+        private CourierCallContext $context,
     ) {}
 
     public function start(User $merchant, string $name, string $phones): BulkFraudBatch
@@ -141,6 +147,60 @@ class MerchantBulkFraudCheck
     }
 
     /**
+     * Remember that someone has this batch open, so the server does not
+     * check the same numbers the page is already checking.
+     */
+    public function touchPage(BulkFraudBatch $batch): void
+    {
+        try {
+            Cache::put($this->pageKey($batch), now()->getTimestamp(), self::PAGE_OPEN_SECONDS + 60);
+        } catch (\Throwable $exception) {
+            LogHelper::saveLog('Merchant bulk fraud check error', CourierTransport::safeMessage($exception));
+        }
+    }
+
+    /**
+     * Check pending numbers for batches whose page is not open.
+     *
+     * @return array{checked: int}
+     */
+    public function runUnattended(int $seconds): array
+    {
+        $deadline = now()->getTimestamp() + max(1, min(300, $seconds));
+        $checked = 0;
+        $request = Request::create('/portal/fraud-check/unattended', 'POST');
+
+        while (now()->getTimestamp() < $deadline) {
+            $batch = $this->nextUnattendedBatch();
+
+            if ($batch === null) {
+                break;
+            }
+
+            $result = $this->advance($request, $batch);
+
+            if (! empty($result['item'])) {
+                $checked++;
+            }
+
+            if (! empty($result['limit_reached'])) {
+                break;
+            }
+
+            if (! empty($result['retry']) && empty($result['item'])) {
+                Sleep::for(1)->seconds();
+            }
+        }
+
+        return ['checked' => $checked];
+    }
+
+    public function hasUnattendedWork(): bool
+    {
+        return $this->nextUnattendedBatch() !== null;
+    }
+
+    /**
      * Check the next pending number, or reuse today's saved result.
      *
      * @return array{done: bool, retry: bool, batch: array<string, mixed>, item: array<string, mixed>|null}
@@ -186,11 +246,11 @@ class MerchantBulkFraudCheck
     }
 
     /**
-     * Extra live checks for one Incomplete row. These do not take a worker slot.
+     * Times a missing courier of one row is asked again in the waiting lane.
      */
     public function incompleteRetries(): int
     {
-        return max(0, min(5, (int) config('fraud_check.bulk_incomplete_retries', 5)));
+        return $this->waitingLane->maxTries();
     }
 
     public function incompleteRetryGapSeconds(): int
@@ -217,7 +277,11 @@ class MerchantBulkFraudCheck
             ];
         }
 
-        $guard = $this->guardedResolve($merchant, $item->phone, fn () => $this->resolvePhone($request, $item->phone));
+        $guard = $this->guardedResolve(
+            $merchant,
+            $item->phone,
+            fn () => $this->context->asBulk(fn () => $this->resolvePhone($request, $item->phone)),
+        );
 
         if ($guard['busy'] || $guard['failed']) {
             $this->putBack($item);
@@ -245,6 +309,7 @@ class MerchantBulkFraudCheck
 
         $resolved = $guard['resolved'];
         $this->applyRow($item, $resolved['row'], $resolved['source'], $resolved['daily_id']);
+        $this->waitingLane->track($item, $resolved['report'] ?? null);
         $item->attempts = $this->boundedAttempts((int) $resolved['attempts']);
         $item->save();
         $this->recordIfSuccessful($merchant, $item);
@@ -313,6 +378,7 @@ class MerchantBulkFraudCheck
 
         $resolved = $guard['resolved'];
         $this->applyRow($item, $resolved['row'], $resolved['source'], $resolved['daily_id']);
+        $this->waitingLane->track($item, $resolved['report'] ?? null);
         $item->attempts = $this->boundedAttempts((int) $item->attempts + (int) $resolved['attempts']);
         $item->save();
         $this->recordIfSuccessful($merchant, $item);
@@ -354,6 +420,11 @@ class MerchantBulkFraudCheck
         ];
         $previousSource = $item->source;
         $previousDailyId = $item->daily_result_id;
+        $previousWaiting = [
+            'waiting_couriers' => $item->waiting_couriers,
+            'fill_report' => $item->fill_report,
+            'next_fill_at' => $item->next_fill_at,
+        ];
 
         $merchant = $this->merchant($batch);
         $guard = $this->guardedResolve($merchant, $item->phone, function () use ($request, $item) {
@@ -375,6 +446,7 @@ class MerchantBulkFraudCheck
 
         if ($guard['busy'] || $guard['failed']) {
             $this->applyRow($item, $previous, $previousSource, $previousDailyId);
+            $item->forceFill($previousWaiting);
             $item->save();
 
             return [
@@ -389,6 +461,7 @@ class MerchantBulkFraudCheck
 
         if (($resolved['row']['status'] ?? '') === 'error' && $previous['status'] !== 'error') {
             $this->applyRow($item, $previous, $previousSource, $previousDailyId);
+            $item->forceFill($previousWaiting);
             $item->save();
 
             return [
@@ -400,6 +473,7 @@ class MerchantBulkFraudCheck
         }
 
         $this->applyRow($item, $resolved['row'], $resolved['source'], $resolved['daily_id']);
+        $this->waitingLane->track($item, $resolved['report'] ?? null);
         $item->attempts = $this->boundedAttempts((int) $item->attempts + (int) $resolved['attempts']);
         $item->save();
         $this->recordIfSuccessful($merchant, $item);
@@ -415,7 +489,9 @@ class MerchantBulkFraudCheck
 
     public function stop(BulkFraudBatch $batch): BulkFraudBatch
     {
-        if ($batch->status === 'running') {
+        $waiting = $batch->items()->whereNotNull('next_fill_at')->exists();
+
+        if ($batch->status === 'running' || ($waiting && $batch->status !== 'stopped')) {
             $batch->status = 'stopped';
             $batch->save();
         }
@@ -497,6 +573,10 @@ class MerchantBulkFraudCheck
             ->pluck('aggregate', 'status');
 
         $pending = (int) ($counts['pending'] ?? 0) + (int) ($counts['checking'] ?? 0);
+        $waiting = BulkFraudBatchItem::query()
+            ->where('batch_id', $batch->id)
+            ->whereNotNull('next_fill_at')
+            ->count();
 
         return [
             'id' => $batch->id,
@@ -506,7 +586,37 @@ class MerchantBulkFraudCheck
             'unique_count' => (int) $batch->unique_count,
             'duplicates_removed' => (int) $batch->duplicates_removed,
             'pending' => $pending,
+            'waiting' => $waiting,
             'created_at' => optional($batch->created_at)?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Rows of $batch changed since $since, with the batch summary and the
+     * couriers its rows wait for. Starts a short waiting-lane pass when the
+     * scheduler has not run for a while.
+     *
+     * @return array{batch: array<string, mixed>, items: list<array<string, mixed>>, couriers: list<array<string, mixed>>, server_time: string}
+     */
+    public function changes(BulkFraudBatch $batch, ?Carbon $since): array
+    {
+        $this->touchPage($batch);
+        $serverTime = now();
+
+        $items = BulkFraudBatchItem::query()
+            ->where('batch_id', $batch->id)
+            ->when($since !== null, fn ($query) => $query->where('updated_at', '>=', $since->copy()->subSeconds(2)))
+            ->orderBy('position')
+            ->limit(1000)
+            ->get();
+
+        $this->waitingLane->nudgeIfIdle();
+
+        return [
+            'batch' => $this->summary($batch->fresh() ?? $batch),
+            'items' => $items->map->toPortalRow()->values()->all(),
+            'couriers' => $this->waitingLane->courierStatus($batch),
+            'server_time' => $serverTime->toIso8601String(),
         ];
     }
 
@@ -574,7 +684,10 @@ class MerchantBulkFraudCheck
     }
 
     /**
-     * @return array{row: array<string, mixed>, source: string, daily_id: int|null, attempts: int}
+     * `report` is the courier report a live row was built from, so couriers
+     * that did not answer can wait for another ask; null for a saved row.
+     *
+     * @return array{row: array<string, mixed>, source: string, daily_id: int|null, attempts: int, report: array<string, mixed>|null}
      */
     private function resolvePhone(Request $request, string $phone, bool $refresh = false): array
     {
@@ -587,6 +700,7 @@ class MerchantBulkFraudCheck
                     'source' => 'cache',
                     'daily_id' => $existing->id,
                     'attempts' => 0,
+                    'report' => null,
                 ];
             }
         }
@@ -604,6 +718,7 @@ class MerchantBulkFraudCheck
                         'source' => 'cache',
                         'daily_id' => $existing->id,
                         'attempts' => 0,
+                        'report' => null,
                     ];
                 }
             }
@@ -616,6 +731,7 @@ class MerchantBulkFraudCheck
                     'source' => 'live',
                     'daily_id' => null,
                     'attempts' => $checked['attempts'],
+                    'report' => null,
                 ];
             }
 
@@ -659,6 +775,7 @@ class MerchantBulkFraudCheck
                     'source' => 'cache',
                     'daily_id' => $existing->id,
                     'attempts' => 0,
+                    'report' => null,
                 ];
             }
 
@@ -667,6 +784,7 @@ class MerchantBulkFraudCheck
                 'source' => 'live',
                 'daily_id' => $daily->id,
                 'attempts' => $checked['attempts'],
+                'report' => $checked['report'],
             ];
         } finally {
             $lock->release();
@@ -716,8 +834,9 @@ class MerchantBulkFraudCheck
 
     /**
      * When SteadFast, Pathao, or Paperfly did not answer, ask only that
-     * courier again. Rate limits, rejected credentials, and a courier that
-     * keeps failing are not asked again; the row stays Incomplete.
+     * courier again. A courier that had no room, asked us to slow down, is
+     * paused, rejected the credentials, or keeps failing is not asked here;
+     * the waiting lane asks it later.
      *
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $report
@@ -738,6 +857,8 @@ class MerchantBulkFraudCheck
                 if (
                     ($courierReport['retryable'] ?? true) !== false
                     && empty($courierReport['rate_limited'])
+                    && empty($courierReport['deferred'])
+                    && empty($courierReport['retry_later'])
                     && empty($courierReport['credential_error'])
                     && ! FraudCheckService::courierRetryPaused($courier)
                 ) {
@@ -827,6 +948,40 @@ class MerchantBulkFraudCheck
         $item->success_rate = $row['success_rate'] ?? null;
         $item->risk = $row['risk'] ?? null;
         $item->couriers = $row['couriers'] ?? [];
+    }
+
+    private function nextUnattendedBatch(): ?BulkFraudBatch
+    {
+        $batches = BulkFraudBatch::query()
+            ->where('status', 'running')
+            ->whereHas('items', fn ($query) => $query->where('status', 'pending'))
+            ->orderBy('id')
+            ->limit(20)
+            ->get();
+
+        foreach ($batches as $batch) {
+            if (! $this->pageIsOpen($batch)) {
+                return $batch;
+            }
+        }
+
+        return null;
+    }
+
+    private function pageIsOpen(BulkFraudBatch $batch): bool
+    {
+        try {
+            $seen = (int) Cache::get($this->pageKey($batch), 0);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return $seen > 0 && (now()->getTimestamp() - $seen) < self::PAGE_OPEN_SECONDS;
+    }
+
+    private function pageKey(BulkFraudBatch $batch): string
+    {
+        return 'bulk-fraud-page:'.$batch->id;
     }
 
     private function releaseStaleChecks(BulkFraudBatch $batch): void

@@ -9,7 +9,17 @@
                             · Daily limit {{ quotaState.daily_limit }} · Used {{ quotaState.used_today }} · Left {{ quotaState.remaining }}
                         </span>
                     </p>
-                    <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">{{ percent }}%</p>
+                    <div class="flex items-center gap-3">
+                        <p
+                            v-if="showElapsed && !waitingCount"
+                            class="font-mono text-sm font-semibold tabular-nums"
+                            style="color: var(--mp-ink)"
+                        >
+                            <span class="sr-only">Checking time</span>
+                            {{ elapsedLabel }}
+                        </p>
+                        <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">{{ percent }}%</p>
+                    </div>
                 </div>
                 <div class="h-2 bg-emerald-100 dark:bg-emerald-950/60" role="progressbar" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100">
                     <div
@@ -18,6 +28,9 @@
                         :style="{ width: (running && percent === 0 ? 8 : percent) + '%' }"
                     />
                 </div>
+                <p v-if="checkActive" class="px-4 py-2 text-xs" style="color: var(--mp-muted)">
+                    You can leave this page. Checking keeps going.
+                </p>
             </section>
 
             <PageHeader
@@ -142,19 +155,51 @@
                         v-else
                         type="button"
                         class="rounded-lg border border-sky-600/40 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
-                        :disabled="!incompleteTargets.length || running || followingIncomplete || refreshingId !== null || retryingId !== null"
+                        :disabled="!incompleteTargets.length || running || refreshingId !== null || retryingId !== null"
                         @click="refreshIncompleteRows"
                     >
                         Refresh incomplete
                     </button>
                 </div>
 
-                <p
-                    v-if="followingIncomplete"
-                    class="mb-4 rounded-xl border border-amber-600/30 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+                <div
+                    v-if="waitingCount > 0"
+                    class="mb-4 rounded-xl border border-sky-600/30 bg-sky-50 px-3 py-2 text-sm text-sky-950 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100"
                 >
-                    Incomplete numbers are being checked again, one at a time, {{ incompleteRetryGapLabel }} seconds apart. The other numbers keep going.
-                </p>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-semibold">
+                                {{ waitingCount }} {{ waitingCount === 1 ? "number is" : "numbers are" }} waiting for a courier
+                            </p>
+                            <p class="mt-0.5 text-xs opacity-80">
+                                The other couriers already answered. A waiting courier is asked again only when it has room, up to {{ incompleteRetryMax }} times.
+                            </p>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <p v-if="showElapsed" class="font-mono text-sm font-semibold tabular-nums">
+                                <span class="sr-only">{{ batchState.status === "stopped" ? "Paused at" : "Checking time" }}</span>
+                                {{ elapsedLabel }}
+                            </p>
+                            <button
+                                type="button"
+                                class="rounded-lg border border-sky-700/30 bg-white px-3 py-1.5 text-xs font-semibold text-sky-950 disabled:opacity-50 dark:border-sky-400/30 dark:bg-transparent dark:text-sky-100"
+                                :disabled="pausing"
+                                @click="pauseChecking"
+                            >
+                                {{ batchState.status === "stopped" ? "Resume" : "Pause" }}
+                            </button>
+                        </div>
+                    </div>
+                    <ul v-if="courierStatus.length" class="mt-2 flex flex-wrap gap-2">
+                        <li
+                            v-for="status in courierStatus"
+                            :key="status.courier"
+                            class="rounded-full border border-sky-600/30 bg-white px-2.5 py-0.5 text-xs font-medium dark:border-sky-500/30 dark:bg-transparent"
+                        >
+                            {{ courierStatusText(status) }}
+                        </li>
+                    </ul>
+                </div>
                 <p v-if="limitNotice" class="mb-4 rounded-xl border border-rose-600/30 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
                     {{ limitNotice }}
                 </p>
@@ -284,7 +329,8 @@
                                     <p v-if="isChecking(row)" class="text-[11px] text-emerald-700 dark:text-emerald-300">Checking now</p>
                                     <p v-else-if="row.source === 'cache'" class="text-[11px] text-sky-700 dark:text-sky-300">Already checked today</p>
                                     <p v-else-if="row.status === 'error'" class="text-[11px] text-rose-600">Tried {{ row.attempts }} times</p>
-                                    <p v-else-if="row.status === 'pending'" class="text-[11px] text-gray-400">Waiting</p>
+                                    <p v-else-if="row.status === 'pending'" class="text-[11px] text-gray-400">Not checked yet</p>
+                                    <p v-else-if="row.risk === 'waiting'" class="text-[11px] text-sky-700 dark:text-sky-300">{{ waitingHint(row) }}</p>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     <span v-if="isChecking(row)" class="skeleton-block inline-block h-5 w-16 rounded-full" />
@@ -302,11 +348,11 @@
                                         class="skeleton-block inline-block h-5 w-16 rounded-full"
                                     />
                                     <span
-                                        v-else-if="riskLabel(row.risk)"
+                                        v-else-if="riskText(row)"
                                         class="inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium"
                                         :class="riskClass(row.risk)"
                                     >
-                                        {{ riskLabel(row.risk) }}
+                                        {{ riskText(row) }}
                                     </span>
                                     <span v-else class="text-gray-400">—</span>
                                 </td>
@@ -323,7 +369,7 @@
                                             v-if="canRefresh(row)"
                                             type="button"
                                             class="rounded-lg border border-sky-600/40 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
-                                            :disabled="running || refreshingIncomplete || refreshingId !== null || retryingId !== null"
+                                            :disabled="refreshingIncomplete || refreshingId !== null || retryingId !== null"
                                             @click="refreshRow(row)"
                                         >
                                             {{ isChecking(row) ? "Refreshing" : "Refresh" }}
@@ -474,7 +520,7 @@
                             v-if="canRefresh(selected)"
                             type="button"
                             class="rounded-lg border border-sky-600/40 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200"
-                            :disabled="running || refreshingIncomplete || refreshingId !== null || retryingId !== null"
+                            :disabled="refreshingIncomplete || refreshingId !== null || retryingId !== null"
                             @click="refreshRow(selected)"
                         >
                             {{ isChecking(selected) ? "Refreshing" : "Refresh" }}
@@ -546,6 +592,9 @@
                     <p v-if="selected.risk === 'incomplete'" class="rounded-xl border border-amber-600/30 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
                         A courier did not answer, so this is not a Safe result. Refresh tries that courier again.
                     </p>
+                    <p v-else-if="selected.risk === 'waiting'" class="rounded-xl border border-sky-600/30 bg-sky-50 px-3 py-2 text-sm text-sky-950 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100">
+                        {{ riskText(selected) }}. {{ waitingCouriers(selected).length > 1 ? "They are" : "It is" }} asked again when there is room, and this result updates by itself.
+                    </p>
                     <div
                         v-for="courier in selected.couriers"
                         :key="courier.title"
@@ -564,7 +613,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-semibold">{{ courier.title }}</p>
-                                <p class="text-xs leading-snug text-[#6b5e48] dark:text-slate-400">{{ courierLine(courier) }}</p>
+                                <p class="text-xs leading-snug text-[#6b5e48] dark:text-slate-400">{{ courierLine(courier, selected) }}</p>
                             </div>
                         </div>
                         <span class="shrink-0 text-sm font-bold" :class="courierRateClass(courier)">
@@ -618,6 +667,7 @@ const props = defineProps({
     workers: { type: Number, default: 1 },
     incompleteRetries: { type: Number, default: 5 },
     incompleteRetryGapSeconds: { type: Number, default: 5 },
+    serverTime: { type: String, default: null },
 });
 
 const batchState = ref({ ...props.batch });
@@ -629,8 +679,8 @@ const checkingIds = ref([]);
 const retryingId = ref(null);
 const refreshingId = ref(null);
 const refreshingIncomplete = ref(false);
-const followingIncomplete = ref(false);
 const incompleteRefresh = ref({ done: 0, total: 0 });
+const courierStatus = ref([]);
 let stopIncompleteRequested = false;
 const refreshNotice = ref("");
 const limitNotice = ref("");
@@ -647,10 +697,79 @@ const MAX_THROTTLED_TRIES = 5;
 const THROTTLE_WAIT_NOTICE = "Couriers were asked too quickly, so refreshing waits a few seconds and then continues.";
 let refreshSlotAt = 0;
 
+// Rows that wait for a courier are filled on the server; the page only asks
+// what changed.
+const POLL_RUNNING_MS = 8000;
+const POLL_WAITING_MS = 15000;
+const POLL_IDLE_MS = 5000;
+let pollTimer = null;
+let pollStopped = false;
+let pollSince = props.serverTime;
+
 const bulkWorkers = computed(() => Math.min(5, Math.max(1, Number(props.workers) || 1)));
 const incompleteRetryMax = computed(() => Math.min(5, Math.max(0, Number(props.incompleteRetries ?? 5))));
-const incompleteRetryGapMs = computed(() => Math.min(30, Math.max(3, Number(props.incompleteRetryGapSeconds) || 5)) * 1000);
-const incompleteRetryGapLabel = computed(() => Math.round(incompleteRetryGapMs.value / 1000));
+const waitingCount = computed(() => countRisk("waiting"));
+const pausing = ref(false);
+const clock = ref(Date.now());
+const pausedMs = ref(0);
+const pauseStartedAt = ref(null);
+const finishedAt = ref(null);
+const timedThisVisit = ref(false);
+let clockTimer = null;
+const serverSkew = Number.isFinite(Date.parse(props.serverTime || ""))
+    ? Date.parse(props.serverTime) - Date.now()
+    : 0;
+
+function serverNow() {
+    return Date.now() + serverSkew;
+}
+
+const startedAt = computed(() => {
+    const parsed = Date.parse(batchState.value.created_at || "");
+    return Number.isFinite(parsed) ? parsed : null;
+});
+const checkActive = computed(() => {
+    if (batchState.value.status === "stopped") return false;
+    return running.value || batchState.value.status === "running" || waitingCount.value > 0;
+});
+const showElapsed = computed(() => {
+    if (!startedAt.value) return false;
+    return checkActive.value || batchState.value.status === "stopped" || finishedAt.value !== null;
+});
+const elapsedLabel = computed(() => {
+    if (!startedAt.value) return "00:00";
+    const now = clock.value + serverSkew;
+    let end = now;
+    if (finishedAt.value !== null) end = finishedAt.value;
+    else if (pauseStartedAt.value !== null) end = pauseStartedAt.value;
+    return formatElapsed(Math.max(0, end - startedAt.value - pausedMs.value));
+});
+
+watch(checkActive, (active) => {
+    if (active) {
+        timedThisVisit.value = true;
+        finishedAt.value = null;
+        if (pauseStartedAt.value !== null) {
+            pausedMs.value += serverNow() - pauseStartedAt.value;
+            pauseStartedAt.value = null;
+        }
+        return;
+    }
+    if (batchState.value.status === "stopped") {
+        if (pauseStartedAt.value === null) pauseStartedAt.value = serverNow();
+        return;
+    }
+    if (timedThisVisit.value && finishedAt.value === null) finishedAt.value = serverNow();
+}, { immediate: true });
+
+function formatElapsed(ms) {
+    const total = Math.floor(ms / 1000);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    const pad = (value) => String(value).padStart(2, "0");
+    return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
+}
 
 const doneCount = computed(() => items.value.filter((row) => row.status !== "pending").length);
 const percent = computed(() => {
@@ -675,11 +794,13 @@ const limitBlocked = computed(() => Number(quotaState.value?.remaining ?? 0) < 1
 
 const progressLabel = computed(() => {
     const done = items.value.filter((row) => row.status !== "pending").length;
-    if (running.value) return `Checking ${done} of ${items.value.length}`;
+    const waiting = waitingCount.value ? ` · ${waitingCount.value} waiting for a courier` : "";
+    if (running.value) return `Checking ${done} of ${items.value.length}${waiting}`;
+    if (batchState.value.status === "stopped") return `Paused · ${done} of ${items.value.length} checked${waiting}`;
     if (limitBlocked.value && items.value.some((row) => row.status === "pending")) {
-        return `Daily limit reached · ${done} of ${items.value.length} checked`;
+        return `Daily limit reached · ${done} of ${items.value.length} checked${waiting}`;
     }
-    return `${batchState.value.status} · ${done} of ${items.value.length} checked`;
+    return `${batchState.value.status} · ${done} of ${items.value.length} checked${waiting}`;
 });
 
 const rowFilter = ref(null);
@@ -691,9 +812,10 @@ const filterChips = computed(() => [
     { value: "not_found", label: "Not found", count: countStatus("not_found"), className: "bg-slate-100 text-slate-600 ring-slate-400 dark:bg-white/10 dark:text-slate-300" },
     { value: "error", label: "Failed", count: countStatus("error"), className: "bg-rose-100 text-rose-800 ring-rose-400 dark:bg-rose-500/15 dark:text-rose-200" },
     { value: "invalid", label: "Invalid", count: countStatus("invalid"), className: "bg-amber-100 text-amber-800 ring-amber-400 dark:bg-amber-500/15 dark:text-amber-200" },
-    { value: "waiting", label: "Waiting", count: countWaiting(), className: "bg-gray-100 text-gray-600 ring-gray-400 dark:bg-white/10 dark:text-gray-300" },
+    { value: "pending", label: "Not checked", count: countWaiting(), className: "bg-gray-100 text-gray-600 ring-gray-400 dark:bg-white/10 dark:text-gray-300" },
     { value: "safe", label: "Safe", count: countRisk("safe"), className: "bg-emerald-100 text-emerald-800 ring-emerald-500 dark:bg-emerald-500/15 dark:text-emerald-200" },
     { value: "review", label: "Review", count: countRisk("review"), className: "bg-amber-100 text-amber-800 ring-amber-400 dark:bg-amber-500/15 dark:text-amber-200" },
+    { value: "waiting", label: "Waiting for courier", count: countRisk("waiting"), className: "bg-sky-100 text-sky-800 ring-sky-400 dark:bg-sky-500/15 dark:text-sky-200" },
     { value: "incomplete", label: "Incomplete", count: countRisk("incomplete"), className: "bg-amber-100 text-amber-900 ring-amber-500 dark:bg-amber-500/20 dark:text-amber-100" },
     { value: "high", label: "High risk", count: countRisk("high"), className: "bg-rose-100 text-rose-800 ring-rose-400 dark:bg-rose-500/15 dark:text-rose-200" },
     { value: "today", label: "From today", count: countSource("cache"), className: "bg-sky-100 text-sky-800 ring-sky-400 dark:bg-sky-500/15 dark:text-sky-200" },
@@ -707,8 +829,8 @@ function rowMatchesFilter(row) {
     if (rowFilter.value === "found" || rowFilter.value === "not_found" || rowFilter.value === "error" || rowFilter.value === "invalid") {
         return row.status === rowFilter.value;
     }
-    if (rowFilter.value === "waiting") return row.status === "pending" || row.status === "checking";
-    if (rowFilter.value === "safe" || rowFilter.value === "review" || rowFilter.value === "incomplete" || rowFilter.value === "high") return row.risk === rowFilter.value;
+    if (rowFilter.value === "pending") return row.status === "pending" || row.status === "checking";
+    if (["safe", "review", "waiting", "incomplete", "high"].includes(rowFilter.value)) return row.risk === rowFilter.value;
     if (rowFilter.value === "today") return row.source === "cache";
     return true;
 }
@@ -845,8 +967,12 @@ async function openPreview() {
 }
 
 onMounted(() => {
+    clockTimer = setInterval(() => {
+        clock.value = Date.now();
+    }, 1000);
     window.addEventListener("keydown", onEscape);
     document.addEventListener("click", onDocumentClick);
+    schedulePoll(1500);
     const hasPending = items.value.some((row) => row.status === "pending");
     if (limitBlocked.value && hasPending) {
         limitNotice.value = "Today's courier history limit is used up. Pending numbers were not checked.";
@@ -861,21 +987,67 @@ onMounted(() => {
 onUnmounted(() => {
     stopRequested = true;
     stopIncompleteRequested = true;
+    pollStopped = true;
+    clearInterval(clockTimer);
+    clearTimeout(pollTimer);
     window.removeEventListener("keydown", onEscape);
     document.removeEventListener("click", onDocumentClick);
 });
+
+function schedulePoll(delay) {
+    clearTimeout(pollTimer);
+    if (pollStopped) return;
+    pollTimer = setTimeout(pollChanges, delay);
+}
+
+async function pollChanges() {
+    if (pollStopped) return;
+    if (!running.value && !waitingCount.value) {
+        courierStatus.value = [];
+        schedulePoll(POLL_IDLE_MS);
+        return;
+    }
+    if (document.hidden) {
+        schedulePoll(POLL_RUNNING_MS);
+        return;
+    }
+    try {
+        const { data } = await axios.get(route("portal.fraud-check.batches.changes", {
+            batch: batchState.value.id,
+            ...(pollSince ? { since: pollSince } : {}),
+        }));
+        if (pollStopped) return;
+        if (data.batch) batchState.value = data.batch;
+        for (const item of data.items || []) mergeChangedItem(item);
+        courierStatus.value = Array.isArray(data.couriers) ? data.couriers : [];
+        if (data.server_time) pollSince = data.server_time;
+    } catch {
+        // The next poll asks again.
+    }
+    schedulePoll(running.value ? POLL_RUNNING_MS : POLL_WAITING_MS);
+}
+
+// A row this page is checking, or a finished row reported as not checked
+// by an older answer, keeps what the page already shows.
+function mergeChangedItem(item) {
+    if (isChecking(item)) return;
+    const current = items.value.find((row) => row.id === item.id);
+    if (current && current.status !== "pending" && item.status === "pending") return;
+    replaceItem(item);
+}
 
 function openDetails(row) {
     selected.value = row;
 }
 
 function detailBadge(row) {
-    if (row.risk) return riskLabel(row.risk);
+    if (row.risk) return riskText(row);
     return statusLabel(row.status);
 }
 
 function detailBadgeClass(row) {
     if (row.risk === "safe") return "border-emerald-600/30 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300";
+    if (row.risk === "waiting") return "border-sky-600/30 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300";
     if (row.risk === "review" || row.risk === "incomplete" || row.status === "invalid") return "border-amber-600/40 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300";
     if (row.risk === "high" || row.status === "error") return "border-rose-600/30 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300";
     return "border-[#e6c56a] bg-white text-[#6b5e48] dark:border-white/15 dark:bg-white/5 dark:text-slate-300";
@@ -895,7 +1067,43 @@ function courierLogo(title) {
     return null;
 }
 
-function courierLine(courier) {
+function courierKey(title) {
+    const key = String(title || "").toLowerCase();
+    if (key.includes("stead")) return "steadfast";
+    if (key.includes("pathao")) return "pathao";
+    if (key.includes("paper")) return "paperfly";
+    if (key.includes("red")) return "redx";
+    if (key.includes("carry")) return "carrybee";
+    return key;
+}
+
+function courierName(key) {
+    if (key === "steadfast") return "SteadFast";
+    if (key === "pathao") return "Pathao";
+    if (key === "paperfly") return "Paperfly";
+    if (key === "redx") return "RedX";
+    if (key === "carrybee") return "Carrybee";
+    return key;
+}
+
+function clockTime(iso) {
+    const time = Date.parse(iso);
+    if (!Number.isFinite(time)) return "";
+    return new Date(time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function courierLine(courier, row = null) {
+    if (courier.available === false) {
+        if (courier.reason === "waiting") {
+            const next = row?.waiting?.[courierKey(courier.title)]?.next_at;
+            return next && Date.parse(next) > Date.now() ? `Waiting · asked again at ${clockTime(next)}` : "Waiting · asked again soon";
+        }
+        if (courier.reason === "sample") return "RedX did not return this number's history";
+        if (courier.reason === "busy") return "Courier had no room for this number. Refresh asks it again.";
+        if (courier.reason === "paused") return "Courier is paused for now. Refresh asks it again later.";
+        if (courier.reason === "credentials") return "Courier login was rejected";
+        if (courier.reason === "not_set_up") return "Courier is not set up";
+    }
     if (!courier.available && !courier.received && !courier.cancelled && !courier.partial) {
         return "Data unavailable";
     }
@@ -991,13 +1199,11 @@ async function continueBatch() {
 }
 
 async function runPending() {
-    const run = { token: ++runToken, halted: false, stopFollow: false };
+    const run = { token: ++runToken, halted: false };
     const workers = bulkWorkers.value;
     running.value = true;
-    await Promise.all([
-        ...Array.from({ length: workers }, (_, index) => runWorker(run, index)),
-        followIncomplete(run),
-    ]);
+    schedulePoll(POLL_RUNNING_MS);
+    await Promise.all(Array.from({ length: workers }, (_, index) => runWorker(run, index)));
     if (run.token !== runToken) return;
     if (items.value.some((row) => row.status === "pending") && !(batchState.value.pending > 0)) {
         await syncItems();
@@ -1031,12 +1237,10 @@ async function runWorker(run, index) {
             if (data.limit_reached) {
                 limitNotice.value = "Today's courier history limit is used up. Pending numbers were not checked.";
                 run.halted = true;
-                run.stopFollow = true;
                 break;
             }
             if (data.batch?.status === "stopped") {
                 run.halted = true;
-                run.stopFollow = true;
                 break;
             }
             if (data.done) {
@@ -1052,7 +1256,6 @@ async function runWorker(run, index) {
         if (Date.now() - idleSince > 240000) {
             refreshNotice.value = "Checking paused. Press Continue to try the remaining numbers.";
             run.halted = true;
-            run.stopFollow = true;
             break;
         }
         await wait(1000 + index * 300);
@@ -1077,7 +1280,7 @@ function canRefresh(row) {
 
 async function refreshRow(row, duringRun = false, quiet = false) {
     if (isChecking(row) || retryingId.value || !canRefresh(row)) return { skipped: true };
-    if (!duringRun && (running.value || refreshingIncomplete.value || followingIncomplete.value || refreshingId.value)) {
+    if (!duringRun && (refreshingIncomplete.value || refreshingId.value)) {
         return { skipped: true };
     }
     if (!duringRun) refreshingId.value = row.id;
@@ -1140,85 +1343,8 @@ function stopIncompleteRefresh() {
     stopIncompleteRequested = true;
 }
 
-// Asks Incomplete rows again, one at a time, after the gap. It does not take a
-// bulk worker slot, so the numbers still waiting keep moving.
-async function followIncomplete(run) {
-    const maxTries = incompleteRetryMax.value;
-    const gapMs = incompleteRetryGapMs.value;
-    if (maxTries < 1) return;
-
-    const tries = new Map();
-    const readyAt = new Map();
-    const throttled = new Map();
-    followingIncomplete.value = true;
-
-    try {
-        while (run.token === runToken && !stopRequested && !run.stopFollow) {
-            const now = Date.now();
-            for (const row of items.value) {
-                if (row.risk !== "incomplete" || !canRefresh(row) || isChecking(row)) continue;
-                if (!readyAt.has(row.id) && (tries.get(row.id) ?? 0) < maxTries) {
-                    readyAt.set(row.id, now + gapMs);
-                }
-            }
-
-            if (refreshingId.value || retryingId.value || refreshingIncomplete.value) {
-                await wait(400);
-                continue;
-            }
-
-            const candidate = items.value.find((row) => {
-                if (row.risk !== "incomplete" || !canRefresh(row) || isChecking(row)) return false;
-                if ((tries.get(row.id) ?? 0) >= maxTries) return false;
-                return (readyAt.get(row.id) ?? Infinity) <= Date.now();
-            });
-            const mainStillGoing = !run.halted && items.value.some((row) => row.status === "pending" || row.status === "checking");
-            const waitingRetry = items.value.some((row) => row.risk === "incomplete" && canRefresh(row) && (tries.get(row.id) ?? 0) < maxTries);
-
-            if (!candidate) {
-                if (!mainStillGoing && !waitingRetry) break;
-                await wait(400);
-                continue;
-            }
-
-            const used = (tries.get(candidate.id) ?? 0) + 1;
-            tries.set(candidate.id, used);
-            readyAt.delete(candidate.id);
-            const result = await refreshRow(candidate, true, true);
-            if (run.token !== runToken || stopRequested || run.stopFollow) break;
-            if (result?.skipped) {
-                tries.set(candidate.id, used - 1);
-                readyAt.set(candidate.id, Date.now() + 1000);
-                await wait(400);
-                continue;
-            }
-            if (result?.limit) {
-                limitNotice.value = "Today's courier history limit is used up, so incomplete numbers were not checked again.";
-                break;
-            }
-            if (result?.throttled) {
-                // The server asked us to slow down. Wait it out and go on; the
-                // try is given back so the number keeps its five chances.
-                const times = (throttled.get(candidate.id) ?? 0) + 1;
-                throttled.set(candidate.id, times);
-                if (times <= MAX_THROTTLED_TRIES) tries.set(candidate.id, used - 1);
-                readyAt.set(candidate.id, Date.now() + (result.waitMs ?? 5000));
-                refreshNotice.value = THROTTLE_WAIT_NOTICE;
-                continue;
-            }
-            clearThrottleNotice();
-            const updated = items.value.find((row) => row.id === candidate.id);
-            if (updated && updated.risk === "incomplete" && used < maxTries) {
-                readyAt.set(candidate.id, Date.now() + gapMs);
-            }
-        }
-    } finally {
-        if (run.token === runToken) followingIncomplete.value = false;
-    }
-}
-
 async function refreshIncompleteRows() {
-    if (running.value || followingIncomplete.value || refreshingIncomplete.value || refreshingId.value || retryingId.value) return;
+    if (running.value || refreshingIncomplete.value || refreshingId.value || retryingId.value) return;
     const ids = incompleteTargets.value.map((row) => row.id);
     if (!ids.length) return;
 
@@ -1314,6 +1440,20 @@ async function stop() {
     running.value = false;
 }
 
+async function pauseChecking() {
+    if (pausing.value) return;
+    if (batchState.value.status === "stopped") {
+        continueBatch();
+        return;
+    }
+    pausing.value = true;
+    try {
+        await stop();
+    } finally {
+        pausing.value = false;
+    }
+}
+
 function applyPayload(payload) {
     if (payload.batch) batchState.value = payload.batch;
     if (payload.items) items.value = payload.items;
@@ -1349,7 +1489,7 @@ function statusLabel(status) {
     if (status === "found") return "Found";
     if (status === "not_found") return "Not found";
     if (status === "invalid") return "Invalid";
-    if (status === "pending") return "Waiting";
+    if (status === "pending") return "Not checked";
     if (status === "error") return "Failed";
     return status;
 }
@@ -1365,14 +1505,43 @@ function statusClass(status) {
 function riskLabel(risk) {
     if (risk === "safe") return "Safe";
     if (risk === "review") return "Review";
+    if (risk === "waiting") return "Waiting for courier";
     if (risk === "incomplete") return "Incomplete";
     if (risk === "high") return "High risk";
     return "";
 }
 
+function waitingCouriers(row) {
+    return Object.keys(row?.waiting || {});
+}
+
+function riskText(row) {
+    if (row.risk !== "waiting") return riskLabel(row.risk);
+    const names = waitingCouriers(row).map(courierName);
+    return names.length ? `Waiting for ${names.join(", ")}` : riskLabel(row.risk);
+}
+
+function waitingHint(row) {
+    const times = waitingCouriers(row)
+        .map((key) => Date.parse(row.waiting[key]?.next_at))
+        .filter((time) => Number.isFinite(time));
+    if (!times.length) return "Asked again soon";
+    const next = Math.min(...times);
+    return next > Date.now() ? `Asked again at ${clockTime(new Date(next).toISOString())}` : "Asked again soon";
+}
+
+function courierStatusText(status) {
+    const name = courierName(status.courier);
+    const waiting = `${status.waiting} waiting`;
+    if (status.paused_until) return `${name} paused until ${clockTime(status.paused_until)} · ${waiting}`;
+    if (status.eta_minutes) return `${name} · ${waiting} · about ${status.eta_minutes} min`;
+    return `${name} · ${waiting}`;
+}
+
 function riskClass(risk) {
     if (risk === "safe") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200";
     if (risk === "review" || risk === "incomplete") return "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200";
+    if (risk === "waiting") return "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-200";
     if (risk === "high") return "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200";
     return "";
 }

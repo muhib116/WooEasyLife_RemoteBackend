@@ -1445,6 +1445,76 @@ it('does not call a merchant portal timeout a credential error', function () {
         ->and($calls['login_post'])->toBe(1);
 });
 
+it('asks one steadfast key with a saved error by itself and clears it when steadfast answers', function () {
+    useOnlyPlatformSteadfastPortal();
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('heal-first-key', 'heal-first-secret', 'First shop');
+    $store->add('heal-second-key', 'heal-second-secret', 'Second shop');
+    plantSteadfastKeyError('Steadfast request failed (HTTP 500).', now()->subHour(), 0);
+    plantSteadfastKeyError('Steadfast rate limit reached for this key.', now()->subMinutes(10), 1);
+    Cache::flush();
+
+    Http::fake([
+        'https://portal.packzy.com/api/v1/fraud_check/score/*' => Http::response([
+            'status' => 200,
+            'delivery_ratio' => 80,
+            'cancellation_ratio' => 20,
+            'delivered_count' => 8,
+            'cancelled_count' => 2,
+            'total_reports' => 0,
+            'fraud_categories' => [],
+        ], 200),
+    ]);
+
+    $this->artisan('fraud-check:retest-steadfast-keys')->assertSuccessful();
+
+    $accounts = $store->accounts();
+    expect($accounts[0]['last_error'])->toBe('')
+        ->and($accounts[1]['last_error'])->toBe('Steadfast rate limit reached for this key.');
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/fraud_check/score/01700000000')
+        && $request->hasHeader('Api-Key', 'heal-first-key'));
+    Http::assertSentCount(1);
+
+    $this->artisan('fraud-check:retest-steadfast-keys')->assertSuccessful();
+
+    expect($store->accounts()[1]['last_error'])->toBe('Steadfast rate limit reached for this key.');
+    Http::assertSentCount(1);
+});
+
+it('does not ask a steadfast key that is still resting', function () {
+    useOnlyPlatformSteadfastPortal();
+    $store = app(SteadfastFraudApiCredentialStore::class);
+    $store->add('resting-heal-key', 'resting-heal-secret', 'Resting shop');
+    plantSteadfastKeyError('Steadfast request failed (HTTP 500).');
+    Cache::flush();
+    $store->rest('resting-heal-key', 600, exact: true);
+
+    Http::fake([
+        'https://portal.packzy.com/api/v1/fraud_check/score/*' => Http::response([
+            'status' => 200,
+            'delivery_ratio' => 80,
+            'cancellation_ratio' => 20,
+            'delivered_count' => 4,
+            'cancelled_count' => 1,
+            'total_reports' => 0,
+            'fraud_categories' => [],
+        ], 200),
+    ]);
+
+    $this->artisan('fraud-check:retest-steadfast-keys')->assertSuccessful();
+
+    Http::assertNothingSent();
+    expect($store->accounts()[0]['last_error'])->toBe('Steadfast request failed (HTTP 500).');
+
+    $this->travel(11)->minutes();
+
+    $this->artisan('fraud-check:retest-steadfast-keys')->assertSuccessful();
+
+    expect($store->accounts()[0]['last_error'])->toBe('');
+    Http::assertSentCount(1);
+});
+
 function useOnlyPlatformSteadfastPortal(): void
 {
     config([

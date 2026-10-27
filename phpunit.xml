@@ -22,6 +22,8 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array" force="true"/>
+        <!-- CacheRuntimeConfig reads CACHE_DRIVER; without this the first test of a run uses the local file cache. -->
+        <env name="CACHE_DRIVER" value="array" force="true"/>
         <!-- Use a dedicated MySQL database so RefreshDatabase never wipes local API_Backend. -->
         <env name="DB_CONNECTION" value="mysql"/>
         <env name="DB_DATABASE" value="API_Backend_testing"/>

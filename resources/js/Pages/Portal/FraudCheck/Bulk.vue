@@ -9,7 +9,7 @@
                 icon-class="text-primary-600 dark:text-primary-400"
             />
 
-            <PageCard title="New batch" description="One phone number per line, or upload a CSV. 017…, 880…, and +880… of the same number count once.">
+            <PageCard title="New batch" description="One phone number per line, or upload one or more CSVs. 017…, 880…, and +880… of the same number count once.">
                 <div class="space-y-4">
                     <div class="space-y-1.5">
                         <label for="batch-name" class="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -37,12 +37,13 @@
                                 :disabled="starting"
                                 @click="fileInput?.click()"
                             >
-                                Upload CSV
+                                Upload CSVs
                             </button>
                             <input
                                 ref="fileInput"
                                 type="file"
                                 accept=".csv,.txt,text/csv,text/plain"
+                                multiple
                                 class="sr-only"
                                 @change="onFile"
                             />
@@ -135,30 +136,78 @@ function defaultBatchName() {
     return `Bulk-${get("day")}-${get("month")}-${get("year")}-${get("hour")}-${get("minute")}`;
 }
 
-function onFile(event) {
-    const file = event.target.files?.[0];
+async function onFile(event) {
+    const files = Array.from(event.target.files || []);
     event.target.value = "";
     fileNote.value = "";
     fileError.value = "";
-    if (!file) return;
-    if (file.size > 1024 * 1024) {
-        fileError.value = "That file is larger than 1 MB.";
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-        const phones = phonesFromFile(String(reader.result || ""));
-        if (!phones.length) {
-            fileError.value = "No phone numbers found in that file.";
-            return;
+    if (!files.length) return;
+
+    const errors = [];
+    const loadedNames = [];
+    const collected = [];
+    for (const file of files) {
+        if (file.size > 1024 * 1024) {
+            errors.push(`${file.name} is larger than 1 MB.`);
+            continue;
         }
-        rawPhones.value = phones.join("\n");
-        fileNote.value = `Loaded ${phones.length} numbers from ${file.name}.`;
-    };
-    reader.onerror = () => {
-        fileError.value = "Could not read that file.";
-    };
-    reader.readAsText(file);
+        let text = "";
+        try {
+            text = await readFileText(file);
+        } catch {
+            errors.push(`Could not read ${file.name}.`);
+            continue;
+        }
+        const phones = phonesFromFile(text);
+        if (!phones.length) {
+            errors.push(`No phone numbers found in ${file.name}.`);
+            continue;
+        }
+        collected.push(...phones);
+        loadedNames.push(file.name);
+    }
+
+    if (loadedNames.length) {
+        const { added, skipped } = appendPhones(collected);
+        const names = loadedNames.join(", ");
+        fileNote.value = added
+            ? `Added ${added} number${added === 1 ? "" : "s"} from ${names}.`
+            : `No new numbers in ${names}.`;
+        if (skipped) fileNote.value += ` ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped.`;
+    }
+    if (errors.length) fileError.value = errors.join(" ");
+}
+
+function readFileText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("read"));
+        reader.readAsText(file);
+    });
+}
+
+function appendPhones(phones) {
+    const lines = rawPhones.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const seen = new Set(lines.map((line) => phoneKey(line)));
+    const addedLines = [];
+    let skipped = 0;
+    for (const phone of phones) {
+        const key = phoneKey(phone);
+        if (seen.has(key)) {
+            skipped += 1;
+            continue;
+        }
+        seen.add(key);
+        addedLines.push(phone);
+    }
+    if (addedLines.length) rawPhones.value = [...lines, ...addedLines].join("\n");
+    return { added: addedLines.length, skipped };
+}
+
+function phoneKey(line) {
+    const phone = normalizePhoneDigits(line);
+    return /^01[3-9]\d{8}$/.test(phone) ? phone : `invalid:${phone || String(line).trim()}`;
 }
 
 function phonesFromFile(text) {
@@ -221,9 +270,7 @@ function parsePhones(raw) {
     for (const line of String(raw).split(/\r?\n/)) {
         if (line.trim() === "") continue;
         submitted += 1;
-        const phone = normalizePhoneDigits(line);
-        const key = /^01[3-9]\d{8}$/.test(phone) ? phone : `invalid:${phone || line.trim()}`;
-        seen.add(key);
+        seen.add(phoneKey(line));
     }
     return { unique: seen.size, duplicates: submitted - seen.size };
 }

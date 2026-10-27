@@ -3,6 +3,7 @@
 namespace App\Services\OrderIntelligence;
 
 use App\Models\OrderIntelligence\PlatformCustomer;
+use App\Services\FraudCheck\CourierCallContext;
 use App\Services\FraudCheck\CourierTransport;
 use App\Services\FraudCheck\MerchantBulkDailySync;
 use App\Services\FraudCheckService;
@@ -63,7 +64,19 @@ class CourierSnapshotRefresher
             }
 
             try {
-                $reports[$courier] = $this->fraudCheckService->checkCourier($courier, $phoneNormalized);
+                // A background refresh never takes the slot kept for live checks.
+                $report = app(CourierCallContext::class)->asBulk(
+                    fn () => $this->fraudCheckService->checkCourier($courier, $phoneNormalized),
+                );
+
+                // Not asked because the courier had no room: try again on a later request.
+                if (! empty($report['deferred'])) {
+                    Cache::forget($cooldownKey);
+
+                    continue;
+                }
+
+                $reports[$courier] = $report;
                 $attempted[] = $courier;
             } catch (\Throwable $exception) {
                 Log::warning('Courier snapshot refresh failed for partner.', [

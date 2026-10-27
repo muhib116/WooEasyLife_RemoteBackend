@@ -519,6 +519,7 @@ class SteadfastFraudChecker
                 return CourierReportFormatter::emptyReport([
                     'frauds' => [],
                     'rate_limited' => true,
+                    'deferred' => true,
                     'message' => 'Steadfast fraud check limit reached for this store. Try again later.',
                 ]);
             }

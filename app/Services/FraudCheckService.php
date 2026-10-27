@@ -294,6 +294,8 @@ class FraudCheckService
     /**
      * A courier that failed in a way a later attempt can fix. Rate limits,
      * rejected credentials, missing setup, and RedX's fixed sample are not.
+     * Neither is a courier that was not asked because it had no room, or one
+     * that blocks when it is asked again right away.
      *
      * @param  array<string, mixed>  $report
      */
@@ -302,7 +304,9 @@ class FraudCheckService
         return ! empty($report['unavailable'])
             && ($report['retryable'] ?? true) !== false
             && empty($report['rate_limited'])
-            && empty($report['credential_error']);
+            && empty($report['credential_error'])
+            && empty($report['deferred'])
+            && empty($report['retry_later']);
     }
 
     /**

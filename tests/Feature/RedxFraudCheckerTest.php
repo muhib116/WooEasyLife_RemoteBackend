@@ -84,6 +84,78 @@ it('does not treat the fixed RedX sample payload as delivery history', function 
         ->and($report['message'])->toBe('RedX did not return this number\'s delivery history.');
 });
 
+function redxSampleEnvelope(): array
+{
+    return redxStatsEnvelope([
+        'successRate' => 60,
+        'totalParcels' => '10',
+        'deliveredParcels' => '6',
+        'returnPercentage' => '4',
+        'customerSegment' => 'Normal Customer',
+    ]);
+}
+
+function redxStatsCount(): int
+{
+    return collect(Http::recorded())
+        ->filter(fn ($pair) => str_contains($pair[0]->url(), 'customer-success-return-rate'))
+        ->count();
+}
+
+it('stops asking RedX for 30 minutes after its fixed sample comes back three times in a row', function () {
+    configureRedxFraudCredentials();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://api.redx.com.bd/v4/auth/login' => Http::response([
+            'data' => ['accessToken' => 'redx-token'],
+        ], 200),
+        'https://redx.com.bd/*' => Http::response(redxSampleEnvelope(), 400),
+    ]);
+
+    $checker = app(RedxFraudChecker::class);
+
+    foreach (['01300000001', '01300000002', '01300000003'] as $phone) {
+        expect($checker->check($phone)['static_sample'])->toBeTrue();
+    }
+
+    $skipped = $checker->check('01300000004');
+
+    expect(redxStatsCount())->toBe(3)
+        ->and($skipped['static_sample'])->toBeTrue()
+        ->and($skipped['unavailable'])->toBeTrue()
+        ->and($skipped['total_order'])->toBe(0)
+        ->and($checker->poolPlan('01300000004'))->toBeNull();
+
+    $this->travel(31)->minutes();
+
+    $checker->check('01300000004');
+    expect(redxStatsCount())->toBe(4);
+});
+
+it('keeps asking RedX when a real answer comes between fixed samples', function () {
+    configureRedxFraudCredentials();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://api.redx.com.bd/v4/auth/login' => Http::response([
+            'data' => ['accessToken' => 'redx-token'],
+        ], 200),
+        'https://redx.com.bd/*' => Http::sequence()
+            ->push(redxSampleEnvelope(), 400)
+            ->push(redxSampleEnvelope(), 400)
+            ->push(redxStatsEnvelope(['totalParcels' => '2', 'deliveredParcels' => '2']), 400)
+            ->push(redxSampleEnvelope(), 400)
+            ->push(redxSampleEnvelope(), 400),
+    ]);
+
+    $checker = app(RedxFraudChecker::class);
+
+    foreach (range(1, 5) as $call) {
+        $checker->check('0130000000'.$call);
+    }
+
+    expect(redxStatsCount())->toBe(5);
+});
+
 it('still reads a normal HTTP 200 RedX stats response', function () {
     configureRedxFraudCredentials();
     Http::preventStrayRequests();

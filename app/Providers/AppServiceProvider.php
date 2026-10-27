@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Services\BlogAi\BlogAiRuntimeConfig;
 use App\Services\CacheRuntimeConfig;
 use App\Services\FraudCheck\BulkFraudRuntimeSettings;
+use App\Services\FraudCheck\CourierCallContext;
+use App\Services\FraudCheck\CourierPace;
 use App\Services\FraudCheck\FraudCheckQuotaSettings;
 use App\Services\OrderIntelligence\FraudCheckRuntimeConfig;
 use App\Services\SubscriptionNotificationRuntimeConfig;
@@ -20,6 +22,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(KnowledgeSearchManager::class);
+        $this->app->singleton(CourierCallContext::class);
+        $this->app->singleton(CourierPace::class);
     }
 
     /**

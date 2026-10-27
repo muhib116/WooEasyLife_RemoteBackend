@@ -135,6 +135,78 @@ class SteadfastFraudApiCredentialStore
     }
 
     /**
+     * One saved key that still shows a passing error and is not resting.
+     * The oldest error is asked first, the same way the Test button asks one key.
+     *
+     * @return array{api_key: string, secret_key: string}|null
+     */
+    public function healCandidate(): ?array
+    {
+        $chosen = null;
+        $oldest = null;
+
+        foreach ($this->readAccounts() as $account) {
+            if (! $this->isTemporaryError($account['last_error']) || $this->isCoolingDown($account['api_key'])) {
+                continue;
+            }
+
+            $since = $this->stampTime($account['last_error_at']);
+
+            if ($chosen === null || $since < $oldest) {
+                $chosen = [
+                    'api_key' => $account['api_key'],
+                    'secret_key' => $account['secret_key'],
+                ];
+                $oldest = $since;
+            }
+        }
+
+        return $chosen;
+    }
+
+    /**
+     * One automatic retest at a time, so a minute schedule cannot pile probes on Steadfast.
+     */
+    public function claimHeal(): bool
+    {
+        try {
+            return Cache::add('fraud_check_steadfast_key_heal_gate', true, now()->addSeconds(50));
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Same result the Test button stores: an answer clears the error, a passing
+     * failure only rests the key, and a rejection stays on the key.
+     *
+     * @param  array{ok?: bool, error?: string|null, temporary?: bool, retry_after?: int, cooldown?: int}  $result
+     */
+    public function rememberProbe(string $apiKey, array $result): void
+    {
+        if (! empty($result['ok'])) {
+            $this->recordOutcome($apiKey, null);
+
+            return;
+        }
+
+        if (! empty($result['temporary'])) {
+            $retryAfter = (int) ($result['retry_after'] ?? 0);
+            $seconds = (int) ($result['cooldown'] ?? 0);
+
+            if ($retryAfter > 0) {
+                $this->rest($apiKey, $retryAfter, exact: true);
+            } elseif ($seconds > 0) {
+                $this->rest($apiKey, $seconds, exact: true);
+            }
+
+            return;
+        }
+
+        $this->recordOutcome($apiKey, $result['error'] ?: 'Steadfast rejected this API key or secret.');
+    }
+
+    /**
      * Steadfast hides parcel counts on keys of stores that are not booking.
      * That is a property of the key, so it is remembered for a while.
      */

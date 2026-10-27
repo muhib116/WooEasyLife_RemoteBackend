@@ -16,6 +16,10 @@ class RedxFraudChecker
 
     private const STATS_URL = 'https://redx.com.bd/api/redx_se/admin/parcel/customer-success-return-rate';
 
+    private const SAMPLE_STREAK_KEY = 'fraud_check_redx_sample_streak';
+
+    private const SAMPLE_SKIP_KEY = 'fraud_check_redx_sample_skip';
+
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
         private CourierLoginGuard $loginGuard = new CourierLoginGuard,
@@ -40,6 +44,10 @@ class RedxFraudChecker
                 'retryable' => false,
                 'message' => 'RedX is not set up for fraud checks.',
             ]);
+        }
+
+        if ($this->skippingSample()) {
+            return $this->sampleReport();
         }
 
         try {
@@ -76,11 +84,9 @@ class RedxFraudChecker
 
             $stats = $this->readStats($response);
             if (! empty($stats['placeholder'])) {
-                return CourierReportFormatter::emptyReport([
-                    'unavailable' => true,
-                    'retryable' => false,
-                    'message' => RedxStaticSample::MESSAGE,
-                ]);
+                $this->noteSample();
+
+                return $this->sampleReport();
             }
 
             if (! $stats['ok']) {
@@ -93,6 +99,7 @@ class RedxFraudChecker
             }
 
             $this->credentials->markSuccess($auth['credential_id']);
+            $this->noteRealAnswer();
 
             if (! empty($stats['empty'])) {
                 return CourierReportFormatter::emptyReport([
@@ -114,13 +121,13 @@ class RedxFraudChecker
 
     /**
      * Pool the stats call when a RedX token is already cached.
-     * Login stays on check().
+     * Login and the skipped-sample answer stay on check().
      *
      * @return array{send: callable, read: callable}|null
      */
     public function poolPlan(string $phone, ?array $credentials = null): ?array
     {
-        if (! $this->isConfigured()) {
+        if (! $this->isConfigured() || $this->skippingSample()) {
             return null;
         }
 
@@ -176,11 +183,9 @@ class RedxFraudChecker
 
                 $stats = $this->readStats($response);
                 if (! empty($stats['placeholder'])) {
-                    return CourierReportFormatter::emptyReport([
-                        'unavailable' => true,
-                        'retryable' => false,
-                        'message' => RedxStaticSample::MESSAGE,
-                    ]);
+                    $this->noteSample();
+
+                    return $this->sampleReport();
                 }
 
                 if (! $stats['ok']) {
@@ -190,6 +195,7 @@ class RedxFraudChecker
                 }
 
                 $this->credentials->markSuccess($auth['credential_id']);
+                $this->noteRealAnswer();
 
                 if (! empty($stats['empty'])) {
                     return CourierReportFormatter::emptyReport([
@@ -201,6 +207,68 @@ class RedxFraudChecker
                 return $this->mapStats($stats['data']);
             },
         ];
+    }
+
+    private function sampleReport(): array
+    {
+        return CourierReportFormatter::emptyReport([
+            'unavailable' => true,
+            'retryable' => false,
+            'static_sample' => true,
+            'message' => RedxStaticSample::MESSAGE,
+        ]);
+    }
+
+    private function skippingSample(): bool
+    {
+        try {
+            return Cache::has(self::SAMPLE_SKIP_KEY);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * RedX sends the same sample for every number while its history is off.
+     * After a few in a row it is not asked for a while.
+     */
+    private function noteSample(): void
+    {
+        $settings = (array) config('fraud_check.redx_sample', []);
+        $minutes = (int) ($settings['skip_minutes'] ?? 30);
+
+        if ($minutes <= 0) {
+            return;
+        }
+
+        $after = max(1, (int) ($settings['after_samples'] ?? 3));
+
+        try {
+            Cache::add(self::SAMPLE_STREAK_KEY, 0, now()->addHour());
+
+            if ((int) Cache::increment(self::SAMPLE_STREAK_KEY) < $after) {
+                return;
+            }
+
+            Cache::forget(self::SAMPLE_STREAK_KEY);
+            Cache::put(self::SAMPLE_SKIP_KEY, true, now()->addMinutes($minutes));
+            LogHelper::saveLog(
+                'Courier pace',
+                'RedX sent its fixed sample '.$after.' times in a row, so RedX is not asked for '.$minutes.' minutes.',
+                'courier-pace.log',
+            );
+        } catch (Throwable) {
+            // Without the cache every number still asks RedX, as before.
+        }
+    }
+
+    private function noteRealAnswer(): void
+    {
+        try {
+            Cache::forget(self::SAMPLE_STREAK_KEY);
+        } catch (Throwable) {
+            //
+        }
     }
 
     /**

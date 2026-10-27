@@ -41,6 +41,13 @@ class MerchantBulkDailySync
                 return;
             }
 
+            // A row where every core courier answered is not replaced by one
+            // where a courier is missing again.
+            $complete = MerchantBulkFraudRow::hasEveryCoreCourier($row['couriers']);
+            if (! $complete && MerchantBulkFraudRow::hasEveryCoreCourier(is_array($existing->couriers) ? $existing->couriers : [])) {
+                return;
+            }
+
             $attributes = [
                 'status' => $row['status'],
                 'total_orders' => $row['total_orders'],
@@ -58,7 +65,24 @@ class MerchantBulkDailySync
                 ->where('daily_result_id', $existing->id)
                 ->whereIn('status', ['found', 'not_found'])
                 ->get()
-                ->each(function (BulkFraudBatchItem $item) use ($attributes): void {
+                ->each(function (BulkFraudBatchItem $item) use ($attributes, $complete): void {
+                    // A waiting row is finished by the waiting lane, unless
+                    // this answer already has every courier.
+                    if ($item->waitingCouriers() !== []) {
+                        if (! $complete) {
+                            return;
+                        }
+
+                        $item->fill([
+                            ...$attributes,
+                            'waiting_couriers' => null,
+                            'fill_report' => null,
+                            'next_fill_at' => null,
+                        ])->save();
+
+                        return;
+                    }
+
                     $item->fill($attributes)->save();
                 });
         } catch (\Throwable) {

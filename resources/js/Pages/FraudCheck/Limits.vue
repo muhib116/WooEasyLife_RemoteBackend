@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <PageHeader
                 title="Bulk check"
-                description="How many numbers run at once, and how Incomplete numbers are asked again. Free daily checks are below. Saved numbers replace the .env defaults."
+                description="How many numbers run at once, how fast each courier is asked, and how long a number waits for a courier. Free daily checks are below. Saved numbers replace the .env defaults."
                 icon="PhSlidersHorizontal"
                 icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
                 icon-class="text-sky-600 dark:text-sky-400"
@@ -18,7 +18,7 @@
 
             <PageCard
                 title="Bulk check"
-                description="How many numbers run at once, and how Incomplete numbers are asked again. Saved numbers replace the .env defaults. A number that matches .env is not stored."
+                description="How many numbers run at once, how fast each courier is asked, and how long a number waits for a courier. Saved numbers replace the .env defaults. A number that matches .env is not stored."
             >
                 <form class="space-y-4" @submit.prevent="saveBulk">
                     <div
@@ -213,6 +213,12 @@ const bulkKeys = [
     "bulk_workers",
     "bulk_incomplete_retries",
     "bulk_incomplete_retry_gap_seconds",
+    "bulk_waiting_max_minutes",
+    "pathao_per_minute",
+    "pathao_live_reserve",
+    "paperfly_gap_seconds",
+    "paperfly_pause_minutes",
+    "redx_sample_skip_minutes",
     "bulk_missing_courier_retries",
     "bulk_number_budget_seconds",
     "bulk_stale_check_seconds",

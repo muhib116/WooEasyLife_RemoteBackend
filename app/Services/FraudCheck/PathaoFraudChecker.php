@@ -22,15 +22,22 @@ class PathaoFraudChecker
 
     private const ISSUE_TOKEN_URL = 'https://api-hermes.pathao.com/aladdin/api/v1/issue-token';
 
+    private const COURIER = 'pathao';
+
+    private const HERMES_LANE = 'hermes';
+
     public function __construct(
         private FraudPartnerCredentialResolver $credentials,
         private CourierLoginGuard $loginGuard = new CourierLoginGuard,
+        private ?CourierPace $pace = null,
     ) {}
 
     /**
      * Merchant logins first, then the Hermes token, then a fresh Hermes token.
-     * Every source asks the same merchant success endpoint. A rating-only
-     * answer is kept while the next source is asked for counts.
+     * Every source asks the same merchant success endpoint within the pace of
+     * its account. A rating-only answer is kept while the next source is
+     * asked for counts. When no account has room, Pathao is not asked and the
+     * report says when it can be.
      */
     public function check(string $phone): array
     {
@@ -47,12 +54,12 @@ class PathaoFraudChecker
         }
 
         $ratingFallback = null;
-        $rateLimited = false;
         $hermesTokenRejected = ! $hasHermesToken;
+        $state = ['rate_limited' => false, 'retry_after' => 0, 'asked' => false, 'wait' => 0];
 
         if ($hasMerchant) {
             $outcome = $this->checkViaMerchantPortal($phone);
-            $rateLimited = $outcome['rate_limited'];
+            $state = $this->mergeOutcome($state, $outcome);
 
             if ($outcome['report'] !== null) {
                 if (! CourierReportFormatter::isRatingOnly($outcome['report'])) {
@@ -63,9 +70,9 @@ class PathaoFraudChecker
             }
         }
 
-        if (! $rateLimited && $hasHermesToken) {
+        if (! $state['rate_limited'] && $hasHermesToken) {
             $outcome = $this->checkViaHermesToken($phone);
-            $rateLimited = $outcome['rate_limited'];
+            $state = $this->mergeOutcome($state, $outcome);
             $hermesTokenRejected = $outcome['unauthorized'];
 
             if ($outcome['report'] !== null) {
@@ -77,9 +84,9 @@ class PathaoFraudChecker
             }
         }
 
-        if (! $rateLimited && $hermesTokenRejected && $this->hasHermesIssueTokenCredentials()) {
+        if (! $state['rate_limited'] && $hermesTokenRejected && $this->hasHermesIssueTokenCredentials()) {
             $outcome = $this->checkViaHermesIssueToken($phone);
-            $rateLimited = $outcome['rate_limited'];
+            $state = $this->mergeOutcome($state, $outcome);
 
             if ($outcome['report'] !== null) {
                 if (! CourierReportFormatter::isRatingOnly($outcome['report'])) {
@@ -94,29 +101,48 @@ class PathaoFraudChecker
             return $ratingFallback;
         }
 
+        if ($state['rate_limited']) {
+            return $this->rateLimitedReport($state['retry_after']);
+        }
+
+        if (! $state['asked'] && $state['wait'] > 0) {
+            return $this->busyReport($state['wait']);
+        }
+
         LogHelper::saveLog('Pathao fraud check error', 'No Pathao login answered this lookup.');
 
-        return $this->unavailableReport($rateLimited);
+        return $this->unavailableReport();
     }
 
     /**
-     * Pool the merchant success call when a Pathao token is already cached.
-     * Login, Hermes, and rating-only answers stay on check().
+     * Pool the merchant success call when a Pathao token is already cached
+     * and its account has room now. Login, Hermes, another account after a
+     * rate limit, and rating-only answers stay on check().
      *
      * @return array{send: callable, read: callable}|null
      */
     public function poolPlan(string $phone, ?array $credentials = null): ?array
     {
-        foreach ($this->credentials->candidates('pathao') as $candidate) {
-            $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
+        foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
             $token = Cache::get($cacheKey);
 
             if (! is_string($token) || trim($token) === '') {
                 continue;
             }
 
+            $lane = $this->laneFor($candidate['identifier']);
+
+            if ($this->pace()->waitSeconds(self::COURIER, $lane) > 0) {
+                continue;
+            }
+
             return [
-                'send' => function (Pool $pool, string $name) use ($phone, $token): void {
+                'send' => function (Pool $pool, string $name) use ($phone, $token, $lane): void {
+                    if ($this->pace()->claim(self::COURIER, $lane, 0) > 0) {
+                        return;
+                    }
+
                     $pool->as($name)
                         ->timeout(25)
                         ->connectTimeout(8)
@@ -132,7 +158,7 @@ class PathaoFraudChecker
                             'phone' => $phone,
                         ]);
                 },
-                'read' => function (Response $response) use ($candidate, $cacheKey, $token): ?array {
+                'read' => function (Response $response) use ($candidate, $cacheKey, $token, $lane): ?array {
                     $result = $this->interpretMerchantHttp($response);
 
                     if ($result['unauthorized']) {
@@ -142,7 +168,10 @@ class PathaoFraudChecker
                     }
 
                     if ($result['rate_limited']) {
-                        return null;
+                        $rest = $this->pace()->rateLimited(self::COURIER, $lane, $result['retry_after']);
+
+                        // Another account may still have room; check() asks it.
+                        return $this->pace()->shared(self::COURIER) ? $this->rateLimitedReport($rest) : null;
                     }
 
                     $report = $result['report'];
@@ -159,6 +188,34 @@ class PathaoFraudChecker
         }
 
         return null;
+    }
+
+    /**
+     * Seconds until a lookup of the current kind could be sent on any Pathao
+     * account, 0 when one can go now.
+     */
+    public function nextSlotSeconds(): int
+    {
+        $lanes = $this->lanes();
+
+        if ($lanes === []) {
+            return 0;
+        }
+
+        return min(array_map(fn (string $lane): int => $this->pace()->waitSeconds(self::COURIER, $lane), $lanes));
+    }
+
+    /**
+     * Bulk lookups per minute over every lane a lookup can use (merchant
+     * accounts and the Hermes token), and how long every lane still rests.
+     *
+     * @return array{per_minute: float, resting_seconds: int, shared: bool}
+     */
+    public function paceStatus(): array
+    {
+        $lanes = $this->lanes();
+
+        return $this->pace()->status(self::COURIER, $lanes === [] ? [self::HERMES_LANE] : $lanes);
     }
 
     public function expireSession(): bool
@@ -180,7 +237,7 @@ class PathaoFraudChecker
             $cleared = $updated > 0;
         }
 
-        if ($this->credentials->forgetSessionCaches('pathao') > 0) {
+        if ($this->credentials->forgetSessionCaches(self::COURIER) > 0) {
             $cleared = true;
         }
 
@@ -217,28 +274,41 @@ class PathaoFraudChecker
 
     private function hasMerchantCredentials(): bool
     {
-        return $this->credentials->isConfigured('pathao');
+        return $this->credentials->isConfigured(self::COURIER);
     }
 
     /**
-     * @return array{report: array<string, mixed>|null, rate_limited: bool}
+     * @return array{report: array<string, mixed>|null, rate_limited: bool, retry_after: int, asked: bool, wait: int}
      */
     private function checkViaMerchantPortal(string $phone): array
     {
         $tried = [];
         $serverError = false;
         $rateLimited = false;
+        $retryAfter = 0;
+        $asked = false;
+        $wait = 0;
         $ratingFallback = null;
 
-        foreach ($this->credentials->candidates('pathao') as $candidate) {
-            $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
+        foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
+            $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
             $token = Cache::get($cacheKey);
 
             if (! is_string($token) || trim($token) === '') {
                 continue;
             }
 
-            $result = $this->askMerchantApi($phone, $token);
+            $result = $this->askMerchantApi($phone, $token, $this->laneFor($candidate['identifier']));
+
+            // No room on this account now. It is not logged in again either.
+            if ($result['deferred']) {
+                $wait = $this->sooner($wait, $result['wait']);
+                $tried[$candidate['identifier']] = true;
+
+                continue;
+            }
+
+            $asked = true;
 
             if ($result['unauthorized']) {
                 $this->loginGuard->forgetToken($cacheKey, $token);
@@ -250,7 +320,7 @@ class PathaoFraudChecker
                 $this->credentials->markSuccess($candidate['id']);
 
                 if (! CourierReportFormatter::isRatingOnly($result['report'])) {
-                    return ['report' => $result['report'], 'rate_limited' => false];
+                    return $this->merchantOutcome($result['report'], false, 0, true, 0);
                 }
 
                 $ratingFallback ??= $result['report'];
@@ -259,9 +329,16 @@ class PathaoFraudChecker
                 continue;
             }
 
+            // This account rests now. Another one is asked unless the limit
+            // covers every account.
             if ($result['rate_limited']) {
                 $rateLimited = true;
+                $retryAfter = max($retryAfter, $result['retry_after']);
                 $tried[$candidate['identifier']] = true;
+
+                if ($this->pace()->shared(self::COURIER)) {
+                    break;
+                }
 
                 continue;
             }
@@ -291,13 +368,23 @@ class PathaoFraudChecker
             $tried[$candidate['identifier']] = true;
         }
 
-        // Pathao is failing on its side; fresh logins would not help.
-        if ($serverError) {
-            return ['report' => $ratingFallback, 'rate_limited' => $rateLimited];
+        // A rate limit or an outage is Pathao's, so another login would not help.
+        if ($serverError || ($rateLimited && $this->pace()->shared(self::COURIER))) {
+            return $this->merchantOutcome($ratingFallback, $rateLimited, $retryAfter, $asked, $wait);
         }
 
-        foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
+        foreach ($this->credentials->loginCandidates(self::COURIER) as $candidate) {
             if (isset($tried[$candidate['identifier']])) {
+                continue;
+            }
+
+            $lane = $this->laneFor($candidate['identifier']);
+            $laneWait = $this->pace()->waitSeconds(self::COURIER, $lane);
+
+            // Logging in is pointless while this account cannot be asked.
+            if ($laneWait > $this->pace()->allowance(self::COURIER)) {
+                $wait = $this->sooner($wait, $laneWait);
+
                 continue;
             }
 
@@ -307,10 +394,18 @@ class PathaoFraudChecker
                 continue;
             }
 
-            $result = $this->askMerchantApi($phone, $token);
+            $result = $this->askMerchantApi($phone, $token, $lane);
+
+            if ($result['deferred']) {
+                $wait = $this->sooner($wait, $result['wait']);
+
+                continue;
+            }
+
+            $asked = true;
 
             if ($result['unauthorized']) {
-                $this->loginGuard->forgetToken($this->credentials->sessionCacheKey('pathao', $candidate['identifier']), $token);
+                $this->loginGuard->forgetToken($this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']), $token);
                 $this->credentials->markFailure($candidate['id'], 'Merchant token rejected');
 
                 continue;
@@ -320,7 +415,7 @@ class PathaoFraudChecker
                 $this->credentials->markSuccess($candidate['id']);
 
                 if (! CourierReportFormatter::isRatingOnly($result['report'])) {
-                    return ['report' => $result['report'], 'rate_limited' => false];
+                    return $this->merchantOutcome($result['report'], false, 0, true, 0);
                 }
 
                 $ratingFallback ??= $result['report'];
@@ -334,35 +429,65 @@ class PathaoFraudChecker
 
             if ($result['rate_limited']) {
                 $rateLimited = true;
+                $retryAfter = max($retryAfter, $result['retry_after']);
+
+                if ($this->pace()->shared(self::COURIER)) {
+                    break;
+                }
 
                 continue;
             }
 
             if ($result['server_error']) {
-                return ['report' => $ratingFallback, 'rate_limited' => $rateLimited];
+                break;
             }
         }
 
-        return ['report' => $ratingFallback, 'rate_limited' => $rateLimited];
+        return $this->merchantOutcome($ratingFallback, $rateLimited, $retryAfter, $asked, $wait);
     }
 
     /**
-     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool}
+     * @param  array<string, mixed>|null  $report
+     * @return array{report: array<string, mixed>|null, rate_limited: bool, retry_after: int, asked: bool, wait: int}
+     */
+    private function merchantOutcome(?array $report, bool $rateLimited, int $retryAfter, bool $asked, int $wait): array
+    {
+        return [
+            'report' => $report,
+            'rate_limited' => $rateLimited,
+            'retry_after' => $retryAfter,
+            'asked' => $asked,
+            'wait' => $wait,
+        ];
+    }
+
+    /**
+     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool, retry_after: int, asked: bool, wait: int}
      */
     private function checkViaHermesToken(string $phone): array
     {
         $token = $this->hermesDatabaseToken();
 
         if ($token === null) {
-            return ['report' => null, 'unauthorized' => true, 'rate_limited' => false];
+            return [
+                'report' => null,
+                'unauthorized' => true,
+                'rate_limited' => false,
+                'retry_after' => 0,
+                'asked' => false,
+                'wait' => 0,
+            ];
         }
 
-        $result = $this->askMerchantApi($phone, $token);
+        $result = $this->askMerchantApi($phone, $token, self::HERMES_LANE);
 
         return [
             'report' => $result['report'],
             'unauthorized' => $result['unauthorized'],
             'rate_limited' => $result['rate_limited'],
+            'retry_after' => $result['retry_after'],
+            'asked' => ! $result['deferred'],
+            'wait' => $result['wait'],
         ];
     }
 
@@ -370,11 +495,19 @@ class PathaoFraudChecker
      * The Hermes token only works for lookups on the merchant host.
      * api-hermes.pathao.com/api/v1/user/success answers 404.
      *
-     * @return array{report: array<string, mixed>|null, rate_limited: bool}
+     * @return array{report: array<string, mixed>|null, rate_limited: bool, retry_after: int, asked: bool, wait: int}
      */
     private function checkViaHermesIssueToken(string $phone): array
     {
-        foreach ($this->credentials->loginCandidates('pathao') as $candidate) {
+        $laneWait = $this->pace()->waitSeconds(self::COURIER, self::HERMES_LANE);
+
+        if ($laneWait > $this->pace()->allowance(self::COURIER)) {
+            return ['report' => null, 'rate_limited' => false, 'retry_after' => 0, 'asked' => false, 'wait' => $laneWait];
+        }
+
+        $asked = false;
+
+        foreach ($this->credentials->loginCandidates(self::COURIER) as $candidate) {
             if ($this->loginGuard->resting('pathao_hermes', $candidate)) {
                 continue;
             }
@@ -407,20 +540,26 @@ class PathaoFraudChecker
 
             $this->persistHermesToken($tokenBody);
 
-            $result = $this->askMerchantApi($phone, $accessToken);
+            $result = $this->askMerchantApi($phone, $accessToken, self::HERMES_LANE);
+
+            if ($result['deferred']) {
+                return ['report' => null, 'rate_limited' => false, 'retry_after' => 0, 'asked' => $asked, 'wait' => $result['wait']];
+            }
+
+            $asked = true;
 
             if ($result['report'] !== null) {
                 $this->credentials->markSuccess($candidate['id']);
 
-                return ['report' => $result['report'], 'rate_limited' => false];
+                return ['report' => $result['report'], 'rate_limited' => false, 'retry_after' => 0, 'asked' => true, 'wait' => 0];
             }
 
             if ($result['rate_limited']) {
-                return ['report' => null, 'rate_limited' => true];
+                return ['report' => null, 'rate_limited' => true, 'retry_after' => $result['retry_after'], 'asked' => true, 'wait' => 0];
             }
         }
 
-        return ['report' => null, 'rate_limited' => false];
+        return ['report' => null, 'rate_limited' => false, 'retry_after' => 0, 'asked' => $asked, 'wait' => 0];
     }
 
     /**
@@ -428,10 +567,10 @@ class PathaoFraudChecker
      */
     private function loginMerchant(array $candidate): ?string
     {
-        $cacheKey = $this->credentials->sessionCacheKey('pathao', $candidate['identifier']);
+        $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
 
         return $this->loginGuard->login(
-            'pathao',
+            self::COURIER,
             $candidate,
             function () use ($cacheKey): ?string {
                 $token = Cache::get($cacheKey);
@@ -454,7 +593,7 @@ class PathaoFraudChecker
             ]);
         } catch (Throwable $exception) {
             LogHelper::saveLog('Pathao fraud check error', 'Merchant login unreachable: '.CourierTransport::safeMessage($exception));
-            $this->loginGuard->restAfter('pathao', $candidate, null);
+            $this->loginGuard->restAfter(self::COURIER, $candidate, null);
 
             return null;
         }
@@ -464,7 +603,7 @@ class PathaoFraudChecker
         if (! $response->successful() || $token === '') {
             $this->credentials->markFailure($candidate['id'], 'Merchant login failed');
             LogHelper::saveLog('Pathao fraud check error', 'Merchant login failed for '.$candidate['identifier'].' (HTTP '.$response->status().').');
-            $this->loginGuard->restAfter('pathao', $candidate, $response->status());
+            $this->loginGuard->restAfter(self::COURIER, $candidate, $response->status());
 
             return null;
         }
@@ -476,10 +615,29 @@ class PathaoFraudChecker
     }
 
     /**
-     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool, server_error: bool, status: int|null}
+     * Ask the success endpoint once, within the pace of $lane.
+     *
+     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool, server_error: bool, status: int|null, retry_after: int, deferred: bool, wait: int}
      */
-    private function askMerchantApi(string $phone, string $token): array
+    private function askMerchantApi(string $phone, string $token, string $lane): array
     {
+        $outcome = [
+            'report' => null,
+            'unauthorized' => false,
+            'rate_limited' => false,
+            'server_error' => false,
+            'status' => null,
+            'retry_after' => 0,
+            'deferred' => false,
+            'wait' => 0,
+        ];
+
+        $wait = $this->pace()->claim(self::COURIER, $lane);
+
+        if ($wait > 0) {
+            return ['deferred' => true, 'wait' => $wait] + $outcome;
+        }
+
         try {
             $response = $this->client()
                 ->withToken($token)
@@ -489,33 +647,41 @@ class PathaoFraudChecker
         } catch (Throwable $exception) {
             LogHelper::saveLog('Pathao fraud check error', 'Merchant success API unreachable: '.CourierTransport::safeMessage($exception));
 
-            return [
-                'report' => null,
-                'unauthorized' => false,
-                'rate_limited' => false,
-                'server_error' => false,
-                'status' => null,
-            ];
+            return $outcome;
         }
 
-        return $this->interpretMerchantHttp($response);
+        $result = $this->interpretMerchantHttp($response);
+
+        if ($result['rate_limited']) {
+            $result['retry_after'] = $this->pace()->rateLimited(self::COURIER, $lane, $result['retry_after']);
+        }
+
+        return $result + $outcome;
     }
 
     /**
      * A report is returned only when Pathao answered for this number:
      * delivery counts, a confirmed empty history, or a rating.
      *
-     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool, server_error: bool, status: int|null}
+     * @return array{report: array<string, mixed>|null, unauthorized: bool, rate_limited: bool, server_error: bool, status: int|null, retry_after: int}
      */
     private function interpretMerchantHttp(Response $response): array
     {
         $status = $response->status();
+        $retryAfter = 0;
+
+        if ($status === 429) {
+            $header = trim((string) $response->header('Retry-After'));
+            $retryAfter = is_numeric($header) ? (int) $header : 0;
+        }
+
         $outcome = [
             'report' => null,
             'unauthorized' => $status === 401,
             'rate_limited' => $status === 429,
             'server_error' => $status >= 500,
             'status' => $status,
+            'retry_after' => $retryAfter,
         ];
 
         if (! $response->successful()) {
@@ -544,17 +710,101 @@ class PathaoFraudChecker
     }
 
     /**
-     * @return array<string, mixed>
+     * @param  array{rate_limited: bool, retry_after: int, asked: bool, wait: int}  $state
+     * @param  array<string, mixed>  $outcome
+     * @return array{rate_limited: bool, retry_after: int, asked: bool, wait: int}
      */
-    private function unavailableReport(bool $rateLimited): array
+    private function mergeOutcome(array $state, array $outcome): array
     {
-        return CourierReportFormatter::emptyReport(array_filter([
+        return [
+            'rate_limited' => $state['rate_limited'] || ! empty($outcome['rate_limited']),
+            'retry_after' => max($state['retry_after'], (int) ($outcome['retry_after'] ?? 0)),
+            'asked' => $state['asked'] || ! empty($outcome['asked']),
+            'wait' => $this->sooner($state['wait'], (int) ($outcome['wait'] ?? 0)),
+        ];
+    }
+
+    private function sooner(int $current, int $next): int
+    {
+        if ($next <= 0) {
+            return $current;
+        }
+
+        return $current > 0 ? min($current, $next) : $next;
+    }
+
+    /**
+     * Merchant accounts and the Hermes token, each with its own pace.
+     *
+     * @return list<string>
+     */
+    private function lanes(): array
+    {
+        $lanes = [];
+
+        if ($this->hasMerchantCredentials()) {
+            foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
+                $lanes[] = $this->laneFor($candidate['identifier']);
+            }
+        }
+
+        if ($this->hasHermesTokenInDatabase() || $this->hasHermesIssueTokenCredentials()) {
+            $lanes[] = self::HERMES_LANE;
+        }
+
+        return array_values(array_unique($lanes));
+    }
+
+    private function laneFor(string $identifier): string
+    {
+        return 'acct-'.substr(md5(strtolower(trim($identifier))), 0, 12);
+    }
+
+    private function pace(): CourierPace
+    {
+        return $this->pace ??= app(CourierPace::class);
+    }
+
+    private function rateLimitedReport(int $seconds): array
+    {
+        $seconds = max(1, $seconds);
+
+        return CourierReportFormatter::emptyReport([
             'unavailable' => true,
-            'rate_limited' => $rateLimited ?: null,
-            'message' => $rateLimited
-                ? 'Pathao asked us to slow down. This number is checked again shortly.'
-                : 'Pathao did not answer this time. This number is checked again automatically.',
-        ], fn ($value) => $value !== null));
+            'rate_limited' => true,
+            'retry_after' => $seconds,
+            'message' => 'Pathao asked us to slow down. Ask again in about '.$this->duration($seconds).'.',
+        ]);
+    }
+
+    private function busyReport(int $seconds): array
+    {
+        $seconds = max(1, $seconds);
+
+        return CourierReportFormatter::emptyReport([
+            'unavailable' => true,
+            'rate_limited' => true,
+            'deferred' => true,
+            'retry_after' => $seconds,
+            'message' => 'Pathao is busy, so this number was not asked yet. Ask again in about '.$this->duration($seconds).'.',
+        ]);
+    }
+
+    private function unavailableReport(): array
+    {
+        return CourierReportFormatter::emptyReport([
+            'unavailable' => true,
+            'message' => 'Pathao did not answer this time. This number is checked again automatically.',
+        ]);
+    }
+
+    private function duration(int $seconds): string
+    {
+        if ($seconds < 90) {
+            return $seconds.' seconds';
+        }
+
+        return (int) ceil($seconds / 60).' minutes';
     }
 
     private function client(): PendingRequest

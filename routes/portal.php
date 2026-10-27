@@ -57,6 +57,9 @@ Route::middleware(['auth', 'auth.active', 'merchant.portal'])
                 Route::post('/fraud-check/batches/{batch}/items/{item}/refresh', [BulkFraudCheckController::class, 'refresh'])
                     ->middleware('throttle:120,1,fraud-refresh')
                     ->name('fraud-check.batches.refresh');
+                Route::get('/fraud-check/batches/{batch}/changes', [BulkFraudCheckController::class, 'changes'])
+                    ->middleware('throttle:120,1,fraud-poll')
+                    ->name('fraud-check.batches.changes');
                 Route::get('/fraud-check/batches/{batch}/preview', [BulkFraudCheckController::class, 'preview'])
                     ->name('fraud-check.batches.preview');
                 Route::get('/fraud-check/batches/{batch}/export', [BulkFraudCheckController::class, 'export'])

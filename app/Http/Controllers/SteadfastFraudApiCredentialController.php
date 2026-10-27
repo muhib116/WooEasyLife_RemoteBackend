@@ -99,22 +99,13 @@ class SteadfastFraudApiCredentialController extends Controller
         }
 
         $result = $checker->probeApiKey($saved['api_key'], $saved['secret_key']);
+        $this->credentials->rememberProbe($saved['api_key'], $result);
 
         if ($result['ok']) {
-            $this->credentials->recordOutcome($saved['api_key'], null);
-
             return back()->with('success', 'This key works again. Hub checks can use it.');
         }
 
         if (! empty($result['temporary'])) {
-            $retryAfter = (int) ($result['retry_after'] ?? 0);
-            $seconds = (int) ($result['cooldown'] ?? 0);
-
-            if ($retryAfter > 0) {
-                $this->credentials->rest($saved['api_key'], $retryAfter, exact: true);
-            } elseif ($seconds > 0) {
-                $this->credentials->rest($saved['api_key'], $seconds, exact: true);
-            }
 
             $message = ! empty($result['rate_limited'])
                 ? 'Steadfast rate limit on this key. It rests for a few minutes, then checks use it again.'
@@ -124,7 +115,6 @@ class SteadfastFraudApiCredentialController extends Controller
         }
 
         $message = $result['error'] ?: 'Steadfast rejected this API key or secret.';
-        $this->credentials->recordOutcome($saved['api_key'], $message);
 
         return back()->with(
             'success',
