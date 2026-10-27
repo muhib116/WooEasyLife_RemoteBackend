@@ -64,8 +64,20 @@
                         <p class="text-xs" :class="quota.remaining < 1 ? 'text-rose-600' : 'text-gray-500 dark:text-gray-400'">
                             {{ quota.remaining }} of {{ quota.daily_limit }} successful checks left today. The same number is counted once.
                         </p>
-                        <p v-if="fileNote" class="text-xs text-emerald-700 dark:text-emerald-300">{{ fileNote }}</p>
-                        <p v-if="fileError" class="text-sm text-rose-600">{{ fileError }}</p>
+                        <ul v-if="fileChips.length" class="flex flex-wrap gap-2">
+                            <li
+                                v-for="(chip, index) in fileChips"
+                                :key="`${chip.name}-${index}`"
+                                class="inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
+                                :class="chip.error
+                                    ? 'border-rose-300 text-rose-700 dark:border-rose-500/40 dark:text-rose-300'
+                                    : 'border-emerald-300 text-emerald-800 dark:border-emerald-500/40 dark:text-emerald-200'"
+                            >
+                                <span class="truncate">{{ chip.name }}</span>
+                                <span v-if="chip.error">· {{ chip.error }}</span>
+                                <span v-else>· {{ chip.added }} added<span v-if="chip.skipped"> · {{ chip.skipped }} skipped</span></span>
+                            </li>
+                        </ul>
                         <p v-if="formError" class="text-sm text-rose-600">{{ formError }}</p>
                     </div>
 
@@ -106,8 +118,7 @@ const rawPhones = ref("");
 const starting = ref(false);
 const formError = ref("");
 const fileInput = ref(null);
-const fileNote = ref("");
-const fileError = ref("");
+const fileChips = ref([]);
 
 const page = usePage();
 const quota = computed(() => page.props.auth?.portal?.courier_history ?? {
@@ -139,43 +150,28 @@ function defaultBatchName() {
 async function onFile(event) {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
-    fileNote.value = "";
-    fileError.value = "";
     if (!files.length) return;
 
-    const errors = [];
-    const loadedNames = [];
-    const collected = [];
     for (const file of files) {
         if (file.size > 1024 * 1024) {
-            errors.push(`${file.name} is larger than 1 MB.`);
+            fileChips.value.push({ name: file.name, error: "Larger than 1 MB" });
             continue;
         }
         let text = "";
         try {
             text = await readFileText(file);
         } catch {
-            errors.push(`Could not read ${file.name}.`);
+            fileChips.value.push({ name: file.name, error: "Could not read" });
             continue;
         }
         const phones = phonesFromFile(text);
         if (!phones.length) {
-            errors.push(`No phone numbers found in ${file.name}.`);
+            fileChips.value.push({ name: file.name, error: "No numbers" });
             continue;
         }
-        collected.push(...phones);
-        loadedNames.push(file.name);
+        const { added, skipped } = appendPhones(phones);
+        fileChips.value.push({ name: file.name, added, skipped });
     }
-
-    if (loadedNames.length) {
-        const { added, skipped } = appendPhones(collected);
-        const names = loadedNames.join(", ");
-        fileNote.value = added
-            ? `Added ${added} number${added === 1 ? "" : "s"} from ${names}.`
-            : `No new numbers in ${names}.`;
-        if (skipped) fileNote.value += ` ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped.`;
-    }
-    if (errors.length) fileError.value = errors.join(" ");
 }
 
 function readFileText(file) {

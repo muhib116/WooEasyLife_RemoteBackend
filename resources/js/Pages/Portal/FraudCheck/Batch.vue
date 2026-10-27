@@ -10,14 +10,23 @@
                         </span>
                     </p>
                     <div class="flex items-center gap-3">
-                        <p
-                            v-if="showElapsed && !waitingCount"
-                            class="font-mono text-sm font-semibold tabular-nums"
-                            style="color: var(--mp-ink)"
+                        <div v-if="showElapsed" class="text-right">
+                            <p class="font-mono text-sm font-semibold tabular-nums" style="color: var(--mp-ink)">
+                                <span class="sr-only">{{ batchState.status === "stopped" ? "Paused at" : "Checking time" }}</span>
+                                {{ elapsedLabel }}
+                            </p>
+                            <p v-if="batchEtaLabel" class="text-xs" style="color: var(--mp-muted)">{{ batchEtaLabel }}</p>
+                        </div>
+                        <button
+                            v-if="showPauseControl"
+                            type="button"
+                            class="rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                            style="border-color: var(--mp-line); color: var(--mp-ink)"
+                            :disabled="pausing"
+                            @click="pauseChecking"
                         >
-                            <span class="sr-only">Checking time</span>
-                            {{ elapsedLabel }}
-                        </p>
+                            {{ resumeInstead ? "Resume" : "Pause" }}
+                        </button>
                         <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">{{ percent }}%</p>
                     </div>
                 </div>
@@ -28,7 +37,10 @@
                         :style="{ width: (running && percent === 0 ? 8 : percent) + '%' }"
                     />
                 </div>
-                <p v-if="checkActive" class="px-4 py-2 text-xs" style="color: var(--mp-muted)">
+                <p v-if="finishedSummary" class="px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                    {{ finishedSummary }}
+                </p>
+                <p v-else-if="checkActive" class="px-4 py-2 text-xs" style="color: var(--mp-muted)">
                     You can leave this page. Checking keeps going.
                 </p>
             </section>
@@ -62,25 +74,6 @@
 
             <PageCard title="Results" :description="progressLabel">
                 <template #actions>
-                    <Button
-                        v-if="running"
-                        type="button"
-                        label="Stop"
-                        icon="pi pi-stop"
-                        severity="secondary"
-                        outlined
-                        size="small"
-                        @click="stop"
-                    />
-                    <Button
-                        v-else-if="batchState.pending > 0 && !limitBlocked"
-                        type="button"
-                        label="Continue"
-                        icon="pi pi-play"
-                        size="small"
-                        :disabled="refreshingIncomplete"
-                        @click="continueBatch"
-                    />
                     <label class="results-search">
                         <span class="sr-only">Search phone number</span>
                         <i class="pi pi-search results-search-icon" />
@@ -166,30 +159,12 @@
                     v-if="waitingCount > 0"
                     class="mb-4 rounded-xl border border-sky-600/30 bg-sky-50 px-3 py-2 text-sm text-sky-950 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100"
                 >
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="font-semibold">
-                                {{ waitingCount }} {{ waitingCount === 1 ? "number is" : "numbers are" }} waiting for a courier
-                            </p>
-                            <p class="mt-0.5 text-xs opacity-80">
-                                The other couriers already answered. A waiting courier is asked again only when it has room, up to {{ incompleteRetryMax }} times.
-                            </p>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-2">
-                            <p v-if="showElapsed" class="font-mono text-sm font-semibold tabular-nums">
-                                <span class="sr-only">{{ batchState.status === "stopped" ? "Paused at" : "Checking time" }}</span>
-                                {{ elapsedLabel }}
-                            </p>
-                            <button
-                                type="button"
-                                class="rounded-lg border border-sky-700/30 bg-white px-3 py-1.5 text-xs font-semibold text-sky-950 disabled:opacity-50 dark:border-sky-400/30 dark:bg-transparent dark:text-sky-100"
-                                :disabled="pausing"
-                                @click="pauseChecking"
-                            >
-                                {{ batchState.status === "stopped" ? "Resume" : "Pause" }}
-                            </button>
-                        </div>
-                    </div>
+                    <p class="font-semibold">
+                        {{ waitingCount }} {{ waitingCount === 1 ? "number is" : "numbers are" }} waiting for a courier
+                    </p>
+                    <p class="mt-0.5 text-xs opacity-80">
+                        The other couriers already answered. A waiting courier is asked again only when it has room, up to {{ incompleteRetryMax }} times.
+                    </p>
                     <ul v-if="courierStatus.length" class="mt-2 flex flex-wrap gap-2">
                         <li
                             v-for="status in courierStatus"
@@ -304,15 +279,15 @@
                 </div>
 
                 <div class="max-w-full overflow-x-auto">
-                    <table class="w-full min-w-[40rem] text-left text-sm">
+                    <table class="w-full text-left text-sm md:min-w-[40rem]">
                         <thead>
                             <tr class="border-b text-xs font-medium" style="border-color: var(--mp-line); color: var(--mp-muted)">
                                 <th class="whitespace-nowrap px-3 py-2.5 font-medium">Phone Number</th>
                                 <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Status</th>
-                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Total Orders</th>
-                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Successful</th>
-                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Cancelled</th>
-                                <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Success Rate</th>
+                                <th class="hidden whitespace-nowrap px-3 py-2.5 text-center font-medium md:table-cell print:table-cell">Total Orders</th>
+                                <th class="hidden whitespace-nowrap px-3 py-2.5 text-center font-medium md:table-cell print:table-cell">Successful</th>
+                                <th class="hidden whitespace-nowrap px-3 py-2.5 text-center font-medium md:table-cell print:table-cell">Cancelled</th>
+                                <th class="hidden whitespace-nowrap px-3 py-2.5 text-center font-medium md:table-cell print:table-cell">Success Rate</th>
                                 <th class="whitespace-nowrap px-3 py-2.5 text-center font-medium">Risk</th>
                                 <th class="whitespace-nowrap px-3 py-2.5 text-right font-medium">Actions</th>
                             </tr>
@@ -338,10 +313,10 @@
                                         {{ statusLabel(row.status) }}
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums" style="color: var(--mp-ink)">{{ row.total_orders }}</td>
-                                <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-violet-600 dark:text-violet-300">{{ row.received }}</td>
-                                <td class="whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-rose-600 dark:text-rose-300">{{ row.cancelled }}</td>
-                                <td class="whitespace-nowrap px-3 py-2.5 text-center font-medium tabular-nums" :class="rateClass(row)">{{ tableRate(row) }}</td>
+                                <td class="hidden whitespace-nowrap px-3 py-2.5 text-center tabular-nums md:table-cell print:table-cell" style="color: var(--mp-ink)">{{ row.total_orders }}</td>
+                                <td class="hidden whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-violet-600 dark:text-violet-300 md:table-cell print:table-cell">{{ row.received }}</td>
+                                <td class="hidden whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-rose-600 dark:text-rose-300 md:table-cell print:table-cell">{{ row.cancelled }}</td>
+                                <td class="hidden whitespace-nowrap px-3 py-2.5 text-center font-medium tabular-nums md:table-cell print:table-cell" :class="rateClass(row)">{{ tableRate(row) }}</td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     <span
                                         v-if="isChecking(row)"
@@ -357,7 +332,7 @@
                                     <span v-else class="text-gray-400">—</span>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2.5">
-                                    <div class="flex flex-nowrap items-center justify-end gap-1.5">
+                                    <div class="flex flex-wrap items-center justify-end gap-1.5 md:flex-nowrap">
                                         <button
                                             type="button"
                                             class="rounded-lg border border-[#e6a800]/50 bg-[#ffc107]/15 px-2.5 py-1 text-xs font-semibold text-[#5c4500] dark:border-[#ffc107]/40 dark:bg-[#ffc107]/10 dark:text-[#ffd54f]"
@@ -710,6 +685,7 @@ const bulkWorkers = computed(() => Math.min(5, Math.max(1, Number(props.workers)
 const incompleteRetryMax = computed(() => Math.min(5, Math.max(0, Number(props.incompleteRetries ?? 5))));
 const waitingCount = computed(() => countRisk("waiting"));
 const pausing = ref(false);
+const workersStalled = ref(false);
 const clock = ref(Date.now());
 const pausedMs = ref(0);
 const pauseStartedAt = ref(null);
@@ -800,7 +776,56 @@ const progressLabel = computed(() => {
     if (limitBlocked.value && items.value.some((row) => row.status === "pending")) {
         return `Daily limit reached · ${done} of ${items.value.length} checked${waiting}`;
     }
+    if (waitingCount.value) return `Waiting for couriers · ${done} of ${items.value.length} checked · ${waitingCount.value} still waiting`;
+    if (batchState.value.status === "completed") return `Completed · ${done} of ${items.value.length} checked`;
     return `${batchState.value.status} · ${done} of ${items.value.length} checked${waiting}`;
+});
+
+const resumeInstead = computed(() => batchState.value.status === "stopped" || workersStalled.value);
+
+const showPauseControl = computed(() => {
+    if (workersStalled.value) return countWaiting() > 0;
+    const paused = batchState.value.status === "stopped";
+    const workLeft = running.value || batchState.value.status === "running" || waitingCount.value > 0 || batchState.value.pending > 0;
+    if (paused) return waitingCount.value > 0 || batchState.value.pending > 0;
+    return workLeft;
+});
+
+const batchFinished = computed(() => !running.value
+    && waitingCount.value === 0
+    && countWaiting() === 0
+    && batchState.value.status === "completed"
+    && items.value.length > 0);
+
+const finishedSummary = computed(() => {
+    if (!batchFinished.value) return "";
+    const count = items.value.length;
+    const noun = count === 1 ? "number" : "numbers";
+    if (showElapsed.value && elapsedLabel.value && elapsedLabel.value !== "00:00") {
+        return `${count} ${noun} finished in ${elapsedLabel.value}.`;
+    }
+    return `${count} ${noun} finished.`;
+});
+
+const batchEtaLabel = computed(() => {
+    if (batchFinished.value || (!checkActive.value && batchState.value.status !== "stopped")) return "";
+    const pending = countWaiting();
+    const pathao = courierStatus.value.find((status) => status.courier === "pathao");
+    const perMinute = Number(pathao?.per_minute) || 0;
+    let minutes = 0;
+    if (perMinute > 0) {
+        minutes = Math.ceil(((Number(pathao.waiting) || 0) + pending) / perMinute);
+    }
+    for (const status of courierStatus.value) {
+        const eta = Number(status.eta_minutes) || 0;
+        if (pending > 0 && status.courier !== "pathao" && perMinute <= 0) continue;
+        if (eta > minutes) minutes = eta;
+    }
+    if (minutes < 1) return "";
+    if (minutes < 60) return `about ${minutes} min left`;
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest ? `about ${hours}h ${rest}m left` : `about ${hours}h left`;
 });
 
 const rowFilter = ref(null);
@@ -1007,10 +1032,6 @@ async function pollChanges() {
         schedulePoll(POLL_IDLE_MS);
         return;
     }
-    if (document.hidden) {
-        schedulePoll(POLL_RUNNING_MS);
-        return;
-    }
     try {
         const { data } = await axios.get(route("portal.fraud-check.batches.changes", {
             batch: batchState.value.id,
@@ -1199,6 +1220,7 @@ async function continueBatch() {
 }
 
 async function runPending() {
+    workersStalled.value = false;
     const run = { token: ++runToken, halted: false };
     const workers = bulkWorkers.value;
     running.value = true;
@@ -1254,7 +1276,8 @@ async function runWorker(run, index) {
         }
         if (!idleSince) idleSince = Date.now();
         if (Date.now() - idleSince > 240000) {
-            refreshNotice.value = "Checking paused. Press Continue to try the remaining numbers.";
+            workersStalled.value = true;
+            refreshNotice.value = "This page stopped asking for the remaining numbers. Press Resume to continue.";
             run.halted = true;
             break;
         }
@@ -1442,7 +1465,7 @@ async function stop() {
 
 async function pauseChecking() {
     if (pausing.value) return;
-    if (batchState.value.status === "stopped") {
+    if (batchState.value.status === "stopped" || workersStalled.value) {
         continueBatch();
         return;
     }

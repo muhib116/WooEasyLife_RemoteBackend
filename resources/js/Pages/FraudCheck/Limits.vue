@@ -17,6 +17,42 @@
             </p>
 
             <PageCard
+                title="Background checking"
+                description="Numbers still to check, and couriers a number is waiting for, keep going after the merchant leaves the page."
+            >
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            Keep checking when the page is closed
+                        </p>
+                        <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                            On, the server does this every minute. Off, a batch checks only while its page is open. Run now starts one pass either way.
+                        </p>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                            {{ schedulerStatusText }}
+                        </p>
+                    </div>
+                    <ToggleSwitch
+                        :model-value="schedulerEnabled"
+                        :disabled="savingScheduler"
+                        aria-label="Keep checking when the page is closed"
+                        @update:model-value="saveScheduler"
+                    />
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <Button
+                        type="button"
+                        label="Run now"
+                        icon="pi pi-play"
+                        class="!min-h-11 w-full sm:w-auto"
+                        :loading="runningScheduler"
+                        :disabled="scheduler.running"
+                        @click="runScheduler"
+                    />
+                </div>
+            </PageCard>
+
+            <PageCard
                 title="Bulk check"
                 description="How many numbers run at once, how fast each courier is asked, and how long a number waits for a courier. Saved numbers replace the .env defaults. A number that matches .env is not stored."
             >
@@ -172,6 +208,7 @@ import { AuthenticatedLayout } from "@/layouts";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 import InputNumber from "primevue/inputnumber";
+import ToggleSwitch from "primevue/toggleswitch";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 
@@ -193,6 +230,13 @@ type QuotaSnapshot = {
     fields: Record<string, QuotaField>;
 };
 
+type SchedulerStatus = {
+    enabled: boolean;
+    alive: boolean;
+    running: boolean;
+    last_ran_at: string | null;
+};
+
 const props = defineProps({
     quotas: {
         type: Object as () => QuotaSnapshot,
@@ -205,6 +249,15 @@ const props = defineProps({
             defaults: {},
             overrides: {},
             fields: {},
+        }),
+    },
+    scheduler: {
+        type: Object as () => SchedulerStatus,
+        default: () => ({
+            enabled: true,
+            alive: false,
+            running: false,
+            last_ran_at: null,
         }),
     },
 });
@@ -233,6 +286,9 @@ function bulkFormState(values: Record<string, number> | undefined) {
 const page = usePage();
 const resetting = ref(false);
 const resettingBulk = ref(false);
+const savingScheduler = ref(false);
+const runningScheduler = ref(false);
+const schedulerEnabled = ref(props.scheduler.enabled !== false);
 const savedMessage = computed(() => {
     const flash = page.props.flash as { success?: string } | undefined;
 
@@ -260,6 +316,22 @@ watch(
         Object.assign(bulkForm, bulkFormState(values));
     },
 );
+
+watch(
+    () => props.scheduler.enabled,
+    (enabled) => {
+        schedulerEnabled.value = enabled !== false;
+    },
+);
+
+const schedulerStatusText = computed(() => {
+    if (props.scheduler.running) return "A run is in progress.";
+    if (!props.scheduler.last_ran_at) return "The server has not run this yet. Run now starts one pass.";
+    const when = `The server last ran this at ${props.scheduler.last_ran_at}.`;
+    if (props.scheduler.alive) return when;
+
+    return `${when} It has not run in the last few minutes.`;
+});
 
 const fields = computed(() => [
     {
@@ -329,6 +401,29 @@ const resetBulkDefaults = () => {
         preserveScroll: true,
         onFinish: () => {
             resettingBulk.value = false;
+        },
+    });
+};
+
+const saveScheduler = (enabled: boolean) => {
+    schedulerEnabled.value = enabled;
+    savingScheduler.value = true;
+
+    router.put(route("frauds.limits.scheduler.update"), { enabled }, {
+        preserveScroll: true,
+        onFinish: () => {
+            savingScheduler.value = false;
+        },
+    });
+};
+
+const runScheduler = () => {
+    runningScheduler.value = true;
+
+    router.post(route("frauds.limits.scheduler.run"), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            runningScheduler.value = false;
         },
     });
 };

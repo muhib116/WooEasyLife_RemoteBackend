@@ -7,6 +7,7 @@ use App\Models\BulkFraudDailyResult;
 use App\Models\CourierHistoryUse;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\FraudCheck\BulkFraudScheduler;
 use App\Services\FraudCheck\MerchantBulkFraudCheck;
 use App\Services\FraudCheckService;
 use App\Services\MerchantEmployeeService;
@@ -1990,6 +1991,28 @@ class MerchantBulkFraudCheckTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(0, BulkFraudBatchItem::query()->where('batch_id', $batchId)->where('status', 'pending')->count());
+    }
+
+    public function test_turning_background_checking_off_leaves_pending_numbers_alone(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->never();
+        });
+
+        $merchant = $this->merchant('scheduler-off@example.com', '01700000080');
+        $batchId = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01711110005'])
+            ->assertOk()
+            ->json('batch.id');
+
+        app(BulkFraudScheduler::class)->setEnabled(false);
+
+        $this->artisan('fraud-check:advance-pending', ['--seconds' => 5])->assertSuccessful();
+        $this->artisan('fraud-check:fill-waiting', ['--seconds' => 5])->assertSuccessful();
+
+        $this->assertSame('pending', BulkFraudBatchItem::query()->where('batch_id', $batchId)->value('status'));
+
+        app(BulkFraudScheduler::class)->setEnabled(true);
     }
 
     private function merchant(string $email = 'bulk-merchant@example.com', string $phone = '01700000021'): User

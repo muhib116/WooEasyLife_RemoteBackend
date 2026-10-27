@@ -3,7 +3,9 @@
 use App\Models\PlatformSetting;
 use App\Models\User;
 use App\Services\FraudCheck\BulkFraudRuntimeSettings;
+use App\Services\FraudCheck\BulkFraudScheduler;
 use App\Services\FraudCheck\CourierPace;
+use Illuminate\Support\Facades\Cache;
 use App\Services\FraudCheck\MerchantBulkFraudCheck;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -175,4 +177,48 @@ it('lets an admin save and reset bulk settings without changing daily limits', f
 
     expect(config('fraud_check.bulk_workers'))->toBe(3)
         ->and(config('fraud_check.bulk_incomplete_retries'))->toBe(5);
+});
+
+it('lets an admin turn background checking off and start one pass', function () {
+    $admin = bulkSettingsAdmin();
+    $scheduler = app(BulkFraudScheduler::class);
+
+    $this->actingAs($admin)->get(route('frauds.limits'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('FraudCheck/Limits')
+            ->where('scheduler.enabled', true)
+            ->where('scheduler.alive', false)
+            ->where('scheduler.running', false));
+
+    expect($scheduler->enabled())->toBeTrue()
+        ->and($scheduler->status()['alive'])->toBeFalse();
+
+    $this->actingAs($admin)->put(route('frauds.limits.scheduler.update'), [
+        'enabled' => false,
+    ])->assertRedirect()->assertSessionHas('success');
+
+    expect($scheduler->enabled())->toBeFalse()
+        ->and($scheduler->allows(manual: false))->toBeFalse()
+        ->and($scheduler->allows(manual: true))->toBeTrue();
+
+    $this->actingAs($admin)->post(route('frauds.limits.scheduler.run'))
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $status = $scheduler->status();
+    expect($status['alive'])->toBeTrue()
+        ->and($status['running'])->toBeTrue()
+        ->and($status['enabled'])->toBeFalse()
+        ->and($status['last_ran_at'])->not->toBeNull();
+
+    $this->actingAs($admin)->put(route('frauds.limits.scheduler.update'), [
+        'enabled' => true,
+    ])->assertRedirect();
+
+    expect($scheduler->enabled())->toBeTrue();
+
+    Cache::forget('fraud_check.scheduler:heartbeat');
+    Cache::forget('fraud_check.scheduler:running');
+    PlatformSetting::query()->where('key', BulkFraudScheduler::SETTING_KEY)->delete();
 });
