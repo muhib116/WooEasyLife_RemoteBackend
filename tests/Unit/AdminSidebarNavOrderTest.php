@@ -25,6 +25,7 @@ it('merges partial stored order with full catalog defaults', function () {
         ->and($merged['children']['Merchants'])->toContain('Trashed Merchants')
         ->and($merged['children']['Merchants'])->toContain('All Merchants')
         ->and($merged['children']['Merchants'])->toContain('Subscription Alerts')
+        ->and($merged['children']['Fraud Checker'][0])->toBe('Dashboard')
         ->and($merged['items']['Merchants'])->not->toContain('Billing')
         ->and($merged['items']['Platform'])->not->toContain('Subscription Alerts');
 });

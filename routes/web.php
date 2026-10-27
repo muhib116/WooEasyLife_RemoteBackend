@@ -54,6 +54,7 @@ use App\Http\Controllers\App\SitemapController;
 use App\Http\Controllers\CurlController;
 use App\Http\Controllers\DeployController;
 use App\Http\Controllers\FraudCheckController;
+use App\Http\Controllers\FraudCheckDashboardController;
 use App\Http\Controllers\FraudCheckQuotaController;
 use App\Http\Controllers\FraudPartnerCredentialController;
 use App\Http\Controllers\PageBuilder;
@@ -847,6 +848,7 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
     // Obfuscated path kept for bookmarks; auth + platform.admin are required.
     Route::group(['as' => 'frauds.', 'prefix' => 'q8w1d9zp7kuo2vrb5m6cnx0ahjls4et3ifyugpdbq2m1vnz0l'], function () {
         Route::get('/', [FraudCheckController::class, 'index'])->name('index');
+        Route::get('/dashboard', FraudCheckDashboardController::class)->name('dashboard');
         Route::get('/expire', [FraudCheckController::class, 'expire'])->name('expire');
         Route::post('/save-steadfast-curl', [FraudCheckController::class, 'saveSteadfastCurl'])->name('saveSteadfastCurl');
         Route::post('/fraud-check', [FraudCheckController::class, 'check'])->name('adminFraudCheck');

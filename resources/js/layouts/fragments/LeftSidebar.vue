@@ -526,6 +526,12 @@ const allSections: NavSection[] = [
                 permission: "merchants.view",
                 children: [
                     {
+                        title: "Dashboard",
+                        name: "frauds.dashboard",
+                        icon: "PhChartBar",
+                        permission: "merchants.view",
+                    },
+                    {
                         title: "Phone Check",
                         name: "frauds.index",
                         icon: "PhMagnifyingGlass",
