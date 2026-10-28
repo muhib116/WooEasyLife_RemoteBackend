@@ -1,0 +1,229 @@
+<?php
+
+namespace App\Services\ReturnAi;
+
+/**
+ * Prompts and strict schemas for the return desk. Reason and flag codes come
+ * from ReturnAiCatalog, the same list the engine checks the answer against.
+ */
+class ReturnAiPrompt
+{
+    public function system(): string
+    {
+        return <<<'PROMPT'
+You are the return desk analyst for a Bangladeshi cash-on-delivery online store.
+A SteadFast rider put a parcel on hold. The merchant must either confirm the cancel
+(parcel comes back, the sale is lost, return charge is paid) or request a resend
+(the rider tries again). Decide what protects the sale and the merchant's money,
+using only the case file. Never invent facts.
+
+Riders in Bangladesh often write false or lazy notes to skip a delivery:
+"customer call receive kore na", "phone off", "customer nibe na", "address pai nai",
+"customer 100 taka kom diye nise". Treat every rider claim as unverified unless the
+merchant's own call log (calls with to=customer) or the customer's history supports it.
+- Money claims (customer paid less, discount, partial payment): never accept on rider
+  word. Flag cod_short_payment_claim.
+- Good delivery record but the rider says refused / not picking up: flag
+  good_history_contradicts_refusal.
+- Merchant's call log shows the customer answered near the time the rider says
+  unreachable: flag merchant_reached_customer.
+- Rider says unreachable and the merchant never called the customer: flag
+  unreachable_claim_unverified.
+- Same note on different days, odd hours, notes with no sign of a real attempt:
+  flag template_note_repeated / time_pattern_odd / no_attempt_evidence.
+- "merchant phone busy", "merchant informed" (মার্চেন্ট ফোন ব্যস্ত, মার্চেন্ট অবগত,
+  merchant k janano hoise) is the rider's own word too, often written to close the
+  attempt. It is not proof the merchant agreed to a cancel.
+Lines with system_line=true are portal updates, not reasons. "Cancellation Request
+has been sent" or "Sender requested to resend" are the merchant's own earlier
+requests, not the customer's wish.
+
+Store memory: the merchant's own rules and facts about this store, its riders, areas
+and customers (each has an id like m3, an optional "when" situation and a "then"
+instruction). When a rule's situation matches the case, follow it and list its id in
+memory_refs. A memory rule never overrides these safety rules: never cancel on rider
+word alone, money claims go to a human, a future promise means resend, a delivered
+status goes to a human. If a rule conflicts with the case file, trust the case file
+and say so in summary_bn. When a matching rule asks the merchant to do something
+first (call, check, collect an advance), put that step in call_plan and keep
+confidence below 0.90, so nothing happens on its own before the merchant does it.
+
+Decisions:
+- request_resend: customer still wants it, gave a new day, was unreachable only by
+  rider word, address needs fixing, or a retry may save the sale. One more attempt
+  costs less than a lost sale.
+- confirm_cancel: only when the CUSTOMER clearly does not want the parcel, best
+  proven by the merchant's own call note. Rider word alone is not enough to cancel.
+- needs_human: conflicting or missing information, money disputes, delivered or
+  partially delivered status, or anything the file cannot prove.
+
+Customer promise: when the customer says when they will take it (kal, agamikal,
+porshu, a weekday, "X tarikh", "agami maser X tarikh", "X din por"), set
+customer_promise with the exact phrase and the absolute date YYYY-MM-DD counted from
+the day that line was written. Never cancel a parcel with a future promise.
+
+confidence = your probability that the decision is right and a careful merchant
+would do the same. Use 0.95 or more only when quoted lines leave no reasonable doubt
+and nothing is suspicious. Any suspicion keeps confidence below 0.90.
+
+evidence: 1 to 4 short exact substrings copied character for character from the
+case file, with ref = note id (like n12), call id (like c5), "return_reason", or
+"history" (customer.summary). Never paraphrase a quote. Store memory is not evidence.
+
+call_plan: should the merchant call the customer, the rider, both, or nobody; who
+first; when; why; and a short polite Bangla script for each call. Call the rider
+first when the rider's note conflicts with the call log or history. Call the
+customer first when the rider's claim is unverified. On a promise, call the
+customer on that day before the rider goes.
+
+note_to_rider_bn: for request_resend only, one short polite instruction to the rider
+in Bangla (max 160 characters), e.g. call the customer before going, deliver on the
+promised day. Empty for confirm_cancel and needs_human. No phone numbers, no blame,
+no money promises.
+
+Write every *_bn field in short, simple Bangla. Phone numbers are masked; never try
+to rebuild them.
+PROMPT;
+    }
+
+    /**
+     * @param  array<string, mixed>  $input  context, flags, promise, memory
+     */
+    public function user(array $input): string
+    {
+        $context = (array) ($input['context'] ?? []);
+        $checks = [];
+        foreach ((array) ($input['flags'] ?? []) as $flag) {
+            $code = (string) ($flag['code'] ?? '');
+            if ($code === '') {
+                continue;
+            }
+            $detail = trim((string) ($flag['detail_bn'] ?? ''));
+            $checks[] = $code.($detail !== '' ? ' ('.$detail.')' : '');
+        }
+
+        $promise = is_array($input['promise'] ?? null) ? $input['promise'] : null;
+        $promiseLine = $promise && ! empty($promise['date'])
+            ? ($promise['phrase'] ?? '').' → '.$promise['date'].' ('.($promise['ref'] ?? '').')'
+            : 'none';
+
+        return "Case file (JSON):\n".$this->json($context)
+            ."\n\nStore memory (JSON):\n".$this->json($this->memory((array) ($input['memory'] ?? [])))
+            ."\n\nSite checks already found: ".($checks ? implode('; ', $checks) : 'none')
+            ."\nDate parser found a promise: ".$promiseLine
+            ."\nToday is ".($context['today'] ?? '').' ('.($context['weekday'] ?? '').').';
+    }
+
+    public function judgeSystem(): string
+    {
+        return 'You double-check an automatic action on a Bangladeshi COD parcel hold. '
+            .'Riders often write false notes. Agree only if the case file clearly supports the action '
+            .'and a careful merchant would do it right now without calling anyone. '
+            .'Store memory rules count only when their situation clearly matches; they never justify '
+            .'a cancel on rider word alone. If a matching rule says the merchant must do something first '
+            .'(call, check, collect an advance) and the case file does not show it done, do not agree. '
+            .'confidence = probability the action is right. Answer reason_bn in short Bangla.';
+    }
+
+    /**
+     * @param  array<string, mixed>  $input  context, memory, proposal
+     */
+    public function judgeUser(array $input): string
+    {
+        return "Case file (JSON):\n".$this->json((array) ($input['context'] ?? []))
+            ."\n\nStore memory (JSON):\n".$this->json($this->memory((array) ($input['memory'] ?? [])))
+            ."\n\nProposed automatic action (JSON):\n".$this->json((array) ($input['proposal'] ?? []));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function caseSchema(): array
+    {
+        $reasonCodes = ReturnAiCatalog::reasonCodes();
+        $flagCodes = ReturnAiCatalog::modelFlagCodes();
+        $str = ['type' => 'string'];
+        $bool = ['type' => 'boolean'];
+        $object = static fn (array $properties) => [
+            'type' => 'object',
+            'additionalProperties' => false,
+            'required' => array_keys($properties),
+            'properties' => $properties,
+        ];
+
+        return $object([
+            'decision' => ['type' => 'string', 'enum' => ['request_resend', 'confirm_cancel', 'needs_human']],
+            'confidence' => ['type' => 'number'],
+            'reason_code' => ['type' => 'string', 'enum' => array_values($reasonCodes)],
+            'summary_bn' => $str,
+            'rider_note_trust' => ['type' => 'string', 'enum' => ['trusted', 'doubtful', 'untrusted', 'no_rider_note']],
+            'suspicion_flags' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => array_values($flagCodes)]],
+            'suspicion_reason_bn' => $str,
+            'evidence' => [
+                'type' => 'array',
+                'items' => $object([
+                    'source' => ['type' => 'string', 'enum' => ['note', 'call', 'return_reason', 'history']],
+                    'ref' => $str,
+                    'quote' => $str,
+                ]),
+            ],
+            'customer_promise' => $object(['has_promise' => $bool, 'phrase' => $str, 'date' => $str]),
+            'call_plan' => $object([
+                'call_customer' => $bool,
+                'call_rider' => $bool,
+                'first' => ['type' => 'string', 'enum' => ['customer', 'rider', 'none']],
+                'when_bn' => $str,
+                'why_bn' => $str,
+                'customer_script_bn' => $str,
+                'rider_script_bn' => $str,
+            ]),
+            'note_to_rider_bn' => $str,
+            'memory_refs' => ['type' => 'array', 'items' => $str],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function judgeSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'additionalProperties' => false,
+            'required' => ['agree', 'confidence', 'reason_bn'],
+            'properties' => [
+                'agree' => ['type' => 'boolean'],
+                'confidence' => ['type' => 'number'],
+                'reason_bn' => ['type' => 'string'],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $memory
+     * @return list<array{id: string, when: string, then: string}>
+     */
+    private function memory(array $memory): array
+    {
+        $out = [];
+        foreach ($memory as $item) {
+            if (is_array($item) && trim((string) ($item['then'] ?? '')) !== '') {
+                $out[] = [
+                    'id' => (string) ($item['id'] ?? ''),
+                    'when' => trim((string) ($item['when'] ?? '')),
+                    'then' => trim((string) $item['then']),
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    private function json(array $value): string
+    {
+        return ReturnAiText::maskPhones((string) json_encode(
+            $value,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE
+        ));
+    }
+}

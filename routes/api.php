@@ -19,6 +19,7 @@ use App\Http\Controllers\Meta\MetaConnectionController;
 use App\Http\Controllers\OrderIntelligenceController;
 use App\Http\Controllers\Plugin\EmployeeController as PluginEmployeeController;
 use App\Http\Controllers\Plugin\LandingAiController;
+use App\Http\Controllers\Plugin\ReturnAiController;
 use App\Http\Controllers\SmsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -179,6 +180,22 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
         Route::get('landing-ai/jobs/{job}', [LandingAiController::class, 'show'])
             ->whereUuid('job')
             ->name('landingAiJob');
+
+        // Return Requests → AI desk (hub owns the engine, prompt, model, key, memory and limits).
+        Route::get('return-ai/config', [ReturnAiController::class, 'config'])
+            ->name('returnAiConfig');
+        Route::post('return-ai/review', [ReturnAiController::class, 'review'])
+            ->middleware('throttle:120,1')
+            ->name('returnAiReview');
+        Route::get('return-ai/memory', [ReturnAiController::class, 'memoryIndex'])
+            ->name('returnAiMemory');
+        Route::post('return-ai/memory', [ReturnAiController::class, 'memorySave'])
+            ->middleware('throttle:60,1')
+            ->name('returnAiMemorySave');
+        Route::delete('return-ai/memory/{memory}', [ReturnAiController::class, 'memoryDelete'])
+            ->whereNumber('memory')
+            ->middleware('throttle:60,1')
+            ->name('returnAiMemoryDelete');
 
         Route::get('employees', [PluginEmployeeController::class, 'index']);
         Route::get('employees/{employee_id}', [PluginEmployeeController::class, 'show'])
