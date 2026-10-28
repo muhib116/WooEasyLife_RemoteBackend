@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\FraudPartnerCredential;
 use App\Services\FraudCheck\CarrybeeFraudChecker;
 use App\Services\FraudCheck\CourierCallContext;
 use App\Services\FraudCheck\CourierReportFormatter;
@@ -43,11 +44,53 @@ function paperflyCountsBody(): array
 
 function cachePaperflyToken(): void
 {
+    cachePaperflyTokenFor('merchant', 'paperfly-token');
+}
+
+function cachePaperflyTokenFor(string $identifier, string $token): void
+{
     Cache::put(
-        app(FraudPartnerCredentialResolver::class)->sessionCacheKey('paperfly', 'merchant'),
-        'paperfly-token',
+        app(FraudPartnerCredentialResolver::class)->sessionCacheKey('paperfly', $identifier),
+        $token,
         now()->addMinutes(30),
     );
+}
+
+function addPaperflyAccount(string $identifier): void
+{
+    FraudPartnerCredential::query()->create([
+        'courier' => 'paperfly',
+        'label' => 'Shop',
+        'identifier' => $identifier,
+        'secret' => 'shop-pass',
+        'is_active' => true,
+        'priority' => 100,
+    ]);
+}
+
+/**
+ * @return list<string>
+ */
+function paperflySmartCheckBearers(): array
+{
+    return collect(Http::recorded())
+        ->map(fn ($pair) => $pair[0])
+        ->filter(fn ($request) => str_contains($request->url(), 'smart-check'))
+        ->map(function ($request): string {
+            $header = $request->header('Authorization');
+            $value = is_array($header) ? (string) ($header[0] ?? '') : (string) $header;
+
+            return trim(str_replace('Bearer', '', $value));
+        })
+        ->values()
+        ->all();
+}
+
+function paperflyLoginCount(): int
+{
+    return collect(Http::recorded())
+        ->filter(fn ($pair) => str_contains($pair[0]->url(), 'login_using_password'))
+        ->count();
 }
 
 it('asks Paperfly once for a number when its pooled lookup gets a server error', function () {
@@ -304,4 +347,145 @@ it('refreshes the Paperfly token after HTTP 401 and then reads smart-check v2', 
         ->and($report['confirmed'])->toBe(4)
         ->and($report['cancel'])->toBe(1)
         ->and($report['success_rate'])->toBe('80%');
+});
+
+it('uses the next saved Paperfly session inside the bulk gap and does not log in', function () {
+    configurePaperflyFraudCredentials();
+    addPaperflyAccount('shop-a');
+    cachePaperflyTokenFor('shop-a', 'shop-token');
+    cachePaperflyToken();
+    Sleep::fake(syncWithCarbon: true);
+    $this->freezeTime();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://go-app.paperfly.com.bd/merchant/api/react/smart-check/*' => Http::response(paperflyCountsBody(), 200),
+    ]);
+
+    $checker = app(PaperflyFraudChecker::class);
+    $bulk = fn (string $phone) => app(CourierCallContext::class)->asBulk(fn () => $checker->check($phone));
+
+    expect($bulk('01712345678')['total_order'])->toBe(5);
+    expect($bulk('01712345679')['total_order'])->toBe(5)
+        ->and(paperflySmartCheckBearers())->toBe(['shop-token', 'paperfly-token'])
+        ->and(paperflyLoginCount())->toBe(0);
+
+    expect($checker->check('01712345670')['total_order'])->toBe(5)
+        ->and(paperflySmartCheckBearers()[2])->toBe('shop-token');
+    Sleep::assertNeverSlept();
+});
+
+it('keeps a free Paperfly session instead of logging in an account that has none', function () {
+    configurePaperflyFraudCredentials();
+    addPaperflyAccount('shop-a');
+    cachePaperflyToken();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://go-app.paperfly.com.bd/merchant/api/react/smart-check/*' => Http::response(paperflyCountsBody(), 200),
+    ]);
+
+    expect(app(PaperflyFraudChecker::class)->check('01712345678')['total_order'])->toBe(5)
+        ->and(paperflySmartCheckBearers())->toBe(['paperfly-token'])
+        ->and(paperflyLoginCount())->toBe(0);
+});
+
+it('logs in one Paperfly account when every saved session is busy and leaves the rest logged out', function () {
+    configurePaperflyFraudCredentials();
+    addPaperflyAccount('shop-a');
+    addPaperflyAccount('shop-b');
+    cachePaperflyToken();
+    Sleep::fake(syncWithCarbon: true);
+    $this->freezeTime();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://go-app.paperfly.com.bd/merchant/api/react/authentication/login_using_password.php' => Http::response([
+            'token' => 'shop-a-token',
+        ], 200),
+        'https://go-app.paperfly.com.bd/merchant/api/react/smart-check/*' => Http::response(paperflyCountsBody(), 200),
+    ]);
+
+    $checker = app(PaperflyFraudChecker::class);
+    $bulk = fn (string $phone) => app(CourierCallContext::class)->asBulk(fn () => $checker->check($phone));
+
+    expect($bulk('01712345678')['total_order'])->toBe(5)
+        ->and(paperflyLoginCount())->toBe(0);
+
+    expect($bulk('01712345679')['total_order'])->toBe(5)
+        ->and(paperflySmartCheckBearers())->toBe(['paperfly-token', 'shop-a-token'])
+        ->and(paperflyLoginCount())->toBe(1);
+
+    $this->travel(5)->seconds();
+
+    expect($bulk('01712345670')['total_order'])->toBe(5)
+        ->and(paperflyLoginCount())->toBe(1);
+});
+
+it('does not log the Paperfly account in again after HTTP 500 and uses the other saved session', function () {
+    configurePaperflyFraudCredentials();
+    addPaperflyAccount('shop-a');
+    cachePaperflyTokenFor('shop-a', 'shop-token');
+    cachePaperflyToken();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://go-app.paperfly.com.bd/merchant/api/react/smart-check/*' => Http::sequence()
+            ->push('<html>error</html>', 500)
+            ->push('<html>error</html>', 500)
+            ->push(paperflyCountsBody(), 200),
+    ]);
+
+    $checker = app(PaperflyFraudChecker::class);
+
+    expect($checker->check('01712345678')['retry_after'])->toBe(60);
+    expect($checker->check('01712345679')['retry_after'])->toBe(300);
+
+    expect($checker->check('01712345670')['total_order'])->toBe(5)
+        ->and(paperflySmartCheckBearers())->toBe(['shop-token', 'shop-token', 'paperfly-token'])
+        ->and(paperflyLoginCount())->toBe(0)
+        ->and(Cache::get(app(FraudPartnerCredentialResolver::class)->sessionCacheKey('paperfly', 'shop-a')))->toBe('shop-token');
+});
+
+it('uses the other saved Paperfly session after HTTP 401 without logging in', function () {
+    configurePaperflyFraudCredentials();
+    addPaperflyAccount('shop-a');
+    cachePaperflyTokenFor('shop-a', 'shop-token');
+    cachePaperflyToken();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://go-app.paperfly.com.bd/merchant/api/react/smart-check/*' => Http::sequence()
+            ->push(['message' => 'Unauthorized'], 401)
+            ->push(paperflyCountsBody(), 200),
+    ]);
+
+    $report = app(PaperflyFraudChecker::class)->check('01712345678');
+
+    expect($report['total_order'])->toBe(5)
+        ->and(paperflySmartCheckBearers())->toBe(['shop-token', 'paperfly-token'])
+        ->and(paperflyLoginCount())->toBe(0)
+        ->and(Cache::get(app(FraudPartnerCredentialResolver::class)->sessionCacheKey('paperfly', 'shop-a')))->toBeNull();
+});
+
+it('does not log in when every Paperfly session is inside the bulk gap', function () {
+    configurePaperflyFraudCredentials();
+    addPaperflyAccount('shop-a');
+    cachePaperflyTokenFor('shop-a', 'shop-token');
+    cachePaperflyToken();
+    Sleep::fake(syncWithCarbon: true);
+    $this->freezeTime();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://go-app.paperfly.com.bd/merchant/api/react/smart-check/*' => Http::response(paperflyCountsBody(), 200),
+    ]);
+
+    $checker = app(PaperflyFraudChecker::class);
+    $bulk = fn (string $phone) => app(CourierCallContext::class)->asBulk(fn () => $checker->check($phone));
+
+    expect($bulk('01712345678')['total_order'])->toBe(5);
+    expect($bulk('01712345679')['total_order'])->toBe(5);
+
+    $busy = $bulk('01712345670');
+
+    expect($busy['deferred'])->toBeTrue()
+        ->and($busy['retry_after'])->toBe(4)
+        ->and(paperflyLoginCount())->toBe(0)
+        ->and(paperflySmartCheckCount())->toBe(2);
+    Sleep::assertNeverSlept();
 });

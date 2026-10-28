@@ -75,27 +75,8 @@ class PaperflyFraudChecker
             return null;
         }
 
-        $auth = null;
-        foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
-            $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
-            $cached = Cache::get($cacheKey);
-            if (! is_string($cached) || $cached === '') {
-                continue;
-            }
-
-            $lane = $this->laneFor($candidate['identifier']);
-            if ($this->pace()->waitSeconds(self::COURIER, $lane) > 0) {
-                continue;
-            }
-
-            $auth = [
-                'token' => $cached,
-                'cache_key' => $cacheKey,
-                'credential_id' => $candidate['id'],
-                'lane' => $lane,
-            ];
-            break;
-        }
+        $choice = $this->chooseAccount([], allowLogin: false);
+        $auth = $choice['auth'];
 
         if ($auth === null) {
             return null;
@@ -165,37 +146,78 @@ class PaperflyFraudChecker
         return $this->pace()->status(self::COURIER, $this->lanes());
     }
 
-    private function fetchSmartCheck(string $phone, bool $forceRefresh = false): array
+    private function fetchSmartCheck(string $phone): array
     {
-        $auth = $this->resolveToken($forceRefresh);
-        if ($auth === null) {
-            return CourierReportFormatter::emptyReport([
-                'unavailable' => true,
-                'message' => 'Paperfly login failed with configured credentials.',
-            ]);
-        }
-
-        // A second call after a token refresh waits for its turn instead of
-        // giving the number up.
-        $wait = $this->pace()->claim(self::COURIER, $auth['lane'], $forceRefresh ? 6 : null);
-        if ($wait > 0) {
-            return $this->busyReport($wait);
-        }
-
         $phone = $this->searchPhone($phone);
-        $response = $this->client()
-            ->withToken($auth['token'])
-            ->post($this->baseUrl.'/smart-check/smart-check-v2.php?search_text='.rawurlencode($phone), [
-                'search_text' => $phone,
-            ]);
+        $skip = [];
+        $claimed = [];
+        $allowLogin = true;
+        $limit = count($this->credentials->candidates(self::COURIER)) + 1;
 
-        if ($response->status() === 401 && ! $forceRefresh) {
+        for ($attempt = 0; $attempt < $limit; $attempt++) {
+            $choice = $this->chooseAccount($skip, $allowLogin);
+            $auth = $choice['auth'];
+
+            if ($auth === null) {
+                if ($choice['wait'] > 0) {
+                    return $this->busyReport($choice['wait']);
+                }
+
+                return $this->loginFailedReport();
+            }
+
+            // A 401 logs this lane in again. The call just sent still sits in
+            // the bulk gap, so this retry waits the way it did before.
+            $sameLaneRetry = $choice['logged_in'] && in_array($auth['lane'], $claimed, true);
+            $wait = $this->pace()->claim(self::COURIER, $auth['lane'], $sameLaneRetry ? 6 : null);
+
+            if ($wait > 0) {
+                if ($sameLaneRetry) {
+                    return $this->busyReport($wait);
+                }
+
+                // Another worker took this lane. Use a saved session that is
+                // still free. Do not log in because of the race.
+                $skip[] = $auth['lane'];
+                $fallback = $this->chooseAccount($skip, allowLogin: false);
+                if ($fallback['auth'] === null) {
+                    return $this->busyReport($fallback['wait'] > 0 ? $fallback['wait'] : $wait);
+                }
+
+                $auth = $fallback['auth'];
+                $wait = $this->pace()->claim(self::COURIER, $auth['lane'], null);
+                if ($wait > 0) {
+                    return $this->busyReport($wait);
+                }
+            }
+
+            $allowLogin = true;
+            $claimed[] = $auth['lane'];
+            $response = $this->client()
+                ->withToken($auth['token'])
+                ->post($this->baseUrl.'/smart-check/smart-check-v2.php?search_text='.rawurlencode($phone), [
+                    'search_text' => $phone,
+                ]);
+
+            if ($response->status() !== 401) {
+                return $this->readAnswer($response, $auth);
+            }
+
             $this->loginGuard->forgetToken($auth['cache_key'], $auth['token']);
-
-            return $this->fetchSmartCheck($phone, true);
         }
 
-        return $this->readAnswer($response, $auth);
+        return $this->loginFailedReport();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loginFailedReport(): array
+    {
+        return CourierReportFormatter::emptyReport([
+            'unavailable' => true,
+            'message' => 'Paperfly login failed with configured credentials.',
+        ]);
     }
 
     /**
@@ -404,29 +426,80 @@ class PaperflyFraudChecker
     }
 
     /**
-     * @return array{token: string, cache_key: string, credential_id: int|null, lane: string}|null
+     * A free saved session wins. Login runs only when none is free, and only
+     * for an account that does not already have a session. This does not
+     * claim a slot.
+     *
+     * @param  list<string>  $skipLanes
+     * @return array{auth: array{token: string, cache_key: string, credential_id: int|null, lane: string}|null, wait: int, logged_in: bool}
      */
-    private function resolveToken(bool $forceRefresh = false): ?array
+    private function chooseAccount(array $skipLanes, bool $allowLogin): array
     {
-        if (! $forceRefresh) {
-            foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
-                $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
-                if ($cached = Cache::get($cacheKey)) {
-                    return [
-                        'token' => (string) $cached,
-                        'cache_key' => $cacheKey,
-                        'credential_id' => $candidate['id'],
-                        'lane' => $this->laneFor($candidate['identifier']),
-                    ];
-                }
+        $soonest = null;
+        $sawSavedSession = false;
+
+        foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
+            if ($this->loginGuard->resting(self::COURIER, $candidate)) {
+                continue;
+            }
+
+            $lane = $this->laneFor($candidate['identifier']);
+            if (in_array($lane, $skipLanes, true)) {
+                continue;
+            }
+
+            $saved = $this->savedSession($candidate);
+            if ($saved === null) {
+                continue;
+            }
+
+            $sawSavedSession = true;
+            $wait = $this->pace()->waitSeconds(self::COURIER, $lane);
+            if ($wait === 0) {
+                return ['auth' => $saved, 'wait' => 0, 'logged_in' => false];
+            }
+
+            $soonest = $soonest === null ? $wait : min($soonest, $wait);
+        }
+
+        if ($allowLogin) {
+            $loggedIn = $this->loginMissingAccount($skipLanes);
+            if ($loggedIn !== null) {
+                return ['auth' => $loggedIn, 'wait' => 0, 'logged_in' => true];
             }
         }
 
-        // Session expired / no cache: random active credential, then failover.
-        // A rejected token was already dropped, so a token found here is one
-        // another worker just saved.
-        foreach ($this->credentials->loginCandidates(self::COURIER) as $candidate) {
+        return [
+            'auth' => null,
+            'wait' => $sawSavedSession ? ($soonest ?? $this->nextSlotSeconds()) : 0,
+            'logged_in' => false,
+        ];
+    }
+
+    /**
+     * Log in the first account in list order that has no saved session.
+     * A failed login tries the next such account. An account that already
+     * has a session is left as it is.
+     *
+     * @param  list<string>  $skipLanes
+     * @return array{token: string, cache_key: string, credential_id: int|null, lane: string}|null
+     */
+    private function loginMissingAccount(array $skipLanes): ?array
+    {
+        foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
+            if ($this->loginGuard->resting(self::COURIER, $candidate)) {
+                continue;
+            }
+
+            $lane = $this->laneFor($candidate['identifier']);
+            if (in_array($lane, $skipLanes, true)) {
+                continue;
+            }
+
             $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
+            if ($this->savedSession($candidate) !== null) {
+                continue;
+            }
 
             $token = $this->loginGuard->login(
                 self::COURIER,
@@ -439,19 +512,44 @@ class PaperflyFraudChecker
                 fn () => $this->loginWithPassword($candidate, $cacheKey),
             );
 
-            if ($token === null) {
+            if (! is_string($token) || $token === '') {
                 continue;
             }
 
-            return [
-                'token' => (string) $token,
-                'cache_key' => $cacheKey,
-                'credential_id' => $candidate['id'],
-                'lane' => $this->laneFor($candidate['identifier']),
-            ];
+            return $this->accountAuth($candidate, $token, $cacheKey, $lane);
         }
 
         return null;
+    }
+
+    /**
+     * @param  array{id: int|null, identifier: string}  $candidate
+     * @return array{token: string, cache_key: string, credential_id: int|null, lane: string}|null
+     */
+    private function savedSession(array $candidate): ?array
+    {
+        $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
+        $cached = Cache::get($cacheKey);
+
+        if (! is_string($cached) || $cached === '') {
+            return null;
+        }
+
+        return $this->accountAuth($candidate, $cached, $cacheKey, $this->laneFor($candidate['identifier']));
+    }
+
+    /**
+     * @param  array{id: int|null, identifier: string}  $candidate
+     * @return array{token: string, cache_key: string, credential_id: int|null, lane: string}
+     */
+    private function accountAuth(array $candidate, string $token, string $cacheKey, string $lane): array
+    {
+        return [
+            'token' => $token,
+            'cache_key' => $cacheKey,
+            'credential_id' => $candidate['id'],
+            'lane' => $lane,
+        ];
     }
 
     /**
