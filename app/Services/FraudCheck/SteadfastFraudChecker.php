@@ -51,6 +51,11 @@ class SteadfastFraudChecker
     /** Lookups in a row that fail on a session before it is dropped and logged in again. */
     private const SESSION_MISS_LIMIT = 3;
 
+    /** A portal that refuses without a wait time rests this long, doubling while it keeps refusing. */
+    private const PORTAL_REST_SECONDS = 60;
+
+    private const PORTAL_REST_MAX_SECONDS = 300;
+
     /** @var array{username: string, password: string}|null */
     private ?array $credentials = null;
 
@@ -220,6 +225,11 @@ class SteadfastFraudChecker
         }
 
         if (is_array($apiReport) && ! empty($apiReport['rate_limited'])) {
+            // A resting key has no wait time to share; a resting portal does.
+            if ((int) ($report['retry_after'] ?? 0) > 0 && empty($apiReport['retry_after'])) {
+                $apiReport['retry_after'] = (int) $report['retry_after'];
+            }
+
             return $apiReport;
         }
 
@@ -233,7 +243,7 @@ class SteadfastFraudChecker
             if ($this->hasCredentials()) {
                 $report = $this->checkViaCachedSession($phone);
 
-                if ($this->isUsableReport($report)) {
+                if ($this->isUsableReport($report) || ! empty($report['rate_limited'])) {
                     return $report;
                 }
 
@@ -256,6 +266,7 @@ class SteadfastFraudChecker
             }
         } elseif ($this->partnerCredentials->isConfigured('steadfast')) {
             $previousCredentials = $this->credentials;
+            $busySession = null;
 
             // Platform multi-cred: reuse any warm session first.
             foreach ($this->partnerCredentials->candidates('steadfast') as $candidate) {
@@ -268,6 +279,10 @@ class SteadfastFraudChecker
                     $report = $this->checkViaCachedSession($phone);
                     if ($this->isUsableReport($report)) {
                         return $report;
+                    }
+
+                    if (! empty($report['rate_limited'])) {
+                        $busySession ??= $report;
                     }
                 } finally {
                     $this->credentials = $previousCredentials;
@@ -293,7 +308,7 @@ class SteadfastFraudChecker
                     }
 
                     if ($this->hasStoredSession()) {
-                        return $report;
+                        return $busySession ?? $report;
                     }
 
                     // A rest or a lockout is not this account's fault, and it
@@ -998,6 +1013,12 @@ class SteadfastFraudChecker
             return $report;
         }
 
+        $resting = $this->portalRestSeconds();
+
+        if ($resting > 0) {
+            return $this->portalBusyReport($resting);
+        }
+
         try {
             return $this->fetchFraudReport(
                 $phone,
@@ -1305,12 +1326,10 @@ class SteadfastFraudChecker
 
         // A busy portal is not a dead session. Keeping it avoids a new login.
         if ($fraudResponse->status() === 429) {
-            LogHelper::saveLog('Steadfast fraud check error', "Fraud API rate limited on {$host}");
+            $seconds = $this->restPortal($this->retryAfterSeconds($fraudResponse));
+            LogHelper::saveLog('Steadfast fraud check error', "Fraud API rate limited on {$host}. The portal rests for {$seconds}s.");
 
-            return array_merge($report, [
-                'rate_limited' => true,
-                'message' => 'Steadfast asked us to slow down. This number is checked again shortly.',
-            ]);
+            return $this->portalBusyReport($seconds);
         }
 
         if (!$fraudResponse->successful()) {
@@ -1342,8 +1361,54 @@ class SteadfastFraudChecker
             Cache::forget($this->sessionMissKey());
         }
 
+        Cache::forget($this->portalRestKey().'_strikes');
+
         return array_merge(CourierReportFormatter::fromSteadfast($payload), [
             'api_success' => true,
+        ]);
+    }
+
+    /**
+     * Rests this account's portal lookups and returns the rest in seconds, so
+     * a refusing portal is not asked again for every number.
+     */
+    private function restPortal(int $retryAfter): int
+    {
+        $key = $this->portalRestKey();
+
+        try {
+            Cache::add($key.'_strikes', 0, now()->addHour());
+            $strikes = max(1, (int) Cache::increment($key.'_strikes'));
+        } catch (\Throwable) {
+            $strikes = 1;
+        }
+
+        $seconds = $retryAfter > 0
+            ? $retryAfter
+            : (int) min(self::PORTAL_REST_MAX_SECONDS, self::PORTAL_REST_SECONDS * 2 ** min(10, $strikes - 1));
+
+        Cache::put($key, now()->getTimestamp() + $seconds, now()->addSeconds($seconds));
+
+        return $seconds;
+    }
+
+    private function portalRestSeconds(): int
+    {
+        return max(0, (int) Cache::get($this->portalRestKey(), 0) - now()->getTimestamp());
+    }
+
+    private function portalRestKey(): string
+    {
+        return $this->sessionCacheKey().'_portal_rest';
+    }
+
+    private function portalBusyReport(int $seconds): array
+    {
+        return CourierReportFormatter::emptyReport([
+            'frauds' => [],
+            'rate_limited' => true,
+            'retry_after' => $seconds,
+            'message' => 'Steadfast asked us to slow down. This number is checked again shortly.',
         ]);
     }
 

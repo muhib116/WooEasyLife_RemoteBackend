@@ -1349,6 +1349,109 @@ it('keeps the steadfast session when the portal has a server error and drops it 
     expect($calls['login_post'])->toBe(1);
 });
 
+it('rests the steadfast portal after a rate limit instead of asking it for every number', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    Cache::put(platformSteadfastSessionKey(), [
+        'host' => 'www.steadfast.com.bd',
+        'cookies' => ['steadfast_courier_session' => 'still-good'],
+    ], now()->addHours(2));
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        null,
+        fn ($request, int $call) => $call <= 2
+            ? Http::response(['message' => 'Too many requests'], 429)
+            : Http::response(['delivered_count' => 4, 'cancelled_count' => 1, 'frauds' => []], 200),
+    );
+
+    $first = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($first['rate_limited'] ?? false)->toBeTrue()
+        ->and($first['retry_after'])->toBe(60)
+        ->and($calls['frauds'])->toBe(1);
+
+    $this->travel(20)->seconds();
+    $resting = app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($resting['rate_limited'] ?? false)->toBeTrue()
+        ->and($resting['retry_after'])->toBe(40)
+        ->and($calls['frauds'])->toBe(1);
+
+    $this->travel(41)->seconds();
+    $second = app(SteadfastFraudChecker::class)->check('01712345670');
+
+    expect($second['retry_after'])->toBe(120)
+        ->and($calls['frauds'])->toBe(2);
+
+    $this->travel(121)->seconds();
+    $answered = app(SteadfastFraudChecker::class)->check('01712345671');
+
+    expect($answered['confirmed'])->toBe(4)
+        ->and($calls['frauds'])->toBe(3)
+        ->and($calls['login_post'] ?? 0)->toBe(0)
+        ->and(Cache::has(platformSteadfastSessionKey()))->toBeTrue();
+});
+
+it('rests the steadfast portal for the wait time steadfast sends', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    Cache::put(platformSteadfastSessionKey(), [
+        'host' => 'www.steadfast.com.bd',
+        'cookies' => ['steadfast_courier_session' => 'still-good'],
+    ], now()->addHours(2));
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        null,
+        fn () => Http::response(['message' => 'Too many requests'], 429, ['Retry-After' => '90']),
+    );
+
+    $report = app(SteadfastFraudChecker::class)->check('01712345678');
+
+    expect($report['retry_after'])->toBe(90);
+
+    $this->travel(89)->seconds();
+    app(SteadfastFraudChecker::class)->check('01712345679');
+
+    expect($calls['frauds'])->toBe(1);
+});
+
+it('gives the portal wait time when the store key and the portal both rest', function () {
+    useOnlyPlatformSteadfastPortal();
+
+    Cache::flush();
+
+    Cache::put(platformSteadfastSessionKey(), [
+        'host' => 'www.steadfast.com.bd',
+        'cookies' => ['steadfast_courier_session' => 'still-good'],
+    ], now()->addHours(2));
+    app(SteadfastFraudApiCredentialStore::class)->coolDown('store-resting-key', 900);
+
+    $calls = [];
+    fakeSteadfastEverywhere(
+        $calls,
+        fn () => Http::response('', 404),
+        null,
+        fn () => Http::response(['message' => 'Too many requests'], 429),
+    );
+
+    $store = ['api_key' => 'store-resting-key', 'secret_key' => 'store-resting-secret'];
+    $report = app(SteadfastFraudChecker::class)->check('01712345678', $store);
+
+    expect($report['rate_limited'] ?? false)->toBeTrue()
+        ->and($report['retry_after'])->toBe(60)
+        ->and($calls['score'] ?? [])->toBe([]);
+});
+
 it('drops the steadfast session and logs in once when the portal shows the login page', function () {
     useOnlyPlatformSteadfastPortal();
 
