@@ -385,11 +385,87 @@ class ReturnAiSignals
             $base = substr((string) $line['at'], 0, 10) ?: (string) ($context['today'] ?? '');
             $found = $this->parsePromiseDate((string) $line['text'], $base);
             if ($found) {
-                return $found + ['ref' => (string) $line['ref']];
+                return $found + ['ref' => (string) $line['ref'], 'written' => $base];
             }
         }
 
         return null;
+    }
+
+    /**
+     * Every note, call and the cancel reason, oldest first, each with the day it
+     * was written and how many days before today that was.
+     *
+     * @param  array<string, mixed>  $context  Prepared case file.
+     * @return list<array{ref: string, at: string, day: string, days_ago: int|null, who: string, text: string}>
+     */
+    public function timeline(array $context): array
+    {
+        $rows = [];
+        foreach ((array) ($context['notes'] ?? []) as $note) {
+            if (! is_array($note)) {
+                continue;
+            }
+            $rows[] = [
+                'ref' => (string) ($note['id'] ?? ''),
+                'at' => (string) ($note['at'] ?? ''),
+                'who' => $this->noteWho($note),
+                'text' => (string) ($note['text'] ?? ''),
+            ];
+        }
+        foreach ((array) ($context['calls'] ?? []) as $call) {
+            if (! is_array($call)) {
+                continue;
+            }
+            $rows[] = [
+                'ref' => (string) ($call['id'] ?? ''),
+                'at' => (string) ($call['at'] ?? ''),
+                'who' => sprintf(
+                    'merchant call to %s (%s, %ds)',
+                    (string) ($call['to'] ?? 'other'),
+                    (string) (($call['status'] ?? '') ?: 'unknown'),
+                    (int) ($call['duration_seconds'] ?? 0),
+                ),
+                'text' => (string) ($call['note'] ?? ''),
+            ];
+        }
+        $reason = (string) ($context['parcel']['return_reason'] ?? '');
+        if ($reason !== '') {
+            $rows[] = [
+                'ref' => 'return_reason',
+                'at' => (string) ($context['parcel']['requested_at'] ?? ''),
+                'who' => 'cancel request reason',
+                'text' => $reason,
+            ];
+        }
+
+        usort($rows, static fn ($a, $b) => ReturnAiText::ts($a['at']) <=> ReturnAiText::ts($b['at']));
+
+        $today = (string) ($context['today'] ?? '');
+        foreach ($rows as &$row) {
+            $day = ReturnAiText::day($row['at']) ? substr($row['at'], 0, 10) : '';
+            $row['day'] = $day;
+            $row['days_ago'] = $day !== '' && $today !== '' ? ReturnAiText::daysBetween($day, $today) : null;
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $note
+     */
+    private function noteWho(array $note): string
+    {
+        if (! empty($note['system_line'])) {
+            return 'portal';
+        }
+
+        return match ((string) ($note['type'] ?? '')) {
+            'rider_note' => 'rider',
+            'plugin_note' => 'merchant note',
+            default => 'courier',
+        };
     }
 
     public function normalizeQuote(string $text): string

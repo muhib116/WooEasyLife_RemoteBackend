@@ -17,6 +17,8 @@ final class ReturnAiText
 
     private const BN_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 
+    private const BN_MONTHS_SHORT = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+
     private const BN_DAYS = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 
     public static function clip(mixed $text, int $max = 400): string
@@ -74,6 +76,46 @@ final class ReturnAiText
         $date = \DateTimeImmutable::createFromFormat('!Y-m-d', substr($ymd, 0, 10), new \DateTimeZone('UTC'));
 
         return $date ?: null;
+    }
+
+    /**
+     * Relative day words (kal, porshu, আগামীকাল…) that only make sense on the day they were written.
+     * সকাল / বিকাল contain কাল but are times of day, so a letter before কাল does not count.
+     */
+    public static function hasRelativeDay(string $text): bool
+    {
+        return (bool) preg_match(
+            '/(আগামীকাল|আগামী\s*কাল|কালকে|পরশু|(?<![\p{L}\p{M}])কাল(?![\p{L}\p{M}])|\b(?:agami\s*kal|agamikal|kalke|kal|porshu|porsu|tomorrow)\b)/iu',
+            $text
+        );
+    }
+
+    /**
+     * Whole calendar days from one Y-m-d to another (negative when $to is earlier).
+     */
+    public static function daysBetween(string $from, string $to): ?int
+    {
+        $a = self::day($from);
+        $b = self::day($to);
+        if (! $a || ! $b) {
+            return null;
+        }
+
+        return (int) round(($b->getTimestamp() - $a->getTimestamp()) / 86400);
+    }
+
+    /**
+     * Short Bangla date like ২৯ অক্টো, for one-line timelines.
+     */
+    public static function dateShortBn(string $ymd): string
+    {
+        $date = self::day($ymd);
+        if (! $date) {
+            return '';
+        }
+
+        return strtr($date->format('j'), array_flip(self::BN_DIGITS))
+            .' '.self::BN_MONTHS_SHORT[(int) $date->format('n') - 1];
     }
 
     /**

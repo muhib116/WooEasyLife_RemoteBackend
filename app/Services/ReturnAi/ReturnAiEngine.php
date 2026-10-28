@@ -116,6 +116,10 @@ class ReturnAiEngine
                 'rider_script_bn' => '',
             ],
             'note_to_rider_bn' => '',
+            'handling_tips_bn' => [
+                'রাইডারের শেষ লাইনকে চূড়ান্ত ধরেন না — আগের নোটগুলোও মিলিয়ে পড়ুন',
+                'কাস্টমারকে কল করে নেবেন কি না জেনে, তারপর রাইডারকে আবার পাঠান',
+            ],
         ];
     }
 
@@ -183,6 +187,7 @@ class ReturnAiEngine
         }
 
         $reminder = null;
+        $promisePassed = $promiseDate !== '' && $promiseDate < $today;
         if ($promiseDate !== '') {
             if ($promiseDate < $today) {
                 $byCode['promise_date_passed'] = ReturnAiCatalog::flag('promise_date_passed', 'rules', ReturnAiText::dateBn($promiseDate));
@@ -251,6 +256,15 @@ class ReturnAiEngine
                 $callPlan['when_bn'] = $reminder['date_bn'].' সকালে';
             }
         }
+        // The customer's own day is gone: "kal" from that old line no longer means tomorrow.
+        if ($promisePassed) {
+            $missed = ReturnAiText::dateBn($promiseDate);
+            $callPlan['call_customer'] = true;
+            $callPlan['when_bn'] = 'আজই';
+            if ($callPlan['why_bn'] === '' || ReturnAiText::hasRelativeDay($callPlan['why_bn'])) {
+                $callPlan['why_bn'] = sprintf('কাস্টমার %s নেবেন বলেছিলেন, নেননি — আজ কল করে নতুন দিন ঠিক করুন', $missed);
+            }
+        }
         if (! $callPlan['call_customer'] && ! $callPlan['call_rider']) {
             $callPlan['first'] = 'none';
         } elseif ($callPlan['first'] === 'none'
@@ -278,6 +292,17 @@ class ReturnAiEngine
         if ($note === '' && $decision === 'request_resend' && $reminder) {
             $note = sprintf('কাস্টমার %s নেবেন। যাওয়ার আগে কল করে ডেলিভারি দিন, ধন্যবাদ।', $reminder['date_bn']);
         }
+        if ($promisePassed && $note !== '' && ReturnAiText::hasRelativeDay($note)) {
+            $note = 'কাস্টমারকে আগে কল করে সময় ঠিক করে ডেলিভারি দিন, ধন্যবাদ।';
+        }
+
+        $summary = ReturnAiText::clip($raw['summary_bn'] ?? '', 480);
+        if ($promisePassed && ReturnAiText::hasRelativeDay($summary)) {
+            $summary = sprintf(
+                'কাস্টমার %s নেবেন বলেছিলেন, সেই দিন পার হয়ে গেছে। আজ কল করে নতুন দিন ঠিক করে তারপর রিসেন্ড করুন।',
+                ReturnAiText::dateBn($promiseDate),
+            );
+        }
 
         $strong = $source === 'ai' && $confidence >= $min && $verified !== [];
 
@@ -286,7 +311,9 @@ class ReturnAiEngine
             'confidence' => round($confidence, 3),
             'reason_code' => $reasonCode,
             'reason_label_bn' => ReturnAiCatalog::reasonLabel($reasonCode),
-            'summary_bn' => ReturnAiText::clip($raw['summary_bn'] ?? '', 300),
+            'summary_bn' => $summary,
+            'journey' => $this->journey($raw, $context),
+            'handling_tips_bn' => $this->tips($raw),
             'rider_note_trust' => in_array($raw['rider_note_trust'] ?? '', ['trusted', 'doubtful', 'untrusted', 'no_rider_note'], true)
                 ? (string) $raw['rider_note_trust']
                 : 'doubtful',
@@ -436,6 +463,106 @@ class ReturnAiEngine
     public function minConfidence(array $settings): float
     {
         return max(95, min(99, (int) ($settings['min_confidence'] ?? 95))) / 100;
+    }
+
+    /**
+     * The story in 2–6 dated steps. The model writes the words; the day always
+     * comes from the line it points at, so a step can never carry a wrong date.
+     *
+     * @param  array<string, mixed>  $raw
+     * @param  array<string, mixed>  $context  Prepared case file.
+     * @return list<array{ref: string, date: string, date_bn: string, text_bn: string}>
+     */
+    private function journey(array $raw, array $context): array
+    {
+        $timeline = $this->signals->timeline($context);
+        $byRef = [];
+        foreach ($timeline as $row) {
+            $byRef[strtolower($row['ref'])] = $row;
+        }
+
+        $steps = [];
+        foreach ((array) ($raw['journey'] ?? []) as $step) {
+            if (count($steps) >= 6) {
+                break;
+            }
+            if (! is_array($step)) {
+                continue;
+            }
+            $text = ReturnAiText::clip(ReturnAiText::maskPhones((string) ($step['text_bn'] ?? '')), 90);
+            if ($text === '') {
+                continue;
+            }
+            $ref = strtolower(trim((string) ($step['ref'] ?? '')));
+            $row = $byRef[$ref] ?? null;
+            $steps[] = ['row' => $row, 'ref' => $row ? $row['ref'] : '', 'text_bn' => $text];
+        }
+
+        if ($steps === []) {
+            foreach (array_slice(array_values(array_filter($timeline, static fn ($r) => $r['who'] !== 'portal' && $r['text'] !== '')), -5) as $row) {
+                $steps[] = [
+                    'row' => $row,
+                    'ref' => $row['ref'],
+                    'text_bn' => ReturnAiText::clip($this->whoBn($row['who']).': '.$row['text'], 90),
+                ];
+            }
+        }
+
+        // Oldest first; a step without a known line keeps the place after the one before it.
+        $last = 0;
+        foreach ($steps as $i => &$step) {
+            $ts = $step['row'] ? ReturnAiText::ts($step['row']['at']) : 0;
+            $last = $ts > 0 ? $ts : $last;
+            $step['sort'] = [$last, $i];
+        }
+        unset($step);
+        usort($steps, static fn ($a, $b) => $a['sort'] <=> $b['sort']);
+
+        $out = [];
+        foreach ($steps as $step) {
+            $day = $step['row']['day'] ?? '';
+            $out[] = [
+                'ref' => $step['ref'],
+                'date' => $day,
+                'date_bn' => $day !== '' ? ReturnAiText::dateShortBn($day) : '',
+                'text_bn' => $step['text_bn'],
+            ];
+        }
+
+        return $out;
+    }
+
+    private function whoBn(string $who): string
+    {
+        return match (true) {
+            $who === 'rider' => 'রাইডার',
+            $who === 'merchant note' => 'আপনার নোট',
+            $who === 'cancel request reason' => 'ক্যানসেলের কারণ',
+            str_starts_with($who, 'merchant call to customer') => 'কাস্টমারকে কল',
+            str_starts_with($who, 'merchant call to rider') => 'রাইডারকে কল',
+            str_starts_with($who, 'merchant call') => 'কল',
+            default => 'কুরিয়ার',
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $raw
+     * @return list<string>
+     */
+    private function tips(array $raw): array
+    {
+        $tips = [];
+        foreach ((array) ($raw['handling_tips_bn'] ?? []) as $tip) {
+            if (count($tips) >= 4) {
+                break;
+            }
+            $tip = is_string($tip) ? ReturnAiText::clip(ReturnAiText::maskPhones($tip), 180) : '';
+            if ($tip !== '') {
+                $tips[] = $tip;
+            }
+        }
+
+        return $tips;
     }
 
     private function failureBn(int $status): string

@@ -18,38 +18,23 @@ return [
         'auto_note' => false,
         'auto_resend' => false,
         'auto_cancel' => false,
-        'model' => 'gpt-4.1-mini',
+        // "auto" = the strongest text model on the hub key (Settings → AI list).
+        'model' => 'auto',
         'min_confidence' => 95,
         'daily_auto_limit' => 30,
         'daily_review_limit' => 300,
         'background_review' => true,
     ],
 
-    // Non-reasoning models only: the desk runs at temperature 0 with a strict schema.
-    'models' => [
-        'gpt-4.1-mini' => [
-            'label' => 'GPT-4.1 mini',
-            'hint' => 'Recommended — reads Bangla and Banglish notes well, low cost',
-            'recommended' => true,
-        ],
-        'gpt-4o-mini' => [
-            'label' => 'GPT-4o mini',
-            'hint' => 'Lowest cost — more mistakes on mixed or long notes',
-        ],
-        'gpt-4.1' => [
-            'label' => 'GPT-4.1',
-            'hint' => 'Most accurate — about 5× the cost',
-        ],
-        'gpt-4o' => [
-            'label' => 'GPT-4o',
-            'hint' => 'Accurate — higher cost',
-        ],
-    ],
+    // The dropdown is the live OpenAI text-model list (same filter as landing AI).
+    // Reasoning models skip temperature; the client sends max_completion_tokens.
+    'reasoning_effort' => 'medium',
+    'judge_reasoning_effort' => 'low',
 
-    'timeout' => 40,
-    'judge_timeout' => 30,
-    'max_tokens' => 1400,
-    'judge_max_tokens' => 300,
+    'timeout' => 70,
+    'judge_timeout' => 40,
+    'max_tokens' => 2200,
+    'judge_max_tokens' => 400,
 
     'max_context_chars' => 60000,
     'max_memory_items' => 30,

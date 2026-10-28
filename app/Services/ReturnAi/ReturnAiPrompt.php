@@ -8,14 +8,24 @@ namespace App\Services\ReturnAi;
  */
 class ReturnAiPrompt
 {
+    public function __construct(
+        private ReturnAiSignals $signals,
+    ) {}
+
     public function system(): string
     {
         return <<<'PROMPT'
-You are the return desk analyst for a Bangladeshi cash-on-delivery online store.
-A SteadFast rider put a parcel on hold. The merchant must either confirm the cancel
-(parcel comes back, the sale is lost, return charge is paid) or request a resend
-(the rider tries again). Decide what protects the sale and the merchant's money,
-using only the case file. Never invent facts.
+You are the return-desk expert for a Bangladeshi cash-on-delivery online store.
+A SteadFast rider put a parcel on hold. Your job is to get that parcel delivered.
+A return loses the sale and the merchant pays a return charge. Read the whole case
+file the way a senior desk operator would: every note in time order, every call,
+the rider, the customer's history, and the portal lines. Do not stop at the latest
+rider sentence. Never invent facts.
+
+The winning outcome is delivery. Choose request_resend whenever one more honest
+attempt can still put the parcel in the customer's hands. Choose confirm_cancel
+only when the customer, in the merchant's own call, clearly does not want it.
+Choose needs_human when the file cannot prove the next move.
 
 Riders in Bangladesh often write false or lazy notes to skip a delivery:
 "customer call receive kore na", "phone off", "customer nibe na", "address pai nai",
@@ -62,9 +72,42 @@ porshu, a weekday, "X tarikh", "agami maser X tarikh", "X din por"), set
 customer_promise with the exact phrase and the absolute date YYYY-MM-DD counted from
 the day that line was written. Never cancel a parcel with a future promise.
 
+Dates: the Timeline gives every line the day it was written and how many days ago
+that was. Count kal, porshu, a weekday or "X din por" from THAT day, never from
+today. Then compare the result with today:
+- The promised day is today or still ahead: request_resend, and plan a customer
+  call on that morning.
+- The promised day has passed and the parcel is still on hold: the customer missed
+  their own day. Do not repeat "kal nibe" as if it were still true. Say which day
+  passed, call the customer today for a firm new day, then resend. Two missed days
+  in a row is a warning sign; keep confidence below 0.90.
+- Later lines beat earlier ones. A newer line that changes the story (customer now
+  refuses, gives a new day, asks to change the address) decides the case.
+summary_bn, journey, when_bn and note_to_rider_bn must name real days (আজ, আগামীকাল
+counted from today, or a date like ২৯ অক্টোবর). Never copy kal or porshu from an
+old line.
+
+journey: the whole story in 2 to 6 steps, oldest first, so the merchant understands
+it at a glance. Each step has ref = the Timeline id it comes from (n3, c1,
+return_reason) and text_bn = who said or did what, in at most 12 Bangla words. Merge
+repeated lines into one step. Skip portal routing lines unless they change the
+case (a cancel request, a resend). Do not write dates in text_bn; the store adds the
+day from ref.
+
+summary_bn: one or two short Bangla sentences: where the parcel stands today and the
+one move that can still get it delivered — or why it cannot.
+
+handling_tips_bn: two to four short Bangla tips for this case only. Each tip is
+one move a skilled merchant uses to get the parcel delivered: who to call first,
+the question to ask, which rider line not to believe, when to send the rider
+again, how to keep the customer from refusing, and what to tell the rider so
+they actually try. No generic lecture, no phone numbers, no blame.
+
 confidence = your probability that the decision is right and a careful merchant
-would do the same. Use 0.95 or more only when quoted lines leave no reasonable doubt
-and nothing is suspicious. Any suspicion keeps confidence below 0.90.
+would do the same to get the parcel delivered. Use 0.95 or more when you have
+read every note, the quotes support one decision, and the handling tips are
+specific to this file. A single unverified rider line is not enough for 0.95.
+Money disputes, a delivered status, or a real conflict stay under 0.90.
 
 evidence: 1 to 4 short exact substrings copied character for character from the
 case file, with ref = note id (like n12), call id (like c5), "return_reason", or
@@ -103,15 +146,66 @@ PROMPT;
         }
 
         $promise = is_array($input['promise'] ?? null) ? $input['promise'] : null;
+        $today = (string) ($context['today'] ?? '');
         $promiseLine = $promise && ! empty($promise['date'])
             ? ($promise['phrase'] ?? '').' → '.$promise['date'].' ('.($promise['ref'] ?? '').')'
+                .$this->promiseStatus($promise, $today)
             : 'none';
 
         return "Case file (JSON):\n".$this->json($context)
+            ."\n\nTimeline, oldest first (relative words in a line count from that line's own day):\n"
+            .$this->timelineText($context)
             ."\n\nStore memory (JSON):\n".$this->json($this->memory((array) ($input['memory'] ?? [])))
             ."\n\nSite checks already found: ".($checks ? implode('; ', $checks) : 'none')
             ."\nDate parser found a promise: ".$promiseLine
-            ."\nToday is ".($context['today'] ?? '').' ('.($context['weekday'] ?? '').').';
+            ."\nToday is ".$today.' ('.($context['weekday'] ?? '').').';
+    }
+
+    /**
+     * @param  array<string, string>  $promise
+     */
+    private function promiseStatus(array $promise, string $today): string
+    {
+        $date = (string) $promise['date'];
+        $written = (string) ($promise['written'] ?? '');
+        $weekday = ReturnAiText::day($date)?->format('l') ?? '';
+        $out = ', '.$weekday.($written !== '' ? ', said on '.$written : '').'. ';
+        $gap = ReturnAiText::daysBetween($today, $date);
+
+        return $out.match (true) {
+            $gap === null => 'Compare it with today yourself.',
+            $gap < 0 => sprintf('That day PASSED %d day%s ago and the parcel is still on hold: the customer missed it.', -$gap, $gap === -1 ? '' : 's'),
+            $gap === 0 => 'That day is TODAY.',
+            $gap === 1 => 'That day is TOMORROW.',
+            default => sprintf('That day is in %d days.', $gap),
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function timelineText(array $context): string
+    {
+        $lines = [];
+        foreach ($this->signals->timeline($context) as $row) {
+            $when = $row['day'] !== ''
+                ? $row['day'].' '.(ReturnAiText::day($row['day'])?->format('D') ?? '').' · '.$this->agoText($row['days_ago'])
+                : 'unknown day';
+            $text = ReturnAiText::clip($row['text'], 160);
+            $lines[] = $row['ref'].' · '.$when.' · '.$row['who'].($text !== '' ? ': "'.$text.'"' : '');
+        }
+
+        return $lines ? ReturnAiText::maskPhones(implode("\n", $lines)) : 'no lines';
+    }
+
+    private function agoText(?int $days): string
+    {
+        return match (true) {
+            $days === null => '',
+            $days <= 0 => 'today',
+            $days === 1 => 'yesterday',
+            default => $days.' days ago',
+        };
     }
 
     public function judgeSystem(): string
@@ -122,6 +216,8 @@ PROMPT;
             .'Store memory rules count only when their situation clearly matches; they never justify '
             .'a cancel on rider word alone. If a matching rule says the merchant must do something first '
             .'(call, check, collect an advance) and the case file does not show it done, do not agree. '
+            .'Count kal, porshu or a weekday from the day that line was written, not from today; '
+            .'a promised day that has already passed is not a reason to act without calling. '
             .'confidence = probability the action is right. Answer reason_bn in short Bangla.';
     }
 
@@ -130,7 +226,12 @@ PROMPT;
      */
     public function judgeUser(array $input): string
     {
-        return "Case file (JSON):\n".$this->json((array) ($input['context'] ?? []))
+        $context = (array) ($input['context'] ?? []);
+
+        return "Case file (JSON):\n".$this->json($context)
+            ."\n\nTimeline, oldest first (relative words in a line count from that line's own day):\n"
+            .$this->timelineText($context)
+            ."\nToday is ".($context['today'] ?? '').' ('.($context['weekday'] ?? '').').'
             ."\n\nStore memory (JSON):\n".$this->json($this->memory((array) ($input['memory'] ?? [])))
             ."\n\nProposed automatic action (JSON):\n".$this->json((array) ($input['proposal'] ?? []));
     }
@@ -178,6 +279,8 @@ PROMPT;
                 'rider_script_bn' => $str,
             ]),
             'note_to_rider_bn' => $str,
+            'handling_tips_bn' => ['type' => 'array', 'items' => $str],
+            'journey' => ['type' => 'array', 'items' => $object(['ref' => $str, 'text_bn' => $str])],
             'memory_refs' => ['type' => 'array', 'items' => $str],
         ]);
     }

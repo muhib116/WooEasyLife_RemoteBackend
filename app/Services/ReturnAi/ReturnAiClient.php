@@ -2,6 +2,7 @@
 
 namespace App\Services\ReturnAi;
 
+use App\Services\LandingAi\OpenAiModelCatalog;
 use App\Services\LandingSettingsService;
 use GuzzleHttp\Exception\TransferException;
 use Illuminate\Http\Client\ConnectionException;
@@ -71,26 +72,26 @@ class ReturnAiClient
         }
 
         $model = $this->settings->model();
+        $effort = $name === 'return_desk_judge'
+            ? (string) config('return_ai.judge_reasoning_effort', 'low')
+            : (string) config('return_ai.reasoning_effort', 'medium');
         $started = microtime(true);
+        $body = $this->payload($model, $maxTokens, $schema, $name, $system, $user, $effort);
 
         try {
             $response = Http::withToken($key)
                 ->acceptJson()
                 ->timeout(max(5, $timeout))
                 ->connectTimeout(8)
-                ->post(self::API, [
-                    'model' => $model,
-                    'temperature' => 0,
-                    'max_tokens' => $maxTokens,
-                    'response_format' => [
-                        'type' => 'json_schema',
-                        'json_schema' => ['name' => $name, 'strict' => true, 'schema' => $schema],
-                    ],
-                    'messages' => [
-                        ['role' => 'system', 'content' => $system],
-                        ['role' => 'user', 'content' => $user],
-                    ],
-                ]);
+                ->post(self::API, $body);
+
+            if ($response->status() === 400 && $this->shouldRetryWithoutReasoning($response->json('error.param'))) {
+                $response = Http::withToken($key)
+                    ->acceptJson()
+                    ->timeout(max(5, $timeout))
+                    ->connectTimeout(8)
+                    ->post(self::API, $this->payload($model, $maxTokens, $schema, $name, $system, $user, null));
+            }
         } catch (ConnectionException|TransferException) {
             throw new ReturnAiException('Could not reach OpenAI. Please try again.', 504);
         }
@@ -130,5 +131,45 @@ class ReturnAiClient
                 'completion_tokens' => (int) $response->json('usage.completion_tokens', 0),
             ],
         ];
+    }
+
+    /**
+     * Reasoning models (gpt-5 and o-series) reject temperature and max_tokens.
+     *
+     * @param  array<string, mixed>  $schema
+     * @return array<string, mixed>
+     */
+    private function payload(string $model, int $maxTokens, array $schema, string $name, string $system, string $user, ?string $effort): array
+    {
+        $body = [
+            'model' => $model,
+            'response_format' => [
+                'type' => 'json_schema',
+                'json_schema' => ['name' => $name, 'strict' => true, 'schema' => $schema],
+            ],
+            'messages' => [
+                ['role' => 'system', 'content' => $system],
+                ['role' => 'user', 'content' => $user],
+            ],
+        ];
+
+        if (OpenAiModelCatalog::isReasoning($model)) {
+            $body['max_completion_tokens'] = $maxTokens;
+            if ($effort !== null && $effort !== '') {
+                $body['reasoning_effort'] = $effort;
+            }
+        } else {
+            $body['temperature'] = 0;
+            $body['max_tokens'] = $maxTokens;
+        }
+
+        return $body;
+    }
+
+    private function shouldRetryWithoutReasoning(mixed $param): bool
+    {
+        $param = (string) $param;
+
+        return $param !== '' && (str_contains($param, 'reasoning') || $param === 'temperature' || $param === 'max_tokens' || $param === 'max_completion_tokens');
     }
 }

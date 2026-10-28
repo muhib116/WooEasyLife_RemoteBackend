@@ -2,6 +2,7 @@
 
 use App\Services\LandingSettingsService;
 use App\Services\ReturnAi\ReturnAiEngine;
+use App\Services\ReturnAi\ReturnAiPrompt;
 use App\Services\ReturnAi\ReturnAiSettings;
 use App\Services\ReturnAi\ReturnAiSignals;
 use App\Services\ReturnAi\ReturnAiText;
@@ -123,6 +124,8 @@ function deskReply(array $answer): array
 beforeEach(function () {
     config(['cache.default' => 'array']);
     app(LandingSettingsService::class)->update(['openai_api_key' => 'sk-test-return-ai-key']);
+    // These cases assert the non-reasoning chat payload. Auto would also call /v1/models.
+    app(ReturnAiSettings::class)->update(['model' => 'gpt-4.1-mini']);
 });
 
 it('reads Bangla and Banglish promise dates from the day the line was written', function () {
@@ -281,6 +284,98 @@ it('turns a cancel with a promised day into a resend with a reminder', function 
         'evidence' => [['source' => 'note', 'ref' => 'n1', 'quote' => 'customer will receive']],
     ]), deskCase([['customer will receive']]));
     expect($past['reminder'])->toBeNull()->and(deskCodes($past['flags']))->toContain('promise_date_passed');
+});
+
+it('counts kal from the day the note was written and drops stale kal once that day has passed', function () {
+    // "kal nibe" written on the 23rd means the 24th; today is the 26th.
+    $context = deskCase([
+        ['customer phone dhore na', '2026-10-22 10:00:00'],
+        ['customer bolse kal nibe', '2026-10-23 18:00:00'],
+    ]);
+    $case = deskFinalize(deskAnswer([
+        'summary_bn' => 'কাস্টমার বলেছেন কালকে নিবে, তাই আবার পাঠান',
+        'note_to_rider_bn' => 'কাস্টমারকে ফোন দিয়ে কালকে ডেলিভারি দিন',
+        'call_plan' => [
+            'call_customer' => true, 'call_rider' => false, 'first' => 'customer',
+            'when_bn' => 'কালকে', 'why_bn' => 'কাস্টমার কাল নেবেন', 'customer_script_bn' => '', 'rider_script_bn' => '',
+        ],
+        'evidence' => [['source' => 'note', 'ref' => 'n2', 'quote' => 'kal nibe']],
+    ]), $context);
+
+    expect($case['reminder'])->toBeNull()
+        ->and(deskCodes($case['flags']))->toContain('promise_date_passed')
+        ->and($case['call_plan']['when_bn'])->toBe('আজই')
+        ->and($case['call_plan']['why_bn'])->toContain('২৪ অক্টোবর')
+        ->and($case['note_to_rider_bn'])->not->toContain('কাল')
+        ->and($case['summary_bn'])->toContain('২৪ অক্টোবর')
+        ->and($case['summary_bn'])->toContain('পার হয়ে গেছে');
+
+    $prompt = app(ReturnAiPrompt::class)->user([
+        'context' => $context,
+        'flags' => [],
+        'promise' => app(ReturnAiSignals::class)->findPromise($context),
+        'memory' => [],
+    ]);
+    expect($prompt)->toContain('n1 · 2026-10-22 Thu · 4 days ago · rider: "customer phone dhore na"')
+        ->and($prompt)->toContain('n2 · 2026-10-23 Fri · 3 days ago · rider: "customer bolse kal nibe"')
+        ->and($prompt)->toContain('kal → 2026-10-24 (n2), Saturday, said on 2026-10-23. That day PASSED 2 days ago');
+
+    // A fresh "kal" still means tomorrow, and the words stay.
+    $fresh = deskFinalize(deskAnswer([
+        'note_to_rider_bn' => 'কাস্টমার আগামীকাল নেবেন, কল করে যান',
+        'evidence' => [['source' => 'note', 'ref' => 'n1', 'quote' => 'kal nibe']],
+    ]), deskCase([['customer bolse kal nibe', '2026-10-26 09:00:00']]));
+    expect($fresh['reminder']['date'])->toBe('2026-10-27')
+        ->and($fresh['note_to_rider_bn'])->toBe('কাস্টমার আগামীকাল নেবেন, কল করে যান');
+});
+
+it('tells the story in dated steps taken from the lines the model points at', function () {
+    $context = deskCase(
+        [
+            ['customer phone dhore na', '2026-10-22 10:00:00'],
+            ['customer bolse kal nibe', '2026-10-23 18:00:00'],
+        ],
+        [['at' => '2026-10-25 12:00:00', 'note' => 'customer bolse address change']],
+    );
+    $case = deskFinalize(deskAnswer([
+        'journey' => [
+            ['ref' => 'c1', 'text_bn' => 'আপনার কলে কাস্টমার ঠিকানা বদলাতে বলেছেন'],
+            ['ref' => 'N1', 'text_bn' => 'রাইডার বলেছেন কাস্টমার ফোন ধরেননি 01712345678'],
+            ['ref' => 'n2', 'text_bn' => 'কাস্টমার বলেছেন পরদিন নেবেন'],
+            ['ref' => 'zz', 'text_bn' => 'পার্সেল এখনো হোল্ডে'],
+            ['ref' => 'n2', 'text_bn' => ''],
+        ],
+        'evidence' => [['source' => 'note', 'ref' => 'n2', 'quote' => 'kal nibe']],
+    ]), $context);
+
+    // The undated step stays right after the step the model wrote before it (n2).
+    expect(array_column($case['journey'], 'ref'))->toBe(['n1', 'n2', '', 'c1'])
+        ->and($case['journey'][0]['date'])->toBe('2026-10-22')
+        ->and($case['journey'][0]['date_bn'])->toBe('২২ অক্টো')
+        ->and($case['journey'][0]['text_bn'])->toContain('01*******78')
+        ->and($case['journey'][2]['date'])->toBe('')
+        ->and($case['journey'][3]['date_bn'])->toBe('২৫ অক্টো');
+
+    $rules = app(ReturnAiEngine::class)->finalize(
+        app(ReturnAiEngine::class)->rulesCase($context, null),
+        $context,
+        [],
+        null,
+        ReturnAiSettings::sanitize([], []),
+        'rules',
+    );
+    expect($rules['journey'])->toHaveCount(3)
+        ->and($rules['journey'][0]['text_bn'])->toBe('রাইডার: customer phone dhore na')
+        ->and($rules['journey'][2]['text_bn'])->toBe('কাস্টমারকে কল: customer bolse address change');
+});
+
+it('knows kal and porshu but not সকাল or বিকাল', function () {
+    expect(ReturnAiText::hasRelativeDay('কালকে ডেলিভারি দিন'))->toBeTrue()
+        ->and(ReturnAiText::hasRelativeDay('কাস্টমার কাল নেবেন'))->toBeTrue()
+        ->and(ReturnAiText::hasRelativeDay('পরশু নেবেন'))->toBeTrue()
+        ->and(ReturnAiText::hasRelativeDay('customer kal nibe'))->toBeTrue()
+        ->and(ReturnAiText::hasRelativeDay('সকালে কল করে বিকালে ডেলিভারি দিন'))->toBeFalse()
+        ->and(ReturnAiText::hasRelativeDay('আজ কল করুন'))->toBeFalse();
 });
 
 it('plans the right calls for each kind of doubt', function () {

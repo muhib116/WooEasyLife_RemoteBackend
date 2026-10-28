@@ -3,6 +3,7 @@
 namespace App\Services\ReturnAi;
 
 use App\Models\PlatformSetting;
+use App\Services\LandingAi\OpenAiModelCatalog;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
@@ -14,9 +15,19 @@ class ReturnAiSettings
 {
     public const KEY = 'return_ai.settings';
 
+    /** Set once the old gpt-4.1-mini default has been moved to "auto". */
+    public const LEGACY_UPGRADE_KEY = 'return_ai.legacy_mini_upgraded';
+
     private const CACHE_KEY = 'return_ai.settings.v1';
 
+    /** Previous hardcoded default. Upgraded once so the desk uses the best model. */
+    private const LEGACY_DEFAULT_MODEL = 'gpt-4.1-mini';
+
     public const MODES = ['off', 'suggest', 'auto'];
+
+    public function __construct(
+        private OpenAiModelCatalog $models,
+    ) {}
 
     /**
      * @return array{
@@ -39,7 +50,10 @@ class ReturnAiSettings
             },
         );
 
-        return self::sanitize(is_array($stored) ? $stored : [], self::defaults());
+        $stored = is_array($stored) ? $stored : [];
+        $clean = self::sanitize($stored, self::defaults());
+
+        return $this->maybeUpgradeLegacyMini($stored, $clean);
     }
 
     /**
@@ -50,17 +64,31 @@ class ReturnAiSettings
     {
         $next = self::sanitize($input, $this->all());
 
-        if ($this->tableReady()) {
-            PlatformSetting::query()->updateOrCreate(['key' => self::KEY], ['value' => $next]);
-        }
+        $this->write(self::KEY, $next);
+        $this->write(self::LEGACY_UPGRADE_KEY, ['at' => now()->toIso8601String()]);
         Cache::forget(self::CACHE_KEY);
 
         return $next;
     }
 
+    /**
+     * Saved id, or the strongest text model on the hub key when the choice is auto.
+     */
     public function model(): string
     {
-        return $this->all()['model'];
+        $saved = (string) $this->all()['model'];
+
+        return $saved === 'auto' || $saved === '' ? $this->models->bestModel() : $saved;
+    }
+
+    /**
+     * Ids an admin may save: auto, plus every text model on the key.
+     *
+     * @return list<string>
+     */
+    public function allowedModelIds(): array
+    {
+        return array_values(array_unique(['auto', ...$this->models->selectableModels()]));
     }
 
     /**
@@ -71,11 +99,11 @@ class ReturnAiSettings
     public function forStore(): array
     {
         $settings = $this->all();
-        $models = self::models();
+        $saved = (string) $settings['model'];
 
         return [
             ...collect($settings)->except(['daily_review_limit'])->all(),
-            'model_label' => $models[$settings['model']]['label'] ?? $settings['model'],
+            'model_label' => $saved === 'auto' ? 'Best available' : $saved,
             'daily_review_limit' => $settings['daily_review_limit'],
         ];
     }
@@ -89,41 +117,38 @@ class ReturnAiSettings
     }
 
     /**
-     * @return array<string, array{label: string, hint: string, recommended?: bool}>
-     */
-    public static function models(): array
-    {
-        return (array) config('return_ai.models', []);
-    }
-
-    /**
+     * Settings → AI dropdown: best-available first, then every text model on the key.
+     *
      * @return list<array{value: string, label: string, hint: string, recommended: bool}>
      */
-    public static function modelOptions(): array
+    public function modelOptions(): array
     {
-        $out = [];
-        foreach (self::models() as $id => $model) {
-            $recommended = ! empty($model['recommended']);
-            $out[] = [
+        $catalog = $this->models->catalog();
+        $best = (string) $catalog['best'];
+        $options = [[
+            'value' => 'auto',
+            'label' => 'Best available — '.$best.' (recommended)',
+            'hint' => 'Strongest text model on this key. Best chance of a careful read that can hold the 95% bar.',
+            'recommended' => true,
+        ]];
+
+        foreach ($catalog['models'] as $id) {
+            $tier = OpenAiModelCatalog::rank($id)['tier'];
+            $options[] = [
                 'value' => $id,
-                'label' => $model['label'].($recommended ? ' (recommended)' : ''),
-                'hint' => $model['hint'],
-                'recommended' => $recommended,
+                'label' => $id.($id === $best ? ' — best quality' : ''),
+                'hint' => match ($tier) {
+                    1 => 'Fastest, lowest cost — weaker on long Bangla notes',
+                    2 => 'Faster and cheaper — more mistakes on mixed or long notes',
+                    default => $id === $best
+                        ? 'Strongest model on the key'
+                        : 'Strong reader for a full note thread',
+                },
+                'recommended' => false,
             ];
         }
 
-        return $out;
-    }
-
-    public static function defaultModel(): string
-    {
-        foreach (self::models() as $id => $model) {
-            if (! empty($model['recommended'])) {
-                return $id;
-            }
-        }
-
-        return (string) (self::defaults()['model'] ?? 'gpt-4.1-mini');
+        return $options;
     }
 
     /**
@@ -131,9 +156,10 @@ class ReturnAiSettings
      *
      * @param  array<string, mixed>  $input
      * @param  array<string, mixed>  $base
+     * @param  list<string>|null  $allowed  When set, a model outside this list becomes auto.
      * @return array<string, mixed>
      */
-    public static function sanitize(array $input, array $base): array
+    public static function sanitize(array $input, array $base, ?array $allowed = null): array
     {
         $out = array_merge(self::defaults(), $base);
 
@@ -151,9 +177,7 @@ class ReturnAiSettings
         if (array_key_exists('model', $input)) {
             $out['model'] = trim((string) $input['model']);
         }
-        if (! array_key_exists((string) $out['model'], self::models())) {
-            $out['model'] = self::defaultModel();
-        }
+        $out['model'] = self::acceptedModel((string) $out['model'], $allowed);
 
         foreach ([
             'min_confidence' => [95, 99],
@@ -182,6 +206,64 @@ class ReturnAiSettings
             'daily_review_limit' => $out['daily_review_limit'],
             'background_review' => $out['background_review'],
         ];
+    }
+
+    /**
+     * The old default was gpt-4.1-mini. Move that saved value to auto once,
+     * so an explicit later choice of mini is kept.
+     *
+     * @param  array<string, mixed>  $stored
+     * @param  array<string, mixed>  $clean
+     * @return array<string, mixed>
+     */
+    private function maybeUpgradeLegacyMini(array $stored, array $clean): array
+    {
+        if (($stored['model'] ?? null) !== self::LEGACY_DEFAULT_MODEL || $this->legacyUpgradeDone()) {
+            return $clean;
+        }
+
+        $clean['model'] = 'auto';
+        $this->write(self::KEY, $clean);
+        $this->write(self::LEGACY_UPGRADE_KEY, ['at' => now()->toIso8601String()]);
+        Cache::forget(self::CACHE_KEY);
+
+        return $clean;
+    }
+
+    private function legacyUpgradeDone(): bool
+    {
+        if (! $this->tableReady()) {
+            return true;
+        }
+
+        return PlatformSetting::query()->where('key', self::LEGACY_UPGRADE_KEY)->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $value
+     */
+    private function write(string $key, array $value): void
+    {
+        if (! $this->tableReady()) {
+            return;
+        }
+
+        PlatformSetting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+    }
+
+    /**
+     * @param  list<string>|null  $allowed
+     */
+    private static function acceptedModel(string $model, ?array $allowed): string
+    {
+        if ($model === '' || $model === 'auto') {
+            return 'auto';
+        }
+        if (is_array($allowed)) {
+            return in_array($model, $allowed, true) ? $model : 'auto';
+        }
+
+        return OpenAiModelCatalog::isTextModel($model) ? $model : 'auto';
     }
 
     private function tableReady(): bool

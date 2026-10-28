@@ -35,7 +35,7 @@ class LandingSettingsController extends Controller
                 'landing_model_list_error' => $catalog['error'],
                 'landing_model_list_fetched_at' => $catalog['fetched_at'],
                 'return_ai' => $this->returnAi->all(),
-                'return_ai_model_options' => ReturnAiSettings::modelOptions(),
+                'return_ai_model_options' => $this->returnAi->modelOptions(),
             ]),
         ]);
     }
@@ -116,7 +116,16 @@ class LandingSettingsController extends Controller
                 'return_ai.auto_resend' => ['required', 'boolean'],
                 'return_ai.auto_cancel' => ['required', 'boolean'],
                 'return_ai.background_review' => ['required', 'boolean'],
-                'return_ai.model' => ['required', 'string', 'in:'.implode(',', array_keys(ReturnAiSettings::models()))],
+                'return_ai.model' => [
+                    'required',
+                    'string',
+                    'max:80',
+                    function (string $attribute, mixed $value, \Closure $fail): void {
+                        if (! in_array($value, $this->returnAi->allowedModelIds(), true)) {
+                            $fail('Choose a model from the list.');
+                        }
+                    },
+                ],
                 'return_ai.min_confidence' => ['required', 'integer', 'min:95', 'max:99'],
                 'return_ai.daily_auto_limit' => ['required', 'integer', 'min:1', 'max:200'],
                 'return_ai.daily_review_limit' => ['required', 'integer', 'min:10', 'max:5000'],

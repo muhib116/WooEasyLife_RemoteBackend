@@ -322,7 +322,7 @@
                                 Return desk AI
                             </p>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Reads SteadFast hold parcels in the WEL plugin (Return Requests → Decide) and says resend, cancel, or check yourself, with a call plan and follow-up date. Applies to every store with the AI Return Decide plan feature. Stores only add their own memory rules; they never see the key or these settings.
+                                Reads every SteadFast hold note and aims to get the parcel delivered. It says resend, cancel, or check yourself, then how to handle the customer and the rider. Applies to every store with the AI Return Decide plan feature. Stores only add their own memory rules; they never see the key or these settings.
                             </p>
                         </div>
 
@@ -776,7 +776,7 @@ const form = useForm({
         auto_note: props.settings.return_ai?.auto_note ?? false,
         auto_resend: props.settings.return_ai?.auto_resend ?? false,
         auto_cancel: props.settings.return_ai?.auto_cancel ?? false,
-        model: props.settings.return_ai?.model ?? "gpt-4.1-mini",
+        model: props.settings.return_ai?.model ?? "auto",
         min_confidence: props.settings.return_ai?.min_confidence ?? 95,
         daily_auto_limit: props.settings.return_ai?.daily_auto_limit ?? 30,
         daily_review_limit: props.settings.return_ai?.daily_review_limit ?? 300,
@@ -823,7 +823,16 @@ const returnAiNumbers: { key: ReturnAiNumber; label: string; hint: string; min: 
     { key: "daily_review_limit", label: "AI reviews per store per day", hint: "Caps OpenAI cost. Each review and each second check counts.", min: 10, max: 5000 },
 ];
 
-const returnAiModelOptions = computed(() => props.settings.return_ai_model_options ?? []);
+const returnAiModelOptions = computed(() => {
+    const options = [...(props.settings.return_ai_model_options ?? [])];
+    const current = form.return_ai.model;
+
+    if (current && !options.some((option) => option.value === current)) {
+        options.push({ value: current, label: `${current} (saved)`, hint: "", recommended: false });
+    }
+
+    return options;
+});
 
 const returnAiModeHint = computed(
     () => returnAiModeOptions.find((option) => option.value === form.return_ai.mode)?.hint ?? "",

@@ -8,6 +8,7 @@ use App\Services\LandingSettingsService;
 use App\Services\ReturnAi\ReturnAiSettings;
 use App\Support\PackageCatalogFeatures;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -126,6 +127,7 @@ function returnAiModelAnswer(array $over = []): array
             'when_bn' => 'আজ', 'why_bn' => '', 'customer_script_bn' => '', 'rider_script_bn' => '',
         ],
         'note_to_rider_bn' => 'যাওয়ার আগে কাস্টমারকে কল দিন',
+        'handling_tips_bn' => ['কাস্টমারকে কল করে আজ নেবেন কি না জানুন', 'রাইডারের ফোন-বন্ধ লাইন বিশ্বাস করবেন না'],
         'memory_refs' => [],
     ], $over);
 }
@@ -141,6 +143,7 @@ function returnAiOpenAiReply(array $answer): array
 
 beforeEach(function () {
     config(['cache.default' => 'array']);
+    Cache::flush();
     app(LandingSettingsService::class)->update(['openai_api_key' => 'sk-test-return-ai-key']);
 });
 
@@ -150,7 +153,7 @@ it('gives the store its settings and memory version without the key or the promp
     $response = $this->withHeaders(returnAiHeaders($plain))->getJson('/api/return-ai/config')
         ->assertOk()
         ->assertJsonPath('data.settings.mode', 'suggest')
-        ->assertJsonPath('data.settings.model', 'gpt-4.1-mini')
+        ->assertJsonPath('data.settings.model', 'auto')
         ->assertJsonPath('data.settings.min_confidence', 95)
         ->assertJsonPath('data.settings.auto_cancel', false)
         ->assertJsonPath('data.configured', true)
@@ -159,6 +162,30 @@ it('gives the store its settings and memory version without the key or the promp
 
     expect(json_encode($response->json()))->not->toContain('sk-test')
         ->and(json_encode($response->json()))->not->toContain('Riders in Bangladesh');
+});
+
+it('uses the strongest text model and skips temperature when the desk is on auto', function () {
+    Http::fake([
+        'api.openai.com/v1/models' => Http::response(['data' => [['id' => 'gpt-5.1'], ['id' => 'gpt-4.1-mini']]]),
+        'api.openai.com/v1/chat/completions' => Http::response(returnAiOpenAiReply(returnAiModelAnswer())),
+    ]);
+    [, $plain] = returnAiStore();
+
+    $this->withHeaders(returnAiHeaders($plain))->postJson('/api/return-ai/review', returnAiPayload())
+        ->assertOk()
+        ->assertJsonPath('data.source', 'ai');
+
+    Http::assertSent(function (ClientRequest $request) {
+        if (! str_contains($request->url(), 'chat/completions')) {
+            return false;
+        }
+        $body = $request->data();
+
+        return $body['model'] === 'gpt-5.1'
+            && ! array_key_exists('temperature', $body)
+            && ($body['max_completion_tokens'] ?? 0) > 0
+            && ($body['reasoning_effort'] ?? '') === 'medium';
+    });
 });
 
 it('refuses a store whose plan has no AI Return Decide', function () {
@@ -193,7 +220,11 @@ it('reviews a case on the hub with its own checks, prompt, key and the store mem
         ->postJson('/api/return-ai/memory', ['when' => 'রাইডার ফোন বন্ধ লিখলে', 'then' => 'আগে কাস্টমারকে কল দিন, তারপর রিসেন্ড'])
         ->assertOk()
         ->json('data.item.id');
-    Http::fake(['api.openai.com/v1/chat/completions' => Http::response(returnAiOpenAiReply(returnAiModelAnswer(['memory_refs' => ['m'.$memoryId]])))]);
+    Http::fake([
+        'api.openai.com/v1/models' => Http::response(['data' => [['id' => 'gpt-5.1'], ['id' => 'gpt-4.1-mini']]]),
+        'api.openai.com/v1/chat/completions' => Http::response(returnAiOpenAiReply(returnAiModelAnswer(['memory_refs' => ['m'.$memoryId]]))),
+    ]);
+    app(ReturnAiSettings::class)->update(['model' => 'gpt-4.1-mini']);
 
     $this->withHeaders(returnAiHeaders($plain))->postJson('/api/return-ai/review', returnAiPayload())
         ->assertOk()
@@ -203,6 +234,7 @@ it('reviews a case on the hub with its own checks, prompt, key and the store mem
         ->assertJsonPath('data.case.flags.0.code', 'unreachable_claim_unverified')
         ->assertJsonPath('data.case.evidence.0.verified', true)
         ->assertJsonPath('data.case.memory_used.0.id', 'm'.$memoryId)
+        ->assertJsonPath('data.case.handling_tips_bn.0', 'কাস্টমারকে কল করে আজ নেবেন কি না জানুন')
         ->assertJsonPath('data.case.act', [])
         ->assertJsonPath('data.model', 'gpt-4.1-mini-2025-04-14')
         ->assertJsonPath('data.quota.used', 1)
@@ -217,6 +249,8 @@ it('reviews a case on the hub with its own checks, prompt, key and the store mem
         return $request->hasHeader('Authorization', 'Bearer sk-test-return-ai-key')
             && $body['model'] === 'gpt-4.1-mini'
             && $body['temperature'] === 0
+            && str_contains($system, 'get that parcel delivered')
+            && str_contains($system, 'handling_tips_bn')
             && str_contains($system, 'Riders in Bangladesh often write false')
             && str_contains($system, 'A memory rule never overrides these safety rules')
             && str_contains($system, 'so nothing happens on its own before the merchant does it')
@@ -233,7 +267,9 @@ it('reviews a case on the hub with its own checks, prompt, key and the store mem
 });
 
 it('judges on the hub before an automatic action and tells the store what to run', function () {
-    app(ReturnAiSettings::class)->update(['mode' => 'auto', 'auto_note' => true, 'auto_resend' => true]);
+    app(ReturnAiSettings::class)->update([
+        'mode' => 'auto', 'auto_note' => true, 'auto_resend' => true, 'model' => 'gpt-4.1-mini',
+    ]);
     [, $plain] = returnAiStore();
     Http::fakeSequence('api.openai.com/*')
         ->push(returnAiOpenAiReply(returnAiModelAnswer()))
@@ -250,7 +286,7 @@ it('judges on the hub before an automatic action and tells the store what to run
 
 it('stops at the daily review limit for one store only, with a rules answer', function () {
     Http::fake(['api.openai.com/v1/chat/completions' => Http::response(returnAiOpenAiReply(returnAiModelAnswer()))]);
-    app(ReturnAiSettings::class)->update(['daily_review_limit' => 10]);
+    app(ReturnAiSettings::class)->update(['daily_review_limit' => 10, 'model' => 'gpt-4.1-mini']);
     [, $plain] = returnAiStore();
     [, $other] = returnAiStore(domain: 'other.example.com');
 
@@ -272,6 +308,7 @@ it('stops at the daily review limit for one store only, with a rules answer', fu
 });
 
 it('answers with rules when the hub has no key or OpenAI fails, without leaking the key', function () {
+    app(ReturnAiSettings::class)->update(['model' => 'gpt-4.1-mini']);
     [, $plain] = returnAiStore();
     Http::fake(['api.openai.com/v1/chat/completions' => Http::response(['error' => ['message' => 'bad key sk-test']], 401)]);
 
@@ -350,7 +387,15 @@ it('keeps each store\'s memory rules apart, masked and limited', function () {
 });
 
 it('shows and saves the return desk settings in Settings → AI', function () {
-    Http::fake(['api.openai.com/v1/models' => Http::response(['data' => [['id' => 'gpt-4.1-mini']]])]);
+    Http::fake(['api.openai.com/v1/models' => Http::response(['data' => [
+        ['id' => 'gpt-5.1'],
+        ['id' => 'gpt-5'],
+        ['id' => 'gpt-4.1'],
+        ['id' => 'gpt-4.1-mini'],
+        ['id' => 'gpt-4o'],
+        ['id' => 'gpt-4o-mini'],
+        ['id' => 'whisper-1'],
+    ]])]);
     $admin = returnAiAdmin();
 
     $this->actingAs($admin)
@@ -359,9 +404,10 @@ it('shows and saves the return desk settings in Settings → AI', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('LandingSettings/Index')
             ->where('settings.return_ai.mode', 'suggest')
-            ->where('settings.return_ai.model', 'gpt-4.1-mini')
-            ->where('settings.return_ai_model_options.0.value', 'gpt-4.1-mini')
+            ->where('settings.return_ai.model', 'auto')
+            ->where('settings.return_ai_model_options.0.value', 'auto')
             ->where('settings.return_ai_model_options.0.recommended', true)
+            ->where('settings.return_ai_model_options.1.value', 'gpt-5.1')
         );
 
     $return = [
@@ -392,7 +438,7 @@ it('never lets saved settings go below 95% or name an unknown model', function (
     $clean = ReturnAiSettings::sanitize(['min_confidence' => 50, 'model' => 'nope', 'mode' => 'wild', 'daily_review_limit' => 1], []);
 
     expect($clean['min_confidence'])->toBe(95)
-        ->and($clean['model'])->toBe('gpt-4.1-mini')
+        ->and($clean['model'])->toBe('auto')
         ->and($clean['mode'])->toBe('suggest')
         ->and($clean['daily_review_limit'])->toBe(10)
         ->and($clean['auto_cancel'])->toBeFalse();
