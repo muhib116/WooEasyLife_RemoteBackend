@@ -2,6 +2,7 @@
 
 use App\Models\FraudPartnerCredential;
 use App\Services\FraudCheck\CourierCallContext;
+use App\Services\FraudCheck\CourierPace;
 use App\Services\FraudCheck\FraudPartnerCredentialResolver;
 use App\Services\FraudCheck\PathaoFraudChecker;
 use Illuminate\Support\Facades\Cache;
@@ -403,6 +404,107 @@ it('tries the next cached Pathao account when the first account returns rating o
         ->and($report['cancel'])->toBe(4);
 });
 
+it('logs in the first Pathao account in list order and leaves the next one logged out', function () {
+    twoPathaoAccountsWithoutSessions();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::response(['access_token' => 'token-early'], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::response(pathaoSuccessBody(), 200),
+    ]);
+
+    expect(app(PathaoFraudChecker::class)->check('01770989591')['total_order'])->toBe(11)
+        ->and(pathaoLoginCount())->toBe(1)
+        ->and(pathaoLoginUsernames())->toBe(['early@pathao.test'])
+        ->and(Cache::get(app(FraudPartnerCredentialResolver::class)->sessionCacheKey('pathao', 'later@pathao.test')))->toBeNull();
+});
+
+it('does not log in another Pathao account when the new login returns only a rating', function () {
+    twoPathaoAccountsWithoutSessions();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::response(['access_token' => 'token-early'], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::response([
+            'data' => [
+                'show_count' => false,
+                'customer_rating' => 'good_customer',
+            ],
+        ], 200),
+    ]);
+
+    $report = app(PathaoFraudChecker::class)->check('01770989591');
+
+    expect($report['customer_rating'] ?? null)->not->toBeNull()
+        ->and(pathaoLoginCount())->toBe(1)
+        ->and(pathaoLoginUsernames())->toBe(['early@pathao.test']);
+});
+
+it('logs in the next Pathao account in list order when the earlier login fails', function () {
+    twoPathaoAccountsWithoutSessions();
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::sequence()
+            ->push(['message' => 'rejected'], 422)
+            ->push(['access_token' => 'token-later'], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::response(pathaoSuccessBody(), 200),
+    ]);
+
+    expect(app(PathaoFraudChecker::class)->check('01770989591')['total_order'])->toBe(11)
+        ->and(pathaoLoginCount())->toBe(2)
+        ->and(pathaoLoginUsernames())->toBe(['early@pathao.test', 'later@pathao.test']);
+});
+
+it('does not log in when another worker takes the free Pathao lane', function () {
+    Cache::flush();
+    silencePathaoOutsideMerchant();
+
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'busy@pathao.test',
+        'secret' => 'busy-password',
+        'is_active' => true,
+        'priority' => 1,
+    ]);
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'fresh@pathao.test',
+        'secret' => 'fresh-password',
+        'is_active' => true,
+        'priority' => 2,
+    ]);
+
+    Cache::put(
+        app(FraudPartnerCredentialResolver::class)->sessionCacheKey('pathao', 'busy@pathao.test'),
+        'token-busy',
+        now()->addMinutes(50),
+    );
+
+    app()->instance(CourierPace::class, new class(app(CourierCallContext::class)) extends CourierPace
+    {
+        public function waitSeconds(string $courier, string $lane): int
+        {
+            return 0;
+        }
+
+        public function claim(string $courier, string $lane, ?int $maxWaitSeconds = null): int
+        {
+            return 4;
+        }
+    });
+
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://merchant.pathao.com/api/v1/login' => Http::response(['access_token' => 'should-not-login'], 200),
+        'https://merchant.pathao.com/api/v1/user/success' => Http::response(pathaoSuccessBody(), 200),
+    ]);
+
+    $report = app(PathaoFraudChecker::class)->check('01770989591');
+
+    expect($report['deferred'])->toBeTrue()
+        ->and($report['retry_after'])->toBe(4)
+        ->and(pathaoLoginCount())->toBe(0)
+        ->and(pathaoSuccessCount())->toBe(0);
+});
+
 function silencePathaoHermes(): void
 {
     config()->set('pathao-courier.pathao_client_id', null);
@@ -419,9 +521,40 @@ function silencePathaoOutsideMerchant(): void
 
 function pathaoLoginCount(): int
 {
+    return count(pathaoLoginUsernames());
+}
+
+/**
+ * @return list<string>
+ */
+function pathaoLoginUsernames(): array
+{
     return collect(Http::recorded())
         ->filter(fn ($pair) => str_contains($pair[0]->url(), '/api/v1/login'))
-        ->count();
+        ->map(fn ($pair) => (string) $pair[0]['username'])
+        ->values()
+        ->all();
+}
+
+function twoPathaoAccountsWithoutSessions(): void
+{
+    Cache::flush();
+    silencePathaoOutsideMerchant();
+
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'later@pathao.test',
+        'secret' => 'later-password',
+        'is_active' => true,
+        'priority' => 2,
+    ]);
+    FraudPartnerCredential::query()->create([
+        'courier' => 'pathao',
+        'identifier' => 'early@pathao.test',
+        'secret' => 'early-password',
+        'is_active' => true,
+        'priority' => 1,
+    ]);
 }
 
 function pathaoSuccessCount(): int

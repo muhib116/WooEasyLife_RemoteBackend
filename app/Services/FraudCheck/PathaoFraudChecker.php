@@ -289,6 +289,7 @@ class PathaoFraudChecker
         $asked = false;
         $wait = 0;
         $ratingFallback = null;
+        $lostRace = false;
 
         foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
             $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
@@ -298,10 +299,24 @@ class PathaoFraudChecker
                 continue;
             }
 
-            $result = $this->askMerchantApi($phone, $token, $this->laneFor($candidate['identifier']));
+            $lane = $this->laneFor($candidate['identifier']);
+            $laneWait = $this->pace()->waitSeconds(self::COURIER, $lane);
 
-            // No room on this account now. It is not logged in again either.
+            // This account is already in its gap. Another saved session can
+            // go. A new login waits until no saved session was free.
+            if ($laneWait > $this->pace()->allowance(self::COURIER)) {
+                $wait = $this->sooner($wait, $laneWait);
+                $tried[$candidate['identifier']] = true;
+
+                continue;
+            }
+
+            $result = $this->askMerchantApi($phone, $token, $lane);
+
+            // The lane was free, then another worker took it. Keep looking at
+            // saved sessions. Do not log in because of the race.
             if ($result['deferred']) {
+                $lostRace = true;
                 $wait = $this->sooner($wait, $result['wait']);
                 $tried[$candidate['identifier']] = true;
 
@@ -368,13 +383,27 @@ class PathaoFraudChecker
             $tried[$candidate['identifier']] = true;
         }
 
-        // A rate limit or an outage is Pathao's, so another login would not help.
-        if ($serverError || ($rateLimited && $this->pace()->shared(self::COURIER))) {
+        // A rate limit that covers every account, or an outage, is Pathao's.
+        // A lost claim is another worker's call. A rating already came from a
+        // saved session, so the next saved session was the place to look for
+        // counts. None of these start a new login.
+        if ($lostRace || $serverError || $ratingFallback !== null || ($rateLimited && $this->pace()->shared(self::COURIER))) {
             return $this->merchantOutcome($ratingFallback, $rateLimited, $retryAfter, $asked, $wait);
         }
 
-        foreach ($this->credentials->loginCandidates(self::COURIER) as $candidate) {
+        foreach ($this->credentials->candidates(self::COURIER) as $candidate) {
             if (isset($tried[$candidate['identifier']])) {
+                continue;
+            }
+
+            $cacheKey = $this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']);
+            $cached = Cache::get($cacheKey);
+
+            if (is_string($cached) && trim($cached) !== '') {
+                continue;
+            }
+
+            if ($this->loginGuard->resting(self::COURIER, $candidate)) {
                 continue;
             }
 
@@ -396,19 +425,21 @@ class PathaoFraudChecker
 
             $result = $this->askMerchantApi($phone, $token, $lane);
 
+            // One new session per number. A failed login above can try the
+            // next account that has none. This one already has a session.
             if ($result['deferred']) {
                 $wait = $this->sooner($wait, $result['wait']);
 
-                continue;
+                break;
             }
 
             $asked = true;
 
             if ($result['unauthorized']) {
-                $this->loginGuard->forgetToken($this->credentials->sessionCacheKey(self::COURIER, $candidate['identifier']), $token);
+                $this->loginGuard->forgetToken($cacheKey, $token);
                 $this->credentials->markFailure($candidate['id'], 'Merchant token rejected');
 
-                continue;
+                break;
             }
 
             if ($result['report'] !== null) {
@@ -420,7 +451,7 @@ class PathaoFraudChecker
 
                 $ratingFallback ??= $result['report'];
 
-                continue;
+                break;
             }
 
             if ($result['status'] !== null && ! $result['rate_limited'] && ! $result['server_error']) {
@@ -430,17 +461,9 @@ class PathaoFraudChecker
             if ($result['rate_limited']) {
                 $rateLimited = true;
                 $retryAfter = max($retryAfter, $result['retry_after']);
-
-                if ($this->pace()->shared(self::COURIER)) {
-                    break;
-                }
-
-                continue;
             }
 
-            if ($result['server_error']) {
-                break;
-            }
+            break;
         }
 
         return $this->merchantOutcome($ratingFallback, $rateLimited, $retryAfter, $asked, $wait);
