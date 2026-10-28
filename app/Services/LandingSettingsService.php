@@ -34,6 +34,10 @@ class LandingSettingsService
 
     public const META_PIXEL_ID_KEY = 'landing.meta_pixel_id';
 
+    public const OPENAI_ADS_PIXEL_ID_KEY = 'landing.openai_ads_pixel_id';
+
+    public const OPENAI_ADS_API_KEY_KEY = 'landing.openai_ads_api_key';
+
     public const HEADER_SCRIPTS_KEY = 'landing.header_scripts';
 
     public const FOOTER_SCRIPTS_KEY = 'landing.footer_scripts';
@@ -225,6 +229,16 @@ class LandingSettingsService
         return $this->resolve(self::META_PIXEL_ID_KEY, config('landing.meta_pixel_id'));
     }
 
+    public function openaiAdsPixelId(): ?string
+    {
+        return $this->resolve(self::OPENAI_ADS_PIXEL_ID_KEY, config('landing.openai_ads_pixel_id'));
+    }
+
+    public function openaiAdsApiKey(): ?string
+    {
+        return $this->resolve(self::OPENAI_ADS_API_KEY_KEY, config('landing.openai_ads_api_key'));
+    }
+
     /**
      * Raw HTML injected into &lt;head&gt; (verification metas, head scripts, etc.).
      */
@@ -326,7 +340,10 @@ class LandingSettingsService
      *     header_scripts: string|null,
      *     header_scripts_source: string,
      *     footer_scripts: string|null,
-     *     footer_scripts_source: string
+     *     footer_scripts_source: string,
+     *     openai_ads_pixel_id: string|null,
+     *     openai_ads_pixel_id_source: string,
+     *     openai_ads_api_key_configured: bool
      * }
      */
     public function marketingTracking(): array
@@ -338,6 +355,9 @@ class LandingSettingsService
             'header_scripts_source' => $this->sourceWithConfig(self::HEADER_SCRIPTS_KEY, 'landing.header_scripts'),
             'footer_scripts' => $this->footerScripts(),
             'footer_scripts_source' => $this->sourceWithConfig(self::FOOTER_SCRIPTS_KEY, 'landing.footer_scripts'),
+            'openai_ads_pixel_id' => $this->openaiAdsPixelId(),
+            'openai_ads_pixel_id_source' => $this->sourceWithConfig(self::OPENAI_ADS_PIXEL_ID_KEY, 'landing.openai_ads_pixel_id'),
+            'openai_ads_api_key_configured' => $this->openaiAdsApiKey() !== null,
         ];
     }
 
@@ -366,6 +386,8 @@ class LandingSettingsService
             'admin_email' => self::ADMIN_EMAIL_KEY,
             'admin_phone' => self::ADMIN_PHONE_KEY,
             'meta_pixel_id' => self::META_PIXEL_ID_KEY,
+            'openai_ads_pixel_id' => self::OPENAI_ADS_PIXEL_ID_KEY,
+            'openai_ads_api_key' => self::OPENAI_ADS_API_KEY_KEY,
             'header_scripts' => self::HEADER_SCRIPTS_KEY,
             'footer_scripts' => self::FOOTER_SCRIPTS_KEY,
             'openai_api_key' => self::OPENAI_API_KEY_KEY,

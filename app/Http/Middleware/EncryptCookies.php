@@ -12,6 +12,8 @@ class EncryptCookies extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // ChatGPT Ads pixel writes these itself. They must arrive unencrypted for the Conversions API.
+        '__oppref',
+        '__obref',
     ];
 }

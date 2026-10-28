@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\LandingAi\OpenAiModelCatalog;
 use App\Services\LandingSettingsService;
+use App\Services\ReturnAi\ReturnAiSettings;
 use App\Services\SubscriptionNotificationRuntimeConfig;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,6 +16,7 @@ class LandingSettingsController extends Controller
         private LandingSettingsService $landingSettings,
         private SubscriptionNotificationRuntimeConfig $subscriptionNotifications,
         private OpenAiModelCatalog $landingModels,
+        private ReturnAiSettings $returnAi,
     ) {}
 
     public function index(Request $request)
@@ -32,6 +34,8 @@ class LandingSettingsController extends Controller
                 'landing_model_list_source' => $catalog['source'],
                 'landing_model_list_error' => $catalog['error'],
                 'landing_model_list_fetched_at' => $catalog['fetched_at'],
+                'return_ai' => $this->returnAi->all(),
+                'return_ai_model_options' => ReturnAiSettings::modelOptions(),
             ]),
         ]);
     }
@@ -104,6 +108,23 @@ class LandingSettingsController extends Controller
         ]);
 
         $this->landingSettings->update($validated);
+
+        if (is_array($request->input('return_ai'))) {
+            $returnAi = $request->validate([
+                'return_ai.mode' => ['required', 'in:'.implode(',', ReturnAiSettings::MODES)],
+                'return_ai.auto_note' => ['required', 'boolean'],
+                'return_ai.auto_resend' => ['required', 'boolean'],
+                'return_ai.auto_cancel' => ['required', 'boolean'],
+                'return_ai.background_review' => ['required', 'boolean'],
+                'return_ai.model' => ['required', 'string', 'in:'.implode(',', array_keys(ReturnAiSettings::models()))],
+                'return_ai.min_confidence' => ['required', 'integer', 'min:95', 'max:99'],
+                'return_ai.daily_auto_limit' => ['required', 'integer', 'min:1', 'max:200'],
+                'return_ai.daily_review_limit' => ['required', 'integer', 'min:10', 'max:5000'],
+            ], [
+                'return_ai.min_confidence.min' => 'Auto actions need at least 95% confidence.',
+            ]);
+            $this->returnAi->update($returnAi['return_ai']);
+        }
 
         if ($request->exists('sms_expiry')) {
             $request->validate([

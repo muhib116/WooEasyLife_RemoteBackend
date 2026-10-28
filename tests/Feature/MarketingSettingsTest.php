@@ -130,6 +130,51 @@ it('injects header and footer scripts on public pages', function () {
         ->assertSee('window.__welFooter=1', false);
 });
 
+it('installs the chatgpt ads pixel on the landing page only', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('https://bzrcdn.openai.com/sdk/oaiq.min.js', false)
+        ->assertSee('6aAQUfAgG6tcHuxGiASdx8', false)
+        ->assertSee('oaiq("init"', false);
+
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertDontSee('https://bzrcdn.openai.com/sdk/oaiq.min.js', false);
+});
+
+it('saves a chatgpt ads pixel id and conversions key without returning the key', function () {
+    $admin = createMarketingAdmin();
+
+    $this->actingAs($admin)
+        ->put(route('marketingSettings.update'), [
+            'meta_pixel_id' => '',
+            'openai_ads_pixel_id' => '6aAQUfAgG6tcHuxGiASdx8',
+            'openai_ads_api_key' => 'secret-conversion-key',
+        ])
+        ->assertRedirect();
+
+    $settings = app(LandingSettingsService::class);
+    expect($settings->openaiAdsPixelId())->toBe('6aAQUfAgG6tcHuxGiASdx8')
+        ->and($settings->openaiAdsApiKey())->toBe('secret-conversion-key');
+
+    $this->actingAs($admin)
+        ->get(route('marketingSettings.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('settings.openai_ads_api_key_configured', true)
+            ->missing('settings.openai_ads_api_key'));
+
+    $this->actingAs($admin)
+        ->put(route('marketingSettings.update'), [
+            'meta_pixel_id' => '',
+            'openai_ads_pixel_id' => '6aAQUfAgG6tcHuxGiASdx8',
+            'openai_ads_api_key' => '',
+        ])
+        ->assertRedirect();
+
+    expect(app(LandingSettingsService::class)->openaiAdsApiKey())->toBe('secret-conversion-key');
+});
+
 it('also injects meta pixel for authenticated admins so testing works', function () {
     PlatformSetting::query()->updateOrCreate(
         ['key' => LandingSettingsService::META_PIXEL_ID_KEY],

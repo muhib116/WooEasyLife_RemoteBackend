@@ -316,6 +316,150 @@
                                 {{ form.errors.landing_ai_daily_limit }}
                             </p>
                         </div>
+
+                        <div class="border-t border-gray-100 pt-5 dark:border-gray-800">
+                            <p class="text-sm font-semibold text-gray-800 dark:text-white/90">
+                                Return desk AI
+                            </p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Reads SteadFast hold parcels in the WEL plugin (Return Requests → Decide) and says resend, cancel, or check yourself, with a call plan and follow-up date. Applies to every store with the AI Return Decide plan feature. Stores only add their own memory rules; they never see the key or these settings.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="return_ai_mode"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Mode
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {{ returnAiModeHint }}
+                            </p>
+                            <Select
+                                id="return_ai_mode"
+                                v-model="form.return_ai.mode"
+                                :options="returnAiModeOptions"
+                                option-label="label"
+                                option-value="value"
+                                class="mt-2 w-full"
+                            />
+                            <p
+                                v-if="returnAiError('mode')"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ returnAiError("mode") }}
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="form.return_ai.mode === 'auto'"
+                            class="space-y-3 rounded-xl border border-gray-100 p-3 dark:border-gray-800"
+                        >
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                The AI acts only when confidence is at or above the minimum, the quoted lines exist in the parcel notes, no suspicion flag is raised, and a second check agrees. Anything else goes to the store's "needs review" list.
+                            </p>
+                            <div
+                                v-for="action in returnAiActions"
+                                :key="action.key"
+                                class="flex items-start justify-between gap-4"
+                            >
+                                <div class="min-w-0">
+                                    <label
+                                        :for="`return_ai_${action.key}`"
+                                        class="text-sm font-medium text-gray-800 dark:text-white/90"
+                                    >
+                                        {{ action.label }}
+                                    </label>
+                                    <p
+                                        class="mt-0.5 text-xs"
+                                        :class="action.danger ? 'text-rose-500' : 'text-gray-500 dark:text-gray-400'"
+                                    >
+                                        {{ action.hint }}
+                                    </p>
+                                </div>
+                                <ToggleSwitch
+                                    :id="`return_ai_${action.key}`"
+                                    v-model="form.return_ai[action.key]"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                for="return_ai_model"
+                                class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            >
+                                Model
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {{ returnAiModelHint }}
+                            </p>
+                            <Select
+                                id="return_ai_model"
+                                v-model="form.return_ai.model"
+                                :options="returnAiModelOptions"
+                                option-label="label"
+                                option-value="value"
+                                class="mt-2 w-full"
+                            />
+                            <p
+                                v-if="returnAiError('model')"
+                                class="mt-1 text-xs text-rose-500"
+                            >
+                                {{ returnAiError("model") }}
+                            </p>
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-3">
+                            <div
+                                v-for="field in returnAiNumbers"
+                                :key="field.key"
+                            >
+                                <label
+                                    :for="`return_ai_${field.key}`"
+                                    class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                                >
+                                    {{ field.label }}
+                                </label>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {{ field.hint }}
+                                </p>
+                                <InputText
+                                    :id="`return_ai_${field.key}`"
+                                    v-model="form.return_ai[field.key]"
+                                    type="number"
+                                    :min="field.min"
+                                    :max="field.max"
+                                    step="1"
+                                    class="mt-2 w-full"
+                                />
+                                <p
+                                    v-if="returnAiError(field.key)"
+                                    class="mt-1 text-xs text-rose-500"
+                                >
+                                    {{ returnAiError(field.key) }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <label
+                                    for="return_ai_background_review"
+                                    class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                                >
+                                    Review in the background
+                                </label>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    After each SteadFast sync the store reads new or changed hold parcels ahead of time, so Decide opens with the answer ready. An unchanged parcel is never read twice.
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                id="return_ai_background_review"
+                                v-model="form.return_ai.background_review"
+                            />
+                        </div>
                     </template>
 
                     <template v-else-if="activeTab === 'notifications'">
@@ -458,7 +602,26 @@ type LandingSettings = {
     image_model_options: string[];
     sms_expiry?: boolean;
     sms_expiry_source?: string;
+    return_ai?: ReturnAiSettings;
+    return_ai_model_options?: { value: string; label: string; hint: string; recommended: boolean }[];
 };
+
+type ReturnAiMode = "off" | "suggest" | "auto";
+
+type ReturnAiSettings = {
+    mode: ReturnAiMode;
+    auto_note: boolean;
+    auto_resend: boolean;
+    auto_cancel: boolean;
+    model: string;
+    min_confidence: number;
+    daily_auto_limit: number;
+    daily_review_limit: number;
+    background_review: boolean;
+};
+
+type ReturnAiToggle = "auto_note" | "auto_resend" | "auto_cancel";
+type ReturnAiNumber = "min_confidence" | "daily_auto_limit" | "daily_review_limit";
 
 type FormFields = {
     app_download_url: string;
@@ -608,7 +771,70 @@ const form = useForm({
     openai_landing_model: props.settings.openai_landing_model || AUTO_MODEL,
     landing_ai_daily_limit: String(props.settings.landing_ai_daily_limit ?? 20),
     sms_expiry: props.settings.sms_expiry !== false,
+    return_ai: {
+        mode: props.settings.return_ai?.mode ?? "suggest",
+        auto_note: props.settings.return_ai?.auto_note ?? false,
+        auto_resend: props.settings.return_ai?.auto_resend ?? false,
+        auto_cancel: props.settings.return_ai?.auto_cancel ?? false,
+        model: props.settings.return_ai?.model ?? "gpt-4.1-mini",
+        min_confidence: props.settings.return_ai?.min_confidence ?? 95,
+        daily_auto_limit: props.settings.return_ai?.daily_auto_limit ?? 30,
+        daily_review_limit: props.settings.return_ai?.daily_review_limit ?? 300,
+        background_review: props.settings.return_ai?.background_review ?? true,
+    } as ReturnAiSettings,
 });
+
+const returnAiModeOptions: { value: ReturnAiMode; label: string; hint: string }[] = [
+    { value: "off", label: "Off", hint: "No AI review at all. Stores decide by hand. No OpenAI cost." },
+    {
+        value: "suggest",
+        label: "Suggest only (recommended)",
+        hint: "The AI reads each case and tells the merchant what to do and whom to call. It never acts on its own.",
+    },
+    {
+        value: "auto",
+        label: "Auto",
+        hint: "Suggest, and run the ticked actions on its own when every safety check passes.",
+    },
+];
+
+const returnAiActions: { key: ReturnAiToggle; label: string; hint: string; danger?: boolean }[] = [
+    {
+        key: "auto_note",
+        label: "Auto note to rider",
+        hint: "Writes a short instruction on the parcel. Skipped when the merchant already wrote their own note.",
+    },
+    {
+        key: "auto_resend",
+        label: "Auto resend",
+        hint: "Asks SteadFast to try again. Safest action; it keeps the sale.",
+    },
+    {
+        key: "auto_cancel",
+        label: "Auto cancel",
+        hint: "Cancels the parcel for good. Also needs the merchant's own call proving the customer refused. Leave off unless you are sure.",
+        danger: true,
+    },
+];
+
+const returnAiNumbers: { key: ReturnAiNumber; label: string; hint: string; min: number; max: number }[] = [
+    { key: "min_confidence", label: "Minimum confidence (%)", hint: "Auto actions only. 95–99.", min: 95, max: 99 },
+    { key: "daily_auto_limit", label: "Auto actions per store per day", hint: "Stops a runaway day. 1–200.", min: 1, max: 200 },
+    { key: "daily_review_limit", label: "AI reviews per store per day", hint: "Caps OpenAI cost. Each review and each second check counts.", min: 10, max: 5000 },
+];
+
+const returnAiModelOptions = computed(() => props.settings.return_ai_model_options ?? []);
+
+const returnAiModeHint = computed(
+    () => returnAiModeOptions.find((option) => option.value === form.return_ai.mode)?.hint ?? "",
+);
+
+const returnAiModelHint = computed(
+    () => returnAiModelOptions.value.find((option) => option.value === form.return_ai.model)?.hint ?? "",
+);
+
+const returnAiError = (field: string): string | undefined =>
+    (form.errors as Record<string, string | undefined>)[`return_ai.${field}`];
 
 const refreshingModels = ref(false);
 
@@ -681,7 +907,7 @@ const activeCard = computed(() => {
     if (activeTab.value === "ai") {
         return {
             title: "OpenAI",
-            description: "API key, models, and daily token limit for blog post generation.",
+            description: "API key, models, and daily limits for blog posts, store landing pages, and the return desk.",
         };
     }
 
@@ -713,7 +939,7 @@ const tabForError = (field: string): TabValue | null => {
         return "contact";
     }
 
-    if (["openai_api_key", "openai_blog_model", "openai_blog_planning_model", "openai_blog_writing_model", "openai_image_model", "blog_ai_daily_token_cap", "openai_landing_model", "landing_ai_daily_limit"].includes(field)) {
+    if (field.startsWith("return_ai.") || ["openai_api_key", "openai_blog_model", "openai_blog_planning_model", "openai_blog_writing_model", "openai_image_model", "blog_ai_daily_token_cap", "openai_landing_model", "landing_ai_daily_limit"].includes(field)) {
         return "ai";
     }
 

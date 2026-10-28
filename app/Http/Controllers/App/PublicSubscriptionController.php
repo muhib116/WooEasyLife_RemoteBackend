@@ -4,6 +4,7 @@ namespace App\Http\Controllers\App;
 
 use App\Http\Controllers\Controller;
 use App\Models\PackageHub;
+use App\Services\Ads\OpenAiAdsConversions;
 use App\Services\MerchantPortalContext;
 use App\Services\PublicSubscriptionService;
 use App\Services\RbacService;
@@ -80,6 +81,7 @@ class PublicSubscriptionController extends Controller
         MerchantPortalContext $portalContext,
         RbacService $rbac,
         SubscriptionPaymentConfigService $paymentConfig,
+        OpenAiAdsConversions $openAiAds,
     ) {
         $packageHub = PackageHub::query()
             ->where('id', $request->integer('package_hub_id'))
@@ -163,12 +165,15 @@ class PublicSubscriptionController extends Controller
             $result['inquiry']->id,
         );
 
+        $openAiAds->recordEnrollment($request, $result['inquiry'], $isFreeTrial);
+
         return back()->with('subscription_submitted', [
             'inquiry_id' => $result['inquiry']->id,
+            'plan_id' => $result['inquiry']->package_hub_id,
             'plan_title' => $result['inquiry']->packageHub?->title,
             'payment_request_id' => $result['payment_request_id'],
             'is_free_trial' => $isFreeTrial,
-            'value' => $isFreeTrial ? 0 : (float) ($validated['total_amount'] ?? 0),
+            'value' => $isFreeTrial ? 0 : (float) ($result['inquiry']->total_amount ?? 0),
             'currency' => 'BDT',
             'pending' => $subscriptionService->serializePending($result['inquiry']),
         ]);

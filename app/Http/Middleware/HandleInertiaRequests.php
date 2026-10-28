@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
         $paymentConfig = app(SubscriptionPaymentConfigService::class);
         $partnerLabels = $paymentConfig->partnerLabels();
         $metaPixelId = $landingSettings->metaPixelId();
+        $openaiAdsPixelId = $landingSettings->openaiAdsPixelId();
         $headerScripts = $landingSettings->headerScripts();
         $footerScripts = $landingSettings->footerScripts();
         $adminSidebarNavOrder = $user?->role === 'admin'
@@ -52,6 +53,7 @@ class HandleInertiaRequests extends Middleware
 
         // Available to the root Blade template for first-paint Meta Pixel / custom HTML injection.
         View::share('metaPixelId', $metaPixelId);
+        View::share('openaiAdsPixelId', $openaiAdsPixelId);
         View::share('headerScripts', $headerScripts);
         View::share('footerScripts', $footerScripts);
 

@@ -21,6 +21,7 @@ import {
     trackSubscribe,
     trackWizardStep,
 } from '@/utils/metaPixel';
+import { trackOpenAiPlanEnrollment } from '@/utils/openaiAds';
 
 const props = defineProps({
     visible: { type: Boolean, default: false },
@@ -408,6 +409,14 @@ watch(
         }
 
         trackWizardStep(isTrial ? 'submitted_trial' : 'submitted_paid', props.plan);
+        trackOnce(`openai:${isTrial ? 'trial' : 'subscription'}:${conversionKey}`, () =>
+            trackOpenAiPlanEnrollment({
+                isTrial,
+                planId: payload.plan_id ?? props.plan?.id,
+                amountTaka: value,
+                eventId: eventID,
+            }),
+        );
     },
 );
 

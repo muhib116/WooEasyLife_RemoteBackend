@@ -10,6 +10,7 @@ use App\Mail\SubscriptionInquiryAdminMail;
 use App\Services\DomainNormalizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -663,6 +664,61 @@ class PublicSubscriptionTest extends TestCase
             'source' => 'landing_pricing',
             'transaction_id' => 'TXNLEAD1',
         ]);
+    }
+
+    public function test_paid_enrollment_is_sent_to_openai_ads_without_raw_contact_details(): void
+    {
+        Mail::fake();
+        Http::fake([
+            'bzr.openai.com/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        config([
+            'landing.openai_ads_pixel_id' => '6aAQUfAgG6tcHuxGiASdx8',
+            'landing.openai_ads_api_key' => 'test-ads-key',
+            'app.url' => 'http://localhost',
+        ]);
+
+        $plan = $this->createPaidPlan();
+
+        $this->withUnencryptedCookie('__oppref', 'oppref_test')
+            ->withHeader('referer', 'http://localhost/pricing')
+            ->post(route('pricing.subscribe'), [
+                'package_hub_id' => $plan->id,
+                'website_url' => 'https://myshop.com',
+                'customer_name' => 'Karim Ahmed',
+                'email' => 'karim@example.com',
+                'contact_number' => '01711111111',
+                'whatsapp_number' => '01711111111',
+                'address' => 'Dhaka, Bangladesh',
+                'transaction_method' => 'Bkash',
+                'transaction_id' => 'TXN123456',
+                'account_number' => '01711111111',
+            ])->assertRedirect()->assertSessionHas('subscription_submitted');
+
+        $inquiry = SubscriptionInquiry::query()->first();
+        $this->assertNotNull($inquiry);
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) use ($plan, $inquiry) {
+            $body = $request->data();
+            $event = $body['events'][0] ?? [];
+            $encoded = json_encode($body);
+
+            return str_starts_with($request->url(), 'https://bzr.openai.com/v1/events?pid=6aAQUfAgG6tcHuxGiASdx8')
+                && $request->hasHeader('Authorization', 'Bearer test-ads-key')
+                && ($body['validate_only'] ?? null) === false
+                && ($event['id'] ?? null) === 'inquiry_'.$inquiry->id
+                && ($event['type'] ?? null) === 'subscription_created'
+                && ($event['action_source'] ?? null) === 'web'
+                && ($event['oppref'] ?? null) === 'oppref_test'
+                && ($event['source_url'] ?? null) === 'http://localhost/pricing'
+                && ($event['data']['type'] ?? null) === 'plan_enrollment'
+                && ($event['data']['plan_id'] ?? null) === (string) $plan->id
+                && ($event['data']['amount'] ?? null) === 99900
+                && ($event['data']['currency'] ?? null) === 'BDT'
+                && ! str_contains((string) $encoded, 'karim@example.com')
+                && ! str_contains((string) $encoded, '01711111111');
+        });
     }
 
     private function createPaidPlan(): PackageHub

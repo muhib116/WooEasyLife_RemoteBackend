@@ -9,6 +9,7 @@ import {
     trackOnce,
     trackViewContent,
 } from '@/utils/metaPixel';
+import { trackOpenAiPageViewed } from '@/utils/openaiAds';
 import {
     attachSiteEngagementTracking,
     attachSiteScrollDepthTracking,
@@ -307,6 +308,7 @@ onMounted(() => {
         || (typeof document !== 'undefined' ? document.title : path);
 
     trackSitePageView(path);
+    trackOpenAiPageViewed(path, contentName);
     detachSiteScroll = attachSiteScrollDepthTracking(path);
     detachSiteEngagement = attachSiteEngagementTracking(path);
 

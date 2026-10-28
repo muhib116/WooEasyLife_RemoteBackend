@@ -69,6 +69,75 @@
                 </PageCard>
 
                 <PageCard
+                    title="ChatGPT Ads"
+                    description="Measurement Pixel on the landing, pricing, blog, and SEO pages. A paid plan enrollment sends subscription_created. A free trial sends trial_started."
+                >
+                    <div>
+                        <label
+                            for="openai_ads_pixel_id"
+                            class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                        >
+                            Pixel ID
+                        </label>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            From Ads Manager → Conversions. The pixel loads in the browser. The API key does not.
+                            <span
+                                v-if="settings.openai_ads_pixel_id_source !== 'none'"
+                                class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                            >
+                                active: {{ settings.openai_ads_pixel_id_source }}
+                            </span>
+                        </p>
+                        <InputText
+                            id="openai_ads_pixel_id"
+                            v-model="form.openai_ads_pixel_id"
+                            class="mt-2 w-full"
+                            placeholder="6aAQUfAgG6tcHuxGiASdx8"
+                            autocomplete="off"
+                        />
+                        <p
+                            v-if="form.errors.openai_ads_pixel_id"
+                            class="mt-1 text-xs text-rose-500"
+                        >
+                            {{ form.errors.openai_ads_pixel_id }}
+                        </p>
+                    </div>
+
+                    <div class="mt-5">
+                        <label
+                            for="openai_ads_api_key"
+                            class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                        >
+                            Conversions API key
+                        </label>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            From Ads Manager → Conversions → Create conversion key. Leave blank to keep the saved key.
+                            <span v-if="settings.openai_ads_api_key_configured"> A key is already saved.</span>
+                        </p>
+                        <InputText
+                            id="openai_ads_api_key"
+                            v-model="form.openai_ads_api_key"
+                            class="mt-2 w-full"
+                            type="password"
+                            autocomplete="new-password"
+                            placeholder="Paste a new key to replace the saved one"
+                        />
+                        <p
+                            v-if="form.errors.openai_ads_api_key"
+                            class="mt-1 text-xs text-rose-500"
+                        >
+                            {{ form.errors.openai_ads_api_key }}
+                        </p>
+                    </div>
+
+                    <ul class="mt-5 list-disc space-y-1 pl-5 text-xs text-gray-600 dark:text-gray-400">
+                        <li><strong>page_viewed</strong> — marketing pages</li>
+                        <li><strong>subscription_created</strong> — paid plan enrollment, browser and server, same event id</li>
+                        <li><strong>trial_started</strong> — free trial enrollment</li>
+                    </ul>
+                </PageCard>
+
+                <PageCard
                     title="Header & footer scripts"
                     description="Raw HTML injected on every public page (verification metas, extra pixels, chat widgets). Admin-only — treat as trusted code."
                 >
@@ -177,6 +246,9 @@ const props = defineProps<{
         header_scripts_source: string;
         footer_scripts: string | null;
         footer_scripts_source: string;
+        openai_ads_pixel_id: string | null;
+        openai_ads_pixel_id_source: string;
+        openai_ads_api_key_configured: boolean;
     };
 }>();
 
@@ -184,6 +256,8 @@ const form = useForm({
     meta_pixel_id: props.settings.meta_pixel_id ?? "",
     header_scripts: props.settings.header_scripts ?? "",
     footer_scripts: props.settings.footer_scripts ?? "",
+    openai_ads_pixel_id: props.settings.openai_ads_pixel_id ?? "",
+    openai_ads_api_key: "",
 });
 
 const submit = () => {
