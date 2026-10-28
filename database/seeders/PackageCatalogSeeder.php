@@ -74,6 +74,7 @@ class PackageCatalogSeeder extends Seeder
                     default: true,
                     disabledKeys: [
                         'ai_intelligence',
+                        'ai_return_decide',
                     ],
                 ),
             ],

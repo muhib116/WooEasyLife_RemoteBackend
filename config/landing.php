@@ -31,6 +31,11 @@ return [
 
     'meta_pixel_id' => env('LANDING_META_PIXEL_ID'),
 
+    // ChatGPT Ads pixel. Public id; the Conversions API key stays server-side.
+    'openai_ads_pixel_id' => env('OPENAI_ADS_PIXEL_ID', '6aAQUfAgG6tcHuxGiASdx8'),
+
+    'openai_ads_api_key' => env('OPENAI_ADS_API_KEY'),
+
     /*
     | Optional raw HTML injected into public pages (app.blade.php).
     | Prefer Marketing Settings in admin; env is only a deploy-time fallback.
@@ -884,7 +889,7 @@ return [
                 ],
             ],
             'accent' => 'fuchsia',
-            'feature_keys' => ['ai_text_order_create', 'ai_image_to_order_create', 'ai_incomplete_address_autocomplete', 'ai_driven_customer_scoring'],
+            'feature_keys' => ['ai_text_order_create', 'ai_image_to_order_create', 'ai_incomplete_address_autocomplete', 'ai_driven_customer_scoring', 'ai_return_decide'],
         ],
         [
             'id' => 'websites',
@@ -1007,6 +1012,7 @@ return [
         'courier_auto_status_sync' => 'truck',
         'courier_webhook_integrations' => 'truck',
         'parcel_note_history' => 'clipboard',
+        'ai_return_decide' => 'spark',
         'customer_sms_for_order' => 'message',
         'bulk_sms' => 'message',
         'duplicate_order_validation' => 'clipboard',
@@ -1053,6 +1059,7 @@ return [
         'ai_image_to_order_create' => 'ছবি থেকে অর্ডার তৈরি',
         'ai_incomplete_address_autocomplete' => 'অসম্পূর্ণ ঠিকানা অটো-কমপ্লিট',
         'ai_driven_customer_scoring' => 'এআই কাস্টমার স্কোরিং',
+        'ai_return_decide' => 'এআই রিটার্ন ডিসিশন',
         'daily_order_limit' => 'দৈনিক অর্ডার লিমিট',
         'checkout_form_validation' => 'চেকআউট ফর্ম ভ্যালিডেশন',
         'duplicate_order_validation' => 'ডুপ্লিকেট অর্ডার ব্লক',
@@ -1114,6 +1121,7 @@ return [
         'ai_image_to_order_create' => 'AI Featuree',
         'ai_incomplete_address_autocomplete' => 'AI Featuree',
         'ai_driven_customer_scoring' => 'AI Featuree',
+        'ai_return_decide' => 'AI Featuree',
         'checkout_form_validation' => 'Checkout',
         'duplicate_order_validation' => 'Orders',
         'checkout_otp_validation' => 'Checkout',
@@ -1180,6 +1188,7 @@ return [
         'ai_image_to_order_create' => 'কাস্টমারের স্ক্রিনশট বা ছবি থেকে এআই অর্ডার তৈরি করে।',
         'ai_incomplete_address_autocomplete' => 'অসম্পূর্ণ ঠিকানা এআই দিয়ে অটো পূরণ — ডেলিভারি ফেইল কমে।',
         'ai_driven_customer_scoring' => 'এআই কাস্টমার স্কোরিং — কে বিশ্বস্ত, কে রিস্কি তা দেখুন।',
+        'ai_return_decide' => 'Steadfast রিটার্ন রিকোয়েস্টে এআই সাজেশন — Cancel না Resend, কারণসহ। সিদ্ধান্ত আপনার।',
         'customer_behavior_track' => 'কাস্টমারের আচরণ ট্র্যাক করে স্মার্ট সিদ্ধান্ত নিন।',
         'courier_auto_status_sync' => 'কুরিয়ার স্ট্যাটাস অটো সিঙ্ক — ম্যানুয়াল চেক লাগে না।',
         'invoice_print' => 'ওয়ান ক্লিকে ইনভয়েস ও স্টিকার প্রিন্ট করুন।',
@@ -1308,6 +1317,10 @@ return [
         'ai_driven_customer_scoring' => [
             'summary' => 'এআই কাস্টমার রিস্ক স্কোর।',
             'detail' => 'কাকে ফোন-কনফার্ম, কাকে সরাসরি পার্সেল পাঠাবেন — ডাটা দিয়ে।',
+        ],
+        'ai_return_decide' => [
+            'summary' => 'রিটার্ন Decide-এ এআই সাজেশন।',
+            'detail' => 'রাইডার নোট ও কাস্টমারের কুরিয়ার রেকর্ড দেখে Cancel parcel না Ask to resend সাজেস্ট করে, সাথে Save-the-sale কল স্ক্রিপ্ট ও এসএমএস। শুধু হাইলাইট করে — বাটন আপনি চাপবেন।',
         ],
         'common_dashboard' => [
             'summary' => 'সব ওয়েবসাইট এক ড্যাশবোর্ডে।',

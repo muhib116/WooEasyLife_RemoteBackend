@@ -184,6 +184,75 @@ class PackageCatalogFeaturesTest extends TestCase
         $this->assertTrue($legacy['parcel_note_history']);
     }
 
+    public function test_ai_return_decide_is_its_own_power_key(): void
+    {
+        $this->assertContains('ai_return_decide', PackageCatalogFeatures::powerKeys());
+        $this->assertSame('এআই রিটার্ন ডিসিশন', PackageCatalogFeatures::powerLabelsBn()['ai_return_decide']);
+        $this->assertSame('AI return decide', PackageCatalogFeatures::powerLabelsEn()['ai_return_decide']);
+
+        $only = PackageCatalogFeatures::normalize([
+            'ai_intelligence' => false,
+            'ai_return_decide' => true,
+        ]);
+        $this->assertTrue($only['ai_return_decide']);
+        $this->assertFalse($only['ai_intelligence']);
+
+        $this->assertTrue(
+            PackageCatalogFeatures::expandForLegacyApi(['ai_return_decide' => true])['ai_return_decide']
+        );
+    }
+
+    public function test_ai_return_decide_is_inferred_for_packages_saved_before_it(): void
+    {
+        $this->assertTrue(PackageCatalogFeatures::normalize(['ai_intelligence' => true])['ai_return_decide']);
+        $this->assertFalse(PackageCatalogFeatures::normalize(['ai_intelligence' => false])['ai_return_decide']);
+        $this->assertFalse(PackageCatalogFeatures::normalize([
+            'ai_intelligence' => true,
+            'ai_return_decide' => false,
+        ])['ai_return_decide']);
+    }
+
+    public function test_catalog_maps_keep_ai_return_decide_off_below_pro(): void
+    {
+        $this->assertFalse(PackageCatalogFeatures::trialMap()['ai_return_decide']);
+        $this->assertFalse(PackageCatalogFeatures::starterMap()['ai_return_decide']);
+        $this->assertTrue(PackageCatalogFeatures::map()['ai_return_decide']);
+    }
+
+    public function test_ad_profit_desk_is_its_own_power_key(): void
+    {
+        $this->assertContains('ad_profit_desk', PackageCatalogFeatures::powerKeys());
+        $this->assertSame('অ্যাড প্রফিট ডেস্ক', PackageCatalogFeatures::powerLabelsBn()['ad_profit_desk']);
+        $this->assertSame('Ad Profit Desk', PackageCatalogFeatures::powerLabelsEn()['ad_profit_desk']);
+
+        $only = PackageCatalogFeatures::normalize([
+            'create_order' => false,
+            'ad_profit_desk' => true,
+        ]);
+        $this->assertTrue($only['ad_profit_desk']);
+        $this->assertFalse($only['create_order']);
+        $this->assertTrue(
+            PackageCatalogFeatures::expandForLegacyApi(['ad_profit_desk' => true])['ad_profit_desk']
+        );
+    }
+
+    public function test_ad_profit_desk_is_inferred_from_create_order_for_old_packages(): void
+    {
+        $this->assertTrue(PackageCatalogFeatures::normalize(['create_order' => true])['ad_profit_desk']);
+        $this->assertFalse(PackageCatalogFeatures::normalize(['create_order' => false])['ad_profit_desk']);
+        $this->assertFalse(PackageCatalogFeatures::normalize([
+            'create_order' => true,
+            'ad_profit_desk' => false,
+        ])['ad_profit_desk']);
+    }
+
+    public function test_catalog_maps_keep_ad_profit_desk_on_paid_plans(): void
+    {
+        $this->assertFalse(PackageCatalogFeatures::trialMap()['ad_profit_desk']);
+        $this->assertTrue(PackageCatalogFeatures::starterMap()['ad_profit_desk']);
+        $this->assertTrue(PackageCatalogFeatures::map()['ad_profit_desk']);
+    }
+
     public function test_power_keys_include_parcel_note_history(): void
     {
         $keys = PackageCatalogFeatures::powerKeys();

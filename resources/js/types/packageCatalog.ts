@@ -11,6 +11,7 @@ export type PowerFeatureKey =
     | "order_cloning"
     | "call_and_status_log"
     | "ai_intelligence"
+    | "ai_return_decide"
     | "app_connect"
     | "unlimited_website_connectivity"
     | "unlimited_app_connectivity"
@@ -26,7 +27,8 @@ export type PowerFeatureKey =
     | "missing_orders"
     | "sms_management"
     | "pixel_protection"
-    | "parcel_note_history";
+    | "parcel_note_history"
+    | "ad_profit_desk";
 
 export type PackageFeatureKey = PowerFeatureKey;
 

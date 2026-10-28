@@ -21,6 +21,7 @@ return [
         'order_cloning',
         'call_and_status_log',
         'ai_intelligence',
+        'ai_return_decide',
         'messenger_sales_agent',
         'app_connect',
         'unlimited_website_connectivity',
@@ -38,6 +39,7 @@ return [
         'sms_management',
         'pixel_protection',
         'parcel_note_history',
+        'ad_profit_desk',
     ],
 
     'power_feature_labels_bn' => [
@@ -45,6 +47,7 @@ return [
         'order_cloning' => 'অর্ডার ক্লোনিং',
         'call_and_status_log' => 'কল ও স্ট্যাটাস লগ',
         'ai_intelligence' => 'এআই ইন্টেলিজেন্স',
+        'ai_return_decide' => 'এআই রিটার্ন ডিসিশন',
         'messenger_sales_agent' => 'মেসেঞ্জার সেলস এজেন্ট',
         'app_connect' => 'অ্যাপ কানেক্ট',
         'unlimited_website_connectivity' => 'অ্যাপে আনলিমিটেড ওয়েবসাইট কানেক্টিভিটি',
@@ -62,6 +65,7 @@ return [
         'sms_management' => 'এসএমএস ম্যানেজমেন্ট',
         'pixel_protection' => 'পিক্সেল প্রোটেকশন',
         'parcel_note_history' => 'পার্সেল নোট হিস্ট্রি',
+        'ad_profit_desk' => 'অ্যাড প্রফিট ডেস্ক',
     ],
 
     'power_feature_labels_en' => [
@@ -69,6 +73,7 @@ return [
         'order_cloning' => 'Order cloning',
         'call_and_status_log' => 'Call and status log',
         'ai_intelligence' => 'AI intelligence',
+        'ai_return_decide' => 'AI return decide',
         'messenger_sales_agent' => 'Messenger Sales Agent',
         'app_connect' => 'WooEasyLife App Connect',
         'unlimited_website_connectivity' => 'Unlimited website connectivity in app',
@@ -86,6 +91,7 @@ return [
         'sms_management' => 'SMS management',
         'pixel_protection' => 'Pixel protection',
         'parcel_note_history' => 'Parcel note history',
+        'ad_profit_desk' => 'Ad Profit Desk',
     ],
 
     /*
@@ -104,6 +110,7 @@ return [
         'ai_image_to_order_create',
         'ai_incomplete_address_autocomplete',
         'ai_driven_customer_scoring',
+        'ai_return_decide',
         'daily_order_limit',
         'checkout_form_validation',
         'duplicate_order_validation',
@@ -136,6 +143,7 @@ return [
         'courier_webhook_integrations',
         'pixel_protection',
         'parcel_note_history',
+        'ad_profit_desk',
     ],
 
     'app_feature_keys' => [
@@ -227,6 +235,9 @@ return [
             'ai_incomplete_address_autocomplete',
             'ai_driven_customer_scoring',
         ],
+        'ai_return_decide' => [
+            'ai_return_decide',
+        ],
         'messenger_sales_agent' => [],
         'app_connect' => [
             'one_click_app_connect',
@@ -305,6 +316,9 @@ return [
         ],
         'parcel_note_history' => [
             'parcel_note_history',
+        ],
+        'ad_profit_desk' => [
+            'ad_profit_desk',
         ],
     ],
 ];

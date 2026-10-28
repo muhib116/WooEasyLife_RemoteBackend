@@ -128,6 +128,7 @@ class PackageCatalogFeatures
             disabledKeys: [
                 'app_connect',
                 'ai_intelligence',
+                'ai_return_decide',
                 'employee_management',
             ],
         );
@@ -203,9 +204,20 @@ class PackageCatalogFeatures
             $normalized['call_and_status_log'] = true;
         }
 
+        // Packages saved before ai_return_decide existed got return AI with ai_intelligence.
+        if (! $explicit('ai_return_decide') && ($normalized['ai_intelligence'] ?? false)) {
+            $normalized['ai_return_decide'] = true;
+        }
+
         // Packages saved before parcel_note_history existed should keep courier access.
         if (! $explicit('parcel_note_history') && ($normalized['courier_automation'] ?? false)) {
             $normalized['parcel_note_history'] = true;
+        }
+
+        // Packages saved before ad_profit_desk existed keep the desk on paid plans.
+        // Free trial has no create_order, so it stays off. An explicit false is kept.
+        if (! $explicit('ad_profit_desk') && ($normalized['create_order'] ?? false)) {
+            $normalized['ad_profit_desk'] = true;
         }
 
         // Packages saved before messenger_sales_agent existed: grant with create_order

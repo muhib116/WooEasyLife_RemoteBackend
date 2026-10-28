@@ -45,6 +45,11 @@ class PackageCatalogSeederTest extends TestCase
         $this->assertSame(14, $trial->trial_days);
         $this->assertFalse($trial->app_connect);
         $this->assertFalse($trial->features['ai_intelligence'] ?? true);
+        $this->assertFalse($trial->features['ai_return_decide'] ?? true);
+        $this->assertTrue($proMonthly->features['ai_return_decide'] ?? false);
+
+        $growth = PackageHub::query()->where('title', 'Growth – 1 Month')->first();
+        $this->assertFalse($growth->features['ai_return_decide'] ?? true);
 
         $this->assertSame(5, PackageHub::query()->whereNotNull('package_duration')->count());
         $this->assertSame(0, PackageHub::query()

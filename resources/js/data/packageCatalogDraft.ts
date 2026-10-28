@@ -58,6 +58,7 @@ export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
         "ai_incomplete_address_autocomplete",
         "ai_driven_customer_scoring",
     ],
+    ai_return_decide: ["ai_return_decide"],
     app_connect: [
         "one_click_app_connect",
         "multistore_order_notifications",
@@ -110,6 +111,7 @@ export const POWER_TO_LEGACY_MAP: Record<PowerFeatureKey, string[]> = {
     sms_management: ["customer_sms_for_order", "bulk_sms"],
     pixel_protection: ["pixel_protection"],
     parcel_note_history: ["parcel_note_history"],
+    ad_profit_desk: ["ad_profit_desk"],
 };
 
 export const POWER_FULL_FEATURE_DEFINITIONS: {
@@ -120,6 +122,7 @@ export const POWER_FULL_FEATURE_DEFINITIONS: {
     { key: "order_cloning", label: "অর্ডার ক্লোনিং" },
     { key: "call_and_status_log", label: "কল ও স্ট্যাটাস লগ" },
     { key: "ai_intelligence", label: "এআই ইন্টেলিজেন্স" },
+    { key: "ai_return_decide", label: "এআই রিটার্ন ডিসিশন" },
     { key: "app_connect", label: "অ্যাপ কানেক্ট" },
     {
         key: "unlimited_website_connectivity",
@@ -142,6 +145,7 @@ export const POWER_FULL_FEATURE_DEFINITIONS: {
     { key: "sms_management", label: "এসএমএস ম্যানেজমেন্ট" },
     { key: "pixel_protection", label: "পিক্সেল প্রোটেকশন" },
     { key: "parcel_note_history", label: "পার্সেল নোট হিস্ট্রি" },
+    { key: "ad_profit_desk", label: "অ্যাড প্রফিট ডেস্ক" },
 ];
 
 const LEGACY_KEYS = new Set(
@@ -221,6 +225,15 @@ export function collapseToPowerFeatures(
     }
 
     if (looksLikePowerFormat(power, source as Record<string, boolean>)) {
+        // Packages saved before ai_return_decide existed got it with ai_intelligence.
+        // Mirrors PackageCatalogFeatures::normalize so saving an old package keeps it.
+        if (!("ai_return_decide" in power)) {
+            power.ai_return_decide = Boolean(power.ai_intelligence);
+        }
+        if (!("ad_profit_desk" in power)) {
+            power.ad_profit_desk = Boolean(power.create_order);
+        }
+
         for (const item of POWER_FULL_FEATURE_DEFINITIONS) {
             if (!(item.key in power)) {
                 power[item.key] = false;
@@ -247,6 +260,13 @@ export function collapseToPowerFeatures(
             collapsed[item.key] =
                 Boolean(source[item.key]) || collapsed[item.key];
         }
+    }
+
+    if (!("ai_return_decide" in source)) {
+        collapsed.ai_return_decide = collapsed.ai_intelligence;
+    }
+    if (!("ad_profit_desk" in source)) {
+        collapsed.ad_profit_desk = collapsed.create_order;
     }
 
     return collapsed;
