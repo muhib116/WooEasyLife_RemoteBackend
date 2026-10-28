@@ -751,6 +751,23 @@ it('times a courier by its real speed when the lane answers slower than its pace
     expect($lane->courierStatus($batch)[0])->toMatchArray(['courier' => 'pathao', 'waiting' => 2, 'per_minute' => 0.8, 'eta_minutes' => 3]);
 });
 
+it('shows a courier as paused until its first waiting number may be asked again', function (): void {
+    $this->freezeTime();
+    $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+        $mock->shouldReceive('checkSingle')->once()->andReturn(waitingLaneReport(waitingLaneBusyPathao(200)));
+    });
+    $this->mock(PathaoFraudChecker::class, function ($mock): void {
+        $mock->shouldReceive('nextSlotSeconds')->andReturn(0);
+        $mock->shouldReceive('paceStatus')->andReturn(['per_minute' => 8.0, 'resting_seconds' => 0, 'shared' => false]);
+    });
+
+    $batchId = waitingLaneStart(waitingLaneMerchant('first-try@example.com', '01700000102'), '01755550091');
+    $status = app(MerchantBulkWaitingLane::class)->courierStatus(\App\Models\BulkFraudBatch::query()->findOrFail($batchId))[0];
+
+    expect($status)->toMatchArray(['courier' => 'pathao', 'waiting' => 1, 'resting_seconds' => 200, 'eta_minutes' => 5])
+        ->and($status['paused_until'])->toBe(now()->addSeconds(200)->toIso8601String());
+});
+
 it('tries three waiting numbers by asking only the missing courier', function (): void {
     $fullChecks = 0;
     $missingOnly = [];

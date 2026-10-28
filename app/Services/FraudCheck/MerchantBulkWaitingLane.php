@@ -427,13 +427,14 @@ class MerchantBulkWaitingLane
      */
     public function courierStatus(BulkFraudBatch $batch): array
     {
-        $mine = $this->waitingCounts(
-            BulkFraudBatchItem::query()->where('batch_id', $batch->id)->whereNotNull('next_fill_at')->pluck('waiting_couriers')->all(),
-        );
+        $rows = BulkFraudBatchItem::query()->where('batch_id', $batch->id)->whereNotNull('next_fill_at')->pluck('waiting_couriers')->all();
+        $mine = $this->waitingCounts($rows);
 
         if ($mine === []) {
             return [];
         }
+
+        $firstTry = $this->firstTrySeconds($rows);
 
         $everyone = $this->waitingCounts(
             BulkFraudBatchItem::query()->whereNotNull('next_fill_at')->pluck('waiting_couriers')->all(),
@@ -450,6 +451,11 @@ class MerchantBulkWaitingLane
 
             $pace = $this->paceStatus($courier);
             $resting = max($pace['resting_seconds'], $this->laneRestSeconds($courier));
+            // A courier that told every waiting number to come back later is paused until then,
+            // even when its pace has room.
+            if (($firstTry[$courier] ?? 0) > 60) {
+                $resting = max($resting, $firstTry[$courier]);
+            }
             $perMinute = $pace['per_minute'];
             $measured = $firstPassDone && $resting === 0 ? $this->measuredRate($courier) : null;
 
@@ -917,6 +923,35 @@ class MerchantBulkWaitingLane
         }
 
         return $counts;
+    }
+
+    /**
+     * Seconds until each courier's first waiting number is due, 0 when one is due now.
+     *
+     * @param  list<mixed>  $rows  waiting_couriers of each row
+     * @return array<string, int>
+     */
+    private function firstTrySeconds(array $rows): array
+    {
+        $now = $this->clock();
+        $first = [];
+
+        foreach ($rows as $waiting) {
+            if (is_string($waiting)) {
+                $waiting = json_decode($waiting, true);
+            }
+
+            if (! is_array($waiting)) {
+                continue;
+            }
+
+            foreach ($waiting as $courier => $entry) {
+                $seconds = max(0, (int) (is_array($entry) ? ($entry['next_at'] ?? 0) : 0) - $now);
+                $first[$courier] = min($first[$courier] ?? $seconds, $seconds);
+            }
+        }
+
+        return $first;
     }
 
     /**
