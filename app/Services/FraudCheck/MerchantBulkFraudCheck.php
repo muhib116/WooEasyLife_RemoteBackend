@@ -510,6 +510,46 @@ class MerchantBulkFraudCheck
     }
 
     /**
+     * Forget today's saved results for this batch and check the numbers again.
+     * Localhost only. Invalid numbers stay invalid.
+     */
+    public function replayAsNew(BulkFraudBatch $batch): BulkFraudBatch
+    {
+        $phones = $batch->items()->pluck('phone')->filter()->unique()->values()->all();
+
+        DB::transaction(function () use ($batch, $phones): void {
+            $batch->items()->where('status', '!=', 'invalid')->update([
+                'status' => 'pending',
+                'source' => null,
+                'daily_result_id' => null,
+                'attempts' => 0,
+                'total_orders' => 0,
+                'received' => 0,
+                'cancelled' => 0,
+                'partial' => 0,
+                'success_rate' => null,
+                'risk' => null,
+                'couriers' => '[]',
+                'waiting_couriers' => null,
+                'fill_report' => null,
+                'next_fill_at' => null,
+            ]);
+
+            if ($phones !== []) {
+                BulkFraudDailyResult::query()
+                    ->where('checked_on', $this->today()->toDateString())
+                    ->whereIn('phone', $phones)
+                    ->delete();
+            }
+
+            $batch->status = 'running';
+            $batch->save();
+        });
+
+        return $batch->fresh()->load('items');
+    }
+
+    /**
      * Check one phone for the merchant portal. The same number on the same day
      * reuses the saved courier result and does not take another daily slot.
      *
@@ -601,6 +641,7 @@ class MerchantBulkFraudCheck
     public function changes(BulkFraudBatch $batch, ?Carbon $since): array
     {
         $this->touchPage($batch);
+        $this->waitingLane->fillReadyIfIdle($batch);
         $serverTime = now();
 
         $items = BulkFraudBatchItem::query()
@@ -617,6 +658,23 @@ class MerchantBulkFraudCheck
             'items' => $items->map->toPortalRow()->values()->all(),
             'couriers' => $this->waitingLane->courierStatus($batch),
             'server_time' => $serverTime->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Ask the missing courier for up to three waiting numbers. Does not run a full check.
+     *
+     * @return array{batch: array<string, mixed>, items: list<array<string, mixed>>, asked: int}
+     */
+    public function tryWaiting(BulkFraudBatch $batch): array
+    {
+        $asked = $this->waitingLane->tryNow($batch, 3);
+        $batch = $batch->fresh() ?? $batch;
+
+        return [
+            'batch' => $this->summary($batch),
+            'items' => $batch->items()->orderBy('position')->get()->map->toPortalRow()->values()->all(),
+            'asked' => $asked,
         ];
     }
 

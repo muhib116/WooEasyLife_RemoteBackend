@@ -2015,6 +2015,92 @@ class MerchantBulkFraudCheckTest extends TestCase
         app(BulkFraudScheduler::class)->setEnabled(true);
     }
 
+    public function test_replay_is_not_available_outside_localhost(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->once()->andReturn($this->report(4, 1, 3, '25%'));
+        });
+
+        $merchant = $this->merchant('replay-closed@example.com', '01700000092');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01722224444'])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk();
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.replay', $batch))
+            ->assertNotFound();
+
+        $this->assertSame(1, BulkFraudDailyResult::query()->count());
+        $this->assertSame('found', BulkFraudBatchItem::query()->where('batch_id', $batch)->value('status'));
+    }
+
+    public function test_localhost_replay_clears_todays_saved_result_and_checks_again(): void
+    {
+        $calls = 0;
+        $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls): void {
+            $mock->shouldReceive('checkSingle')->andReturnUsing(function () use (&$calls) {
+                $calls++;
+
+                return $this->report(4, 1, 3, '25%');
+            });
+        });
+
+        $previous = $this->app['env'];
+        $this->app['env'] = 'local';
+        $this->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+
+        try {
+            $merchant = $this->merchant('replay-bulk@example.com', '01700000091');
+            $batch = $this->actingAs($merchant)
+                ->postJson(route('portal.fraud-check.batches.store'), [
+                    'name' => 'Replay',
+                    'phones' => "01722223333\nnot-a-number",
+                ])->json('batch.id');
+
+            $this->actingAs($merchant)
+                ->postJson(route('portal.fraud-check.batches.next', $batch))
+                ->assertOk()
+                ->assertJsonPath('item.source', 'live');
+
+            BulkFraudDailyResult::query()->create([
+                'phone' => '01800000000',
+                'checked_on' => \Carbon\Carbon::now('Asia/Dhaka')->toDateString(),
+                'status' => 'not_found',
+                'total_orders' => 0,
+                'received' => 0,
+                'cancelled' => 0,
+                'partial' => 0,
+                'couriers' => [],
+                'attempts' => 1,
+            ]);
+
+            $this->actingAs($merchant)
+                ->postJson(route('portal.fraud-check.batches.replay', $batch))
+                ->assertOk()
+                ->assertJsonPath('batch.status', 'running')
+                ->assertJsonPath('batch.pending', 1);
+
+            $this->assertSame(1, BulkFraudDailyResult::query()->count());
+            $this->assertSame('01800000000', BulkFraudDailyResult::query()->value('phone'));
+            $this->assertSame('invalid', BulkFraudBatchItem::query()->where('batch_id', $batch)->where('phone', 'not-a-number')->value('status'));
+            $this->assertSame('pending', BulkFraudBatchItem::query()->where('batch_id', $batch)->where('phone', '01722223333')->value('status'));
+
+            $this->actingAs($merchant)
+                ->postJson(route('portal.fraud-check.batches.next', $batch))
+                ->assertOk()
+                ->assertJsonPath('item.source', 'live')
+                ->assertJsonPath('item.received', 1);
+        } finally {
+            $this->app['env'] = $previous;
+        }
+
+        $this->assertSame(2, $calls);
+    }
+
     private function merchant(string $email = 'bulk-merchant@example.com', string $phone = '01700000021'): User
     {
         return User::create([

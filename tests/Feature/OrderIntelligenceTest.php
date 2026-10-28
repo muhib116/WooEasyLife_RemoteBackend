@@ -682,6 +682,69 @@ it('uses the preserve snapshot switch on the live fraud-check response', functio
         ->and($liveReport['total_order'])->toBe(0);
 });
 
+it('keeps a not-asked courier marked as not asked when last known data is shown', function () {
+    config([
+        'order_intelligence.enabled' => true,
+        'order_intelligence.fraud_check.mode' => 'external_only',
+        'order_intelligence.fraud_check.preserve_snapshot_on_failure' => true,
+    ]);
+
+    createOrderIntelligenceToken();
+    $customer = app(CustomerResolver::class)->resolve('01770001133', 'Busy Courier');
+
+    foreach (['pathao', 'steadfast'] as $courier) {
+        CourierCustomerSnapshot::query()->create([
+            'platform_customer_id' => $customer->id,
+            'phone_normalized' => '01770001133',
+            'courier' => $courier,
+            'total_order' => 4,
+            'confirmed' => 3,
+            'cancel' => 1,
+            'success_rate' => '75%',
+            'frauds_count' => 0,
+            'fetched_at' => now(),
+        ]);
+    }
+
+    $this->mock(FraudCheckService::class, function ($mock) {
+        $mock->shouldReceive('normalizePhone')->andReturn('01770001133');
+        $mock->shouldReceive('getReport')->once()->andReturn([
+            'total_order' => 0,
+            'confirmed' => 0,
+            'cancel' => 0,
+            'success_rate' => 'No order history found!',
+            'frauds' => [],
+            'courier' => [
+                ['title' => 'Pathao', 'report' => [
+                    'total_order' => 0, 'confirmed' => 0, 'cancel' => 0,
+                    'unavailable' => true, 'rate_limited' => true, 'deferred' => true, 'retry_after' => 12,
+                    'message' => 'Pathao is busy, so this number was not asked yet.',
+                ]],
+                ['title' => 'Stead Fast', 'report' => [
+                    'total_order' => 0, 'confirmed' => 0, 'cancel' => 0,
+                    'unavailable' => true, 'message' => 'Steadfast did not answer',
+                ]],
+            ],
+        ]);
+    });
+
+    $request = Request::create('/api/fraud-check', 'POST', ['phone' => '01770001133']);
+    $report = app(FraudCheckCoordinator::class)->checkSingle($request, $request->all());
+    $byTitle = collect($report['courier'])->keyBy('title');
+
+    $pathao = $byTitle['Pathao']['report'];
+    expect($pathao['cached_fallback'] ?? false)->toBeTrue()
+        ->and($pathao['deferred'] ?? false)->toBeTrue()
+        ->and($pathao['retry_after'] ?? null)->toBe(12)
+        ->and($pathao)->not->toHaveKey('rate_limited')
+        ->and(\App\Services\FraudCheck\MerchantBulkFraudRow::unavailableReason($pathao))->toBe('busy');
+
+    $steadfast = $byTitle['Stead Fast']['report'];
+    expect($steadfast['cached_fallback'] ?? false)->toBeTrue()
+        ->and($steadfast)->not->toHaveKey('deferred')
+        ->and($steadfast)->not->toHaveKey('retry_after');
+});
+
 it('stores failed courier fetches as refreshable placeholders instead of fresh empty success', function () {
     config(['order_intelligence.fraud_check.preserve_snapshot_on_failure' => true]);
 

@@ -142,6 +142,7 @@ class BulkFraudCheckController extends Controller
         $payload['incompleteRetries'] = $bulk->incompleteRetries();
         $payload['incompleteRetryGapSeconds'] = $bulk->incompleteRetryGapSeconds();
         $payload['serverTime'] = $serverTime;
+        $payload['localReplay'] = $this->isLocalhost($request);
 
         if ($request->header('X-Inertia')) {
             return Inertia::render('Portal/FraudCheck/Batch', $payload);
@@ -186,6 +187,29 @@ class BulkFraudCheckController extends Controller
         $this->owns($request, $portalContext, $batch);
 
         return response()->json($this->payload($bulk, $bulk->resume($batch)));
+    }
+
+    public function replay(
+        Request $request,
+        BulkFraudBatch $batch,
+        MerchantPortalContext $portalContext,
+        MerchantBulkFraudCheck $bulk,
+    ): JsonResponse {
+        abort_unless($this->isLocalhost($request), 404);
+        $this->owns($request, $portalContext, $batch);
+
+        return response()->json($this->withQuota($request, $this->payload($bulk, $bulk->replayAsNew($batch))));
+    }
+
+    public function fillWaiting(
+        Request $request,
+        BulkFraudBatch $batch,
+        MerchantPortalContext $portalContext,
+        MerchantBulkFraudCheck $bulk,
+    ): JsonResponse {
+        $this->owns($request, $portalContext, $batch);
+
+        return response()->json($bulk->tryWaiting($batch));
     }
 
     public function retry(
@@ -274,6 +298,12 @@ class BulkFraudCheckController extends Controller
     {
         $merchant = $portalContext->resolveMerchant($request->user());
         abort_unless((int) $batch->user_id === (int) $merchant->id, 404);
+    }
+
+    private function isLocalhost(Request $request): bool
+    {
+        return app()->environment('local')
+            && in_array($request->getHost(), ['127.0.0.1', 'localhost', '::1'], true);
     }
 
     /**

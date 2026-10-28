@@ -459,6 +459,11 @@ class FraudCheckCoordinator
                     'source' => 'platform_cache',
                     'message' => $failureMessage.' Showing last known good data.',
                     'cached_fallback' => true,
+                    // A courier that was not asked (no room, resting, paused) must not look like a failure,
+                    // or bulk asks it again at once and counts it as a missed answer.
+                    'deferred' => $failedLive && (! empty($live['deferred']) || ! empty($live['rate_limited'])) ? true : null,
+                    'retry_later' => $failedLive && ! empty($live['retry_later']) ? true : null,
+                    'retry_after' => $failedLive && (int) ($live['retry_after'] ?? 0) > 0 ? (int) $live['retry_after'] : null,
                 ], fn ($value) => $value !== null),
             );
 

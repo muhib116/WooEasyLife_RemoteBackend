@@ -28,9 +28,15 @@ class MerchantBulkWaitingLane
     private const NUDGE_KEY = 'bulk_waiting_lane:nudge';
 
     /** Seconds without a scheduled run after which a page poll starts a short one. */
-    private const IDLE_SECONDS = 150;
+    private const IDLE_SECONDS = 20;
 
     private const MAX_SLEEP_SECONDS = 10;
+
+    /** A courier that is busy without saying for how long rests this lane, up to this many seconds. */
+    private const MAX_REST_SECONDS = 300;
+
+    /** Minutes of lane answers a courier's real speed is measured over. */
+    private const RATE_MINUTES = 5;
 
     public function __construct(
         private FraudCheckCoordinator $coordinator,
@@ -110,16 +116,27 @@ class MerchantBulkWaitingLane
                     continue;
                 }
 
-                $item = $this->nextDue($courier);
+                // A courier with room can take a few waiting numbers on this pass.
+                for ($turn = 0; $turn < 3 && $this->clock() < $deadline; $turn++) {
+                    if ($turn > 0 && $this->slotSeconds($courier) > 0) {
+                        break;
+                    }
 
-                if ($item === null) {
-                    continue;
+                    $item = $this->nextDue($courier);
+
+                    if ($item === null) {
+                        break;
+                    }
+
+                    $outcome = $this->fill($item);
+                    $stats['asked'] += count($outcome['asked']);
+                    $stats['finished'] += $outcome['finished'] ? 1 : 0;
+                    $progress = $progress || $outcome['changed'];
+
+                    if ($outcome['asked'] === []) {
+                        break;
+                    }
                 }
-
-                $outcome = $this->fill($item);
-                $stats['asked'] += count($outcome['asked']);
-                $stats['finished'] += $outcome['finished'] ? 1 : 0;
-                $progress = $progress || $outcome['changed'];
             }
 
             if ($progress) {
@@ -143,11 +160,107 @@ class MerchantBulkWaitingLane
     }
 
     /**
+     * Ask up to a few due rows of this batch now. A page poll uses this so
+     * waiting numbers are tried while the batch is open, without waiting for
+     * the scheduler. $live waits briefly for a slot the way a manual refresh does.
+     */
+    public function fillReady(BulkFraudBatch $batch, int $limit = 3, bool $live = false): int
+    {
+        $limit = max(1, min(3, $limit));
+        $askedRows = 0;
+
+        foreach (self::CORE as $courier) {
+            $guard = 0;
+
+            while ($askedRows < $limit && $guard < $limit) {
+                $guard++;
+                $item = $this->nextDue($courier, $batch);
+
+                if ($item === null) {
+                    break;
+                }
+
+                $outcome = $this->fill($item, $live);
+
+                if ($outcome['asked'] === []) {
+                    break;
+                }
+
+                $askedRows++;
+                $fresh = $item->fresh();
+
+                // The courier asked us to wait. Another number now would only queue behind the same rest.
+                if ($fresh !== null && $fresh->next_fill_at !== null && $fresh->next_fill_at->isFuture()) {
+                    break;
+                }
+            }
+
+            if ($askedRows >= $limit) {
+                break;
+            }
+        }
+
+        if ($askedRows > 0) {
+            $this->beat();
+        }
+
+        return $askedRows;
+    }
+
+    /**
+     * The page poll's share of the work: only when no background pass ran
+     * recently. A running filler already uses every free courier slot.
+     */
+    public function fillReadyIfIdle(BulkFraudBatch $batch): int
+    {
+        try {
+            if ($this->clock() - (int) Cache::get(self::HEARTBEAT_KEY, 0) < self::IDLE_SECONDS) {
+                return 0;
+            }
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        return $this->fillReady($batch, 3);
+    }
+
+    /**
+     * Ask up to three waiting numbers of this batch now, only for the courier
+     * that has not answered. Used by the manual "Try 3 now" button.
+     */
+    public function tryNow(BulkFraudBatch $batch, int $limit = 3): int
+    {
+        $limit = max(1, min(3, $limit));
+        $now = $this->clock();
+        $items = $this->waitingForAny()
+            ->where('batch_id', $batch->id)
+            ->orderBy('next_fill_at')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
+
+        foreach ($items as $item) {
+            $waiting = $item->waitingCouriers();
+
+            foreach ($waiting as $courier => $entry) {
+                $entry['next_at'] = $now;
+                $waiting[$courier] = $entry;
+            }
+
+            $item->waiting_couriers = $waiting;
+            $item->next_fill_at = now();
+            $item->save();
+        }
+
+        return $this->fillReady($batch, $limit, live: true);
+    }
+
+    /**
      * Ask every due courier of one row that has room now, then save the row.
      *
      * @return array{changed: bool, asked: list<string>, finished: bool}
      */
-    public function fill(BulkFraudBatchItem $item): array
+    public function fill(BulkFraudBatchItem $item, bool $live = false): array
     {
         $outcome = ['changed' => false, 'asked' => [], 'finished' => false];
         $lock = Cache::lock('bulk-fraud-daily:'.$item->phone.':'.$this->today()->toDateString(), 120);
@@ -204,40 +317,44 @@ class MerchantBulkWaitingLane
                     continue;
                 }
 
-                if ((int) ($entry['next_at'] ?? 0) <= $now && $this->slotSeconds($courier) === 0) {
+                if ((int) ($entry['next_at'] ?? 0) <= $now && ($live || $this->slotSeconds($courier) === 0)) {
                     $due[] = $courier;
                 }
             }
 
             if ($due !== []) {
-                $asked = $this->context->asBulk(fn () => $this->coordinator->askCouriers(
+                $ask = fn () => $this->coordinator->askCouriers(
                     Request::create('/portal/fraud-check/waiting', 'POST'),
                     ['phone' => $item->phone],
                     $report,
                     $due,
-                ));
+                );
+                $asked = $live ? $ask() : $this->context->asBulk($ask);
 
                 $report = $asked['report'];
                 $outcome['asked'] = $due;
                 $outcome['changed'] = true;
 
                 foreach ($due as $courier) {
+                    $this->noteAsked($courier);
+
                     if (in_array($courier, $asked['answered'], true)) {
                         unset($waiting[$courier]);
+                        $this->noteAnswered($courier);
 
                         continue;
                     }
 
-                    $live = $asked['live'][$courier] ?? null;
+                    $answer = $asked['live'][$courier] ?? null;
                     $entry = $waiting[$courier];
 
-                    if (! is_array($live) || (empty($live['deferred']) && empty($live['rate_limited']))) {
+                    if (! is_array($answer) || (empty($answer['deferred']) && empty($answer['rate_limited']))) {
                         $entry['tries'] = (int) $entry['tries'] + 1;
                     }
 
-                    if (is_array($live)) {
-                        $report = $this->replaceCourierReport($report, $courier, $live);
-                        $entry['reason'] = MerchantBulkFraudRow::unavailableReason($live);
+                    if (is_array($answer)) {
+                        $report = $this->replaceCourierReport($report, $courier, $answer);
+                        $entry['reason'] = MerchantBulkFraudRow::unavailableReason($answer);
                     }
 
                     if (
@@ -249,7 +366,13 @@ class MerchantBulkWaitingLane
                         continue;
                     }
 
-                    $entry['next_at'] = $this->clock() + $this->delay(is_array($live) ? $live : [], (int) $entry['tries']);
+                    $wait = $this->delay(is_array($answer) ? $answer : [], (int) $entry['tries']);
+
+                    if (is_array($answer) && $this->busyWithoutWait($answer)) {
+                        $wait = max($wait, $this->restCourier($courier));
+                    }
+
+                    $entry['next_at'] = $this->clock() + $wait;
                     $waiting[$courier] = $entry;
                 }
             }
@@ -296,7 +419,11 @@ class MerchantBulkWaitingLane
      * how long the whole queue of that courier takes, and when a paused
      * courier is asked again.
      *
-     * @return list<array{courier: string, waiting: int, per_minute: float, eta_minutes: int|null, paused_until: string|null}>
+     * The pace is what the courier allows; when the lane has been answering
+     * slower than that for a few minutes, the time left follows the real
+     * speed instead.
+     *
+     * @return list<array{courier: string, waiting: int, per_minute: float, resting_seconds: int, eta_minutes: int|null, paused_until: string|null}>
      */
     public function courierStatus(BulkFraudBatch $batch): array
     {
@@ -312,6 +439,8 @@ class MerchantBulkWaitingLane
             BulkFraudBatchItem::query()->whereNotNull('next_fill_at')->pluck('waiting_couriers')->all(),
         );
 
+        // While the first pass runs it takes the courier slots, so the lane's own speed says little.
+        $firstPassDone = ! $batch->items()->whereIn('status', ['pending', 'checking'])->exists();
         $status = [];
 
         foreach (self::CORE as $courier) {
@@ -320,14 +449,23 @@ class MerchantBulkWaitingLane
             }
 
             $pace = $this->paceStatus($courier);
+            $resting = max($pace['resting_seconds'], $this->laneRestSeconds($courier));
+            $perMinute = $pace['per_minute'];
+            $measured = $firstPassDone && $resting === 0 ? $this->measuredRate($courier) : null;
+
+            if ($measured !== null && $measured < $perMinute) {
+                $perMinute = max(0.2, $measured);
+            }
+
             $queue = max($mine[$courier], $everyone[$courier] ?? 0);
 
             $status[] = [
                 'courier' => $courier,
                 'waiting' => $mine[$courier],
-                'per_minute' => $pace['per_minute'],
-                'eta_minutes' => $pace['per_minute'] > 0 ? (int) ceil($queue / $pace['per_minute']) + (int) ceil($pace['resting_seconds'] / 60) : null,
-                'paused_until' => $pace['resting_seconds'] > 60 ? now()->addSeconds($pace['resting_seconds'])->toIso8601String() : null,
+                'per_minute' => round($perMinute, 1),
+                'resting_seconds' => $resting,
+                'eta_minutes' => $perMinute > 0 ? (int) ceil($queue / $perMinute) + (int) ceil($resting / 60) : null,
+                'paused_until' => $resting > 60 ? now()->addSeconds($resting)->toIso8601String() : null,
             ];
         }
 
@@ -357,7 +495,7 @@ class MerchantBulkWaitingLane
         }
 
         dispatch(function (): void {
-            app(self::class)->run(20, wait: false);
+            app(self::class)->run(35, wait: false);
         })->afterResponse();
     }
 
@@ -492,16 +630,22 @@ class MerchantBulkWaitingLane
     /**
      * The oldest row waiting for $courier whose ask time has come.
      */
-    private function nextDue(string $courier): ?BulkFraudBatchItem
+    private function nextDue(string $courier, ?BulkFraudBatch $batch = null): ?BulkFraudBatchItem
     {
         $path = $this->nextAtPath($courier);
 
         return $this->waitingFor($courier)
+            ->when($batch !== null, fn ($query) => $query->where('batch_id', $batch->id))
             ->where('next_fill_at', '<=', now())
             ->whereRaw('CAST(JSON_EXTRACT(waiting_couriers, ?) AS UNSIGNED) <= ?', [$path, $this->clock()])
             ->orderByRaw('CAST(JSON_EXTRACT(waiting_couriers, ?) AS UNSIGNED)', [$path])
             ->orderBy('id')
             ->first();
+    }
+
+    private function retryGap(): int
+    {
+        return max(3, min(30, (int) config('fraud_check.bulk_incomplete_retry_gap_seconds', 5)));
     }
 
     /**
@@ -562,13 +706,124 @@ class MerchantBulkWaitingLane
     private function slotSeconds(string $courier): int
     {
         try {
-            return $this->context->asBulk(fn (): int => match ($courier) {
+            $slot = $this->context->asBulk(fn (): int => match ($courier) {
                 'pathao' => app(PathaoFraudChecker::class)->nextSlotSeconds(),
                 'paperfly' => app(PaperflyFraudChecker::class)->nextSlotSeconds(),
                 default => 0,
             });
         } catch (\Throwable) {
+            $slot = 0;
+        }
+
+        return max($slot, $this->laneRestSeconds($courier));
+    }
+
+    /**
+     * A busy answer without a wait time (for example SteadFast while its
+     * store key cools down) can take seconds and still not answer. The lane
+     * then leaves that courier alone for a while, longer each time, so the
+     * other couriers are not held up behind it.
+     *
+     * @param  array<string, mixed>  $answer
+     */
+    private function busyWithoutWait(array $answer): bool
+    {
+        $busy = ! empty($answer['deferred']) || ! empty($answer['rate_limited']) || ! empty($answer['retry_later']);
+
+        return $busy && (int) ($answer['retry_after'] ?? 0) <= 0;
+    }
+
+    /**
+     * Rest $courier in this lane and return the rest in seconds.
+     */
+    private function restCourier(string $courier): int
+    {
+        try {
+            $strikesKey = 'bulk_waiting_lane:busy:'.$courier;
+            Cache::add($strikesKey, 0, now()->addHour());
+            $strikes = max(1, (int) Cache::increment($strikesKey));
+            $seconds = (int) min(self::MAX_REST_SECONDS, $this->retryGap() * 2 ** min(10, $strikes - 1));
+            $until = $this->clock() + $seconds;
+
+            if ($until > (int) Cache::get('bulk_waiting_lane:rest:'.$courier, 0)) {
+                Cache::put('bulk_waiting_lane:rest:'.$courier, $until, now()->addSeconds($seconds + 5));
+            }
+
+            return $seconds;
+        } catch (\Throwable) {
+            return $this->retryGap();
+        }
+    }
+
+    private function laneRestSeconds(string $courier): int
+    {
+        try {
+            return max(0, (int) Cache::get('bulk_waiting_lane:rest:'.$courier, 0) - $this->clock());
+        } catch (\Throwable) {
             return 0;
+        }
+    }
+
+    private function noteAsked(string $courier): void
+    {
+        try {
+            $key = 'bulk_waiting_lane:asking:'.$courier;
+            $now = $this->clock();
+            $asking = Cache::get($key);
+
+            // A courier the lane stopped asking for two minutes starts a new measurement.
+            $since = is_array($asking) && $now - (int) ($asking['seen'] ?? 0) <= 120
+                ? (int) ($asking['since'] ?? $now)
+                : $now;
+
+            Cache::put($key, ['since' => $since, 'seen' => $now], now()->addMinutes(10));
+        } catch (\Throwable) {
+            //
+        }
+    }
+
+    private function noteAnswered(string $courier): void
+    {
+        try {
+            $bucket = 'bulk_waiting_lane:answers:'.$courier.':'.intdiv($this->clock(), 60);
+            Cache::add($bucket, 0, now()->addMinutes(self::RATE_MINUTES + 5));
+            Cache::increment($bucket);
+            Cache::forget('bulk_waiting_lane:busy:'.$courier);
+            Cache::forget('bulk_waiting_lane:rest:'.$courier);
+        } catch (\Throwable) {
+            //
+        }
+    }
+
+    /**
+     * Answers per minute the lane got from $courier lately, or null while
+     * it has been asking for less than two minutes.
+     */
+    private function measuredRate(string $courier): ?float
+    {
+        try {
+            $asking = Cache::get('bulk_waiting_lane:asking:'.$courier);
+            $now = $this->clock();
+
+            if (! is_array($asking) || $now - (int) ($asking['seen'] ?? 0) > 120) {
+                return null;
+            }
+
+            $span = min(self::RATE_MINUTES * 60, $now - (int) ($asking['since'] ?? $now));
+
+            if ($span < 120) {
+                return null;
+            }
+
+            $answers = 0;
+
+            for ($minute = intdiv($now - $span, 60); $minute <= intdiv($now, 60); $minute++) {
+                $answers += (int) Cache::get('bulk_waiting_lane:answers:'.$courier.':'.$minute, 0);
+            }
+
+            return $answers / ($span / 60);
+        } catch (\Throwable) {
+            return null;
         }
     }
 
@@ -605,12 +860,12 @@ class MerchantBulkWaitingLane
         if (! empty($courierReport['deferred']) || ! empty($courierReport['rate_limited']) || ! empty($courierReport['retry_later'])) {
             $retryAfter = (int) ($courierReport['retry_after'] ?? 0);
 
-            return max(5, $retryAfter > 0 ? $retryAfter : 60);
+            return max(5, $retryAfter > 0 ? $retryAfter : $this->retryGap());
         }
 
-        $gap = max(3, min(30, (int) config('fraud_check.bulk_incomplete_retry_gap_seconds', 5)));
+        $gap = $this->retryGap();
 
-        return min(600, $gap * (2 ** max(0, $tries - 1)));
+        return min(30, $gap * (2 ** max(0, $tries - 1)));
     }
 
     /**

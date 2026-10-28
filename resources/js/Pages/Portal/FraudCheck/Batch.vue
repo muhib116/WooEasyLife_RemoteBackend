@@ -68,6 +68,18 @@
                     >
                         Export CSV
                     </a>
+                    <Button
+                        v-if="localReplay"
+                        type="button"
+                        label="Check again as new"
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        outlined
+                        size="small"
+                        :loading="replaying"
+                        :disabled="running || replaying"
+                        @click="replayAsNew"
+                    />
                     <Button type="button" label="Print" icon="pi pi-print" severity="secondary" outlined size="small" @click="printResults" />
                 </template>
             </PageHeader>
@@ -163,8 +175,30 @@
                         {{ waitingCount }} {{ waitingCount === 1 ? "number is" : "numbers are" }} waiting for a courier
                     </p>
                     <p class="mt-0.5 text-xs opacity-80">
-                        The other couriers already answered. A waiting courier is asked again only when it has room, up to {{ incompleteRetryMax }} times.
+                        The other couriers already answered. A waiting courier is asked again when it has room, up to {{ incompleteRetryMax }} times.
                     </p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                            v-if="tryingWaiting"
+                            type="button"
+                            class="rounded-lg border border-sky-700/30 bg-white px-3 py-1.5 text-xs font-semibold text-sky-950 dark:border-sky-400/30 dark:bg-transparent dark:text-sky-100"
+                            @click="stopWaitingTry"
+                        >
+                            Stop
+                        </button>
+                        <button
+                            v-else
+                            type="button"
+                            class="rounded-lg border border-sky-600/40 bg-white px-3 py-1.5 text-xs font-semibold text-sky-800 disabled:opacity-50 dark:border-sky-500/30 dark:bg-transparent dark:text-sky-100"
+                            :disabled="!waitingTargets.length || retryingId !== null"
+                            @click="tryWaitingRows"
+                        >
+                            Try {{ Math.min(3, waitingTargets.length) }} now
+                        </button>
+                        <span v-if="tryingWaiting" class="text-xs opacity-80">
+                            Trying {{ waitingTry.done }} of {{ waitingTry.total }}.
+                        </span>
+                    </div>
                     <ul v-if="courierStatus.length" class="mt-2 flex flex-wrap gap-2">
                         <li
                             v-for="status in courierStatus"
@@ -643,6 +677,7 @@ const props = defineProps({
     incompleteRetries: { type: Number, default: 5 },
     incompleteRetryGapSeconds: { type: Number, default: 5 },
     serverTime: { type: String, default: null },
+    localReplay: { type: Boolean, default: false },
 });
 
 const batchState = ref({ ...props.batch });
@@ -654,7 +689,11 @@ const checkingIds = ref([]);
 const retryingId = ref(null);
 const refreshingId = ref(null);
 const refreshingIncomplete = ref(false);
+const replaying = ref(false);
 const incompleteRefresh = ref({ done: 0, total: 0 });
+const tryingWaiting = ref(false);
+const waitingTry = ref({ done: 0, total: 0 });
+let waitingAbort = null;
 const courierStatus = ref([]);
 let stopIncompleteRequested = false;
 const refreshNotice = ref("");
@@ -807,20 +846,25 @@ const finishedSummary = computed(() => {
     return `${count} ${noun} finished.`;
 });
 
+// Couriers work through their queues side by side, so the batch ends with the slowest one.
 const batchEtaLabel = computed(() => {
     if (batchFinished.value || (!checkActive.value && batchState.value.status !== "stopped")) return "";
     const pending = countWaiting();
-    const pathao = courierStatus.value.find((status) => status.courier === "pathao");
-    const perMinute = Number(pathao?.per_minute) || 0;
+    if (pending + waitingCount.value < 1) return "";
+
     let minutes = 0;
-    if (perMinute > 0) {
-        minutes = Math.ceil(((Number(pathao.waiting) || 0) + pending) / perMinute);
-    }
     for (const status of courierStatus.value) {
         const eta = Number(status.eta_minutes) || 0;
-        if (pending > 0 && status.courier !== "pathao" && perMinute <= 0) continue;
         if (eta > minutes) minutes = eta;
     }
+    // Numbers not checked yet still need Pathao, the slowest courier.
+    const pathao = courierStatus.value.find((status) => status.courier === "pathao");
+    const perMinute = Number(pathao?.per_minute) || 0;
+    if (pending > 0 && perMinute > 0) {
+        const resting = Math.ceil((Number(pathao.resting_seconds) || 0) / 60);
+        minutes = Math.max(minutes, Math.ceil(((Number(pathao.waiting) || 0) + pending) / perMinute) + resting);
+    }
+
     if (minutes < 1) return "";
     if (minutes < 60) return `about ${minutes} min left`;
     const hours = Math.floor(minutes / 60);
@@ -1199,6 +1243,27 @@ function notesEmptyLabel(row) {
     return stored ? "No fraud notes for this number." : "Notes were not stored for this check.";
 }
 
+async function replayAsNew() {
+    if (!props.localReplay || replaying.value || running.value) return;
+    if (!window.confirm("Clear today's saved results for these numbers and check them again?")) return;
+
+    replaying.value = true;
+    try {
+        const { data } = await axios.post(route("portal.fraud-check.batches.replay", batchState.value.id));
+        applyPayload(data);
+        if (data.quota) quotaState.value = data.quota;
+        finishedAt.value = null;
+        pausedMs.value = 0;
+        pauseStartedAt.value = null;
+        stopRequested = false;
+        await runPending();
+    } catch {
+        refreshNotice.value = "Could not clear today's saved results.";
+    } finally {
+        replaying.value = false;
+    }
+}
+
 async function continueBatch() {
     if (running.value || refreshingIncomplete.value || limitBlocked.value) {
         if (limitBlocked.value) {
@@ -1361,6 +1426,39 @@ function clearThrottleNotice() {
 }
 
 const incompleteTargets = computed(() => sortedItems.value.filter((row) => row.risk === "incomplete" && canRefresh(row)));
+const waitingTargets = computed(() => items.value.filter((row) => row.risk === "waiting" && canRefresh(row)));
+
+function stopWaitingTry() {
+    waitingAbort?.abort();
+}
+
+async function tryWaitingRows() {
+    if (tryingWaiting.value || retryingId.value) return;
+    const total = Math.min(3, waitingTargets.value.length);
+    if (!total) return;
+
+    tryingWaiting.value = true;
+    waitingTry.value = { done: 0, total };
+    refreshNotice.value = "";
+    waitingAbort = new AbortController();
+    try {
+        const { data } = await axios.post(
+            route("portal.fraud-check.batches.fill-waiting", batchState.value.id),
+            {},
+            { timeout: 180000, signal: waitingAbort.signal },
+        );
+        if (data.batch) batchState.value = data.batch;
+        for (const item of data.items || []) replaceItem(item);
+        waitingTry.value.done = Number(data.asked) || 0;
+    } catch (error) {
+        if (error?.code !== "ERR_CANCELED") {
+            refreshNotice.value = "Could not ask the waiting couriers again.";
+        }
+    } finally {
+        waitingAbort = null;
+        tryingWaiting.value = false;
+    }
+}
 
 function stopIncompleteRefresh() {
     stopIncompleteRequested = true;

@@ -29,6 +29,11 @@ beforeEach(function (): void {
     }
     Cache::forget('bulk_waiting_lane:heartbeat');
     Cache::forget('bulk_waiting_lane:nudge');
+    foreach (MerchantBulkWaitingLane::CORE as $courier) {
+        Cache::forget('bulk_waiting_lane:busy:'.$courier);
+        Cache::forget('bulk_waiting_lane:rest:'.$courier);
+        Cache::forget('bulk_waiting_lane:asking:'.$courier);
+    }
 
     Sleep::fake();
 });
@@ -523,4 +528,288 @@ it('does not ask a waiting courier while the batch is paused', function (): void
 
     app(MerchantBulkWaitingLane::class)->run(1, wait: false);
     expect($asked)->toBe(1);
+});
+
+it('clears every due waiting number in one short pass while the courier has room', function (): void {
+    $asked = 0;
+    $couriers = [];
+    $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$asked, &$couriers): void {
+        $mock->shouldReceive('checkSingle')->times(6)->andReturn(waitingLaneReport(waitingLaneBusyPathao(20)));
+        $mock->shouldReceive('askCouriers')->times(6)->andReturnUsing(function ($request, array $payload, array $report, array $only) use (&$asked, &$couriers): array {
+            $asked++;
+            $couriers[] = $only;
+
+            return waitingLaneAsked(waitingLaneAnsweredPathao(), answered: true);
+        });
+    });
+
+    $merchant = waitingLaneMerchant('pace-lane@example.com', '01700000093');
+    $phones = implode("\n", array_map(fn (int $index): string => '0175556'.str_pad((string) $index, 4, '0', STR_PAD_LEFT), range(1, 6)));
+    $batch = (int) $this->actingAs($merchant)
+        ->postJson(route('portal.fraud-check.batches.store'), ['phones' => $phones])
+        ->assertOk()
+        ->json('batch.id');
+
+    for ($index = 0; $index < 6; $index++) {
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk();
+    }
+
+    $this->travel(21)->seconds();
+    $started = hrtime(true);
+    $stats = app(MerchantBulkWaitingLane::class)->run(1, wait: false);
+    $milliseconds = (hrtime(true) - $started) / 1e6;
+
+    expect($stats['asked'])->toBe(6)
+        ->and($stats['finished'])->toBe(6)
+        ->and($asked)->toBe(6)
+        ->and($couriers)->each->toBe(['pathao'])
+        ->and($milliseconds)->toBeLessThan(1500)
+        ->and(BulkFraudBatchItem::query()->where('batch_id', $batch)->where('risk', 'waiting')->count())->toBe(0);
+
+    fwrite(STDERR, sprintf("\n[efficiency] 6 due numbers, missing courier only, one pass: %.1f ms\n", $milliseconds));
+});
+
+it('spends no courier call on a poll when the courier has no room', function (): void {
+    $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+        $mock->shouldReceive('checkSingle')->once()->andReturn(waitingLaneReport(waitingLaneBusyPathao(20)));
+        $mock->shouldReceive('askCouriers')->never();
+    });
+    $this->mock(PathaoFraudChecker::class, function ($mock): void {
+        $mock->shouldReceive('nextSlotSeconds')->andReturn(45);
+        $mock->shouldReceive('paceStatus')->andReturn(['per_minute' => 3.9, 'resting_seconds' => 45, 'shared' => false]);
+    });
+
+    $merchant = waitingLaneMerchant('busy-poll@example.com', '01700000094');
+    $batchId = waitingLaneStart($merchant, '01755550021');
+    $batch = \App\Models\BulkFraudBatch::query()->findOrFail($batchId);
+
+    $this->travel(21)->seconds();
+    $started = hrtime(true);
+    $asked = app(MerchantBulkWaitingLane::class)->fillReady($batch, 3, live: false);
+    $milliseconds = (hrtime(true) - $started) / 1e6;
+
+    expect($asked)->toBe(0)
+        ->and($milliseconds)->toBeLessThan(250)
+        ->and(waitingLaneItem()->risk)->toBe('waiting');
+
+    fwrite(STDERR, sprintf("\n[efficiency] poll while Pathao is resting: %.1f ms, 0 courier calls\n", $milliseconds));
+});
+
+it('leaves the page poll light while the background filler is running', function (): void {
+    $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+        $mock->shouldReceive('checkSingle')->once()->andReturn(waitingLaneReport(waitingLaneBusyPathao(20)));
+        $mock->shouldReceive('askCouriers')->never();
+    });
+
+    $merchant = waitingLaneMerchant('poll-light@example.com', '01700000097');
+    $batch = waitingLaneStart($merchant, '01755550051');
+
+    $this->travel(21)->seconds();
+    Cache::put('bulk_waiting_lane:heartbeat', now()->getTimestamp(), 300);
+    Cache::put('bulk_waiting_lane:nudge', true, 60);
+
+    $started = hrtime(true);
+    $this->actingAs($merchant)
+        ->getJson(route('portal.fraud-check.batches.changes', ['batch' => $batch]))
+        ->assertOk()
+        ->assertJsonPath('items.0.risk', 'waiting')
+        ->assertJsonPath('couriers.0.resting_seconds', 0);
+    $milliseconds = (hrtime(true) - $started) / 1e6;
+
+    expect($milliseconds)->toBeLessThan(500);
+    fwrite(STDERR, sprintf("\n[efficiency] poll while the filler runs: %.1f ms, 0 courier calls\n", $milliseconds));
+});
+
+it('does not ask a not-asked courier again inside the first check', function (): void {
+    config(['fraud_check.bulk_missing_courier_retries' => 1, 'fraud_check.bulk_retry_pause_ms' => 300]);
+
+    $busyFromCache = waitingLaneCourier([
+        'status' => 'degraded',
+        'unavailable' => true,
+        'cached_fallback' => true,
+        'deferred' => true,
+        'retry_after' => 9,
+        'message' => 'Pathao is busy, so this number was not asked yet. Showing last known good data.',
+    ]);
+
+    $this->mock(FraudCheckCoordinator::class, function ($mock) use ($busyFromCache): void {
+        $mock->shouldReceive('checkSingle')->once()->andReturn(waitingLaneReport($busyFromCache));
+        $mock->shouldReceive('retryCouriers')->never();
+        $mock->shouldReceive('askCouriers')->never();
+    });
+
+    $merchant = waitingLaneMerchant('no-inline@example.com', '01700000098');
+    $batch = (int) $this->actingAs($merchant)
+        ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01755550061'])
+        ->json('batch.id');
+
+    $started = hrtime(true);
+    $this->actingAs($merchant)
+        ->postJson(route('portal.fraud-check.batches.next', $batch))
+        ->assertOk()
+        ->assertJsonPath('item.risk', 'waiting')
+        ->assertJsonPath('item.waiting.pathao.reason', 'busy');
+    $milliseconds = (hrtime(true) - $started) / 1e6;
+
+    expect(waitingLaneItem()->waitingCouriers()['pathao']['next_at'])->toBe(now()->getTimestamp() + 9);
+    fwrite(STDERR, sprintf("\n[efficiency] first check with a busy courier, no inline re-ask: %.1f ms\n", $milliseconds));
+});
+
+it('rests a courier that stays busy without a wait time instead of asking it for every number', function (): void {
+    $busySteadfast = waitingLaneCourier([
+        'status' => 'unavailable',
+        'unavailable' => true,
+        'deferred' => true,
+        'rate_limited' => true,
+        'message' => 'Steadfast fraud check limit reached for this store. Try again later.',
+    ]);
+    $report = function (array $steadfast): array {
+        $report = waitingLaneReport(waitingLaneAnsweredPathao());
+        $report['courier'][0]['report'] = $steadfast;
+
+        return $report;
+    };
+    $answers = [];
+    $this->mock(FraudCheckCoordinator::class, function ($mock) use ($report, $busySteadfast, &$answers): void {
+        $mock->shouldReceive('checkSingle')->times(3)->andReturn($report($busySteadfast));
+        $mock->shouldReceive('askCouriers')->andReturnUsing(function ($request, array $payload, array $current, array $only) use ($report, $busySteadfast, &$answers): array {
+            $answer = array_shift($answers) ?? $busySteadfast;
+            $answered = ! empty($answer['api_success']);
+
+            return ['report' => $report($answer), 'answered' => $answered ? ['steadfast'] : [], 'live' => ['steadfast' => $answer]];
+        });
+    });
+
+    $merchant = waitingLaneMerchant('busy-rest@example.com', '01700000099');
+    $batch = (int) $this->actingAs($merchant)
+        ->postJson(route('portal.fraud-check.batches.store'), ['phones' => "01755550071\n01755550072\n01755550073"])
+        ->json('batch.id');
+    for ($index = 0; $index < 3; $index++) {
+        $this->actingAs($merchant)->postJson(route('portal.fraud-check.batches.next', $batch))->assertOk();
+    }
+
+    $lane = app(MerchantBulkWaitingLane::class);
+    $nextAt = fn (): array => BulkFraudBatchItem::query()->where('batch_id', $batch)->orderBy('position')->get()
+        ->map(fn (BulkFraudBatchItem $item): int => (int) ($item->waitingCouriers()['steadfast']['next_at'] ?? 0) - now()->getTimestamp())
+        ->all();
+
+    $this->travel(6)->seconds();
+    expect($lane->run(1, wait: false)['asked'])->toBe(1)
+        ->and($nextAt())->toBe([5, -1, -1]);
+
+    $this->travel(6)->seconds();
+    expect($lane->run(1, wait: false)['asked'])->toBe(1)
+        ->and($nextAt()[1])->toBe(10);
+
+    // Still resting: nothing is asked, and no number's tries are used up.
+    $this->travel(4)->seconds();
+    expect($lane->run(1, wait: false)['asked'])->toBe(0)
+        ->and(BulkFraudBatchItem::query()->where('batch_id', $batch)->get()->every(fn ($item) => $item->waitingCouriers()['steadfast']['tries'] === 0))->toBeTrue();
+
+    // The first real answer ends the rest for the numbers still waiting.
+    $answers[] = waitingLaneCourier(['total_order' => 3, 'confirmed' => 3, 'success_rate' => '100%', 'status' => 'ok', 'api_success' => true]);
+    $answers[] = waitingLaneCourier(['total_order' => 1, 'confirmed' => 1, 'success_rate' => '100%', 'status' => 'ok', 'api_success' => true]);
+    $answers[] = waitingLaneCourier(['total_order' => 2, 'confirmed' => 1, 'cancel' => 1, 'success_rate' => '50%', 'status' => 'ok', 'api_success' => true]);
+    $this->travel(7)->seconds();
+    expect($lane->run(1, wait: false)['finished'])->toBe(3)
+        ->and(BulkFraudBatchItem::query()->where('batch_id', $batch)->where('risk', 'waiting')->count())->toBe(0);
+});
+
+it('times a courier by its real speed when the lane answers slower than its pace', function (): void {
+    $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+        $mock->shouldReceive('checkSingle')->times(4)->andReturn(waitingLaneReport(waitingLaneBusyPathao(20)));
+        $mock->shouldReceive('askCouriers')->twice()->andReturn(waitingLaneAsked(waitingLaneAnsweredPathao(), answered: true));
+    });
+    $this->mock(PathaoFraudChecker::class, function ($mock): void {
+        $mock->shouldReceive('nextSlotSeconds')->andReturn(0);
+        $mock->shouldReceive('paceStatus')->andReturn(['per_minute' => 8.0, 'resting_seconds' => 0, 'shared' => false]);
+    });
+
+    $merchant = waitingLaneMerchant('real-speed@example.com', '01700000100');
+    $batchId = (int) $this->actingAs($merchant)
+        ->postJson(route('portal.fraud-check.batches.store'), ['phones' => "01755550081\n01755550082\n01755550083\n01755550084"])
+        ->json('batch.id');
+    for ($index = 0; $index < 4; $index++) {
+        $this->actingAs($merchant)->postJson(route('portal.fraud-check.batches.next', $batchId))->assertOk();
+    }
+
+    $batch = \App\Models\BulkFraudBatch::query()->findOrFail($batchId);
+    $lane = app(MerchantBulkWaitingLane::class);
+    $rows = BulkFraudBatchItem::query()->where('batch_id', $batchId)->orderBy('position')->get();
+
+    expect($lane->courierStatus($batch)[0])->toMatchArray(['courier' => 'pathao', 'waiting' => 4, 'per_minute' => 8.0, 'eta_minutes' => 1]);
+
+    $this->travel(21)->seconds();
+    $lane->fill($rows[0]);
+    $this->travel(70)->seconds();
+    $lane->fill($rows[1]);
+    $this->travel(80)->seconds();
+
+    // Two answers in two and a half minutes: 0.8 a minute, so two numbers take three minutes, not one.
+    expect($lane->courierStatus($batch)[0])->toMatchArray(['courier' => 'pathao', 'waiting' => 2, 'per_minute' => 0.8, 'eta_minutes' => 3]);
+});
+
+it('tries three waiting numbers by asking only the missing courier', function (): void {
+    $fullChecks = 0;
+    $missingOnly = [];
+    $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$fullChecks, &$missingOnly): void {
+        $mock->shouldReceive('checkSingle')->times(4)->andReturnUsing(function () use (&$fullChecks): array {
+            $fullChecks++;
+
+            return waitingLaneReport(waitingLaneBusyPathao(60));
+        });
+        $mock->shouldReceive('askCouriers')->times(3)->andReturnUsing(function ($request, array $payload, array $report, array $only) use (&$missingOnly): array {
+            $missingOnly[] = $only;
+
+            return waitingLaneAsked(waitingLaneAnsweredPathao(), answered: true);
+        });
+    });
+
+    $merchant = waitingLaneMerchant('try-three@example.com', '01700000095');
+    $phones = implode("\n", ['01755550031', '01755550032', '01755550033', '01755550034']);
+    $batch = (int) $this->actingAs($merchant)
+        ->postJson(route('portal.fraud-check.batches.store'), ['phones' => $phones])
+        ->assertOk()
+        ->json('batch.id');
+
+    for ($index = 0; $index < 4; $index++) {
+        $this->actingAs($merchant)->postJson(route('portal.fraud-check.batches.next', $batch))->assertOk();
+    }
+
+    $started = hrtime(true);
+    $this->actingAs($merchant)
+        ->postJson(route('portal.fraud-check.batches.fill-waiting', $batch))
+        ->assertOk()
+        ->assertJsonPath('asked', 3)
+        ->assertJsonPath('batch.waiting', 1);
+    $milliseconds = (hrtime(true) - $started) / 1e6;
+
+    expect($fullChecks)->toBe(4)
+        ->and($missingOnly)->toBe([['pathao'], ['pathao'], ['pathao']])
+        ->and($milliseconds)->toBeLessThan(1500)
+        ->and(BulkFraudBatchItem::query()->where('batch_id', $batch)->where('risk', 'waiting')->count())->toBe(1);
+
+    fwrite(STDERR, sprintf("\n[efficiency] Try 3 now, missing courier only, no full recheck: %.1f ms\n", $milliseconds));
+});
+
+it('retries a failed courier within 30 seconds instead of backing off for minutes', function (): void {
+    $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+        $mock->shouldReceive('checkSingle')->once()->andReturn(waitingLaneReport(waitingLaneFailedPathao()));
+        $mock->shouldReceive('retryCouriers')->once()->andReturnUsing(fn ($request, array $payload, array $report): array => $report);
+        $mock->shouldReceive('askCouriers')->times(4)->andReturn(waitingLaneAsked(waitingLaneFailedPathao()));
+    });
+
+    waitingLaneStart(waitingLaneMerchant('retry-cap@example.com', '01700000096'), '01755550041');
+    $lane = app(MerchantBulkWaitingLane::class);
+
+    for ($round = 1; $round <= 4; $round++) {
+        $this->travel(31)->seconds();
+        $lane->run(1, wait: false);
+    }
+
+    $waiting = waitingLaneItem()->waitingCouriers();
+    expect($waiting['pathao']['tries'])->toBe(4)
+        ->and($waiting['pathao']['next_at'])->toBe(now()->getTimestamp() + 30);
 });
