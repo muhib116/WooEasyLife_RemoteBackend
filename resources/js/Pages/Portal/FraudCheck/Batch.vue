@@ -69,7 +69,6 @@
                         Export CSV
                     </a>
                     <Button
-                        v-if="localReplay"
                         type="button"
                         label="Check again as new"
                         icon="pi pi-refresh"
@@ -677,7 +676,6 @@ const props = defineProps({
     incompleteRetries: { type: Number, default: 5 },
     incompleteRetryGapSeconds: { type: Number, default: 5 },
     serverTime: { type: String, default: null },
-    localReplay: { type: Boolean, default: false },
 });
 
 const batchState = ref({ ...props.batch });
@@ -1244,8 +1242,8 @@ function notesEmptyLabel(row) {
 }
 
 async function replayAsNew() {
-    if (!props.localReplay || replaying.value || running.value) return;
-    if (!window.confirm("Clear today's saved results for these numbers and check them again?")) return;
+    if (replaying.value || running.value) return;
+    if (!window.confirm("Check every number in this batch with the couriers again? Numbers already counted today do not use your daily limit again.")) return;
 
     replaying.value = true;
     try {
@@ -1257,8 +1255,12 @@ async function replayAsNew() {
         pauseStartedAt.value = null;
         stopRequested = false;
         await runPending();
-    } catch {
-        refreshNotice.value = "Could not clear today's saved results.";
+    } catch (error) {
+        if (error?.response?.status === 429) {
+            refreshNotice.value = "Batches can be checked again 5 times an hour. Try again later.";
+        } else {
+            refreshNotice.value = error?.response?.data?.errors?.batch?.[0] || "Could not start checking this batch again.";
+        }
     } finally {
         replaying.value = false;
     }

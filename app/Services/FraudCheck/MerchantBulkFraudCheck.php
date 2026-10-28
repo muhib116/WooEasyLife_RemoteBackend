@@ -25,6 +25,9 @@ class MerchantBulkFraudCheck
     /** The open batch page checks its own numbers. After this, the server takes over. */
     private const PAGE_OPEN_SECONDS = 30;
 
+    /** Source of a number queued by "Check again as new"; it skips today's saved result. */
+    private const RECHECK_SOURCE = 'recheck';
+
     public function __construct(
         private FraudCheckService $fraudCheckService,
         private FraudCheckCoordinator $coordinator,
@@ -280,7 +283,7 @@ class MerchantBulkFraudCheck
         $guard = $this->guardedResolve(
             $merchant,
             $item->phone,
-            fn () => $this->context->asBulk(fn () => $this->resolvePhone($request, $item->phone)),
+            fn () => $this->context->asBulk(fn () => $this->resolvePhone($request, $item->phone, $item->source === self::RECHECK_SOURCE)),
         );
 
         if ($guard['busy'] || $guard['failed']) {
@@ -510,17 +513,22 @@ class MerchantBulkFraudCheck
     }
 
     /**
-     * Forget today's saved results for this batch and check the numbers again.
-     * Localhost only. Invalid numbers stay invalid.
+     * Check every number of this batch with the couriers again. Today's saved
+     * result is skipped, not deleted: other merchants' batches point at it,
+     * and the new answer replaces it. Invalid numbers stay invalid.
      */
     public function replayAsNew(BulkFraudBatch $batch): BulkFraudBatch
     {
-        $phones = $batch->items()->pluck('phone')->filter()->unique()->values()->all();
+        if ($batch->status === 'running' && $batch->items()->whereIn('status', ['pending', 'checking'])->exists()) {
+            throw ValidationException::withMessages([
+                'batch' => 'This batch is still checking. Pause it or let it finish, then check it again.',
+            ]);
+        }
 
-        DB::transaction(function () use ($batch, $phones): void {
+        DB::transaction(function () use ($batch): void {
             $batch->items()->where('status', '!=', 'invalid')->update([
                 'status' => 'pending',
-                'source' => null,
+                'source' => self::RECHECK_SOURCE,
                 'daily_result_id' => null,
                 'attempts' => 0,
                 'total_orders' => 0,
@@ -534,13 +542,6 @@ class MerchantBulkFraudCheck
                 'fill_report' => null,
                 'next_fill_at' => null,
             ]);
-
-            if ($phones !== []) {
-                BulkFraudDailyResult::query()
-                    ->where('checked_on', $this->today()->toDateString())
-                    ->whereIn('phone', $phones)
-                    ->delete();
-            }
 
             $batch->status = 'running';
             $batch->save();

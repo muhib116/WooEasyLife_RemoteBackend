@@ -2015,90 +2015,80 @@ class MerchantBulkFraudCheckTest extends TestCase
         app(BulkFraudScheduler::class)->setEnabled(true);
     }
 
-    public function test_replay_is_not_available_outside_localhost(): void
-    {
-        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
-            $mock->shouldReceive('checkSingle')->once()->andReturn($this->report(4, 1, 3, '25%'));
-        });
-
-        $merchant = $this->merchant('replay-closed@example.com', '01700000092');
-        $batch = $this->actingAs($merchant)
-            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01722224444'])
-            ->json('batch.id');
-
-        $this->actingAs($merchant)
-            ->postJson(route('portal.fraud-check.batches.next', $batch))
-            ->assertOk();
-
-        $this->actingAs($merchant)
-            ->postJson(route('portal.fraud-check.batches.replay', $batch))
-            ->assertNotFound();
-
-        $this->assertSame(1, BulkFraudDailyResult::query()->count());
-        $this->assertSame('found', BulkFraudBatchItem::query()->where('batch_id', $batch)->value('status'));
-    }
-
-    public function test_localhost_replay_clears_todays_saved_result_and_checks_again(): void
+    public function test_check_again_asks_the_couriers_again_and_keeps_other_merchants_results(): void
     {
         $calls = 0;
         $this->mock(FraudCheckCoordinator::class, function ($mock) use (&$calls): void {
             $mock->shouldReceive('checkSingle')->andReturnUsing(function () use (&$calls) {
                 $calls++;
 
-                return $this->report(4, 1, 3, '25%');
+                return $calls === 1 ? $this->report(4, 1, 3, '25%') : $this->report(6, 5, 1, '83%');
             });
         });
 
-        $previous = $this->app['env'];
-        $this->app['env'] = 'local';
-        $this->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        $merchant = $this->merchant('replay-bulk@example.com', '01700000091');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), [
+                'name' => 'Replay',
+                'phones' => "01722223333\nnot-a-number",
+            ])->json('batch.id');
 
-        try {
-            $merchant = $this->merchant('replay-bulk@example.com', '01700000091');
-            $batch = $this->actingAs($merchant)
-                ->postJson(route('portal.fraud-check.batches.store'), [
-                    'name' => 'Replay',
-                    'phones' => "01722223333\nnot-a-number",
-                ])->json('batch.id');
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.source', 'live');
 
-            $this->actingAs($merchant)
-                ->postJson(route('portal.fraud-check.batches.next', $batch))
-                ->assertOk()
-                ->assertJsonPath('item.source', 'live');
+        $daily = BulkFraudDailyResult::query()->sole();
+        $other = $this->merchant('replay-other@example.com', '01700000093');
+        $otherBatch = $this->actingAs($other)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => '01722223333'])
+            ->assertJsonPath('items.0.source', 'cache')
+            ->json('batch.id');
 
-            BulkFraudDailyResult::query()->create([
-                'phone' => '01800000000',
-                'checked_on' => \Carbon\Carbon::now('Asia/Dhaka')->toDateString(),
-                'status' => 'not_found',
-                'total_orders' => 0,
-                'received' => 0,
-                'cancelled' => 0,
-                'partial' => 0,
-                'couriers' => [],
-                'attempts' => 1,
-            ]);
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.replay', $batch))
+            ->assertOk()
+            ->assertJsonPath('batch.status', 'running')
+            ->assertJsonPath('batch.pending', 1);
 
-            $this->actingAs($merchant)
-                ->postJson(route('portal.fraud-check.batches.replay', $batch))
-                ->assertOk()
-                ->assertJsonPath('batch.status', 'running')
-                ->assertJsonPath('batch.pending', 1);
+        $this->assertSame('invalid', BulkFraudBatchItem::query()->where('batch_id', $batch)->where('phone', 'not-a-number')->value('status'));
+        $this->assertSame((int) $daily->id, (int) BulkFraudBatchItem::query()->where('batch_id', $otherBatch)->value('daily_result_id'));
 
-            $this->assertSame(1, BulkFraudDailyResult::query()->count());
-            $this->assertSame('01800000000', BulkFraudDailyResult::query()->value('phone'));
-            $this->assertSame('invalid', BulkFraudBatchItem::query()->where('batch_id', $batch)->where('phone', 'not-a-number')->value('status'));
-            $this->assertSame('pending', BulkFraudBatchItem::query()->where('batch_id', $batch)->where('phone', '01722223333')->value('status'));
-
-            $this->actingAs($merchant)
-                ->postJson(route('portal.fraud-check.batches.next', $batch))
-                ->assertOk()
-                ->assertJsonPath('item.source', 'live')
-                ->assertJsonPath('item.received', 1);
-        } finally {
-            $this->app['env'] = $previous;
-        }
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.next', $batch))
+            ->assertOk()
+            ->assertJsonPath('item.source', 'live')
+            ->assertJsonPath('item.received', 5);
 
         $this->assertSame(2, $calls);
+        $this->assertSame(1, BulkFraudDailyResult::query()->count());
+        $this->assertSame(5, (int) $daily->fresh()->received);
+        $this->assertSame(1, app(\App\Services\FraudCheck\CourierHistoryQuota::class)->usedToday($merchant));
+    }
+
+    public function test_check_again_waits_while_the_batch_is_still_checking_and_is_limited_per_hour(): void
+    {
+        $this->mock(FraudCheckCoordinator::class, function ($mock): void {
+            $mock->shouldReceive('checkSingle')->never();
+        });
+
+        $merchant = $this->merchant('replay-busy@example.com', '01700000094');
+        $batch = $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.store'), ['phones' => "01722225555\n01722225556"])
+            ->json('batch.id');
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.replay', $batch))
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.batch.0', 'This batch is still checking. Pause it or let it finish, then check it again.');
+
+        for ($try = 0; $try < 4; $try++) {
+            $this->actingAs($merchant)->postJson(route('portal.fraud-check.batches.replay', $batch))->assertUnprocessable();
+        }
+
+        $this->actingAs($merchant)
+            ->postJson(route('portal.fraud-check.batches.replay', $batch))
+            ->assertStatus(429);
     }
 
     private function merchant(string $email = 'bulk-merchant@example.com', string $phone = '01700000021'): User

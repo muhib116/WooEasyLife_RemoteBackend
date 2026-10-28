@@ -55,6 +55,7 @@ Route::middleware(['auth', 'auth.active', 'merchant.portal'])
                     ->middleware('throttle:60,1,fraud-fill-waiting')
                     ->name('fraud-check.batches.fill-waiting');
                 Route::post('/fraud-check/batches/{batch}/replay', [BulkFraudCheckController::class, 'replay'])
+                    ->middleware('throttle:5,60,fraud-replay')
                     ->name('fraud-check.batches.replay');
                 Route::post('/fraud-check/batches/{batch}/items/{item}/retry', [BulkFraudCheckController::class, 'retry'])
                     ->middleware('throttle:120,1,fraud-retry')
