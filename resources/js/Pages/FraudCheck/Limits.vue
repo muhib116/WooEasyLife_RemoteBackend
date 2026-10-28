@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <PageHeader
                 title="Bulk check"
-                description="How many numbers run at once, how fast each courier is asked, and how long a number waits for a courier. Free daily checks are below. Saved numbers replace the .env defaults."
+                description="The defaults are tuned for the best speed without couriers refusing the store. Change them only if a courier keeps refusing."
                 icon="PhSlidersHorizontal"
                 icon-bg-class="bg-sky-50 dark:bg-sky-500/15"
                 icon-class="text-sky-600 dark:text-sky-400"
@@ -16,19 +16,13 @@
                 {{ savedMessage }}
             </p>
 
-            <PageCard
-                title="Background checking"
-                description="Numbers still to check, and couriers a number is waiting for, keep going after the merchant leaves the page."
-            >
+            <PageCard title="Background checking">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0 flex-1">
                         <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
                             Keep checking when the page is closed
                         </p>
-                        <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                            On, the server does this every minute. Off, a batch checks only while its page is open. Run now starts one pass either way.
-                        </p>
-                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                             {{ schedulerStatusText }}
                         </p>
                     </div>
@@ -39,11 +33,13 @@
                         @update:model-value="saveScheduler"
                     />
                 </div>
-                <div class="mt-4 flex justify-end">
+                <div v-if="!scheduler.alive" class="mt-4 flex justify-end">
                     <Button
                         type="button"
                         label="Run now"
                         icon="pi pi-play"
+                        severity="secondary"
+                        outlined
                         class="!min-h-11 w-full sm:w-auto"
                         :loading="runningScheduler"
                         :disabled="scheduler.running"
@@ -52,10 +48,7 @@
                 </div>
             </PageCard>
 
-            <PageCard
-                title="Bulk check"
-                description="How many numbers run at once, how fast each courier is asked, and how long a number waits for a courier. Saved numbers replace the .env defaults. A number that matches .env is not stored."
-            >
+            <PageCard title="Speed">
                 <form class="space-y-4" @submit.prevent="saveBulk">
                     <div
                         v-for="field in bulkFields"
@@ -78,13 +71,7 @@
                                 v-if="isBulkOverridden(field.key)"
                                 class="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
                             >
-                                saved here
-                            </span>
-                            <span
-                                v-else
-                                class="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                            >
-                                .env default
+                                Changed
                             </span>
                         </div>
                         <InputNumber
@@ -97,7 +84,7 @@
                             input-class="w-full"
                         />
                         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                            .env default: {{ field.defaultValue }}. Allowed {{ field.min }}–{{ field.max }}.
+                            Default: {{ field.defaultValue }}
                         </p>
                         <p v-if="bulkForm.errors[field.key]" class="mt-1 text-sm text-rose-600">
                             {{ bulkForm.errors[field.key] }}
@@ -106,18 +93,19 @@
 
                     <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button
-                            v-if="hasBulkOverride"
                             type="button"
-                            label="Use .env defaults"
+                            label="Reset to default"
+                            icon="pi pi-replay"
                             severity="secondary"
                             outlined
                             class="!min-h-11 w-full sm:w-auto"
                             :loading="resettingBulk"
+                            :disabled="!hasBulkOverride"
                             @click="resetBulkDefaults"
                         />
                         <Button
                             type="submit"
-                            label="Save bulk settings"
+                            label="Save"
                             icon="pi pi-save"
                             class="!min-h-11 w-full sm:w-auto"
                             :loading="bulkForm.processing"
@@ -126,10 +114,7 @@
                 </form>
             </PageCard>
 
-            <PageCard
-                title="Free checks per day"
-                description="Saved numbers replace the .env defaults. A number that matches .env is not stored."
-            >
+            <PageCard title="Free checks per day">
                 <form class="space-y-4" @submit.prevent="save">
                     <div
                         v-for="field in fields"
@@ -152,13 +137,7 @@
                                 v-if="isOverridden(field.key)"
                                 class="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
                             >
-                                saved here
-                            </span>
-                            <span
-                                v-else
-                                class="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                            >
-                                .env default
+                                Changed
                             </span>
                         </div>
                         <InputNumber
@@ -171,7 +150,7 @@
                             input-class="w-full"
                         />
                         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                            .env default: {{ field.defaultValue }}. Allowed {{ field.min }}–{{ field.max }}.
+                            Default: {{ field.defaultValue }}
                         </p>
                         <p v-if="form.errors[field.key]" class="mt-1 text-sm text-rose-600">
                             {{ form.errors[field.key] }}
@@ -180,18 +159,19 @@
 
                     <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button
-                            v-if="hasOverride"
                             type="button"
-                            label="Use .env defaults"
+                            label="Reset to default"
+                            icon="pi pi-replay"
                             severity="secondary"
                             outlined
                             class="!min-h-11 w-full sm:w-auto"
                             :loading="resetting"
+                            :disabled="!hasOverride"
                             @click="resetDefaults"
                         />
                         <Button
                             type="submit"
-                            label="Save limits"
+                            label="Save"
                             icon="pi pi-save"
                             class="!min-h-11 w-full sm:w-auto"
                             :loading="form.processing"
@@ -262,25 +242,10 @@ const props = defineProps({
     },
 });
 
-const bulkKeys = [
-    "bulk_workers",
-    "bulk_incomplete_retries",
-    "bulk_incomplete_retry_gap_seconds",
-    "bulk_waiting_max_minutes",
-    "pathao_per_minute",
-    "pathao_live_reserve",
-    "paperfly_gap_seconds",
-    "paperfly_pause_minutes",
-    "redx_sample_skip_minutes",
-    "bulk_missing_courier_retries",
-    "bulk_number_budget_seconds",
-    "bulk_stale_check_seconds",
-    "courier_retry_pause_after_failures",
-    "courier_retry_cooldown_seconds",
-] as const;
+const bulkKeys = computed(() => Object.keys(props.bulk?.fields ?? {}));
 
 function bulkFormState(values: Record<string, number> | undefined) {
-    return Object.fromEntries(bulkKeys.map((key) => [key, Number(values?.[key] ?? 0)]));
+    return Object.fromEntries(bulkKeys.value.map((key) => [key, Number(values?.[key] ?? 0)]));
 }
 
 const page = usePage();
@@ -325,12 +290,12 @@ watch(
 );
 
 const schedulerStatusText = computed(() => {
-    if (props.scheduler.running) return "A run is in progress.";
-    if (!props.scheduler.last_ran_at) return "The server has not run this yet. Run now starts one pass.";
-    const when = `The server last ran this at ${props.scheduler.last_ran_at}.`;
-    if (props.scheduler.alive) return when;
+    if (!schedulerEnabled.value) return "Off. A batch checks only while its page is open.";
+    if (props.scheduler.running) return "On. A run is in progress.";
+    if (!props.scheduler.last_ran_at) return "On, but the server has not run it yet.";
+    if (props.scheduler.alive) return `On. Last run at ${props.scheduler.last_ran_at}.`;
 
-    return `${when} It has not run in the last few minutes.`;
+    return `On, but the server has not run it since ${props.scheduler.last_ran_at}.`;
 });
 
 const fields = computed(() => [
@@ -357,7 +322,7 @@ const hasOverride = computed(() => Object.keys(props.quotas.overrides ?? {}).len
 const isOverridden = (key: string) =>
     Object.prototype.hasOwnProperty.call(props.quotas.overrides ?? {}, key);
 
-const bulkFields = computed(() => bulkKeys.map((key) => ({
+const bulkFields = computed(() => bulkKeys.value.map((key) => ({
     key,
     label: props.bulk?.fields?.[key]?.label || key,
     help: props.bulk?.fields?.[key]?.help || "",

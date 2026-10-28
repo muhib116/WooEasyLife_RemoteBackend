@@ -43,7 +43,7 @@ class FraudCheckQuotaController extends Controller
     {
         $this->quotas->resetToEnv();
 
-        return back()->with('success', 'Daily limits are back to the .env defaults.');
+        return back()->with('success', 'Daily limits are back to default.');
     }
 
     public function updateBulk(Request $request): RedirectResponse
@@ -62,7 +62,7 @@ class FraudCheckQuotaController extends Controller
     {
         $this->bulk->resetToEnv();
 
-        return back()->with('success', 'Bulk check settings are back to the .env defaults.');
+        return back()->with('success', 'Bulk check settings are back to default.');
     }
 
     public function updateScheduler(Request $request): RedirectResponse

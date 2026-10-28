@@ -59,7 +59,7 @@ class AdminSidebarNavOrder
             'children' => [
                 'Wise AI' => ['Dashboard', 'Config', 'Knowledge', 'Language', 'Playground', 'Learning', 'Help', 'Train', 'Intelligence', 'Fleet'],
                 'Merchants' => ['Billing', 'All Merchants', 'Trashed Merchants', 'Subscription Alerts'],
-                'Fraud Checker' => ['Dashboard', 'Phone Check', 'Partner Credentials', 'Steadfast API', 'Token & CURL'],
+                'Fraud Checker' => ['Dashboard', 'Phone Check', 'Partner Credentials', 'Steadfast API', 'Token & CURL', 'Bulk check'],
                 'Plans & Billing' => [
                     'Pricing Plans',
                     'Landing Orders',
@@ -72,7 +72,7 @@ class AdminSidebarNavOrder
                     'Topic Clusters',
                     'SEO & Learning',
                 ],
-                'Settings' => ['General', 'Bulk check'],
+                'Settings' => ['General'],
             ],
         ];
     }

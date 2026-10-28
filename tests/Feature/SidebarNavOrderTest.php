@@ -200,3 +200,17 @@ it('returns current sidebar order for authorized admins', function () {
         ->assertOk()
         ->assertJsonPath('order.sections.0', 'System');
 });
+
+it('lists bulk check under fraud checker, even with an older saved order', function () {
+    PlatformSetting::query()->updateOrCreate(
+        ['key' => AdminSidebarNavOrder::SETTING_KEY],
+        ['value' => ['children' => ['Settings' => ['Bulk check', 'General'], 'Fraud Checker' => ['Phone Check', 'Dashboard']]]],
+    );
+
+    $order = app(AdminSidebarNavOrder::class)->mergeWithCatalog(
+        PlatformSetting::query()->where('key', AdminSidebarNavOrder::SETTING_KEY)->value('value'),
+    );
+
+    expect($order['children']['Settings'])->toBe(['General'])
+        ->and($order['children']['Fraud Checker'])->toBe(['Phone Check', 'Dashboard', 'Partner Credentials', 'Steadfast API', 'Token & CURL', 'Bulk check']);
+});

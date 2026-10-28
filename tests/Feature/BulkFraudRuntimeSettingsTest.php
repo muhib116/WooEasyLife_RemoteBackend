@@ -56,127 +56,96 @@ function bulkSettingsPayload(array $overrides = []): array
 {
     return array_merge([
         'bulk_workers' => 3,
-        'bulk_incomplete_retries' => 5,
-        'bulk_incomplete_retry_gap_seconds' => 5,
-        'bulk_missing_courier_retries' => 1,
-        'bulk_number_budget_seconds' => 60,
-        'bulk_stale_check_seconds' => 150,
-        'courier_retry_pause_after_failures' => 3,
-        'courier_retry_cooldown_seconds' => 60,
-        'bulk_waiting_max_minutes' => 360,
         'pathao_per_minute' => 5,
-        'pathao_live_reserve' => 1,
         'paperfly_gap_seconds' => 4,
-        'paperfly_pause_minutes' => 5,
-        'redx_sample_skip_minutes' => 30,
     ], $overrides);
 }
 
-it('applies saved bulk settings over the env defaults', function () {
-    $saved = bulkSettingsPayload([
-        'bulk_workers' => 2,
-        'bulk_incomplete_retries' => 4,
-        'bulk_incomplete_retry_gap_seconds' => 8,
+it('applies saved bulk settings over the defaults and ignores old hidden ones', function () {
+    PlatformSetting::query()->create([
+        'key' => BulkFraudRuntimeSettings::SETTING_KEY,
+        'value' => ['bulk_incomplete_retries' => 1, 'bulk_waiting_max_minutes' => 20],
     ]);
+    BulkFraudRuntimeSettings::clearMemoForTests();
 
-    app(BulkFraudRuntimeSettings::class)->update($saved);
+    app(BulkFraudRuntimeSettings::class)->update(bulkSettingsPayload(['bulk_workers' => 2]));
 
     expect(config('fraud_check.bulk_workers'))->toBe(2)
-        ->and(config('fraud_check.bulk_incomplete_retries'))->toBe(4)
-        ->and(config('fraud_check.bulk_incomplete_retry_gap_seconds'))->toBe(8)
         ->and(app(MerchantBulkFraudCheck::class)->workers())->toBe(2)
-        ->and(app(MerchantBulkFraudCheck::class)->incompleteRetries())->toBe(4)
-        ->and(app(MerchantBulkFraudCheck::class)->incompleteRetryGapSeconds())->toBe(8)
-        ->and(PlatformSetting::query()->where('key', BulkFraudRuntimeSettings::SETTING_KEY)->exists())->toBeTrue();
+        ->and(config('fraud_check.bulk_incomplete_retries'))->toBe(5)
+        ->and(config('fraud_check.bulk_waiting.max_minutes'))->toBe(360)
+        ->and(PlatformSetting::query()->where('key', BulkFraudRuntimeSettings::SETTING_KEY)->value('value'))->toBe(['bulk_workers' => 2]);
 
     BulkFraudRuntimeSettings::clearMemoForTests();
-    config([
-        'fraud_check.bulk_workers' => 3,
-        'fraud_check.bulk_incomplete_retries' => 5,
-        'fraud_check.bulk_incomplete_retry_gap_seconds' => 5,
-    ]);
+    config(['fraud_check.bulk_workers' => 3]);
     app(BulkFraudRuntimeSettings::class)->applyOverrides();
 
-    expect(config('fraud_check.bulk_workers'))->toBe(2)
-        ->and(config('fraud_check.bulk_incomplete_retries'))->toBe(4);
+    expect(config('fraud_check.bulk_workers'))->toBe(2);
 
     app(BulkFraudRuntimeSettings::class)->resetToEnv();
 
     expect(config('fraud_check.bulk_workers'))->toBe(3)
-        ->and(config('fraud_check.bulk_incomplete_retries'))->toBe(5)
         ->and(PlatformSetting::query()->where('key', BulkFraudRuntimeSettings::SETTING_KEY)->exists())->toBeFalse();
 });
 
-it('lets an admin set the courier pace and the waiting time', function () {
+it('shows only the three speed settings and resets them to default', function () {
     $admin = bulkSettingsAdmin();
 
     $this->actingAs($admin)->get(route('frauds.limits'))
         ->assertOk()
-        ->assertSee('Pathao lookups per minute, per account')
-        ->assertSee('Seconds between bulk Paperfly lookups')
-        ->assertSee('Minutes a number may wait for a courier');
+        ->assertInertia(fn ($page) => $page
+            ->component('FraudCheck/Limits')
+            ->has('bulk.fields', 3)
+            ->where('bulk.defaults.bulk_workers', 3)
+            ->where('bulk.defaults.pathao_per_minute', 5)
+            ->where('bulk.defaults.paperfly_gap_seconds', 4)
+            ->where('bulk.overrides', []));
 
     $this->actingAs($admin)->put(route('frauds.limits.bulk.update'), bulkSettingsPayload([
         'pathao_per_minute' => 8,
-        'pathao_live_reserve' => 0,
         'paperfly_gap_seconds' => 6,
-        'paperfly_pause_minutes' => 10,
-        'redx_sample_skip_minutes' => 0,
-        'bulk_waiting_max_minutes' => 600,
     ]))->assertRedirect()->assertSessionHasNoErrors();
 
     expect(config('fraud_check.pace.pathao.per_window'))->toBe(8)
-        ->and(config('fraud_check.pace.pathao.live_reserve'))->toBe(0)
+        ->and(config('fraud_check.pace.pathao.live_reserve'))->toBe(1)
         ->and(config('fraud_check.pace.paperfly.bulk_gap_seconds'))->toBe(6)
-        ->and(config('fraud_check.pace.paperfly.block.pause_minutes'))->toBe(10)
-        ->and(config('fraud_check.redx_sample.skip_minutes'))->toBe(0)
-        ->and(config('fraud_check.bulk_waiting.max_minutes'))->toBe(600)
-        ->and(app(CourierPace::class)->status('pathao', ['acct-a'])['per_minute'])->toBe(7.7)
+        ->and(app(CourierPace::class)->status('pathao', ['acct-a'])['per_minute'])->toBe(6.8)
         ->and(app(CourierPace::class)->status('paperfly', ['acct-p'])['per_minute'])->toBe(10.0);
 
-    $this->actingAs($admin)->put(route('frauds.limits.bulk.update'), bulkSettingsPayload([
-        'pathao_per_minute' => 0,
-    ]))->assertSessionHasErrors('pathao_per_minute');
+    $this->actingAs($admin)->get(route('frauds.limits'))
+        ->assertInertia(fn ($page) => $page->where('bulk.overrides', ['pathao_per_minute' => 8, 'paperfly_gap_seconds' => 6]));
+
+    foreach ([['pathao_per_minute', 0], ['pathao_per_minute', 11], ['paperfly_gap_seconds', 1], ['bulk_workers', 6]] as [$field, $value]) {
+        $this->actingAs($admin)->put(route('frauds.limits.bulk.update'), bulkSettingsPayload([$field => $value]))
+            ->assertSessionHasErrors($field);
+    }
 
     expect(config('fraud_check.pace.pathao.per_window'))->toBe(8);
 
-    $this->actingAs($admin)->post(route('frauds.limits.bulk.reset'))->assertRedirect();
+    $this->actingAs($admin)->post(route('frauds.limits.bulk.reset'))
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Bulk check settings are back to default.');
 
     expect(config('fraud_check.pace.pathao.per_window'))->toBe(5)
-        ->and(config('fraud_check.pace.pathao.live_reserve'))->toBe(1)
         ->and(config('fraud_check.pace.paperfly.bulk_gap_seconds'))->toBe(4)
-        ->and(config('fraud_check.bulk_waiting.max_minutes'))->toBe(360);
+        ->and(config('fraud_check.bulk_workers'))->toBe(3);
 });
 
 it('lets an admin save and reset bulk settings without changing daily limits', function () {
     $admin = bulkSettingsAdmin();
-
-    $this->actingAs($admin)->get(route('frauds.limits'))
-        ->assertOk()
-        ->assertSee('Incomplete retries')
-        ->assertSee('Numbers checked at once');
-
     $pluginLimit = config('fraud_check.plugin_free_checks_without_steadfast');
 
     $this->actingAs($admin)->put(route('frauds.limits.bulk.update'), bulkSettingsPayload([
         'bulk_workers' => 2,
-        'bulk_incomplete_retries' => 5,
     ]))->assertRedirect();
 
     expect(config('fraud_check.bulk_workers'))->toBe(2)
         ->and(config('fraud_check.plugin_free_checks_without_steadfast'))->toBe($pluginLimit);
 
-    $this->actingAs($admin)->put(route('frauds.limits.bulk.update'), bulkSettingsPayload([
-        'bulk_incomplete_retries' => 9,
-    ]))->assertSessionHasErrors('bulk_incomplete_retries');
-
-    expect(config('fraud_check.bulk_workers'))->toBe(2);
-
     $this->actingAs($admin)->post(route('frauds.limits.bulk.reset'))
         ->assertRedirect();
 
-    expect(config('fraud_check.bulk_workers'))->toBe(3)
-        ->and(config('fraud_check.bulk_incomplete_retries'))->toBe(5);
+    expect(config('fraud_check.bulk_workers'))->toBe(3);
 });
 
 it('lets an admin turn background checking off and start one pass', function () {
