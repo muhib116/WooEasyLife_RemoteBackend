@@ -9,6 +9,7 @@ use App\Services\Courier\CourierConfigurationResolver;
 use App\Services\Courier\CourierLogoUrl;
 use App\Services\Courier\CourierShipmentService;
 use App\Services\Courier\SteadfastNotificationsService;
+use App\Services\Courier\SteadfastCancelRequestStateException;
 use App\Services\Courier\SteadfastParcelNotesService;
 use App\Services\Courier\SteadfastReturnRequestsService;
 use App\Services\Courier\SteadfastConsignmentService;
@@ -688,6 +689,8 @@ class SteadFastController extends Controller
             'status' => ['nullable', 'string', 'max:32'],
             'date' => ['nullable', 'date_format:Y-m-d'],
             'mode' => ['nullable', 'string', 'in:quick,full'],
+            'return_request_ids' => ['nullable', 'array', 'max:10'],
+            'return_request_ids.*' => ['regex:/^\d{1,20}$/'],
         ]);
 
         if ($validator->fails()) {
@@ -710,7 +713,8 @@ class SteadFastController extends Controller
                 $portalCredentials,
                 $request->input('status'),
                 $request->input('date'),
-                $request->input('mode', 'full')
+                $request->input('mode', 'full'),
+                array_map('strval', (array) $request->input('return_request_ids', []))
             );
 
             return $this->successResponse($data);
@@ -747,15 +751,29 @@ class SteadFastController extends Controller
             );
         }
 
+        $config = $this->getConfig();
+
         try {
             $data = $this->returnRequestsService->updateStatus(
                 (string) $request->input('action'),
                 $portalCredentials,
                 (string) $request->input('consignment_id'),
-                $request->input('id')
+                $request->input('id'),
+                $config ? [
+                    'api_key' => (string) $config->api_key,
+                    'secret_key' => (string) $config->secret_key,
+                ] : null
             );
 
             return $this->successResponse($data, 'Return request status updated');
+        } catch (SteadfastCancelRequestStateException $state) {
+            // SteadFast's state rules the decision out; the plugin saves `data` as the real state.
+            return response()->json([
+                'status' => false,
+                'message' => $state->getMessage(),
+                'data' => $state->context(),
+                'errors' => null,
+            ], $state->status());
         } catch (\Throwable $th) {
             LogHelper::saveLog('Steadfast return request status update failed', $th->getMessage());
 

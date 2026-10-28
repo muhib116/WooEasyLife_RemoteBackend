@@ -185,19 +185,51 @@ HTML;
         ->and($codes[0])->toBe('SFR000000TESTCODE');
 });
 
-it('reads the cancel-request id from the parcel details notice', function () {
-    $html = <<<'HTML'
-<div class="sf-parcel" data-id="299879646">
-  <div class="sf-parcel__notice sf-parcel__creq" data-sf-creq="22315485"></div>
+it('reads the cancel-request item and its state from the parcel details notice', function () {
+    $pending = <<<'HTML'
+<div class="sf-parcel" v-pre="" data-sf-parcel="" data-id="299879646">
+  <div class="sf-parcel__notice sf-parcel__creq" data-sf-creq="22315485">
+    <p><b>Cancellation requested by the recipient</b> — "Wrong size"</p>
+    <div class="sf-creq-item__decide" data-sf-creq-actions="">
+      <button type="button" data-sf-creq-decide="2">Ask to resend</button>
+      <button type="button" data-sf-creq-decide="1" data-confirm="Cancel this parcel?">Cancel parcel</button>
+    </div>
+  </div>
 </div>
 HTML;
+    $decided = preg_replace(
+        '/<button\b.*<\/button>/s',
+        '<span class="sf-badge sf-badge--info"><span class="sf-badge__dot"></span>Resend requested</span>',
+        $pending
+    );
 
     $service = (new ReflectionClass(App\Services\Courier\SteadfastReturnRequestsService::class))
         ->newInstanceWithoutConstructor();
-    $method = new ReflectionMethod(App\Services\Courier\SteadfastReturnRequestsService::class, 'extractCancelRequestItemIdFromHtml');
+    $method = new ReflectionMethod(App\Services\Courier\SteadfastReturnRequestsService::class, 'readParcelCancelRequest');
     $method->setAccessible(true);
 
-    expect($method->invoke($service, $html, '299879646'))->toBe('22315485');
+    expect($method->invoke($service, $pending, '299879646'))
+        ->toBe(['item_id' => '22315485', 'status' => 'pending', 'label' => 'Pending'])
+        ->and($method->invoke($service, $decided, '299879646'))
+        ->toBe(['item_id' => '22315485', 'status' => 'resend_request', 'label' => 'Resend requested'])
+        ->and(fn () => $method->invoke($service, $pending, '111111111'))
+        ->toThrow(RuntimeException::class, 'instead of 111111111');
+});
+
+it('reads SteadFast portal and Packzy dates as Bangladesh time', function () {
+    $service = (new ReflectionClass(App\Services\Courier\SteadfastReturnRequestsService::class))
+        ->newInstanceWithoutConstructor();
+    $method = new ReflectionMethod(App\Services\Courier\SteadfastReturnRequestsService::class, 'portalDateTime');
+    $method->setAccessible(true);
+
+    expect($method->invoke($service, '29 Sep 2026, 08:29 PM'))->toBe('2026-09-29 20:29:00')
+        ->and($method->invoke($service, 'July 17, 2026, 07:09:52 PM'))->toBe('2026-07-17 19:09:52')
+        ->and($method->invoke($service, '2026-09-20T23:11:45.000000Z'))->toBe('2026-09-21 05:11:45')
+        ->and($method->invoke($service, '2026-10-27 21:02:00'))->toBe('2026-10-27 21:02:00')
+        ->and($method->invoke($service, '0000-00-00 00:00:00'))->toBe('')
+        ->and($method->invoke($service, '31 Feb 2026, 10:00 AM'))->toBe('')
+        ->and($method->invoke($service, 'yesterday'))->toBe('')
+        ->and($method->invoke($service, null))->toBe('');
 });
 
 it('extracts tracking code candidates from consignment html', function () {

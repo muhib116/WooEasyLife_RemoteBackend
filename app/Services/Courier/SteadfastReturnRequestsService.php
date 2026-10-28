@@ -9,14 +9,43 @@ use RuntimeException;
 /**
  * Steadfast return / cancel-request hub service.
  *
- * Create + list prefer Packzy public API (Api-Key / Secret-Key).
- * Confirm cancel / request resend use merchant portal:
+ * Two queues:
+ * - Merchant return requests ("Ask to return") live in the Packzy API:
+ *   create_return_request, get_return_requests, get_return_request/{id}.
+ * - Recipient cancel requests only exist on the merchant portal
+ *   (cancel-requests/show/{tab}); Packzy has no endpoint for them.
+ *
+ * Decide reads the parcel page first, then makes the portal's own call once:
  * POST /user/consignment/cancel-request/confirm-request
  * FormData: item_id + verify_status (1=Confirm Cancel, 2=Request to Resend).
+ *
+ * Dates leave this service as Bangladesh time, `Y-m-d H:i:s`.
  */
 class SteadfastReturnRequestsService
 {
     private const PACKZY_BASE = 'https://portal.packzy.com/api/v1';
+
+    /** SteadFast prints portal times in Bangladesh time. */
+    private const PORTAL_TIMEZONE = 'Asia/Dhaka';
+
+    private const CONFIRM_REQUEST_PATH = '/user/consignment/cancel-request/confirm-request';
+
+    /** Delivery statuses where confirming a cancel would cancel a parcel the customer already has. */
+    private const CONFIRM_BLOCKING_DELIVERY_STATUSES = [
+        'delivered',
+        'partial_delivered',
+        'delivered_approval_pending',
+        'partial_delivered_approval_pending',
+    ];
+
+    /** Pages per tab in a quick sync. New requests and fresh decisions sit at the front. */
+    private const PORTAL_QUICK_PAGES_PER_TAB = 3;
+
+    /** Undated pages to filter when the portal's dated list fails. */
+    private const DATED_FALLBACK_PAGES = 5;
+
+    /** Merchant return requests read by id in one list call. */
+    private const MAX_TRACKED_RETURN_REQUESTS = 10;
 
     /** Portal cancel-request tab index → status slug. */
     private const PORTAL_TAB_STATUSES = [
@@ -29,6 +58,15 @@ class SteadfastReturnRequestsService
 
     /** Safety cap when walking SteadFast cancel-requests ?page=N links. */
     private const MAX_PORTAL_PAGES_PER_TAB = 40;
+
+    /**
+     * Tab walk order. Resent comes before Cancelled: Cancelled can hold
+     * thousands of requests (100+ pages) and would use up the deadline first.
+     */
+    private const PORTAL_TAB_ORDER = [0, 1, 2, 4, 3];
+
+    /** Newest pages of the Cancelled history read in a full sync. */
+    private const PORTAL_CANCELLED_PAGES = 10;
 
     /** Cards on a full SteadFast cancel-request page. A short page is the end of that tab. */
     private const PORTAL_TAB_PAGE_SIZE = 20;
@@ -104,7 +142,8 @@ class SteadfastReturnRequestsService
      * @param  array{api_key: string, secret_key: string}  $apiConfig
      * @param  array{username?: string, password?: string}|null  $portalCredentials
      * @param  string|null  $mode  `quick` (active tabs) or `full` (all tabs/pages)
-     * @return array{items: list<array<string, mixed>>, counts: array<string, int>, source: string, mode: string, authoritative_statuses: list<string>}
+     * @param  list<string>|null  $returnRequestIds  Open merchant return requests to read by id.
+     * @return array{items: list<array<string, mixed>>, counts: array<string, int>, source: string, mode: string, authoritative_statuses: list<string>, return_requests: list<array<string, mixed>>}
      */
     public function list(
         array $apiConfig,
@@ -112,11 +151,14 @@ class SteadfastReturnRequestsService
         ?string $status = null,
         ?string $date = null,
         ?string $mode = 'full',
+        ?array $returnRequestIds = null,
     ): array {
         $status = $this->normalizeStatus($status);
         $mode = $this->normalizeListMode($mode);
         /** @var array<string, array<string, mixed>> $packzyByConsignment */
         $packzyByConsignment = [];
+        /** @var array<string, array<string, mixed>> $returnRequests */
+        $returnRequests = [];
         /** @var array<string, array<string, mixed>> $byConsignment */
         $byConsignment = [];
         $packzyOk = false;
@@ -129,29 +171,44 @@ class SteadfastReturnRequestsService
         // Packzy return-request API (different queue from portal cancel-requests).
         try {
             $json = $this->packzyRequest('GET', '/get_return_requests', $apiConfig);
-            $raw = $json['data'] ?? $json;
-            if (! is_array($raw)) {
-                $raw = [];
-            }
-            if (isset($raw['items']) && is_array($raw['items'])) {
-                $raw = $raw['items'];
-            }
 
-            foreach ($raw as $row) {
-                if (! is_array($row)) {
-                    continue;
-                }
+            foreach ($this->packzyRows($json) as $row) {
                 $item = $this->normalizeItem($row);
                 $key = (string) ($item['consignment_id'] ?? '');
                 if ($key === '') {
                     continue;
                 }
                 $packzyByConsignment[$key] = $item;
+                $request = $this->normalizeReturnRequest($row);
+                if ($request['id'] !== '') {
+                    $returnRequests[$request['id']] = $request;
+                }
             }
             $packzyOk = true;
         } catch (\Throwable $th) {
             $lastError = $th;
             LogHelper::saveLog('Steadfast return list API failed', $th->getMessage());
+        }
+
+        // Page 1 holds the newest ten. Older open requests are read one by one.
+        $tracked = array_slice(array_values(array_unique(array_filter(
+            array_map(static fn ($id) => preg_replace('/\D+/', '', (string) $id) ?? '', $returnRequestIds ?? []),
+            static fn ($id) => $id !== ''
+        ))), 0, self::MAX_TRACKED_RETURN_REQUESTS);
+        foreach ($tracked as $returnId) {
+            if (isset($returnRequests[$returnId])) {
+                continue;
+            }
+            try {
+                $json = $this->packzyRequest('GET', '/get_return_request/'.$returnId, $apiConfig, null, 15);
+                $row = is_array($json['data'] ?? null) ? $json['data'] : $json;
+                $request = is_array($row) ? $this->normalizeReturnRequest($row) : null;
+                if ($request !== null && $request['id'] === $returnId) {
+                    $returnRequests[$returnId] = $request;
+                }
+            } catch (\Throwable $th) {
+                LogHelper::saveLog('Steadfast return request read failed', $returnId.': '.$th->getMessage());
+            }
         }
 
         // Portal cancel-requests is the merchant UI source of truth.
@@ -172,9 +229,10 @@ class SteadfastReturnRequestsService
                     }
 
                     // Enrich with Packzy reason/invoice when the same consignment exists there.
+                    // Never the id: a Packzy return id is not a portal cancel item.
                     if (isset($packzyByConsignment[$key])) {
                         $packzy = $packzyByConsignment[$key];
-                        foreach (['reason', 'invoice', 'tracking_code', 'customer_name', 'charge', 'id'] as $field) {
+                        foreach (['reason', 'invoice', 'tracking_code', 'customer_name', 'charge'] as $field) {
                             $incoming = $packzy[$field] ?? null;
                             if ($incoming === null || $incoming === '') {
                                 continue;
@@ -234,7 +292,47 @@ class SteadfastReturnRequestsService
             'source' => $portalOk ? 'portal' : 'packzy',
             'mode' => $mode,
             'authoritative_statuses' => $portalOk ? $authoritativeStatuses : [],
+            'return_requests' => array_values($returnRequests),
         ];
+    }
+
+    /**
+     * Rows from a Packzy list response: a bare list, `{data: [...]}`, or a paginator.
+     *
+     * @param  array<string, mixed>  $json
+     * @return list<array<string, mixed>>
+     */
+    private function packzyRows(array $json): array
+    {
+        $raw = $json['data'] ?? $json;
+        if (! is_array($raw)) {
+            return [];
+        }
+        if (isset($raw['items']) && is_array($raw['items'])) {
+            $raw = $raw['items'];
+        } elseif (isset($raw['data']) && is_array($raw['data']) && array_is_list($raw['data'])) {
+            $raw = $raw['data'];
+        }
+        if (! array_is_list($raw)) {
+            return [];
+        }
+
+        return array_values(array_filter($raw, 'is_array'));
+    }
+
+    /**
+     * One merchant return request with Packzy's own status word kept beside the slug.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function normalizeReturnRequest(array $row): array
+    {
+        $item = $this->normalizeItem($row);
+        $item['id'] = preg_replace('/\D+/', '', (string) ($row['id'] ?? '')) ?? '';
+        $item['api_status'] = strtolower(trim((string) ($row['status'] ?? '')));
+
+        return $item;
     }
 
     private function normalizeListMode(?string $mode): string
@@ -244,11 +342,23 @@ class SteadfastReturnRequestsService
         return $mode === 'quick' ? 'quick' : 'full';
     }
 
+    /**
+     * Confirm cancel or ask to resend, the way the portal's own buttons do it.
+     *
+     * SteadFast's state is read from the parcel page before anything is
+     * posted. A request that is already decided is reported and never posted
+     * again; otherwise exactly one POST goes to confirm-request.
+     *
+     * @param  array{username: string, password: string}  $portalCredentials
+     * @param  array{api_key: string, secret_key: string}|null  $apiConfig  Packzy keys for the delivered-parcel check.
+     * @return array{consignment_id: string, id: string, status: string, action: string, verify_status: int, already_decided: bool}
+     */
     public function updateStatus(
         string $action,
         array $portalCredentials,
         ?string $consignmentId = null,
         ?string $remoteId = null,
+        ?array $apiConfig = null,
     ): array {
         $action = $this->sanitizeAction($action);
         if (! in_array($action, ['confirm_cancel', 'request_resend'], true)) {
@@ -261,403 +371,377 @@ class SteadfastReturnRequestsService
         }
 
         $remoteId = $remoteId !== null ? trim((string) $remoteId) : '';
-        if ($remoteId === $consignmentId) {
-            // Portal scrapes often store consignment as id; keep as consignment only.
+        if ($remoteId === $consignmentId || ! preg_match('/^\d+$/', $remoteId)) {
             $remoteId = '';
         }
+
+        if ($action === 'confirm_cancel' && $apiConfig !== null) {
+            $this->assertParcelStillCancellable($consignmentId, $apiConfig);
+        }
+
+        $verifyStatus = $action === 'confirm_cancel' ? 1 : 2;
 
         return $this->portal->withSession($portalCredentials, function (
             SteadfastPortalSessionClient $client,
             string $host,
             array $cookies
-        ) use ($action, $consignmentId, $remoteId, $portalCredentials) {
-            $listPath = '/user/consignment/cancel-requests/show/0';
-            $detailPath = '/user/consignment/'.rawurlencode($consignmentId);
-
-            // Prefer consignment detail (Cancel Request select), then pending list.
-            $page = $client->get($detailPath, $host, $cookies, expectJson: false);
-            $cookies = $client->absorbCookies($cookies, $page, $host, $portalCredentials);
-            if ($page->status() === 404 || $client->looksLikeLoginPage($page->body())) {
-                $page = $client->get($listPath, $host, $cookies, expectJson: false);
-                $cookies = $client->absorbCookies($cookies, $page, $host, $portalCredentials);
-            }
-            $this->assertAuthenticatedHtml($client, $page->body(), $page->status(), 'cancel-request');
-
-            $csrf = $this->extractMetaCsrfToken($page->body())
-                ?? $this->extractInputValue($page->body(), '_token');
-
-            $itemId = $this->resolveCancelRequestItemId(
+        ) use ($action, $consignmentId, $remoteId, $portalCredentials, $verifyStatus) {
+            // withSession runs this again after a re-login, so the state is
+            // re-read before every POST and a decided request is not posted twice.
+            [$request, $html, $cookies] = $this->loadCancelRequest(
                 $client,
                 $host,
                 $cookies,
                 $portalCredentials,
-                $consignmentId,
-                $remoteId,
-                $page->body()
+                $consignmentId
             );
 
-            // Portal Vue cancel-request component posts:
-            // axios.post('/user/consignment/cancel-request/confirm-request', FormData{
-            //   item_id, verify_status: 1|2
-            // })
-            $verifyStatus = $action === 'confirm_cancel' ? '1' : '2';
-            $candidates = [];
-
-            if ($itemId !== '') {
-                $candidates[] = [
-                    'path' => '/user/consignment/cancel-request/confirm-request',
-                    'payload' => array_filter([
-                        '_token' => $csrf,
-                        'item_id' => $itemId,
-                        'verify_status' => $verifyStatus,
-                    ], static fn ($v) => $v !== null && $v !== ''),
-                    'referer' => $this->absoluteUrl($host, $detailPath),
-                ];
-                $candidates[] = [
-                    'path' => '/user/consignment/cancel-request/confirm-request',
-                    'payload' => array_filter([
-                        '_token' => $csrf,
-                        'item_id' => $itemId,
-                        'consignment_id' => $consignmentId,
-                        'verify_status' => $verifyStatus,
-                    ], static fn ($v) => $v !== null && $v !== ''),
-                    'referer' => $this->absoluteUrl($host, $detailPath),
-                ];
-            }
-
-            $statusValue = $action === 'confirm_cancel' ? 'confirm_cancel' : 'request_to_resend';
-            $discovered = $this->discoverCancelStatusCandidates(
-                $page->body(),
-                $consignmentId,
-                $csrf,
-                $action,
-                $statusValue,
-                $itemId !== '' ? $itemId : ($remoteId !== '' ? $remoteId : null)
-            );
-            foreach ($discovered as $row) {
-                $row['referer'] = $this->absoluteUrl($host, $listPath);
-                $candidates[] = $row;
-            }
-
-            $candidates = array_merge($candidates, [
-                [
-                    'path' => '/user/consignment/cancel-requests/change-status',
-                    'payload' => array_filter([
-                        '_token' => $csrf,
-                        'consignment_id' => $consignmentId,
-                        'id' => $itemId !== '' ? $itemId : null,
-                        'status' => $verifyStatus,
-                        'verify_status' => $verifyStatus,
-                    ], static fn ($v) => $v !== null && $v !== ''),
-                    'referer' => $this->absoluteUrl($host, $listPath),
-                ],
-                [
-                    'path' => '/user/consignment/cancel-requests/update',
-                    'payload' => array_filter([
-                        '_token' => $csrf,
-                        'consignment_id' => $consignmentId,
-                        'id' => $itemId !== '' ? $itemId : null,
-                        'status' => (int) $verifyStatus,
-                        'verify_status' => (int) $verifyStatus,
-                    ], static fn ($v) => $v !== null && $v !== ''),
-                    'referer' => $this->absoluteUrl($host, $listPath),
-                ],
-            ]);
-
-            $lastError = 'Unable to update Steadfast cancel/return request status. '
-                .'Confirm portal login in Config → Courier → Steadfast, then try again.';
-            if ($itemId === '') {
-                $lastError = 'Could not find the SteadFast cancel-request item for this consignment. '
-                    .'Open the parcel on SteadFast, or Refresh return requests, then try again.';
-            }
-
-            foreach ($candidates as $candidate) {
-                $path = (string) ($candidate['path'] ?? '');
-                $payload = is_array($candidate['payload'] ?? null) ? $candidate['payload'] : [];
-                if ($path === '' || $payload === []) {
-                    continue;
-                }
-
-                $referer = (string) ($candidate['referer'] ?? $this->absoluteUrl($host, $listPath));
-                $response = $client->postMultipart(
-                    $path,
-                    $payload,
-                    $host,
-                    $cookies,
-                    $referer
+            if ($remoteId !== '' && $remoteId !== $request['item_id']) {
+                LogHelper::saveLog(
+                    'Steadfast decide item differs from parcel page',
+                    $consignmentId.': sent '.$remoteId.', portal '.$request['item_id']
                 );
-                $cookies = $client->absorbCookies($cookies, $response, $host, $portalCredentials);
-
-                if ($response->status() === 404) {
-                    continue;
-                }
-
-                if ($response->status() === 401 || $response->status() === 419 || $client->looksLikeLoginPage($response->body())) {
-                    throw new RuntimeException('Steadfast portal session expired while updating return status.');
-                }
-
-                $body = $response->json();
-                if (is_array($body)) {
-                    $data = is_array($body['data'] ?? null) ? $body['data'] : [];
-                    $returnedVerify = $data['verify_status'] ?? $body['verify_status'] ?? null;
-                    $ok = ($body['status'] ?? null) === true
-                        || (int) ($body['status'] ?? 0) === 1
-                        || ($body['success'] ?? false) === true
-                        || (($body['status'] ?? null) === 'success')
-                        || (string) $returnedVerify === $verifyStatus
-                        || (int) $returnedVerify === (int) $verifyStatus;
-                    if ($ok) {
-                        return [
-                            'consignment_id' => $consignmentId,
-                            'id' => $itemId !== '' ? $itemId : ($remoteId !== '' ? $remoteId : null),
-                            'status' => $action === 'confirm_cancel' ? 'confirmed' : 'resend_request',
-                            'action' => $action,
-                            'verify_status' => (int) $verifyStatus,
-                        ];
-                    }
-                    $message = trim((string) ($body['message'] ?? ''));
-                    if ($message !== '') {
-                        $lastError = $message;
-                    }
-                    continue;
-                }
-
-                $html = (string) $response->body();
-                $looksError = preg_match('/\b(error|failed|invalid|unauthorized|forbidden)\b/i', $html) === 1;
-                $looksSuccessFlash = preg_match('/\b(success|updated|confirmed|resend)\b/i', $html) === 1;
-                $provisionalOk = $response->redirect()
-                    || ($response->successful() && $looksSuccessFlash && ! $looksError);
-
-                if (! $provisionalOk) {
-                    continue;
-                }
-
-                $verify = $client->get($listPath, $host, $cookies, expectJson: false);
-                $cookies = $client->absorbCookies($cookies, $verify, $host, $portalCredentials);
-                $stillPending = $this->pendingCancelRequestsContainConsignment($verify->body(), $consignmentId);
-                if ($stillPending) {
-                    $lastError = 'SteadFast did not confirm the status change for this consignment. Try again from the portal or check credentials.';
-                    continue;
-                }
-
-                return [
-                    'consignment_id' => $consignmentId,
-                    'id' => $itemId !== '' ? $itemId : ($remoteId !== '' ? $remoteId : null),
-                    'status' => $action === 'confirm_cancel' ? 'confirmed' : 'resend_request',
-                    'action' => $action,
-                    'verify_status' => (int) $verifyStatus,
-                ];
             }
 
-            throw new RuntimeException($lastError);
+            if ($request['status'] !== 'pending') {
+                return $this->settledDecision($action, $consignmentId, $request);
+            }
+
+            $response = $client->postMultipart(
+                $this->confirmRequestPath($html, $host),
+                array_filter([
+                    '_token' => $this->extractMetaCsrfToken($html) ?? $this->extractInputValue($html, '_token'),
+                    'item_id' => $request['item_id'],
+                    'verify_status' => (string) $verifyStatus,
+                ], static fn ($v) => $v !== null && $v !== ''),
+                $host,
+                $cookies,
+                $this->absoluteUrl($host, '/user/consignment/'.rawurlencode($consignmentId)),
+                followRedirects: false,
+            );
+            $cookies = $client->absorbCookies($cookies, $response, $host, $portalCredentials);
+
+            $location = strtolower((string) $response->header('Location'));
+            if ($response->status() === 401
+                || $response->status() === 419
+                || ($response->redirect() && str_contains($location, '/login'))
+                || $client->looksLikeLoginPage($response->body())
+            ) {
+                throw new RuntimeException('Steadfast portal session expired while updating return status.');
+            }
+
+            $body = $response->json();
+            if ($response->successful() && is_array($body) && $this->portalJsonOk($body)) {
+                $returned = $body['data']['verify_status'] ?? $body['verify_status'] ?? $verifyStatus;
+                $status = self::PORTAL_TAB_STATUSES[(int) $returned]
+                    ?? ($action === 'confirm_cancel' ? 'confirmed' : 'resend_request');
+
+                return $this->decisionResult($action, $consignmentId, $request['item_id'], $status, false);
+            }
+
+            // Not the portal's JSON success: the parcel page says what happened.
+            try {
+                [$after] = $this->loadCancelRequest($client, $host, $cookies, $portalCredentials, $consignmentId);
+            } catch (SteadfastCancelRequestStateException) {
+                $after = null;
+            }
+            if ($after !== null && $after['status'] !== 'pending') {
+                return $this->settledDecision($action, $consignmentId, $after, false);
+            }
+
+            $message = is_array($body) ? trim((string) ($body['message'] ?? '')) : '';
+            throw new RuntimeException($message !== ''
+                ? $message
+                : 'SteadFast did not save the decision (HTTP '.$response->status().'). Nothing changed; refresh and try again, or decide on the SteadFast portal.');
         });
     }
 
     /**
-     * Resolve SteadFast cancel-request row id (item_id) for confirm-request.
+     * Packzy's live delivery status. Fails open: no answer never blocks a decision.
      *
-     * @param  array{username: string, password: string}  $portalCredentials
-     * @param  array<string, string>  $cookies
+     * @param  array{api_key: string, secret_key: string}  $apiConfig
      */
-    private function resolveCancelRequestItemId(
-        SteadfastPortalSessionClient $client,
-        string $host,
-        array &$cookies,
-        array $portalCredentials,
-        string $consignmentId,
-        string $remoteId,
-        string $seedHtml = '',
-    ): string {
-        if ($remoteId !== '' && $remoteId !== $consignmentId && preg_match('/^\d+$/', $remoteId)) {
-            return $remoteId;
-        }
-
-        $fromSeed = $this->extractCancelRequestItemIdFromHtml($seedHtml, $consignmentId);
-        if ($fromSeed !== '') {
-            return $fromSeed;
-        }
-
-        foreach ([
-            '/user/consignment/'.rawurlencode($consignmentId),
-            '/user/consignment/cancel-requests/show/0',
-        ] as $path) {
-            $page = $client->get($path, $host, $cookies, expectJson: false);
-            $cookies = $client->absorbCookies($cookies, $page, $host, $portalCredentials);
-            if ($page->status() === 404 || $client->looksLikeLoginPage($page->body())) {
-                continue;
-            }
-            $found = $this->extractCancelRequestItemIdFromHtml($page->body(), $consignmentId);
-            if ($found !== '') {
-                return $found;
-            }
-        }
-
-        return '';
-    }
-
-    private function extractCancelRequestItemIdFromHtml(string $html, string $consignmentId): string
+    private function assertParcelStillCancellable(string $consignmentId, array $apiConfig): void
     {
-        if ($html === '' || $consignmentId === '') {
-            return '';
+        try {
+            $json = $this->packzyRequest('GET', '/status_by_cid/'.rawurlencode($consignmentId), $apiConfig, null, 8);
+        } catch (\Throwable $th) {
+            LogHelper::saveLog('Steadfast decide status check skipped', $consignmentId.': '.$th->getMessage());
+
+            return;
         }
 
-        $parcelId = preg_quote($consignmentId, '/');
-        if (preg_match('/<div\b[^>]*\bdata-id="'.$parcelId.'"[^>]*>/i', $html)
-            && preg_match('/<div\b([^>]*\bsf-parcel__creq\b[^>]*)>/i', $html, $creqTag)
-            && preg_match('/\bdata-sf-creq="(\d+)"/', (string) $creqTag[1], $detailMatch)
-        ) {
-            $id = (string) $detailMatch[1];
-            if ($id !== '' && $id !== $consignmentId) {
-                return $id;
-            }
+        $status = str_replace([' ', '-'], '_', strtolower(trim((string) ($json['delivery_status'] ?? ''))));
+        if (! in_array($status, self::CONFIRM_BLOCKING_DELIVERY_STATUSES, true)) {
+            return;
         }
 
-        if (preg_match_all('/<li\b([^>]*)>(.*?)<\/li>/is', $html, $cards, PREG_SET_ORDER)) {
-            foreach ($cards as $card) {
-                if (! preg_match('/\bdata-sf-creq="(\d+)"/', (string) $card[1], $idMatch)) {
-                    continue;
-                }
-                $id = (string) $idMatch[1];
-                $body = (string) $card[2];
-                $needle = '/user/consignment/'.$consignmentId;
-                if (! str_contains($body, $needle) && ! str_contains($body, '#'.$consignmentId)) {
-                    continue;
-                }
-                if ($id !== '' && $id !== $consignmentId) {
-                    return $id;
-                }
-            }
-        }
-
-        if (preg_match_all('/<cancel-request\s+:item="([^"]+)"/i', $html, $itemMatches)) {
-            foreach ($itemMatches[1] as $encoded) {
-                $decoded = html_entity_decode($encoded, ENT_QUOTES | ENT_HTML5);
-                $payload = json_decode($decoded, true);
-                if (! is_array($payload)) {
-                    continue;
-                }
-                $consignment = is_array($payload['consignment'] ?? null) ? $payload['consignment'] : [];
-                $rowConsignment = (string) ($payload['consignment_id'] ?? $consignment['id'] ?? '');
-                if ($rowConsignment !== $consignmentId) {
-                    continue;
-                }
-                $id = trim((string) ($payload['id'] ?? ''));
-                if ($id !== '' && $id !== $consignmentId && preg_match('/^\d+$/', $id)) {
-                    return $id;
-                }
-            }
-        }
-
-        if (preg_match_all(
-            '/\{[^{}]{0,400}"id"\s*:\s*(\d+)[^{}]{0,400}"consignment_id"\s*:\s*"?'.preg_quote($consignmentId, '/').'"?[^{}]{0,200}\}/s',
-            $html,
-            $jsonMatches,
-            PREG_SET_ORDER
-        )) {
-            foreach ($jsonMatches as $match) {
-                $id = (string) ($match[1] ?? '');
-                if ($id !== '' && $id !== $consignmentId) {
-                    return $id;
-                }
-            }
-        }
-
-        return '';
-    }
-
-    private function pendingCancelRequestsContainConsignment(string $html, string $consignmentId): bool
-    {
-        if ($consignmentId === '' || $html === '') {
-            return false;
-        }
-
-        $rows = $this->parseCancelRequestRows($html, 'pending');
-        foreach ($rows as $row) {
-            if ((string) ($row['consignment_id'] ?? '') === $consignmentId) {
-                return true;
-            }
-        }
-
-        return str_contains($html, $consignmentId);
+        throw new SteadfastCancelRequestStateException(
+            'SteadFast shows parcel '.$consignmentId.' as '.str_replace('_', ' ', $status)
+                .', so it cannot be cancelled. Nothing was changed.',
+            [
+                'code' => 'parcel_not_cancellable',
+                'consignment_id' => $consignmentId,
+                'courier_status' => $status,
+            ]
+        );
     }
 
     /**
-     * Pull candidate POST targets from cancel-requests HTML near this consignment.
+     * SteadFast's cancel request for one parcel: the parcel page first, then the pending tab.
      *
-     * @return list<array{path: string, payload: array<string, mixed>}>
+     * @param  array<string, string>  $cookies
+     * @param  array{username: string, password: string}  $credentials
+     * @return array{0: array{item_id: string, status: string, label: string}, 1: string, 2: array<string, string>}
      */
-    private function discoverCancelStatusCandidates(
-        string $html,
+    private function loadCancelRequest(
+        SteadfastPortalSessionClient $client,
+        string $host,
+        array $cookies,
+        array $credentials,
         string $consignmentId,
-        ?string $csrf,
-        string $action,
-        string $statusValue,
-        ?string $remoteId,
     ): array {
-        $candidates = [];
+        $page = $client->get('/user/consignment/'.rawurlencode($consignmentId), $host, $cookies, expectJson: false);
+        $cookies = $client->absorbCookies($cookies, $page, $host, $credentials);
+        $this->assertAuthenticatedHtml($client, $page->body(), $page->status(), 'parcel '.$consignmentId);
 
-        if (preg_match_all(
-            '/<form\b[^>]*action=["\']([^"\']+)["\'][^>]*>(.*?)<\/form>/is',
-            $html,
-            $formMatches,
-            PREG_SET_ORDER
-        )) {
-            foreach ($formMatches as $match) {
-                $actionUrl = html_entity_decode((string) $match[1], ENT_QUOTES | ENT_HTML5);
-                $formBody = (string) $match[2];
-                if (! preg_match('/cancel[-_]?request/i', $actionUrl.$formBody)
-                    && ! str_contains($formBody, $consignmentId)
-                ) {
-                    continue;
+        $html = $page->successful() ? $page->body() : '';
+        $request = $html !== '' ? $this->readParcelCancelRequest($html, $consignmentId) : null;
+
+        if ($request === null) {
+            $list = $client->get('/user/consignment/cancel-requests/show/0', $host, $cookies, expectJson: false);
+            $cookies = $client->absorbCookies($cookies, $list, $host, $credentials);
+            $this->assertAuthenticatedHtml($client, $list->body(), $list->status(), 'cancel-requests');
+            if ($list->successful()) {
+                $request = $this->readCardCancelRequest($list->body(), $consignmentId)
+                    ?? $this->readLegacyCancelRequest($list->body(), $consignmentId);
+                if ($request !== null) {
+                    $html = $list->body();
                 }
-
-                $path = parse_url($actionUrl, PHP_URL_PATH) ?: $actionUrl;
-                if (! is_string($path) || $path === '') {
-                    continue;
-                }
-
-                $payload = [
-                    '_token' => $csrf,
-                    'consignment_id' => $consignmentId,
-                    'status' => $statusValue,
-                    'action' => $action,
-                ];
-                if ($remoteId) {
-                    $payload['id'] = $remoteId;
-                }
-
-                if (preg_match_all('/<input\b[^>]*>/i', $formBody, $inputMatches)) {
-                    foreach ($inputMatches[0] as $inputHtml) {
-                        if (! preg_match('/name=["\']([^"\']+)["\']/i', $inputHtml, $nameMatch)) {
-                            continue;
-                        }
-                        $name = $nameMatch[1];
-                        $value = '';
-                        if (preg_match('/value=["\']([^"\']*)["\']/i', $inputHtml, $valueMatch)) {
-                            $value = html_entity_decode($valueMatch[1], ENT_QUOTES | ENT_HTML5);
-                        }
-                        if ($name === '_token' && $csrf) {
-                            $payload['_token'] = $csrf;
-                            continue;
-                        }
-                        if ($value !== '') {
-                            $payload[$name] = $value;
-                        }
-                    }
-                }
-
-                $payload['consignment_id'] = $consignmentId;
-                $payload['status'] = $statusValue;
-                $payload['action'] = $action;
-
-                $candidates[] = [
-                    'path' => $path,
-                    'payload' => array_filter($payload, static fn ($v) => $v !== null && $v !== ''),
-                ];
             }
         }
 
-        return $candidates;
+        if ($request === null) {
+            throw new SteadfastCancelRequestStateException(
+                'SteadFast shows no cancellation request on parcel '.$consignmentId.'. Nothing was changed; refresh the list.',
+                ['code' => 'no_cancel_request', 'consignment_id' => $consignmentId]
+            );
+        }
+
+        return [$request, $html, $cookies];
+    }
+
+    /**
+     * The `sf-parcel__creq` notice on a parcel page (Oct 2026 markup), else the older Vue item.
+     *
+     * @return array{item_id: string, status: string, label: string}|null
+     */
+    private function readParcelCancelRequest(string $html, string $consignmentId): ?array
+    {
+        if (preg_match('/<div\b(?=[^>]*\bclass="[^"]*\bsf-parcel\b)[^>]*\bdata-id="(\d+)"/i', $html, $parcel)
+            && $parcel[1] !== $consignmentId
+        ) {
+            throw new RuntimeException(
+                'SteadFast opened parcel '.$parcel[1].' instead of '.$consignmentId.'. Nothing was changed.'
+            );
+        }
+
+        if (preg_match('/<div\b[^>]*\bsf-parcel__creq\b[^>]*>/i', $html, $tag, PREG_OFFSET_CAPTURE)
+            && preg_match('/\bdata-sf-creq="(\d+)"/', $tag[0][0], $item)
+        ) {
+            return ['item_id' => $item[1]] + $this->cancelRequestState(substr($html, (int) $tag[0][1], 8000));
+        }
+
+        return $this->readLegacyCancelRequest($html, $consignmentId);
+    }
+
+    /**
+     * A cancel-request card (`li.sf-creq-item`) for this parcel on a tab page.
+     *
+     * @return array{item_id: string, status: string, label: string}|null
+     */
+    private function readCardCancelRequest(string $html, string $consignmentId): ?array
+    {
+        if (! preg_match_all('/<li\b[^>]*\bdata-sf-creq="(\d+)"[^>]*>(.*?)<\/li>/is', $html, $cards, PREG_SET_ORDER)) {
+            return null;
+        }
+
+        $link = '#/user/consignment/'.preg_quote($consignmentId, '#').'(?!\d)#';
+        foreach ($cards as $card) {
+            if (preg_match($link, (string) $card[2])) {
+                return ['item_id' => (string) $card[1]] + $this->cancelRequestState((string) $card[2]);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Older markup: `<cancel-request :item="{...}">`, shown while the request waits.
+     *
+     * @return array{item_id: string, status: string, label: string}|null
+     */
+    private function readLegacyCancelRequest(string $html, string $consignmentId): ?array
+    {
+        if (! preg_match_all('/<cancel-request\s+:item="([^"]+)"/i', $html, $matches)) {
+            return null;
+        }
+
+        foreach ($matches[1] as $encoded) {
+            $payload = json_decode(html_entity_decode($encoded, ENT_QUOTES | ENT_HTML5), true);
+            if (! is_array($payload)) {
+                continue;
+            }
+            $consignment = is_array($payload['consignment'] ?? null) ? $payload['consignment'] : [];
+            if ((string) ($payload['consignment_id'] ?? $consignment['id'] ?? '') !== $consignmentId) {
+                continue;
+            }
+            $id = trim((string) ($payload['id'] ?? ''));
+            if ($id === '' || $id === $consignmentId || ! preg_match('/^\d+$/', $id)) {
+                continue;
+            }
+            $status = self::PORTAL_TAB_STATUSES[(int) ($payload['verify_status'] ?? 0)] ?? '';
+
+            return ['item_id' => $id, 'status' => $status, 'label' => $this->statusWord($status)];
+        }
+
+        return null;
+    }
+
+    /**
+     * Pending while the portal still offers its decide buttons, else the badge it shows.
+     *
+     * @return array{status: string, label: string}
+     */
+    private function cancelRequestState(string $block): array
+    {
+        $actions = preg_match('/<div\b[^>]*\bdata-sf-creq-actions\b[^>]*>(.*?)<\/div>/is', $block, $match)
+            ? (string) $match[1]
+            : '';
+        if (preg_match('/\bdata-sf-creq-decide="[12]"/', $actions)) {
+            return ['status' => 'pending', 'label' => 'Pending'];
+        }
+
+        $label = trim((string) preg_replace(
+            '/\s+/',
+            ' ',
+            html_entity_decode(strip_tags($actions), ENT_QUOTES | ENT_HTML5)
+        ));
+        $word = strtolower($label);
+        $status = match (true) {
+            str_contains($word, 'resend') => 'resend_request',
+            (bool) preg_match('/\bresent\b/', $word) => 'resent',
+            str_contains($word, 'cancel') => 'cancelled',
+            str_contains($word, 'confirm') => 'confirmed',
+            default => '',
+        };
+
+        return ['status' => $status, 'label' => $label];
+    }
+
+    /**
+     * The decide URL from the portal's `#sf-creq-config`, when it points at the portal.
+     */
+    private function confirmRequestPath(string $html, string $host): string
+    {
+        if (preg_match('/<script\b[^>]*\bid="sf-creq-config"[^>]*>(.*?)<\/script>/is', $html, $match)) {
+            $config = json_decode(trim((string) $match[1]), true);
+            $url = is_array($config) ? (string) ($config['url'] ?? '') : '';
+            $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
+            $urlHost = strtolower((string) (parse_url($url, PHP_URL_HOST) ?? ''));
+            $portalHost = $urlHost === ''
+                || $urlHost === strtolower($host)
+                || $urlHost === 'steadfast.com.bd'
+                || str_ends_with($urlHost, '.steadfast.com.bd');
+            if ($portalHost && preg_match('#^/user/consignment/cancel-request/[a-z0-9-]+$#i', $path)) {
+                return $path;
+            }
+        }
+
+        return self::CONFIRM_REQUEST_PATH;
+    }
+
+    /**
+     * The portal's own success test: `res.ok && Number(json.status) === 1`.
+     *
+     * @param  array<string, mixed>  $body
+     */
+    private function portalJsonOk(array $body): bool
+    {
+        $status = $body['status'] ?? null;
+
+        return $status === true || (is_numeric($status) && (int) $status === 1);
+    }
+
+    /**
+     * A request SteadFast already decided: fine when it matches the action, a 409 when it does not.
+     *
+     * @param  array{item_id: string, status: string, label: string}  $request
+     * @return array{consignment_id: string, id: string, status: string, action: string, verify_status: int, already_decided: bool}
+     */
+    private function settledDecision(string $action, string $consignmentId, array $request, bool $alreadyDecided = true): array
+    {
+        $status = $request['status'];
+        if ($status === '') {
+            throw new RuntimeException(
+                'Could not read the SteadFast decision on parcel '.$consignmentId.'. Nothing was changed; decide on the SteadFast portal.'
+            );
+        }
+
+        $matches = $action === 'confirm_cancel'
+            ? in_array($status, ['confirmed', 'cancelled'], true)
+            : in_array($status, ['resend_request', 'resent'], true);
+        if ($matches) {
+            return $this->decisionResult($action, $consignmentId, $request['item_id'], $status, $alreadyDecided);
+        }
+
+        $label = $request['label'] !== '' ? $request['label'] : $this->statusWord($status);
+        $verify = array_search($status, self::PORTAL_TAB_STATUSES, true);
+
+        throw new SteadfastCancelRequestStateException(
+            'SteadFast already shows this request as '.$label.'. Nothing was changed.',
+            [
+                'code' => 'already_decided',
+                'consignment_id' => $consignmentId,
+                'id' => $request['item_id'],
+                'status' => $status,
+                'verify_status' => $verify === false ? 0 : (int) $verify,
+            ]
+        );
+    }
+
+    /**
+     * @return array{consignment_id: string, id: string, status: string, action: string, verify_status: int, already_decided: bool}
+     */
+    private function decisionResult(
+        string $action,
+        string $consignmentId,
+        string $itemId,
+        string $status,
+        bool $alreadyDecided,
+    ): array {
+        $verify = array_search($status, self::PORTAL_TAB_STATUSES, true);
+
+        return [
+            'consignment_id' => $consignmentId,
+            'id' => $itemId,
+            'status' => $status,
+            'action' => $action,
+            'verify_status' => $verify === false ? 0 : (int) $verify,
+            'already_decided' => $alreadyDecided,
+        ];
+    }
+
+    private function statusWord(string $status): string
+    {
+        return match ($status) {
+            'pending' => 'Pending',
+            'confirmed' => 'Confirmed',
+            'resend_request' => 'Resend requested',
+            'cancelled' => 'Cancelled',
+            'resent' => 'Resent',
+            default => ucfirst(str_replace('_', ' ', $status)),
+        };
     }
 
     /**
@@ -727,7 +811,7 @@ class SteadfastReturnRequestsService
                 'reason' => $reason,
                 'customer_name' => '',
                 'charge' => null,
-                'requested_at' => now()->toDateTimeString(),
+                'requested_at' => now(self::PORTAL_TIMEZONE)->format('Y-m-d H:i:s'),
             ];
         });
     }
@@ -756,7 +840,8 @@ class SteadfastReturnRequestsService
                 : self::PORTAL_LIST_DEADLINE_SECONDS;
             $deadlineAt = microtime(true) + $deadlineSeconds;
 
-            foreach (self::PORTAL_TAB_STATUSES as $index => $slug) {
+            foreach (self::PORTAL_TAB_ORDER as $index) {
+                $slug = self::PORTAL_TAB_STATUSES[$index];
                 if ($mode === 'quick' && ! in_array($slug, self::PORTAL_QUICK_TAB_STATUSES, true)) {
                     continue;
                 }
@@ -769,18 +854,54 @@ class SteadfastReturnRequestsService
                     break;
                 }
 
+                $pageLimit = match (true) {
+                    $mode === 'quick' => self::PORTAL_QUICK_PAGES_PER_TAB,
+                    $slug === 'cancelled' => self::PORTAL_CANCELLED_PAGES,
+                    default => null,
+                };
+
                 try {
-                    $tab = $this->fetchCancelRequestTabPages(
-                        $client,
-                        $cookies,
-                        $host,
-                        $credentials,
-                        $index,
-                        $slug,
-                        $date,
-                        requireAuthAssert: $index === 0,
-                        deadlineAt: $deadlineAt,
-                    );
+                    try {
+                        $tab = $this->fetchCancelRequestTabPages(
+                            $client,
+                            $cookies,
+                            $host,
+                            $credentials,
+                            $index,
+                            $slug,
+                            $date,
+                            requireAuthAssert: $index === 0,
+                            deadlineAt: $deadlineAt,
+                            pageLimit: $pageLimit,
+                        );
+                    } catch (\Throwable $th) {
+                        if (! $dated || str_contains(strtolower($th->getMessage()), 'session expired')) {
+                            throw $th;
+                        }
+                        // The dated list is its own portal route. If it fails, filter
+                        // the newest pages of the tab by the requested day instead.
+                        LogHelper::saveLog(
+                            'Steadfast dated cancel-requests list failed',
+                            $slug.' '.$date.': '.$th->getMessage()
+                        );
+                        $tab = $this->fetchCancelRequestTabPages(
+                            $client,
+                            $cookies,
+                            $host,
+                            $credentials,
+                            $index,
+                            $slug,
+                            null,
+                            requireAuthAssert: $index === 0,
+                            deadlineAt: $deadlineAt,
+                            pageLimit: self::DATED_FALLBACK_PAGES,
+                        );
+                        $tab['rows'] = array_values(array_filter(
+                            $tab['rows'],
+                            fn ($row) => str_starts_with($this->portalDateTime($row['requested_at'] ?? ''), (string) $date)
+                        ));
+                        $tab['complete'] = false;
+                    }
                     $cookies = $tab['cookies'];
                     $rows = $tab['rows'];
                     // A dated scrape is one day, not the whole tab, so it must not
@@ -820,8 +941,12 @@ class SteadfastReturnRequestsService
     /**
      * Walk SteadFast cancel-requests pagination (?page=1..N) for one status tab.
      *
+     * The pager only links two pages either side of the current one, so the
+     * page count comes from "Showing 1–20 of N" and from every page's links.
+     *
      * @param  array{username: string, password: string}  $credentials
      * @param  array<string, string>  $cookies
+     * @param  int|null  $pageLimit  Stop after this many pages (quick sync).
      * @return array{rows: list<array<string, mixed>>, cookies: array<string, string>, complete: bool}
      */
     private function fetchCancelRequestTabPages(
@@ -834,11 +959,15 @@ class SteadfastReturnRequestsService
         ?string $date,
         bool $requireAuthAssert = false,
         ?float $deadlineAt = null,
+        ?int $pageLimit = null,
     ): array {
         /** @var array<string, array<string, mixed>> $byConsignment */
         $byConsignment = [];
+        $pageCap = max(1, min($pageLimit ?? self::MAX_PORTAL_PAGES_PER_TAB, self::MAX_PORTAL_PAGES_PER_TAB));
+        $linkPath = $this->cancelRequestsTabLinkPath($tabIndex, $date);
         $maxPage = 1;
-        $uncappedMax = 1;
+        $portalPages = 1;
+        $total = null;
         $complete = true;
         $lastPageCount = 0;
 
@@ -910,13 +1039,16 @@ class SteadfastReturnRequestsService
                 $byConsignment[$key] = $row;
             }
 
-            if ($pageNum === 1) {
-                $uncappedMax = $this->detectCancelRequestsMaxPage($body);
-                $maxPage = max(1, min($uncappedMax, self::MAX_PORTAL_PAGES_PER_TAB));
-                if ($uncappedMax > self::MAX_PORTAL_PAGES_PER_TAB) {
-                    $complete = false;
-                }
+            $pageTotal = $this->detectCancelRequestsTotal($body);
+            if ($pageTotal !== null) {
+                $total = $pageTotal;
             }
+            $portalPages = max(
+                $portalPages,
+                $this->detectCancelRequestsMaxPage($body, $linkPath),
+                $total !== null ? (int) ceil($total / self::PORTAL_TAB_PAGE_SIZE) : 1,
+            );
+            $maxPage = min($portalPages, $pageCap);
 
             // Stop early when a page returns no rows (pagination lied / trailing empty).
             if ($pageNum > 1 && $rows === []) {
@@ -929,9 +1061,11 @@ class SteadfastReturnRequestsService
             }
         }
 
-        // A full page can sit in front of another page the first pager never linked.
-        // A short page is the end of the tab this walk actually reached.
-        if ($complete && $lastPageCount >= self::PORTAL_TAB_PAGE_SIZE) {
+        if ($portalPages > $pageCap) {
+            $complete = false;
+        }
+        // Without the portal's total, a full last page may hide one more page.
+        if ($complete && $total === null && $lastPageCount >= self::PORTAL_TAB_PAGE_SIZE) {
             $complete = false;
         }
 
@@ -942,40 +1076,63 @@ class SteadfastReturnRequestsService
         ];
     }
 
+    /**
+     * One status tab. A date uses the portal's dated list, which shows that day only.
+     */
     private function cancelRequestsTabPath(int $tabIndex, ?string $date, int $page = 1): string
     {
-        $path = '/user/consignment/cancel-requests/show/'.$tabIndex;
-        $query = [];
         if ($date !== null && $date !== '') {
-            $query['date'] = $date;
-        }
-        if ($page > 1) {
-            $query['page'] = $page;
-        }
-        if ($query === []) {
-            return $path;
+            $query = ['type' => $tabIndex, 'date' => $date];
+            if ($page > 1) {
+                $query['page'] = $page;
+            }
+
+            return '/user/consignment/latest-cancelled/show?'.http_build_query($query);
         }
 
-        return $path.'?'.http_build_query($query);
+        $path = '/user/consignment/cancel-requests/show/'.$tabIndex;
+
+        return $page > 1 ? $path.'?page='.$page : $path;
     }
 
-    private function detectCancelRequestsMaxPage(string $html): int
+    /** Path the pager links of this tab start with. */
+    private function cancelRequestsTabLinkPath(int $tabIndex, ?string $date): string
+    {
+        return $date !== null && $date !== ''
+            ? '/user/consignment/latest-cancelled/show'
+            : '/user/consignment/cancel-requests/show/'.$tabIndex;
+    }
+
+    /**
+     * Highest page this tab's pager links to. Links for other tabs do not count.
+     */
+    private function detectCancelRequestsMaxPage(string $html, string $linkPath): int
     {
         $max = 1;
+        $html = str_replace('&amp;', '&', $html);
+        $pattern = '#'.preg_quote($linkPath, '#').'\?(?:[^"\'\s<>]*&)?page=(\d+)#i';
 
-        if (preg_match_all('/[?&]page=(\d+)/i', $html, $matches)) {
+        if (preg_match_all($pattern, $html, $matches)) {
             foreach ($matches[1] as $value) {
                 $max = max($max, (int) $value);
             }
         }
 
-        if (preg_match_all('/class="[^"]*\bpage-link\b[^"]*"[^>]*>\s*(\d+)\s*</i', $html, $matches)) {
-            foreach ($matches[1] as $value) {
-                $max = max($max, (int) $value);
-            }
+        return $max;
+    }
+
+    /**
+     * Total from the pager line "Showing 21–40 of 148". Single-page tabs have no pager.
+     */
+    private function detectCancelRequestsTotal(string $html): ?int
+    {
+        if (preg_match('/\bsf-pagination__info\b[^>]*>([^<]*)</i', $html, $info)
+            && preg_match('/\bof\s+([\d,]+)/i', html_entity_decode((string) $info[1], ENT_QUOTES | ENT_HTML5), $count)
+        ) {
+            return (int) str_replace(',', '', $count[1]);
         }
 
-        return max(1, $max);
+        return null;
     }
 
     /**
@@ -1068,6 +1225,12 @@ class SteadfastReturnRequestsService
             if (preg_match('/<p\b([^>]*\bsf-creq-item__reason\b[^>]*)>(.*?)<\/p>/is', $inner, $reasonMatch)) {
                 $reasonAttrs = (string) $reasonMatch[1];
                 $reasonText = trim(html_entity_decode(strip_tags((string) $reasonMatch[2]), ENT_QUOTES | ENT_HTML5));
+                // The note's own time sits on a line after the quoted note: `"note"\n\n2026-09-26 10:49 am`.
+                $reasonText = (string) preg_replace(
+                    '/\s*\R\s*\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[ap]\.?m\.?)?\s*$/iu',
+                    '',
+                    $reasonText
+                );
                 $reasonText = trim($reasonText, " \t\n\r\0\x0B\"“”");
                 $empty = str_contains($reasonAttrs, 'is-empty')
                     || preg_match('/^no reason given\.?$/i', $reasonText) === 1;
@@ -1329,8 +1492,13 @@ class SteadfastReturnRequestsService
      * @param  array<string, mixed>|null  $body
      * @return array<string, mixed>
      */
-    private function packzyRequest(string $method, string $path, array $apiConfig, ?array $body = null): array
-    {
+    private function packzyRequest(
+        string $method,
+        string $path,
+        array $apiConfig,
+        ?array $body = null,
+        int $timeout = 45,
+    ): array {
         $apiKey = trim((string) ($apiConfig['api_key'] ?? ''));
         $secret = trim((string) ($apiConfig['secret_key'] ?? ''));
         if ($apiKey === '' || $secret === '') {
@@ -1342,7 +1510,7 @@ class SteadfastReturnRequestsService
             'Secret-Key' => $secret,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->timeout(45);
+        ])->timeout(max(1, $timeout));
 
         $url = self::PACKZY_BASE . $path;
         $response = strtoupper($method) === 'GET'
@@ -1416,9 +1584,64 @@ class SteadfastReturnRequestsService
             'charge' => is_numeric($charge) ? (float) $charge : null,
             'invoice' => (string) ($merged['invoice'] ?? ''),
             'tracking_code' => (string) ($merged['tracking_code'] ?? $merged['track_id'] ?? ''),
-            'requested_at' => (string) ($merged['requested_at'] ?? $merged['created_at'] ?? $merged['createdAt'] ?? ''),
-            'updated_at' => (string) ($merged['updated_at'] ?? $merged['updatedAt'] ?? ''),
+            'requested_at' => $this->portalDateTime(
+                $merged['requested_at'] ?? $merged['created_at'] ?? $merged['createdAt'] ?? ''
+            ),
+            'updated_at' => $this->portalDateTime($merged['updated_at'] ?? $merged['updatedAt'] ?? ''),
         ];
+    }
+
+    /**
+     * Portal text ("29 Sep 2026, 08:29 PM", "July 17, 2026, 07:09:52 PM") or
+     * Packzy ISO UTC as Bangladesh time `Y-m-d H:i:s`. Unreadable values are ''.
+     *
+     * MySQL stores an unparsed portal string as 0000-00-00, so none may leave here.
+     */
+    private function portalDateTime(mixed $value): string
+    {
+        if (! is_scalar($value)) {
+            return '';
+        }
+
+        $raw = trim((string) preg_replace('/[\s\x{00A0}\x{202F}]+/u', ' ', (string) $value));
+        if ($raw === '' || str_starts_with($raw, '0000-00-00')) {
+            return '';
+        }
+
+        $zone = new \DateTimeZone(self::PORTAL_TIMEZONE);
+        $read = static function (\DateTimeImmutable|false $date) use ($zone): string {
+            if ($date === false) {
+                return '';
+            }
+            $errors = \DateTimeImmutable::getLastErrors();
+            if (is_array($errors) && ($errors['warning_count'] > 0 || $errors['error_count'] > 0)) {
+                return '';
+            }
+            $year = (int) $date->format('Y');
+            if ($year < 2000 || $year > 2100) {
+                return '';
+            }
+
+            return $date->setTimezone($zone)->format('Y-m-d H:i:s');
+        };
+
+        try {
+            // ISO or MySQL style: an offset (Z, +06:00) is converted, a bare value is already local.
+            if (preg_match('/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?\s*(?:Z|[+-]\d{2}:?\d{2})?$/i', $raw)) {
+                return $read(new \DateTimeImmutable($raw, $zone));
+            }
+
+            foreach (['!j M Y, h:i A', '!j M Y, h:i:s A', '!F j, Y, h:i:s A', '!F j, Y, h:i A', '!F j, Y h:i:s A', '!F j, Y h:i A', '!j M Y'] as $format) {
+                $parsed = $read(\DateTimeImmutable::createFromFormat($format, $raw, $zone));
+                if ($parsed !== '') {
+                    return $parsed;
+                }
+            }
+        } catch (\Throwable) {
+            return '';
+        }
+
+        return '';
     }
 
     private function normalizeStatus(?string $status): string

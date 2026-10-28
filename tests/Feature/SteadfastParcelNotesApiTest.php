@@ -349,4 +349,20 @@ class SteadfastParcelNotesApiTest extends TestCase
             $response->json('active_package.features')
         );
     }
+
+    public function test_get_user_sends_ai_return_decide_on_its_own(): void
+    {
+        [$user, $plainToken] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'ai_intelligence' => false,
+            'ai_return_decide' => true,
+            'courier_automation' => true,
+        ]);
+
+        $this->withHeaders($this->apiHeaders($plainToken))
+            ->getJson('/api/get-user')
+            ->assertOk()
+            ->assertJsonPath('active_package.features.ai_return_decide', true)
+            ->assertJsonPath('active_package.features.ai_intelligence', false);
+    }
 }

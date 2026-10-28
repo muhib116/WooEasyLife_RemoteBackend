@@ -399,9 +399,11 @@ HTML;
             ->assertJsonPath('data.items.0.consignment_id', '272384678')
             ->assertJsonPath('data.items.0.customer_name', 'Sonia')
             ->assertJsonPath('data.counts.pending', 1)
-            ->assertJsonPath('data.source', 'portal')
-            ->assertJsonMissing(['consignment_id' => '267997491']);
+            ->assertJsonPath('data.source', 'portal');
 
+        // The merchant's own return request is a separate queue, never a cancel-request row.
+        $this->assertNotContains('267997491', collect($response->json('data.items'))->pluck('consignment_id')->all());
+        $this->assertSame('267997491', $response->json('data.return_requests.0.consignment_id'));
         $this->assertContains('pending', $response->json('data.authoritative_statuses'));
     }
 
@@ -468,6 +470,7 @@ HTML;
         $pendingHtml = '<html><body><ul>'
             .'<li class="sf-creq-item" data-sf-creq="9">'
             .'<a href="/user/consignment/299056668">#299056668</a><b>Buyer</b>'
+            .'<span>Requested 29 Sep 2026, 08:29 PM</span>'
             .'</li></ul></body></html>';
 
         \Illuminate\Support\Facades\Cache::flush();
@@ -478,14 +481,18 @@ HTML;
             if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
                 return Http::response(['data' => []], 200);
             }
-            if (str_contains($url, '/login') && $request->method() === 'GET') {
-                return Http::response('<input type="hidden" name="_token" value="csrf-token">', 200);
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
             }
-            if (str_contains($url, '/login') && $request->method() === 'POST') {
-                return Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+            // The portal ignores ?date= on the tab pages; the dated list is its own route.
+            if (str_contains($url, '/user/consignment/latest-cancelled/show?type=0&date=2026-09-29')) {
+                return Http::response($pendingHtml, 200);
+            }
+            if (str_contains($url, '/user/consignment/latest-cancelled/show')) {
+                return Http::response('<html><body><div class="sf-empty">Nothing here</div></body></html>', 200);
             }
             if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
-                return Http::response($pendingHtml, 200);
+                return Http::response('undated-tab-should-not-run', 500);
             }
 
             return Http::response('not-found', 404);
@@ -498,7 +505,318 @@ HTML;
             ])
             ->assertOk()
             ->assertJsonPath('data.source', 'portal')
+            ->assertJsonPath('data.counts.pending', 1)
+            ->assertJsonPath('data.items.0.consignment_id', '299056668')
+            ->assertJsonPath('data.items.0.requested_at', '2026-09-29 20:29:00')
             ->assertJsonPath('data.authoritative_statuses', []);
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/cancel-requests/show/'));
+    }
+
+    public function test_dated_list_falls_back_to_tab_pages_filtered_by_day(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $pendingHtml = '<html><body><ul>'
+            .'<li class="sf-creq-item" data-sf-creq="9"><a href="/user/consignment/299056668">#299056668</a>'
+            .'<b>Today</b><span>Requested 29 Sep 2026, 08:29 PM</span></li>'
+            .'<li class="sf-creq-item" data-sf-creq="8"><a href="/user/consignment/299056600">#299056600</a>'
+            .'<b>Yesterday</b><span>Requested 28 Sep 2026, 11:50 PM</span></li>'
+            .'</ul></body></html>';
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) use ($pendingHtml) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if (str_contains($url, '/user/consignment/latest-cancelled/show')) {
+                return Http::response('not-found', 404);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/0')) {
+                return Http::response($pendingHtml, 200);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response('<html><body></body></html>', 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $response = $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', [
+                'date' => '2026-09-29',
+                'mode' => 'quick',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.counts.pending', 1)
+            ->assertJsonPath('data.items.0.consignment_id', '299056668')
+            ->assertJsonPath('data.authoritative_statuses', []);
+
+        $this->assertNotContains('299056600', collect($response->json('data.items'))->pluck('consignment_id')->all());
+    }
+
+    public function test_full_list_walks_every_page_from_the_pager_total(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/2')) {
+                $page = preg_match('/[?&]page=(\d+)/', $url, $m) ? (int) $m[1] : 1;
+
+                return Http::response($this->resendTabPage($page, 65), 200);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response('<html><body></body></html>', 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $response = $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', ['mode' => 'full'])
+            ->assertOk()
+            ->assertJsonPath('data.counts.resend_request', 65);
+
+        $this->assertContains('resend_request', $response->json('data.authoritative_statuses'));
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/cancel-requests/show/2?page=4'));
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/cancel-requests/show/2?page=5'));
+    }
+
+    public function test_full_list_reads_resent_before_a_capped_cancelled_history(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        \Illuminate\Support\Facades\Cache::flush();
+        $tabRequests = [];
+
+        Http::fake(function ($request) use (&$tabRequests) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if (preg_match('#/cancel-requests/show/(\d)(?:\?page=(\d+))?#', $url, $m)) {
+                $tab = (int) $m[1];
+                $page = (int) ($m[2] ?? 1) ?: 1;
+                $tabRequests[] = $tab;
+                $totals = [0 => 0, 1 => 0, 2 => 0, 3 => 2093, 4 => 45];
+
+                return Http::response(
+                    $totals[$tab] > 0
+                        ? $this->cancelRequestTabPage($tab, $page, $totals[$tab])
+                        : '<html><body><div class="sf-empty">Nothing here</div></body></html>',
+                    200
+                );
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $response = $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', ['mode' => 'full'])
+            ->assertOk()
+            ->assertJsonPath('data.counts.resent', 45)
+            ->assertJsonPath('data.counts.cancelled', 200);
+
+        $authoritative = $response->json('data.authoritative_statuses');
+        $this->assertContains('resent', $authoritative);
+        $this->assertNotContains('cancelled', $authoritative);
+        $this->assertSame(10, count(array_keys($tabRequests, 3, true)));
+        $this->assertLessThan(array_search(3, $tabRequests, true), array_search(4, $tabRequests, true));
+    }
+
+    public function test_card_reason_drops_the_note_time_line(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $resendHtml = <<<HTML
+<html><body><ul>
+<li class="sf-creq-item" data-sf-creq="22159720">
+  <a class="sf-parcels__id" href="https://www.steadfast.com.bd/user/consignment/299589460">#299589460</a>
+  <b>Buyer</b><span>Requested 27 Oct 2026, 05:54 PM</span>
+  <p class="sf-creq-item__reason">
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" class="sf-ico"><path d="M2.9 16.3a2 2 0 0 1 .1 1.2"></path></svg>
+    <span>"Customer will not take the parcel"\r\n\r\n2026-09-26 10:49 am</span>
+  </p>
+</li>
+</ul></body></html>
+HTML;
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) use ($resendHtml) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/2')) {
+                return Http::response($resendHtml, 200);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response('<html><body></body></html>', 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', ['mode' => 'quick', 'status' => 'resend_request'])
+            ->assertOk()
+            ->assertJsonPath('data.items.0.consignment_id', '299589460')
+            ->assertJsonPath('data.items.0.reason', 'Customer will not take the parcel')
+            ->assertJsonPath('data.items.0.requested_at', '2026-10-27 17:54:00');
+    }
+
+    public function test_quick_list_stops_after_three_pages_and_is_not_authoritative(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => []], 200);
+            }
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/2')) {
+                $page = preg_match('/[?&]page=(\d+)/', $url, $m) ? (int) $m[1] : 1;
+
+                return Http::response($this->resendTabPage($page, 65), 200);
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response('<html><body></body></html>', 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $response = $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', ['mode' => 'quick'])
+            ->assertOk()
+            ->assertJsonPath('data.counts.resend_request', 60);
+
+        $this->assertNotContains('resend_request', $response->json('data.authoritative_statuses') ?? []);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/cancel-requests/show/2?page=4'));
+    }
+
+    public function test_list_returns_packzy_return_requests_and_reads_tracked_ids(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        \Illuminate\Support\Facades\Cache::flush();
+
+        Http::fake(function ($request) {
+            $url = $request->url();
+
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_requests')) {
+                return Http::response(['data' => [[
+                    'id' => 78681,
+                    'consignment_id' => 267997491,
+                    'status' => 'pending',
+                    'reason' => 'Wrong item',
+                    'created_at' => '2026-09-20T23:11:45.000000Z',
+                ]]], 200);
+            }
+            if (str_contains($url, 'portal.packzy.com/api/v1/get_return_request/78000')) {
+                return Http::response(['data' => [
+                    'id' => 78000,
+                    'consignment_id' => 267990000,
+                    'status' => 'approved',
+                    'created_at' => '2026-09-01T04:00:00.000000Z',
+                ]], 200);
+            }
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if (str_contains($url, '/user/consignment/cancel-requests/show/')) {
+                return Http::response('<html><body></body></html>', 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $response = $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', [
+                'mode' => 'quick',
+                'return_request_ids' => ['78681', '78000'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.source', 'portal')
+            ->assertJsonPath('data.items', []);
+
+        $returns = collect($response->json('data.return_requests'))->keyBy('id');
+        $this->assertSame(['78681', '78000'], $returns->pluck('id')->all());
+        $this->assertSame('267997491', $returns['78681']['consignment_id']);
+        $this->assertSame('2026-09-21 05:11:45', $returns['78681']['requested_at']);
+        $this->assertSame('approved', $returns['78000']['api_status']);
+        $this->assertSame('267990000', $returns['78000']['consignment_id']);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'get_return_request/78681'));
+    }
+
+    public function test_list_rejects_non_numeric_return_request_ids(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests', [
+                'return_request_ids' => ['../get_balance'],
+            ])
+            ->assertStatus(422);
     }
 
     public function test_list_scrapes_all_portal_cancel_request_pages(): void
@@ -730,7 +1048,7 @@ HTML;
             ->assertJsonPath('data.items.0.customer_name', 'Enamul')
             ->assertJsonPath('data.items.0.reason', 'Customer asked to cancel')
             ->assertJsonPath('data.items.0.charge', 650)
-            ->assertJsonPath('data.items.0.requested_at', '29 Sep 2026, 08:29 PM')
+            ->assertJsonPath('data.items.0.requested_at', '2026-09-29 20:29:00')
             ->assertJsonPath('data.items.1.id', '22298083')
             ->assertJsonPath('data.items.1.consignment_id', '298712355')
             ->assertJsonPath('data.items.1.reason', '')
@@ -739,5 +1057,261 @@ HTML;
         $ids = collect($response->json('data.items'))->pluck('id')->all();
         $this->assertNotContains('299879646', $ids);
         $this->assertNotContains('298712355', $ids);
+    }
+
+    public function test_update_return_status_posts_once_like_the_portal_button(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $parcelHtml = $this->parcelPageWithCancelRequest('299879646', '22315485', true);
+        $posts = [];
+
+        Http::fake(function ($request) use ($parcelHtml, &$posts) {
+            $url = $request->url();
+
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if ($request->method() === 'POST') {
+                $posts[] = ['url' => $url, 'data' => $request->data()];
+
+                return str_contains($url, '/user/consignment/cancel-request/confirm-request')
+                    ? Http::response(['status' => 1, 'message' => 'Updated', 'data' => ['verify_status' => 2]], 200)
+                    : Http::response('not-found', 404);
+            }
+            if (str_contains($url, '/user/consignment/299879646')) {
+                return Http::response($parcelHtml, 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests/update-status', [
+                'action' => 'request_resend',
+                'consignment_id' => '299879646',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.id', '22315485')
+            ->assertJsonPath('data.status', 'resend_request')
+            ->assertJsonPath('data.verify_status', 2)
+            ->assertJsonPath('data.already_decided', false);
+
+        $this->assertCount(1, $posts);
+        $this->assertStringContainsString('/user/consignment/cancel-request/confirm-request', $posts[0]['url']);
+        $this->assertSame(
+            ['_token' => 'csrf-live', 'item_id' => '22315485', 'verify_status' => '2'],
+            $posts[0]['data']
+        );
+    }
+
+    public function test_update_return_status_reports_a_matching_decision_without_posting(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $parcelHtml = $this->parcelPageWithCancelRequest('299879646', '22315485', false, 'Resend requested');
+
+        Http::fake(function ($request) use ($parcelHtml) {
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if ($request->method() === 'GET' && str_contains($request->url(), '/user/consignment/299879646')) {
+                return Http::response($parcelHtml, 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests/update-status', [
+                'action' => 'request_resend',
+                'consignment_id' => '299879646',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'resend_request')
+            ->assertJsonPath('data.already_decided', true);
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'confirm-request'));
+    }
+
+    public function test_update_return_status_refuses_a_request_decided_the_other_way(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $parcelHtml = $this->parcelPageWithCancelRequest('299879646', '22315485', false, 'Resend requested');
+
+        Http::fake(function ($request) use ($parcelHtml) {
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if (str_contains($request->url(), 'portal.packzy.com/api/v1/status_by_cid/299879646')) {
+                return Http::response(['status' => 200, 'delivery_status' => 'in_review'], 200);
+            }
+            if ($request->method() === 'GET' && str_contains($request->url(), '/user/consignment/299879646')) {
+                return Http::response($parcelHtml, 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests/update-status', [
+                'action' => 'confirm_cancel',
+                'consignment_id' => '299879646',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('status', false)
+            ->assertJsonPath('data.code', 'already_decided')
+            ->assertJsonPath('data.id', '22315485')
+            ->assertJsonPath('data.status', 'resend_request')
+            ->assertJsonPath('data.verify_status', 2);
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'confirm-request'));
+    }
+
+    public function test_update_return_status_will_not_cancel_a_delivered_parcel(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), 'portal.packzy.com/api/v1/status_by_cid/299879646')) {
+                return Http::response(['status' => 200, 'delivery_status' => 'delivered'], 200);
+            }
+
+            return Http::response('portal-should-not-run', 500);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests/update-status', [
+                'action' => 'confirm_cancel',
+                'consignment_id' => '299879646',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('data.code', 'parcel_not_cancellable')
+            ->assertJsonPath('data.courier_status', 'delivered');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'steadfast.com.bd'));
+    }
+
+    public function test_update_return_status_without_a_cancel_request_changes_nothing(): void
+    {
+        [$user, $token] = $this->createMerchantWithToken();
+        $this->attachCatalogPackage($user, [
+            'courier_automation' => true,
+        ]);
+        $this->attachSteadfastConfig($user);
+
+        $parcelHtml = '<html><head><meta name="csrf-token" content="csrf-live"></head><body>'
+            .'<div class="sf-parcel" v-pre="" data-sf-parcel="" data-id="299879646"><h1>#299879646</h1></div>'
+            .'</body></html>';
+
+        Http::fake(function ($request) use ($parcelHtml) {
+            if ($login = $this->fakePortalLogin($request)) {
+                return $login;
+            }
+            if ($request->method() === 'GET' && str_contains($request->url(), '/user/consignment/299879646')) {
+                return Http::response($parcelHtml, 200);
+            }
+            if ($request->method() === 'GET' && str_contains($request->url(), '/user/consignment/cancel-requests/show/0')) {
+                return Http::response('<html><body><div class="sf-empty">Nothing here</div></body></html>', 200);
+            }
+
+            return Http::response('not-found', 404);
+        });
+
+        $this->withHeaders($this->apiHeaders($token))
+            ->postJson('/api/steadfast/return-requests/update-status', [
+                'action' => 'request_resend',
+                'consignment_id' => '299879646',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('data.code', 'no_cancel_request');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'confirm-request'));
+    }
+
+    /** Portal login responses shared by the scrape tests, or null for other requests. */
+    private function fakePortalLogin($request)
+    {
+        if (! str_contains($request->url(), '/login')) {
+            return null;
+        }
+
+        return $request->method() === 'GET'
+            ? Http::response('<input type="hidden" name="_token" value="csrf-token">', 200)
+            : Http::response('ok', 200, ['Set-Cookie' => 'steadfast_courier_session=abc123; path=/']);
+    }
+
+    /** One page of the "resend" tab. */
+    private function resendTabPage(int $page, int $total): string
+    {
+        return $this->cancelRequestTabPage(2, $page, $total);
+    }
+
+    /** One page of a cancel-request tab. Like the portal, the pager links two pages either side. */
+    private function cancelRequestTabPage(int $tab, int $page, int $total): string
+    {
+        $from = ($page - 1) * 20 + 1;
+        $to = min($page * 20, $total);
+        $cards = '';
+        for ($i = $from; $i <= $to; $i++) {
+            $consignment = 310000000 + $tab * 1000000 + $i;
+            $cards .= '<li class="sf-creq-item" data-sf-creq="'.($tab * 100000 + $i).'">'
+                .'<a href="/user/consignment/'.$consignment.'">#'.$consignment.'</a><b>Buyer '.$i.'</b></li>';
+        }
+
+        $links = '';
+        $last = (int) ceil($total / 20);
+        for ($n = max(1, $page - 2); $n <= min($last, $page + 2); $n++) {
+            $links .= '<a class="sf-pagination__link" href="https://www.steadfast.com.bd/user/consignment/cancel-requests/show/'.$tab.'?page='.$n.'">'.$n.'</a>';
+        }
+
+        return '<html><body><ul>'.$cards.'</ul>'
+            .'<nav class="sf-pagination"><p class="sf-pagination__info">Showing '.$from.'–'.$to.' of '.number_format($total).'</p>'
+            .$links.'</nav>'
+            .'<a href="/user/consignment/cancel-requests/show/0?page=9">Pending</a>'
+            .'</body></html>';
+    }
+
+    /** A parcel page with the recipient's cancel request, pending (buttons) or decided (badge). */
+    private function parcelPageWithCancelRequest(string $consignmentId, string $itemId, bool $pending, string $badge = ''): string
+    {
+        $actions = $pending
+            ? '<button type="button" data-sf-creq-decide="2">Ask to resend</button>'
+                .'<button type="button" data-sf-creq-decide="1" data-confirm="Cancel this parcel?">Cancel parcel</button>'
+            : '<span class="sf-badge sf-badge--info"><span class="sf-badge__dot"></span>'.$badge.'</span>';
+
+        return <<<HTML
+<html><head><meta name="csrf-token" content="csrf-live"></head><body>
+<div class="sf-parcel" v-pre="" data-sf-parcel="" data-id="{$consignmentId}">
+  <div class="sf-parcel__notice sf-parcel__creq" data-sf-creq="{$itemId}">
+    <p><b>Cancellation requested by the recipient</b> — "Customer asked to cancel"</p>
+    <div class="sf-creq-item__decide" data-sf-creq-actions="">{$actions}</div>
+  </div>
+  <div hidden data-sf-creq-badges>
+    <span data-for="2" class="sf-badge sf-badge--info">Resend requested</span>
+    <span data-for="3" class="sf-badge">Cancelled</span>
+    <span data-for="1" class="sf-badge">Confirmed</span>
+  </div>
+</div>
+<script type="application/json" id="sf-creq-config">{"url":"https://www.steadfast.com.bd/user/consignment/cancel-request/confirm-request"}</script>
+</body></html>
+HTML;
     }
 }
