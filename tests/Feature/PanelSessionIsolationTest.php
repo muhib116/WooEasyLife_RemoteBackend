@@ -89,6 +89,104 @@ class PanelSessionIsolationTest extends TestCase
                 ->where('auth.user.email', 'admin-side@example.com'));
     }
 
+    public function test_live_csrf_tokens_stay_on_their_own_panel(): void
+    {
+        $this->app->instance('env', 'local');
+
+        $merchant = User::create([
+            'name' => 'CSRF Merchant',
+            'email' => 'csrf-merchant@example.com',
+            'phone' => '01700000771',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $merchantPage = $this->getWithCookies('/marchent/login', []);
+        $merchantPage->assertOk();
+        $merchantCookies = $this->onlyCookies($this->cookiesFrom($merchantPage), true);
+        $merchantToken = $merchantCookies[PanelSession::MERCHANT_XSRF_COOKIE] ?? null;
+        $this->assertNotEmpty($merchantToken);
+
+        $this->postWithCookies('/marchent/login', [
+            'email' => '01700000771',
+            'password' => 'password',
+        ], $merchantCookies)->assertStatus(419);
+
+        $this->postWithCookies('/marchent/login', [
+            'email' => '01700000771',
+            'password' => 'password',
+        ], $merchantCookies, [
+            'X-XSRF-TOKEN' => $merchantToken,
+        ])->assertRedirect('/portal');
+
+        $admin = User::factory()->create([
+            'email' => 'csrf-admin@example.com',
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $adminPage = $this->getWithCookies('/muhib/login', []);
+        $adminPage->assertOk();
+        $adminCookies = $this->onlyCookies($this->cookiesFrom($adminPage), false);
+        $adminToken = $adminCookies[PanelSession::ADMIN_XSRF_COOKIE] ?? null;
+        $this->assertNotEmpty($adminToken);
+
+        $this->postWithCookies('/muhib/login/unlock', [], $adminCookies, [
+            'X-XSRF-TOKEN' => $merchantToken,
+        ])->assertStatus(419);
+
+        $unlocked = $this->postWithCookies('/muhib/login/unlock', [], $adminCookies, [
+            'X-XSRF-TOKEN' => $adminToken,
+        ]);
+        $unlocked->assertRedirect(route('login'));
+
+        $adminCookies = $this->onlyCookies($this->cookiesFrom($unlocked), false);
+        $adminToken = $adminCookies[PanelSession::ADMIN_XSRF_COOKIE] ?? $adminToken;
+
+        $this->postWithCookies('/muhib/login', [
+            'email' => $admin->email,
+            'password' => 'password',
+        ], $adminCookies, [
+            'X-XSRF-TOKEN' => $merchantToken,
+        ])->assertStatus(419);
+
+        $this->postWithCookies('/muhib/login', [
+            'email' => $admin->email,
+            'password' => 'password',
+        ], $adminCookies, [
+            'X-XSRF-TOKEN' => $adminToken,
+        ])->assertRedirect('/dashboard');
+    }
+
+    public function test_old_merchant_session_does_not_block_the_admin_login_page(): void
+    {
+        $merchant = User::create([
+            'name' => 'Old Session Merchant',
+            'email' => 'old-session-merchant@example.com',
+            'phone' => '01700000772',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        $this->actingAs($merchant)
+            ->get('/muhib/login')
+            ->assertOk();
+
+        $this->assertGuest();
+
+        $admin = User::factory()->create([
+            'email' => 'still-admin@example.com',
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/muhib/login')
+            ->assertRedirect('/dashboard');
+    }
+
     /**
      * @return array<string, string>
      */
@@ -137,12 +235,13 @@ class PanelSessionIsolationTest extends TestCase
     /**
      * @param  array<string, mixed>  $data
      * @param  array<string, string>  $cookies
+     * @param  array<string, string>  $headers
      */
-    private function postWithCookies(string $uri, array $data, array $cookies = [])
+    private function postWithCookies(string $uri, array $data, array $cookies = [], array $headers = [])
     {
         $this->preparePanelRuntime($cookies);
 
-        return $this->post($uri, $data);
+        return $this->post($uri, $data, $headers);
     }
 
     /**
