@@ -50,7 +50,7 @@ class CourierLicenseSyncService
                 continue;
             }
 
-            foreach (['steadfast', 'pathao', 'redx'] as $slug) {
+            foreach (['steadfast', 'pathao', 'redx', 'paperfly'] as $slug) {
                 $config = $this->configurations->forUser((int) $userId, $slug);
                 if (! $config) {
                     continue;

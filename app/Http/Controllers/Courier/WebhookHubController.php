@@ -109,6 +109,58 @@ class WebhookHubController extends Controller
         ], $environment, $invoice);
     }
 
+    public function paperfly(Request $request)
+    {
+        $payload = $request->all();
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $event = strtolower(trim((string) ($payload['event'] ?? '')));
+        $consignmentId = trim((string) ($data['order_number'] ?? ''));
+        $invoice = trim((string) ($data['merchant_order_reference'] ?? ''));
+        $shipment = ($consignmentId !== '' || $invoice !== '')
+            ? $this->shipmentService->resolveShipment('paperfly', $consignmentId, $invoice, 'live')
+            : null;
+        $account = $shipment?->courier_account_id
+            ? CourierAccount::query()->find($shipment->courier_account_id)
+            : null;
+
+        if (! $this->paperflySecretMatches($request, $account)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
+
+        $forward = $this->paperflyForwardPayload($event, $payload, $data, $consignmentId, $invoice);
+        if ($forward === null || ($consignmentId === '' && $invoice === '')) {
+            $this->eventService->record('paperfly', 'live', [
+                'event_type' => $event !== '' ? $event : 'paperfly.webhook',
+                'consignment_id' => $consignmentId !== '' ? $consignmentId : null,
+                'shipment_id' => $shipment?->id,
+                'access_token_id' => $shipment?->access_token_id,
+                'site_url' => $shipment?->site_url,
+                'wc_order_id' => $shipment?->wc_order_id,
+                'forward_status' => 'received',
+                'forward_message' => $forward === null ? 'unmapped_event' : 'missing_reference',
+                'payload_summary' => [
+                    'partner' => 'paperfly',
+                    'event' => $event,
+                ],
+            ]);
+
+            return response()->json(['success' => true]);
+        }
+
+        $this->forwardShipmentUpdate(
+            'paperfly',
+            $consignmentId !== '' ? $consignmentId : $invoice,
+            $forward,
+            'live',
+            $invoice
+        );
+
+        return response()->json(['success' => true]);
+    }
+
     private function forwardShipmentUpdate(
         string $partner,
         string $consignmentId,
@@ -183,6 +235,149 @@ class WebhookHubController extends Controller
             'status' => 'success',
             'message' => 'Webhook received successfully.',
         ], $this->successStatusForPartner($partner));
+    }
+
+    /**
+     * Paperfly sends the Configuration secret in a header and does not name that header.
+     * A value matches when it equals the saved secret, or is the HMAC-SHA256 of the raw body.
+     */
+    private function paperflySecretMatches(Request $request, ?CourierAccount $account): bool
+    {
+        $accounts = $account
+            ? collect([$account])
+            : CourierAccount::query()
+                ->where('partner', 'paperfly')
+                ->where('environment', 'live')
+                ->where('is_active', true)
+                ->get();
+
+        $secrets = [];
+        foreach ($accounts as $candidate) {
+            $secret = trim((string) $candidate->webhook_verify_secret);
+            if ($secret !== '') {
+                $secrets[] = $secret;
+            }
+        }
+
+        if ($secrets === []) {
+            return false;
+        }
+
+        $rawBody = (string) $request->getContent();
+        foreach ($this->paperflyHeaderValues($request) as $value) {
+            foreach ($secrets as $secret) {
+                if (strlen($value) === strlen($secret) && hash_equals($secret, $value)) {
+                    return true;
+                }
+
+                $expected = hash_hmac('sha256', $rawBody, $secret);
+                if (strlen($value) === strlen($expected) && hash_equals($expected, strtolower($value))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function paperflyHeaderValues(Request $request): array
+    {
+        $skip = [
+            'host', 'content-type', 'content-length', 'user-agent', 'accept',
+            'accept-encoding', 'accept-language', 'connection', 'cookie',
+            'origin', 'referer', 'content-encoding', 'cache-control', 'pragma',
+        ];
+        $values = [];
+
+        foreach ($request->headers->all() as $name => $headerValues) {
+            if (in_array(strtolower((string) $name), $skip, true)) {
+                continue;
+            }
+
+            foreach ((array) $headerValues as $headerValue) {
+                $value = trim((string) $headerValue);
+                if (str_starts_with(strtolower($value), 'bearer ')) {
+                    $value = trim(substr($value, 7));
+                }
+                if ($value !== '') {
+                    $values[] = $value;
+                }
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
+     */
+    private function paperflyForwardPayload(string $event, array $payload, array $data, string $consignmentId, string $invoice): ?array
+    {
+        $statuses = [
+            'parcel.created' => 'pending',
+            'parcel.cancelled' => 'cancelled',
+            'parcel.picked_up' => 'in_transit',
+            'parcel.in_transit' => 'in_transit',
+            'parcel.received_at_point' => 'in_transit',
+            'parcel.assigned_for_delivery' => 'in_transit',
+            'parcel.delivered' => 'delivered',
+            'parcel.partial' => 'partial_delivered',
+            'parcel.exchange' => 'delivered',
+            'parcel.on_hold' => 'hold',
+            'parcel.return' => 'return_initiated',
+            'parcel.return_transit' => 'return_in_transit',
+            'parcel.return_to_merchant' => 'return_completed',
+        ];
+        $messages = [
+            'parcel.created' => 'Parcel created',
+            'parcel.invoiced' => 'Invoice generated',
+            'parcel.cancelled' => 'Cancelled',
+            'parcel.picked_up' => 'Picked up',
+            'parcel.in_transit' => 'In transit',
+            'parcel.received_at_point' => 'Received at the local point',
+            'parcel.assigned_for_delivery' => 'Out for delivery',
+            'parcel.delivered' => 'Delivered',
+            'parcel.partial' => 'Partially delivered',
+            'parcel.exchange' => 'Exchange completed',
+            'parcel.on_hold' => 'On hold',
+            'parcel.return' => 'Return started',
+            'parcel.return_transit' => 'Return in transit',
+            'parcel.return_to_merchant' => 'Returned to merchant',
+        ];
+
+        if ($event !== 'parcel.invoiced' && ! isset($statuses[$event])) {
+            return null;
+        }
+
+        $updatedAt = trim((string) ($payload['timestamp'] ?? ''));
+        if ($updatedAt === '') {
+            $updatedAt = now()->toDateTimeString();
+        }
+
+        $forward = [
+            'partner' => 'paperfly',
+            'notification_type' => $event === 'parcel.invoiced' ? 'tracking_update' : 'delivery_status',
+            'updated_at' => $updatedAt,
+            'tracking_message' => $messages[$event] ?? '',
+            'invoice' => $invoice,
+            'consignment_id' => $consignmentId,
+        ];
+
+        if ($event !== 'parcel.invoiced') {
+            $forward['raw_status'] = $statuses[$event];
+        }
+
+        $price = $data['package_price'] ?? null;
+        if (is_numeric($price)) {
+            $forward['cod_amount'] = $price;
+        }
+
+        return $forward;
     }
 
     private function verifyPathaoSignature(Request $request, string $environment): bool

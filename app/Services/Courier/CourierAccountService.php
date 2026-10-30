@@ -40,6 +40,10 @@ class CourierAccountService
             return $secret !== '' ? $secret : trim((string) $config->secret_key);
         }
 
+        if ($partner === 'paperfly') {
+            return trim((string) ($overrideSecret ?? ($settings['webhook_secret'] ?? '')));
+        }
+
         if ($partner === 'steadfast') {
             return trim((string) $config->api_key);
         }

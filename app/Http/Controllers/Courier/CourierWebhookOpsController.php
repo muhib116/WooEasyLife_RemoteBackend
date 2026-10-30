@@ -119,7 +119,7 @@ class CourierWebhookOpsController extends Controller
         $accessToken = $this->accountService->resolveAccessToken($request);
         $limit = max(1, min(50, (int) $request->query('limit', 20)));
 
-        if ($partner !== '' && !in_array($partner, ['steadfast', 'pathao', 'redx'], true)) {
+        if ($partner !== '' && !in_array($partner, ['steadfast', 'pathao', 'redx', 'paperfly'], true)) {
             return $this->errorResponse('Invalid courier partner.');
         }
 
@@ -136,7 +136,7 @@ class CourierWebhookOpsController extends Controller
     {
         $partner = strtolower(trim((string) $request->input('partner', '')));
 
-        if (!in_array($partner, ['steadfast', 'pathao', 'redx'], true)) {
+        if (!in_array($partner, ['steadfast', 'pathao', 'redx', 'paperfly'], true)) {
             return $this->errorResponse('Invalid courier partner.');
         }
 

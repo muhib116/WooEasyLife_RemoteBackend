@@ -106,6 +106,17 @@ return [
             'in_transit' => 'courier_handover',
             'returned' => 'returned',
         ],
+        'paperfly' => [
+            'pending' => 'courier_entry',
+            'in_transit' => 'courier_handover',
+            'delivered' => 'delivered',
+            'partial_delivered' => 'partially_delivered',
+            'cancelled' => 'canceled',
+            'hold' => 'courier_handover',
+            'return_initiated' => 'returned',
+            'return_in_transit' => 'returned',
+            'return_completed' => 'returned',
+        ],
         'redx' => [
             'pending' => 'courier_entry',
             'pickup' => 'courier_handover',

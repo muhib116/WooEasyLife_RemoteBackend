@@ -79,7 +79,7 @@
 
         <div class="merchant-nav-foot">
             <Link
-                :href="route('logout')"
+                :href="route('merchant.logout')"
                 method="post"
                 as="button"
                 class="merchant-nav-link merchant-logout"

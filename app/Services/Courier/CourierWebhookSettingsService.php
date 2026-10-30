@@ -17,6 +17,9 @@ class CourierWebhookSettingsService
     {
         $partner = strtolower(trim($partner));
         $environment = ($request->query('environment') === 'sandbox') ? 'sandbox' : 'live';
+        if ($partner === 'paperfly') {
+            $environment = 'live';
+        }
         $accessToken = $this->accountService->resolveAccessToken($request);
 
         $callbackUrl = $this->callbackUrl($partner, $environment);
@@ -71,6 +74,7 @@ class CourierWebhookSettingsService
             'steadfast' => 'Paste the WooEasyLife Bearer token into Steadfast as the Auth token. Do not use Steadfast Generate unless you save that exact value back on the hub. The same token is the Bearer header and the X-Signature key. Letters, digits, and - _ . = only.',
             'pathao' => 'Use your Client Webhook Secret in Woo Easy Life. Pathao signs requests with X-PATHAO-Signature.',
             'redx' => 'Register the full callback URL including the token query parameter shown below.',
+            'paperfly' => 'Paste the callback URL and the Secret key into Paperfly Developer Guide, Webhooks, Configuration. Select every event on that page. A matching delivery event updates the order and sends the same notification as Steadfast.',
         ];
 
         $setupSteps = [
@@ -97,6 +101,17 @@ class CourierWebhookSettingsService
             $setupSteps[] = 'Handled statuses: ready-for-delivery, delivery-in-progress, delivered, agent-hold, agent-returning, returned, agent-area-change.';
         }
 
+        if ($partner === 'paperfly') {
+            $setupSteps = [
+                'Save the panel username, password, and Secret key here.',
+                'If this store already has Paperfly shipments, run Sync existing orders.',
+                'Copy the callback URL below.',
+                'Open Paperfly Developer Guide, then Webhooks, then Configuration.',
+                'Paste the callback URL and the same Secret key, and select every event on that page.',
+                'A delivered, cancelled, hold, or return event updates the order and notifies the store.',
+            ];
+        }
+
         $credentialsChanged = (bool) ($context['credentials_changed'] ?? false);
         $inFlight = (int) ($context['in_flight_shipments'] ?? 0);
         $mappingCount = $this->shipmentMappingCount($accessToken?->id, $partner, $environment);
@@ -120,7 +135,9 @@ class CourierWebhookSettingsService
             'shared_account' => $sharedAccount,
             'shared_with_license_count' => max($sharedCount, 1),
             'webhook_auth' => [
-                'type' => $partner === 'pathao' ? 'signature' : ($partner === 'steadfast' ? 'bearer' : 'query_token'),
+                'type' => $partner === 'paperfly'
+                    ? 'header_secret'
+                    : ($partner === 'pathao' ? 'signature' : ($partner === 'steadfast' ? 'bearer' : 'query_token')),
                 'hint' => $authHints[$partner] ?? '',
             ],
             'setup_steps' => $setupSteps,

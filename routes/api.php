@@ -6,6 +6,7 @@ use App\Http\Controllers\Courier\CourierWebhookOpsController;
 use App\Http\Controllers\Courier\WebhookHubController;
 use App\Http\Controllers\Courier\ConfigurationController;
 use App\Http\Controllers\Courier\PathaoController;
+use App\Http\Controllers\Courier\PaperflySettingsController;
 use App\Http\Controllers\Courier\RedXController;
 use App\Http\Controllers\Courier\SteadFastController;
 use App\Http\Controllers\Data\DataController;
@@ -106,6 +107,7 @@ Route::prefix('api/webhooks')->group(function () {
     Route::post('/redx/sandbox', function (Request $request) {
         return app(WebhookHubController::class)->redx($request, 'sandbox');
     });
+    Route::post('/paperfly', [WebhookHubController::class, 'paperfly']);
 
     Route::get('/messenger', [MessengerWebhookController::class, 'verify']);
     Route::post('/messenger', [MessengerWebhookController::class, 'receive']);
@@ -281,6 +283,15 @@ Route::group(['middleware' => ['check.token', 'check.tokenDomain'], 'prefix' => 
             Route::post('/bulk-track-status', [RedXController::class, 'bulkTrackStatus']);
             Route::post('/create-bulk-order', [RedXController::class, 'createBulkOrder']);
             Route::post('/check-balance', [RedXController::class, 'checkBalance']);
+        });
+
+        Route::group(['as' => 'paperfly.', 'prefix' => 'paperfly'], function () {
+            Route::post('/test-connection', [PaperflySettingsController::class, 'testConnection']);
+            Route::post('/stores', [PaperflySettingsController::class, 'stores']);
+            Route::post('/stores/create', [PaperflySettingsController::class, 'createStore']);
+            Route::post('/stores/update', [PaperflySettingsController::class, 'updateStore']);
+            Route::post('/stores/default', [PaperflySettingsController::class, 'setDefaultStore']);
+            Route::post('/create-bulk-order', [PaperflySettingsController::class, 'createBulkOrder']);
         });
 
         Route::group(['as' => 'sms.', 'prefix' => 'sms'], function () {

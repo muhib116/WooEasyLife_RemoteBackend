@@ -16,7 +16,7 @@ class Authenticate extends Middleware
             return null;
         }
 
-        if ($request->is('portal', 'portal/*')) {
+        if ($request->is('portal', 'portal/*', 'marchent', 'marchent/*')) {
             return route('merchant.login');
         }
 

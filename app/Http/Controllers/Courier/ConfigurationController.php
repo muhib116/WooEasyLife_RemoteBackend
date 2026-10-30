@@ -52,6 +52,11 @@ class ConfigurationController extends Controller
                 'title' => 'RedX',
                 'logo' => CourierLogoUrl::forSlug('redx'),
             ],
+            [
+                'slug' => 'paperfly',
+                'title' => 'Paperfly',
+                'logo' => CourierLogoUrl::forSlug('paperfly'),
+            ],
         ];
 
         return $this->successResponse($formatted);
@@ -83,6 +88,22 @@ class ConfigurationController extends Controller
         if ($request->slug === 'steadfast') {
             $rules['settings.username'] = 'nullable|string|max:255';
             $rules['settings.password'] = 'nullable|string|max:255';
+        }
+
+        if ($request->slug === 'paperfly') {
+            $username = trim((string) ($request->input('settings.username') ?: $request->api_key));
+            if ($username !== '' && trim((string) $request->api_key) === '') {
+                $request->merge(['api_key' => $username]);
+            }
+            if (trim((string) $request->input('title', '')) === '') {
+                $request->merge(['title' => 'Paperfly']);
+            }
+
+            $rules['secret_key'] = $request->filled('id') ? 'nullable|string' : 'required|string';
+            $rules['settings.username'] = 'nullable|string|max:255';
+            $rules['settings.default_weight'] = 'nullable|string|max:32';
+            $rules['settings.max_weight'] = 'nullable|string|max:32';
+            $rules['settings.webhook_secret'] = 'nullable|string|max:255';
         }
 
         if ($request->slug === 'pathao') {
@@ -255,6 +276,95 @@ class ConfigurationController extends Controller
             ]);
         }
 
+        if ($request->slug === 'paperfly') {
+            $existingSettings = [];
+            $existingSecret = '';
+
+            if ($request->filled('id')) {
+                $existing = CourierConfiguration::find($request->id);
+                $existingSettings = is_array($existing?->settings) ? $existing->settings : [];
+                $existingSecret = trim((string) ($existing?->secret_key ?? ''));
+            }
+
+            $username = trim((string) ($request->input('settings.username') ?: $request->api_key));
+            if ($username === '') {
+                return $this->validationErrorResponse([
+                    'settings.username' => ['Paperfly username is required.'],
+                ]);
+            }
+
+            $secretKey = trim((string) $request->secret_key);
+            if ($secretKey === '' && $request->filled('id')) {
+                $secretKey = $existingSecret;
+            }
+
+            if ($secretKey === '') {
+                return $this->validationErrorResponse([
+                    'secret_key' => ['Paperfly password is required.'],
+                ]);
+            }
+
+            $settingsInput = $request->input('settings', []);
+            $settingsInput = is_array($settingsInput) ? $settingsInput : [];
+            $defaultWeight = trim((string) ($settingsInput['default_weight'] ?? ''));
+            $maxWeight = trim((string) ($settingsInput['max_weight'] ?? ''));
+
+            if ($defaultWeight !== '' && $this->invalidPaperflyWeight($defaultWeight)) {
+                return $this->validationErrorResponse([
+                    'settings.default_weight' => ['Default weight must be a positive number such as 1.0.'],
+                ]);
+            }
+
+            if ($defaultWeight === '' && array_key_exists('max_weight', $settingsInput) && $maxWeight !== '') {
+                if ($this->invalidPaperflyWeight($maxWeight)) {
+                    return $this->validationErrorResponse([
+                        'settings.max_weight' => ['Max weight must be a positive number such as 0.3.'],
+                    ]);
+                }
+                $defaultWeight = $maxWeight;
+            }
+
+            if ($defaultWeight === '' && ! array_key_exists('default_weight', $settingsInput)) {
+                $existingWeight = trim((string) ($existingSettings['default_weight'] ?? ''));
+                $legacyWeight = trim((string) ($existingSettings['max_weight'] ?? ''));
+                if ($existingWeight !== '' && ! $this->invalidPaperflyWeight($existingWeight)) {
+                    $defaultWeight = $existingWeight;
+                } elseif ($legacyWeight !== '' && ! $this->invalidPaperflyWeight($legacyWeight)) {
+                    $defaultWeight = $legacyWeight;
+                }
+            }
+
+            $activeStore = is_array($existingSettings['active_store'] ?? null) ? $existingSettings['active_store'] : [];
+            $activeId = trim((string) ($activeStore['id'] ?? ''));
+            $storeName = $activeId === '' ? '' : trim((string) ($activeStore['full_name'] ?? ''));
+
+            if ($request->boolean('is_active')) {
+                if ($activeId === '') {
+                    return $this->validationErrorResponse([
+                        'settings.active_store' => ['A default Paperfly store is required.'],
+                    ]);
+                }
+                if ($defaultWeight === '' || $this->invalidPaperflyWeight($defaultWeight)) {
+                    return $this->validationErrorResponse([
+                        'settings.default_weight' => ['Default weight must be a positive number such as 1.0.'],
+                    ]);
+                }
+            }
+
+            $data['api_key'] = $username;
+            $data['secret_key'] = $secretKey;
+            $data['settings'] = array_merge($existingSettings, [
+                'username' => $username,
+                'store_name' => $storeName,
+                'default_weight' => $defaultWeight,
+                'webhook_secret' => $this->pathaoStringSetting(
+                    $request->input('settings.webhook_secret'),
+                    $existingSettings['webhook_secret'] ?? ''
+                ),
+            ]);
+            unset($data['settings']['password']);
+        }
+
         // $statusCode = 200;
         // try {
         //     $response = Http::withHeaders([
@@ -344,6 +454,10 @@ class ConfigurationController extends Controller
         ]);
 
         $responseData = $configuration->toArray();
+        if ((string) $configuration->slug === 'paperfly') {
+            $responseData['has_saved_password'] = trim((string) $configuration->secret_key) !== '';
+            $responseData['secret_key'] = '';
+        }
         $responseData['logo'] = CourierLogoUrl::forSlug((string) $configuration->slug);
         $responseData['webhook_settings'] = $webhookSettings;
         $responseData['credentials_changed'] = (bool) ($sync['credentials_changed'] ?? false);
@@ -363,7 +477,7 @@ class ConfigurationController extends Controller
     {
         $partner = strtolower(trim((string) $request->query('partner', '')));
 
-        if (!in_array($partner, ['steadfast', 'pathao', 'redx'], true)) {
+        if (!in_array($partner, ['steadfast', 'pathao', 'redx', 'paperfly'], true)) {
             return $this->errorResponse('Invalid courier partner.');
         }
 
@@ -377,7 +491,7 @@ class ConfigurationController extends Controller
     {
         $data = [];
 
-        foreach (['steadfast', 'pathao', 'redx'] as $slug) {
+        foreach (['steadfast', 'pathao', 'redx', 'paperfly'] as $slug) {
             $data[$slug] = $this->presentCourierConfiguration($slug);
         }
 
@@ -388,7 +502,7 @@ class ConfigurationController extends Controller
     {
         $slug = strtolower(trim((string) $request->input('slug', '')));
 
-        if (! in_array($slug, ['steadfast', 'pathao', 'redx'], true)) {
+        if (! in_array($slug, ['steadfast', 'pathao', 'redx', 'paperfly'], true)) {
             return $this->errorResponse('Invalid courier partner.');
         }
 
@@ -446,7 +560,19 @@ class ConfigurationController extends Controller
             $item->secret_key = '';
         }
 
-        return array_merge($item->toArray(), $meta);
+        $presentedItem = array_merge($item->toArray(), $meta);
+
+        if ($slug === 'paperfly') {
+            $presentedItem['has_saved_password'] = trim((string) $configuration->secret_key) !== '';
+            $presentedItem['secret_key'] = '';
+        }
+
+        return $presentedItem;
+    }
+
+    private function invalidPaperflyWeight(string $value): bool
+    {
+        return ! preg_match('/^\d+(\.\d+)?$/', $value) || (float) $value <= 0;
     }
 
     private function pathaoStringSetting($value, $fallback = '')

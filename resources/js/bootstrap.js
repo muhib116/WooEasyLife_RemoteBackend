@@ -9,6 +9,31 @@ window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+function panelXsrfCookieName(url) {
+    let path = '';
+
+    try {
+        path = new URL(url || '/', window.location.origin).pathname;
+    } catch {
+        path = window.location.pathname;
+    }
+
+    if (
+        path === '/portal' || path.startsWith('/portal/')
+        || path === '/marchent' || path.startsWith('/marchent/')
+    ) {
+        return 'XSRF-TOKEN-MERCHANT';
+    }
+
+    return 'XSRF-TOKEN';
+}
+
+window.axios.interceptors.request.use((config) => {
+    config.xsrfCookieName = panelXsrfCookieName(config.url || window.location.href);
+
+    return config;
+});
+
 /**
  * Echo exposes an expressive API for subscribing to channels and listening
  * for events that are broadcast by Laravel. Echo and event broadcasting
