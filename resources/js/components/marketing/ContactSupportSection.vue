@@ -1,6 +1,7 @@
 <script setup>
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { formatBdPhoneDisplay } from '@/utils/bdPhoneDisplay';
 
 const props = defineProps({
     whatsappContactUrl: { type: String, default: null },
@@ -37,7 +38,8 @@ const contactUrl = computed(
 );
 
 const adminEmail = computed(() => page.props.marketing?.admin_email || null);
-const helpline = computed(() => page.props.marketing?.helpline || null);
+const helplineRaw = computed(() => page.props.marketing?.helpline || null);
+const helpline = computed(() => formatBdPhoneDisplay(helplineRaw.value));
 </script>
 
 <template>
@@ -62,7 +64,7 @@ const helpline = computed(() => page.props.marketing?.helpline || null);
                     >
                         <a
                             v-if="helpline"
-                            :href="`tel:${helpline}`"
+                            :href="`tel:${helplineRaw}`"
                             class="transition hover:text-white"
                         >
                             {{ helpline }}

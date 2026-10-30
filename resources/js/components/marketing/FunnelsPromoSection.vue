@@ -12,32 +12,32 @@ const isEn = computed(() => props.locale === 'en');
 
 const copy = computed(() => (isEn.value
     ? {
-        badge: 'New · Funnels (Beta)',
+        badge: 'New · Funnels',
         h2: 'Build a COD landing page for Facebook Ads — without coding',
         p: 'Create a funnel, set product + phone, generate copy with ChatGPT/Gemini (Import JSON), pick a theme/layout, and publish on a clean /wel/ URL with an inline order form.',
         bullets: [
-            'Funnels hub in WooEasyLife admin (Beta)',
+            'Funnels hub in WooEasyLife admin',
             'AI prompt → Import JSON content',
             'Inline COD checkout · WhatsApp/call CTAs',
             'Layouts: Classic · Offer · Voyage · Atlas',
         ],
         ctaTrial: 'Start free trial',
         ctaVideo: 'Watch how-to video',
-        note: 'Beta — step analytics (views/revenue) are placeholders. No conversion-rate guarantee.',
+        note: 'Step analytics (views/revenue) are placeholders. No conversion-rate guarantee.',
     }
     : {
-        badge: 'নতুন · Funnels (Beta)',
+        badge: 'নতুন · Funnels',
         h2: 'Facebook Ads-এর জন্য COD ল্যান্ডিং পেজ — কোডিং ছাড়াই',
         p: 'ফানেল তৈরি করুন, প্রোডাক্ট ও ফোন সেট করুন, ChatGPT/Gemini দিয়ে কনটেন্ট Import JSON করুন, থিম/লেআউট বেছে /wel/ clean URL-এ পাবলিশ করুন — ইনলাইন অর্ডার ফর্মসহ।',
         bullets: [
-            'WooEasyLife অ্যাডমিনে Funnels hub (Beta)',
+            'WooEasyLife অ্যাডমিনে Funnels hub',
             'AI প্রম্পট → Import JSON',
             'Inline COD চেকআউট · WhatsApp/কল CTA',
             'লেআউট: Classic · Offer · Voyage · Atlas',
         ],
         ctaTrial: 'ফ্রি ট্রায়াল শুরু করুন',
         ctaVideo: 'হাউ-টু ভিডিও দেখুন',
-        note: 'Beta — Views/Revenue এখনো প্লেসহোল্ডার। কনভার্সন গ্যারান্টি দাবি করা হয় না।',
+        note: 'Views/Revenue এখনো প্লেসহোল্ডার। কনভার্সন গ্যারান্টি দাবি করা হয় না।',
     }));
 </script>
 

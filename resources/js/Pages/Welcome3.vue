@@ -199,7 +199,7 @@ const copy = computed(() => (isEn.value
             { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'Free fraud checker · courier history', theme: 'emerald' },
             { href: fakeOrderProtectionHref.value, title: 'Fake order protection', desc: 'OTP · block · cut return loss', theme: 'amber' },
             { href: courierAutoEntryHref.value, title: 'Courier auto entry', desc: couriers.bookingPhraseEn, theme: 'sky' },
-            { href: funnelsAnchorHref.value, title: 'Funnels (Beta)', desc: 'COD landing pages for Facebook Ads', theme: 'orange' },
+            { href: funnelsAnchorHref.value, title: 'Funnels', desc: 'COD landing pages for Facebook Ads', theme: 'orange' },
         ],
         fraudBdAltPrefix: 'Only need a checker tool?',
         fraudBdAltLink: 'See FraudBD Alternative',
@@ -229,7 +229,7 @@ const copy = computed(() => (isEn.value
             { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'ফ্রি ফ্রড চেকার · কুরিয়ার হিস্টোরি', theme: 'emerald' },
             { href: fakeOrderProtectionHref.value, title: 'ফেক অর্ডার প্রোটেকশন', desc: 'OTP · ব্লক · রিটার্ন লস কমান', theme: 'amber' },
             { href: courierAutoEntryHref.value, title: 'কুরিয়ার অটো এন্ট্রি', desc: couriers.bookingPhraseBn, theme: 'sky' },
-            { href: funnelsAnchorHref.value, title: 'Funnels (Beta)', desc: 'Facebook Ads COD ল্যান্ডিং পেজ', theme: 'orange' },
+            { href: funnelsAnchorHref.value, title: 'Funnels', desc: 'Facebook Ads COD ল্যান্ডিং পেজ', theme: 'orange' },
         ],
         fraudBdAltPrefix: 'টুল-শুধু চেকারের বিকল্প?',
         fraudBdAltLink: 'FraudBD Alternative দেখুন',
@@ -295,7 +295,7 @@ const faqs = computed(() => {
             },
             {
                 q: 'What is WooEasyLife Funnels?',
-                a: 'Funnels (Beta) helps you build WooCommerce COD landing pages for Facebook Ads without coding — AI prompt → Import JSON, themes/layouts, and a clean /wel/ URL with an inline order form. Start from the free trial, then open Funnels in the plugin admin.',
+                a: 'Funnels helps you build WooCommerce COD landing pages for Facebook Ads without coding — AI prompt → Import JSON, themes/layouts, and a clean /wel/ URL with an inline order form. Start from the free trial, then open Funnels in the plugin admin.',
             },
             {
                 q: 'How do I get help when stuck?',
@@ -349,7 +349,7 @@ const faqs = computed(() => {
             },
             {
                 q: 'WooEasyLife Funnels কী?',
-                a: 'Funnels (Beta) দিয়ে Facebook Ads-এর জন্য WooCommerce COD ল্যান্ডিং পেজ কোডিং ছাড়াই বানানো যায় — AI প্রম্পট → Import JSON, থিম/লেআউট, /wel/ clean URL ও ইনলাইন অর্ডার ফর্ম। ফ্রি ট্রায়াল শুরু করে প্লাগইন অ্যাডমিনে Funnels খুলুন।',
+                a: 'Funnels দিয়ে Facebook Ads-এর জন্য WooCommerce COD ল্যান্ডিং পেজ কোডিং ছাড়াই বানানো যায় — AI প্রম্পট → Import JSON, থিম/লেআউট, /wel/ clean URL ও ইনলাইন অর্ডার ফর্ম। ফ্রি ট্রায়াল শুরু করে প্লাগইন অ্যাডমিনে Funnels খুলুন।',
             },
             {
                 q: 'সমস্যায় পড়লে সাহায্য পাব কীভাবে?',
@@ -514,7 +514,7 @@ const toggleFaq = (i) => {
             <HowItWorksSection :steps="howItWorks" :locale="locale" />
         </ScrollReveal>
 
-        <!-- 8b. Funnels (Beta) — product discovery, hero stays fraud-first -->
+        <!-- 8b. Funnels — product discovery, hero stays fraud-first -->
         <ScrollReveal :delay="70">
             <FunnelsPromoSection
                 :locale="locale"

@@ -14,7 +14,7 @@
 
 1. BD **fraud / courier history check** (phone) before confirm  
 2. **Fake-order protection:** checkout OTP (platform-billed SMS), duplicate same-cart block, optional OTP soft-pass, checkout attempt throttle, BD area picker, blacklist (phone/email/IP/device), daily limits, BD-IP option  
-3. **Courier auto-entry + status sync:** Pathao, Steadfast, RedX (+ webhooks)  
+3. **Courier auto-entry + status sync:** Pathao, Steadfast, RedX, Paperfly. Public fraud check also includes Carrybee (history only — Carrybee has no booking)  
 4. **SteadFast courier hub (newer):** Return Requests (ask-to-return → Decide cancel/resend) + portal Notifications + stuck-parcel scan *(package: `courier_automation`; needs SteadFast portal login)*  
 5. **Facebook Messenger inbox (newer):** Page connect, chat, media/voice, lead labels — inside WP admin  
 6. **Missing / abandoned order recovery** → create WooCommerce order  
@@ -22,7 +22,7 @@
 8. **Mobile app:** multi-store, push, call ID / inbound match, approve on the go  
 9. **SMS** status + bulk; **Meta Pixel + CAPI**  
 10. **Team / employees** + performance; invoices / POS stickers (package-gated)  
-11. **Funnels (Beta):** COD landing pages for Facebook Ads — AI prompt → Import JSON, themes/layouts, `/wel/{slug}` + inline order form *(do not claim CartFlows replacement or live views/revenue analytics)*
+11. **Funnels:** COD landing pages for Facebook Ads — AI prompt → Import JSON, themes/layouts, `/wel/{slug}` + inline order form *(do not claim CartFlows replacement or live views/revenue analytics)*
 
 **Founder personal brand:** Muhibbullah · `dev.muhibbullah@gmail.com` · WooEasyLife  
 
@@ -70,7 +70,7 @@ Package: `messenger_sales_agent` and/or `ai_intelligence`
 ### AI / automation (non-Messenger)
 AI Order from Image · AI Order from Text · address enrich · status SMS · bulk SMS + recharge · new-order sound/toast · Missing Orders / abandoned cart (gated) · Meta Pixel + CAPI (+ CartFlows hooks)
 
-### Funnels (Beta — WP admin)
+### Funnels (WP admin)
 Top-nav **Funnels** hub:
 - Create funnel → Elementor **WEL Landing** widget → design/publish  
 - AI content path: Reset prompt + product fill → Copy → ChatGPT/Gemini (competitor URL / product image) → **Import JSON**  
@@ -114,11 +114,11 @@ Steadfast · RedX · Pathao · **Paperfly** (settings list; live assign/refresh 
 - Pathao / RedX **Return Requests** or **portal Notifications** inbox (SteadFast only today)  
 - Multi-Page Messenger inbox (single connected Page for v1)  
 - AI call-summary as a product feature (config key only)  
-- Extra unnamed couriers beyond Steadfast / Pathao / RedX (Paperfly = settings-only until assign shipped)  
+- Carrybee parcel booking (history check only)  
 - iOS as primary ship target  
 - App lock / PIN (empty module)  
 - Shopper-facing storefront app  
-- Funnels **live** Views/Revenue/conversion analytics (placeholders in Beta)  
+- Funnels **live** Views/Revenue/conversion analytics (still placeholders)  
 - Funnels as a full CartFlows / multi-step checkout replacement 
 
 ---

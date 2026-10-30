@@ -1,16 +1,16 @@
 <?php
 
 return [
-    'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE'),
+    'whatsapp_phone' => env('LANDING_WHATSAPP_PHONE', '8801770989591'),
 
     'whatsapp_default_message' => env(
         'LANDING_WHATSAPP_DEFAULT_MESSAGE',
         'সালাম, আমি WooEasyLife সাবস্ক্রিপশন নিতে চাই।',
     ),
 
-    'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE')),
+    'helpline_phone' => env('LANDING_HELPLINE_PHONE', env('LANDING_WHATSAPP_PHONE', '8801770989591')),
 
-    'admin_email' => env('LANDING_ADMIN_EMAIL', env('MAIL_FROM_ADDRESS')),
+    'admin_email' => env('LANDING_ADMIN_EMAIL', 'dev.muhibbullah@gmail.com'),
 
     'bkash_number' => env('LANDING_BKASH_NUMBER', env('SUBSCRIPTION_PAYMENT_BKASH')),
 
@@ -676,9 +676,9 @@ return [
         ],
         [
             'id' => 'funnels',
-            'badge' => 'Funnels · Beta',
+            'badge' => 'Funnels',
             'headline' => 'Facebook Ads-এর জন্য COD ল্যান্ডিং পেজ — কোডিং ছাড়াই',
-            'teaser' => 'Funnels (Beta): AI প্রম্পট → Import JSON → /wel/ clean URL',
+            'teaser' => 'AI প্রম্পট → Import JSON → /wel/ clean URL',
             'pain' => 'অ্যাড চালাচ্ছেন কিন্তু ল্যান্ডিং পেজ বানাতে Elementor/ডেভেলপার দেরি — কনটেন্ট বদলাতেও ঘণ্টার পর ঘণ্টা লাগে।',
             'solution' => 'WooEasyLife Funnels-এ ফানেল তৈরি করুন, প্রোডাক্ট ও ফোন সেট করুন, ChatGPT/Gemini প্রম্পট দিয়ে কনটেন্ট জেনারেট করে Import JSON করুন — তারপর থিম/লেআউট বেছে পাবলিশ।',
             'benefit' => 'নন-টেকনিক্যাল টিমও দ্রুত সিঙ্গেল-প্রোডাক্ট COD ল্যান্ডিং পেজ লাইভ করতে পারে — অ্যাড ক্রিয়েটিভের সাথে ম্যাচ করা সহজ।',
@@ -687,7 +687,7 @@ return [
                 'monthly' => 'ঘণ্টা বাঁচে',
                 'basis' => 'ম্যানুয়াল পেজ বিল্ড/এজেন্সি রাউন্ডের বদলে একই দিনে ল্যান্ডার আপডেট — উদাহরণভিত্তিক; ফলাফল ব্যবসা অনুযায়ী ভিন্ন',
                 'compare' => '১৪ দিন ফ্রি ট্রায়ালে নিজের স্টোরে Funnels টেস্ট করুন।',
-                'note' => 'Beta ফিচার — Views/Conversions মেট্রিক্স এখনো প্লেসহোল্ডার। গ্যারান্টিযুক্ত কনভার্সন রেট দাবি করা হয় না।',
+                'note' => 'Views/Conversions মেট্রিক্স এখনো প্লেসহোল্ডার। গ্যারান্টিযুক্ত কনভার্সন রেট দাবি করা হয় না।',
             ],
             'highlights' => [
                 'Funnels hub → Create → Design Your Funnel',
@@ -699,7 +699,7 @@ return [
             'read_more' => [
                 [
                     'title' => 'Funnels কী?',
-                    'body' => 'WooEasyLife অ্যাডমিনে Funnels (Beta) হলো সেলস ফানেল হাব। একটি ফানেল তৈরি করলে ল্যান্ডিং পেজ স্টেপ তৈরি হয় — Elementor WEL Landing widget দিয়ে এডিট ও পাবলিশ। পুরনো Elementor ল্যান্ডারও আগের মতোই কাজ করে।',
+                    'body' => 'WooEasyLife অ্যাডমিনে Funnels হলো সেলস ফানেল হাব। একটি ফানেল তৈরি করলে ল্যান্ডিং পেজ স্টেপ তৈরি হয় — Elementor WEL Landing widget দিয়ে এডিট ও পাবলিশ। পুরনো Elementor ল্যান্ডারও আগের মতোই কাজ করে।',
                 ],
                 [
                     'title' => 'AI কনটেন্ট কীভাবে?',

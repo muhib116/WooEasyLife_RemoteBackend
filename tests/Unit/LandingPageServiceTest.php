@@ -55,6 +55,8 @@ class LandingPageServiceTest extends TestCase
         $this->assertNotEmpty($teamShowcase['read_more']);
         $funnelsShowcase = collect($payload['featureShowcases'])->firstWhere('id', 'funnels');
         $this->assertNotNull($funnelsShowcase);
+        $this->assertSame('Funnels', $funnelsShowcase['badge']);
+        $this->assertStringNotContainsString('Beta', json_encode($funnelsShowcase, JSON_UNESCAPED_UNICODE));
         $this->assertTrue($funnelsShowcase['always_show'] ?? false);
         $this->assertNotEmpty($funnelsShowcase['features']);
         $this->assertSame('orange', $funnelsShowcase['accent']);
@@ -110,6 +112,21 @@ class LandingPageServiceTest extends TestCase
         $this->assertArrayNotHasKey('featureHighlights', $payload);
         $this->assertNotEmpty($payload['plans']);
         $this->assertArrayHasKey('fraudCheck', $payload);
+    }
+
+    public function test_whatsapp_display_phone_uses_international_form(): void
+    {
+        config(['landing.whatsapp_phone' => '8801770989591']);
+
+        $fromInternational = app(LandingPageService::class)->payload()['whatsappDisplayPhone'] ?? null;
+
+        config(['landing.whatsapp_phone' => '01770989591']);
+
+        $fromLocal = app(LandingPageService::class)->payload()['whatsappDisplayPhone'] ?? null;
+
+        $this->assertSame('+8801770-989591', $fromInternational);
+        $this->assertSame('+8801770-989591', $fromLocal);
+        $this->assertStringNotContainsString('001770', (string) $fromInternational);
     }
 
     public function test_marketing_shell_is_lightweight(): void

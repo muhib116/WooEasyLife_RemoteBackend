@@ -311,7 +311,11 @@ class LandingPageService
         $digits = preg_replace('/\D+/', '', $phone) ?? '';
 
         if (strlen($digits) === 13 && str_starts_with($digits, '880')) {
-            return '0'.substr($digits, 2);
+            return '+880'.substr($digits, 3, 4).'-'.substr($digits, 7);
+        }
+
+        if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+            return '+880'.substr($digits, 1, 4).'-'.substr($digits, 5);
         }
 
         return $phone;

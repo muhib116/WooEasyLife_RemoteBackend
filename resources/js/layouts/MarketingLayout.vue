@@ -1,6 +1,7 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { formatBdPhoneDisplay } from '@/utils/bdPhoneDisplay';
 import { primaryCtaLabel, primaryCtaShortLabel, primaryCtaUrl, merchantLoginHref, merchantLoginLabel } from '@/utils/marketingCta';
 import {
     attachScrollDepthTracking,
@@ -173,25 +174,7 @@ const headerCtaShortLabel = computed(() => primaryCtaShortLabel(isEnLocale.value
 const merchantLoginLink = computed(() => merchantLoginHref(page.props.auth));
 const merchantLoginText = computed(() => merchantLoginLabel(page.props.auth, isEnLocale.value ? 'en' : 'bn'));
 
-const helplineDisplay = computed(() => {
-    const phone = marketing.value.helpline;
-
-    if (!phone) {
-        return null;
-    }
-
-    const digits = String(phone).replace(/\D/g, '');
-
-    if (digits.length === 13 && digits.startsWith('880')) {
-        return `0${digits.slice(2, 7)}-${digits.slice(7)}`;
-    }
-
-    if (digits.length === 11) {
-        return `${digits.slice(0, 5)}-${digits.slice(5)}`;
-    }
-
-    return phone;
-});
+const helplineDisplay = computed(() => formatBdPhoneDisplay(marketing.value.helpline));
 
 const navLinkClass = (key) => {
     const active = props.activeNav === key;
