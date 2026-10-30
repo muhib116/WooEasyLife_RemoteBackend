@@ -1,4 +1,6 @@
 <template>
+    <!-- Admin tool, English UI, no /en route. Guests do not get AuthenticatedLayout, so the title is set here. -->
+    <Head v-if="!$page.props?.auth?.user?.id" title="Fraud Checker" />
     <component
         :is="$page.props?.auth?.user?.id ? AuthenticatedLayout : 'div'"
         title="Fraud Checker"
@@ -403,7 +405,7 @@
 
 <script setup lang="ts">
 import { AuthenticatedLayout } from "@/layouts";
-import { useForm, Link } from "@inertiajs/vue3";
+import { Head, useForm, Link } from "@inertiajs/vue3";
 import SecurityOn from "@/images/security_on.svg";
 import { ref, reactive, computed } from "vue";
 import axios from "axios";

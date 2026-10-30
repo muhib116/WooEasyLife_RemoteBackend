@@ -21,6 +21,7 @@ import {
     trackSubscribe,
     trackWizardStep,
 } from '@/utils/metaPixel';
+import { trackSubscriptionRequest } from '@/utils/analytics';
 import { trackOpenAiPlanEnrollment } from '@/utils/openaiAds';
 
 const props = defineProps({
@@ -409,6 +410,12 @@ watch(
         }
 
         trackWizardStep(isTrial ? 'submitted_trial' : 'submitted_paid', props.plan);
+        const pagePath = typeof window !== 'undefined' ? window.location.pathname : '';
+        trackSubscriptionRequest(
+            payload.plan_title || props.plan?.title || '',
+            pagePath === '/en' || pagePath.startsWith('/en/') ? 'en' : 'bn',
+            payload.inquiry_id,
+        );
         trackOnce(`openai:${isTrial ? 'trial' : 'subscription'}:${conversionKey}`, () =>
             trackOpenAiPlanEnrollment({
                 isTrial,

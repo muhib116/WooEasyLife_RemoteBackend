@@ -5,7 +5,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title inertia>{{ ($seo['title'] ?? null) ?: config('app.name', 'Laravel') }}</title>
+    @php
+        $configuredAppName = (string) config('app.name', '');
+        $fallbackDocumentTitle = ($configuredAppName !== '' && $configuredAppName !== 'Laravel')
+            ? $configuredAppName
+            : 'WooEasyLife';
+    @endphp
+    <title inertia>{{ ($seo['title'] ?? null) ?: $fallbackDocumentTitle }}</title>
 
     @isset($seo)
         @if (! empty($seo['description']))

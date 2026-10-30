@@ -21,7 +21,10 @@ import axios from 'axios';
 // set axios default Bearer token
 axios.defaults.headers.common['Authorization'] = `Bearer Kod30eDnI1EFG9vaf9gBPsSwaD3IkklCIATZoSYz9cf733bd`;
 
-const appName = import.meta.env.VITE_APP_NAME || 'WooEasyLife';
+const configuredAppName = import.meta.env.VITE_APP_NAME;
+const appName = configuredAppName && configuredAppName !== 'Laravel'
+    ? configuredAppName
+    : 'WooEasyLife';
 
 function hideInitialLoader() {
     const loader = document.getElementById('app-loader');

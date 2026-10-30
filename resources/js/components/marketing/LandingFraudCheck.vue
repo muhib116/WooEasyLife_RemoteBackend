@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
+import { trackFraudCheckComplete } from '@/utils/analytics';
 import { trackSearch } from '@/utils/metaPixel';
 import { trackToolAction } from '@/utils/siteVisitors';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
@@ -230,6 +231,15 @@ const handleSearch = async () => {
 
         result.value = data;
         meta.value = data.meta ?? meta.value;
+        // Once per result object. Do not send phone, name, or the raw body — see analytics.js.
+        trackFraudCheckComplete(
+            data,
+            (typeof window !== 'undefined' && (window.location.pathname === '/en' || window.location.pathname.startsWith('/en/')))
+                || props.locale === 'en'
+                ? 'en'
+                : 'bn',
+            typeof window !== 'undefined' ? window.location.pathname : '',
+        );
         trackSearch({
             // Don't send raw phone numbers to Meta — only signal that a check happened.
             search_string: 'fraud_phone_check',
