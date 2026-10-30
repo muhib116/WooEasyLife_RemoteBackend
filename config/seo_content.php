@@ -8,7 +8,7 @@ return array (
       'heading' => 'বাংলাদেশি COD সেলারদের জন্য WooEasyLife',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife হলো WooCommerce ও Facebook পেজ সেলারদের জন্য তৈরি অপারেশন প্ল্যাটফর্ম। ফ্রি Courier Fraud Checker BD দিয়ে মোবাইল নম্বর চেক করুন, ফেক অর্ডার আটকান, রিটার্ন লস কমান এবং Pathao, Steadfast, RedX-এ অটো পার্সেল এন্ট্রি চালু করুন। শুধু একটি টুল নয় — চেক, ব্লক, কুরিয়ার ও অ্যাপ এক জায়গায়। কনফার্মের আগে কাস্টমার যাচাই: /fake-customer-check। ইংরেজি হোম: /en।',
+        0 => 'WooEasyLife হলো WooCommerce ও Facebook পেজ সেলারদের জন্য তৈরি অপারেশন প্ল্যাটফর্ম। ফ্রি Courier Fraud Checker BD দিয়ে মোবাইল নম্বর চেক করুন, ফেক অর্ডার আটকান, রিটার্ন লস কমান এবং {couriers.booking.bn}-এ অটো পার্সেল এন্ট্রি চালু করুন। শুধু একটি টুল নয় — চেক, ব্লক, কুরিয়ার ও অ্যাপ এক জায়গায়। কনফার্মের আগে কাস্টমার যাচাই: /fake-customer-check। ইংরেজি হোম: /en।',
         1 => 'প্রতিদিন ফেক বা ঝুঁকিপূর্ণ অর্ডার পার্সেল করলে রিটার্ন চার্জ, প্যাকেজিং ও সময় সব লস যায়। অর্ডার কনফার্মের আগে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখে সিদ্ধান্ত নিন। তারপর চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে একই সমস্যা বারবার আসা কমান।',
         2 => 'রিটার্ন লস ক্যালকুলেটর দিয়ে মাসিক লস হিসাব করুন, কুরিয়ার চার্জ ক্যালকুলেটরে রেট তুলনা করুন, আর Ads ROAS ক্যালকুলেটরে ফেক Purchase বাদ দিয়ে আসল রিটার্ন দেখুন। পূর্ণ প্ল্যানে কুরিয়ার অটো এন্ট্রি, পার্সেল নোট হিস্ট্রি, মিসিং অর্ডার রিকভারি ও মোবাইল অ্যাপ পাবেন।',
       ),
@@ -52,7 +52,7 @@ return array (
       'heading' => 'দ্রুত উত্তর',
       'paragraphs' => 
       array (
-        0 => 'Free Courier Fraud Checker BD-এ কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি হিস্টোরি ও সাকসেস রেট দেখা যায়। অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। এটি নিশ্চিত “fraud verdict” নয়—history ও ratio দেখে কল, ঠিকানা বা OTP যাচাইয়ের সিদ্ধান্ত নিন। বিস্তারিত প্রশ্ন: /faq/customer-delivery-history-check, /faq/courier-success-rate-kivabe-bujhbo এবং /faq/success-rate-kom-hole-ki-korbo। পূর্ণ সুরক্ষা ও প্ল্যান: /pricing।',
+        0 => 'Free Courier Fraud Checker BD-এ কাস্টমারের মোবাইল নম্বর দিলে {couriers.history.bn} ডেলিভারি হিস্টোরি ও সাকসেস রেট দেখা যায়। অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। এটি নিশ্চিত “fraud verdict” নয়—history ও ratio দেখে কল, ঠিকানা বা OTP যাচাইয়ের সিদ্ধান্ত নিন। বিস্তারিত প্রশ্ন: /faq/customer-delivery-history-check, /faq/courier-success-rate-kivabe-bujhbo এবং /faq/success-rate-kom-hole-ki-korbo। পূর্ণ সুরক্ষা ও প্ল্যান: /pricing।',
       ),
     ),
     1 => 
@@ -60,7 +60,7 @@ return array (
       'heading' => 'Courier Fraud Checker BD কীভাবে কাজে লাগে',
       'paragraphs' => 
       array (
-        0 => 'Free Courier Fraud Checker BD পেজে কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখা যায়। সাকসেস রেট কম বা রিটার্ন বেশি হলে অর্ডার কনফার্মের আগেই সিদ্ধান্ত নিন — পার্সেল পাঠিয়ে লস নেওয়ার দরকার নেই।',
+        0 => 'Free Courier Fraud Checker BD পেজে কাস্টমারের মোবাইল নম্বর দিলে {couriers.history.bn} ডেলিভারি ও রিটার্ন হিস্টোরি দেখা যায়। সাকসেস রেট কম বা রিটার্ন বেশি হলে অর্ডার কনফার্মের আগেই সিদ্ধান্ত নিন — পার্সেল পাঠিয়ে লস নেওয়ার দরকার নেই।',
         1 => 'অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। ই-কমার্স, Facebook পেজ ও WooCommerce COD সেলাররা অর্ডার কনফার্ম করার আগে এই চেক ব্যবহার করে ফেক অর্ডার ও পার্সেল রিটার্ন কমান।',
         2 => 'শুধু চেক দীর্ঘমেয়াদি সুরক্ষার জন্য যথেষ্ট নয়। WooEasyLife সাবস্ক্রিপশনে checkout OTP, duplicate order block, blacklist, courier auto-entry ও parcel note history একসাথে পাওয়া যায়। ফ্রি বনাম paid বেছে নিতে আগে দৈনিক ম্যানুয়াল চেক দিয়ে workflow যাচাই করুন; automation ও protection দরকার হলে /pricing দেখুন। সম্পর্কিত FAQ: /faq/cod-order-otp-kokhon, /faq/duplicate-cod-order-block ও /faq/woocommerce-customer-blacklist।',
       ),
@@ -106,7 +106,7 @@ return array (
       'heading' => 'এআই সারাংশ',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife Free Courier Fraud Checker BD মোবাইল নম্বর দিয়ে Pathao, Steadfast, RedX কুরিয়ার হিস্টোরি ও সাকসেস রেট চেক করে — ফেক অর্ডার ও পার্সেল রিটার্ন কমাতে। অ্যাকাউন্ট ছাড়াই ফ্রি চেক সম্ভব। পূর্ণ সুরক্ষায় OTP, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রি যোগ করুন। শুরু করতে /bd-fraud-checker দিয়ে নম্বর সার্চ করুন, বা /pricing থেকে ট্রায়াল নিন।',
+        0 => 'WooEasyLife Free Courier Fraud Checker BD মোবাইল নম্বর দিয়ে {couriers.history.bn} হিস্টোরি ও সাকসেস রেট চেক করে — ফেক অর্ডার ও পার্সেল রিটার্ন কমাতে। অ্যাকাউন্ট ছাড়াই ফ্রি চেক সম্ভব। পূর্ণ সুরক্ষায় OTP, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রি যোগ করুন। শুরু করতে /bd-fraud-checker দিয়ে নম্বর সার্চ করুন, বা /pricing থেকে ট্রায়াল নিন।',
         1 => 'SteadFast ক্লাস্টার লুপ: গাইড /steadfast-fraud-check → FAQ /blog/steadfast-fraud-check-faq · /faq → কেস /blog/steadfast-fraud-check-case-study → ক্যালকুলেটর /return-loss-calculator → আবার গাইড।',
       ),
     ),
@@ -146,7 +146,7 @@ return array (
       'heading' => 'কীভাবে চেক করবেন (ধাপ)',
       'paragraphs' => 
       array (
-        0 => '১) অর্ডার থেকে বাংলাদেশি মোবাইল নম্বর কপি করুন (01XXXXXXXXX)। ২) নিচের ফ্রি টুলে নম্বর দিন। ৩) Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের হিস্টোরি ও সাকসেস রেট দেখুন। ৪) সবুজ/উচ্চ সাকসেস হলে কনফার্ম; হলুদ হলে কল/OTP; লাল/কম সাকসেস হলে হোল্ড বা অগ্রিম চার্জ।',
+        0 => '১) অর্ডার থেকে বাংলাদেশি মোবাইল নম্বর কপি করুন (01XXXXXXXXX)। ২) নিচের ফ্রি টুলে নম্বর দিন। ৩) {couriers.history.bn} হিস্টোরি ও সাকসেস রেট দেখুন। ৪) সবুজ/উচ্চ সাকসেস হলে কনফার্ম; হলুদ হলে কল/OTP; লাল/কম সাকসেস হলে হোল্ড বা অগ্রিম চার্জ।',
         1 => 'কনফার্মের পর পার্সেল বুকিং: /courier-auto-entry। মোবাইল থেকে approve/hold: /woocommerce-mobile-app। OTP ও জোন রুল: /customer-verification।',
       ),
     ),
@@ -502,7 +502,7 @@ return array (
       'heading' => 'দ্রুত উত্তর',
       'paragraphs' => 
       array (
-        0 => 'কুরিয়ার অটো এন্ট্রি মানে অর্ডার কনফার্ম হলেই Pathao, Steadfast বা RedX প্যানেলে পার্সেল তথ্য স্বয়ংক্রিয় এন্ট্রি। WooCommerce ও Facebook পেজ COD সেলাররা ম্যানুয়াল কপি-পেস্ট বাদ দিয়ে দিনে ৩+ ঘণ্টা সময় বাঁচাতে পারে। আগে /bd-fraud-checker দিয়ে নম্বর চেক করুন, তারপর কনফার্ম — কনফার্ম হলেই অটো এন্ট্রি। চার্জ তুলনায় /courier-charge-calculator।',
+        0 => 'কুরিয়ার অটো এন্ট্রি মানে অর্ডার কনফার্ম হলেই {couriers.booking.bn} প্যানেলে পার্সেল তথ্য স্বয়ংক্রিয় এন্ট্রি। WooCommerce ও Facebook পেজ COD সেলাররা ম্যানুয়াল কপি-পেস্ট বাদ দিয়ে দিনে ৩+ ঘণ্টা সময় বাঁচাতে পারে। আগে /bd-fraud-checker দিয়ে নম্বর চেক করুন, তারপর কনফার্ম — কনফার্ম হলেই অটো এন্ট্রি। চার্জ তুলনায় /courier-charge-calculator।',
       ),
     ),
     1 => 
@@ -510,7 +510,7 @@ return array (
       'heading' => 'কুরিয়ার অটো এন্ট্রি কী এবং কেন লাগে',
       'paragraphs' => 
       array (
-        0 => 'বাংলাদেশি COD ব্যবসায় প্রতি অর্ডারে কুরিয়ার ওয়েবসাইটে নাম, ফোন, ঠিকানা ও COD অ্যামাউন্ট হাতে টাইপ করা দিনে ঘণ্টার পর ঘণ্টা নষ্ট করে। ভুল এন্ট্রি মানে ভুল ডেলিভারি, রিটার্ন ও কাস্টমার অভিযোগ। WooEasyLife কুরিয়ার অটো এন্ট্রিতে অর্ডার কনফার্ম = Pathao, Steadfast বা RedX-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি।',
+        0 => 'বাংলাদেশি COD ব্যবসায় প্রতি অর্ডারে কুরিয়ার ওয়েবসাইটে নাম, ফোন, ঠিকানা ও COD অ্যামাউন্ট হাতে টাইপ করা দিনে ঘণ্টার পর ঘণ্টা নষ্ট করে। ভুল এন্ট্রি মানে ভুল ডেলিভারি, রিটার্ন ও কাস্টমার অভিযোগ। WooEasyLife কুরিয়ার অটো এন্ট্রিতে অর্ডার কনফার্ম = {couriers.booking.bn}-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি।',
         1 => 'এক ড্যাশবোর্ড থেকে তিন কুরিয়ার, স্ট্যাটাস সিঙ্ক ও কাস্টমার SMS — স্টাফ কুরিয়ার সাইটে বারবার লগইন করে না। দিনে ৫০+ অর্ডারও স্মুথলি চলে; প্যাকিং ও ফলো-আপে বেশি সময় যায়।',
         2 => 'শুধু গতি নয় — নিরাপদ ফ্লো: নতুন অর্ডার → /bd-fraud-checker → প্রয়োজনে কল → কনফার্ম → অটো এন্ট্রি। ফেক অর্ডার আটকাতে /fake-order-protection চালু রাখুন।',
       ),
@@ -538,7 +538,7 @@ return array (
       'heading' => 'নিরাপদ ওয়ার্কফ্লো: ফ্রড চেক → কনফার্ম → অটো এন্ট্রি',
       'paragraphs' => 
       array (
-        0 => 'অটো এন্ট্রি দ্রুত, কিন্তু ঝুঁকিপূর্ণ অর্ডার অটো পার্সেল পাঠানো উচিত নয়। প্রথমে /bd-fraud-checker দিয়ে মোবাইল নম্বর দিয়ে Pathao/Steadfast/RedX হিস্টোরি ও সাকসেস রেট দেখুন। কম সাকসেস রেট বা বারবার রিটার্ন হলে ফোন-কনফার্ম বা হোল্ড করুন।',
+        0 => 'অটো এন্ট্রি দ্রুত, কিন্তু ঝুঁকিপূর্ণ অর্ডার অটো পার্সেল পাঠানো উচিত নয়। প্রথমে /bd-fraud-checker দিয়ে মোবাইল নম্বর দিয়ে {couriers.history.bn} হিস্টোরি ও সাকসেস রেট দেখুন। কম সাকসেস রেট বা বারবার রিটার্ন হলে ফোন-কনফার্ম বা হোল্ড করুন।',
         1 => 'ভালো হিস্টোরি থাকলে দ্রুত কনফার্ম করুন — কনফার্ম হলেই অটো এন্ট্রি। বারবার ফেক প্যাটার্ন আটকাতে /fake-order-protection (OTP, ডুপ্লিকেট ব্লক, ব্ল্যাকলিস্ট) চালু রাখুন। মাসিক রিটার্ন খরচ দেখতে /return-loss-calculator; অ্যাড বাজেটের আসল ROAS দেখতে /ads-roas-calculator।',
       ),
     ),
@@ -565,7 +565,7 @@ return array (
       'heading' => 'এআই সারাংশ',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife কুরিয়ার অটো এন্ট্রি অর্ডার কনফার্মে Pathao, Steadfast, RedX-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি করে — WooCommerce COD সেলারদের ম্যানুয়াল টাইপ ও দিনে ৩+ ঘণ্টা সময় বাঁচায়। সাথে স্ট্যাটাস সিঙ্ক, SMS ও Steadfast পার্সেল নোট হিস্ট্রি। নিরাপদ ফ্লো: /bd-fraud-checker → কনফার্ম → অটো এন্ট্রি; প্রোটেকশন /fake-order-protection। শুরু: /pricing।',
+        0 => 'WooEasyLife কুরিয়ার অটো এন্ট্রি অর্ডার কনফার্মে {couriers.booking.bn}-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি করে — WooCommerce COD সেলারদের ম্যানুয়াল টাইপ ও দিনে ৩+ ঘণ্টা সময় বাঁচায়। সাথে স্ট্যাটাস সিঙ্ক, SMS ও Steadfast পার্সেল নোট হিস্ট্রি। নিরাপদ ফ্লো: /bd-fraud-checker → কনফার্ম → অটো এন্ট্রি; প্রোটেকশন /fake-order-protection। শুরু: /pricing।',
       ),
     ),
   ),
@@ -576,7 +576,7 @@ return array (
       'heading' => 'Quick answer',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife is built for Bangladesh WooCommerce and Facebook COD sellers. Use the free Courier Fraud Checker BD on this page to verify Pathao, Steadfast, and RedX history by phone, then add checkout OTP, courier auto-entry, missing-order recovery, and a mobile app when you subscribe. Verify before confirm: /en/fake-customer-check. Bangla home: /.',
+        0 => 'WooEasyLife is built for Bangladesh WooCommerce and Facebook COD sellers. Use the free Courier Fraud Checker BD on this page to verify {couriers.history.en} history by phone, then add checkout OTP, courier auto-entry, missing-order recovery, and a mobile app when you subscribe. Verify before confirm: /en/fake-customer-check. Bangla home: /.',
       ),
     ),
     1 => 
@@ -584,7 +584,7 @@ return array (
       'heading' => 'Built for Bangladesh WooCommerce & Facebook sellers',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife helps COD sellers stop fake orders, check courier delivery history, and automate parcel entry for Pathao, Steadfast, and RedX. Start with the free Courier Fraud Checker BD on this site, then add checkout OTP, duplicate blocking, blacklist tools, courier auto-entry, parcel note history, and a mobile app when you subscribe.',
+        0 => 'WooEasyLife helps COD sellers stop fake orders, check courier delivery history, and automate parcel entry for {couriers.booking.en}. Start with the free Courier Fraud Checker BD on this site, then add checkout OTP, duplicate blocking, blacklist tools, courier auto-entry, parcel note history, and a mobile app when you subscribe.',
         1 => 'Before you confirm an order, verify the customer phone number against courier success and return rates. Shipping risky parcels burns return fees, packaging, and ad budget. Pair fraud checks with fake-order protection and clean Facebook purchase events so optimization stays accurate.',
         2 => 'Use the return-loss calculator to estimate monthly COD losses, the courier charge calculator to compare delivery rates, and the Ads ROAS calculator to see reported versus real ROAS after removing fake purchases. Bangla pages are available from the home page for local sellers.',
       ),
@@ -614,7 +614,7 @@ return array (
       'heading' => 'Quick answer',
       'paragraphs' => 
       array (
-        0 => 'Free Courier Fraud Checker BD shows Pathao, Steadfast, and RedX delivery history and success rate from a customer mobile number. Limited free daily checks work without an account. If success rate is low, pause confirmation to cut parcel returns and ad waste. For lasting protection, pair this with /en/fake-order-protection and courier auto-entry. Verify-before-confirm focus: /en/fake-customer-check. English home: /en.',
+        0 => 'Free Courier Fraud Checker BD shows {couriers.history.en} delivery history and success rate from a customer mobile number. Limited free daily checks work without an account. If success rate is low, pause confirmation to cut parcel returns and ad waste. For lasting protection, pair this with /en/fake-order-protection and courier auto-entry. Verify-before-confirm focus: /en/fake-customer-check. English home: /en.',
       ),
     ),
     1 => 
@@ -622,7 +622,7 @@ return array (
       'heading' => 'How the free BD fraud checker works',
       'paragraphs' => 
       array (
-        0 => 'Enter a customer mobile number to review supported courier delivery and return history, including Pathao, Steadfast, and RedX where available. Limited free daily checks work without an account so you can decide before confirming COD orders.',
+        0 => 'Enter a customer mobile number to review supported courier delivery and return history, {couriers.history.en}. Limited free daily checks work without an account so you can decide before confirming COD orders.',
         1 => 'Low success rates or heavy return patterns are a signal to call the customer or hold the order. Strong history can be confirmed faster and sent through courier auto-entry once you subscribe to WooEasyLife.',
         2 => 'A checker alone is only the first layer. Full protection adds checkout OTP, duplicate blocking, device or phone blocks, courier automation, and parcel note history inside one WooCommerce-focused platform for Bangladesh sellers.',
       ),
@@ -668,7 +668,7 @@ return array (
       'heading' => 'AI summary',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife Free Courier Fraud Checker BD verifies Pathao, Steadfast, and RedX delivery history and success rate by mobile number to reduce fake COD orders and parcel returns. Free checks work without an account. Add OTP, blacklists, and courier auto-entry for full protection. Start on /en/bd-fraud-checker or trial via /pricing. Bangla mirror: /bd-fraud-checker.',
+        0 => 'WooEasyLife Free Courier Fraud Checker BD verifies {couriers.history.en} delivery history and success rate by mobile number to reduce fake COD orders and parcel returns. Free checks work without an account. Add OTP, blacklists, and courier auto-entry for full protection. Start on /en/bd-fraud-checker or trial via /pricing. Bangla mirror: /bd-fraud-checker.',
       ),
     ),
   ),
@@ -810,7 +810,7 @@ return array (
       'heading' => 'Quick answer',
       'paragraphs' => 
       array (
-        0 => 'Courier auto-entry means confirming an order automatically pushes parcel details into Pathao, Steadfast, or RedX. WooCommerce and Facebook page COD sellers can skip manual copy-paste and save 3+ hours a day. Check the number first on /en/bd-fraud-checker, then confirm — confirm triggers auto-entry. Compare charges on /en/courier-charge-calculator.',
+        0 => 'Courier auto-entry means confirming an order automatically pushes parcel details into {couriers.booking.en}. WooCommerce and Facebook page COD sellers can skip manual copy-paste and save 3+ hours a day. Check the number first on /en/bd-fraud-checker, then confirm — confirm triggers auto-entry. Compare charges on /en/courier-charge-calculator.',
       ),
     ),
     1 => 
@@ -818,7 +818,7 @@ return array (
       'heading' => 'What courier auto-entry is and why it matters',
       'paragraphs' => 
       array (
-        0 => 'In Bangladesh COD operations, typing name, phone, address, and COD amount into courier websites wastes hours every day. Typos cause wrong deliveries, returns, and customer complaints. With WooEasyLife courier auto-entry, order confirm = automatic Pathao, Steadfast, or RedX parcel entry.',
+        0 => 'In Bangladesh COD operations, typing name, phone, address, and COD amount into courier websites wastes hours every day. Typos cause wrong deliveries, returns, and customer complaints. With WooEasyLife courier auto-entry, order confirm = automatic {couriers.booking.en} parcel entry.',
         1 => 'One dashboard for three couriers, status sync, and customer SMS — staff stop logging into courier sites repeatedly. Even 50+ orders/day stays smooth so packing and follow-up get more time.',
         2 => 'Speed alone is not enough — use a safe flow: new order → /en/bd-fraud-checker → call if needed → confirm → auto-entry. Keep /fake-order-protection on to stop repeat fakes.',
       ),
@@ -846,7 +846,7 @@ return array (
       'heading' => 'Safe workflow: fraud check → confirm → auto-entry',
       'paragraphs' => 
       array (
-        0 => 'Auto-entry is fast, but risky orders should not ship automatically. First check Pathao/Steadfast/RedX history and success rate on /en/bd-fraud-checker. Low success rate or repeat returns → phone confirm or hold.',
+        0 => 'Auto-entry is fast, but risky orders should not ship automatically. First check {couriers.history.en} history and success rate on /en/bd-fraud-checker. Low success rate or repeat returns → phone confirm or hold.',
         1 => 'Strong history → confirm quickly — confirm triggers auto-entry. Stop repeat fake patterns with /fake-order-protection (OTP, duplicate blocks, blacklists). Measure monthly return cost on /return-loss-calculator and real ad ROAS on /en/ads-roas-calculator.',
       ),
     ),
@@ -873,7 +873,7 @@ return array (
       'heading' => 'AI summary',
       'paragraphs' => 
       array (
-        0 => 'WooEasyLife courier auto-entry pushes Pathao, Steadfast, and RedX parcels when orders are confirmed — saving WooCommerce COD sellers from manual typing and 3+ hours/day. Includes status sync, SMS, and Steadfast parcel note history. Safe flow: /en/bd-fraud-checker → confirm → auto-entry; protection via /fake-order-protection. Start: /pricing. Bangla: /courier-auto-entry.',
+        0 => 'WooEasyLife courier auto-entry pushes {couriers.booking.en} parcels when orders are confirmed — saving WooCommerce COD sellers from manual typing and 3+ hours/day. Includes status sync, SMS, and Steadfast parcel note history. Safe flow: /en/bd-fraud-checker → confirm → auto-entry; protection via /fake-order-protection. Start: /pricing. Bangla: /courier-auto-entry.',
       ),
     ),
   ),
@@ -1423,7 +1423,7 @@ return array (
       'heading' => 'How to run the check (steps)',
       'paragraphs' => 
       array (
-        0 => '1) Copy the Bangladesh mobile (01XXXXXXXXX) from the order. 2) Enter it in the free tool below. 3) Read Pathao, Steadfast, and RedX history and success rate where available. 4) Green/high → confirm faster; yellow → call or OTP; red/low → hold or ask for an advance delivery fee.',
+        0 => '1) Copy the Bangladesh mobile (01XXXXXXXXX) from the order. 2) Enter it in the free tool below. 3) Read {couriers.history.en} history and success rate where available. 4) Green/high → confirm faster; yellow → call or OTP; red/low → hold or ask for an advance delivery fee.',
         1 => 'After confirm, book with /en/courier-auto-entry. Approve/hold on the road: /en/woocommerce-mobile-app. Zone and OTP rules: /en/customer-verification. Courier setup: /en/pathao-courier-guide, /en/steadfast-integration, /en/redx-courier-guide.',
       ),
     ),
@@ -1526,7 +1526,7 @@ return array (
       'heading' => 'কীভাবে Courier number check online করবেন',
       'paragraphs' => 
       array (
-        0 => '১) অর্ডার/ইনবক্স থেকে 01XXXXXXXXX নম্বর নিন। ২) নিচের ফ্রি Courier Checker টুলে পেস্ট করুন। ৩) Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের হিস্টোরি ও সাকসেস রেট পড়ুন। ৪) সবুজ/উচ্চ সাকসেস → কনফার্ম; হলুদ → কল/OTP; লাল → হোল্ড বা অগ্রিম চার্জ।',
+        0 => '১) অর্ডার/ইনবক্স থেকে 01XXXXXXXXX নম্বর নিন। ২) নিচের ফ্রি Courier Checker টুলে পেস্ট করুন। ৩) {couriers.history.bn} হিস্টোরি ও সাকসেস রেট পড়ুন। ৪) সবুজ/উচ্চ সাকসেস → কনফার্ম; হলুদ → কল/OTP; লাল → হোল্ড বা অগ্রিম চার্জ।',
         1 => 'রেশিও-কেন্দ্রিক ভিউ চাইলে: /bd-courier-ratio-checker। কুরিয়ার-নির্দিষ্ট ল্যান্ডিং: /pathao-fraud-check, /steadfast-fraud-check, /redx-fraud-check। মোবাইল SOP: /woocommerce-mobile-app।',
       ),
     ),
@@ -1628,7 +1628,7 @@ return array (
       'heading' => 'কীভাবে চেক করবেন',
       'paragraphs' => 
       array (
-        0 => '১) 01XXXXXXXXX নম্বর নিন। ২) নিচের ফ্রি টুলে দিন। ৩) Pathao/Steadfast/RedX হিস্টোরি পড়ুন। ৪) সবুজ কনফার্ম; হলুদ কল/OTP; লাল হোল্ড বা অগ্রিম চার্জ।',
+        0 => '১) 01XXXXXXXXX নম্বর নিন। ২) নিচের ফ্রি টুলে দিন। ৩) {couriers.history.bn} হিস্টোরি পড়ুন। ৪) সবুজ কনফার্ম; হলুদ কল/OTP; লাল হোল্ড বা অগ্রিম চার্জ।',
         1 => 'জোন রুল: /customer-verification। প্রোটেকশন: /fake-order-protection। অটো এন্ট্রি: /courier-auto-entry।',
       ),
     ),
@@ -1666,7 +1666,7 @@ return array (
       'heading' => 'BD Courier Ratio Checker কী',
       'paragraphs' => 
       array (
-        0 => 'BD Courier Order Ratio Checker মোবাইল নম্বর দিয়ে ডেলিভারি সাকসেস রেট বনাম রিটার্ন/ক্যানসেল রেশিও দেখায়—কাস্টমার কোয়ালিটি বোঝার জন্য। Pathao, Steadfast, RedX সিগন্যাল একসাথে।',
+        0 => 'BD Courier Order Ratio Checker মোবাইল নম্বর দিয়ে ডেলিভারি সাকসেস রেট বনাম রিটার্ন/ক্যানসেল রেশিও দেখায়—কাস্টমার কোয়ালিটি বোঝার জন্য। {couriers.history.bn} সিগন্যাল একসাথে।',
         1 => 'ফ্রি চেক এই পেজে। পূর্ণ টুল: /bd-fraud-checker। Fake customer অ্যাঙ্গেল: /fake-customer-check।',
       ),
       'figures' => 

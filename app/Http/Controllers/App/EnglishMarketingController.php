@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\App;
 
 use App\Http\Controllers\Controller;
+use App\Support\PublicCourierNames;
 use App\Services\BlogService;
 use App\Services\LandingPageService;
 use App\Services\LandingSettingsService;
@@ -174,7 +175,7 @@ class EnglishMarketingController extends Controller
             'showChecker' => true,
             'steps' => [
                 'Copy the customer’s Bangladesh mobile number from the order (before you confirm).',
-                'Run the free checker below — review Pathao / Steadfast / RedX history and success rate.',
+                'Run the free checker below — review '.PublicCourierNames::historyPhrase('en').' history and success rate.',
                 'Green/high success → confirm; yellow → call or OTP; red/low success → hold or ask for advance fee.',
                 'Stop repeats with Fake Order Protection (OTP, blacklist), then book via courier auto-entry.',
             ],

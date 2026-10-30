@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
@@ -18,6 +18,7 @@ defineProps({
 });
 
 const openFaq = ref(null);
+const historyEn = usePage().props.publicCouriers?.historyPhraseEn || '';
 const ctaUrl = computed(() => primaryCtaUrl());
 const ctaLabel = computed(() => primaryCtaLabel());
 
@@ -28,7 +29,7 @@ const toggleFaq = (i) => {
 const pillars = [
     {
         title: 'Courier history at a glance',
-        body: 'Enter a mobile number to see delivery and return records from Pathao, Steadfast, RedX, and other supported couriers.',
+        body: `Enter a mobile number to see delivery and return records from ${historyEn}.`,
     },
     {
         title: 'Decide with success rate',
@@ -46,7 +47,7 @@ const pillars = [
 
 const steps = [
     'Enter the customer’s Bangladesh mobile number before you confirm the COD order.',
-    'Review Pathao, Steadfast, RedX (and other supported) delivery and return history.',
+    `Review ${historyEn} delivery and return history.`,
     'If risk looks high, call to verify or hold shipping. If history looks strong, confirm.',
     'Turn on OTP, blacklist, and protection features to stop repeat fake orders.',
 ];
@@ -141,7 +142,7 @@ const relatedLinks = [
                     {{ seo?.prerender_h1 || 'Free Courier Fraud Checker BD — delivery history by phone' }}
                 </h1>
                 <p class="mx-auto mt-1.5 max-w-2xl text-xs text-slate-400 sm:text-sm">
-                    Enter number · Pathao · SteadFast · RedX — check before you confirm
+                    Enter number · {{ historyEn }} — check before you confirm
                 </p>
             </div>
         </section>
@@ -170,7 +171,7 @@ const relatedLinks = [
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-amber-200 sm:text-2xl">Quick answer</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    Free Courier Fraud Checker BD shows Pathao, Steadfast, and RedX delivery history and success rate from a customer mobile number.
+                    Free Courier Fraud Checker BD shows {{ historyEn }} delivery history and success rate from a customer mobile number.
                     Limited free daily checks work without an account. If success rate is low, pause confirmation — you cut parcel returns and ad waste.
                     For lasting protection, combine this with
                     <Link href="/en/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">fake order protection</Link>
@@ -297,7 +298,7 @@ const relatedLinks = [
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">AI summary</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    WooEasyLife Free Courier Fraud Checker BD verifies Pathao, Steadfast, and RedX delivery history and success rate by mobile number
+                    WooEasyLife Free Courier Fraud Checker BD verifies {{ historyEn }} delivery history and success rate by mobile number
                     to reduce fake COD orders and parcel returns. Free checks work without an account. Add OTP, blacklists, and courier auto-entry for full protection.
                     Start with a phone search on this page, or begin a trial from
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">pricing</Link>.

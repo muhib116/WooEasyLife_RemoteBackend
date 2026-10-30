@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
@@ -19,6 +19,7 @@ const props = defineProps({
 });
 
 const openFaq = ref(null);
+const historyBn = usePage().props.publicCouriers?.historyPhraseBn || '';
 const ctaUrl = computed(() => primaryCtaUrl());
 const ctaLabel = computed(() => primaryCtaLabel());
 
@@ -29,7 +30,7 @@ const toggleFaq = (i) => {
 const pillars = [
     {
         title: 'কুরিয়ার হিস্টোরি এক নজরে',
-        body: 'মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন রেকর্ড একসাথে দেখা যায়।',
+        body: `মোবাইল নম্বর দিলে ${historyBn} ডেলিভারি ও রিটার্ন রেকর্ড একসাথে দেখা যায়।`,
     },
     {
         title: 'সাকসেস রেট দিয়ে সিদ্ধান্ত',
@@ -47,7 +48,7 @@ const pillars = [
 
 const steps = [
     'কাস্টমারের বাংলাদেশি মোবাইল নম্বর দিন (অর্ডার কনফার্মের আগে)।',
-    'Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখুন।',
+    `${historyBn} ডেলিভারি ও রিটার্ন হিস্টোরি দেখুন।`,
     'সাকসেস রেট ও রিটার্ন প্যাটার্ন মিলিয়ে ঝুঁকি কম হলে কনফার্ম করুন — বেশি হলে ফোন-যাচাই বা বাতিল রাখুন।',
     'বারবার ফেক অর্ডার আটকাতে OTP, ব্ল্যাকলিস্ট ও প্রোটেকশন চালু করুন।',
 ];
@@ -165,7 +166,7 @@ const relatedLinks = computed(() => {
                     {{ seo?.prerender_h1 || 'Fraud Checker BD — ফ্রি কুরিয়ার হিস্টোরি চেক' }}
                 </h1>
                 <p class="mx-auto mt-1.5 max-w-2xl text-xs text-slate-400 sm:text-sm">
-                    নম্বর দিন · Pathao · SteadFast · RedX — অর্ডার কনফার্মের আগে চেক করুন
+                    নম্বর দিন · {{ historyBn }} — অর্ডার কনফার্মের আগে চেক করুন
                 </p>
             </div>
         </section>
@@ -200,7 +201,7 @@ const relatedLinks = computed(() => {
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-amber-200 sm:text-2xl">দ্রুত উত্তর</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    Free Courier Fraud Checker BD-এ কাস্টমারের মোবাইল নম্বর দিলে Pathao, Steadfast, RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি হিস্টোরি ও সাকসেস রেট দেখা যায়।
+                    Free Courier Fraud Checker BD-এ কাস্টমারের মোবাইল নম্বর দিলে {{ historyBn }} ডেলিভারি হিস্টোরি ও সাকসেস রেট দেখা যায়।
                     অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। সাকসেস রেট কম হলে অর্ডার কনফার্মের আগে থামুন — পার্সেল রিটার্ন ও অ্যাড লস কমে।
                     দীর্ঘমেয়াদে WooEasyLife-এর
                     <Link href="/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">ফেক অর্ডার প্রোটেকশন</Link>
@@ -336,7 +337,7 @@ const relatedLinks = computed(() => {
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    WooEasyLife Free Courier Fraud Checker BD মোবাইল নম্বর দিয়ে Pathao, Steadfast, RedX কুরিয়ার হিস্টোরি ও সাকসেস রেট চেক করে —
+                    WooEasyLife Free Courier Fraud Checker BD মোবাইল নম্বর দিয়ে {{ historyBn }} হিস্টোরি ও সাকসেস রেট চেক করে —
                     ফেক অর্ডার ও পার্সেল রিটার্ন কমাতে। অ্যাকাউন্ট ছাড়াই ফ্রি চেক সম্ভব। পূর্ণ সুরক্ষায় OTP, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রি যোগ করুন।
                     শুরু করতে এই পেজে নম্বর সার্চ করুন, বা
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>

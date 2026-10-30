@@ -151,7 +151,7 @@ return [
     'stats' => [
         ['value' => '৳45,000+', 'label' => 'Example monthly return-loss savings'],
         ['value' => '3+ hrs', 'label' => 'Courier time saved per day'],
-        ['value' => '5 couriers', 'label' => 'Pathao · Steadfast · RedX and more'],
+        ['value' => '{couriers.history.count.en} couriers', 'label' => '{couriers.history.en}'],
         ['value' => '14 days', 'label' => 'Free trial — no card required'],
     ],
 
@@ -215,7 +215,7 @@ return [
         'subtitle' => 'Website to courier, SMS, and mobile app — in one place.',
         'items' => [
             ['icon' => 'woocommerce', 'title' => 'WooCommerce website', 'description' => 'Connect your site — orders sync automatically.', 'accent' => 'fuchsia'],
-            ['icon' => 'courier', 'title' => 'Pathao · Steadfast · RedX', 'description' => 'Confirm triggers auto courier entry and updates.', 'accent' => 'amber'],
+            ['icon' => 'courier', 'title' => '{couriers.booking.en}', 'description' => 'Confirm triggers auto courier entry and updates.', 'accent' => 'amber'],
             ['icon' => 'sms', 'title' => 'SMS', 'description' => 'Order and delivery updates straight to the customer phone.', 'accent' => 'emerald'],
             ['icon' => 'app', 'title' => 'Mobile app (Android)', 'description' => 'Every site in one app — alerts and calling.', 'accent' => 'sky'],
             ['icon' => 'ai', 'title' => 'Message to order', 'description' => 'Create orders quickly from text or images.', 'accent' => 'violet'],

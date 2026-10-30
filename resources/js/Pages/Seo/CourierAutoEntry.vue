@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
@@ -16,6 +16,8 @@ defineProps({
 });
 
 const openFaq = ref(null);
+const historyBn = usePage().props.publicCouriers?.historyPhraseBn || '';
+const bookingBn = usePage().props.publicCouriers?.bookingPhraseBn || '';
 const ctaUrl = computed(() => primaryCtaUrl());
 const ctaLabel = computed(() => primaryCtaLabel());
 
@@ -26,10 +28,10 @@ const toggleFaq = (i) => {
 const pillars = [
     {
         title: 'কনফার্ম = অটো এন্ট্রি',
-        body: 'অর্ডার কনফার্ম হলেই Pathao, Steadfast বা RedX-এ নাম, ফোন, ঠিকানা ও COD অ্যামাউন্ট স্বয়ংক্রিয় এন্ট্রি — ম্যানুয়াল কপি-পেস্ট লাগে না।',
+        body: `অর্ডার কনফার্ম হলেই ${bookingBn}-এ নাম, ফোন, ঠিকানা ও COD অ্যামাউন্ট স্বয়ংক্রিয় এন্ট্রি — ম্যানুয়াল কপি-পেস্ট লাগে না।`,
     },
     {
-        title: '৩ কুরিয়ার এক ড্যাশবোর্ড',
+        title: 'এক ড্যাশবোর্ডে বুকিং',
         body: 'আলাদা প্যানেলে বারবার লগইন বাদ। WooEasyLife থেকেই এন্ট্রি, স্ট্যাটাস সিঙ্ক ও কাস্টমার SMS।',
     },
     {
@@ -43,7 +45,7 @@ const pillars = [
 ];
 
 const steps = [
-    'কুরিয়ার অ্যাকাউন্ট (Pathao / Steadfast / RedX) WooEasyLife-এ কানেক্ট করুন।',
+    `কুরিয়ার অ্যাকাউন্ট (${bookingBn}) WooEasyLife-এ কানেক্ট করুন।`,
     'নতুন অর্ডারে আগে BD Fraud Checker দিয়ে মোবাইল নম্বর চেক করুন।',
     'ঝুঁকি কম হলে অর্ডার কনফার্ম করুন — কনফার্ম হলেই কুরিয়ারে অটো এন্ট্রি।',
     'স্ট্যাটাস সিঙ্ক ও SMS চালু রাখুন; প্রয়োজনে পার্সেল নোট হিস্ট্রি থেকে ফলো-আপ নোট রাখুন।',
@@ -53,7 +55,7 @@ const guideSections = [
     {
         heading: 'কুরিয়ার অটো এন্ট্রি কী এবং কেন লাগে',
         paragraphs: [
-            'বাংলাদেশি COD ব্যবসায় প্রতি অর্ডারে কুরিয়ার ওয়েবসাইটে নাম, ফোন, ঠিকানা ও COD অ্যামাউন্ট হাতে টাইপ করা দিনে ঘণ্টার পর ঘণ্টা নষ্ট করে। ভুল এন্ট্রি মানে ভুল ডেলিভারি, রিটার্ন ও কাস্টমার অভিযোগ। WooEasyLife কুরিয়ার অটো এন্ট্রিতে অর্ডার কনফার্ম = Pathao, Steadfast বা RedX-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি।',
+            `বাংলাদেশি COD ব্যবসায় প্রতি অর্ডারে কুরিয়ার ওয়েবসাইটে নাম, ফোন, ঠিকানা ও COD অ্যামাউন্ট হাতে টাইপ করা দিনে ঘণ্টার পর ঘণ্টা নষ্ট করে। ভুল এন্ট্রি মানে ভুল ডেলিভারি, রিটার্ন ও কাস্টমার অভিযোগ। WooEasyLife কুরিয়ার অটো এন্ট্রিতে অর্ডার কনফার্ম = ${bookingBn}-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি।`,
             'এক ড্যাশবোর্ড থেকে তিন কুরিয়ার, স্ট্যাটাস সিঙ্ক ও কাস্টমার SMS — স্টাফ কুরিয়ার সাইটে বারবার লগইন করে না। দিনে ৫০+ অর্ডারও স্মুথলি চলে; প্যাকিং ও ফলো-আপে বেশি সময় যায়।',
         ],
     },
@@ -92,7 +94,7 @@ const compareRows = [
 const workflowCards = [
     {
         title: '১. ফ্রড চেক',
-        body: 'মোবাইল নম্বর দিয়ে Pathao, Steadfast, RedX হিস্টোরি ও সাকসেস রেট দেখুন।',
+        body: `মোবাইল নম্বর দিয়ে ${historyBn} হিস্টোরি ও সাকসেস রেট দেখুন।`,
         href: '/bd-fraud-checker',
         linkLabel: 'BD Fraud Checker',
         tone: 'warn',
@@ -125,7 +127,7 @@ const whoFor = [
     'দিনে অনেক COD অর্ডার হ্যান্ডেল করা Facebook পেজ সেলার',
     'WooCommerce স্টোর যেখানে স্টাফ কুরিয়ার প্যানেলে আটকে থাকে',
     'ড্রপশিপ / রিসেলার টিম যাদের পার্সেল ভলিউম বাড়ছে',
-    'এজেন্সি যারা ক্লায়েন্টের জন্য Pathao/Steadfast/RedX এন্ট্রি করে',
+    `এজেন্সি যারা ক্লায়েন্টের জন্য ${bookingBn} এন্ট্রি করে`,
 ];
 
 const relatedLinks = [
@@ -152,7 +154,7 @@ const relatedLinks = [
                 </div>
                 <p class="text-sm font-semibold tracking-[0.18em] text-amber-300/90">কুরিয়ার অটো এন্ট্রি</p>
                 <h1 class="mt-3 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-                    {{ seo?.prerender_h1 || 'কুরিয়ার অটো এন্ট্রি — Pathao, Steadfast, RedX' }}
+                    {{ seo?.prerender_h1 || `কুরিয়ার অটো এন্ট্রি — ${bookingBn}` }}
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
                     {{ seo?.prerender_lead || 'অর্ডার কনফার্ম হলেই কুরিয়ার প্যানেলে অটো এন্ট্রি। ম্যানুয়াল টাইপ বাদ দিয়ে সময় বাঁচান।' }}
@@ -193,7 +195,7 @@ const relatedLinks = [
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-amber-200 sm:text-2xl">দ্রুত উত্তর</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    কুরিয়ার অটো এন্ট্রি মানে অর্ডার কনফার্ম হলেই Pathao, Steadfast বা RedX প্যানেলে পার্সেল তথ্য স্বয়ংক্রিয় এন্ট্রি।
+                    কুরিয়ার অটো এন্ট্রি মানে অর্ডার কনফার্ম হলেই {{ bookingBn }} প্যানেলে পার্সেল তথ্য স্বয়ংক্রিয় এন্ট্রি।
                     WooCommerce ও Facebook পেজ COD সেলাররা ম্যানুয়াল কপি-পেস্ট বাদ দিয়ে দিনে ৩+ ঘণ্টা সময় বাঁচাতে পারে।
                     আগে
                     <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">BD Fraud Checker</Link>
@@ -367,7 +369,7 @@ const relatedLinks = [
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    WooEasyLife কুরিয়ার অটো এন্ট্রি অর্ডার কনফার্মে Pathao, Steadfast, RedX-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি করে —
+                    WooEasyLife কুরিয়ার অটো এন্ট্রি অর্ডার কনফার্মে {{ bookingBn }}-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি করে —
                     WooCommerce COD সেলারদের ম্যানুয়াল টাইপ ও দিনে ৩+ ঘণ্টা সময় বাঁচায়। সাথে স্ট্যাটাস সিঙ্ক, SMS ও Steadfast পার্সেল নোট হিস্ট্রি।
                     নিরাপদ ফ্লো:
                     <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">ফ্রড চেক</Link>

@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
@@ -16,6 +16,8 @@ defineProps({
 });
 
 const openFaq = ref(null);
+const historyEn = usePage().props.publicCouriers?.historyPhraseEn || '';
+const bookingEn = usePage().props.publicCouriers?.bookingPhraseEn || '';
 const ctaUrl = computed(() => primaryCtaUrl());
 const ctaLabel = 'Start free trial';
 
@@ -26,10 +28,10 @@ const toggleFaq = (i) => {
 const pillars = [
     {
         title: 'Confirm = auto-entry',
-        body: 'Confirm an order and name, phone, address, and COD amount enter Pathao, Steadfast, or RedX automatically — no manual copy-paste.',
+        body: `Confirm an order and name, phone, address, and COD amount enter ${bookingEn} automatically — no manual copy-paste.`,
     },
     {
-        title: '3 couriers, one dashboard',
+        title: 'One dashboard for booking',
         body: 'Stop logging into separate panels. Entry, status sync, and customer SMS run from WooEasyLife.',
     },
     {
@@ -43,7 +45,7 @@ const pillars = [
 ];
 
 const steps = [
-    'Connect Pathao / Steadfast / RedX accounts inside WooEasyLife.',
+    `Connect ${bookingEn} accounts inside WooEasyLife.`,
     'On new orders, check the mobile number with BD Fraud Checker first.',
     'If risk looks low, confirm the order — confirm triggers courier auto-entry.',
     'Keep status sync and SMS on; use parcel note history for follow-up notes.',
@@ -53,7 +55,7 @@ const guideSections = [
     {
         heading: 'What courier auto-entry is and why it matters',
         paragraphs: [
-            'In Bangladesh COD operations, typing name, phone, address, and COD amount into courier websites wastes hours every day. Typos cause wrong deliveries, returns, and customer complaints. With WooEasyLife courier auto-entry, order confirm = automatic Pathao, Steadfast, or RedX parcel entry.',
+            `In Bangladesh COD operations, typing name, phone, address, and COD amount into courier websites wastes hours every day. Typos cause wrong deliveries, returns, and customer complaints. With WooEasyLife courier auto-entry, order confirm = automatic ${bookingEn} parcel entry.`,
             'One dashboard for three couriers, status sync, and customer SMS — staff stop logging into courier sites repeatedly. Even 50+ orders/day stays smooth so packing and follow-up get more time.',
         ],
     },
@@ -92,7 +94,7 @@ const compareRows = [
 const workflowCards = [
     {
         title: '1. Fraud check',
-        body: 'Check Pathao, Steadfast, RedX history and success rate by mobile number.',
+        body: `Check ${historyEn} history and success rate by mobile number.`,
         href: '/en/bd-fraud-checker',
         linkLabel: 'BD Fraud Checker',
         tone: 'warn',
@@ -125,7 +127,7 @@ const whoFor = [
     'Facebook page sellers handling many COD orders daily',
     'WooCommerce stores where staff are stuck in courier panels',
     'Dropship / reseller teams with rising parcel volume',
-    'Agencies entering Pathao/Steadfast/RedX parcels for clients',
+    `Agencies entering ${bookingEn} parcels for clients`,
 ];
 
 const relatedLinks = [
@@ -152,7 +154,7 @@ const relatedLinks = [
                 </div>
                 <p class="text-sm font-semibold tracking-[0.18em] text-amber-300/90">Courier Auto Entry</p>
                 <h1 class="mt-3 text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-                    {{ seo?.prerender_h1 || 'Courier Auto Entry — Pathao, Steadfast, RedX' }}
+                    {{ seo?.prerender_h1 || `Courier Auto Entry — ${bookingEn}` }}
                 </h1>
                 <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
                     {{ seo?.prerender_lead || 'Confirm an order and the courier panel fills automatically. Skip manual typing and save time.' }}
@@ -187,7 +189,7 @@ const relatedLinks = [
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-amber-200 sm:text-2xl">Quick answer</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    Courier auto-entry means confirming an order automatically pushes parcel details into Pathao, Steadfast, or RedX.
+                    Courier auto-entry means confirming an order automatically pushes parcel details into {{ bookingEn }}.
                     WooCommerce and Facebook page COD sellers can skip manual copy-paste and save 3+ hours a day.
                     Check the number first on
                     <Link href="/en/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">BD Fraud Checker</Link>,
@@ -361,7 +363,7 @@ const relatedLinks = [
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">AI summary</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
-                    WooEasyLife courier auto-entry pushes Pathao, Steadfast, and RedX parcels when orders are confirmed —
+                    WooEasyLife courier auto-entry pushes {{ bookingEn }} parcels when orders are confirmed —
                     saving WooCommerce COD sellers from manual typing and 3+ hours/day. Includes status sync, SMS, and Steadfast parcel note history.
                     Safe flow:
                     <Link href="/en/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">fraud check</Link>

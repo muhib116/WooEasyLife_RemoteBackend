@@ -66,6 +66,7 @@ const openFaq = ref(null);
 const showWizard = ref(false);
 const selectedPlan = ref(null);
 const page = usePage();
+const couriers = page.props.publicCouriers || {};
 
 const isEn = computed(() => props.locale === 'en');
 const localeTag = computed(() => (props.locale === 'en' ? 'en' : 'bn'));
@@ -197,7 +198,7 @@ const copy = computed(() => (isEn.value
         seoCards: [
             { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'Free fraud checker · courier history', theme: 'emerald' },
             { href: fakeOrderProtectionHref.value, title: 'Fake order protection', desc: 'OTP · block · cut return loss', theme: 'amber' },
-            { href: courierAutoEntryHref.value, title: 'Courier auto entry', desc: 'Pathao · Steadfast · RedX', theme: 'sky' },
+            { href: courierAutoEntryHref.value, title: 'Courier auto entry', desc: couriers.bookingPhraseEn, theme: 'sky' },
             { href: funnelsAnchorHref.value, title: 'Funnels (Beta)', desc: 'COD landing pages for Facebook Ads', theme: 'orange' },
         ],
         fraudBdAltPrefix: 'Only need a checker tool?',
@@ -227,7 +228,7 @@ const copy = computed(() => (isEn.value
         seoCards: [
             { href: bdFraudCheckerHref.value, title: 'BD Fraud Checker', desc: 'ফ্রি ফ্রড চেকার · কুরিয়ার হিস্টোরি', theme: 'emerald' },
             { href: fakeOrderProtectionHref.value, title: 'ফেক অর্ডার প্রোটেকশন', desc: 'OTP · ব্লক · রিটার্ন লস কমান', theme: 'amber' },
-            { href: courierAutoEntryHref.value, title: 'কুরিয়ার অটো এন্ট্রি', desc: 'Pathao · Steadfast · RedX', theme: 'sky' },
+            { href: courierAutoEntryHref.value, title: 'কুরিয়ার অটো এন্ট্রি', desc: couriers.bookingPhraseBn, theme: 'sky' },
             { href: funnelsAnchorHref.value, title: 'Funnels (Beta)', desc: 'Facebook Ads COD ল্যান্ডিং পেজ', theme: 'orange' },
         ],
         fraudBdAltPrefix: 'টুল-শুধু চেকারের বিকল্প?',
@@ -286,7 +287,7 @@ const faqs = computed(() => {
             },
             {
                 q: 'Which couriers are supported?',
-                a: 'Pathao, Steadfast, RedX, and more — entry and updates from one place.',
+                a: `${couriers.bookingPhraseEn} — entry and updates from one place.`,
             },
             {
                 q: 'Do fake orders hurt Facebook ad ROAS?',
@@ -340,7 +341,7 @@ const faqs = computed(() => {
             },
             {
                 q: 'কোন কুরিয়ার কাজ করে?',
-                a: 'Pathao, Steadfast, RedX সহ একাধিক কুরিয়ার — এক জায়গা থেকে এন্ট্রি ও আপডেট।',
+                a: `${couriers.bookingPhraseBn} — এক জায়গা থেকে এন্ট্রি ও আপডেট।`,
             },
             {
                 q: 'ফেক অর্ডার কি Facebook অ্যাড নষ্ট করে?',

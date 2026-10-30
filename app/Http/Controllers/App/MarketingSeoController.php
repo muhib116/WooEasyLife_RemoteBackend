@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\App;
 
 use App\Http\Controllers\Controller;
+use App\Support\PublicCourierNames;
 use App\Services\LandingPageService;
 use App\Services\LandingSettingsService;
 use App\Services\SeoMetaService;
@@ -351,7 +352,7 @@ class MarketingSeoController extends Controller
             ],
             'fake_customer_check' => [
                 'অর্ডার থেকে কাস্টমারের বাংলাদেশি মোবাইল নম্বর নিন (কনফার্মের আগে)।',
-                'নিচের ফ্রি টুলে নম্বর দিয়ে Pathao / Steadfast / RedX হিস্টোরি ও সাকসেস রেট দেখুন।',
+                'নিচের ফ্রি টুলে নম্বর দিয়ে '.PublicCourierNames::historyPhrase('bn').' হিস্টোরি ও সাকসেস রেট দেখুন।',
                 'সবুজ/উচ্চ সাকসেস হলে কনফার্ম; হলুদ হলে কল বা OTP; লাল/কম সাকসেস হলে হোল্ড বা অগ্রিম চার্জ।',
                 'বারবার ফেক আটকাতে Fake Order Protection (OTP, ব্ল্যাকলিস্ট) চালু রাখুন—তারপর কুরিয়ার অটো এন্ট্রি।',
             ],
@@ -363,13 +364,13 @@ class MarketingSeoController extends Controller
             ],
             'fake_order_check' => [
                 'কাস্টমারের বাংলাদেশি মোবাইল নম্বর নিন।',
-                'নিচের Fake Order Check টুলে Pathao / Steadfast / RedX হিস্টোরি দেখুন।',
+                'নিচের Fake Order Check টুলে '.PublicCourierNames::historyPhrase('bn').' হিস্টোরি দেখুন।',
                 'সাকসেস রেট খারাপ হলে কনফার্ম করবেন না—কল, OTP বা হোল্ড।',
                 'পূর্ণ সুরক্ষায় /fake-order-protection চালু রাখুন; কনফার্মের পর /courier-auto-entry।',
             ],
             'courier_checker' => [
                 'অর্ডার/মেসেজ থেকে বাংলাদেশি মোবাইল নম্বর নিন (কনফার্ম বা কুরিয়ার বুকিংয়ের আগে)।',
-                'নিচের Courier Checker টুলে নম্বর দিয়ে Pathao / Steadfast / RedX হিস্টোরি ও সাকসেস রেট দেখুন।',
+                'নিচের Courier Checker টুলে নম্বর দিয়ে '.PublicCourierNames::historyPhrase('bn').' হিস্টোরি ও সাকসেস রেট দেখুন।',
                 'সবুজ/উচ্চ সাকসেস → কনফার্ম; হলুদ → কল বা OTP; লাল/কম সাকসেস → হোল্ড বা অগ্রিম চার্জ।',
                 'বারবার ফেক আটকাতে /fake-order-protection চালু রাখুন—কনফার্মের পর /courier-auto-entry।',
             ],

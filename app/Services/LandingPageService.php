@@ -188,7 +188,9 @@ class LandingPageService
             $payload = $this->applyEnglishLandingOverlays($payload, $paymentMethods);
         }
 
-        return $this->withLiveFraudLimitCopy($payload, $locale);
+        return \App\Support\PublicCourierNames::expandValue(
+            $this->withLiveFraudLimitCopy($payload, $locale)
+        );
     }
 
     /**

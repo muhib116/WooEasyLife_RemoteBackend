@@ -636,7 +636,7 @@ return [
                 ],
                 [
                     'title' => 'ফ্রড চেক কীভাবে কাজ করে?',
-                    'body' => 'কাস্টমারের নম্বর দিয়ে Pathao, Steadfast, RedX, Paperfly ও Carrybee — পাঁচটি কুরিয়ারের ডেলিভারি রেকর্ড একসাথে দেখুন। ঝুঁকি বেশি হলে কনফার্ম করবেন নাকি বাতিল — সিদ্ধান্ত পুরোপুরি আপনার হাতে।',
+                    'body' => 'কাস্টমারের নম্বর দিয়ে {couriers.history.bn} ডেলিভারি রেকর্ড একসাথে দেখুন। ঝুঁকি বেশি হলে কনফার্ম করবেন নাকি বাতিল — সিদ্ধান্ত পুরোপুরি আপনার হাতে।',
                 ],
             ],
             'accent' => 'emerald',
@@ -772,7 +772,7 @@ return [
             'id' => 'courier',
             'badge' => 'কুরিয়ার সহজ',
             'headline' => 'কুরিয়ার প্যানেলে বসে সময় নষ্ট করবেন না',
-            'teaser' => 'Pathao, Steadfast, RedX — কনফার্ম হলেই অটো এন্ট্রি',
+            'teaser' => '{couriers.booking.bn} — কনফার্ম হলেই অটো এন্ট্রি',
             'pain' => 'প্রতি অর্ডারে কুরিয়ার ওয়েবসাইটে হাতে এন্ট্রি — দিনে ৩+ ঘণ্টা চলে যায়। ভুল এন্ট্রি হলে ভুল ডেলিভারি।',
             'solution' => 'অর্ডার কনফার্ম হলেই কুরিয়ারে অটো এন্ট্রি, স্ট্যাটাস আপডেট ও কাস্টমারকে এসএমএস। এক জায়গা থেকে সব কুরিয়ার।',
             'benefit' => 'সময় বাঁচে, ভুল কমে — দিনে ৫০+ অর্ডারও স্মুথলি চলে।',
@@ -1049,7 +1049,7 @@ return [
 
     'labels' => [
         'fraud_customer_checker' => 'ফ্রড কাস্টমার চেকার',
-        'three_courier_partner_integration' => '৩টি কুরিয়ার পার্টনার ইন্টিগ্রেশন',
+        'three_courier_partner_integration' => 'কুরিয়ার পার্টনার ইন্টিগ্রেশন',
         'courier_entry_automation' => 'কুরিয়ার এন্ট্রি অটোমেশন',
         'customer_delivery_history' => 'কাস্টমার ডেলিভারি হিস্ট্রি',
         'parcel_note_history' => 'পার্সেল নোট হিস্ট্রি',
@@ -1155,7 +1155,7 @@ return [
 
     'feature_descriptions' => [
         'fraud_customer_checker' => 'অর্ডার কনফার্মের আগেই কুরিয়ার ডাটা দিয়ে কাস্টমার যাচাই করে ফেক অর্ডার আটকান।',
-        'three_courier_partner_integration' => 'Steadfast, Pathao, RedX — সব কুরিয়ার এক প্ল্যাটফর্ম থেকে ম্যানেজ করুন।',
+        'three_courier_partner_integration' => '{couriers.booking.bn} — এক প্ল্যাটফর্ম থেকে বুকিং ও আপডেট।',
         'courier_entry_automation' => 'অর্ডার কনফার্ম হলেই অটো কুরিয়ার এন্ট্রি — সময় বাঁচান।',
         'parcel_note_history' => 'কুরিয়ার পার্সেল নোট ও হিস্ট্রি এক জায়গায় দেখুন ও আপডেট করুন।',
         'customer_sms_for_order' => 'অর্ডার ও ডেলিভারি আপডেট কাস্টমারকে এসএমএসে পাঠান।',
@@ -1255,7 +1255,7 @@ return [
             'detail' => 'ইনকামিং কলে অ্যাপে কাস্টমারের নাম, আগের অর্ডার ও হিস্ট্রি সাথে সাথে দেখা যায়। স্টাফ দ্রুত রেসপন্স দিতে পারে, কলের সাথে অর্ডারও লিংক হয়—আলাদা করে খুঁজতে হয় না।',
         ],
         'three_courier_partner_integration' => [
-            'summary' => 'Steadfast, Pathao, RedX এক প্ল্যাটফর্মে।',
+            'summary' => '{couriers.booking.bn} এক প্ল্যাটফর্মে।',
             'detail' => 'আলাদা প্যানেলে লগইনের দিন শেষ — সব কুরিয়ার WooEasyLife থেকে।',
         ],
         'courier_entry_automation' => [
@@ -1345,7 +1345,7 @@ return [
     'stats' => [
         ['value' => '৳৪৫,০০০+', 'label' => 'মাসিক রিটার্ন লস বাঁচানোর উদাহরণ'],
         ['value' => '৩+ ঘণ্টা', 'label' => 'প্রতিদিন কুরিয়ার সময় সাশ্রয়'],
-        ['value' => '৫ কুরিয়ার', 'label' => 'Pathao · Steadfast · RedX সহ'],
+        ['value' => '{couriers.history.count.bn}টি কুরিয়ার', 'label' => '{couriers.history.bn}'],
         ['value' => '১৪ দিন', 'label' => 'ফ্রি ট্রায়াল — কার্ড লাগবে না'],
     ],
 
@@ -1421,7 +1421,7 @@ return [
         'subtitle' => 'ওয়েবসাইট থেকে কুরিয়ার, এসএমএস ও মোবাইল অ্যাপ — সব এক জায়গায়।',
         'items' => [
             ['icon' => 'woocommerce', 'title' => 'WooCommerce ওয়েবসাইট', 'description' => 'সাইটে যোগ করুন — অর্ডার অটো চলে আসে।', 'accent' => 'fuchsia'],
-            ['icon' => 'courier', 'title' => 'Pathao · Steadfast · RedX', 'description' => 'কনফার্ম হলেই অটো কুরিয়ার এন্ট্রি ও আপডেট।', 'accent' => 'amber'],
+            ['icon' => 'courier', 'title' => '{couriers.booking.bn}', 'description' => 'কনফার্ম হলেই অটো কুরিয়ার এন্ট্রি ও আপডেট।', 'accent' => 'amber'],
             ['icon' => 'sms', 'title' => 'এসএমএস', 'description' => 'অর্ডার ও ডেলিভারি আপডেট সরাসরি কাস্টমারের ফোনে।', 'accent' => 'emerald'],
             ['icon' => 'app', 'title' => 'মোবাইল অ্যাপ (Android)', 'description' => 'সব সাইট এক অ্যাপে — নতুন অর্ডার অ্যালার্ট ও কল।', 'accent' => 'sky'],
             ['icon' => 'ai', 'title' => 'মেসেজ থেকে অর্ডার', 'description' => 'টেক্সট বা ছবি দিলেই দ্রুত অর্ডার তৈরি।', 'accent' => 'violet'],

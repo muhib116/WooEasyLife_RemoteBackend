@@ -506,8 +506,8 @@
                     <h2>{{ $isEnPrerender ? 'Free courier fraud check' : 'ফ্রি কুরিয়ার ফ্রড চেক' }}</h2>
                     <p class="ssr-fraud-hint">
                         {{ $isEnPrerender
-                            ? 'Enter a Bangladesh mobile number to see Pathao, Steadfast, and RedX delivery history before you confirm COD.'
-                            : 'বাংলাদেশি মোবাইল নম্বর দিন — Pathao, Steadfast, RedX হিস্টোরি ও সাকসেস রেট দেখে COD কনফার্ম করুন।' }}
+                            ? 'Enter a Bangladesh mobile number to see '.\App\Support\PublicCourierNames::historyPhrase('en').' delivery history before you confirm COD.'
+                            : 'বাংলাদেশি মোবাইল নম্বর দিন — '.\App\Support\PublicCourierNames::historyPhrase('bn').' হিস্টোরি ও সাকসেস রেট দেখে COD কনফার্ম করুন।' }}
                     </p>
                     <form method="get" action="{{ $ssrFormAction }}#fraud-check" role="search" aria-label="{{ $isEnPrerender ? 'Courier fraud checker' : 'কুরিয়ার ফ্রড চেকার' }}">
                         <label for="ssr-fraud-phone">

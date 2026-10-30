@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\PublicCourierNames;
 use App\Support\WhatsappLink;
 use App\Support\SeoPrerenderText;
 use App\Services\AdminSidebarNavOrder;
@@ -90,6 +91,7 @@ class HandleInertiaRequests extends Middleware
                 'portal' => $user ? $portal->sharePayload($user) : null,
             ],
             'sitemapNavLinks' => SeoPrerenderText::sitemapNavLinks($isEnMarketing),
+            'publicCouriers' => PublicCourierNames::share(),
             'admin_sidebar_nav_order' => $adminSidebarNavOrder,
             'flash' => [
                 'success' => session('success'),
