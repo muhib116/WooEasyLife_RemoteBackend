@@ -31,7 +31,7 @@ return new class extends Migration
             'title' => 'ই-কমার্সে হারানো অর্ডার ফেরত আনার উপায় — Missing Order Recovery গাইড',
             'meta_title' => 'ই-কমার্সে হারানো অর্ডার ফেরত আনার উপায়',
             'meta_description' => 'Missing Order Recovery দিয়ে হারানো অর্ডার ফেরত আনার গাইড। বিক্রি দ্বিগুণের দাবি নয়।',
-        ], $disclaimer, stripDoubleClaim: true);
+        ], '', stripDoubleClaim: true);
     }
 
     public function down(): void
@@ -51,12 +51,10 @@ return new class extends Migration
 
         $body = (string) ($post->body_html ?? '');
         if ($stripDoubleClaim) {
-            $body = str_replace('সেলস বাড়ান ২ গুণ!', '', $body);
-            $body = (string) preg_replace('/[^<।\n]*২ গুণ[^<।\n]*[।]?/u', '', $body);
+            $body = self::stripDoubleClaim($body);
             foreach (['title', 'meta_title', 'meta_description', 'excerpt'] as $column) {
                 if (! array_key_exists($column, $fields) && isset($post->{$column})) {
-                    $cleaned = str_replace('সেলস বাড়ান ২ গুণ!', '', (string) $post->{$column});
-                    $cleaned = trim((string) preg_replace('/[^।\n]*২ গুণ[^।\n]*[।]?/u', '', $cleaned));
+                    $cleaned = self::stripDoubleClaim((string) $post->{$column});
                     if ($cleaned !== (string) $post->{$column}) {
                         $fields[$column] = $cleaned;
                     }
@@ -64,7 +62,7 @@ return new class extends Migration
             }
         }
 
-        if (! str_contains($body, 'কোনো নির্দিষ্ট মার্চেন্টের ফল নয়')) {
+        if ($disclaimer !== '' && ! str_contains($body, 'কোনো নির্দিষ্ট মার্চেন্টের ফল নয়')) {
             $body = $disclaimer.$body;
         }
 
@@ -72,5 +70,12 @@ return new class extends Migration
         $fields['updated_at'] = now();
 
         DB::table('blog_posts')->where('id', $post->id)->update($fields);
+    }
+
+    private static function stripDoubleClaim(string $text): string
+    {
+        $text = str_replace('সেলস বাড়ান ২ গুণ!', '', $text);
+
+        return trim((string) preg_replace('/[^<।\n]{0,180}২ গুণ[^<।\n]{0,180}[।!]?/u', '', $text));
     }
 };

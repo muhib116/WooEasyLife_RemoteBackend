@@ -115,7 +115,12 @@ class PublicPricingFacts
                 continue;
             }
 
-            $prices[] = (float) ($plan['package_price'] ?? 0);
+            $price = (float) ($plan['package_price'] ?? 0);
+            if ($price <= 0) {
+                continue;
+            }
+
+            $prices[] = $price;
         }
 
         if ($prices === []) {
