@@ -8,7 +8,7 @@ Fixed slot order (do not reorder):
 4. `result_framing` — H2: qualitative outcomes only (never invent % / revenue)
 5. `differentiation` — H2: lessons other sellers can copy
 6. `tool_bridge` — soft WooEasyLife + must_link
-7. `ai_summary` — SEO block এআই সারাংশ
+7. `ai_summary` — SEO block সংক্ষেপে
 8. `faqs` — 5–7 spoken Q&A
 9. `cta_close` — soft CTA to primary_path
 

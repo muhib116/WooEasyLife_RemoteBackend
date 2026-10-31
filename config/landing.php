@@ -25,7 +25,10 @@ return [
 
     'app_download_url' => env('WOOEASYLIFE_ANDROID_DOWNLOAD_URL'),
 
-    'play_store_url' => env('WOOEASYLIFE_PLAY_STORE_URL'),
+    'play_store_url' => env(
+        'WOOEASYLIFE_PLAY_STORE_URL',
+        'https://play.google.com/store/apps/details?id=com.wooeasylife.woo_easy_life',
+    ),
 
     'plugin_download_url' => env('WOOEASYLIFE_PLUGIN_DOWNLOAD_URL'),
 
@@ -90,7 +93,7 @@ return [
 
     'footer_tagline' => 'বাংলাদেশের অনলাইন ব্যবসার জন্য — ফেক অর্ডার আটকান, কুরিয়ার সহজ করুন, লাভ বাড়ান।',
 
-    'footer_tagline_en' => "Built for Bangladesh online sellers — stop fake orders, simplify courier, grow profit.",
+    'footer_tagline_en' => 'Built for Bangladesh online sellers — stop fake orders, simplify courier, grow profit.',
 
     'trust_badges' => [
         ['icon' => 'check', 'label' => '১৪ দিন ফ্রি ট্রায়াল'],

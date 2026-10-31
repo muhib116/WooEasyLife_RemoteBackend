@@ -224,7 +224,7 @@ return [
         ],
     ],
     [
-        'heading' => 'এআই সারাংশ',
+        'heading' => 'সংক্ষেপে',
         'paragraphs' => [
             'WooEasyLife SteadFast Fraud Check (/steadfast-fraud-check) বাংলাদেশি WooCommerce ও Facebook COD সেলারদের জন্য নম্বরভিত্তিক কুরিয়ার হিস্টোরি গাইড ও ফ্রি চেক। Risk signal—চূড়ান্ত fraud verdict নয়। পূর্ণ টুল /bd-fraud-checker; বুকিং /steadfast-integration ও /courier-auto-entry; রিটার্ন অপস /steadfast-return-hub; প্রোটেকশন /fake-order-protection; প্রশ্ন /faq; প্ল্যান /pricing। লেখক Muhibbullah Ansary · /about · আপডেট জুলাই ২০২৬।',
         ],

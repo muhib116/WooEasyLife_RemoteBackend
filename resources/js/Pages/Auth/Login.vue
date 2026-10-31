@@ -3,7 +3,7 @@
         v-if="!adminLoginUnlocked"
         class="flex min-h-svh cursor-default select-none items-center justify-center bg-slate-950 px-6"
     >
-        <Head title="Not found" />
+        <Head title="Not found - WooEasyLife" />
 
         <div class="text-center">
             <p class="text-6xl font-bold tracking-tight text-slate-800">404</p>
@@ -12,7 +12,7 @@
     </div>
 
     <GuestLayout v-else>
-        <Head title="Log in" />
+        <Head title="Log in - WooEasyLife" />
 
         <div class="mb-7">
             <h2 class="text-2xl font-bold tracking-tight text-white">

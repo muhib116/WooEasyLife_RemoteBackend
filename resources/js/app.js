@@ -42,17 +42,9 @@ function markAppReady() {
 }
 
 createInertiaApp({
-    title: (title) => {
-        if (!title) {
-            return appName;
-        }
-
-        if (title.includes('WooEasyLife') || title.includes(appName)) {
-            return title;
-        }
-
-        return `${title} - ${appName}`;
-    },
+    // SEO pages pass $seo.title through SeoHead and must stay unsuffixed.
+    // Portal and auth layouts already include the brand via withAppTitle().
+    title: (title) => title || appName,
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
         let metaPixelInitialPage = true;

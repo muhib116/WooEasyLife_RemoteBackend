@@ -9,6 +9,7 @@ import MetaCtaLink from '@/components/marketing/MetaCtaLink.vue';
 import ClusterGuideBlocks from '@/components/marketing/ClusterGuideBlocks.vue';
 import LinkedRichText from '@/components/marketing/LinkedRichText.vue';
 import { buildContentBlocks, injectFigureBlocks } from '@/utils/clusterContentBlocks';
+import { PLAY_STORE_URL } from '@/utils/playStore';
 
 const props = defineProps({
     canLogin: { type: Boolean, default: false },
@@ -27,6 +28,8 @@ const ctaUrl = computed(() => primaryCtaUrl());
 const ctaLabel = computed(() => primaryCtaLabel(isEn.value ? 'en' : 'bn'));
 const isPillar = computed(() => Boolean(props.seo?.is_pillar));
 const isAbout = computed(() => props.seo?.page_kind === 'about');
+const isMobileApp = computed(() => String(props.seo?.canonical || '').includes('/woocommerce-mobile-app'));
+const playStoreUrl = PLAY_STORE_URL;
 const sections = computed(() => props.seo?.content_sections || []);
 const clusterLinks = computed(() => props.seo?.cluster_links || []);
 const founderPortrait = computed(() => props.seo?.author_image || '/images/seo/about/founder-headshot.jpg');
@@ -245,6 +248,20 @@ onUnmounted(() => {
                         </p>
 
                         <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <a
+                                v-if="isMobileApp"
+                                :href="playStoreUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black shadow-lg shadow-emerald-900/30 hover:bg-emerald-400 sm:w-auto"
+                            >
+                                Get it on Google Play
+                            </a>
+                            <p v-if="isMobileApp" class="w-full text-sm leading-relaxed text-slate-300">
+                                {{ isEn
+                                    ? 'The app works with a WooEasyLife account connected to a WooCommerce store.'
+                                    : 'অ্যাপটি WooCommerce স্টোরের সাথে যুক্ত WooEasyLife অ্যাকাউন্টে কাজ করে।' }}
+                            </p>
                             <MetaCtaLink
                                 :href="ctaUrl"
                                 :label="ctaLabel"

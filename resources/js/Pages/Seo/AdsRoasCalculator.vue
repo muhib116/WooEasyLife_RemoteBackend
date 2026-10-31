@@ -369,10 +369,10 @@ const whoFor = [
             </div>
         </section>
 
-        <!-- এআই সারাংশ -->
+        <!-- সংক্ষেপে -->
         <section class="border-t border-white/10 bg-emerald-950/15 px-4 py-10 lg:px-8">
             <div class="mx-auto max-w-3xl">
-                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
+                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">সংক্ষেপে</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     Facebook Ads ROAS ক্যালকুলেটর দিয়ে রিপোর্টেড vs আসল ROAS তুলনা করুন — ফেক Purchase বাদ দিয়ে।
                     COD সেলারদের জন্য আসল ROASই স্কেল সিদ্ধান্তের ভিত্তি। WooEasyLife ফ্রড চেক, ফেক অর্ডার প্রোটেকশন ও পিক্সেল প্রোটেকশন দিয়ে পরিষ্কার Purchase সিগন্যাল রাখতে সাহায্য করে।

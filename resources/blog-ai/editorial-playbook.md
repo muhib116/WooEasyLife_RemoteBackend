@@ -35,7 +35,7 @@ Render in this exact order:
 1. **দ্রুত উত্তর** (`seo-quick-answer`) — 40–60 words, direct answer  
 2. **Intro scene** — real BD seller problem / moment (short paragraphs)  
 3. **Body slots** — follow the article_type skeleton (howto / comparison / glossary / case_study)  
-4. **এআই সারাংশ** (`seo-ai-summary`) — 100–150 words overview  
+4. **সংক্ষেপে** (`seo-ai-summary`) — 100–150 words overview  
 5. **FAQs** — 5–7 spoken seller questions (JSON `faqs`; optional matching H2 in body)  
 6. **Closing CTA** — one soft push to `cluster_landing.primary_path` (and `/pricing` only if natural)
 

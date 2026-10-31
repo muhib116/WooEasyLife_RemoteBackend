@@ -2,14 +2,14 @@
 
 namespace App\Http\Middleware;
 
-use App\Support\PublicCourierNames;
-use App\Support\WhatsappLink;
-use App\Support\SeoPrerenderText;
 use App\Services\AdminSidebarNavOrder;
 use App\Services\LandingSettingsService;
 use App\Services\MerchantPortalContext;
 use App\Services\RbacService;
 use App\Services\SubscriptionPaymentConfigService;
+use App\Support\PublicCourierNames;
+use App\Support\SeoPrerenderText;
+use App\Support\WhatsappLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
@@ -90,7 +90,7 @@ class HandleInertiaRequests extends Middleware
                 'access_label' => $accessLabel,
                 'portal' => $user ? $portal->sharePayload($user) : null,
             ],
-            'sitemapNavLinks' => SeoPrerenderText::sitemapNavLinks($isEnMarketing),
+            'sitemapNavLinks' => SeoPrerenderText::compactFooterLinks($isEnMarketing),
             'publicCouriers' => PublicCourierNames::share(),
             'admin_sidebar_nav_order' => $adminSidebarNavOrder,
             'flash' => [

@@ -355,7 +355,7 @@ return [
         ],
     ],
     [
-        'heading' => 'এআই সারাংশ',
+        'heading' => 'সংক্ষেপে',
         'paragraphs' => [
             'WooCommerce Bangladesh গাইড (২০২৬): COD রিস্ক ম্যাথ → ফ্রড চেক → OTP/ব্ল্যাকলিস্ট → কুরিয়ার API অটো এন্ট্রি → নোটিফিকেশন → Meta/GA4 → স্কেল। এক হাব থেকে স্পোক: /steadfast-integration, /pathao-courier-guide, /redx-courier-guide, /customer-verification, /cod-return-reduction। টুল স্টার্ট: /bd-fraud-checker। প্ল্যান: /pricing।',
         ],

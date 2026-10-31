@@ -296,7 +296,7 @@ const relatedLinks = [
 
         <section class="border-t border-white/10 bg-emerald-950/15 px-4 py-10 lg:px-8">
             <div class="mx-auto max-w-3xl">
-                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">AI summary</h2>
+                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">In short</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     WooEasyLife Free Courier Fraud Checker BD verifies {{ historyEn }} delivery history and success rate by mobile number
                     to reduce fake COD orders and parcel returns. Free checks work without an account. Add OTP, blacklists, and courier auto-entry for full protection.

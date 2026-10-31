@@ -516,7 +516,7 @@ const resetFlow = () => {
                             <svg class="h-5 w-5 shrink-0 text-[#3DDC84]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path d="M17.6 9.48 19.44 6.3a.64.64 0 0 0-.26-.85.64.64 0 0 0-.83.22l-1.88 3.24a11.2 11.2 0 0 0-8.94 0L5.65 5.67a.64.64 0 0 0-.87-.2.64.64 0 0 0-.22.83L6.4 9.48A8.98 8.98 0 0 0 1 18h22a8.98 8.98 0 0 0-5.4-8.52ZM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Z" />
                             </svg>
-                            Google Play
+                            Get it on Google Play
                         </a>
 
                         <button

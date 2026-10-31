@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { PLAY_STORE_URL } from '@/utils/playStore';
 
 const props = defineProps({
     appShowcase: { type: Object, default: () => ({}) },
@@ -179,14 +180,22 @@ const onPointerLeave = () => {
                         </div>
                     </div>
 
-                    <div class="mt-6">
+                    <div class="mt-6 flex flex-col items-start gap-3">
+                        <a
+                            :href="PLAY_STORE_URL"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-amber-400"
+                        >
+                            Get it on Google Play
+                        </a>
                         <a
                             href="#downloads"
-                            class="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-black transition hover:bg-amber-400"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                         >
                             অ্যাপ ও প্লাগইন ডাউনলোড →
                         </a>
-                        <p class="mt-2 text-xs text-slate-500">
+                        <p class="text-xs text-slate-500">
                             ডাউনলোডের আগে নাম ও ফোন OTP যাচাই লাগবে।
                         </p>
                     </div>

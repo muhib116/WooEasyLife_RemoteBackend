@@ -1,6 +1,6 @@
 <template>
     <MerchantGuestLayout>
-        <Head title="Merchant sign in" />
+        <Head title="Merchant sign in - WooEasyLife" />
 
         <div class="mb-7">
             <h2 class="text-2xl font-bold tracking-tight text-white">

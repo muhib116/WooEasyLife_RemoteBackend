@@ -9,8 +9,7 @@ class SeoMetaService
 {
     public function __construct(
         protected LandingSettingsService $landingSettings,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $overrides
@@ -465,11 +464,20 @@ class SeoMetaService
     {
         $configured = config('seo.organization.same_as', []);
         $playStore = $this->landingSettings->playStoreUrl();
+        $links = [];
 
-        return array_values(array_unique(array_filter([
-            ...$configured,
-            $playStore,
-        ])));
+        foreach ([...$configured, $playStore] as $url) {
+            $url = trim((string) $url);
+            if ($url === '' || str_contains($url, 'freetoolssite.com')) {
+                continue;
+            }
+            if (str_contains($url, 'play.google.com/apps/testing')) {
+                $url = LandingSettingsService::PUBLIC_PLAY_STORE_URL;
+            }
+            $links[] = $url;
+        }
+
+        return array_values(array_unique($links));
     }
 
     /**
@@ -504,15 +512,9 @@ class SeoMetaService
         $founderPersonId = $this->absoluteUrl('/').'#person-'.Str::slug($founderName);
         $founderImagePath = (string) ($org['founder_image'] ?? '/images/seo/about/founder-headshot.jpg');
         $founderUrl = $this->absoluteUrl((string) ($org['founder_url_path'] ?? '/about'));
-        $founderSameAs = array_values(array_filter($org['founder_same_as'] ?? []));
+        $founderSameAs = $this->personSameAs($org['founder_same_as'] ?? []);
         $isAboutPage = ($config['page_kind'] ?? null) === 'about'
             || (string) ($config['schema_type'] ?? '') === 'AboutPage';
-        if ($isAboutPage) {
-            $pageSameAs = array_values(array_filter($config['person_same_as'] ?? []));
-            if ($pageSameAs !== []) {
-                $founderSameAs = $pageSameAs;
-            }
-        }
 
         $brandId = $this->absoluteUrl('/').'#brand-wooeasylife';
         $founderPerson = array_filter([
@@ -665,7 +667,7 @@ class SeoMetaService
             $modified = (string) ($config['date_modified'] ?? $published);
             $articleType = (string) ($config['schema_type'] ?? 'Article');
             $authorImage = (string) ($config['author_image'] ?? $founderImagePath);
-            $personSameAs = array_values(array_filter($config['person_same_as'] ?? $founderSameAs));
+            $personSameAs = $this->personSameAs($config['person_same_as'] ?? $founderSameAs);
 
             $personNode = array_filter([
                 '@type' => 'Person',
@@ -740,7 +742,9 @@ class SeoMetaService
                         str_contains($lower, 'দ্রুত')
                         || str_contains($lower, 'quick')
                         || str_contains($heading, 'এআই সারাংশ')
+                        || str_contains($heading, 'সংক্ষেপে')
                         || str_contains($lower, 'ai summary')
+                        || str_contains($lower, 'in short')
                     ) {
                         continue;
                     }
@@ -811,10 +815,8 @@ class SeoMetaService
             }
         }
 
-        // Money fraud tool: HowTo only.
-        // Do NOT emit WebApplication/SoftwareApplication — Semrush/GSC treat it as
-        // "Software App" rich-result markup and flag it invalid without a real
-        // AggregateRating/Review (which we must never invent).
+        // Money fraud tool: HowTo only. No SoftwareApplication here — it needs a real
+        // AggregateRating/Review, which we must never invent.
         $isFraudMoneyPage = in_array($page, ['bd_fraud_checker', 'en_bd_fraud_checker'], true)
             || (($config['schema_web_application'] ?? false) === true);
         if ($isFraudMoneyPage) {
@@ -856,9 +858,44 @@ class SeoMetaService
             ];
         }
 
+        // Product home, pricing, and the mobile-app guide only.
+        // TODO: add offers once public prices are confirmed. Do not add price, aggregateRating, or review.
+        if (in_array($page, ['home', 'en_home', 'pricing', 'woocommerce_mobile_app', 'en_woocommerce_mobile_app'], true)) {
+            $graphs[] = [
+                '@type' => 'SoftwareApplication',
+                '@id' => $this->absoluteUrl('/').'#software',
+                'name' => 'WooEasyLife',
+                'applicationCategory' => 'BusinessApplication',
+                'operatingSystem' => 'Web, WordPress (WooCommerce plugin), Android',
+                'installUrl' => LandingSettingsService::PUBLIC_PLAY_STORE_URL,
+                'url' => 'https://app.wpsalehub.com/',
+                'publisher' => ['@id' => $orgId],
+            ];
+        }
+
         return [
             '@context' => 'https://schema.org',
             '@graph' => $graphs,
         ];
+    }
+
+    /**
+     * Shared Person sameAs. Drops profiles that are not the founder's.
+     *
+     * @param  list<string>|mixed  $urls
+     * @return list<string>
+     */
+    private function personSameAs(mixed $urls): array
+    {
+        $clean = [];
+        foreach (is_array($urls) ? $urls : [] as $url) {
+            $url = trim((string) $url);
+            if ($url === '' || str_contains($url, 'freetoolssite.com')) {
+                continue;
+            }
+            $clean[] = $url;
+        }
+
+        return array_values(array_unique($clean));
     }
 }

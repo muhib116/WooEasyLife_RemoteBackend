@@ -29,7 +29,7 @@ class BlogPromptLibraryTest extends TestCase
         $playbook = app(BlogPromptLibrary::class)->playbook();
 
         $this->assertStringContainsString('দ্রুত উত্তর', $playbook);
-        $this->assertStringContainsString('এআই সারাংশ', $playbook);
+        $this->assertStringContainsString('সংক্ষেপে', $playbook);
         $this->assertStringContainsString('product_brief', $playbook);
         $this->assertStringContainsString('skeleton wins', strtolower($playbook));
     }

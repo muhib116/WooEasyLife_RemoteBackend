@@ -8,17 +8,7 @@ createServer((page) =>
     createInertiaApp({
         page,
         render: renderToString,
-        title: (title) => {
-            if (!title) {
-                return 'WooEasyLife';
-            }
-
-            if (title.includes('WooEasyLife')) {
-                return title;
-            }
-
-            return `${title} - WooEasyLife`;
-        },
+        title: (title) => title || 'WooEasyLife',
         resolve: (name) =>
             resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
         setup({ App, props, plugin }) {

@@ -27,7 +27,7 @@ Return JSON:
 - Obey editorial playbook + article_type skeleton in the system message.
 - Render body in skeleton slot order. Do not reshuffle H2s for creativity.
 - Map outline `sections[].slot` → matching H2 blocks in the same order.
-- Bookends are fixed: দ্রুত উত্তর → body slots → এআই সারাংশ → FAQs → closing CTA.
+- Bookends are fixed: দ্রুত উত্তর → body slots → সংক্ষেপে → FAQs → closing CTA.
 - Competitor gaps fill differentiation / steps / FAQ slots — they do not create a new flow.
 - Product claims only from product_brief + cluster_landing.
 
@@ -59,7 +59,7 @@ Return JSON:
   <section class="seo-quick-answer"><h2>দ্রুত উত্তর</h2><p>...</p></section>
   (use quick_answer text; 40–60 words)
 - Include AI Search Summary near the end (before FAQ/CTA):
-  <section class="seo-ai-summary"><h2>এআই সারাংশ</h2><p>...</p></section>
+  <section class="seo-ai-summary"><h2>সংক্ষেপে</h2><p>...</p></section>
   (use ai_search_summary; 100–150 words)
 - One soft WooEasyLife CTA near the end pointing to primary_path
 - Conclusion that is practical (do NOT start with “In conclusion” / “পরিশেষে বলতে গেলে”)

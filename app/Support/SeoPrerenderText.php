@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\BlogService;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -148,6 +149,43 @@ class SeoPrerenderText
     }
 
     /**
+     * Short sitewide footer. Page-specific links stay in the page body.
+     * Sitemap URLs are unchanged; blog posts stay linked from the blog index.
+     *
+     * @return list<array{href: string, label: string}>
+     */
+    public static function compactFooterLinks(bool $isEn = false): array
+    {
+        if ($isEn) {
+            return [
+                ['href' => '/en', 'label' => 'Home'],
+                ['href' => '/en/bd-fraud-checker', 'label' => 'Free Fraud Checker'],
+                ['href' => '/en/fake-order-protection', 'label' => 'Fake Order Protection'],
+                ['href' => '/en/courier-auto-entry', 'label' => 'Courier Auto Entry'],
+                ['href' => '/en/woocommerce-mobile-app', 'label' => 'Mobile App'],
+                ['href' => '/pricing', 'label' => 'Pricing'],
+                ['href' => '/faq', 'label' => 'FAQ'],
+                ['href' => '/en/blog', 'label' => 'Blog'],
+                ['href' => '/en/about', 'label' => 'About'],
+                ['href' => '/', 'label' => 'বাংলা'],
+            ];
+        }
+
+        return [
+            ['href' => '/', 'label' => 'হোম'],
+            ['href' => '/bd-fraud-checker', 'label' => 'ফ্রি ফ্রড চেকার'],
+            ['href' => '/fake-order-protection', 'label' => 'ফেক অর্ডার প্রোটেকশন'],
+            ['href' => '/courier-auto-entry', 'label' => 'কুরিয়ার অটো এন্ট্রি'],
+            ['href' => '/woocommerce-mobile-app', 'label' => 'মোবাইল অ্যাপ'],
+            ['href' => '/pricing', 'label' => 'প্রাইসিং'],
+            ['href' => '/faq', 'label' => 'FAQ'],
+            ['href' => '/blog', 'label' => 'ব্লগ'],
+            ['href' => '/about', 'label' => 'About'],
+            ['href' => '/en', 'label' => 'English'],
+        ];
+    }
+
+    /**
      * Published blog posts that appear in /sitemap.xml — must also be linked sitewide.
      *
      * @return list<array{href: string, label: string}>
@@ -155,7 +193,7 @@ class SeoPrerenderText
     public static function blogSitemapNavLinks(): array
     {
         try {
-            $posts = app(\App\Services\BlogService::class)->all();
+            $posts = app(BlogService::class)->all();
         } catch (\Throwable) {
             return [];
         }
@@ -218,6 +256,7 @@ class SeoPrerenderText
             if ($buf !== '' && mb_strlen($candidate) > $maxChars) {
                 $chunks[] = $buf;
                 $buf = $part;
+
                 continue;
             }
             $buf = $candidate;

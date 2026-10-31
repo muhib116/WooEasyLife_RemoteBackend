@@ -145,23 +145,15 @@ const onDocumentKeydown = (event) => {
 };
 
 /**
- * Sitewide footer links = full sitemap (marketing + blog). Semrush/Ahrefs orphaned sitemap pages.
+ * Compact sitewide footer. Page-specific links stay in the page body.
  */
 const footerProductLinks = computed(() => {
     const fromServer = Array.isArray(page.props.sitemapNavLinks) ? page.props.sitemapNavLinks : [];
-    const links = fromServer.map((link) => ({
+
+    return fromServer.map((link) => ({
         label: link.label,
         href: link.href,
     }));
-
-    if (! isEnLocale.value) {
-        links.push(
-            { label: 'মোবাইল অ্যাপ', href: '/#download-app' },
-            { label: 'ডাউনলোড', href: '/#downloads' },
-        );
-    }
-
-    return links;
 });
 
 const isDark = computed(() => props.variant === 'dark');
@@ -653,7 +645,7 @@ onUnmounted(() => {
                     <!-- Product -->
                     <div>
                         <p class="text-sm font-bold text-white">{{ isEnLocale ? 'Site pages' : 'সাইট পেজ' }}</p>
-                        <div class="mt-4 flex max-h-80 flex-col gap-1.5 overflow-y-auto pr-1">
+                        <div class="mt-4 flex flex-col gap-1.5">
                             <component
                                 :is="link.href.startsWith('/#') ? 'a' : Link"
                                 v-for="link in footerProductLinks"

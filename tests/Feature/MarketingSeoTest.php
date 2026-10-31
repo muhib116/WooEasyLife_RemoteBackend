@@ -2,10 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\App\RobotsController;
 use App\Models\BlogPost;
 use App\Models\User;
+use App\Services\BlogService;
+use App\Services\Seo\GaCredentialStore;
+use App\Services\SeoMetaService;
+use App\Support\SeoPrerenderText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -530,7 +537,7 @@ class MarketingSeoTest extends TestCase
                 ->has('seo.cluster_links')
             );
 
-            $seo = app(\App\Services\SeoMetaService::class)->forPage($key);
+            $seo = app(SeoMetaService::class)->forPage($key);
             $this->assertGreaterThan(
                 200,
                 $this->seoPrerenderTokenCount($seo),
@@ -544,7 +551,7 @@ class MarketingSeoTest extends TestCase
         $hub->assertSee('/fake-order-protection', false);
         $hub->assertSee('/courier-auto-entry', false);
 
-        $pillar = app(\App\Services\SeoMetaService::class)->forPage('woocommerce_bangladesh');
+        $pillar = app(SeoMetaService::class)->forPage('woocommerce_bangladesh');
         $this->assertGreaterThanOrEqual(
             30,
             count($pillar['content_sections'] ?? []),
@@ -556,7 +563,7 @@ class MarketingSeoTest extends TestCase
             'redx_courier_guide',
             'woocommerce_bangladesh',
         ];
-        $seoService = app(\App\Services\SeoMetaService::class);
+        $seoService = app(SeoMetaService::class);
         foreach ($aiFlagged as $page) {
             $seo = $seoService->forPage($page);
             $headings = collect($seo['content_sections'] ?? [])->pluck('heading')->map(fn ($h) => (string) $h);
@@ -615,7 +622,7 @@ class MarketingSeoTest extends TestCase
 
     public function test_woocommerce_bangladesh_cluster_is_seo_complete(): void
     {
-        $seoService = app(\App\Services\SeoMetaService::class);
+        $seoService = app(SeoMetaService::class);
         $pillar = $seoService->forPage('woocommerce_bangladesh');
         $graph = collect($pillar['json_ld']['@graph'] ?? []);
 
@@ -685,7 +692,7 @@ class MarketingSeoTest extends TestCase
 
     public function test_facebook_page_cod_management_pillar_is_seo_complete(): void
     {
-        $seoService = app(\App\Services\SeoMetaService::class);
+        $seoService = app(SeoMetaService::class);
         $pillar = $seoService->forPage('facebook_page_cod_management');
         $graph = collect($pillar['json_ld']['@graph'] ?? []);
 
@@ -729,7 +736,7 @@ class MarketingSeoTest extends TestCase
 
     public function test_about_founder_page_has_person_image_schema(): void
     {
-        $seo = app(\App\Services\SeoMetaService::class)->forPage('about');
+        $seo = app(SeoMetaService::class)->forPage('about');
         $graph = collect($seo['json_ld']['@graph'] ?? []);
 
         $person = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Person');
@@ -742,6 +749,8 @@ class MarketingSeoTest extends TestCase
         $this->assertContains('https://www.linkedin.com/in/dev-muhib', $person['sameAs'] ?? []);
         $this->assertContains('https://www.facebook.com/muhib116', $person['sameAs'] ?? []);
         $this->assertContains('https://www.instagram.com/muhibbullah611/', $person['sameAs'] ?? []);
+        $this->assertContains('https://www.youtube.com/channel/UCiEVvaV8O6VBKzU3d7ezKGg', $person['sameAs'] ?? []);
+        $this->assertNotContains('https://freetoolssite.com/', $person['sameAs'] ?? []);
         $this->assertSame('Founder & CEO, WPSaleHub · Creator of WooEasyLife', $person['jobTitle'] ?? null);
         $this->assertStringContainsString('WooEasyLife', (string) ($person['description'] ?? ''));
         $this->assertContains('WooEasyLife', $person['knowsAbout'] ?? []);
@@ -755,7 +764,14 @@ class MarketingSeoTest extends TestCase
         $this->assertNotNull($org['brand'] ?? null);
         $this->assertContains('WooEasyLife', $org['alternateName'] ?? []);
         $this->assertContains('https://www.facebook.com/wooeasylife', $org['sameAs'] ?? []);
+        $this->assertContains('https://play.google.com/store/apps/details?id=com.wooeasylife.woo_easy_life', $org['sameAs'] ?? []);
         $this->assertNotContains('https://www.linkedin.com/in/dev-muhib', $org['sameAs'] ?? []);
+        $this->assertFalse(
+            collect($org['sameAs'] ?? [])->contains(fn ($url) => str_contains((string) $url, 'play.google.com/apps/testing')),
+        );
+        $enPerson = collect(app(SeoMetaService::class)->forPage('en_about')['json_ld']['@graph'] ?? [])
+            ->first(fn (array $node) => ($node['@type'] ?? null) === 'Person');
+        $this->assertSame($person['sameAs'] ?? [], $enPerson['sameAs'] ?? []);
 
         $brand = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Brand');
         $this->assertNotNull($brand);
@@ -893,7 +909,7 @@ class MarketingSeoTest extends TestCase
 
     public function test_steadfast_fraud_check_pillar_is_seo_complete(): void
     {
-        $seoService = app(\App\Services\SeoMetaService::class);
+        $seoService = app(SeoMetaService::class);
         $pillar = $seoService->forPage('steadfast_fraud_check');
         $graph = collect($pillar['json_ld']['@graph'] ?? []);
 
@@ -937,7 +953,7 @@ class MarketingSeoTest extends TestCase
         $response->assertSee($pillar['faqs'][0]['q'] ?? 'missing-faq', false);
         $response->assertDontSee('aggregateRating', false);
         $response->assertDontSee('AggregateRating', false);
-        $response->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+        $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Seo/CourierIntent')
             ->where('seo.canonical_path', '/steadfast-fraud-check')
             ->where('seo.is_pillar', true)
@@ -1095,9 +1111,12 @@ class MarketingSeoTest extends TestCase
 
         $response->assertOk();
         $html = $response->getContent();
-        // Product and SoftwareApplication rich results require real commercial
-        // eligibility data. Do not invent offers, reviews, or ratings.
-        $this->assertStringNotContainsString('"@type":"SoftwareApplication"', $html);
+        // SoftwareApplication is allowed on the product home without offers or ratings.
+        $this->assertStringContainsString('"@type":"SoftwareApplication"', $html);
+        $this->assertStringContainsString('"applicationCategory":"BusinessApplication"', $html);
+        $this->assertStringContainsString('https://play.google.com/store/apps/details?id=com.wooeasylife.woo_easy_life', $html);
+        $this->assertStringNotContainsString('"offers"', $html);
+        $this->assertStringNotContainsString('aggregateRating', $html);
         $this->assertStringNotContainsString('"@type":"Product"', $html);
         $this->assertStringContainsString('"@type":"Organization"', $html);
         $this->assertStringContainsString('"name":"WPSaleHub"', $html);
@@ -1105,11 +1124,24 @@ class MarketingSeoTest extends TestCase
         $this->assertStringContainsString('Muhibbullah Ansary', $html);
         $this->assertStringContainsString('"@type":"WebPage"', $html);
         $this->assertStringContainsString('"@type":"FAQPage"', $html);
+        $this->assertStringContainsString(rtrim((string) config('app.url'), '/').'/#software', $html);
     }
 
     public function test_tool_landing_pages_keep_webpage_json_ld(): void
     {
-        foreach (['/pricing', '/return-loss-calculator', '/courier-charge-calculator', '/ads-roas-calculator'] as $path) {
+        foreach (['/pricing', '/woocommerce-mobile-app', '/en/woocommerce-mobile-app', '/en'] as $path) {
+            $response = $this->get($path);
+            $response->assertOk();
+            $this->assertStringContainsString(
+                '"@type":"SoftwareApplication"',
+                $response->getContent(),
+                "Missing SoftwareApplication on {$path}"
+            );
+            $this->assertStringNotContainsString('aggregateRating', $response->getContent());
+            $this->assertStringContainsString('"@type":"WebPage"', $response->getContent());
+        }
+
+        foreach (['/return-loss-calculator', '/courier-charge-calculator', '/ads-roas-calculator', '/bd-fraud-checker'] as $path) {
             $response = $this->get($path);
             $response->assertOk();
             $this->assertStringNotContainsString(
@@ -1166,49 +1198,34 @@ class MarketingSeoTest extends TestCase
         $html = $response->getContent();
 
         $this->assertStringContainsString('aria-label="Site pages"', $html);
-
-        foreach (config('seo.sitemap.paths', []) as $item) {
-            $path = (string) ($item['path'] ?? '');
-            if ($path === '' || $path === '/') {
-                continue;
-            }
-            $this->assertStringContainsString('href="'.$path.'"', $html, "Missing internal link for sitemap path {$path}");
+        preg_match('/<nav aria-label="Site pages">\s*<ul>(.*?)<\/ul>/s', $html, $match);
+        $this->assertNotEmpty($match[1] ?? null);
+        $navHtml = $match[1] ?? '';
+        $this->assertSame(10, substr_count($navHtml, '<a '));
+        foreach (SeoPrerenderText::compactFooterLinks(false) as $link) {
+            $this->assertStringContainsString('href="'.$link['href'].'"', $navHtml);
         }
+        $this->assertStringNotContainsString('/faq/cod-return-loss-hisab', $navHtml);
     }
 
     public function test_home_prerender_links_every_sitemap_blog_post(): void
     {
-        $blog = app(\App\Services\BlogService::class);
+        $blog = app(BlogService::class);
         $posts = $blog->all();
         $this->assertNotEmpty($posts, 'Need at least one published blog post to assert orphan prevention');
 
-        $response = $this->get('/');
-        $response->assertOk();
-        $html = $response->getContent();
+        $bn = $this->get('/blog');
+        $bn->assertOk();
+        $en = $this->get('/en/blog');
+        $en->assertOk();
 
         foreach ($posts as $post) {
             $slug = (string) ($post['slug'] ?? '');
             if ($slug === '') {
                 continue;
             }
-            $path = '/blog/'.$slug;
-            $this->assertStringContainsString(
-                'href="'.$path.'"',
-                $html,
-                "Orphan risk: sitemap blog {$path} missing from home internal links"
-            );
-        }
-
-        $navLinks = collect(\App\Support\SeoPrerenderText::sitemapNavLinks(false))->pluck('href');
-        foreach ($posts as $post) {
-            $slug = (string) ($post['slug'] ?? '');
-            if ($slug === '') {
-                continue;
-            }
-            $this->assertTrue(
-                $navLinks->contains('/blog/'.$slug),
-                'sitemapNavLinks (footer) must include /blog/'.$slug
-            );
+            $page = (($post['locale'] ?? 'bn') === 'en') ? $en : $bn;
+            $page->assertSee($slug, false);
         }
     }
 
@@ -1226,7 +1243,7 @@ class MarketingSeoTest extends TestCase
         $this->assertStringContainsString('<h2>গাইড পর্বসমূহ</h2>', $pillarHtml);
         $this->assertMatchesRegularExpression('/<h2>গাইড পর্বসমূহ<\/h2>[\s\S]*<h3>অংশ ১\/৩০/', $pillarHtml);
 
-        $chunks = \App\Support\SeoPrerenderText::readableParagraphs(
+        $chunks = SeoPrerenderText::readableParagraphs(
             str_repeat('এটি একটি পরীক্ষামূলক বাক্য যা যথেষ্ট লম্বা যাতে স্প্লিট হয়। ', 10)
         );
         $this->assertGreaterThan(1, count($chunks));
@@ -1352,7 +1369,7 @@ class MarketingSeoTest extends TestCase
 
         try {
             config(['app.url' => 'https://app.wpsalehub.com']);
-            \Illuminate\Support\Facades\Cache::forget(\App\Http\Controllers\App\RobotsController::CACHE_KEY);
+            Cache::forget(RobotsController::CACHE_KEY);
             file_put_contents($path, "User-agent: *\nDisallow: /\n");
 
             $this->get('/robots.txt')->assertOk();
@@ -1362,14 +1379,14 @@ class MarketingSeoTest extends TestCase
             $this->assertStringNotContainsString("Disallow: /\n", $body."\n");
         } finally {
             file_put_contents($path, $original);
-            \Illuminate\Support\Facades\Cache::forget(\App\Http\Controllers\App\RobotsController::CACHE_KEY);
+            Cache::forget(RobotsController::CACHE_KEY);
         }
     }
 
     public function test_publishing_blog_post_forgets_sitemap_nav_cache(): void
     {
-        \App\Support\SeoPrerenderText::sitemapNavLinks(false);
-        $this->assertTrue(\Illuminate\Support\Facades\Cache::has(\App\Support\SeoPrerenderText::SITEMAP_NAV_CACHE_PREFIX.'bn'));
+        SeoPrerenderText::sitemapNavLinks(false);
+        $this->assertTrue(Cache::has(SeoPrerenderText::SITEMAP_NAV_CACHE_PREFIX.'bn'));
 
         $admin = User::create([
             'name' => 'Admin',
@@ -1391,14 +1408,14 @@ class MarketingSeoTest extends TestCase
             'updated_by' => $admin->id,
         ]);
 
-        $this->assertFalse(\Illuminate\Support\Facades\Cache::has(\App\Support\SeoPrerenderText::SITEMAP_NAV_CACHE_PREFIX.'bn'));
+        $this->assertFalse(Cache::has(SeoPrerenderText::SITEMAP_NAV_CACHE_PREFIX.'bn'));
     }
 
     public function test_home_includes_ga4_gtag_when_measurement_id_configured(): void
     {
         config(['seo.ga.measurement_id' => 'G-V3TDVR7ED9']);
-        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementId();
-        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementEnabled();
+        app(GaCredentialStore::class)->clearMeasurementId();
+        app(GaCredentialStore::class)->clearMeasurementEnabled();
 
         $response = $this->get('/');
 
@@ -1410,8 +1427,8 @@ class MarketingSeoTest extends TestCase
     public function test_home_omits_ga4_gtag_when_measurement_id_empty(): void
     {
         config(['seo.ga.measurement_id' => '']);
-        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementId();
-        app(\App\Services\Seo\GaCredentialStore::class)->clearMeasurementEnabled();
+        app(GaCredentialStore::class)->clearMeasurementId();
+        app(GaCredentialStore::class)->clearMeasurementEnabled();
 
         $response = $this->get('/');
 
@@ -1422,7 +1439,7 @@ class MarketingSeoTest extends TestCase
     public function test_home_omits_ga4_gtag_when_admin_disables_public_tag(): void
     {
         config(['seo.ga.measurement_id' => 'G-V3TDVR7ED9']);
-        $store = app(\App\Services\Seo\GaCredentialStore::class);
+        $store = app(GaCredentialStore::class);
         $store->putMeasurementId('G-V3TDVR7ED9');
         $store->putMeasurementEnabled(false);
 
@@ -1435,7 +1452,7 @@ class MarketingSeoTest extends TestCase
     public function test_home_prefers_admin_saved_measurement_id_over_env(): void
     {
         config(['seo.ga.measurement_id' => 'G-ENVDEFAULT1']);
-        $store = app(\App\Services\Seo\GaCredentialStore::class);
+        $store = app(GaCredentialStore::class);
         $store->putMeasurementId('G-V3TDVR7ED9');
         $store->putMeasurementEnabled(true);
 
@@ -1477,7 +1494,7 @@ class MarketingSeoTest extends TestCase
         $response->assertSee('বাংলাদেশি COD সেলারদের জন্য WooEasyLife', false);
         $response->assertSee('id="seo-prerender"', false);
 
-        $seo = app(\App\Services\SeoMetaService::class)->forPage('home');
+        $seo = app(SeoMetaService::class)->forPage('home');
         $this->assertNotEmpty($seo['content_sections']);
 
         $tokens = $this->seoPrerenderTokenCount($seo);
@@ -1535,7 +1552,7 @@ class MarketingSeoTest extends TestCase
             'en_blog_index',
         ];
 
-        $seoService = app(\App\Services\SeoMetaService::class);
+        $seoService = app(SeoMetaService::class);
 
         foreach ($pages as $page) {
             $seo = $seoService->forPage($page);

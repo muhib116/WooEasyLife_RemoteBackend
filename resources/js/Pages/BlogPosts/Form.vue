@@ -904,7 +904,7 @@ const checklist = computed(() => {
         || /<h2\b[^>]*>[^<]*(Quick Answer|দ্রুত উত্তর)[^<]*<\/h2>/iu.test(form.body_html || '');
     const hasAiSummary =
         /seo-ai-summary/i.test(form.body_html || '')
-        || /<h2\b[^>]*>[^<]*(AI Search Summary|AI Summary|এআই সারাংশ)[^<]*<\/h2>/iu.test(form.body_html || '');
+        || /<h2\b[^>]*>[^<]*(AI Search Summary|AI Summary|এআই সারাংশ|In short|সংক্ষেপে)[^<]*<\/h2>/iu.test(form.body_html || '');
     const wordCount = bodyText ? bodyText.split(/\s+/).filter(Boolean).length : 0;
     const keywordInTitle = keyword ? title.includes(keyword) : false;
     const metaLen = metaDescLen.value;
@@ -922,7 +922,7 @@ const checklist = computed(() => {
         { label: 'Body has H3 heading', ok: hasH3, soft: true },
         { label: 'Has bullet or numbered list', ok: hasLists, soft: true },
         { label: 'Featured snippet (দ্রুত উত্তর)', ok: hasQuickAnswer, soft: true },
-        { label: 'AI Search Summary (এআই সারাংশ)', ok: hasAiSummary, soft: true },
+        { label: 'In short (সংক্ষেপে)', ok: hasAiSummary, soft: true },
         { label: `${seoMinLinks.value}+ internal links`, ok: internalLinks.length >= seoMinLinks.value, soft: true },
         { label: `FAQs ≥ ${seoMinFaqs.value}`, ok: faqCount >= seoMinFaqs.value, soft: true },
         { label: 'OG/cover or content image with alt', ok: ogOrImage, soft: true },

@@ -1,5 +1,5 @@
 <template>
-    <Head :title="title" />
+    <Head :title="documentTitle" />
 
     <div class="merchant-portal admin-shell flex min-h-svh">
         <div
@@ -79,11 +79,14 @@ import { Icon } from "@/plugins";
 import { Head, Link } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
 import { computed, onBeforeUnmount, onMounted } from "vue";
+import { withAppTitle } from "@/utils/documentTitle";
 import "../../css/merchant-portal.css";
 
-defineProps<{
+const props = defineProps<{
     title: string;
 }>();
+
+const documentTitle = computed(() => withAppTitle(props.title));
 
 const { sidebarOpen, sidebarCollapsed, isDesktop, toggleSidebar } = useCollapsibleSidebar(
     "merchant-sidebar-collapsed",

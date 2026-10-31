@@ -1,6 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 
 const props = defineProps({
     seo: { type: Object, default: null },
@@ -34,16 +34,49 @@ const ogLocaleAlternate = computed(() => {
     return alts;
 });
 
-const jsonLd = computed(() => {
-    if (!props.seo?.json_ld) {
-        return '';
-    }
+function sameJsonLd(existingText, value) {
     try {
-        return JSON.stringify(props.seo.json_ld);
+        return JSON.stringify(JSON.parse(existingText)) === JSON.stringify(value);
     } catch {
-        return '';
+        return false;
     }
-});
+}
+
+function syncJsonLd(value) {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    document.querySelectorAll('script[type="application/ld+json"]').forEach((node) => {
+        if (!node.textContent || !node.textContent.trim()) {
+            node.remove();
+        }
+    });
+
+    const hasData = value && typeof value === 'object' && Object.keys(value).length > 0;
+    let node = document.getElementById('seo-json-ld');
+
+    if (!hasData) {
+        node?.remove();
+        return;
+    }
+
+    if (node && sameJsonLd(node.textContent, value)) {
+        return;
+    }
+
+    if (!node) {
+        node = document.createElement('script');
+        node.type = 'application/ld+json';
+        node.id = 'seo-json-ld';
+        document.head.appendChild(node);
+    }
+
+    node.textContent = JSON.stringify(value);
+}
+
+onMounted(() => syncJsonLd(props.seo?.json_ld));
+watch(() => props.seo?.json_ld, (value) => syncJsonLd(value));
 </script>
 
 <template>
@@ -88,12 +121,5 @@ const jsonLd = computed(() => {
         <meta v-if="pageTitle" head-key="twitter:title" name="twitter:title" :content="pageTitle" />
         <meta v-if="description" head-key="twitter:description" name="twitter:description" :content="description" />
         <meta v-if="ogImage" head-key="twitter:image" name="twitter:image" :content="ogImage" />
-        <component
-            :is="'script'"
-            v-if="jsonLd"
-            head-key="json-ld"
-            type="application/ld+json"
-            v-text="jsonLd"
-        />
     </Head>
 </template>

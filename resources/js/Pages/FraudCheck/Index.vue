@@ -1,6 +1,6 @@
 <template>
     <!-- Admin tool, English UI, no /en route. Guests do not get AuthenticatedLayout, so the title is set here. -->
-    <Head v-if="!$page.props?.auth?.user?.id" title="Fraud Checker" />
+    <Head v-if="!$page.props?.auth?.user?.id" title="Fraud Checker - WooEasyLife" />
     <component
         :is="$page.props?.auth?.user?.id ? AuthenticatedLayout : 'div'"
         title="Fraud Checker"

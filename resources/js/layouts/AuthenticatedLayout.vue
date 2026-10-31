@@ -1,5 +1,5 @@
 <template>
-    <Head :title="title" />
+    <Head :title="documentTitle" />
 
     <div class="admin-shell flex min-h-svh bg-slate-100 dark:bg-slate-950">
         <div
@@ -96,8 +96,9 @@ import { Head, router, usePage } from "@inertiajs/vue3";
 import { useTheme } from "@/composable";
 import { computed, onMounted, ref } from "vue";
 import { get } from "lodash";
+import { withAppTitle } from "@/utils/documentTitle";
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         title?: string;
         skipWrapper?: boolean;
@@ -107,6 +108,8 @@ withDefaults(
         skipWrapper: false,
     },
 );
+
+const documentTitle = computed(() => withAppTitle(props.title));
 
 const page = usePage();
 const accessArea = computed(() => (page.props.auth as any)?.access_area);

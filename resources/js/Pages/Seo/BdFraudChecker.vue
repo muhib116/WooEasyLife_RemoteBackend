@@ -335,7 +335,7 @@ const relatedLinks = computed(() => {
 
         <section class="border-t border-white/10 bg-emerald-950/15 px-4 py-10 lg:px-8">
             <div class="mx-auto max-w-3xl">
-                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
+                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">সংক্ষেপে</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     WooEasyLife Free Courier Fraud Checker BD মোবাইল নম্বর দিয়ে {{ historyBn }} হিস্টোরি ও সাকসেস রেট চেক করে —
                     ফেক অর্ডার ও পার্সেল রিটার্ন কমাতে। অ্যাকাউন্ট ছাড়াই ফ্রি চেক সম্ভব। পূর্ণ সুরক্ষায় OTP, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রি যোগ করুন।

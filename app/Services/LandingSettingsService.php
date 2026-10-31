@@ -18,6 +18,8 @@ class LandingSettingsService
 
     public const PLAY_STORE_URL_KEY = 'landing.play_store_url';
 
+    public const PUBLIC_PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.wooeasylife.woo_easy_life';
+
     public const PLUGIN_DOWNLOAD_URL_KEY = 'landing.plugin_download_url';
 
     public const BKASH_NUMBER_KEY = 'landing.bkash_number';
@@ -180,7 +182,22 @@ class LandingSettingsService
 
     public function playStoreUrl(): ?string
     {
-        return $this->resolve(self::PLAY_STORE_URL_KEY, config('landing.play_store_url'));
+        return self::normalizePlayStoreUrl(
+            $this->resolve(self::PLAY_STORE_URL_KEY, config('landing.play_store_url'))
+        );
+    }
+
+    /**
+     * Public Play listing. A stored closed-testing URL is rewritten so schema and links stay public.
+     */
+    public static function normalizePlayStoreUrl(?string $url): string
+    {
+        $url = trim((string) $url);
+        if ($url === '' || str_contains($url, 'play.google.com/apps/testing')) {
+            return self::PUBLIC_PLAY_STORE_URL;
+        }
+
+        return $url;
     }
 
     public function pluginDownloadUrl(): ?string

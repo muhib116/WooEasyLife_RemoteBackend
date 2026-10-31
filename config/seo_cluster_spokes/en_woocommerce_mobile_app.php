@@ -5,6 +5,7 @@ return [
         'heading' => 'What is the WooEasyLife mobile app?',
         'paragraphs' => [
             'WooEasyLife is an Android app for WooCommerce merchants—not a shopping app for customers. If you run WooCommerce or Facebook COD in Bangladesh, you can see new orders on your phone, call the customer, check courier history risk hints, and confirm or hold the order without sitting at a laptop.',
+            'The app works with a WooEasyLife account connected to a WooCommerce store.',
             'You can connect more than one website with a QR scan. New orders can notify your phone. When a customer calls, the app can often match the call to an order. You can also start Pathao, SteadFast, and RedX parcel work from mobile. iPhone is not the main version yet.',
             'Author: Muhibbullah Ansary — see /en/about. To start, visit /pricing. Bangla guide: /woocommerce-mobile-app. Full system hub: /en/woocommerce-bangladesh.',
         ],

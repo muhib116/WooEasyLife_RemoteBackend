@@ -62,7 +62,7 @@
         @endif
         <meta name="twitter:card" content="summary_large_image">
         @if (! empty($seo['json_ld']))
-            <script type="application/ld+json">{!! json_encode($seo['json_ld'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+            <script id="seo-json-ld" type="application/ld+json">{!! json_encode($seo['json_ld'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
         @endif
     @endisset
 
@@ -669,10 +669,10 @@
                     @endforeach
                 </article>
             @endif
-            {{-- Full sitemap link list (marketing + blog) so crawlers never see orphaned sitemap URLs --}}
+            {{-- Compact footer. Contextual links stay in the page body. Sitemap is unchanged. --}}
             <nav aria-label="Site pages">
                 <ul>
-                    @foreach (\App\Support\SeoPrerenderText::sitemapNavLinks($isEnPrerender) as $navLink)
+                    @foreach (\App\Support\SeoPrerenderText::compactFooterLinks($isEnPrerender) as $navLink)
                         <li><a href="{{ $navLink['href'] }}">{{ $navLink['label'] }}</a></li>
                     @endforeach
                 </ul>

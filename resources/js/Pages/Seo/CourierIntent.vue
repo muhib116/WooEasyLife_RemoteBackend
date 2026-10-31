@@ -70,7 +70,7 @@ const isSkippedForGuideToc = (heading) => {
     if (!h) return true;
     const lower = h.toLowerCase();
     if (h.includes('দ্রুত') || lower.includes('quick')) return true;
-    if (h.includes('এআই সারাংশ') || lower.includes('ai summary')) return true;
+    if (h.includes('এআই সারাংশ') || h.includes('সংক্ষেপে') || lower.includes('ai summary') || lower.includes('in short')) return true;
     return false;
 };
 

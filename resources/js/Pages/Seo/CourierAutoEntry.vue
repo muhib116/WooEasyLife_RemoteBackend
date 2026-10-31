@@ -367,7 +367,7 @@ const relatedLinks = [
 
         <section class="border-t border-white/10 bg-emerald-950/15 px-4 py-10 lg:px-8">
             <div class="mx-auto max-w-3xl">
-                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
+                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">সংক্ষেপে</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     WooEasyLife কুরিয়ার অটো এন্ট্রি অর্ডার কনফার্মে {{ bookingBn }}-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি করে —
                     WooCommerce COD সেলারদের ম্যানুয়াল টাইপ ও দিনে ৩+ ঘণ্টা সময় বাঁচায়। সাথে স্ট্যাটাস সিঙ্ক, SMS ও Steadfast পার্সেল নোট হিস্ট্রি।

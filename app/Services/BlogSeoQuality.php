@@ -302,7 +302,7 @@ class BlogSeoQuality
             'meta_description_ok' => ['meta_description', 'Meta description must be 50–160 characters before publishing.'],
             'faq_count_ok' => ['faqs_json', "Add at least {$minFaqs} FAQs (question + answer) before publishing."],
             'has_quick_answer' => ['body_html', 'Add a Quick Answer / দ্রুত উত্তর section before publishing.'],
-            'has_ai_search_summary' => ['body_html', 'Add an AI Search Summary / এআই সারাংশ section before publishing.'],
+            'has_ai_search_summary' => ['body_html', 'Add an In short / সংক্ষেপে section before publishing.'],
             'secondary_keyword_in_body' => ['body_html', 'Include at least one secondary keyword in the body before publishing.'],
             'slug_collision' => ['slug', 'Slug collides with another post. Choose a unique English SEO slug.'],
             'focus_keyword_collision' => ['focus_keyword', 'Focus keyword is already used by another published post.'],
@@ -579,7 +579,7 @@ class BlogSeoQuality
                 }
                 // Skip SEO block titles if matched as bare h2.
                 $text = trim(html_entity_decode(strip_tags($m[0])));
-                if (preg_match('/^(Quick Answer|দ্রুত উত্তর|AI Search Summary|AI Summary|এআই সারাংশ)$/iu', $text)) {
+                if (preg_match('/^(Quick Answer|দ্রুত উত্তর|AI Search Summary|AI Summary|এআই সারাংশ|In short|সংক্ষেপে)$/iu', $text)) {
                     return $m[0];
                 }
                 $done = true;
@@ -859,7 +859,7 @@ class BlogSeoQuality
         }
 
         return (bool) preg_match(
-            '/<h2\b[^>]*>[^<]*(AI Search Summary|AI Summary|এআই সারাংশ)[^<]*<\/h2>/iu',
+            '/<h2\b[^>]*>[^<]*(AI Search Summary|AI Summary|এআই সারাংশ|In short|সংক্ষেপে)[^<]*<\/h2>/iu',
             $html,
         );
     }
@@ -905,7 +905,7 @@ class BlogSeoQuality
         }
 
         if ($summary !== '' && ! $this->hasAiSearchSummary($body)) {
-            $block = '<section class="seo-ai-summary"><h2>এআই সারাংশ</h2><p>'
+            $block = '<section class="seo-ai-summary"><h2>সংক্ষেপে</h2><p>'
                 .e(Str::limit($summary, 1200, ''))
                 .'</p></section>';
             // Place before a trailing FAQ-looking h2 if present; else append.

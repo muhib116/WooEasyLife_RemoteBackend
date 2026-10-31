@@ -7,7 +7,7 @@ Fixed slot order (do not reorder):
 3. `why_it_matters` — H2: why COD / Facebook sellers should care
 4. `how_to_act` — H2: what to do next (short practical steps)
 5. `tool_bridge` — related landing tool + must_link
-6. `ai_summary` — SEO block এআই সারাংশ
+6. `ai_summary` — SEO block সংক্ষেপে
 7. `faqs` — 5–7 spoken Q&A (glossary can lean FAQ-heavy)
 8. `cta_close` — soft CTA to primary_path
 

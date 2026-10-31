@@ -69,12 +69,6 @@ return [
     'author_role' => 'Founder & CEO, WPSaleHub · Creator of WooEasyLife',
     'author_image' => '/images/seo/about/founder-headshot.jpg',
     'schema_type' => 'AboutPage',
-    'person_same_as' => [
-        'https://www.linkedin.com/in/dev-muhib',
-        'https://www.facebook.com/muhib116',
-        'https://www.instagram.com/muhibbullah611/',
-        'https://freetoolssite.com/',
-    ],
     'person_email' => 'dev.muhibbullah@gmail.com',
     'person_telephone' => '+8801770989591',
     'person_job_title' => 'Founder & CEO, WPSaleHub · Creator of WooEasyLife',

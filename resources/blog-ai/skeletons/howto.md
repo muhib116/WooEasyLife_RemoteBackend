@@ -8,7 +8,7 @@ Fixed slot order (do not reorder):
 4. `steps` — H2: numbered practical steps (the only required numbered list)
 5. `differentiation` — H2: common mistakes / vs generic advice / competitor gaps
 6. `tool_bridge` — H2 or short section: when WooEasyLife helps + must_link
-7. `ai_summary` — SEO block এআই সারাংশ
+7. `ai_summary` — SEO block সংক্ষেপে
 8. `faqs` — 5–7 spoken Q&A
 9. `cta_close` — soft closing CTA to primary_path
 

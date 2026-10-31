@@ -69,12 +69,11 @@ return [
             'https://www.linkedin.com/in/dev-muhib',
             'https://www.facebook.com/muhib116',
             'https://www.instagram.com/muhibbullah611/',
-            'https://freetoolssite.com/',
+            'https://www.youtube.com/channel/UCiEVvaV8O6VBKzU3d7ezKGg',
         ],
         'same_as' => array_values(array_filter([
             env('SEO_SAME_AS_FACEBOOK', 'https://www.facebook.com/wooeasylife'),
             env('SEO_SAME_AS_YOUTUBE'),
-            env('WOOEASYLIFE_PLAY_STORE_URL'),
         ])),
     ],
 

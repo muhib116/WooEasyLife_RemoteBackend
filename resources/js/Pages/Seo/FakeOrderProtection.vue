@@ -335,7 +335,7 @@ const relatedLinks = [
 
         <section class="border-t border-white/10 bg-emerald-950/15 px-4 py-10 lg:px-8">
             <div class="mx-auto max-w-3xl">
-                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
+                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">সংক্ষেপে</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     WooEasyLife ফেক অর্ডার প্রোটেকশন মাল্টি-লেয়ার: কুরিয়ার হিস্টোরি চেক, চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে COD ফেক অর্ডার ও রিটার্ন লস কমায়।
                     ফ্রি চেক

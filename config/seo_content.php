@@ -103,7 +103,7 @@ return array (
     ),
     6 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife Free Courier Fraud Checker BD মোবাইল নম্বর দিয়ে {couriers.history.bn} হিস্টোরি ও সাকসেস রেট চেক করে — ফেক অর্ডার ও পার্সেল রিটার্ন কমাতে। অ্যাকাউন্ট ছাড়াই ফ্রি চেক সম্ভব। পূর্ণ সুরক্ষায় OTP, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রি যোগ করুন। শুরু করতে /bd-fraud-checker দিয়ে নম্বর সার্চ করুন, বা /pricing থেকে ট্রায়াল নিন।',
@@ -206,7 +206,7 @@ return array (
     ),
     9 => 
     array (
-      'heading' => 'এআই সারাংশ ও পরবর্তী ধাপ',
+      'heading' => 'সংক্ষেপে ও পরবর্তী ধাপ',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife Fake Customer Check মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখিয়ে COD কনফার্মের আগে ফেক/ঝুঁকিপূর্ণ কাস্টমার আটকাতে সাহায্য করে—ফ্রি, অ্যাকাউন্ট ছাড়াই। সিদ্ধান্ত আপনার; টুল অন্ধভাবে অটো পার্সেল পাঠায় না।',
@@ -273,7 +273,7 @@ return array (
     ),
     6 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife ফেক অর্ডার প্রোটেকশন মাল্টি-লেয়ার: কুরিয়ার হিস্টোরি চেক, চেকআউট OTP (প্ল্যাটফর্ম SMS), BD এরিয়া পিকার, ডুপ্লিকেট ব্লক, ঐচ্ছিক থ্রোটল/soft-pass ও ব্ল্যাকলিস্ট দিয়ে COD ফেক অর্ডার ও রিটার্ন লস কমায়। ফ্রি চেক /bd-fraud-checker; পূর্ণ সুরক্ষা /pricing। আপডেট গাইড: /blog/checkout-security-update-otp-bd-area। English: /en/fake-order-protection।',
@@ -338,7 +338,7 @@ return array (
     ),
     6 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife রিটার্ন লস ক্যালকুলেটর দৈনিক অর্ডার, রিটার্ন রেট ও প্রতি রিটার্নের খরচ দিয়ে মাসিক COD রিটার্ন লস ও সম্ভাব্য সাশ্রয় দেখায়। হিসাব শিক্ষামূলক। লস কমাতে /bd-fraud-checker ও /fake-order-protection চালু করুন। English: /en/return-loss-calculator। শুরু: /pricing।',
@@ -395,7 +395,7 @@ return array (
     ),
     5 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife কুরিয়ার চার্জ ক্যালকুলেটরে Pathao, Steadfast ও RedX-এর আনুমানিক ডেলিভারি চার্জ জোন ও ওজন দিয়ে তুলনা করুন — COD ফিসহ। রেট আনুমানিক হতে পারে; চূড়ান্ত চার্জ প্যানেলে যাচাই করুন। কনফার্মড অর্ডারে /courier-auto-entry চালু রাখুন, ফেক অর্ডার আটকাতে /bd-fraud-checker করুন। ট্রায়াল: /pricing।',
@@ -488,7 +488,7 @@ return array (
     ),
     9 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'Facebook Ads ROAS ক্যালকুলেটর দিয়ে রিপোর্টেড vs আসল ROAS তুলনা করুন — ফেক Purchase বাদ দিয়ে। COD সেলারদের জন্য আসল ROASই স্কেল সিদ্ধান্তের ভিত্তি। WooEasyLife ফ্রড চেক, ফেক অর্ডার প্রোটেকশন ও পিক্সেল প্রোটেকশন দিয়ে পরিষ্কার Purchase সিগন্যাল রাখতে সাহায্য করে। হিসাব শিক্ষামূলক; নিজের রিটার্ন রেট মিলিয়ে নিন, তারপর /pricing থেকে ট্রায়াল শুরু করুন। ইংরেজি মিরর: /en/ads-roas-calculator।',
@@ -562,7 +562,7 @@ return array (
     ),
     7 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife কুরিয়ার অটো এন্ট্রি অর্ডার কনফার্মে {couriers.booking.bn}-এ স্বয়ংক্রিয় পার্সেল এন্ট্রি করে — WooCommerce COD সেলারদের ম্যানুয়াল টাইপ ও দিনে ৩+ ঘণ্টা সময় বাঁচায়। সাথে স্ট্যাটাস সিঙ্ক, SMS ও Steadfast পার্সেল নোট হিস্ট্রি। নিরাপদ ফ্লো: /bd-fraud-checker → কনফার্ম → অটো এন্ট্রি; প্রোটেকশন /fake-order-protection। শুরু: /pricing।',
@@ -600,7 +600,7 @@ return array (
     ),
     3 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife English home offers free BD fraud checks plus WooCommerce protection, courier auto-entry, and app tools for COD sellers. Verify courier history before confirming, then subscribe via /pricing. Bangla mirror: /.',
@@ -665,7 +665,7 @@ return array (
     ),
     6 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife Free Courier Fraud Checker BD verifies {couriers.history.en} delivery history and success rate by mobile number to reduce fake COD orders and parcel returns. Free checks work without an account. Add OTP, blacklists, and courier auto-entry for full protection. Start on /en/bd-fraud-checker or trial via /pricing. Bangla mirror: /bd-fraud-checker.',
@@ -731,7 +731,7 @@ return array (
     ),
     6 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife fake order protection is multi-layer: courier history checks, checkout OTP, duplicate blocks, and blacklists to cut COD fake orders and return loss. Free checks on /en/bd-fraud-checker; full protection via /pricing. Bangla guide: /ki-vabe-fake-order-atkabo. Bangla mirror: /fake-order-protection.',
@@ -796,7 +796,7 @@ return array (
     ),
     6 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'The WooEasyLife return loss calculator estimates monthly COD return loss and savings from daily orders, return rate, and cost per return. Educational only. Cut loss with /en/bd-fraud-checker and /en/fake-order-protection. Bangla: /return-loss-calculator. Start: /pricing.',
@@ -870,7 +870,7 @@ return array (
     ),
     7 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife courier auto-entry pushes {couriers.booking.en} parcels when orders are confirmed — saving WooCommerce COD sellers from manual typing and 3+ hours/day. Includes status sync, SMS, and Steadfast parcel note history. Safe flow: /en/bd-fraud-checker → confirm → auto-entry; protection via /fake-order-protection. Start: /pricing. Bangla: /courier-auto-entry.',
@@ -927,7 +927,7 @@ return array (
     ),
     5 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'Compare reported vs real Facebook Ads ROAS after removing fake purchases. For COD sellers, real ROAS should drive scale decisions. WooEasyLife helps with fraud checks, fake-order protection, and pixel protection for cleaner Purchase signals. Estimates are educational — match your return rate, then start a trial from /pricing. Bangla mirror: /ads-roas-calculator.',
@@ -983,7 +983,7 @@ return array (
     ),
     5 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'Compare approximate Pathao, Steadfast, and RedX delivery charges by zone and weight — including COD fee — on the WooEasyLife courier charge calculator. Rates can be approximate; verify on the panel. Keep /en/courier-auto-entry on for confirmed orders and fraud-check on /en/bd-fraud-checker. Trial: /pricing. Bangla: /courier-charge-calculator.',
@@ -1075,7 +1075,7 @@ return array (
     ),
     8 => 
     array (
-      'heading' => 'এআই সারাংশ ও পরবর্তী ধাপ',
+      'heading' => 'সংক্ষেপে ও পরবর্তী ধাপ',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife একটি FraudBD Alternative: ফ্রি BD fraud checker-এর সাথে ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটো এন্ট্রি, রিকভারি ও মোবাইল অ্যাপ—শুধু হিস্টোরি নয়, পূর্ণ COD ওয়ার্কফ্লো।',
@@ -1168,7 +1168,7 @@ return array (
     ),
     8 => 
     array (
-      'heading' => 'AI summary & next steps',
+      'heading' => 'In short & next steps',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife is a FraudBD alternative: free BD fraud checks plus fake-order protection, courier auto-entry, recovery, and a mobile app—full COD workflow, not history alone.',
@@ -1269,7 +1269,7 @@ return array (
     ),
     8 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'কিভাবে ফেক অর্ডার আটকাবো: কুরিয়ার হিস্টোরি চেক → জোন অনুযায়ী কল/OTP → ডুপ্লিকেট/ব্ল্যাকলিস্ট → কনফার্ম → অটো এন্ট্রি ও ট্র্যাকিং মেসেজ। WooEasyLife-এ ফ্রি চেক ও পূর্ণ প্রোটেকশন এক প্ল্যাটফর্মে।',
@@ -1371,7 +1371,7 @@ return array (
     ),
     8 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'How to stop fake orders in Bangladesh COD: courier history check → zone-based call/OTP → duplicate/blacklist → confirm → auto entry and tracking messages. WooEasyLife combines free checks and full protection in one stack.',
@@ -1483,7 +1483,7 @@ return array (
     ),
     9 => 
     array (
-      'heading' => 'AI summary & next steps',
+      'heading' => 'In short & next steps',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife Fake Customer Check helps Bangladesh COD sellers verify courier history and success rate by mobile before confirm—free, no account required. You decide; the tool does not auto-send parcels blindly.',
@@ -1586,7 +1586,7 @@ return array (
     ),
     9 => 
     array (
-      'heading' => 'এআই সারাংশ ও পরবর্তী ধাপ',
+      'heading' => 'সংক্ষেপে ও পরবর্তী ধাপ',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife Courier Checker BD মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি ও সাকসেস রেট দেখিয়ে COD কনফার্মের আগে ঝুঁকি কমায়—ফ্রি, অ্যাকাউন্ট ছাড়াই। সিদ্ধান্ত আপনার; টুল অন্ধভাবে অটো পার্সেল পাঠায় না।',
@@ -1652,7 +1652,7 @@ return array (
     ),
     5 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife Fake Order Check মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি দেখিয়ে COD কনফার্মের আগে ফেক অর্ডার ঝুঁকি কমায়—ফ্রি। এখনই নিচে চেক করুন বা /bd-fraud-checker খুলুন।',
@@ -1708,7 +1708,7 @@ return array (
     ),
     4 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'BD Courier Ratio Checker ফ্রি মোবাইল চেক দিয়ে সাকসেস রেট দেখায়—কম রেটে অন্ধভাবে পার্সেল পাঠাবেন না। শুরু: নিচের টুল বা /bd-fraud-checker।',
@@ -1773,7 +1773,7 @@ return array (
     ),
     5 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife Pathao Fraud Check ফ্রি নম্বর চেক দিয়ে Pathao সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখায়—এটি risk signal, চূড়ান্ত fraud verdict নয়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন। সব প্রশ্ন: /faq।',
@@ -1840,7 +1840,7 @@ return array (
     ),
     5 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife RedX Fraud Check ফ্রি নম্বর চেক দিয়ে RedX সহ সাপোর্টেড কুরিয়ারের ডেলিভারি ও রিটার্ন হিস্টোরি দেখায়—risk signal, চূড়ান্ত verdict নয়। এখনই নিচে চেক করুন বা /bd-fraud-checker ব্যবহার করুন। সব প্রশ্ন: /faq।',
@@ -1887,7 +1887,7 @@ return array (
     ),
     4 => 
     array (
-      'heading' => 'এআই সারাংশ',
+      'heading' => 'সংক্ষেপে',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife ব্লগ (/blog) COD সেলারদের জন্য ফেক অর্ডার, ফ্রড চেক ও রিটার্ন লস গাইড হাব। পোস্ট পড়ে টুলে যান: /bd-fraud-checker, /faq, /pricing। ইংরেজি: /en/blog। ফাউন্ডার: /about।',
@@ -1934,7 +1934,7 @@ return array (
     ),
     4 => 
     array (
-      'heading' => 'AI summary',
+      'heading' => 'In short',
       'paragraphs' => 
       array (
         0 => 'WooEasyLife English blog (/en/blog) is a COD fraud and operations guide hub. After reading, use /en/bd-fraud-checker, /faq, and /pricing. Bangla blog: /blog. Founder: /en/about.',

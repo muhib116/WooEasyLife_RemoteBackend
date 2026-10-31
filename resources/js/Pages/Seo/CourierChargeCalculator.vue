@@ -304,7 +304,7 @@ const relatedLinks = [
 
         <section class="border-t border-white/10 bg-emerald-950/15 px-4 py-10 lg:px-8">
             <div class="mx-auto max-w-3xl">
-                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
+                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">সংক্ষেপে</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     WooEasyLife কুরিয়ার চার্জ ক্যালকুলেটরে Pathao, Steadfast ও RedX-এর আনুমানিক ডেলিভারি চার্জ জোন ও ওজন দিয়ে তুলনা করুন — COD ফিসহ।
                     রেট আনুমানিক হতে পারে; চূড়ান্ত চার্জ প্যানেলে যাচাই করুন। কনফার্মড অর্ডারে অটো এন্ট্রি চালু রাখুন, ফেক অর্ডার আটকাতে ফ্রড চেক করুন।

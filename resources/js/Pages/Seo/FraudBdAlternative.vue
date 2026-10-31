@@ -339,7 +339,7 @@ const relatedLinks = [
 
         <section class="border-t border-white/10 bg-emerald-950/15 px-4 py-10 lg:px-8">
             <div class="mx-auto max-w-3xl">
-                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">এআই সারাংশ</h2>
+                <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">সংক্ষেপে</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     WooEasyLife হলো FraudBD Alternative — ফ্রি BD fraud checker-এর সাথে ফেক অর্ডার প্রোটেকশন,
                     কুরিয়ার অটো এন্ট্রি, হারানো অর্ডার রিকভারি ও মোবাইল অ্যাপ। শুধু-চেকার টুল হিস্টোরি দেখায়;

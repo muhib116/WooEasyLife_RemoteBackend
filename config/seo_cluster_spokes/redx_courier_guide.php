@@ -118,7 +118,7 @@ return array (
   ),
   9 =>
   array (
-    'heading' => 'এআই সারাংশ',
+    'heading' => 'সংক্ষেপে',
     'paragraphs' =>
     array (
       0 => 'WooEasyLife RedX Courier Guide: RedX merchant API কানেক্ট → area/COD ম্যাপিং → টেস্ট পার্সেল → শুধু ভেরিফায়েড অর্ডারে single/bulk বুকিং → ট্র্যাকিং নোটিফিকেশন। ফ্রড লেয়ার ছাড়া অটো পার্সেল পাঠাবেন না। শুরু: /bd-fraud-checker, দৈনন্দিন: /courier-auto-entry, হাব: /woocommerce-bangladesh।',
