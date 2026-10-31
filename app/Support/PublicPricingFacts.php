@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\PackageHub;
 use App\Services\PackagePlanResolver;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Public pricing cards and crawler copy share one plan list.
@@ -13,21 +12,19 @@ use Illuminate\Support\Facades\Schema;
 class PublicPricingFacts
 {
     /**
-     * Same plans and order as the Vue pricing cards.
+     * Same plans as the committed pricing cards: active rows with a duration.
+     * Trial plans are listed first, matching the Vue card order.
      *
      * @return list<array<string, mixed>>
      */
     public static function displayPlans(): array
     {
-        $query = PackageHub::query()
+        $plans = PackageHub::query()
             ->where('is_active', true)
-            ->whereNotNull('package_duration');
-
-        if (Schema::hasColumn('package_hubs', 'show_on_frontend')) {
-            $query->where('show_on_frontend', true);
-        }
-
-        $plans = $query->orderBy('index')->orderBy('id')->get();
+            ->whereNotNull('package_duration')
+            ->orderBy('index')
+            ->orderBy('id')
+            ->get();
         $enriched = app(PackagePlanResolver::class)->mapPlansForDisplay($plans);
 
         $trial = [];

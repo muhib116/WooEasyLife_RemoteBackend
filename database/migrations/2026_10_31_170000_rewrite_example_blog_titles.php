@@ -15,8 +15,8 @@ return new class extends Migration
         $disclaimer = '<p>এটি একটি উদাহরণ হিসাব, কোনো নির্দিষ্ট মার্চেন্টের ফল নয়।</p>';
 
         $this->retitle('steadfast-fraud-check-case-study', [
-            'title' => 'SteadFast Fraud Check উদাহরণ হিসাব — রিটার্ন ১৮% থেকে ১২% হলে কত সাশ্রয়?',
-            'meta_title' => 'SteadFast Fraud Check উদাহরণ হিসাব — রিটার্ন ১৮% থেকে ১২%',
+            'title' => 'SteadFast উদাহরণ — ১৮%→১২% হলে কত সাশ্রয়',
+            'meta_title' => 'SteadFast উদাহরণ — ১৮%→১২% হলে কত সাশ্রয়',
             'meta_description' => 'উদাহরণ হিসাব: রিটার্ন ১৮% থেকে ১২% হলে কত সাশ্রয় হতে পারে। কোনো নির্দিষ্ট মার্চেন্টের ফল নয়।',
         ], $disclaimer);
 

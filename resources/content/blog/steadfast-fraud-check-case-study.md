@@ -1,5 +1,5 @@
 ---
-title: SteadFast Fraud Check উদাহরণ হিসাব — রিটার্ন ১৮% থেকে ১২% হলে কত সাশ্রয়?
+title: SteadFast উদাহরণ — ১৮%→১২% হলে কত সাশ্রয়
 description: উদাহরণ হিসাব: নম্বর চেক, OTP ও Return Hub ধরলে রিটার্ন ১৮% থেকে ১২% হলে কত সাশ্রয় হতে পারে। কোনো নির্দিষ্ট মার্চেন্টের ফল নয়।
 date: 2026-07-30
 slug: steadfast-fraud-check-case-study
