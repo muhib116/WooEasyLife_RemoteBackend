@@ -21,8 +21,7 @@ class PublicSubscriptionService
         protected PackagePlanResolver $planResolver,
         protected DomainAvailabilityService $domainAvailability,
         protected LandingSettingsService $landingSettings,
-    ) {
-    }
+    ) {}
 
     /**
      * Soft-save contact-step lead without requiring DNS or payment.
@@ -42,8 +41,7 @@ class PublicSubscriptionService
 
         $packageHub = PackageHub::query()
             ->where('id', $data['package_hub_id'] ?? null)
-            ->where('is_active', true)
-            ->whereNotNull('package_duration')
+            ->forPublicPricing()
             ->first();
 
         if (! $packageHub) {
@@ -146,8 +144,7 @@ class PublicSubscriptionService
 
         $packageHub = PackageHub::query()
             ->where('id', $data['package_hub_id'] ?? null)
-            ->where('is_active', true)
-            ->whereNotNull('package_duration')
+            ->forPublicPricing()
             ->first();
 
         if (! $packageHub) {

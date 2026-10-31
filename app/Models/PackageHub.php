@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 
 class PackageHub extends Model
 {
@@ -14,6 +15,7 @@ class PackageHub extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'is_special' => 'boolean',
+        'show_on_frontend' => 'boolean',
         'app_connect' => 'boolean',
         'features' => 'array',
         'trial_days' => 'integer',
@@ -31,5 +33,20 @@ class PackageHub extends Model
     public function subscriptions()
     {
         return $this->hasMany(UserPackage::class, 'package_hub_id', 'id');
+    }
+
+    /**
+     * Plans the public homepage pricing section and /pricing page may show.
+     */
+    public function scopeForPublicPricing($query)
+    {
+        $query->where('is_active', true)
+            ->whereNotNull('package_duration');
+
+        if (Schema::hasColumn($this->getTable(), 'show_on_frontend')) {
+            $query->where($this->getTable().'.show_on_frontend', true);
+        }
+
+        return $query;
     }
 }

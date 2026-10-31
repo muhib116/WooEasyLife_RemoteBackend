@@ -33,4 +33,35 @@ class PricingPageTest extends TestCase
             ->where('plans.0.catalog_features.0.key', config('package_catalog.power_feature_keys.0'))
             ->has('conversionFeatures'));
     }
+
+    public function test_pricing_page_hides_plans_not_selected_for_the_website(): void
+    {
+        PackageHub::create([
+            'title' => 'Public plan',
+            'per_order_rate' => 0,
+            'package_duration' => '1_month',
+            'order_rate_token' => 1000,
+            'package_price' => 999,
+            'is_active' => true,
+            'show_on_frontend' => true,
+            'features' => ['fraud_customer_checker' => true],
+        ]);
+
+        PackageHub::create([
+            'title' => 'Internal plan',
+            'per_order_rate' => 0,
+            'package_duration' => '1_year',
+            'order_rate_token' => 2000,
+            'package_price' => 1999,
+            'is_active' => true,
+            'show_on_frontend' => false,
+            'features' => ['fraud_customer_checker' => true],
+        ]);
+
+        $this->get(route('pricing'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('plans', 1)
+                ->where('plans.0.title', 'Public plan'));
+    }
 }

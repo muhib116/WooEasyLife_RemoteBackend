@@ -3,10 +3,11 @@
 namespace App\Services;
 
 use App\Models\PackageHub;
+use App\Services\Marketing\CourierPublicRatesService;
 use App\Support\PackageCatalogFeatures;
 use App\Support\PlanDisplayPresenter;
+use App\Support\PublicCourierNames;
 use App\Support\WhatsappLink;
-use App\Services\PublicFraudCheckService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -14,7 +15,7 @@ use Illuminate\Support\Str;
 
 class LandingPageService
 {
-    public const ACTIVE_PLANS_CACHE_KEY = 'landing.active_plans.v1';
+    public const ACTIVE_PLANS_CACHE_KEY = 'landing.active_plans.v2';
 
     private const ACTIVE_PLANS_CACHE_SECONDS = 300;
 
@@ -23,8 +24,7 @@ class LandingPageService
         protected PublicFraudCheckService $publicFraudCheckService,
         protected LandingSettingsService $landingSettings,
         protected SubscriptionPaymentConfigService $paymentConfig,
-    ) {
-    }
+    ) {}
 
     public static function forgetActivePlansCache(): void
     {
@@ -64,7 +64,7 @@ class LandingPageService
 
         foreach ($keys as $key) {
             $props[$key] = match ($key) {
-                'courierChargeCalculator' => app(\App\Services\Marketing\CourierPublicRatesService::class)
+                'courierChargeCalculator' => app(CourierPublicRatesService::class)
                     ->calculatorConfig($locale),
                 'roiCalculator' => $locale === 'en'
                     ? config('landing.roi_calculator_en', config('landing.roi_calculator', []))
@@ -171,7 +171,7 @@ class LandingPageService
             $payload['valuePillars'] = $featuredPayload
                 ? $this->buildValuePillars($this->legacyFeatures($featuredPayload['features'] ?? []))
                 : [];
-            $payload['courierChargeCalculator'] = app(\App\Services\Marketing\CourierPublicRatesService::class)
+            $payload['courierChargeCalculator'] = app(CourierPublicRatesService::class)
                 ->calculatorConfig($locale);
             $payload['adsRoasCalculator'] = config('landing.ads_roas_calculator', []);
             $payload['adsRoasCalculatorEn'] = config('landing.ads_roas_calculator_en', []);
@@ -188,7 +188,7 @@ class LandingPageService
             $payload = $this->applyEnglishLandingOverlays($payload, $paymentMethods);
         }
 
-        return \App\Support\PublicCourierNames::expandValue(
+        return PublicCourierNames::expandValue(
             $this->withLiveFraudLimitCopy($payload, $locale)
         );
     }
@@ -201,8 +201,7 @@ class LandingPageService
         /** @var list<array<string, mixed>> $rows */
         $rows = Cache::remember(self::ACTIVE_PLANS_CACHE_KEY, self::ACTIVE_PLANS_CACHE_SECONDS, function () {
             return PackageHub::query()
-                ->where('is_active', true)
-                ->whereNotNull('package_duration')
+                ->forPublicPricing()
                 ->orderBy('index')
                 ->orderBy('id')
                 ->get()

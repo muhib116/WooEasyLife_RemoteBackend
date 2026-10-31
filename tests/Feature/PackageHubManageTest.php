@@ -317,4 +317,45 @@ class PackageHubManageTest extends TestCase
                         && ($match['active_subscriptions_count'] ?? null) === 1;
                 }));
     }
+
+    public function test_admin_can_hide_a_plan_from_the_website(): void
+    {
+        $admin = $this->adminUser();
+
+        $package = PackageHub::create([
+            'title' => 'Growth',
+            'per_order_rate' => 0,
+            'package_duration' => '1_month',
+            'order_rate_token' => 1000,
+            'package_price' => 1500,
+            'features' => ['fraud_customer_checker' => true],
+            'is_active' => true,
+            'show_on_frontend' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('packages.toggleFrontend', $package->id))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertFalse($package->fresh()->show_on_frontend);
+
+        $this->actingAs($admin)
+            ->post(route('packages.update', $package->id), $this->catalogPayload([
+                'show_on_frontend' => true,
+            ]))
+            ->assertRedirect();
+
+        $this->assertTrue($package->fresh()->show_on_frontend);
+
+        $this->actingAs($admin)
+            ->post(route('packages.update', $package->id), $this->catalogPayload([
+                'show_on_frontend' => 0,
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertFalse($package->fresh()->show_on_frontend);
+        $this->assertTrue($package->fresh()->is_active);
+    }
 }

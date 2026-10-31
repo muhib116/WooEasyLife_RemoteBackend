@@ -17,8 +17,7 @@ class PackageHubController extends Controller
 {
     public function __construct(
         protected PackagePlanResolver $planResolver
-    ) {
-    }
+    ) {}
 
     public function index()
     {
@@ -37,8 +36,6 @@ class PackageHubController extends Controller
     public function create(Request $request)
     {
         $validated = $this->validateCatalogPayload($request);
-        $features = PackageCatalogFeatures::normalize($validated['features'] ?? []);
-
         $features = PackageCatalogFeatures::normalize($validated['features'] ?? []);
         $appConnect = $request->boolean('app_connect');
         $unlimitedWebsite = (bool) ($features['unlimited_website_connectivity'] ?? false);
@@ -60,6 +57,9 @@ class PackageHubController extends Controller
             'features' => $features,
             'is_active' => $request->boolean('is_active'),
             'is_special' => $request->boolean('is_special'),
+            'show_on_frontend' => $request->has('show_on_frontend')
+                ? $request->boolean('show_on_frontend')
+                : true,
             'created_by' => Auth::id(),
             'index' => PackageHub::withTrashed()->count() + 1,
         ]);
@@ -98,6 +98,9 @@ class PackageHubController extends Controller
             'features' => $features,
             'is_active' => $request->boolean('is_active'),
             'is_special' => $request->boolean('is_special'),
+            'show_on_frontend' => $request->has('show_on_frontend')
+                ? $request->boolean('show_on_frontend')
+                : (bool) $package->show_on_frontend,
             'updated_by' => Auth::id(),
         ]);
 
@@ -168,6 +171,31 @@ class PackageHubController extends Controller
         return back()->with('success', "Package {$label} successfully!");
     }
 
+    public function toggleFrontend(int $id)
+    {
+        $package = PackageHub::withTrashed()->findOrFail($id);
+
+        if ($package->trashed()) {
+            return back()->with(
+                'error',
+                'Deleted packages must be restored before changing the website selection.',
+            );
+        }
+
+        $package->update([
+            'show_on_frontend' => ! $package->show_on_frontend,
+            'updated_by' => Auth::id(),
+        ]);
+
+        LandingPageService::forgetActivePlansCache();
+
+        $label = $package->show_on_frontend
+            ? 'will show on the website pricing page'
+            : 'is hidden from the website pricing page';
+
+        return back()->with('success', "Package {$label}.");
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -191,6 +219,7 @@ class PackageHubController extends Controller
             'description' => ['nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
             'is_special' => ['sometimes', 'boolean'],
+            'show_on_frontend' => ['sometimes', 'boolean'],
             'app_connect' => ['sometimes', 'boolean'],
             'total_website_connect' => ['nullable', 'integer', 'min:1', 'max:5'],
             'features' => ['required', 'array'],

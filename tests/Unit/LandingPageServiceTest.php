@@ -129,6 +129,35 @@ class LandingPageServiceTest extends TestCase
         $this->assertStringNotContainsString('001770', (string) $fromInternational);
     }
 
+    public function test_public_pricing_lists_only_plans_selected_for_the_website(): void
+    {
+        PackageHub::create([
+            'title' => 'Shown plan',
+            'per_order_rate' => 0,
+            'package_duration' => '1_month',
+            'order_rate_token' => 1000,
+            'package_price' => 999,
+            'is_active' => true,
+            'show_on_frontend' => true,
+            'features' => PackageCatalogFeatures::map(),
+        ]);
+
+        PackageHub::create([
+            'title' => 'Catalog only',
+            'per_order_rate' => 0,
+            'package_duration' => '1_year',
+            'order_rate_token' => 5000,
+            'package_price' => 4999,
+            'is_active' => true,
+            'show_on_frontend' => false,
+            'features' => PackageCatalogFeatures::map(),
+        ]);
+
+        $plans = collect(app(LandingPageService::class)->payload()['plans']);
+
+        $this->assertSame(['Shown plan'], $plans->pluck('title')->all());
+    }
+
     public function test_marketing_shell_is_lightweight(): void
     {
         $shell = app(LandingPageService::class)->marketingShell();

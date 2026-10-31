@@ -200,6 +200,49 @@
                             </div>
                         </template>
                     </Column>
+                    <Column header="Website" style="min-width: 6.5rem">
+                        <template #body="{ data }">
+                            <StatusBadge
+                                v-if="data.deleted_at"
+                                label="Hidden"
+                                variant="neutral"
+                            />
+                            <button
+                                v-else
+                                type="button"
+                                class="cursor-pointer rounded-full transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 disabled:cursor-wait disabled:opacity-60"
+                                :disabled="togglingFrontendId === data.id"
+                                :aria-label="
+                                    data.show_on_frontend
+                                        ? 'Hide from website pricing'
+                                        : 'Show on website pricing'
+                                "
+                                v-tooltip.top="
+                                    data.show_on_frontend && !data.is_active
+                                        ? 'Selected for the website, but this package is disabled so the pricing page stays empty of it.'
+                                        : data.show_on_frontend
+                                          ? 'Shown on the homepage pricing section and the pricing page. Click to hide.'
+                                          : 'Hidden from the website. Click to show it on the pricing page.'
+                                "
+                                @click="togglePackageFrontend(data)"
+                            >
+                                <StatusBadge
+                                    :label="
+                                        data.show_on_frontend && data.is_active
+                                            ? 'Shown'
+                                            : data.show_on_frontend
+                                              ? 'Selected'
+                                              : 'Hidden'
+                                    "
+                                    :variant="
+                                        data.show_on_frontend && data.is_active
+                                            ? 'success'
+                                            : 'neutral'
+                                    "
+                                />
+                            </button>
+                        </template>
+                    </Column>
                     <Column header="Status" style="min-width: 5.5rem">
                         <template #body="{ data }">
                             <StatusBadge
@@ -378,6 +421,7 @@ const showView = ref(false);
 const formMode = ref<"create" | "edit">("create");
 const editingPackageId = ref<number | null>(null);
 const togglingPackageId = ref<number | null>(null);
+const togglingFrontendId = ref<number | null>(null);
 const viewingPackage = ref<Record<string, any> | null>(null);
 const packageDraft = reactive(buildDefaultPackageDraft());
 
@@ -535,6 +579,21 @@ const submitTogglePackageStatus = (pkg: Record<string, any>) => {
             preserveScroll: true,
             onFinish: () => {
                 togglingPackageId.value = null;
+            },
+        },
+    );
+};
+
+const togglePackageFrontend = (pkg: Record<string, any>) => {
+    togglingFrontendId.value = pkg.id;
+
+    router.post(
+        route("packages.toggleFrontend", pkg.id),
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                togglingFrontendId.value = null;
             },
         },
     );

@@ -243,6 +243,21 @@
 
         <div
             class="flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
+            @click="draft.show_on_frontend = !draft.show_on_frontend"
+        >
+            <div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    Show on website
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Homepage pricing section and the public pricing page. Unchecked plans stay in the catalog for merchant assignment.
+                </p>
+            </div>
+            <ToggleSwitch v-model="draft.show_on_frontend" class="pointer-events-none" />
+        </div>
+
+        <div
+            class="flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
             @click="draft.is_active = !draft.is_active"
         >
             <div>

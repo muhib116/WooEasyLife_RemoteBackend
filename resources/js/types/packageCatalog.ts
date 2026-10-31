@@ -44,6 +44,7 @@ export interface PackageCatalogDraft {
     description: string;
     is_active: boolean;
     is_special: boolean;
+    show_on_frontend: boolean;
     app_connect: boolean;
     total_website_connect: WebsiteConnectLimit;
     features: PackageFeatures;
@@ -58,6 +59,7 @@ export interface PackageCatalogPayload {
     description: string;
     is_active: boolean;
     is_special: boolean;
+    show_on_frontend: boolean;
     app_connect: boolean;
     total_website_connect: number | null;
     features: PackageFeatures;

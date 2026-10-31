@@ -133,6 +133,10 @@
                         :variant="pkg.is_active ? 'success' : 'neutral'"
                     />
                     <StatusBadge
+                        :label="pkg.show_on_frontend ? 'On website' : 'Hidden from website'"
+                        :variant="pkg.show_on_frontend ? 'success' : 'neutral'"
+                    />
+                    <StatusBadge
                         v-if="pkg.deleted_at"
                         label="Deleted"
                         variant="danger"

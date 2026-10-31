@@ -12,7 +12,7 @@ use App\Services\PackagePlanResolver;
 class PublicPricingFacts
 {
     /**
-     * Same plans as the committed pricing cards: active rows with a duration.
+     * Same plans as the public pricing cards: active, selected for the website, with a duration.
      * Trial plans are listed first, matching the Vue card order.
      *
      * @return list<array<string, mixed>>
@@ -20,8 +20,7 @@ class PublicPricingFacts
     public static function displayPlans(): array
     {
         $plans = PackageHub::query()
-            ->where('is_active', true)
-            ->whereNotNull('package_duration')
+            ->forPublicPricing()
             ->orderBy('index')
             ->orderBy('id')
             ->get();

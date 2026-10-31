@@ -172,6 +172,7 @@ export function buildDefaultPackageDraft(): PackageCatalogDraft {
         description: "",
         is_active: true,
         is_special: false,
+        show_on_frontend: true,
         app_connect: true,
         total_website_connect: 3,
         features: defaultFeatureMap(),
@@ -324,6 +325,7 @@ export function buildPackagePayload(
         description: draft.description.trim(),
         is_active: draft.is_active,
         is_special: draft.is_special,
+        show_on_frontend: draft.show_on_frontend,
         app_connect: draft.app_connect,
         total_website_connect: resolveWebsiteConnectLimit(
             draft.total_website_connect,
@@ -552,6 +554,7 @@ export function buildDraftFromPackageHub(pkg: {
     description?: string | null;
     is_active?: boolean;
     is_special?: boolean;
+    show_on_frontend?: boolean;
     app_connect?: boolean;
     total_website_connect?: number | null;
     features?: Partial<PackageFeatures> | Record<string, boolean> | null;
@@ -570,6 +573,7 @@ export function buildDraftFromPackageHub(pkg: {
         description: pkg.description || "",
         is_active: pkg.is_active !== false,
         is_special: Boolean(pkg.is_special),
+        show_on_frontend: pkg.show_on_frontend !== false,
         app_connect: appConnect,
         total_website_connect:
             !appConnect

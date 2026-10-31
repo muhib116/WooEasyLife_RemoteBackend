@@ -85,7 +85,7 @@ class PublicSubscriptionController extends Controller
     ) {
         $packageHub = PackageHub::query()
             ->where('id', $request->integer('package_hub_id'))
-            ->where('is_active', true)
+            ->forPublicPricing()
             ->first();
 
         if (! $packageHub) {

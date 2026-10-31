@@ -2,13 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Mail\SubscriptionInquiryAdminMail;
 use App\Models\PackageHub;
 use App\Models\SubscriptionInquiry;
 use App\Models\User;
 use App\Models\Website;
-use App\Mail\SubscriptionInquiryAdminMail;
 use App\Services\DomainNormalizer;
+use App\Services\PublicSubscriptionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -35,7 +37,7 @@ class PublicSubscriptionTest extends TestCase
     private function mockDnsPass(): void
     {
         $this->mock(DomainNormalizer::class, function ($mock) {
-            $real = new DomainNormalizer();
+            $real = new DomainNormalizer;
 
             $mock->shouldReceive('normalize')
                 ->andReturnUsing(fn (?string $input) => $real->normalize($input));
@@ -53,7 +55,7 @@ class PublicSubscriptionTest extends TestCase
     private function mockDnsFail(): void
     {
         $this->mock(DomainNormalizer::class, function ($mock) {
-            $real = new DomainNormalizer();
+            $real = new DomainNormalizer;
 
             $mock->shouldReceive('normalize')
                 ->andReturnUsing(fn (?string $input) => $real->normalize($input));
@@ -523,7 +525,7 @@ class PublicSubscriptionTest extends TestCase
         ]);
 
         $response = $this->withSession([
-            \App\Services\PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY => $inquiry->id,
+            PublicSubscriptionService::SESSION_PENDING_INQUIRY_KEY => $inquiry->id,
         ])->get('/');
 
         $response->assertOk();
@@ -699,7 +701,7 @@ class PublicSubscriptionTest extends TestCase
         $inquiry = SubscriptionInquiry::query()->first();
         $this->assertNotNull($inquiry);
 
-        Http::assertSent(function (\Illuminate\Http\Client\Request $request) use ($plan, $inquiry) {
+        Http::assertSent(function (Request $request) use ($plan, $inquiry) {
             $body = $request->data();
             $event = $body['events'][0] ?? [];
             $encoded = json_encode($body);
@@ -719,6 +721,32 @@ class PublicSubscriptionTest extends TestCase
                 && ! str_contains((string) $encoded, 'karim@example.com')
                 && ! str_contains((string) $encoded, '01711111111');
         });
+    }
+
+    public function test_plan_hidden_from_the_website_cannot_be_purchased(): void
+    {
+        Mail::fake();
+
+        $plan = $this->createPaidPlan();
+        $plan->update(['show_on_frontend' => false]);
+
+        $this->from(route('pricing'))
+            ->post(route('pricing.subscribe'), [
+                'package_hub_id' => $plan->id,
+                'website_url' => 'https://myshop.com',
+                'customer_name' => 'Karim',
+                'email' => 'karim@example.com',
+                'contact_number' => '01711111111',
+                'whatsapp_number' => '01770989591',
+                'address' => 'Dhaka, Bangladesh',
+                'transaction_method' => 'Bkash',
+                'transaction_id' => 'TXN123456',
+                'account_number' => '01711111111',
+            ])
+            ->assertRedirect(route('pricing'))
+            ->assertSessionHasErrors('package_hub_id');
+
+        $this->assertSame(0, SubscriptionInquiry::query()->count());
     }
 
     private function createPaidPlan(): PackageHub
