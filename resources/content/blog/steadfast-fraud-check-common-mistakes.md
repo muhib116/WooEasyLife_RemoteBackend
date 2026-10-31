@@ -42,7 +42,7 @@ locale: bn
 
 ## ভুল ৯: স্টাফ টার্গেট শুধু “পার্সেল পাঠাও”
 
-টার্গেট হোক কনফার্মড ও ডেলিভারযোগ্য অর্ডার। কেস হিসাব: [কেস স্টাডি](/blog/steadfast-fraud-check-case-study)।
+টার্গেট হোক কনফার্মড ও ডেলিভারযোগ্য অর্ডার। কেস হিসাব: [উদাহরণ হিসাব](/blog/steadfast-fraud-check-case-study)।
 
 ## ভুল ১০: কম রেটে নীতি না থাকা
 
@@ -55,7 +55,7 @@ locale: bn
 1. [SteadFast Fraud Check গাইড](/steadfast-fraud-check)  
 2. [SteadFast FAQ ইনডেক্স](/blog/steadfast-fraud-check-faq) · [FAQ হাব](/faq)  
 3. [ফ্রি চেকার](/bd-fraud-checker)  
-4. [কেস স্টাডি](/blog/steadfast-fraud-check-case-study)  
+4. [উদাহরণ হিসাব](/blog/steadfast-fraud-check-case-study)  
 5. [রিটার্ন লস ক্যালকুলেটর](/return-loss-calculator)  
 
 প্রোটেকশন: [ফেক অর্ডার প্রোটেকশন](/fake-order-protection)। প্ল্যান: [প্রাইসিং](/pricing)।

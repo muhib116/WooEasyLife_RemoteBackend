@@ -5,7 +5,7 @@
 return array (
   'woocommerce_bangladesh' => 
   array (
-    'title' => 'WooCommerce Bangladesh গাইড ২০২৬ — COD ও কুরিয়ার অটোমেশন',
+    'title' => 'WooCommerce Bangladesh গাইড — COD ও কুরিয়ার অটোমেশন',
     'description' => 'বাংলাদেশে WooCommerce ব্যবসা: COD রিস্ক, ফেক অর্ডার, কুরিয়ার API, OTP, SMS/WhatsApp, Meta CAPI, GA4 ও স্কেলিং—৩০ পর্বের মাস্টার গাইড।',
     'canonical_path' => '/woocommerce-bangladesh',
     'html_lang' => 'bn-BD',
@@ -145,7 +145,7 @@ return array (
   ),
   'en_woocommerce_bangladesh' => 
   array (
-    'title' => 'WooCommerce Bangladesh Guide 2026 — COD & Courier Automation',
+    'title' => 'WooCommerce Bangladesh Guide — COD & Courier Automation',
     'description' => 'Run WooCommerce in Bangladesh: COD risk math, fake orders, courier APIs, OTP, SMS/WhatsApp, Meta CAPI, GA4, and scaling—full 30-part master guide.',
     'canonical_path' => '/en/woocommerce-bangladesh',
     'html_lang' => 'en',
@@ -285,7 +285,7 @@ return array (
   ),
   'steadfast_integration' => 
   array (
-    'title' => 'Steadfast Integration ২০২৬ — API, Return Request ও Stuck Parcel',
+    'title' => 'Steadfast Integration — API, Return Request ও Stuck Parcel',
     'description' => 'Steadfast WooCommerce API বুকিং, Ask to return / Decide, portal notifications ও stuck parcel স্ক্যান—ফ্রড চেকের পর অটো এন্ট্রি।',
     'canonical_path' => '/steadfast-integration',
     'html_lang' => 'bn-BD',
@@ -435,7 +435,7 @@ return array (
   ),
   'en_steadfast_integration' => 
   array (
-    'title' => 'Steadfast Integration 2026 — API, Return Requests & Stuck Parcels',
+    'title' => 'Steadfast Integration — API, Return Requests & Stuck Parcels',
     'description' => 'Connect SteadFast to WooCommerce: API booking, Ask to return / Decide, portal notifications, and stuck-parcel scan—after fraud filters.',
     'canonical_path' => '/en/steadfast-integration',
     'html_lang' => 'en',
@@ -585,7 +585,7 @@ return array (
   ),
   'pathao_courier_guide' => 
   array (
-    'title' => 'Pathao Courier Guide ২০২৬ — API ও অটো এন্ট্রি',
+    'title' => 'Pathao Courier Guide — API ও অটো এন্ট্রি',
     'description' => 'Pathao Client ID/Secret দিয়ে WooCommerce কানেক্ট করুন—বাল্ক বুকিং, জোন ম্যাপিং, ট্র্যাকিং ও ফ্রড-সেফ অটো এন্ট্রি।',
     'canonical_path' => '/pathao-courier-guide',
     'html_lang' => 'bn-BD',
@@ -725,7 +725,7 @@ return array (
   ),
   'en_pathao_courier_guide' => 
   array (
-    'title' => 'Pathao Courier Guide 2026 — API & Auto Entry',
+    'title' => 'Pathao Courier Guide — API & Auto Entry',
     'description' => 'Connect Pathao Client ID/Secret to WooCommerce: bulk booking, zone mapping, tracking IDs, and fraud-safe auto entry for Bangladesh COD stores.',
     'canonical_path' => '/en/pathao-courier-guide',
     'html_lang' => 'en',
@@ -865,7 +865,7 @@ return array (
   ),
   'redx_courier_guide' => 
   array (
-    'title' => 'RedX Courier Guide ২০২৬ — API ও অটো এন্ট্রি',
+    'title' => 'RedX Courier Guide — API ও অটো এন্ট্রি',
     'description' => 'RedX API দিয়ে WooCommerce পার্সেল বুকিং, বাল্ক এন্ট্রি, ট্র্যাকিং সিঙ্ক এবং ফ্রড চেকের পর নিরাপদ COD অপারেশন।',
     'canonical_path' => '/redx-courier-guide',
     'html_lang' => 'bn-BD',
@@ -1005,7 +1005,7 @@ return array (
   ),
   'en_redx_courier_guide' => 
   array (
-    'title' => 'RedX Courier Guide 2026 — API & Auto Entry',
+    'title' => 'RedX Courier Guide — API & Auto Entry',
     'description' => 'Connect RedX API credentials to WooCommerce: parcel booking, bulk entry, tracking sync, and fraud-safe COD auto entry for Bangladesh sellers.',
     'canonical_path' => '/en/redx-courier-guide',
     'html_lang' => 'en',
@@ -1435,7 +1435,7 @@ return array (
   ),
   'customer_verification' => 
   array (
-    'title' => 'Customer Verification গাইড ২০২৬ — OTP ও ফ্রড জোন',
+    'title' => 'Customer Verification গাইড — OTP ও ফ্রড জোন',
     'description' => 'WooCommerce COD-এ OTP, সবুজ/হলুদ/লাল কুরিয়ার জোন, কন্ডিশনাল OTP ও অগ্রিম চার্জ দিয়ে ফেক অর্ডার আটকান।',
     'canonical_path' => '/customer-verification',
     'html_lang' => 'bn-BD',
@@ -1575,7 +1575,7 @@ return array (
   ),
   'en_customer_verification' => 
   array (
-    'title' => 'Customer Verification Guide 2026 — OTP & Fraud Zones',
+    'title' => 'Customer Verification Guide — OTP & Fraud Zones',
     'description' => 'Stop fake WooCommerce COD orders with OTP, green/yellow/red courier history zones, conditional OTP rules, call confirm, and advance delivery fees.',
     'canonical_path' => '/en/customer-verification',
     'html_lang' => 'en',
@@ -1715,7 +1715,7 @@ return array (
   ),
   'cod_return_reduction' => 
   array (
-    'title' => 'COD Return Reduction গাইড ২০২৬ — RTS কমান',
+    'title' => 'COD Return Reduction গাইড — RTS কমান',
     'description' => 'বাংলাদেশ COD-এ রিটার্ন ম্যাথ, ফ্রড জোন, OTP/অগ্রিম চার্জ ও Out-for-Delivery মেসেজ দিয়ে RTS ও লস কমান।',
     'canonical_path' => '/cod-return-reduction',
     'html_lang' => 'bn-BD',
@@ -1855,7 +1855,7 @@ return array (
   ),
   'en_cod_return_reduction' => 
   array (
-    'title' => 'COD Return Reduction Guide 2026 — Cut RTS Loss',
+    'title' => 'COD Return Reduction Guide — Cut RTS Loss',
     'description' => 'Reduce WooCommerce Bangladesh COD returns with return math, fraud zones, OTP/advance fees, out-for-delivery alerts, and confirm-only courier auto entry.',
     'canonical_path' => '/en/cod-return-reduction',
     'html_lang' => 'en',
@@ -1995,7 +1995,7 @@ return array (
   ),
   'woocommerce_notifications' => 
   array (
-    'title' => 'WooCommerce Notifications গাইড ২০২৬ — SMS/WhatsApp',
+    'title' => 'WooCommerce Notifications গাইড — SMS/WhatsApp',
     'description' => 'ইনকমপ্লিট রিকভারি, অর্ডার কনফার্ম, ট্র্যাকিং লাইফসাইকেল ও রিভিউ—WhatsApp প্রাইমারি + SMS ফলব্যাক।',
     'canonical_path' => '/woocommerce-notifications',
     'html_lang' => 'bn-BD',
@@ -2135,7 +2135,7 @@ return array (
   ),
   'en_woocommerce_notifications' => 
   array (
-    'title' => 'WooCommerce Notifications Guide 2026 — SMS/WhatsApp',
+    'title' => 'WooCommerce Notifications Guide — SMS/WhatsApp',
     'description' => 'Automate incomplete recovery, order confirm, tracking lifecycle, and review requests with WhatsApp primary and SMS fallback for Bangladesh COD.',
     'canonical_path' => '/en/woocommerce-notifications',
     'html_lang' => 'en',
@@ -2275,7 +2275,7 @@ return array (
   ),
   'facebook_ads_for_woocommerce' => 
   array (
-    'title' => 'Facebook Ads for WooCommerce গাইড ২০২৬',
+    'title' => 'Facebook Ads for WooCommerce গাইড',
     'description' => 'Meta Pixel + Conversions API ও GA4 দিয়ে BD COD ROAS পরিষ্কার রাখুন—ফেক অর্ডারে অ্যাড স্কেল করবেন না।',
     'canonical_path' => '/facebook-ads-for-woocommerce',
     'html_lang' => 'bn-BD',
@@ -2415,7 +2415,7 @@ return array (
   ),
   'en_facebook_ads_for_woocommerce' => 
   array (
-    'title' => 'Facebook Ads for WooCommerce Guide 2026',
+    'title' => 'Facebook Ads for WooCommerce Guide',
     'description' => 'Pair Meta Pixel with Conversions API, audiences, and GA4 for clean Bangladesh COD ROAS—never scale ads on fake or high-return orders.',
     'canonical_path' => '/en/facebook-ads-for-woocommerce',
     'html_lang' => 'en',

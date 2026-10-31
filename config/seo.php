@@ -126,7 +126,7 @@ return [
 
         'pricing' => [
             'title' => 'প্রাইসিং — WooEasyLife সাবস্ক্রিপশন | ফ্রি ট্রায়াল',
-            'description' => 'WooEasyLife প্ল্যান ও মূল্য দেখুন। ফ্রড চেকার, ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও মোবাইল অ্যাপ — ১৪ দিন ফ্রি ট্রায়াল, bKash/Nagad/Rocket পেমেন্ট।',
+            'description' => 'WooEasyLife প্ল্যান ও মূল্য দেখুন। ফ্রড চেকার, ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও মোবাইল অ্যাপ — {trial_length_bn} ফ্রি ট্রায়াল, bKash/Nagad/Rocket পেমেন্ট।',
             'canonical_path' => '/pricing',
             'prerender_h1' => 'WooEasyLife প্রাইসিং — সাবস্ক্রিপশন ও ফ্রি ট্রায়াল',
             'prerender_lead' => 'ফ্রড চেকার, ফেক অর্ডার প্রোটেকশন ও কুরিয়ার অটো এন্ট্রিসহ প্ল্যান বেছে নিন। লগইন ছাড়াই সাবস্ক্রিপশন অনুরোধ করা যায়।',
@@ -137,7 +137,7 @@ return [
             'faqs' => [
                 [
                     'q' => 'ফ্রি ট্রায়াল কতদিন?',
-                    'a' => 'সাধারণত ১৪ দিন ফ্রি ট্রায়াল পাওয়া যায় — প্ল্যান কার্ডে সঠিক দিনসংখ্যা দেখুন। ট্রায়ালে মূল ফিচার টেস্ট করে তারপর আপগ্রেড করতে পারেন।',
+                    'a' => '{trial_faq_bn}',
                 ],
                 [
                     'q' => 'কীভাবে পেমেন্ট করব?',
@@ -173,7 +173,7 @@ return [
             ],
             'cluster_links' => [
                 ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
-                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast উদাহরণ হিসাব'],
                 ['path' => '/blog/steadfast-fraud-check-faq', 'label' => 'SteadFast FAQ ইনডেক্স'],
                 ['path' => '/blog/steadfast-fraud-check-common-mistakes', 'label' => 'SteadFast সাধারণ ভুল'],
                 ['path' => '/fake-customer-check', 'label' => 'Fake Customer Check'],
@@ -313,7 +313,7 @@ return [
             ],
             'cluster_links' => [
                 ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
-                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast উদাহরণ হিসাব'],
                 ['path' => '/bd-fraud-checker', 'label' => 'ফ্রি BD Fraud Checker'],
                 ['path' => '/faq', 'label' => 'FAQ হাব'],
                 ['path' => '/fake-order-protection', 'label' => 'ফেক অর্ডার প্রোটেকশন'],
@@ -466,7 +466,7 @@ return [
         ],
 
         'ki_vabe_fake_order_atkabo' => [
-            'title' => 'কিভাবে ফেক অর্ডার আটকাবো গাইড ২০২৬ — চেক→OTP→ব্লক',
+            'title' => 'কিভাবে ফেক অর্ডার আটকাবো গাইড — চেক→OTP→ব্লক',
             'description' => 'কিভাবে ফেক অর্ডার আটকাবো: কুরিয়ার হিস্টোরি চেক, OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে BD COD রিটার্ন ও অ্যাড লস কমান—ধাপে ধাপে গাইড।',
             'canonical_path' => '/ki-vabe-fake-order-atkabo',
             'og_type' => 'article',
@@ -511,7 +511,7 @@ return [
         ],
 
         'fake_customer_check' => [
-            'title' => 'Fake Customer Check BD ২০২৬ — নম্বর দিয়ে যাচাই',
+            'title' => 'Fake Customer Check BD — নম্বর দিয়ে যাচাই',
             'description' => 'Fake customer check BD: মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি, সাকসেস রেট ও রিটার্ন প্যাটার্ন দেখে COD কনফার্মের আগে ফেক কাস্টমার আটকান।',
             'canonical_path' => '/fake-customer-check',
             'og_type' => 'article',
@@ -531,7 +531,7 @@ return [
             'cluster_links' => [
                 ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
                 ['path' => '/bd-fraud-checker', 'label' => 'ফ্রি BD Fraud Checker'],
-                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast উদাহরণ হিসাব'],
                 ['path' => '/return-loss-calculator', 'label' => 'রিটার্ন লস ক্যালকুলেটর'],
                 ['path' => '/faq', 'label' => 'FAQ হাব'],
                 ['path' => '/pricing', 'label' => 'প্রাইসিং'],
@@ -573,7 +573,7 @@ return [
         ],
 
         'bd_courier_ratio_checker' => [
-            'title' => 'BD Courier Ratio Checker ২০২৬ — সাকসেস রেট ফ্রি',
+            'title' => 'BD Courier Ratio Checker — সাকসেস রেট ফ্রি',
             'description' => 'BD Courier Ratio Checker: মোবাইল নম্বরে {couriers.history.bn} সাকসেস রেট ও রিটার্ন রেশিও ফ্রি দেখুন।',
             'canonical_path' => '/bd-courier-ratio-checker',
             'og_type' => 'article',
@@ -609,7 +609,7 @@ return [
         ],
 
         'fake_order_check' => [
-            'title' => 'Fake Order Check BD ২০২৬ — নম্বর দিয়ে যাচাই',
+            'title' => 'Fake Order Check BD — নম্বর দিয়ে যাচাই',
             'description' => 'Fake Order Check BD: মোবাইল নম্বরে {couriers.history.bn} হিস্টোরি ও সাকসেস রেট ফ্রি দেখুন।',
             'canonical_path' => '/fake-order-check',
             'og_type' => 'article',
@@ -645,7 +645,7 @@ return [
         ],
 
         'courier_checker' => [
-            'title' => 'Courier Checker BD ২০২৬ — নম্বর চেক অনলাইন ফ্রি',
+            'title' => 'Courier Checker BD — নম্বর চেক অনলাইন ফ্রি',
             'description' => 'Courier Checker BD: মোবাইল নম্বরে {couriers.history.bn} হিস্টোরি ও সাকসেস রেট অনলাইনে ফ্রি দেখুন।',
             'canonical_path' => '/courier-checker',
             'og_type' => 'article',
@@ -871,7 +871,7 @@ return [
 
         'fraudbd_alternative' => [
             'title' => 'FraudBD Alternative — WooEasyLife BD Fraud Checker + WooCommerce',
-            'description' => 'FraudBD বা শুধু-টুল ফ্রড চেকারের বিকল্প খুঁজছেন? WooEasyLife-এ ফ্রি BD fraud checker ছাড়াও ফেক অর্ডার প্রোটেকশন, কুরিয়ার অটো এন্ট্রি ও মোবাইল অ্যাপ একসাথে।',
+            'description' => 'FraudBD-এর সাথে WooEasyLife তুলনা: কুরিয়ার হিস্টোরি, WooCommerce প্লাগইন, অ্যাপ ও পাবলিক প্রাইস টেবিল। ফিচার বদলাতে পারে — তাদের সাইটে যাচাই করুন।',
             'canonical_path' => '/fraudbd-alternative',
             'prerender_h1' => 'FraudBD Alternative — টুলের বদলে পূর্ণ WooCommerce প্ল্যাটফর্ম',
             'prerender_lead' => 'শুধু ফ্রড হিস্টোরি নয় — WooEasyLife-এ চেক, ব্লক, কুরিয়ার অটো এন্ট্রি ও অর্ডার রিকভারি এক প্ল্যাটফর্মে।',
@@ -887,7 +887,7 @@ return [
             'faqs' => [
                 [
                     'q' => 'FraudBD আর WooEasyLife-এর মূল পার্থক্য কী?',
-                    'a' => 'FraudBD মূলত কুরিয়ার ফ্রড/হিস্টোরি চেক টুল—নম্বর দিলে সিগন্যাল দেখায়। WooEasyLife FraudBD Alternative হিসেবে সেই চেক রাখে (/bd-fraud-checker, /fake-customer-check), সাথে WooCommerce ফেক অর্ডার প্রোটেকশন (OTP, ডুপ্লিকেট, ব্ল্যাকলিস্ট), কুরিয়ার অটো এন্ট্রি, হারানো অর্ডার রিকভারি ও মোবাইল অ্যাপ—চেক→ব্লক→কনফার্ম→বুকিং এক ফ্লোতে। বিস্তারিত প্রোটেকশন: /fake-order-protection। অটো এন্ট্রি: /courier-auto-entry।',
+                    'a' => '৩১ অক্টোবর ২০২৬-এ FraudBD-এর পাবলিক সাইটে ফোন নম্বরে কুরিয়ার হিস্টোরি, WordPress/WooCommerce প্লাগইন, REST API, Google Play-এ Android অ্যাপ এবং https://fraudbd.com/ -এ পাবলিক প্রাইস টেবিল দেখা গেছে। WooEasyLife-এ {couriers.history.bn} হিস্টোরি, চেকআউট OTP, ডুপ্লিকেট ব্লক, ব্ল্যাকলিস্ট, {couriers.booking.bn} অটো এন্ট্রি, হারানো অর্ডার রিকভারি ও Android অ্যাপ আছে। প্রতিযোগীর ফিচার বদলাতে পারে — সিদ্ধান্তের আগে তাদের সাইটে যাচাই করুন। শুধু নম্বর লুকআপ বা কাস্টম (নন-WooCommerce) প্ল্যাটফর্মের API লাগলে চেকার-ধরনের টুলই যথেষ্ট হতে পারে।',
                 ],
                 [
                     'q' => 'আমি কি ফ্রি চেক করতে পারব?',
@@ -895,7 +895,7 @@ return [
                 ],
                 [
                     'q' => 'কখন WooEasyLife বেছে নেবেন?',
-                    'a' => 'যখন শুধু নম্বর চেক নয়, পুরো COD অপারেশন চান: কনফার্মের আগে যাচাই, চেকআউট সুরক্ষা, কুরিয়ার বুকিং ও মোবাইল থেকে approve/hold। দিনে কয়েক ডজন COD অর্ডার এলে শুধু-চেকার ট্যাব ধীর ও ভুলপ্রবণ হয়। ধাপে ধাপে স্ট্যাক: /ki-vabe-fake-order-atkabo। অপস হাব: /woocommerce-bangladesh।',
+                    'a' => 'যখন WooCommerce-এর ভিতরে চেকআউট OTP, ডুপ্লিকেট ব্লক, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রি একসাথে চান। শুধু নম্বর লুকআপ বা কাস্টম প্ল্যাটফর্মের API লাগলে চেকার-ধরনের টুলই যথেষ্ট হতে পারে। ধাপে ধাপে স্ট্যাক: /ki-vabe-fake-order-atkabo।',
                 ],
                 [
                     'q' => 'চেকার টুল কি ফেলে দিতে হবে?',
@@ -903,7 +903,7 @@ return [
                 ],
                 [
                     'q' => 'কুরিয়ার অটো এন্ট্রি কোনগুলো সাপোর্ট করে?',
-                    'a' => 'Pathao, Steadfast ও RedX—অর্ডার কনফার্ম হলে পার্সেল তথ্য অটো যায়, ম্যানুয়াল প্যানেল কপি-পেস্ট কমে। বিস্তারিত: /courier-auto-entry। সেটআপ গাইড: /pathao-courier-guide, /steadfast-integration, /redx-courier-guide। ট্র্যাকিং মেসেজ: /woocommerce-notifications।',
+                    'a' => '{couriers.booking.bn} — অর্ডার কনফার্ম হলে পার্সেল তথ্য অটো যায়। বিস্তারিত: /courier-auto-entry।',
                 ],
                 [
                     'q' => 'রিটার্ন লস কীভাবে মাপব?',
@@ -921,7 +921,7 @@ return [
         ],
 
         'pathao_fraud_check' => [
-            'title' => 'Pathao Fraud Check BD ২০২৬ — ফ্রি হিস্টোরি চেক',
+            'title' => 'Pathao Fraud Check BD — ফ্রি হিস্টোরি চেক',
             'description' => 'Pathao fraud check BD: মোবাইল নম্বর দিয়ে Pathao সহ Steadfast/RedX হিস্টোরি ও সাকসেস রেট ফ্রি চেক করুন—COD কনফার্মের আগে ফেক অর্ডার কমান।',
             'canonical_path' => '/pathao-fraud-check',
             'og_type' => 'article',
@@ -1044,7 +1044,7 @@ return [
                 ['path' => '/blog/steadfast-delivery-ratio-ki', 'label' => 'Delivery Ratio কী'],
                 ['path' => '/blog/steadfast-return-komano', 'label' => 'রিটার্ন কমানো'],
                 ['path' => '/blog/kokhon-customer-verify-korbo', 'label' => 'কখন ভেরিফাই'],
-                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'কেস স্টাডি'],
+                ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'উদাহরণ হিসাব'],
                 ['path' => '/blog/steadfast-fraud-check-common-mistakes', 'label' => 'সাধারণ ভুল'],
                 ['path' => '/blog/steadfast-fraud-check-faq', 'label' => 'SteadFast FAQ ইনডেক্স'],
                 ['path' => '/faq/phone-confirm-delivery-guarantee-ki', 'label' => 'ফোন কনফার্ম গ্যারান্টি?'],
@@ -1106,7 +1106,7 @@ return [
         ],
 
         'redx_fraud_check' => [
-            'title' => 'RedX Fraud Check BD ২০২৬ — ফ্রি হিস্টোরি চেক',
+            'title' => 'RedX Fraud Check BD — ফ্রি হিস্টোরি চেক',
             'description' => 'RedX fraud check BD: মোবাইল নম্বর দিয়ে RedX সহ Pathao/Steadfast হিস্টোরি ফ্রি চেক করুন—COD ফেক অর্ডার কমান।',
             'canonical_path' => '/redx-fraud-check',
             'og_type' => 'article',
@@ -1281,7 +1281,7 @@ return [
         ],
 
         'en_ki_vabe_fake_order_atkabo' => [
-            'title' => 'How to Stop Fake Orders Guide 2026 — Check→OTP→Block',
+            'title' => 'How to Stop Fake Orders Guide — Check→OTP→Block',
             'description' => 'How to stop fake COD orders in Bangladesh: courier history checks, OTP, duplicate blocks, and blacklists—step-by-step for WooCommerce and Facebook sellers.',
             'canonical_path' => '/en/ki-vabe-fake-order-atkabo',
             'html_lang' => 'en',
@@ -1327,7 +1327,7 @@ return [
         ],
 
         'en_fake_customer_check' => [
-            'title' => 'Fake Customer Check BD 2026 — Verify Before Confirm',
+            'title' => 'Fake Customer Check BD — Verify Before Confirm',
             'description' => 'Fake customer check BD: verify courier history, success rate, and return patterns by mobile number before confirming COD orders.',
             'canonical_path' => '/en/fake-customer-check',
             'html_lang' => 'en',
@@ -1766,7 +1766,7 @@ return [
 
         'en_fraudbd_alternative' => [
             'title' => 'FraudBD Alternative — WooEasyLife BD Fraud Checker + WooCommerce',
-            'description' => 'Looking for a FraudBD or checker-only alternative? WooEasyLife includes a free BD fraud checker plus fake-order protection, courier auto-entry, and a mobile app.',
+            'description' => 'FraudBD vs WooEasyLife, checked 31 Oct 2026: courier history, a WooCommerce plugin, an Android app, and a public price table. Verify features on their site.',
             'canonical_path' => '/en/fraudbd-alternative',
             'html_lang' => 'en',
             'prerender_h1' => 'FraudBD Alternative — a full WooCommerce platform, not just a tool',
@@ -1783,7 +1783,7 @@ return [
             'faqs' => [
                 [
                     'q' => 'What is the main difference between FraudBD and WooEasyLife?',
-                    'a' => 'FraudBD is mainly a courier fraud/history checker—enter a number, see a signal. As a FraudBD alternative, WooEasyLife keeps that check (/en/bd-fraud-checker, /en/fake-customer-check) and adds WooCommerce fake-order protection (OTP, duplicates, blacklists), courier auto-entry, missing-order recovery, and a mobile app—check → block → confirm → book in one flow. Protection details: /en/fake-order-protection. Auto-entry: /en/courier-auto-entry.',
+                    'a' => 'On 31 Oct 2026 FraudBD’s public site showed courier history checks by phone, a WordPress/WooCommerce plugin, a REST API, an Android app on Google Play, and a public price table at https://fraudbd.com/. WooEasyLife shows {couriers.history.en} history, checkout OTP, duplicate-order blocking, blacklist, auto-entry for {couriers.booking.en}, missing-order recovery, and an Android app. Competitor features change — verify on their site before deciding. If you only need phone-number lookups or an API for a custom (non-WooCommerce) platform, a checker-only tool can be enough.',
                 ],
                 [
                     'q' => 'Can I check for free?',
@@ -1799,7 +1799,7 @@ return [
                 ],
                 [
                     'q' => 'Which couriers support auto-entry?',
-                    'a' => 'Pathao, Steadfast, and RedX—parcel data pushes on confirm so you skip merchant-panel copy-paste. Details: /en/courier-auto-entry. Setup guides: /en/pathao-courier-guide, /en/steadfast-integration, /en/redx-courier-guide. Tracking messages: /en/woocommerce-notifications.',
+                    'a' => '{couriers.booking.en}. Parcel data can push on confirm. Details: /en/courier-auto-entry.',
                 ],
                 [
                     'q' => 'How do I measure return loss?',

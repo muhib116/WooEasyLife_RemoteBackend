@@ -47,7 +47,7 @@ class SeoPrerenderText
         '/blog/steadfast-delivery-ratio-ki' => ['bn' => 'Delivery Ratio কী', 'en' => 'What is delivery ratio'],
         '/blog/steadfast-return-komano' => ['bn' => 'SteadFast রিটার্ন কমানো', 'en' => 'Reduce SteadFast returns'],
         '/blog/kokhon-customer-verify-korbo' => ['bn' => 'কখন কাস্টমার ভেরিফাই', 'en' => 'When to verify customers'],
-        '/blog/steadfast-fraud-check-case-study' => ['bn' => 'SteadFast Fraud Check কেস', 'en' => 'SteadFast fraud check case study'],
+        '/blog/steadfast-fraud-check-case-study' => ['bn' => 'SteadFast উদাহরণ হিসাব', 'en' => 'SteadFast example calculation'],
         '/blog/steadfast-fraud-check-common-mistakes' => ['bn' => 'SteadFast চেক সাধারণ ভুল', 'en' => 'SteadFast check common mistakes'],
         '/blog/steadfast-fraud-check-faq' => ['bn' => 'SteadFast Fraud Check FAQ', 'en' => 'SteadFast fraud check FAQ'],
         '/fake-order-protection' => ['bn' => 'ফেক অর্ডার প্রোটেকশন', 'en' => 'Fake Order Protection'],

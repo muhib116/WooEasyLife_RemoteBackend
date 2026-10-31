@@ -32,6 +32,6 @@ locale: bn
 ## টুল ও কেস
 
 - **এখনই চেক:** [SteadFast Fraud Check](/steadfast-fraud-check) · [BD Fraud Checker](/bd-fraud-checker)
-- **কেস স্টাডি:** [রিটার্ন ১৮%→১২%](/blog/steadfast-fraud-check-case-study)
+- **কেস স্টাডি:** [SteadFast উদাহরণ হিসাব](/blog/steadfast-fraud-check-case-study)
 - **সাধারণ ভুল:** [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)
 - **প্ল্যান:** [প্রাইসিং](/pricing)

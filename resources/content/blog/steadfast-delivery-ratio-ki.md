@@ -51,4 +51,4 @@ locale: bn
 4. বুকিংয়ের পর সমস্যা — [SteadFast Return Hub](/steadfast-return-hub)
 5. রিটার্ন কমানো প্লেবুক — [SteadFast রিটার্ন কমানো](/blog/steadfast-return-komano)
 
-কেস স্টাডি: [SteadFast Fraud Check কেস](/blog/steadfast-fraud-check-case-study)। ভুলগুলো: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)।
+কেস স্টাডি: [SteadFast উদাহরণ হিসাব](/blog/steadfast-fraud-check-case-study)। ভুলগুলো: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)।

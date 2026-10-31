@@ -42,4 +42,4 @@ locale: bn
 
 স্টাফকে লিখে দিন: *নতুন নম্বর / হাই টিকেট / কম রেট / অদ্ভুত ঠিকানা = চেক বাধ্যতামূলক। রেট = সিগন্যাল, verdict নয়।*
 
-রিটার্ন কমানো প্লেবুক: [SteadFast রিটার্ন কমানো](/blog/steadfast-return-komano)। ভুল: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)। কেস: [কেস স্টাডি](/blog/steadfast-fraud-check-case-study)। FAQ: [SteadFast FAQ ইনডেক্স](/blog/steadfast-fraud-check-faq) · [প্রত্যেককে ভেরিফাই?](/faq/prottek-customer-verify-korbo-ki)। লস মাপুন: [রিটার্ন লস ক্যালকুলেটর](/return-loss-calculator)। প্রোটেকশন: [ফেক অর্ডার প্রোটেকশন](/fake-order-protection)। প্ল্যান: [প্রাইসিং](/pricing)।
+রিটার্ন কমানো প্লেবুক: [SteadFast রিটার্ন কমানো](/blog/steadfast-return-komano)। ভুল: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)। কেস: [উদাহরণ হিসাব](/blog/steadfast-fraud-check-case-study)। FAQ: [SteadFast FAQ ইনডেক্স](/blog/steadfast-fraud-check-faq) · [প্রত্যেককে ভেরিফাই?](/faq/prottek-customer-verify-korbo-ki)। লস মাপুন: [রিটার্ন লস ক্যালকুলেটর](/return-loss-calculator)। প্রোটেকশন: [ফেক অর্ডার প্রোটেকশন](/fake-order-protection)। প্ল্যান: [প্রাইসিং](/pricing)।

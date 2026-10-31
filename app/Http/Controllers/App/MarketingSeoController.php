@@ -4,6 +4,7 @@ namespace App\Http\Controllers\App;
 
 use App\Http\Controllers\Controller;
 use App\Support\PublicCourierNames;
+use App\Support\PublicPricingFacts;
 use App\Services\LandingPageService;
 use App\Services\LandingSettingsService;
 use App\Services\SeoMetaService;
@@ -444,6 +445,7 @@ class MarketingSeoController extends Controller
             ),
             'activeNav' => $activeNav,
             'faqs' => $seoMeta['faqs'] ?? [],
+            'cheapestMonthlyLabel' => PublicPricingFacts::cheapestMonthlyPriceLabel(),
         ])->withViewData(['seo' => $seoMeta]);
     }
 }

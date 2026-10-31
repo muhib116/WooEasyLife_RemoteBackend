@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
@@ -42,14 +42,15 @@ const pillars = [
     },
 ];
 
+const couriers = usePage().props.publicCouriers || {};
 const compareRows = [
-    { feature: 'কুরিয়ার হিস্টোরি / ফ্রড চেক', toolOnly: 'হ্যাঁ', woo: 'হ্যাঁ (বিল্ট-ইন)' },
-    { feature: 'চেকআউট OTP / ফেক অর্ডার ব্লক', toolOnly: 'সাধারণত না', woo: 'হ্যাঁ' },
-    { feature: 'কুরিয়ার অটো এন্ট্রি', toolOnly: 'না', woo: 'Pathao / Steadfast / RedX' },
-    { feature: 'পার্সেল নোট হিস্ট্রি', toolOnly: 'না', woo: 'হ্যাঁ (Steadfast সহ)' },
-    { feature: 'হারানো অর্ডার রিকভারি', toolOnly: 'না', woo: 'হ্যাঁ' },
-    { feature: 'রিটার্ন লস / ROAS টুল', toolOnly: 'সীমিত', woo: 'ক্যালকুলেটরসহ' },
-    { feature: 'মোবাইল অ্যাপ + মাল্টিস্টোর', toolOnly: 'সীমিত', woo: 'হ্যাঁ' },
+    { feature: 'কুরিয়ার হিস্টোরি', fraudbd: 'ফোন নম্বরে কুরিয়ার হিস্টোরি চেক', woo: couriers.historyPhraseBn || '' },
+    { feature: 'WordPress / WooCommerce', fraudbd: 'WordPress/WooCommerce প্লাগইন', woo: 'চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক ও ব্ল্যাকলিস্ট' },
+    { feature: 'API', fraudbd: 'REST API', woo: '' },
+    { feature: 'Android অ্যাপ', fraudbd: 'Google Play-এ Android অ্যাপ', woo: 'Android অ্যাপ' },
+    { feature: 'দাম', fraudbd: 'পাবলিক প্রাইস টেবিল', woo: 'নিজের প্ল্যান কার্ড' },
+    { feature: 'কুরিয়ার অটো এন্ট্রি', fraudbd: '', woo: couriers.bookingPhraseBn || '' },
+    { feature: 'হারানো অর্ডার', fraudbd: '', woo: 'Missing-order recovery' },
 ];
 
 const guideSections = [
@@ -61,9 +62,9 @@ const guideSections = [
         ],
     },
     {
-        heading: 'শুধু-চেকার vs পূর্ণ প্ল্যাটফর্ম',
+        heading: 'WooEasyLife-এ যা আছে',
         paragraphs: [
-            'শুধু-চেকার: নম্বর দিলে হিস্টোরি দেখায়। স্টাফ ম্যানুয়ালি সিদ্ধান্ত নেয়; চেকআউট বা কুরিয়ার প্যানেলে আলাদা টুল লাগে।',
+            'WooEasyLife-এ চেকআউট OTP, ডুপ্লিকেট ব্লক, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রি আছে। FraudBD-এর বাকি ফিচার তাদের সাইটে দেখে নিন।',
             'WooEasyLife: ফ্রি চেক + সাবস্ক্রিপশনে OTP/ব্ল্যাকলিস্ট, কনফার্মে অটো কুরিয়ার এন্ট্রি, স্ট্যাটাস সিঙ্ক ও পার্সেল নোট। রিটার্ন লস ও Ads ROAS ক্যালকুলেটর দিয়ে খরচও মাপা যায়।',
             'যখন দিনে কয়েক ডজন COD অর্ডার আসে, শুধু ট্যাবে চেক করে কপি-পেস্ট করা ধীর ও ভুলপ্রবণ। প্ল্যাটফর্ম ওয়ার্কফ্লো সেই ঘর্ষণ কমায়।',
         ],
@@ -147,8 +148,8 @@ const relatedLinks = [
                     {{ seo?.prerender_lead || 'শুধু ফ্রড হিস্টোরি নয় — চেক, ব্লক, কুরিয়ার অটো এন্ট্রি ও রিকভারি একসাথে।' }}
                 </p>
                 <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-                    FraudBD বা অন্যান্য শুধু-চেকার টুলের বিকল্প খুঁজছেন? WooEasyLife-এ ফ্রি BD fraud checker
-                    ছাড়াও WooCommerce প্রোটেকশন ও কুরিয়ার অটোমেশন পাবেন।
+                    FraudBD-এর পাবলিক সাইটে কুরিয়ার হিস্টোরি, WooCommerce প্লাগইন, REST API ও Android অ্যাপ আছে।
+                    WooEasyLife-এ হিস্টোরির সাথে চেকআউট OTP, ব্লক ও কুরিয়ার অটো এন্ট্রি আছে।
                 </p>
                 <div class="mt-6 flex flex-wrap justify-center gap-3">
                     <Link
@@ -181,7 +182,7 @@ const relatedLinks = [
                     <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">ফ্রি ফ্রড চেক</Link>,
                     <Link href="/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">ফেক অর্ডার প্রোটেকশন</Link>,
                     <Link href="/courier-auto-entry" class="font-semibold text-amber-400 hover:text-amber-300">কুরিয়ার অটো এন্ট্রি</Link>
-                    ও মোবাইল অ্যাপ এক প্ল্যাটফর্মে দেয়। শুধু-চেকার টুল হিস্টোরি দেখায়; WooEasyLife COD অপারেশন সম্পূর্ণ করে।
+                    ও মোবাইল অ্যাপ এক প্ল্যাটফর্মে দেয়। নিচের টেবিল শুধু ৩১ অক্টোবর ২০২৬-এর পাবলিক তথ্য।
                     শুরু:
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>।
                 </p>
@@ -203,15 +204,15 @@ const relatedLinks = [
 
         <section id="compare" class="scroll-mt-24 border-y border-white/10 bg-[#111111] px-4 py-12 lg:px-8">
             <div class="mx-auto max-w-3xl overflow-x-auto">
-                <h2 class="text-center text-2xl font-bold text-white">দ্রুত তুলনা</h2>
+                <h2 class="text-center text-2xl font-bold text-white">FraudBD vs WooEasyLife (checked 31 Oct 2026)</h2>
                 <p class="mx-auto mt-3 max-w-2xl text-center text-sm text-slate-400">
-                    শুধু-ফ্রড-চেকার টুল vs WooEasyLife — কোনটা আপনার COD ফ্লোর সাথে মিলে।
+                    শুধু যাচাই করা পাবলিক তথ্য। FraudBD-এর দাম কপি করা হয়নি।
                 </p>
                 <table class="mt-8 w-full min-w-[32rem] border-collapse text-left text-sm text-slate-300">
                     <thead>
                         <tr class="border-b border-white/15 text-slate-400">
-                            <th class="py-3 pr-4 font-medium">ফিচার</th>
-                            <th class="py-3 pr-4 font-medium">টুল-শুধু চেকার</th>
+                            <th class="py-3 pr-4 font-medium">বিষয়</th>
+                            <th class="py-3 pr-4 font-medium">FraudBD</th>
                             <th class="py-3 font-medium text-amber-300">WooEasyLife</th>
                         </tr>
                     </thead>
@@ -222,11 +223,26 @@ const relatedLinks = [
                             class="border-b border-white/10 last:border-b-0"
                         >
                             <td class="py-3 pr-4">{{ row.feature }}</td>
-                            <td class="py-3 pr-4">{{ row.toolOnly }}</td>
-                            <td class="py-3 text-emerald-400">{{ row.woo }}</td>
+                            <td class="py-3 pr-4">
+                                <a
+                                    v-if="row.feature === 'দাম'"
+                                    href="https://fraudbd.com/"
+                                    class="font-semibold text-amber-400 hover:text-amber-300"
+                                    rel="noopener noreferrer"
+                                >{{ row.fraudbd }}</a>
+                                <template v-else>{{ row.fraudbd }}</template>
+                            </td>
+                            <td class="py-3 text-emerald-400">
+                                <Link v-if="row.feature === 'দাম'" href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">/pricing</Link>
+                                <template v-else>{{ row.woo }}</template>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+                <p class="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-400">
+                    শুধু ফোন-নম্বর লুকআপ বা কাস্টম (নন-WooCommerce) প্ল্যাটফর্মের API লাগলে চেকার-ধরনের টুলই যথেষ্ট হতে পারে।
+                    প্রতিযোগীর ফিচার বদলাতে পারে — সিদ্ধান্তের আগে তাদের সাইটে যাচাই করুন।
+                </p>
             </div>
         </section>
 
@@ -342,7 +358,7 @@ const relatedLinks = [
                 <h2 class="text-xl font-bold text-emerald-200 sm:text-2xl">সংক্ষেপে</h2>
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     WooEasyLife হলো FraudBD Alternative — ফ্রি BD fraud checker-এর সাথে ফেক অর্ডার প্রোটেকশন,
-                    কুরিয়ার অটো এন্ট্রি, হারানো অর্ডার রিকভারি ও মোবাইল অ্যাপ। শুধু-চেকার টুল হিস্টোরি দেখায়;
+                    কুরিয়ার অটো এন্ট্রি, হারানো অর্ডার রিকভারি ও মোবাইল অ্যাপ।
                     WooEasyLife পুরো COD ওয়ার্কফ্লো কভার করে। ফ্রি চেক:
                     <Link href="/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">ফ্রড চেকার</Link>,
                     ট্রায়াল:

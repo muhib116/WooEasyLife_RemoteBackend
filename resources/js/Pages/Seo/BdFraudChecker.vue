@@ -16,6 +16,7 @@ const props = defineProps({
     whatsappUrl: { type: String, default: null },
     whatsappContactUrl: { type: String, default: null },
     faqs: { type: Array, default: () => [] },
+    cheapestMonthlyLabel: { type: String, default: null },
 });
 
 const openFaq = ref(null);
@@ -114,7 +115,7 @@ const mistakeList = [
 
 const relatedLinksFallback = [
     { href: '/steadfast-fraud-check', label: 'SteadFast Fraud Check গাইড' },
-    { href: '/blog/steadfast-fraud-check-case-study', label: 'SteadFast কেস স্টাডি' },
+    { href: '/blog/steadfast-fraud-check-case-study', label: 'SteadFast উদাহরণ হিসাব' },
     { href: '/blog/steadfast-fraud-check-faq', label: 'SteadFast FAQ ইনডেক্স' },
     { href: '/blog/steadfast-fraud-check-common-mistakes', label: 'SteadFast সাধারণ ভুল' },
     { href: '/faq', label: 'FAQ হাব' },
@@ -174,6 +175,15 @@ const relatedLinks = computed(() => {
         <section id="fraud-check" class="scroll-mt-20 border-b border-white/10 bg-[#111111] px-3 pb-6 pt-3 sm:scroll-mt-24 sm:px-4 sm:pb-8 sm:pt-4 lg:px-8">
             <div class="mx-auto max-w-3xl">
                 <LandingFraudCheck :fraud-check="fraudCheck" compact />
+                <div class="mx-auto mt-4 max-w-2xl rounded-xl border border-white/10 bg-white/5 p-4 text-left text-sm leading-relaxed text-slate-300">
+                    <h2 class="text-base font-bold text-white">এরপর কী হয়</h2>
+                    <p class="mt-2">
+                        ফ্রি চেক দিনে সীমিত, অ্যাকাউন্ট লাগে না। WooCommerce-এ চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রির জন্য
+                        <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>
+                        থেকে ফ্রি ট্রায়াল শুরু করুন।
+                        <template v-if="cheapestMonthlyLabel"> পেইড প্ল্যান শুরু {{ cheapestMonthlyLabel }}/মাস থেকে।</template>
+                    </p>
+                </div>
                 <p
                     v-if="seo?.honesty_line"
                     class="mx-auto mt-3 max-w-2xl text-left text-[11px] leading-relaxed text-slate-500 sm:text-xs"
@@ -203,9 +213,13 @@ const relatedLinks = computed(() => {
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     Free Courier Fraud Checker BD-এ কাস্টমারের মোবাইল নম্বর দিলে {{ historyBn }} ডেলিভারি হিস্টোরি ও সাকসেস রেট দেখা যায়।
                     অ্যাকাউন্ট ছাড়াই দৈনিক সীমিত ফ্রি চেক করা যায়। সাকসেস রেট কম হলে অর্ডার কনফার্মের আগে থামুন — পার্সেল রিটার্ন ও অ্যাড লস কমে।
-                    দীর্ঘমেয়াদে WooEasyLife-এর
-                    <Link href="/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">ফেক অর্ডার প্রোটেকশন</Link>
-                    ও কুরিয়ার অটো এন্ট্রি একসাথে চালান।
+                    কম সাকসেস রেট ঝুঁকির সিগন্যাল, কাস্টমার ফেক তার প্রমাণ নয় — বাতিলের আগে কল বা যাচাই করুন।
+                    <span class="mt-3 block">
+                        ফ্রি চেক দিনে সীমিত, অ্যাকাউন্ট লাগে না। WooCommerce-এ চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক, ব্ল্যাকলিস্ট ও কুরিয়ার অটো এন্ট্রির জন্য
+                        <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">প্রাইসিং</Link>
+                        থেকে ফ্রি ট্রায়াল শুরু করুন।
+                        <template v-if="cheapestMonthlyLabel"> পেইড প্ল্যান শুরু {{ cheapestMonthlyLabel }}/মাস থেকে।</template>
+                    </span>
                 </p>
             </div>
         </section>

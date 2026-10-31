@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\PublicCourierNames;
+use App\Support\PublicPricingFacts;
 use Illuminate\Support\Str;
 
 class SeoMetaService
@@ -26,18 +27,18 @@ class SeoMetaService
             return [];
         }
 
-        $title = PublicCourierNames::expand((string) ($config['title'] ?? config('seo.site_name', config('app.name'))));
-        $description = PublicCourierNames::expand((string) ($config['description'] ?? ''));
+        $title = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['title'] ?? config('seo.site_name', config('app.name')))));
+        $description = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['description'] ?? '')));
         $canonicalPath = (string) ($config['canonical_path'] ?? '/');
         $canonical = $this->absoluteUrl($canonicalPath);
         $ogImagePath = (string) ($config['og_image'] ?? config('seo.default_og_image', '/images/seo/og-default.jpg'));
         $ogImage = $this->absoluteUrl($ogImagePath);
         $ogImage = $this->withOgImageCacheBust($ogImage, $ogImagePath);
-        $faqs = PublicCourierNames::expandValue($config['faqs'] ?? []);
+        $faqs = PublicPricingFacts::expandValue(PublicCourierNames::expandValue($config['faqs'] ?? []));
         $breadcrumbs = $config['breadcrumbs'] ?? [];
-        $prerenderH1 = PublicCourierNames::expand((string) ($config['prerender_h1'] ?? $title));
-        $prerenderLead = PublicCourierNames::expand((string) ($config['prerender_lead'] ?? $description));
-        $contentSections = PublicCourierNames::expandValue($this->contentSectionsFor($page, $config));
+        $prerenderH1 = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['prerender_h1'] ?? $title)));
+        $prerenderLead = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['prerender_lead'] ?? $description)));
+        $contentSections = PublicPricingFacts::expandValue(PublicCourierNames::expandValue($this->contentSectionsFor($page, $config)));
         $htmlLang = (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD'));
         $hreflang = $this->buildHreflang($config['hreflang_paths'] ?? [
             $htmlLang => $canonicalPath,
@@ -859,9 +860,9 @@ class SeoMetaService
         }
 
         // Product home, pricing, and the mobile-app guide only.
-        // TODO: add offers once public prices are confirmed. Do not add price, aggregateRating, or review.
+        // Offers are live package prices on home and pricing. No aggregateRating or review.
         if (in_array($page, ['home', 'en_home', 'pricing', 'woocommerce_mobile_app', 'en_woocommerce_mobile_app'], true)) {
-            $graphs[] = [
+            $software = [
                 '@type' => 'SoftwareApplication',
                 '@id' => $this->absoluteUrl('/').'#software',
                 'name' => 'WooEasyLife',
@@ -871,6 +872,21 @@ class SeoMetaService
                 'url' => 'https://app.wpsalehub.com/',
                 'publisher' => ['@id' => $orgId],
             ];
+
+            if (in_array($page, ['home', 'en_home', 'pricing'], true)) {
+                $offer = PublicPricingFacts::aggregateOffer();
+                if ($offer !== null) {
+                    $software['offers'] = [
+                        '@type' => 'AggregateOffer',
+                        'priceCurrency' => $offer['priceCurrency'],
+                        'lowPrice' => $offer['lowPrice'],
+                        'highPrice' => $offer['highPrice'],
+                        'offerCount' => $offer['offerCount'],
+                    ];
+                }
+            }
+
+            $graphs[] = $software;
         }
 
         return [

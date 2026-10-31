@@ -3,7 +3,7 @@
 /** SEO page meta — Facebook Page COD order management pillar (EN). */
 
 return [
-    'title' => 'Facebook Page COD Order Management Bangladesh 2026',
+    'title' => 'Facebook Page COD Order Management Bangladesh',
     'description' => 'Run Facebook/Instagram page COD orders in Bangladesh: Messenger confirm, fraud check, OTP, WooCommerce sync, and Pathao/Steadfast/RedX auto entry—full ops playbook.',
     'canonical_path' => '/en/facebook-page-cod-management',
     'html_lang' => 'en',

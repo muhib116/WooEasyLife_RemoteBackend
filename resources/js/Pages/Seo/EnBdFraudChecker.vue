@@ -15,6 +15,7 @@ defineProps({
     fraudCheck: { type: Object, default: () => ({}) },
     whatsappUrl: { type: String, default: null },
     faqs: { type: Array, default: () => [] },
+    cheapestMonthlyLabel: { type: String, default: null },
 });
 
 const openFaq = ref(null);
@@ -138,6 +139,11 @@ const relatedLinks = [
                 <div class="hidden text-left lg:block">
                     <SeoBreadcrumbs :items="seo?.breadcrumbs || []" />
                 </div>
+                <p class="mb-2 text-center">
+                    <Link href="/bd-fraud-checker" class="text-sm font-semibold text-amber-300 hover:text-amber-200">
+                        বাংলায় দেখুন
+                    </Link>
+                </p>
                 <h1 class="text-xl font-extrabold leading-snug text-white sm:text-2xl sm:leading-tight lg:text-3xl">
                     {{ seo?.prerender_h1 || 'Free Courier Fraud Checker BD — delivery history by phone' }}
                 </h1>
@@ -150,6 +156,14 @@ const relatedLinks = [
         <section id="fraud-check" class="scroll-mt-20 border-b border-white/10 bg-[#111111] px-3 pb-6 pt-3 sm:scroll-mt-24 sm:px-4 sm:pb-8 sm:pt-4 lg:px-8">
             <div class="mx-auto max-w-3xl">
                 <LandingFraudCheck :fraud-check="fraudCheck" locale="en" compact />
+                <div class="mx-auto mt-4 max-w-2xl rounded-xl border border-white/10 bg-white/5 p-4 text-left text-sm leading-relaxed text-slate-300">
+                    <h2 class="text-base font-bold text-white">What happens next</h2>
+                    <p class="mt-2">
+                        Free checks are limited per day and need no account. For checkout OTP, duplicate-order blocking, blacklist and courier auto-entry inside WooCommerce, start a free trial from
+                        <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">Pricing</Link>.
+                        <template v-if="cheapestMonthlyLabel"> Paid plans start from {{ cheapestMonthlyLabel }}/month.</template>
+                    </p>
+                </div>
                 <div class="mt-4 flex flex-wrap justify-center gap-3">
                     <Link
                         href="/en/fake-order-protection"
@@ -173,9 +187,12 @@ const relatedLinks = [
                 <p class="mt-4 text-sm leading-relaxed text-slate-300 sm:text-base">
                     Free Courier Fraud Checker BD shows {{ historyEn }} delivery history and success rate from a customer mobile number.
                     Limited free daily checks work without an account. If success rate is low, pause confirmation — you cut parcel returns and ad waste.
-                    For lasting protection, combine this with
-                    <Link href="/en/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">fake order protection</Link>
-                    and courier auto-entry.
+                    <span class="mt-3 block">A low success rate is a risk signal, not proof that a customer is fake — call or verify before you cancel.</span>
+                    <span class="mt-3 block">
+                        Free checks are limited per day and need no account. For checkout OTP, duplicate-order blocking, blacklist and courier auto-entry inside WooCommerce, start a free trial from
+                        <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">Pricing</Link>.
+                        <template v-if="cheapestMonthlyLabel"> Paid plans start from {{ cheapestMonthlyLabel }}/month.</template>
+                    </span>
                 </p>
             </div>
         </section>

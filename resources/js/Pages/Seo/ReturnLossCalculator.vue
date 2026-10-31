@@ -128,7 +128,7 @@ const whoFor = [
 
 const relatedLinks = [
     { href: '/steadfast-fraud-check', label: 'SteadFast Fraud Check গাইড' },
-    { href: '/blog/steadfast-fraud-check-case-study', label: 'SteadFast কেস স্টাডি' },
+    { href: '/blog/steadfast-fraud-check-case-study', label: 'SteadFast উদাহরণ হিসাব' },
     { href: '/bd-fraud-checker', label: 'BD Fraud Checker' },
     { href: '/faq', label: 'FAQ হাব' },
     { href: '/fake-order-protection', label: 'ফেক অর্ডার প্রোটেকশন' },

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\App\RobotsController;
 use App\Models\BlogPost;
+use App\Models\PackageHub;
 use App\Models\User;
 use App\Services\BlogService;
 use App\Services\Seo\GaCredentialStore;
@@ -929,7 +930,7 @@ class MarketingSeoTest extends TestCase
         $article = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Article');
         $this->assertNotNull($article, 'SteadFast pillar should emit Article JSON-LD');
         $this->assertSame('2026-07-30', $article['datePublished'] ?? null);
-        $this->assertSame('2026-07-30', $article['dateModified'] ?? null);
+        $this->assertSame('2026-08-17', $article['dateModified'] ?? null);
         $this->assertSame('SteadFast Fraud Check', $article['articleSection'] ?? null);
 
         $faq = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'FAQPage');
@@ -1128,6 +1129,58 @@ class MarketingSeoTest extends TestCase
         $this->assertStringContainsString('"@type":"WebPage"', $html);
         $this->assertStringContainsString('"@type":"FAQPage"', $html);
         $this->assertStringContainsString(rtrim((string) config('app.url'), '/').'/#software', $html);
+    }
+
+    public function test_software_json_ld_offers_come_from_public_plans(): void
+    {
+        PackageHub::create([
+            'title' => 'Free Trial',
+            'per_order_rate' => 0,
+            'package_duration' => 'free_trial',
+            'trial_days' => 14,
+            'order_rate_token' => 100,
+            'package_price' => 0,
+            'is_active' => true,
+            'features' => [],
+        ]);
+        PackageHub::create([
+            'title' => 'Starter – 1 Month',
+            'per_order_rate' => 0,
+            'package_duration' => '1_month',
+            'order_rate_token' => 1000,
+            'package_price' => 999,
+            'is_active' => true,
+            'features' => [],
+        ]);
+        PackageHub::create([
+            'title' => 'Pro Plus – 1 Year',
+            'per_order_rate' => 0,
+            'package_duration' => '1_year',
+            'order_rate_token' => 120000,
+            'package_price' => 49999,
+            'is_active' => true,
+            'features' => [],
+        ]);
+
+        foreach (['/', '/en', '/pricing'] as $path) {
+            $html = $this->get($path)->assertOk()->getContent();
+            $this->assertStringContainsString('"@type":"AggregateOffer"', $html);
+            $this->assertStringContainsString('"priceCurrency":"BDT"', $html);
+            $this->assertStringContainsString('"lowPrice":"999"', $html);
+            $this->assertStringContainsString('"highPrice":"49999"', $html);
+            $this->assertStringContainsString('"offerCount":2', $html);
+            $this->assertStringNotContainsString('aggregateRating', $html);
+        }
+
+        $pricing = $this->get('/pricing')->assertOk()->getContent();
+        $this->assertStringContainsString('Starter – 1 Month', $pricing);
+        $this->assertStringContainsString('৳999', $pricing);
+        $this->assertStringContainsString('১ মাস', $pricing);
+        $this->assertStringContainsString('ফ্রি ট্রায়াল ১৪ দিন', $pricing);
+        $this->assertStringNotContainsString('সাধারণত ১৪ দিন', $pricing);
+
+        $mobile = $this->get('/woocommerce-mobile-app')->assertOk()->getContent();
+        $this->assertStringNotContainsString('"@type":"AggregateOffer"', $mobile);
     }
 
     public function test_tool_landing_pages_keep_webpage_json_ld(): void

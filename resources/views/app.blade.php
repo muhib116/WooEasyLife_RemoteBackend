@@ -492,6 +492,9 @@
         @endphp
         <section id="seo-prerender">
             <h1>{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</h1>
+            @if (($seo['canonical_path'] ?? '') === '/en/bd-fraud-checker')
+                <p><a href="/bd-fraud-checker">বাংলায় দেখুন</a></p>
+            @endif
             @if (! empty($seo['prerender_lead'] ?? $seo['description'] ?? null))
                 <p>{{ $seo['prerender_lead'] ?? $seo['description'] }}</p>
             @endif
@@ -529,6 +532,10 @@
                         </button>
                     </form>
                 </div>
+                @if (in_array((string) ($seo['canonical_path'] ?? ''), ['/bd-fraud-checker', '/en/bd-fraud-checker'], true))
+                    <h2>{{ $isEnPrerender ? 'What happens next' : 'এরপর কী হয়' }}</h2>
+                    <p>{!! \App\Support\SeoPrerenderText::linkifyHtml(\App\Support\PublicPricingFacts::nextStepSentence($isEnPrerender ? 'en' : 'bn'), $isEnPrerender) !!}</p>
+                @endif
             @endif
             @if (! empty($seo['ssr_calculator']))
                 @php
@@ -626,6 +633,61 @@
                     </ul>
                 </nav>
             @endif
+            @if (in_array((string) ($seo['canonical_path'] ?? ''), ['/fraudbd-alternative', '/en/fraudbd-alternative'], true))
+                @php
+                    $cmpEn = str_starts_with((string) ($seo['canonical_path'] ?? ''), '/en');
+                @endphp
+                <h2>FraudBD vs WooEasyLife (checked 31 Oct 2026)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{{ $cmpEn ? 'Topic' : 'বিষয়' }}</th>
+                            <th>FraudBD</th>
+                            <th>WooEasyLife</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{ $cmpEn ? 'Courier history' : 'কুরিয়ার হিস্টোরি' }}</td>
+                            <td>{{ $cmpEn ? 'Courier history check by phone' : 'ফোন নম্বরে কুরিয়ার হিস্টোরি চেক' }}</td>
+                            <td>{{ $cmpEn ? \App\Support\PublicCourierNames::historyPhrase('en') : \App\Support\PublicCourierNames::historyPhrase('bn') }}</td>
+                        </tr>
+                        <tr>
+                            <td>WordPress / WooCommerce</td>
+                            <td>{{ $cmpEn ? 'WordPress/WooCommerce plugin' : 'WordPress/WooCommerce প্লাগইন' }}</td>
+                            <td>{{ $cmpEn ? 'Checkout OTP, duplicate-order block and blacklist' : 'চেকআউট OTP, ডুপ্লিকেট অর্ডার ব্লক ও ব্ল্যাকলিস্ট' }}</td>
+                        </tr>
+                        <tr>
+                            <td>API</td>
+                            <td>REST API</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>{{ $cmpEn ? 'Android app' : 'Android অ্যাপ' }}</td>
+                            <td>{{ $cmpEn ? 'Android app on Google Play' : 'Google Play-এ Android অ্যাপ' }}</td>
+                            <td>Android app</td>
+                        </tr>
+                        <tr>
+                            <td>{{ $cmpEn ? 'Price' : 'দাম' }}</td>
+                            <td><a href="https://fraudbd.com/">{{ $cmpEn ? 'Public price table' : 'পাবলিক প্রাইস টেবিল' }}</a></td>
+                            <td><a href="/pricing">/pricing</a></td>
+                        </tr>
+                        <tr>
+                            <td>{{ $cmpEn ? 'Courier auto-entry' : 'কুরিয়ার অটো এন্ট্রি' }}</td>
+                            <td></td>
+                            <td>{{ $cmpEn ? \App\Support\PublicCourierNames::bookingPhrase('en') : \App\Support\PublicCourierNames::bookingPhrase('bn') }}</td>
+                        </tr>
+                        <tr>
+                            <td>{{ $cmpEn ? 'Missing orders' : 'হারানো অর্ডার' }}</td>
+                            <td></td>
+                            <td>Missing-order recovery</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>{{ $cmpEn
+                    ? 'If you only need phone-number lookups or an API for a custom (non-WooCommerce) platform, a checker-only tool can be enough. Competitor features change — verify on their site before deciding.'
+                    : 'শুধু নম্বর লুকআপ বা কাস্টম (নন-WooCommerce) প্ল্যাটফর্মের API লাগলে চেকার-ধরনের টুলই যথেষ্ট হতে পারে। প্রতিযোগীর ফিচার বদলাতে পারে — সিদ্ধান্তের আগে তাদের সাইটে যাচাই করুন।' }}</p>
+            @endif
             @if (! empty($seo['content_sections']) && is_array($seo['content_sections']))
                 <article>
                     @php $openedGuideParts = false; @endphp
@@ -682,6 +744,30 @@
                         </section>
                     @endforeach
                 </article>
+            @endif
+            @if (in_array((string) ($seo['canonical_path'] ?? ''), ['/pricing', '/en/pricing'], true))
+                @php
+                    $ssrPlans = \App\Support\PublicPricingFacts::displayPlans();
+                    $ssrPlanLocale = $isEnPrerender ? 'en' : 'bn';
+                @endphp
+                <section>
+                    <h2>{{ $isEnPrerender ? 'Plans' : 'প্ল্যান' }}</h2>
+                    <ul>
+                        @foreach ($ssrPlans as $ssrPlan)
+                            <li>
+                                {{ $ssrPlan['title'] ?? '' }}
+                                — {{ $ssrPlan['price_label'] ?? '' }}
+                                — {{ \App\Support\PublicPricingFacts::factualDuration($ssrPlan, $ssrPlanLocale) }}
+                                @if (! empty($ssrPlan['token_label']) && $ssrPlan['token_label'] !== '—')
+                                    — {{ $ssrPlan['token_label'] }}
+                                @endif
+                                @if (! empty($ssrPlan['website_label']))
+                                    — {{ $ssrPlan['website_label'] }}
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
             @endif
             {{-- Compact footer. Contextual links stay in the page body. Sitemap is unchanged. --}}
             <nav aria-label="Site pages">

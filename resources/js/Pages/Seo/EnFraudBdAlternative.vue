@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import MarketingLayout from '@/layouts/MarketingLayout.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
@@ -42,14 +42,15 @@ const pillars = [
     },
 ];
 
+const couriers = usePage().props.publicCouriers || {};
 const compareRows = [
-    { feature: 'Courier history / fraud check', toolOnly: 'Yes', woo: 'Yes (built-in)' },
-    { feature: 'Checkout OTP / fake-order block', toolOnly: 'Usually no', woo: 'Yes' },
-    { feature: 'Courier auto-entry', toolOnly: 'No', woo: 'Pathao / Steadfast / RedX' },
-    { feature: 'Parcel note history', toolOnly: 'No', woo: 'Yes (incl. Steadfast)' },
-    { feature: 'Missing-order recovery', toolOnly: 'No', woo: 'Yes' },
-    { feature: 'Return loss / ROAS tools', toolOnly: 'Limited', woo: 'With calculators' },
-    { feature: 'Mobile app + multi-store', toolOnly: 'Limited', woo: 'Yes' },
+    { feature: 'Courier history', fraudbd: 'Courier history check by phone', woo: couriers.historyPhraseEn || '' },
+    { feature: 'WordPress / WooCommerce', fraudbd: 'WordPress/WooCommerce plugin', woo: 'Checkout OTP, duplicate-order block and blacklist' },
+    { feature: 'API', fraudbd: 'REST API', woo: '' },
+    { feature: 'Android app', fraudbd: 'Android app on Google Play', woo: 'Android app' },
+    { feature: 'Price', fraudbd: 'Public price table', woo: 'Own plan cards' },
+    { feature: 'Courier auto-entry', fraudbd: '', woo: couriers.bookingPhraseEn || '' },
+    { feature: 'Missing orders', fraudbd: '', woo: 'Missing-order recovery' },
 ];
 
 const guideSections = [
@@ -147,8 +148,8 @@ const relatedLinks = [
                     {{ seo?.prerender_lead || 'Not only fraud history — check, block, courier auto-entry, and recovery together.' }}
                 </p>
                 <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-                    Looking for a FraudBD or checker-only alternative? WooEasyLife adds free BD fraud checks
-                    plus WooCommerce protection and courier automation.
+                    FraudBD’s public site lists courier history, a WooCommerce plugin, a REST API, and an Android app.
+                    WooEasyLife adds checkout OTP, blocking, and courier auto-entry beside history checks.
                 </p>
                 <div class="mt-6 flex flex-wrap justify-center gap-3">
                     <Link
@@ -181,7 +182,7 @@ const relatedLinks = [
                     <Link href="/en/bd-fraud-checker" class="font-semibold text-amber-400 hover:text-amber-300">free fraud checks</Link>,
                     <Link href="/fake-order-protection" class="font-semibold text-amber-400 hover:text-amber-300">fake-order protection</Link>,
                     <Link href="/en/courier-auto-entry" class="font-semibold text-amber-400 hover:text-amber-300">courier auto-entry</Link>,
-                    and a mobile app in one platform. Checker-only tools show history; WooEasyLife completes the COD operation.
+                    and a mobile app. The dated table below uses only public facts from 31 Oct 2026.
                     Start at
                     <Link href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">pricing</Link>.
                 </p>
@@ -203,15 +204,15 @@ const relatedLinks = [
 
         <section id="compare" class="scroll-mt-24 border-y border-white/10 bg-[#111111] px-4 py-12 lg:px-8">
             <div class="mx-auto max-w-3xl overflow-x-auto">
-                <h2 class="text-center text-2xl font-bold text-white">Quick comparison</h2>
+                <h2 class="text-center text-2xl font-bold text-white">FraudBD vs WooEasyLife (checked 31 Oct 2026)</h2>
                 <p class="mx-auto mt-3 max-w-2xl text-center text-sm text-slate-400">
-                    Checker-only fraud tools vs WooEasyLife — which fits your COD floor.
+                    Verified public facts only. FraudBD prices are not copied here.
                 </p>
                 <table class="mt-8 w-full min-w-[32rem] border-collapse text-left text-sm text-slate-300">
                     <thead>
                         <tr class="border-b border-white/15 text-slate-400">
-                            <th class="py-3 pr-4 font-medium">Feature</th>
-                            <th class="py-3 pr-4 font-medium">Checker-only tool</th>
+                            <th class="py-3 pr-4 font-medium">Topic</th>
+                            <th class="py-3 pr-4 font-medium">FraudBD</th>
                             <th class="py-3 font-medium text-amber-300">WooEasyLife</th>
                         </tr>
                     </thead>
@@ -222,11 +223,26 @@ const relatedLinks = [
                             class="border-b border-white/10 last:border-b-0"
                         >
                             <td class="py-3 pr-4">{{ row.feature }}</td>
-                            <td class="py-3 pr-4">{{ row.toolOnly }}</td>
-                            <td class="py-3 text-emerald-400">{{ row.woo }}</td>
+                            <td class="py-3 pr-4">
+                                <a
+                                    v-if="row.feature === 'Price'"
+                                    href="https://fraudbd.com/"
+                                    class="font-semibold text-amber-400 hover:text-amber-300"
+                                    rel="noopener noreferrer"
+                                >{{ row.fraudbd }}</a>
+                                <template v-else>{{ row.fraudbd }}</template>
+                            </td>
+                            <td class="py-3 text-emerald-400">
+                                <Link v-if="row.feature === 'Price'" href="/pricing" class="font-semibold text-amber-400 hover:text-amber-300">/pricing</Link>
+                                <template v-else>{{ row.woo }}</template>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+                <p class="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-400">
+                    If you only need phone-number lookups or an API for a custom (non-WooCommerce) platform, a checker-only tool can be enough.
+                    Competitor features change — verify on their site before deciding.
+                </p>
             </div>
         </section>
 

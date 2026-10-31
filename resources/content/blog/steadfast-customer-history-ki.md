@@ -45,6 +45,6 @@ locale: bn
 2. রেশিও বুঝতে [Delivery Ratio গাইড](/blog/steadfast-delivery-ratio-ki) পড়ুন।
 3. রিটার্ন কমাতে [SteadFast রিটার্ন কমানো](/blog/steadfast-return-komano) ও [রিটার্ন লস ক্যালকুলেটর](/return-loss-calculator) ব্যবহার করুন।
 4. সাধারণ ভুল এড়াতে: [Common mistakes](/blog/steadfast-fraud-check-common-mistakes)।
-5. কেস স্টাডি: [SteadFast Fraud Check কেস](/blog/steadfast-fraud-check-case-study)।
+5. কেস স্টাডি: [SteadFast উদাহরণ হিসাব](/blog/steadfast-fraud-check-case-study)।
 
 সব প্রশ্ন: [FAQ হাব](/faq)। প্ল্যান: [প্রাইসিং](/pricing)।

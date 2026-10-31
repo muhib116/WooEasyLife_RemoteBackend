@@ -3,7 +3,7 @@
 /** SEO page meta — Facebook Page COD order management pillar (BN). */
 
 return [
-    'title' => 'Facebook Page COD Order Management Bangladesh ২০২৬',
+    'title' => 'Facebook Page COD Order Management Bangladesh',
     'description' => 'Facebook/Instagram পেজ COD অর্ডার: Messenger কনফার্ম, ফ্রড চেক, OTP, WooCommerce সিঙ্ক ও কুরিয়ার অটো এন্ট্রি—সম্পূর্ণ অপস প্লেবুক।',
     'canonical_path' => '/facebook-page-cod-management',
     'html_lang' => 'bn-BD',

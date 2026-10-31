@@ -29,7 +29,7 @@ $questionLinks = [
 $toolLinks = [
     ['path' => '/steadfast-fraud-check', 'label' => 'SteadFast Fraud Check গাইড'],
     ['path' => '/bd-fraud-checker', 'label' => 'ফ্রি ফ্রড চেকার'],
-    ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast কেস স্টাডি'],
+    ['path' => '/blog/steadfast-fraud-check-case-study', 'label' => 'SteadFast উদাহরণ হিসাব'],
     ['path' => '/return-loss-calculator', 'label' => 'রিটার্ন লস ক্যালকুলেটর'],
     ['path' => '/fake-order-protection', 'label' => 'ফেক অর্ডার প্রোটেকশন'],
     ['path' => '/courier-auto-entry', 'label' => 'কুরিয়ার অটো এন্ট্রি'],
