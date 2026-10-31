@@ -141,6 +141,7 @@ Route::get('/woocommerce-facebook-messenger', [MarketingSeoController::class, 'w
 Route::get('/fraudbd-alternative', [MarketingSeoController::class, 'fraudBdAlternative'])
     ->name('seo.fraudbd-alternative');
 Route::redirect('/fraud-bd-alternative', '/fraudbd-alternative', 301);
+Route::permanentRedirect('/missing-orders', '/blog/missing-order-recovery-abandoned-checkout-strategy');
 
 Route::get('/woocommerce-bangladesh', [MarketingSeoController::class, 'clusterGuide'])
     ->defaults('seoKey', 'woocommerce_bangladesh')

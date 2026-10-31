@@ -186,6 +186,40 @@ class SeoPrerenderText
     }
 
     /**
+     * Published posts for the blog index prerender. Newest first, same order as BlogService::all().
+     *
+     * @return list<array{href: string, label: string}>
+     */
+    public static function blogIndexLinks(bool $isEn = false): array
+    {
+        try {
+            $posts = app(BlogService::class)->all($isEn ? 'en' : 'bn');
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $links = [];
+        foreach ($posts as $post) {
+            $slug = trim((string) ($post['slug'] ?? ''));
+            if ($slug === '' || ! preg_match('/^[a-z0-9-]+$/i', $slug)) {
+                continue;
+            }
+
+            $title = trim((string) ($post['title'] ?? ''));
+            if ($title === '') {
+                $title = str_replace('-', ' ', $slug);
+            }
+
+            $links[] = [
+                'href' => '/blog/'.$slug,
+                'label' => $title,
+            ];
+        }
+
+        return $links;
+    }
+
+    /**
      * Published blog posts that appear in /sitemap.xml — must also be linked sitewide.
      *
      * @return list<array{href: string, label: string}>

@@ -612,6 +612,20 @@
                     <figcaption>{{ $seo['author_name'] ?? 'Muhibbullah Ansary' }} — {{ $seo['author_role'] ?? 'Founder & CEO, WPSaleHub' }}</figcaption>
                 </figure>
             @endif
+            @if (in_array((string) ($seo['canonical_path'] ?? ''), ['/woocommerce-mobile-app', '/en/woocommerce-mobile-app'], true))
+                <p>
+                    <a href="{{ \App\Services\LandingSettingsService::PUBLIC_PLAY_STORE_URL }}">Get it on Google Play</a>
+                </p>
+            @endif
+            @if (in_array((string) ($seo['canonical_path'] ?? ''), ['/blog', '/en/blog'], true))
+                <nav aria-label="{{ $isEnPrerender ? 'Blog posts' : 'ব্লগ পোস্ট' }}">
+                    <ul>
+                        @foreach (\App\Support\SeoPrerenderText::blogIndexLinks($isEnPrerender) as $postLink)
+                            <li><a href="{{ $postLink['href'] }}">{{ $postLink['label'] }}</a></li>
+                        @endforeach
+                    </ul>
+                </nav>
+            @endif
             @if (! empty($seo['content_sections']) && is_array($seo['content_sections']))
                 <article>
                     @php $openedGuideParts = false; @endphp

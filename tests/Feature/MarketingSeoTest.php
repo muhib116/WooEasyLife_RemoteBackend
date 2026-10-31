@@ -507,6 +507,9 @@ class MarketingSeoTest extends TestCase
     {
         $this->get('/fraud-bd-alternative')->assertRedirect('/fraudbd-alternative');
         $this->get('/en/fraud-bd-alternative')->assertRedirect('/en/fraudbd-alternative');
+        $this->get('/missing-orders')
+            ->assertStatus(301)
+            ->assertRedirect('/blog/missing-order-recovery-abandoned-checkout-strategy');
     }
 
     public function test_woocommerce_bangladesh_cluster_pages_render(): void
@@ -1214,19 +1217,35 @@ class MarketingSeoTest extends TestCase
         $posts = $blog->all();
         $this->assertNotEmpty($posts, 'Need at least one published blog post to assert orphan prevention');
 
-        $bn = $this->get('/blog');
-        $bn->assertOk();
-        $en = $this->get('/en/blog');
-        $en->assertOk();
-
-        foreach ($posts as $post) {
-            $slug = (string) ($post['slug'] ?? '');
-            if ($slug === '') {
-                continue;
-            }
-            $page = (($post['locale'] ?? 'bn') === 'en') ? $en : $bn;
-            $page->assertSee($slug, false);
+        foreach (['bn' => '/blog', 'en' => '/en/blog'] as $locale => $index) {
+            $expected = array_values(array_filter(
+                $blog->all($locale),
+                fn (array $post) => preg_match('/^[a-z0-9-]+$/i', (string) ($post['slug'] ?? '')) === 1
+            ));
+            $html = $this->get($index)->assertOk()->getContent();
+            $label = $locale === 'en' ? 'Blog posts' : 'ব্লগ পোস্ট';
+            $this->assertMatchesRegularExpression(
+                '/<nav aria-label="'.preg_quote($label, '/').'">\s*<ul>(.*?)<\/ul>/s',
+                $html
+            );
+            preg_match('/<nav aria-label="'.preg_quote($label, '/').'">\s*<ul>(.*?)<\/ul>/s', $html, $match);
+            preg_match_all('/<a href="([^"]+)">/', $match[1] ?? '', $hrefs);
+            $this->assertSame(
+                array_map(fn (array $post) => '/blog/'.$post['slug'], $expected),
+                $hrefs[1] ?? []
+            );
         }
+
+        $app = $this->get('/woocommerce-mobile-app')->assertOk()->getContent();
+        $this->assertStringContainsString(
+            'href="https://play.google.com/store/apps/details?id=com.wooeasylife.woo_easy_life"',
+            $app
+        );
+        $enApp = $this->get('/en/woocommerce-mobile-app')->assertOk()->getContent();
+        $this->assertStringContainsString(
+            'href="https://play.google.com/store/apps/details?id=com.wooeasylife.woo_easy_life"',
+            $enApp
+        );
     }
 
     public function test_ai_content_prerender_uses_semantic_hierarchy(): void
