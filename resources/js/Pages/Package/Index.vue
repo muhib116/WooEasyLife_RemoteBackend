@@ -122,6 +122,41 @@
                                 >
                                     {{ packageDescriptionPreview(data) }}
                                 </p>
+                                <button
+                                    v-if="!data.deleted_at"
+                                    type="button"
+                                    class="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-600/80 px-2 py-1 text-xs font-semibold transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 disabled:cursor-wait disabled:opacity-60"
+                                    :disabled="togglingFrontendId === data.id"
+                                    :aria-label="
+                                        data.show_on_frontend
+                                            ? 'Hide from website pricing'
+                                            : 'Show on website pricing'
+                                    "
+                                    v-tooltip.top="
+                                        data.show_on_frontend && !data.is_active
+                                            ? 'Selected for the website, but this package is disabled so the pricing page stays empty of it.'
+                                            : data.show_on_frontend
+                                              ? 'Shown on the homepage pricing section and the pricing page. Click to hide.'
+                                              : 'Hidden from the website. Click to show it on the pricing page.'
+                                    "
+                                    @click="togglePackageFrontend(data)"
+                                >
+                                    <span class="text-gray-400">Website</span>
+                                    <StatusBadge
+                                        :label="
+                                            data.show_on_frontend && data.is_active
+                                                ? 'Shown'
+                                                : data.show_on_frontend
+                                                  ? 'Selected'
+                                                  : 'Hidden'
+                                        "
+                                        :variant="
+                                            data.show_on_frontend && data.is_active
+                                                ? 'success'
+                                                : 'neutral'
+                                        "
+                                    />
+                                </button>
                             </div>
                         </template>
                     </Column>
@@ -248,54 +283,6 @@
                             <div class="whitespace-nowrap">
                                 {{ formatDate(data.updated_at) }}
                             </div>
-                        </template>
-                    </Column>
-                    <Column
-                        header="Website"
-                        frozen
-                        align-frozen="right"
-                        style="width: 7rem; min-width: 7rem"
-                    >
-                        <template #body="{ data }">
-                            <StatusBadge
-                                v-if="data.deleted_at"
-                                label="Hidden"
-                                variant="neutral"
-                            />
-                            <button
-                                v-else
-                                type="button"
-                                class="cursor-pointer rounded-full transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60 disabled:cursor-wait disabled:opacity-60"
-                                :disabled="togglingFrontendId === data.id"
-                                :aria-label="
-                                    data.show_on_frontend
-                                        ? 'Hide from website pricing'
-                                        : 'Show on website pricing'
-                                "
-                                v-tooltip.top="
-                                    data.show_on_frontend && !data.is_active
-                                        ? 'Selected for the website, but this package is disabled so the pricing page stays empty of it.'
-                                        : data.show_on_frontend
-                                          ? 'Shown on the homepage pricing section and the pricing page. Click to hide.'
-                                          : 'Hidden from the website. Click to show it on the pricing page.'
-                                "
-                                @click="togglePackageFrontend(data)"
-                            >
-                                <StatusBadge
-                                    :label="
-                                        data.show_on_frontend && data.is_active
-                                            ? 'Shown'
-                                            : data.show_on_frontend
-                                              ? 'Selected'
-                                              : 'Hidden'
-                                    "
-                                    :variant="
-                                        data.show_on_frontend && data.is_active
-                                            ? 'success'
-                                            : 'neutral'
-                                    "
-                                />
-                            </button>
                         </template>
                     </Column>
                     <Column
