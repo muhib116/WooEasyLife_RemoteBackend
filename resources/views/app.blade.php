@@ -523,6 +523,14 @@
                     @endif
                 </p>
             @endif
+            @if (! empty($seo['plugin_footer']))
+                <p>
+                    {{ $seo['plugin_footer'] }}
+                    @if (! empty($seo['plugin_about_href']))
+                        <a href="{{ $seo['plugin_about_href'] }}">About</a>
+                    @endif
+                </p>
+            @endif
             @if (! empty($seo['ssr_fraud_checker']))
                 @php
                     $ssrFormAction = (string) ($seo['canonical_path'] ?? '/bd-fraud-checker');
@@ -822,9 +830,13 @@
                     @foreach ($seo['faqs'] as $faq)
                         @if (! empty($faq['q']) && ! empty($faq['a']))
                             <h3>{{ $faq['q'] }}</h3>
-                            @foreach (\App\Support\SeoPrerenderText::readableParagraphs((string) $faq['a']) as $faqPara)
-                                <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($faqPara, $isEnPrerender) !!}</p>
-                            @endforeach
+                            @if (! empty($seo['single_h1']))
+                                <p>{!! \App\Support\SeoPrerenderText::linkifyHtml((string) $faq['a'], $isEnPrerender) !!}</p>
+                            @else
+                                @foreach (\App\Support\SeoPrerenderText::readableParagraphs((string) $faq['a']) as $faqPara)
+                                    <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($faqPara, $isEnPrerender) !!}</p>
+                                @endforeach
+                            @endif
                         @endif
                     @endforeach
                 </section>

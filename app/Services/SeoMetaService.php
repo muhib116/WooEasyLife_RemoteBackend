@@ -121,6 +121,8 @@ class SeoMetaService
             'plugin_checker_label',
             'plugin_pricing_href',
             'plugin_pricing_label',
+            'plugin_footer',
+            'plugin_about_href',
         ] as $pluginKey) {
             $pluginValue = is_string($config[$pluginKey] ?? null) ? trim($config[$pluginKey]) : '';
             if ($pluginValue !== '') {

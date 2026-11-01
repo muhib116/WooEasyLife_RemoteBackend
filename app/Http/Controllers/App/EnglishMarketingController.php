@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\App;
 
 use App\Http\Controllers\Controller;
+use App\Support\CourierCheckLanding;
 use App\Support\PublicCourierNames;
 use App\Support\PublicPricingFacts;
 use App\Services\BlogService;
@@ -18,6 +19,13 @@ use Inertia\Response;
 
 class EnglishMarketingController extends Controller
 {
+    public function courierCheckPlugin(
+        SeoMetaService $seo,
+        LandingSettingsService $landingSettings,
+    ): Response {
+        return CourierCheckLanding::render($seo, $landingSettings, true);
+    }
+
     public function home(
         Request $request,
         LandingPageService $landing,

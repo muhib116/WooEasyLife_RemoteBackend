@@ -126,6 +126,8 @@ Route::get('/bd-fraud-checker', [MarketingSeoController::class, 'bdFraudChecker'
     ->name('seo.bd-fraud-checker');
 Route::get('/fake-order-protection', [MarketingSeoController::class, 'fakeOrderProtection'])
     ->name('seo.fake-order-protection');
+Route::get('/courier-check-plugin', [MarketingSeoController::class, 'courierCheckPlugin'])
+    ->name('seo.courier-check-plugin');
 Route::get('/return-loss-calculator', [MarketingSeoController::class, 'returnLossCalculator'])
     ->name('seo.return-loss-calculator');
 Route::get('/courier-charge-calculator', [MarketingSeoController::class, 'courierChargeCalculator'])
@@ -226,6 +228,8 @@ Route::prefix('en')->name('seo.en.')->group(function () {
         ->name('bd-fraud-checker');
     Route::get('/fake-order-protection', [EnglishMarketingController::class, 'fakeOrderProtection'])
         ->name('fake-order-protection');
+    Route::get('/courier-check-plugin', [EnglishMarketingController::class, 'courierCheckPlugin'])
+        ->name('courier-check-plugin');
     Route::get('/ki-vabe-fake-order-atkabo', [EnglishMarketingController::class, 'kiVabeFakeOrderAtkabo'])
         ->name('ki-vabe-fake-order-atkabo');
     Route::get('/fake-customer-check', [EnglishMarketingController::class, 'fakeCustomerCheck'])

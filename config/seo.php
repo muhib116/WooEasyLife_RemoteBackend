@@ -1871,7 +1871,7 @@ return [
                 ],
             ],
         ],
-    ],
+    ] + require __DIR__.'/courier_check_pages.php',
 
     'sitemap' => [
         'paths' => [
@@ -1945,6 +1945,8 @@ return [
             ['path' => '/wooeasylife/app/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/courier-check/privacy-policy', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/courier-check/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],
+            ['path' => '/courier-check-plugin', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['path' => '/en/courier-check-plugin', 'priority' => '0.9', 'changefreq' => 'weekly'],
         ],
     ],
 ];
