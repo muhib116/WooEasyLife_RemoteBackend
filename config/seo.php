@@ -158,6 +158,10 @@ return [
             'title' => 'ফ্রি Fraud Checker BD — Pathao, Steadfast সহ {couriers.history.count.bn}টি কুরিয়ার',
             'description' => 'ফ্রি Fraud Checker BD: মোবাইল নম্বরে {couriers.history.bn} হিস্টোরি ও সাকসেস রেট দেখুন। অ্যাকাউন্ট ছাড়াই (গ্যারান্টি নয়)।',
             'canonical_path' => '/bd-fraud-checker',
+            'trailing_text_link' => [
+                'href' => '/courier-check-plugin',
+                'label' => 'ফ্রি WordPress প্লাগইন: EasyLife Courier Check →',
+            ],
             'og_image' => '/images/seo/cluster/fraud-layers.jpg',
             'prerender_h1' => 'Fraud Checker BD — ফ্রি কুরিয়ার হিস্টোরি চেক',
             'prerender_lead' => 'কাস্টমারের মোবাইল নম্বর দিয়ে কুরিয়ার হিস্টোরি, ডেলিভারি সাকসেস রেট ও রিটার্ন রেকর্ড তাৎক্ষণিক দেখুন। অর্ডার কনফার্মের আগেই ফেক কাস্টমার চেক করুন — {couriers.history.bn}।',
@@ -241,6 +245,10 @@ return [
             'title' => 'কিভাবে ফেক অর্ডার আটকাবো — চেক, OTP ও ব্লক | WooEasyLife',
             'description' => 'কিভাবে ফেক অর্ডার আটকাবো? কুরিয়ার হিস্টোরি চেক, চেকআউট OTP, ডুপ্লিকেট ব্লক ও ব্ল্যাকলিস্ট দিয়ে COD পার্সেল রিটার্ন কমান — WooCommerce ও Facebook পেজ সেলারদের জন্য।',
             'canonical_path' => '/fake-order-protection',
+            'trailing_text_link' => [
+                'href' => '/courier-check-plugin',
+                'label' => 'ফ্রি WordPress প্লাগইন: EasyLife Courier Check →',
+            ],
             'prerender_h1' => 'কিভাবে ফেক অর্ডার আটকাবো — Fake Order Protection',
             'prerender_lead' => 'ফ্রড চেক + OTP + ডুপ্লিকেট ব্লক + ব্ল্যাকলিস্ট — মাল্টি-লেয়ার প্রোটেকশনে ফেক অর্ডার ও রিটার্ন লস কমান। WooCommerce ও Facebook পেজ COD সেলারদের জন্য।',
             'hreflang_paths' => [
@@ -576,6 +584,10 @@ return [
             'title' => 'BD Courier Ratio Checker — সাকসেস রেট ফ্রি',
             'description' => 'BD Courier Ratio Checker: মোবাইল নম্বরে {couriers.history.bn} সাকসেস রেট ও রিটার্ন রেশিও ফ্রি দেখুন।',
             'canonical_path' => '/bd-courier-ratio-checker',
+            'trailing_text_link' => [
+                'href' => '/courier-check-plugin',
+                'label' => 'ফ্রি WordPress প্লাগইন: EasyLife Courier Check →',
+            ],
             'og_type' => 'article',
             'og_image' => '/images/seo/cluster/fraud-layers.jpg',
             'prerender_h1' => 'BD Courier Order Ratio Checker — ডেলিভারি সাকসেস রেট',
@@ -1223,6 +1235,10 @@ return [
             'title' => 'Free Fraud Checker BD — {couriers.history.short.en}',
             'description' => 'Free Courier Fraud Checker BD. Check {couriers.history.en} delivery history and success rate by mobile number.',
             'canonical_path' => '/en/bd-fraud-checker',
+            'trailing_text_link' => [
+                'href' => '/en/courier-check-plugin',
+                'label' => 'Free WordPress plugin: EasyLife Courier Check →',
+            ],
             'html_lang' => 'en',
             'og_image' => '/images/seo/cluster/fraud-layers.jpg',
             'prerender_h1' => 'Free Courier Fraud Checker BD — delivery history by phone',
@@ -1420,6 +1436,10 @@ return [
             'title' => 'How to Stop Fake Orders — Fake Order Protection | WooEasyLife',
             'description' => 'How to stop fake COD orders in Bangladesh: courier history checks, checkout OTP, duplicate blocks, and blacklists — for WooCommerce and Facebook page sellers.',
             'canonical_path' => '/en/fake-order-protection',
+            'trailing_text_link' => [
+                'href' => '/en/courier-check-plugin',
+                'label' => 'Free WordPress plugin: EasyLife Courier Check →',
+            ],
             'html_lang' => 'en',
             'prerender_h1' => 'How to stop fake orders — Fake Order Protection',
             'prerender_lead' => 'Fraud check + OTP + duplicate block + blacklist — multi-layer protection to cut fake COD orders and return loss. Built for Bangladesh WooCommerce and Facebook page sellers.',

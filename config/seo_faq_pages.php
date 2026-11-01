@@ -95,6 +95,10 @@ return [
         'title' => 'কুরিয়ার সাকসেস রেট কীভাবে বুঝব — COD গাইড | WooEasyLife',
         'description' => 'কুরিয়ার সাকসেস রেট কীভাবে বুঝবেন: delivered বনাম ক্যানসেল ও রিটার্ন অনুপাত, BD COD-তে কত হলে ভালো, এবং অর্ডার কনফার্মের আগে কী দেখবেন।',
         'canonical_path' => '/faq/courier-success-rate-kivabe-bujhbo',
+        'trailing_text_link' => [
+            'href' => '/courier-check-plugin',
+            'label' => 'ফ্রি WordPress প্লাগইন: EasyLife Courier Check →',
+        ],
         'og_type' => 'article',
         'og_image' => '/images/seo/cluster/fraud-layers.jpg',
         'prerender_h1' => 'কুরিয়ার সাকসেস রেট কীভাবে বুঝব?',

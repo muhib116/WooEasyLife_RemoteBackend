@@ -228,5 +228,8 @@ const localeMirrorLabel = computed(() => {
                 </div>
             </div>
         </section>
+        <p v-if="seo?.canonical_path === '/bd-courier-ratio-checker'" class="mx-auto max-w-3xl px-4 py-6 text-center text-sm">
+            <Link href="/courier-check-plugin" class="font-semibold text-amber-400 hover:text-amber-300">ফ্রি WordPress প্লাগইন: EasyLife Courier Check →</Link>
+        </p>
     </MarketingLayout>
 </template>

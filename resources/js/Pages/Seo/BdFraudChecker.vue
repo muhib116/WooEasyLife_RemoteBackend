@@ -361,6 +361,10 @@ const relatedLinks = computed(() => {
             </div>
         </section>
 
+        <p class="mx-auto max-w-3xl px-4 py-6 text-center text-sm">
+            <Link href="/courier-check-plugin" class="font-semibold text-amber-400 hover:text-amber-300">ফ্রি WordPress প্লাগইন: EasyLife Courier Check →</Link>
+        </p>
+
         <section v-if="faqs.length" id="faq" class="scroll-mt-24 border-t border-white/10 bg-[#111111] px-4 py-12 lg:px-8">
             <div class="mx-auto max-w-3xl">
                 <h2 class="text-center text-2xl font-bold text-white">যা জানতে চান</h2>

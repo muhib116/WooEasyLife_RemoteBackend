@@ -98,6 +98,9 @@ const toolHref = computed(() => props.seo?.pillar_path || '/bd-fraud-checker');
                 <p class="mt-6 text-sm text-slate-500">
                     <Link href="/faq" class="font-semibold text-amber-400 hover:text-amber-300">← সব FAQ</Link>
                 </p>
+                <p v-if="seo?.canonical_path === '/faq/courier-success-rate-kivabe-bujhbo'" class="mt-4 text-sm">
+                    <Link href="/courier-check-plugin" class="font-semibold text-amber-400 hover:text-amber-300">ফ্রি WordPress প্লাগইন: EasyLife Courier Check →</Link>
+                </p>
             </div>
         </section>
     </MarketingLayout>
