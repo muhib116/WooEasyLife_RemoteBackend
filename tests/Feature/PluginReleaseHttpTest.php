@@ -154,6 +154,9 @@ class PluginReleaseHttpTest extends TestCase
         }
 
         $response = $this->withHeaders($headers)->get('/download-plugins')->assertOk();
+        $disposition = (string) $response->headers->get('content-disposition');
+        $this->assertStringContainsString('woo-easy-life-', $disposition);
+        $this->assertStringNotContainsString('wpsalehub', $disposition);
 
         return $response->streamedContent();
     }

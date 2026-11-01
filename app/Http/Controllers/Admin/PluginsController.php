@@ -7,9 +7,9 @@ use App\Models\PluginsVersion;
 use App\Services\Plugin\PluginLogoUrl;
 use App\Services\Plugin\PluginReleaseGate;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -126,7 +126,7 @@ class PluginsController extends Controller
         }
         $file = file_get_contents($path);
         $type = mime_content_type($path);
-        $fileName = basename($path);
+        $fileName = $this->downloadFileName($plugins);
 
         return Response::make($file, 200, [
             'Content-Type' => $type,
@@ -189,7 +189,7 @@ class PluginsController extends Controller
             abort(404);
         }
 
-        $fileName = basename($path);
+        $fileName = $this->downloadFileName($plugins);
         // Plugin packages are always zips. mime_content_type() can mis-detect
         // edge files as text/plain and break WP download_url / upgraders.
         $type = 'application/zip';
@@ -356,6 +356,19 @@ class PluginsController extends Controller
         }
 
         return $rule;
+    }
+
+    /**
+     * Browser save name. Storage stays wpsalehub-{version}.zip so existing packages keep working.
+     */
+    private function downloadFileName(PluginsVersion $plugin): string
+    {
+        $settings = is_array($plugin->settings) ? $plugin->settings : [];
+        $slug = strtolower(trim((string) ($settings['slug'] ?? 'woo-easy-life')));
+        $slug = preg_replace('/[^a-z0-9-]+/', '', $slug) ?: 'woo-easy-life';
+        $version = preg_replace('/[^A-Za-z0-9._-]+/', '', (string) $plugin->version) ?: 'plugin';
+
+        return $slug.'-'.$version.'.zip';
     }
 
     private function storePluginZip(string $version, UploadedFile $file): string
