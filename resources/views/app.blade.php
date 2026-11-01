@@ -490,13 +490,38 @@
         @php
             $isEnPrerender = str_starts_with((string) ($seo['html_lang'] ?? 'bn-BD'), 'en');
         @endphp
-        <section id="seo-prerender">
-            <h1>{{ $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife' }}</h1>
+        <section id="seo-prerender"@if (! empty($seo['single_h1'])) data-single-h1 @endif>
+            @php
+                $prerenderTitle = $seo['prerender_h1'] ?? $seo['title'] ?? 'WooEasyLife';
+                $prerenderTitleIsParagraph = ! empty($seo['single_h1']) && ! empty($__inertiaSsrResponse);
+            @endphp
+            @if ($prerenderTitleIsParagraph)
+                <p>{{ $prerenderTitle }}</p>
+            @else
+                <h1>{{ $prerenderTitle }}</h1>
+            @endif
             @if (($seo['canonical_path'] ?? '') === '/en/bd-fraud-checker')
                 <p><a href="/bd-fraud-checker">বাংলায় দেখুন</a></p>
             @endif
             @if (! empty($seo['prerender_lead'] ?? $seo['description'] ?? null))
                 <p>{{ $seo['prerender_lead'] ?? $seo['description'] }}</p>
+            @endif
+            @if (! empty($seo['plugin_download_label']) || ! empty($seo['plugin_checker_href']) || ! empty($seo['plugin_pricing_href']))
+                <p>
+                    @if (! empty($seo['plugin_download_label']))
+                        @if (! empty($seo['plugin_download_url']))
+                            <a href="{{ $seo['plugin_download_url'] }}" target="_blank" rel="noopener">{{ $seo['plugin_download_label'] }}</a>
+                        @else
+                            <button type="button" aria-disabled="true">{{ $seo['plugin_download_label'] }}</button>
+                        @endif
+                    @endif
+                    @if (! empty($seo['plugin_checker_href']) && ! empty($seo['plugin_checker_label']))
+                        <a href="{{ $seo['plugin_checker_href'] }}">{{ $seo['plugin_checker_label'] }}</a>
+                    @endif
+                    @if (! empty($seo['plugin_pricing_href']) && ! empty($seo['plugin_pricing_label']))
+                        <a href="{{ $seo['plugin_pricing_href'] }}">{{ $seo['plugin_pricing_label'] }}</a>
+                    @endif
+                </p>
             @endif
             @if (! empty($seo['ssr_fraud_checker']))
                 @php
@@ -724,6 +749,9 @@
                                     @endforeach
                                 </ol>
                             @endif
+                            @if (! empty($section['note']) && is_string($section['note']))
+                                <p>{!! \App\Support\SeoPrerenderText::linkifyHtml($section['note'], $isEnPrerender) !!}</p>
+                            @endif
                             @foreach (($section['figures'] ?? []) as $figure)
                                 @if (! empty($figure['src']))
                                     <figure>
@@ -732,8 +760,8 @@
                                             alt="{{ $figure['alt'] ?? ($figure['caption'] ?? 'Diagram') }}"
                                             loading="lazy"
                                             decoding="async"
-                                            width="1200"
-                                            height="675"
+                                            width="{{ (int) ($figure['width'] ?? 1200) }}"
+                                            height="{{ (int) ($figure['height'] ?? 675) }}"
                                         />
                                         @if (! empty($figure['caption']))
                                             <figcaption>{{ $figure['caption'] }}</figcaption>
@@ -790,7 +818,7 @@
             @endif
             @if (! empty($seo['faqs']) && is_array($seo['faqs']))
                 <section>
-                    <h2>{{ $isEnPrerender ? 'FAQ' : 'যা জানতে চান' }}</h2>
+                    <h2>{{ $seo['faq_heading'] ?? ($isEnPrerender ? 'FAQ' : 'যা জানতে চান') }}</h2>
                     @foreach ($seo['faqs'] as $faq)
                         @if (! empty($faq['q']) && ! empty($faq['a']))
                             <h3>{{ $faq['q'] }}</h3>
@@ -800,6 +828,9 @@
                         @endif
                     @endforeach
                 </section>
+            @endif
+            @if (! empty($seo['trailing_text_link']['href']) && ! empty($seo['trailing_text_link']['label']))
+                <p><a href="{{ $seo['trailing_text_link']['href'] }}">{{ $seo['trailing_text_link']['label'] }}</a></p>
             @endif
         </section>
         <noscript>

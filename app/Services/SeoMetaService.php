@@ -45,7 +45,7 @@ class SeoMetaService
             'x-default' => $canonicalPath,
         ]);
 
-        return [
+        $payload = [
             'page' => $page,
             'title' => $title,
             'description' => $description,
@@ -104,6 +104,45 @@ class SeoMetaService
                 $page,
             ),
         ];
+
+        if (! empty($config['single_h1'])) {
+            $payload['single_h1'] = true;
+        }
+
+        $faqHeading = is_string($config['faq_heading'] ?? null) ? trim($config['faq_heading']) : '';
+        if ($faqHeading !== '') {
+            $payload['faq_heading'] = $faqHeading;
+        }
+
+        foreach ([
+            'plugin_download_label',
+            'plugin_download_url',
+            'plugin_checker_href',
+            'plugin_checker_label',
+            'plugin_pricing_href',
+            'plugin_pricing_label',
+        ] as $pluginKey) {
+            $pluginValue = is_string($config[$pluginKey] ?? null) ? trim($config[$pluginKey]) : '';
+            if ($pluginValue !== '') {
+                $payload[$pluginKey] = $pluginValue;
+            }
+        }
+
+        $trailing = $config['trailing_text_link'] ?? null;
+        if (
+            is_array($trailing)
+            && is_string($trailing['href'] ?? null)
+            && trim($trailing['href']) !== ''
+            && is_string($trailing['label'] ?? null)
+            && trim($trailing['label']) !== ''
+        ) {
+            $payload['trailing_text_link'] = [
+                'href' => trim($trailing['href']),
+                'label' => trim($trailing['label']),
+            ];
+        }
+
+        return $payload;
     }
 
     /**
@@ -370,14 +409,43 @@ class SeoMetaService
                 }
                 $alt = is_string($figure['alt'] ?? null) ? trim((string) $figure['alt']) : '';
                 $caption = is_string($figure['caption'] ?? null) ? trim((string) $figure['caption']) : null;
-                $figures[] = [
+                $item = [
                     'src' => $src,
                     'alt' => $alt !== '' ? $alt : ($caption ?: 'Diagram'),
                     'caption' => $caption !== '' ? $caption : null,
                 ];
+                if (isset($figure['width']) && is_numeric($figure['width'])) {
+                    $item['width'] = (int) $figure['width'];
+                }
+                if (isset($figure['height']) && is_numeric($figure['height'])) {
+                    $item['height'] = (int) $figure['height'];
+                }
+                $figures[] = $item;
             }
 
-            if ($paragraphs === [] && $figures === [] && $list === []) {
+            $note = is_string($section['note'] ?? null) ? trim($section['note']) : '';
+            $rows = [];
+            foreach (is_array($section['rows'] ?? null) ? $section['rows'] : [] as $comparisonRow) {
+                if (! is_array($comparisonRow)) {
+                    continue;
+                }
+                $feature = is_string($comparisonRow['feature'] ?? null) ? trim($comparisonRow['feature']) : '';
+                if ($feature === '') {
+                    continue;
+                }
+                $cleanRow = [
+                    'feature' => $feature,
+                    'free' => is_string($comparisonRow['free'] ?? null) ? $comparisonRow['free'] : '',
+                    'paid' => is_string($comparisonRow['paid'] ?? null) ? $comparisonRow['paid'] : '',
+                ];
+                $href = is_string($comparisonRow['href'] ?? null) ? trim($comparisonRow['href']) : '';
+                if ($href !== '') {
+                    $cleanRow['href'] = $href;
+                }
+                $rows[] = $cleanRow;
+            }
+
+            if ($paragraphs === [] && $figures === [] && $list === [] && $note === '' && $rows === []) {
                 continue;
             }
 
@@ -389,6 +457,12 @@ class SeoMetaService
                 'list' => $list,
                 'figures' => $figures,
             ];
+            if ($note !== '') {
+                $row['note'] = $note;
+            }
+            if ($rows !== []) {
+                $row['rows'] = $rows;
+            }
 
             if ($layout !== null && $layout !== '') {
                 $row['layout'] = $layout;
@@ -887,6 +961,52 @@ class SeoMetaService
             }
 
             $graphs[] = $software;
+        }
+
+        $pluginApp = $config['software_application'] ?? null;
+        if (is_array($pluginApp) && $pluginApp !== []) {
+            $pluginNode = [
+                '@type' => 'SoftwareApplication',
+                '@id' => $canonical.'#easylife-courier-check',
+                'name' => (string) ($pluginApp['name'] ?? 'EasyLife Courier Check'),
+                'operatingSystem' => (string) ($pluginApp['operatingSystem'] ?? 'WordPress'),
+                'applicationCategory' => (string) ($pluginApp['applicationCategory'] ?? 'BusinessApplication'),
+                'offers' => [
+                    '@type' => 'Offer',
+                    'price' => '0',
+                    'priceCurrency' => 'BDT',
+                ],
+                'publisher' => ['@id' => $orgId],
+                'author' => ['@id' => $orgId],
+            ];
+            $downloadUrl = is_string($pluginApp['downloadUrl'] ?? null) ? trim($pluginApp['downloadUrl']) : '';
+            if ($downloadUrl !== '') {
+                $pluginNode['downloadUrl'] = $downloadUrl;
+            }
+            $graphs[] = $pluginNode;
+        }
+
+        foreach (is_array($config['schema_images'] ?? null) ? $config['schema_images'] : [] as $image) {
+            if (! is_array($image)) {
+                continue;
+            }
+            $imageUrl = trim((string) ($image['url'] ?? $image['src'] ?? ''));
+            if ($imageUrl === '') {
+                continue;
+            }
+            if (! str_starts_with($imageUrl, 'http://') && ! str_starts_with($imageUrl, 'https://')) {
+                $imageUrl = $this->absoluteUrl($imageUrl);
+            }
+            $graphs[] = array_filter([
+                '@type' => 'ImageObject',
+                'url' => $imageUrl,
+                'contentUrl' => $imageUrl,
+                'width' => isset($image['width']) && is_numeric($image['width']) ? (int) $image['width'] : null,
+                'height' => isset($image['height']) && is_numeric($image['height']) ? (int) $image['height'] : null,
+                'caption' => is_string($image['caption'] ?? $image['alt'] ?? null)
+                    ? trim((string) ($image['caption'] ?? $image['alt']))
+                    : null,
+            ], static fn ($value) => $value !== null && $value !== '');
         }
 
         return [

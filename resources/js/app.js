@@ -38,6 +38,7 @@ function hideInitialLoader() {
 
 function markAppReady() {
     document.documentElement.classList.add('app-ready');
+    document.querySelector('#seo-prerender[data-single-h1]')?.remove();
     hideInitialLoader();
 }
 
