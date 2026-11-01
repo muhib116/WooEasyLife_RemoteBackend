@@ -173,6 +173,7 @@ class RbacAndEmployeeTest extends TestCase
             route('users.employees.store', $merchant->id),
             [
                 'name' => 'Photo Employee',
+                'email' => 'photo-employee@example.com',
                 'phone' => '01733333333',
                 'role_id' => $role->id,
                 'status' => true,
@@ -182,6 +183,7 @@ class RbacAndEmployeeTest extends TestCase
         );
 
         $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
 
         $employee = MerchantEmployee::query()->where('merchant_user_id', $merchant->id)->firstOrFail();
 

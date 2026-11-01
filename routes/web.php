@@ -405,6 +405,8 @@ Route::middleware(['auth', 'auth.active', 'platform.admin'])->group(function () 
         Route::get('/', [SystemMaintenanceController::class, 'index'])->name('index');
         Route::get('/status', [SystemMaintenanceController::class, 'status'])->name('status');
         Route::post('/run', [SystemMaintenanceController::class, 'run'])->name('run');
+        Route::put('/cache-driver', [SystemMaintenanceController::class, 'updateCacheDriver'])->name('cacheDriver.update');
+        Route::post('/cache-driver/reset', [SystemMaintenanceController::class, 'resetCacheDriver'])->name('cacheDriver.reset');
         Route::get('/gsc/connect', [GoogleSearchConsoleOAuthController::class, 'connect'])
             ->middleware('throttle:10,1')
             ->name('gsc.connect');

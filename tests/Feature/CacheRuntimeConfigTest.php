@@ -16,6 +16,7 @@ class CacheRuntimeConfigTest extends TestCase
         parent::setUp();
 
         CacheRuntimeConfig::clearMemoForTests();
+        app(CacheRuntimeConfig::class)->applyOverrides();
 
         PlatformSetting::query()->where('key', CacheRuntimeConfig::SETTING_KEY)->delete();
     }
