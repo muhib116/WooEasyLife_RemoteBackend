@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\CourierCheck\CourierCheckWporgLive;
 use App\Services\LandingAi\OpenAiModelCatalog;
 use App\Services\LandingSettingsService;
 use App\Services\ReturnAi\ReturnAiSettings;
@@ -17,6 +18,7 @@ class LandingSettingsController extends Controller
         private SubscriptionNotificationRuntimeConfig $subscriptionNotifications,
         private OpenAiModelCatalog $landingModels,
         private ReturnAiSettings $returnAi,
+        private CourierCheckWporgLive $courierCheckWporg,
     ) {}
 
     public function index(Request $request)
@@ -36,12 +38,24 @@ class LandingSettingsController extends Controller
                 'landing_model_list_fetched_at' => $catalog['fetched_at'],
                 'return_ai' => $this->returnAi->all(),
                 'return_ai_model_options' => $this->returnAi->modelOptions(),
+                'courier_check_wporg_live' => $this->courierCheckWporg->enabled(),
+                'courier_check_wporg_live_source' => $this->courierCheckWporg->source(),
             ]),
         ]);
     }
 
     public function update(Request $request)
     {
+        if ($request->exists('courier_check_wporg_live')) {
+            $request->validate([
+                'courier_check_wporg_live' => ['required', 'boolean'],
+            ]);
+
+            if ($request->boolean('courier_check_wporg_live') && ! $this->courierCheckWporg->isStoredOn()) {
+                $this->courierCheckWporg->ensureListingIsPublic();
+            }
+        }
+
         $stringFields = [
             'app_download_url',
             'play_store_url',
@@ -133,6 +147,10 @@ class LandingSettingsController extends Controller
                 'return_ai.min_confidence.min' => 'Auto actions need at least 95% confidence.',
             ]);
             $this->returnAi->update($returnAi['return_ai']);
+        }
+
+        if ($request->exists('courier_check_wporg_live')) {
+            $this->courierCheckWporg->update($request->boolean('courier_check_wporg_live'));
         }
 
         if ($request->exists('sms_expiry')) {

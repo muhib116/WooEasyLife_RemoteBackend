@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\CourierCheck\CourierCheckWporgLive;
 use App\Services\LandingSettingsService;
 use App\Services\SeoMetaService;
 use Illuminate\Support\Facades\Route;
@@ -15,12 +16,12 @@ class CourierCheckLanding
         LandingSettingsService $settings,
         bool $english,
     ): Response {
-        $live = filter_var(config('courier_check.wporg_live'), FILTER_VALIDATE_BOOLEAN);
+        $live = app(CourierCheckWporgLive::class)->enabled();
         $shots = self::screenshots($english);
         $overrides = [];
 
         if ($live) {
-            $downloadUrl = 'https://wordpress.org/plugins/easylife-courier-check/';
+            $downloadUrl = CourierCheckWporgLive::DOWNLOAD_URL;
             $overrides['plugin_download_url'] = $downloadUrl;
             $overrides['plugin_download_label'] = $english
                 ? 'Free download — WordPress.org'

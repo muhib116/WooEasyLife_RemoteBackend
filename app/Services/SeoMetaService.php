@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\CourierCheck\CourierCheckWporgLive;
 use App\Support\PublicCourierNames;
 use App\Support\PublicPricingFacts;
 use Illuminate\Support\Str;
@@ -982,7 +983,7 @@ class SeoMetaService
                 'author' => ['@id' => $orgId],
             ];
             $downloadUrl = is_string($pluginApp['downloadUrl'] ?? null) ? trim($pluginApp['downloadUrl']) : '';
-            if ($downloadUrl !== '') {
+            if ($downloadUrl === CourierCheckWporgLive::DOWNLOAD_URL) {
                 $pluginNode['downloadUrl'] = $downloadUrl;
             }
             $graphs[] = $pluginNode;

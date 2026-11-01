@@ -2,9 +2,8 @@
 
 return [
     /*
-    | WordPress.org listing for EasyLife Courier Check.
-    | Set COURIER_CHECK_WPORG_LIVE=false before config:cache until the plugin is public.
-    | filter_var keeps the string "false" false. A plain (bool) cast would not.
+    | EasyLife Courier Check on WordPress.org is controlled from
+    | Admin → Settings → Downloads. The choice is stored in platform settings.
+    | The environment is not read.
     */
-    'wporg_live' => filter_var(env('COURIER_CHECK_WPORG_LIVE', false), FILTER_VALIDATE_BOOLEAN),
 ];

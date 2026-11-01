@@ -526,6 +526,38 @@
                                 {{ form.errors[field.key] }}
                             </p>
                         </div>
+
+                        <div
+                            v-if="activeTab === 'downloads'"
+                            class="flex items-start justify-between gap-4 rounded-xl border border-gray-100 p-3 dark:border-gray-800"
+                        >
+                            <div class="min-w-0">
+                                <label
+                                    for="courier_check_wporg_live"
+                                    class="text-sm font-semibold text-gray-800 dark:text-white/90"
+                                >
+                                    EasyLife Courier Check on WordPress.org
+                                </label>
+                                <p class="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                                    On: the public landing links to the free plugin. This saves only when that WordPress.org page is public. Off: the button says it is coming soon.
+                                    <span
+                                        class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                                    >
+                                        active: {{ settings.courier_check_wporg_live_source ?? "default" }}
+                                    </span>
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                id="courier_check_wporg_live"
+                                v-model="form.courier_check_wporg_live"
+                            />
+                        </div>
+                        <p
+                            v-if="activeTab === 'downloads' && form.errors.courier_check_wporg_live"
+                            class="text-xs text-rose-500"
+                        >
+                            {{ form.errors.courier_check_wporg_live }}
+                        </p>
                     </template>
 
                     <div class="flex flex-wrap gap-2">
@@ -602,6 +634,8 @@ type LandingSettings = {
     image_model_options: string[];
     sms_expiry?: boolean;
     sms_expiry_source?: string;
+    courier_check_wporg_live?: boolean;
+    courier_check_wporg_live_source?: string;
     return_ai?: ReturnAiSettings;
     return_ai_model_options?: { value: string; label: string; hint: string; recommended: boolean }[];
 };
@@ -771,6 +805,7 @@ const form = useForm({
     openai_landing_model: props.settings.openai_landing_model || AUTO_MODEL,
     landing_ai_daily_limit: String(props.settings.landing_ai_daily_limit ?? 20),
     sms_expiry: props.settings.sms_expiry !== false,
+    courier_check_wporg_live: props.settings.courier_check_wporg_live === true,
     return_ai: {
         mode: props.settings.return_ai?.mode ?? "suggest",
         auto_note: props.settings.return_ai?.auto_note ?? false,
@@ -936,7 +971,7 @@ const activeCard = computed(() => {
 const sourceOf = (field: SettingsField) => String(props.settings[field.sourceKey] ?? "none");
 
 const tabForError = (field: string): TabValue | null => {
-    if (["app_download_url", "play_store_url", "plugin_download_url"].includes(field)) {
+    if (["app_download_url", "play_store_url", "plugin_download_url", "courier_check_wporg_live"].includes(field)) {
         return "downloads";
     }
 

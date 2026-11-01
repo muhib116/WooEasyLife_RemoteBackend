@@ -510,9 +510,9 @@
                 <p>
                     @if (! empty($seo['plugin_download_label']))
                         @if (! empty($seo['plugin_download_url']))
-                            <a href="{{ $seo['plugin_download_url'] }}" target="_blank" rel="noopener">{{ $seo['plugin_download_label'] }}</a>
+                            <a href="{{ $seo['plugin_download_url'] }}" target="_blank" rel="noopener noreferrer">{{ $seo['plugin_download_label'] }}</a>
                         @else
-                            <button type="button" aria-disabled="true">{{ $seo['plugin_download_label'] }}</button>
+                            <button type="button" disabled aria-disabled="true">{{ $seo['plugin_download_label'] }}</button>
                         @endif
                     @endif
                     @if (! empty($seo['plugin_checker_href']) && ! empty($seo['plugin_checker_label']))
@@ -525,9 +525,10 @@
             @endif
             @if (! empty($seo['plugin_footer']))
                 <p>
-                    {{ $seo['plugin_footer'] }}
                     @if (! empty($seo['plugin_about_href']))
-                        <a href="{{ $seo['plugin_about_href'] }}">About</a>
+                        <a href="{{ $seo['plugin_about_href'] }}">{{ $seo['plugin_footer'] }}</a>
+                    @else
+                        {{ $seo['plugin_footer'] }}
                     @endif
                 </p>
             @endif

@@ -2,11 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Models\PlatformSetting;
+use App\Models\User;
+use App\Services\CourierCheck\CourierCheckWporgLive;
+use App\Services\SeoMetaService;
 use App\Support\SeoPrerenderText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Inertia\Ssr\Gateway;
 use Inertia\Ssr\Response as SsrResponse;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class CourierCheckPluginPageTest extends TestCase
@@ -15,7 +22,7 @@ class CourierCheckPluginPageTest extends TestCase
 
     public function test_bangla_and_english_pages_are_crawlable_without_a_live_download(): void
     {
-        $this->assertFalse(filter_var(config('courier_check.wporg_live'), FILTER_VALIDATE_BOOLEAN));
+        $this->assertFalse(app(CourierCheckWporgLive::class)->enabled());
 
         $bn = $this->get('/courier-check-plugin');
         $en = $this->get('/en/courier-check-plugin');
@@ -44,22 +51,123 @@ class CourierCheckPluginPageTest extends TestCase
 
     public function test_live_flag_adds_the_wordpress_org_link_and_download_url(): void
     {
-        Config::set('courier_check.wporg_live', true);
+        app(CourierCheckWporgLive::class)->update(true);
 
         $response = $this->get('/courier-check-plugin');
 
         $response->assertOk();
         $response->assertSee('href="https://wordpress.org/plugins/easylife-courier-check/"', false);
         $response->assertSee('target="_blank"', false);
-        $response->assertSee('rel="noopener"', false);
+        $response->assertSee('rel="noopener noreferrer"', false);
         $response->assertSee('ফ্রি ডাউনলোড — WordPress.org', false);
         $response->assertSee('"downloadUrl":"https://wordpress.org/plugins/easylife-courier-check/"', false);
         $this->assertSame(1, substr_count($response->getContent(), '<h1'));
     }
 
-    public function test_string_false_keeps_the_download_off(): void
+    public function test_admin_setting_controls_the_download_without_env(): void
     {
-        Config::set('courier_check.wporg_live', 'false');
+        Config::set('courier_check.wporg_live', true);
+        $admin = User::create([
+            'name' => 'Settings Admin',
+            'email' => 'courier-check-admin-'.uniqid().'@example.com',
+            'phone' => '01700000991',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('landingSettings.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('LandingSettings/Index')
+                ->where('settings.courier_check_wporg_live', false)
+                ->where('settings.courier_check_wporg_live_source', 'default')
+            );
+
+        $this->actingAs($admin)
+            ->put(route('landingSettings.update'), [
+                'courier_check_wporg_live' => false,
+            ])
+            ->assertRedirect();
+
+        $this->assertFalse(app(CourierCheckWporgLive::class)->enabled());
+        $this->get('/courier-check-plugin')
+            ->assertOk()
+            ->assertDontSee('wordpress.org/plugins/easylife-courier-check', false)
+            ->assertSee('শীঘ্রই WordPress.org-এ আসছে', false);
+
+        Http::fake([
+            'https://wordpress.org/plugins/easylife-courier-check/' => Http::response('', 200),
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('landingSettings.update'), [
+                'courier_check_wporg_live' => true,
+            ])
+            ->assertRedirect();
+
+        Config::set('courier_check.wporg_live', false);
+
+        $this->assertTrue(app(CourierCheckWporgLive::class)->enabled());
+        $this->get('/en/courier-check-plugin')
+            ->assertOk()
+            ->assertSee('href="https://wordpress.org/plugins/easylife-courier-check/"', false)
+            ->assertSee('rel="noopener noreferrer"', false)
+            ->assertSee('Free download — WordPress.org', false);
+    }
+
+    public function test_admin_cannot_turn_the_download_on_while_wordpress_org_redirects_to_search(): void
+    {
+        Http::fake([
+            'https://wordpress.org/plugins/easylife-courier-check/' => Http::response('', 301, [
+                'Location' => 'https://wordpress.org/plugins/search/easylife-courier-check/',
+            ]),
+        ]);
+        $admin = User::create([
+            'name' => 'Settings Admin',
+            'email' => 'courier-check-admin-'.uniqid().'@example.com',
+            'phone' => '01700000992',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('landingSettings.index'))
+            ->put(route('landingSettings.update'), [
+                'courier_check_wporg_live' => true,
+            ])
+            ->assertRedirect(route('landingSettings.index'))
+            ->assertSessionHasErrors('courier_check_wporg_live');
+
+        $this->assertFalse(PlatformSetting::query()->where('key', CourierCheckWporgLive::SETTING_KEY)->exists());
+        $this->get('/courier-check-plugin')
+            ->assertOk()
+            ->assertDontSee('wordpress.org/plugins/easylife-courier-check', false)
+            ->assertSee('শীঘ্রই WordPress.org-এ আসছে', false);
+    }
+
+    public function test_json_ld_rejects_a_download_url_that_is_not_the_plugin_page(): void
+    {
+        $seo = app(SeoMetaService::class)->forPage('courier_check_plugin', [
+            'software_application' => [
+                'name' => 'EasyLife Courier Check',
+                'operatingSystem' => 'WordPress',
+                'applicationCategory' => 'BusinessApplication',
+                'downloadUrl' => 'https://evil.example/plugin',
+            ],
+        ]);
+
+        $encoded = json_encode($seo['json_ld']);
+        $this->assertIsString($encoded);
+        $this->assertStringNotContainsString('evil.example', $encoded);
+        $this->assertStringNotContainsString('downloadUrl', $encoded);
+    }
+
+    public function test_env_config_cannot_turn_the_download_on(): void
+    {
+        Config::set('courier_check.wporg_live', true);
 
         $this->get('/en/courier-check-plugin')
             ->assertOk()

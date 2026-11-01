@@ -48,7 +48,7 @@ const track = (name) => {
                         v-if="showDownload"
                         :href="downloadUrl"
                         target="_blank"
-                        rel="noopener"
+                        rel="noopener noreferrer"
                         class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 sm:w-auto"
                         @click="track('courier_plugin_download_click')"
                     >
