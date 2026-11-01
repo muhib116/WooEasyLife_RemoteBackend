@@ -105,6 +105,8 @@ class SeoPrerenderText
         '/wooeasylife/app/terms-of-service' => ['bn' => 'টার্মস অফ সার্ভিস', 'en' => 'Terms of Service'],
         '/wooeasylife/messenger/privacy-policy' => ['bn' => 'মেসেঞ্জার প্রাইভেসি পলিসি', 'en' => 'Messenger Privacy Policy'],
         '/wooeasylife/messenger/terms-of-service' => ['bn' => 'মেসেঞ্জার টার্মস অফ সার্ভিস', 'en' => 'Messenger Terms of Service'],
+        '/wooeasylife/courier-check/privacy-policy' => ['bn' => 'কুরিয়ার চেক প্রাইভেসি পলিসি', 'en' => 'Courier Check Privacy Policy'],
+        '/wooeasylife/courier-check/terms-of-service' => ['bn' => 'কুরিয়ার চেক টার্মস অফ সার্ভিস', 'en' => 'Courier Check Terms of Service'],
     ];
 
     /**

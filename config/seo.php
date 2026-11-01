@@ -1943,6 +1943,8 @@ return [
             ['path' => '/wooeasylife/messenger/privacy-policy', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/messenger/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['path' => '/wooeasylife/app/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],
+            ['path' => '/wooeasylife/courier-check/privacy-policy', 'priority' => '0.3', 'changefreq' => 'yearly'],
+            ['path' => '/wooeasylife/courier-check/terms-of-service', 'priority' => '0.3', 'changefreq' => 'yearly'],
         ],
     ],
 ];
