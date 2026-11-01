@@ -98,6 +98,29 @@ class PublicFraudCheckService
         ];
     }
 
+    /**
+     * Same phone check and 75/45 label as check(), without the website IP or daily counters.
+     *
+     * @return array{risk_label: string, risk_tone: string, report: array<string, mixed>}
+     */
+    public function lookup(string $phone, string $locale = 'bn', ?Request $request = null): array
+    {
+        $normalizedPhone = $this->fraudCheckService->normalizePhone($phone);
+        $request ??= Request::create('/api/courier-check/v1/check', 'POST', [
+            'phone' => $normalizedPhone,
+        ]);
+
+        $report = $this->fraudCheckCoordinator->checkSingle($request, [
+            'phone' => $normalizedPhone,
+        ]);
+
+        return [
+            'risk_label' => $this->riskLabel($report, $locale),
+            'risk_tone' => $this->riskTone($report, $locale),
+            'report' => $report,
+        ];
+    }
+
     public function dailySearchCount(): int
     {
         return (int) Cache::get($this->dailyCountKey(), 0);
