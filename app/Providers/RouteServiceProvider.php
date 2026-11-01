@@ -64,6 +64,9 @@ class RouteServiceProvider extends ServiceProvider
 
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
+
+            // Courier Check plugin API and its legal pages. Middleware is set in the file.
+            Route::group([], base_path('routes/courier_check.php'));
         });
     }
 }
