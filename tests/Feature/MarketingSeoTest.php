@@ -1493,7 +1493,9 @@ class MarketingSeoTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('https://www.googletagmanager.com/gtag/js?id=G-V3TDVR7ED9', false);
-        $response->assertSee("gtag('config', \"G-V3TDVR7ED9\")", false);
+        $response->assertSee("gtag('config', \"G-V3TDVR7ED9\"", false);
+        $response->assertSee('page_location: window.__cleanLocation', false);
+        $response->assertSee('page_referrer: window.__cleanReferrer', false);
     }
 
     public function test_home_omits_ga4_gtag_when_measurement_id_empty(): void

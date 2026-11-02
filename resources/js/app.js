@@ -17,6 +17,40 @@ import ToastService from 'primevue/toastservice';
 import { CkeditorPlugin } from '@ckeditor/ckeditor5-vue'
 import DialogService from 'primevue/dialogservice';
 import axios from 'axios';
+import { cleanUrl, stripSensitiveQueryFromLocation } from './utils/analytics';
+
+function cleanInitialPageUrl() {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const el = document.getElementById('app');
+
+    if (!el?.dataset?.page) {
+        return;
+    }
+
+    try {
+        const page = JSON.parse(el.dataset.page);
+
+        if (typeof page.url !== 'string') {
+            return;
+        }
+
+        const cleaned = cleanUrl(page.url);
+
+        if (cleaned === page.url) {
+            return;
+        }
+
+        page.url = cleaned;
+        el.dataset.page = JSON.stringify(page);
+    } catch {
+        // Keep the original page payload when it is not JSON.
+    }
+}
+
+cleanInitialPageUrl();
 
 // set axios default Bearer token
 axios.defaults.headers.common['Authorization'] = `Bearer Kod30eDnI1EFG9vaf9gBPsSwaD3IkklCIATZoSYz9cf733bd`;
@@ -51,9 +85,23 @@ createInertiaApp({
         let metaPixelInitialPage = true;
 
         router.on('navigate', (event) => {
+            const page = event.detail?.page;
+
+            if (page && typeof page.url === 'string') {
+                page.url = cleanUrl(page.url);
+            }
+
+            stripSensitiveQueryFromLocation();
+
             // SPA PageView after initial Blade boot.
+            // The first navigate is after the checker has read a stashed phone.
             if (metaPixelInitialPage) {
                 metaPixelInitialPage = false;
+                try {
+                    delete window.__fraudCheckPhone;
+                } catch {
+                    window.__fraudCheckPhone = '';
+                }
                 return;
             }
 
@@ -63,8 +111,8 @@ createInertiaApp({
 
             if (typeof window.gtag === 'function') {
                 window.gtag('event', 'page_view', {
-                    page_path: event.detail.page.url,
-                    page_location: window.location.href,
+                    page_path: cleanUrl(event.detail.page.url),
+                    page_location: cleanUrl(window.location.href),
                     page_title: document.title,
                 });
             }

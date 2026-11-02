@@ -275,7 +275,8 @@ import { AuthenticatedLayout } from "@/layouts";
 import PageHeader from "@/Pages/Users/fragments/PageHeader.vue";
 import PageCard from "@/Pages/Users/fragments/PageCard.vue";
 import { router, useForm } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
+import { stripSensitiveQueryFromLocationSoon } from "@/utils/analytics";
 
 const props = defineProps({
     summary: { type: Object, required: true },
@@ -285,6 +286,10 @@ const props = defineProps({
 });
 
 const form = useForm({ phone: props.phone || "" });
+
+onMounted(() => {
+    stripSensitiveQueryFromLocationSoon();
+});
 
 const headline = computed(() => [
     { label: "Phones", value: props.summary.phones, hint: "Numbers stored on the platform" },
@@ -336,6 +341,7 @@ function search() {
     form.get(route("frauds.dashboard"), {
         preserveScroll: true,
         replace: true,
+        onFinish: () => stripSensitiveQueryFromLocationSoon(),
     });
 }
 

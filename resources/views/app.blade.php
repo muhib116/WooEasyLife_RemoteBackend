@@ -1,9 +1,45 @@
+@php
+    if (isset($page['url']) && is_string($page['url'])) {
+        $page['url'] = \App\Support\SensitiveQuery::strip($page['url']);
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="{{ ($seo['html_lang'] ?? null) ?: str_replace('_', '-', app()->getLocale()) }}" class="light">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+        (function () {
+            try {
+                var url = new URL(window.location.href);
+                var phone = url.searchParams.get('phone');
+                if (phone) window.__fraudCheckPhone = phone;
+                var keys = [];
+                url.searchParams.forEach(function (value, key) {
+                    var name = String(key).toLowerCase();
+                    if (name === 'phone' || name === 'mobile' || name === 'number') keys.push(key);
+                });
+                keys.forEach(function (key) { url.searchParams.delete(key); });
+                if (keys.length) {
+                    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+                }
+                window.__cleanLocation = url.toString();
+                var referrer = document.referrer;
+                try {
+                    var referrerUrl = new URL(referrer);
+                    var referrerKeys = [];
+                    referrerUrl.searchParams.forEach(function (value, key) {
+                        var name = String(key).toLowerCase();
+                        if (name === 'phone' || name === 'mobile' || name === 'number') referrerKeys.push(key);
+                    });
+                    referrerKeys.forEach(function (key) { referrerUrl.searchParams.delete(key); });
+                    referrer = referrerUrl.toString();
+                } catch (e) {}
+                window.__cleanReferrer = referrer;
+            } catch (e) {}
+        })();
+    </script>
 
     @php
         $configuredAppName = (string) config('app.name', '');
@@ -81,7 +117,7 @@
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', @json($gaMeasurementId));
+            gtag('config', @json($gaMeasurementId), { page_location: window.__cleanLocation, page_referrer: window.__cleanReferrer });
         </script>
     @endif
 

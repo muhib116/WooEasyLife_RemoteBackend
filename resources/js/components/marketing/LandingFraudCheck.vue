@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
-import { trackFraudCheckComplete } from '@/utils/analytics';
+import { cleanUrl, stripSensitiveQueryFromLocation, stripSensitiveQueryFromLocationSoon, trackFraudCheckComplete } from '@/utils/analytics';
 import { trackSearch } from '@/utils/metaPixel';
 import { trackToolAction } from '@/utils/siteVisitors';
 import { primaryCtaLabel, primaryCtaUrl } from '@/utils/marketingCta';
@@ -267,7 +267,24 @@ onMounted(() => {
         return;
     }
 
-    const queryPhone = new URLSearchParams(window.location.search).get('phone');
+    const fromQuery = new URLSearchParams(window.location.search).get('phone');
+    const stashed = typeof window.__fraudCheckPhone === 'string' ? window.__fraudCheckPhone : '';
+
+    try {
+        delete window.__fraudCheckPhone;
+    } catch {
+        window.__fraudCheckPhone = '';
+    }
+
+    const queryPhone = fromQuery || stashed;
+
+    if (router.page && typeof router.page.url === 'string') {
+        router.page.url = cleanUrl(router.page.url);
+    }
+
+    stripSensitiveQueryFromLocation();
+    stripSensitiveQueryFromLocationSoon();
+
     if (! queryPhone) {
         return;
     }

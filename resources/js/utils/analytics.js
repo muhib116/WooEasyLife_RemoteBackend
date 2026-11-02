@@ -29,6 +29,127 @@ const LABEL_BAND = {
 const trackedFraudResults = new WeakSet();
 const trackedSubscriptionIds = new Set();
 
+const SENSITIVE_QUERY_KEYS = ['phone', 'mobile', 'number'];
+
+function deleteSensitiveParams(params) {
+    const keys = [];
+
+    params.forEach((value, key) => {
+        if (SENSITIVE_QUERY_KEYS.includes(String(key).toLowerCase())) {
+            keys.push(key);
+        }
+    });
+
+    keys.forEach((key) => params.delete(key));
+}
+
+/**
+ * Drop phone, mobile, and number from a URL. Other query params and the hash stay.
+ * Absolute hrefs stay absolute. A path (or ?query / #hash) stays a path.
+ */
+export function cleanUrl(href) {
+    if (typeof href !== 'string' || href === '') {
+        return '';
+    }
+
+    const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(href);
+    const relative = href.startsWith('/') || href.startsWith('?') || href.startsWith('#');
+
+    if (!hasScheme && !relative) {
+        return href;
+    }
+
+    try {
+        const url = new URL(href, 'https://app.wpsalehub.com');
+        deleteSensitiveParams(url.searchParams);
+
+        if (!hasScheme) {
+            return `${url.pathname}${url.search}${url.hash}`;
+        }
+
+        return url.toString();
+    } catch {
+        return href;
+    }
+}
+
+/**
+ * Remove phone, mobile, and number from the address bar without a reload.
+ * The existing history state is kept so Inertia can still restore the page.
+ * Its url is cleaned too, so a later scroll save does not write the number back.
+ */
+function browserWindow() {
+    if (typeof window !== 'undefined') {
+        return window;
+    }
+
+    if (typeof globalThis !== 'undefined' && globalThis.window) {
+        return globalThis.window;
+    }
+
+    return undefined;
+}
+
+export function stripSensitiveQueryFromLocation() {
+    const browser = browserWindow();
+
+    if (!browser) {
+        return;
+    }
+
+    const url = new URL(browser.location.href);
+
+    const before = url.search;
+    deleteSensitiveParams(url.searchParams);
+
+    if (url.search === before) {
+        return;
+    }
+
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    const state = browser.history.state;
+
+    try {
+        if (state && typeof state === 'object' && typeof state.url === 'string') {
+            state.url = cleanUrl(state.url);
+        }
+    } catch {
+        // Keep the address-bar update even if the history object is sealed.
+    }
+
+    browser.history.replaceState(state, '', next);
+}
+
+/**
+ * Inertia writes the original page url after setup. Stripping before that
+ * write makes the urls differ, so Inertia pushes a second history entry.
+ * Read the query first, then call this so the removal happens after that write.
+ */
+export function stripSensitiveQueryFromLocationSoon() {
+    queueMicrotask(() => {
+        stripSensitiveQueryFromLocation();
+        setTimeout(stripSensitiveQueryFromLocation, 0);
+    });
+}
+
+function looksLikeUrl(value) {
+    return value.startsWith('/') || value.startsWith('?') || value.startsWith('#') || /^[a-z][a-z0-9+.-]*:/i.test(value);
+}
+
+function sanitizeEventParams(params) {
+    const clean = {};
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (SENSITIVE_QUERY_KEYS.includes(String(key).toLowerCase())) {
+            return;
+        }
+
+        clean[key] = typeof value === 'string' && looksLikeUrl(value) ? cleanUrl(value) : value;
+    });
+
+    return clean;
+}
+
 /**
  * GA4 via the gtag.js stub in resources/views/app.blade.php.
  * Never throws if the tag is blocked or missing.
@@ -39,7 +160,7 @@ const trackedSubscriptionIds = new Set();
 export function trackEvent(name, params = {}) {
     try {
         if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-            window.gtag('event', name, params);
+            window.gtag('event', name, sanitizeEventParams(params));
         }
     } catch {
         // Analytics must not break the page.

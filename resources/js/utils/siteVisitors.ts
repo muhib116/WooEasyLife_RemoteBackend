@@ -1,3 +1,5 @@
+import { cleanUrl } from './analytics';
+
 const VISITOR_KEY = 'wel_site_vid';
 const UTM_KEY = 'wel_site_utm';
 const ENDPOINT = '/analytics/visitors/event';
@@ -154,7 +156,8 @@ function extractSearchKeywordFromReferrer(referrer?: string): string | undefined
 
 function basePayload(path: string, event: SiteVisitorEvent): TrackPayload {
     const utms = captureUtmsFromLocation();
-    const referrer = typeof document !== 'undefined' ? document.referrer || undefined : undefined;
+    const rawReferrer = typeof document !== 'undefined' ? document.referrer || undefined : undefined;
+    const referrer = rawReferrer ? cleanUrl(rawReferrer) || undefined : undefined;
     const searchKeyword = utms.utm_term || extractSearchKeywordFromReferrer(referrer);
 
     return {

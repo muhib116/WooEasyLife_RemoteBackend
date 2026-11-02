@@ -4,6 +4,7 @@ namespace App\Services\Ads;
 
 use App\Models\SubscriptionInquiry;
 use App\Services\LandingSettingsService;
+use App\Support\SensitiveQuery;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -222,7 +223,7 @@ class OpenAiAdsConversions
 
     private function sourceUrl(Request $request): string
     {
-        $referer = trim((string) $request->headers->get('referer'));
+        $referer = SensitiveQuery::strip(trim((string) $request->headers->get('referer')));
         $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
         $refererHost = parse_url($referer, PHP_URL_HOST);
 
