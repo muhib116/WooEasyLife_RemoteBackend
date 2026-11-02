@@ -747,7 +747,7 @@ class MarketingSeoTest extends TestCase
         $this->assertNotNull($person);
         $this->assertSame('Muhibbullah Ansary', $person['name'] ?? null);
         $this->assertStringContainsString(
-            'founder-headshot',
+            'muhibbullah-ansary.jpg',
             (string) (is_array($person['image'] ?? null) ? ($person['image']['url'] ?? '') : ($person['image'] ?? ''))
         );
         $this->assertContains('https://www.linkedin.com/in/dev-muhib', $person['sameAs'] ?? []);
@@ -757,9 +757,16 @@ class MarketingSeoTest extends TestCase
         $this->assertNotContains('https://freetoolssite.com/', $person['sameAs'] ?? []);
         $this->assertSame('Founder & CEO, WPSaleHub · Creator of WooEasyLife', $person['jobTitle'] ?? null);
         $this->assertStringContainsString('WooEasyLife', (string) ($person['description'] ?? ''));
-        $this->assertContains('WooEasyLife', $person['knowsAbout'] ?? []);
+        $this->assertSame([
+            'WooCommerce',
+            'Courier fraud check',
+            'Cash on delivery e-commerce in Bangladesh',
+            'WordPress',
+            'Vue.js',
+            'Laravel',
+        ], $person['knowsAbout'] ?? null);
         $this->assertIsArray($person['image'] ?? null);
-        $this->assertStringContainsString('founder-headshot', (string) ($person['image']['contentUrl'] ?? $person['image']['url'] ?? ''));
+        $this->assertStringContainsString('muhibbullah-ansary.jpg', (string) ($person['image']['contentUrl'] ?? $person['image']['url'] ?? ''));
 
         $org = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'Organization');
         $this->assertNotNull($org);
@@ -788,13 +795,21 @@ class MarketingSeoTest extends TestCase
         $faq = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'FAQPage');
         $this->assertNull($faq, 'About must not emit FAQPage (GSC FAQ enhancement not eligible)');
 
-        $aboutPage = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'AboutPage');
+        $aboutPage = $graph->first(function (array $node): bool {
+            $types = $node['@type'] ?? null;
+            $types = is_array($types) ? $types : [$types];
+
+            return in_array('AboutPage', $types, true);
+        });
         $this->assertNotNull($aboutPage);
+        $aboutTypes = $aboutPage['@type'] ?? null;
+        $aboutTypes = is_array($aboutTypes) ? $aboutTypes : [$aboutTypes];
+        $this->assertContains('ProfilePage', $aboutTypes);
         $this->assertStringEndsWith('#webpage', (string) ($aboutPage['@id'] ?? ''));
         $this->assertNull($graph->first(fn (array $node) => ($node['@id'] ?? null) === ($seo['canonical'] ?? '').'#article'));
         $this->assertSame('+8801770989591', $person['telephone'] ?? null);
         $this->assertIsArray($person['image'] ?? null);
-        $this->assertStringContainsString('founder-headshot', (string) ($person['image']['url'] ?? ''));
+        $this->assertStringContainsString('muhibbullah-ansary.jpg', (string) ($person['image']['url'] ?? ''));
 
         $crumb = $graph->first(fn (array $node) => ($node['@type'] ?? null) === 'BreadcrumbList');
         $this->assertNotNull($crumb, 'About should keep BreadcrumbList');
@@ -823,7 +838,7 @@ class MarketingSeoTest extends TestCase
             $firstAboutImg = $m[1];
         }
         $this->assertNotNull($firstAboutImg);
-        $this->assertStringContainsString('founder-headshot.jpg', $firstAboutImg);
+        $this->assertStringContainsString('muhibbullah-ansary.jpg', $firstAboutImg);
 
         $en = $this->get('/en/about');
         $en->assertOk();
@@ -842,7 +857,7 @@ class MarketingSeoTest extends TestCase
             $firstEnAboutImg = $m[1];
         }
         $this->assertNotNull($firstEnAboutImg);
-        $this->assertStringContainsString('founder-headshot.jpg', $firstEnAboutImg);
+        $this->assertStringContainsString('muhibbullah-ansary.jpg', $firstEnAboutImg);
 
         $llms = $this->get('/llms.txt');
         $llms->assertOk();

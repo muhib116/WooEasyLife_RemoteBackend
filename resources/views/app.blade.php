@@ -525,6 +525,13 @@
     @isset($seo)
         @php
             $isEnPrerender = str_starts_with((string) ($seo['html_lang'] ?? 'bn-BD'), 'en');
+            $prerenderPath = (string) ($seo['canonical_path'] ?? '');
+            $prerenderComponent = (string) ($page['component'] ?? '');
+            $showFounderByline = ($seo['page_kind'] ?? null) !== 'about'
+                && (
+                    str_starts_with($prerenderComponent, 'Seo/')
+                    || preg_match('#^/(en/)?blog/.+#', $prerenderPath) === 1
+                );
         @endphp
         <section id="seo-prerender"@if (! empty($seo['single_h1'])) data-single-h1 @endif>
             @php
@@ -535,6 +542,17 @@
                 <p>{{ $prerenderTitle }}</p>
             @else
                 <h1>{{ $prerenderTitle }}</h1>
+            @endif
+            @if (($seo['page_kind'] ?? null) === 'about')
+                @include('seo.founder-entity')
+            @elseif ($showFounderByline)
+                <p>
+                    @if ($isEnPrerender)
+                        <a href="/en/about">Written by Muhibbullah Ansary</a>
+                    @else
+                        <a href="/about">লিখেছেন: মুহিব্বুল্লাহ আনসারী</a>
+                    @endif
+                </p>
             @endif
             @if (($seo['canonical_path'] ?? '') === '/en/bd-fraud-checker')
                 <p><a href="/bd-fraud-checker">বাংলায় দেখুন</a></p>
@@ -674,20 +692,6 @@
                         </button>
                     </form>
                 </div>
-            @endif
-            @if (($seo['page_kind'] ?? null) === 'about' && ! empty($seo['author_image']))
-                <figure>
-                    <img
-                        src="{{ $seo['author_image'] }}"
-                        alt="{{ ($seo['author_name'] ?? 'Muhibbullah Ansary').' — '.($seo['author_role'] ?? 'Founder & CEO, WPSaleHub') }}"
-                        width="1200"
-                        height="1200"
-                        loading="eager"
-                        decoding="async"
-                        fetchpriority="high"
-                    />
-                    <figcaption>{{ $seo['author_name'] ?? 'Muhibbullah Ansary' }} — {{ $seo['author_role'] ?? 'Founder & CEO, WPSaleHub' }}</figcaption>
-                </figure>
             @endif
             @if (in_array((string) ($seo['canonical_path'] ?? ''), ['/woocommerce-mobile-app', '/en/woocommerce-mobile-app'], true))
                 <p>

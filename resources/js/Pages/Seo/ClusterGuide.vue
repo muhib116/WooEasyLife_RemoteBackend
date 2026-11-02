@@ -32,9 +32,33 @@ const isMobileApp = computed(() => String(props.seo?.canonical || '').includes('
 const playStoreUrl = PLAY_STORE_URL;
 const sections = computed(() => props.seo?.content_sections || []);
 const clusterLinks = computed(() => props.seo?.cluster_links || []);
-const founderPortrait = computed(() => props.seo?.author_image || '/images/seo/about/founder-headshot.jpg');
+const founderPortrait = computed(() => props.seo?.author_image || '/images/seo/about/muhibbullah-ansary.jpg');
 const founderName = computed(() => props.seo?.author_name || 'Muhibbullah Ansary');
 const founderRole = computed(() => props.seo?.author_role || 'Founder & CEO, WPSaleHub');
+const founderAlt = 'Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী), Founder of WPSaleHub';
+const founderAnswerBn = 'মুহিব্বুল্লাহ আনসারী (Muhibbullah Ansary, অনেকে ডাকেন Muhib) বাংলাদেশের একজন web developer এবং WPSaleHub-এর প্রতিষ্ঠাতা। তিনি বাংলাদেশের WooCommerce ও cash on delivery seller-দের জন্য WooEasyLife বানিয়েছেন, যেখানে courier history check, fake order protection আর courier auto entry আছে। তিনি ফ্রি EasyLife Courier Check plugin, courierfraudbd.com আর বাংলা শেখার সাইট Web Guide BD-ও চালান।';
+const founderAnswerEn = 'Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী, also called Muhib) is a web developer in Bangladesh and the founder of WPSaleHub. He built WooEasyLife for WooCommerce and cash on delivery sellers in Bangladesh, with courier history check, fake order protection, and courier auto entry. He also runs the free EasyLife Courier Check plugin, courierfraudbd.com, and Web Guide BD, a Bangla learning site.';
+const founderProducts = [
+    { href: '/', label: 'WooEasyLife' },
+    { href: '/courier-check-plugin', label: 'EasyLife Courier Check (free WordPress plugin)' },
+    { href: PLAY_STORE_URL, label: 'Woo Easy Life Android app' },
+    { href: 'https://courierfraudbd.com/', label: 'Courier Fraud Check BD' },
+    { href: 'https://webguidebd.site/', label: 'Web Guide BD' },
+];
+const founderProfiles = [
+    { href: 'https://www.linkedin.com/in/dev-muhib', label: 'LinkedIn' },
+    { href: 'https://www.facebook.com/muhib116', label: 'Facebook' },
+    { href: 'https://www.instagram.com/muhibbullah611/', label: 'Instagram' },
+    { href: 'https://www.youtube.com/channel/UCiEVvaV8O6VBKzU3d7ezKGg', label: 'YouTube' },
+    { href: 'https://www.tiktok.com/@muhibbullah116', label: 'TikTok' },
+    { href: 'https://medium.com/@dev.muhibbullah', label: 'Medium' },
+    { href: 'https://www.pinterest.com/devmuhibbullah/', label: 'Pinterest' },
+    { href: 'https://github.com/muhib116', label: 'GitHub' },
+    { href: 'https://dev.to/muhib116', label: 'DEV' },
+    { href: 'https://profiles.wordpress.org/muhibbullah/', label: 'WordPress.org' },
+    { href: 'https://webguidebd.site/muhibbullah-ansary/', label: 'Web Guide BD' },
+    { href: 'https://courierfraudbd.com/about/', label: 'Courier Fraud Check BD' },
+];
 
 const isRedundantStubSection = (section) => {
     if (!section) return true;
@@ -243,6 +267,12 @@ onUnmounted(() => {
                         <h1 class="mt-4 max-w-3xl break-words text-[1.7rem] font-extrabold !leading-[1.15] text-white sm:text-4xl lg:text-[2.75rem]">
                             {{ seo?.prerender_h1 }}
                         </h1>
+                        <p v-if="isAbout" class="mt-3 text-sm font-semibold text-amber-200 sm:text-base">
+                            {{ isEn ? 'Founder of WPSaleHub · Creator of WooEasyLife' : 'WPSaleHub-এর প্রতিষ্ঠাতা · WooEasyLife-এর নির্মাতা' }}
+                        </p>
+                        <p v-if="isAbout" class="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-lg">
+                            {{ isEn ? founderAnswerEn : founderAnswerBn }}
+                        </p>
                         <p class="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-lg">
                             <LinkedRichText :text="seo?.prerender_lead || ''" :is-en="isEn" />
                         </p>
@@ -308,7 +338,7 @@ onUnmounted(() => {
                             />
                             <img
                                 :src="founderPortrait"
-                                :alt="`${founderName} — ${founderRole}`"
+                                :alt="isAbout ? founderAlt : `${founderName} — ${founderRole}`"
                                 class="relative z-[1] h-full w-full rounded-full object-cover drop-shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
                                 width="1200"
                                 height="1200"
@@ -336,6 +366,36 @@ onUnmounted(() => {
                             <p class="mt-0.5 text-[10px] leading-snug text-slate-400 sm:text-xs">{{ stat.label }}</p>
                         </div>
                     </aside>
+                </div>
+
+                <div v-if="isAbout" class="mt-10 grid gap-8 border-t border-white/10 pt-8 sm:grid-cols-2">
+                    <section>
+                        <h2 class="text-xl font-bold text-white">{{ isEn ? 'Products' : 'যা বানিয়েছি' }}</h2>
+                        <ul class="mt-4 space-y-2">
+                            <li v-for="product in founderProducts" :key="product.href">
+                                <a
+                                    :href="product.href"
+                                    class="text-sm font-semibold text-amber-200 hover:text-amber-100"
+                                >
+                                    {{ product.label }}
+                                </a>
+                            </li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2 class="text-xl font-bold text-white">Profiles</h2>
+                        <ul class="mt-4 flex flex-wrap gap-2">
+                            <li v-for="profile in founderProfiles" :key="profile.href">
+                                <a
+                                    :href="profile.href"
+                                    rel="me"
+                                    class="inline-flex rounded-full border border-white/15 px-3 py-1.5 text-sm text-slate-200 hover:border-amber-400/40 hover:text-amber-100"
+                                >
+                                    {{ profile.label }}
+                                </a>
+                            </li>
+                        </ul>
+                    </section>
                 </div>
             </div>
         </section>

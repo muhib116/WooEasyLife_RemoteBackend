@@ -33,6 +33,8 @@ const props = defineProps({
 
 const page = usePage();
 const mobileOpen = ref(false);
+const showFounderByline = computed(() => Boolean(page.props.seo?.founder_byline));
+const founderBylineEn = computed(() => String(page.props.seo?.html_lang || '').startsWith('en'));
 
 const marketing = computed(() => page.props.marketing ?? {});
 const seoContentSections = computed(() => (
@@ -607,6 +609,10 @@ onUnmounted(() => {
         </header>
 
         <main>
+            <p v-if="showFounderByline" class="mx-auto max-w-5xl px-4 pt-4 text-sm text-slate-400 lg:px-8">
+                <Link v-if="founderBylineEn" href="/en/about" class="hover:text-amber-300">Written by Muhibbullah Ansary</Link>
+                <Link v-else href="/about" class="hover:text-amber-300">লিখেছেন: মুহিব্বুল্লাহ আনসারী</Link>
+            </p>
             <slot />
             <SeoContentSections :sections="seoContentSections" />
         </main>

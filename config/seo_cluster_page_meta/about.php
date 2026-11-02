@@ -21,7 +21,7 @@ return [
         ['name' => 'হোম', 'path' => '/'],
         ['name' => 'About', 'path' => '/about'],
     ],
-    'prerender_h1' => 'Muhibbullah Ansary — WPSaleHub ও WooEasyLife-এর প্রতিষ্ঠাতা',
+    'prerender_h1' => 'মুহিব্বুল্লাহ আনসারী (Muhibbullah Ansary)',
     'prerender_lead' => 'WPSaleHub ও WooEasyLife-এর owner / Founder & CEO Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী)। Automating Business. Empowering People.',
     'faqs' => [
         [
@@ -67,7 +67,7 @@ return [
     'date_modified' => '2026-07-26',
     'author_name' => 'Muhibbullah Ansary',
     'author_role' => 'Founder & CEO, WPSaleHub · Creator of WooEasyLife',
-    'author_image' => '/images/seo/about/founder-headshot.jpg',
+    'author_image' => '/images/seo/about/muhibbullah-ansary.jpg',
     'schema_type' => 'AboutPage',
     'person_email' => 'dev.muhibbullah@gmail.com',
     'person_telephone' => '+8801770989591',

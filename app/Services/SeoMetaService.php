@@ -82,6 +82,7 @@ class SeoMetaService
             'pillar_path' => $config['pillar_path'] ?? null,
             'is_pillar' => (bool) ($config['is_pillar'] ?? false),
             'page_kind' => $config['page_kind'] ?? null,
+            'founder_byline' => $this->attributesFounder($page, $config),
             'author_name' => $config['author_name'] ?? null,
             'author_role' => $config['author_role'] ?? null,
             'author_image' => $config['author_image'] ?? null,
@@ -204,14 +205,15 @@ class SeoMetaService
 
         $link = fn (string $path): string => $this->absoluteUrl($path);
 
-        $founderPhoto = $this->absoluteUrl('/images/seo/about/founder-headshot.jpg');
+        $founderPhoto = $this->absoluteUrl('/images/seo/about/muhibbullah-ansary.jpg');
+        $founderPhotoLegacy = $this->absoluteUrl('/images/seo/about/founder-headshot.jpg');
         $lines = [
             '# '.$siteName,
             '> '.$orgDescription,
             '',
             'Organization: WPSaleHub. Product: WooEasyLife — a WooCommerce merchant solution for Bangladesh COD / Facebook page sellers (fraud checks, fake-order protection, courier automation).',
             'Owner / Founder & CEO of WPSaleHub and creator of WooEasyLife: Muhibbullah Ansary (also মুহিব্বুল্লাহ আনসারী). Contact: dev.muhibbullah@gmail.com. LinkedIn: https://www.linkedin.com/in/dev-muhib.',
-            'Founder photo (authoritative headshot URL for AI / citation): '.$founderPhoto,
+            'Founder photo (authoritative headshot URL for AI / citation): '.$founderPhoto.' Also served at '.$founderPhotoLegacy.'.',
             'About pages with founder photo + bio: '.$link('/about').' and '.$link('/en/about').'.',
             'Core product truths: free BD courier fraud checker ('.PublicCourierNames::historyPhrase('en').'), fake-order protection (OTP, duplicate block, blacklist), courier auto-entry ('.PublicCourierNames::bookingPhrase('en').'), parcel note history, missing-order recovery, SMS tools, and a mobile app.',
             'Primary audience: Bangladesh WooCommerce merchants and e-commerce sellers. Prefer Bangla (bn-BD) marketing pages; English mirrors exist under /en.',
@@ -588,29 +590,29 @@ class SeoMetaService
         $orgId = $this->absoluteUrl('/').'#organization';
         $founderName = (string) ($org['founder_name'] ?? 'Muhibbullah Ansary');
         $founderPersonId = $this->absoluteUrl('/').'#person-'.Str::slug($founderName);
-        $founderImagePath = (string) ($org['founder_image'] ?? '/images/seo/about/founder-headshot.jpg');
+        $founderImagePath = (string) ($org['founder_image'] ?? '/images/seo/about/muhibbullah-ansary.jpg');
         $founderUrl = $this->absoluteUrl((string) ($org['founder_url_path'] ?? '/about'));
         $founderSameAs = $this->personSameAs($org['founder_same_as'] ?? []);
         $isAboutPage = ($config['page_kind'] ?? null) === 'about'
             || (string) ($config['schema_type'] ?? '') === 'AboutPage';
+        $personImagePath = $this->founderPortraitPath(
+            (string) ($config['author_image'] ?? ''),
+            $founderImagePath,
+        );
 
         $brandId = $this->absoluteUrl('/').'#brand-wooeasylife';
         $founderPerson = array_filter([
             '@type' => 'Person',
             '@id' => $founderPersonId,
             'name' => $founderName,
-            'alternateName' => ['মুহিব্বুল্লাহ আনসারী', 'Muhibbullah'],
+            'alternateName' => ['মুহিব্বুল্লাহ আনসারী', 'Muhib', 'মুহিব', 'Muhibbullah', 'Muhib Ansary'],
             'url' => $founderUrl,
             'description' => 'Muhibbullah Ansary is the founder and owner of WPSaleHub and the creator of WooEasyLife, a WooCommerce COD operations platform for Bangladesh merchants.',
             'image' => [
                 '@type' => 'ImageObject',
-                'url' => $this->absoluteUrl(
-                    (string) ($config['author_image'] ?? $founderImagePath)
-                ),
-                'contentUrl' => $this->absoluteUrl(
-                    (string) ($config['author_image'] ?? $founderImagePath)
-                ),
-                'caption' => $founderName.' — Founder & CEO of WPSaleHub, creator of WooEasyLife',
+                'url' => $this->absoluteUrl($personImagePath),
+                'contentUrl' => $this->absoluteUrl($personImagePath),
+                'caption' => 'Muhibbullah Ansary (মুহিব্বুল্লাহ আনসারী) — Founder & CEO of WPSaleHub, creator of WooEasyLife',
                 'width' => 1200,
                 'height' => 1200,
             ],
@@ -620,10 +622,10 @@ class SeoMetaService
                 ?? $org['founder_job_title']
                 ?? 'Founder & CEO'
             ),
-            'email' => filled($config['person_email'] ?? $org['founder_email'] ?? null)
+            'email' => $isAboutPage && filled($config['person_email'] ?? $org['founder_email'] ?? null)
                 ? 'mailto:'.($config['person_email'] ?? $org['founder_email'])
                 : null,
-            'telephone' => filled($config['person_telephone'] ?? null)
+            'telephone' => $isAboutPage && filled($config['person_telephone'] ?? null)
                 ? (string) $config['person_telephone']
                 : null,
             'address' => filled($config['person_address'] ?? null)
@@ -635,11 +637,12 @@ class SeoMetaService
                 : null,
             'worksFor' => ['@id' => $orgId],
             'knowsAbout' => [
-                'WooEasyLife',
-                'WPSaleHub',
-                'WooCommerce Bangladesh',
-                'COD fraud prevention',
-                'Business automation',
+                'WooCommerce',
+                'Courier fraud check',
+                'Cash on delivery e-commerce in Bangladesh',
+                'WordPress',
+                'Vue.js',
+                'Laravel',
             ],
             'sameAs' => $founderSameAs !== [] ? $founderSameAs : null,
         ], static fn ($value) => $value !== null);
@@ -682,7 +685,7 @@ class SeoMetaService
         $ogImageWidth = (int) ($config['og_image_width'] ?? config('seo.og_image_width', 1200));
         $ogImageHeight = (int) ($config['og_image_height'] ?? config('seo.og_image_height', 630));
 
-        $webPageType = $isAboutPage ? 'AboutPage' : 'WebPage';
+        $webPageType = $isAboutPage ? ['AboutPage', 'ProfilePage'] : 'WebPage';
         $webPage = array_filter([
             '@type' => $webPageType,
             '@id' => $canonical.'#webpage',
@@ -754,25 +757,19 @@ class SeoMetaService
                 'jobTitle' => $authorRole,
                 'image' => $this->absoluteUrl($authorImage),
                 'url' => $personId === $founderPersonId ? $founderUrl : $canonical,
-                'email' => filled($config['person_email'] ?? $org['founder_email'] ?? null)
-                    ? 'mailto:'.($config['person_email'] ?? $org['founder_email'])
-                    : null,
-                'telephone' => $config['person_telephone'] ?? null,
                 'worksFor' => ['@id' => $orgId],
                 'sameAs' => $personSameAs !== [] ? $personSameAs : null,
             ], static fn ($value) => $value !== null);
 
             // Avoid duplicate Person nodes when author is the founder.
+            // Keep the shared ImageObject. Email and telephone stay on /about only.
             if ($personId !== $founderPersonId) {
                 $graphs[] = $personNode;
             } else {
-                // Enrich the sitewide founder node with page-specific contact fields.
                 foreach ($graphs as $i => $node) {
                     if (($node['@id'] ?? null) === $founderPersonId) {
                         $graphs[$i] = array_merge($node, array_filter([
                             'jobTitle' => $authorRole,
-                            'image' => $this->absoluteUrl($authorImage),
-                            'telephone' => $config['person_telephone'] ?? null,
                             'sameAs' => $personSameAs !== [] ? $personSameAs : ($node['sameAs'] ?? null),
                         ], static fn ($value) => $value !== null));
                         break;
@@ -1012,6 +1009,20 @@ class SeoMetaService
             ], static fn ($value) => $value !== null && $value !== '');
         }
 
+        if ($this->attributesFounder($page, $config)) {
+            $authorName = trim((string) ($config['author_name'] ?? ''));
+            $authorId = $authorName !== ''
+                ? $this->absoluteUrl('/').'#person-'.Str::slug($authorName)
+                : $founderPersonId;
+            foreach ($graphs as $i => $node) {
+                $nodeId = (string) ($node['@id'] ?? '');
+                $isPageNode = str_ends_with($nodeId, '#webpage') || str_ends_with($nodeId, '#article');
+                if ($isPageNode && ! isset($node['author'])) {
+                    $graphs[$i]['author'] = ['@id' => $authorId];
+                }
+            }
+        }
+
         return [
             '@context' => 'https://schema.org',
             '@graph' => $graphs,
@@ -1036,5 +1047,44 @@ class SeoMetaService
         }
 
         return array_values(array_unique($clean));
+    }
+
+    /**
+     * Headshot used by the shared Person node. The older filename stays on disk.
+     */
+    private function founderPortraitPath(string $candidate, string $canonicalPath): string
+    {
+        $candidate = trim($candidate);
+        if ($candidate === '' || str_ends_with($candidate, 'founder-headshot.jpg') || str_ends_with($candidate, 'muhibbullah-ansary.jpg')) {
+            return $canonicalPath;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Blog posts, FAQ pages, and public SEO guides get the founder as author
+     * when that node does not already name one.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function attributesFounder(string $page, array $config): bool
+    {
+        if (($config['page_kind'] ?? null) === 'about') {
+            return false;
+        }
+
+        $path = (string) ($config['canonical_path'] ?? '');
+        if (in_array($path, ['/', '/en', '/about', '/en/about', '/pricing', '/en/pricing', '/blog', '/en/blog'], true)) {
+            return false;
+        }
+
+        if (preg_match('#^/(en/)?blog/.+#', $path) === 1 || str_starts_with($path, '/faq')) {
+            return true;
+        }
+
+        return isset(config('seo.pages')[$page])
+            || isset(config('seo_cluster_pages')[$page])
+            || isset(config('seo_faq_pages')[$page]);
     }
 }
