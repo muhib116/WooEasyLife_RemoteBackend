@@ -361,6 +361,30 @@
             padding-left: 1.15rem;
         }
 
+        #seo-prerender .seo-table-scroll {
+            overflow-x: auto;
+            max-width: 100%;
+            margin: 0 0 1rem;
+        }
+
+        #seo-prerender .seo-table-scroll table {
+            width: 100%;
+            min-width: 36rem;
+            border-collapse: collapse;
+        }
+
+        #seo-prerender .seo-table-scroll th,
+        #seo-prerender .seo-table-scroll td {
+            border: 1px solid rgba(255, 255, 255, .15);
+            padding: .5rem .75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        #seo-prerender .seo-table-scroll th {
+            color: #fff;
+        }
+
         #seo-prerender a {
             color: #fbbf24;
         }
@@ -781,6 +805,28 @@
                                 @else
                                     <h2>{{ $sectionHeading }}</h2>
                                 @endif
+                            @endif
+                            @if (! empty($section['table']['headers']) && ! empty($section['table']['rows']))
+                                <div class="seo-table-scroll">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                @foreach ($section['table']['headers'] as $header)
+                                                    <th scope="col">{{ $header }}</th>
+                                                @endforeach
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($section['table']['rows'] as $cells)
+                                                <tr>
+                                                    @foreach ($cells as $cell)
+                                                        <td>{{ $cell }}</td>
+                                                    @endforeach
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                             @endif
                             @foreach (($section['paragraphs'] ?? []) as $paragraph)
                                 @if (is_string($paragraph) && $paragraph !== '')

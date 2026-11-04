@@ -63,6 +63,39 @@ const normalizedSections = computed(() => {
                 >
                     {{ section.heading }}
                 </h2>
+                <div
+                    v-if="section.table?.headers?.length && section.table?.rows?.length"
+                    class="max-w-full overflow-x-auto"
+                >
+                    <table class="w-full min-w-[36rem] border-collapse text-left text-sm text-slate-300">
+                        <thead>
+                            <tr>
+                                <th
+                                    v-for="header in section.table.headers"
+                                    :key="header"
+                                    scope="col"
+                                    class="border border-white/15 px-3 py-2 font-semibold text-white"
+                                >
+                                    {{ header }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="(cells, rowIndex) in section.table.rows"
+                                :key="`${id}-row-${rowIndex}`"
+                            >
+                                <td
+                                    v-for="(cell, cellIndex) in cells"
+                                    :key="`${id}-cell-${rowIndex}-${cellIndex}`"
+                                    class="border border-white/15 px-3 py-2 align-top"
+                                >
+                                    {{ cell }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <p
                     v-for="(paragraph, pIndex) in section.paragraphs || []"
                     :key="pIndex"

@@ -9,6 +9,12 @@ use InvalidArgumentException;
 
 class PublicFraudCheckService
 {
+    /** Success rate at or above this percent is the good (green) band. */
+    public const GOOD_MIN = 75;
+
+    /** Success rate at or above this percent, and below GOOD_MIN, is the caution (amber) band. */
+    public const CAUTION_MIN = 45;
+
     public function __construct(
         private FraudCheckService $fraudCheckService,
         private FraudCheckCoordinator $fraudCheckCoordinator,
@@ -99,7 +105,7 @@ class PublicFraudCheckService
     }
 
     /**
-     * Same phone check and 75/45 label as check(), without the website IP or daily counters.
+     * Same phone check and GOOD_MIN/CAUTION_MIN label as check(), without the website IP or daily counters.
      *
      * @return array{risk_label: string, risk_tone: string, report: array<string, mixed>}
      */
@@ -244,11 +250,11 @@ class PublicFraudCheckService
             return $isEn ? 'Caution advised' : 'সতর্কতা প্রয়োজন';
         }
 
-        if ($percent >= 75) {
+        if ($percent >= self::GOOD_MIN) {
             return $isEn ? 'Safe customer' : 'নিরাপদ গ্রাহক';
         }
 
-        if ($percent >= 45) {
+        if ($percent >= self::CAUTION_MIN) {
             return $isEn ? 'Caution advised' : 'সতর্কতা প্রয়োজন';
         }
 

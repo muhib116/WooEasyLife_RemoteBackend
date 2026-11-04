@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Services\CourierCheck\CourierCheckWporgLive;
 use App\Support\PublicCourierNames;
 use App\Support\PublicPricingFacts;
+use App\Support\SuccessRateBands;
 use Illuminate\Support\Str;
 
 class SeoMetaService
@@ -28,18 +29,18 @@ class SeoMetaService
             return [];
         }
 
-        $title = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['title'] ?? config('seo.site_name', config('app.name')))));
-        $description = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['description'] ?? '')));
+        $title = SuccessRateBands::expand(PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['title'] ?? config('seo.site_name', config('app.name'))))));
+        $description = SuccessRateBands::expand(PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['description'] ?? ''))));
         $canonicalPath = (string) ($config['canonical_path'] ?? '/');
         $canonical = $this->absoluteUrl($canonicalPath);
         $ogImagePath = (string) ($config['og_image'] ?? config('seo.default_og_image', '/images/seo/og-default.jpg'));
         $ogImage = $this->absoluteUrl($ogImagePath);
         $ogImage = $this->withOgImageCacheBust($ogImage, $ogImagePath);
-        $faqs = PublicPricingFacts::expandValue(PublicCourierNames::expandValue($config['faqs'] ?? []));
+        $faqs = SuccessRateBands::expandValue(PublicPricingFacts::expandValue(PublicCourierNames::expandValue($config['faqs'] ?? [])));
         $breadcrumbs = $config['breadcrumbs'] ?? [];
-        $prerenderH1 = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['prerender_h1'] ?? $title)));
-        $prerenderLead = PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['prerender_lead'] ?? $description)));
-        $contentSections = PublicPricingFacts::expandValue(PublicCourierNames::expandValue($this->contentSectionsFor($page, $config)));
+        $prerenderH1 = SuccessRateBands::expand(PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['prerender_h1'] ?? $title))));
+        $prerenderLead = SuccessRateBands::expand(PublicPricingFacts::expand(PublicCourierNames::expand((string) ($config['prerender_lead'] ?? $description))));
+        $contentSections = SuccessRateBands::expandValue(PublicPricingFacts::expandValue(PublicCourierNames::expandValue($this->contentSectionsFor($page, $config))));
         $htmlLang = (string) ($config['html_lang'] ?? config('seo.html_lang', 'bn-BD'));
         $hreflang = $this->buildHreflang($config['hreflang_paths'] ?? [
             $htmlLang => $canonicalPath,
@@ -367,6 +368,44 @@ class SeoMetaService
     }
 
     /**
+     * @return array{headers: list<string>, rows: list<list<string>>}|null
+     */
+    private function normalizeDecisionTable(mixed $table): ?array
+    {
+        if (! is_array($table)) {
+            return null;
+        }
+
+        $headers = array_values(array_filter(array_map(
+            static fn ($header) => is_string($header) ? trim($header) : '',
+            is_array($table['headers'] ?? null) ? $table['headers'] : []
+        ), static fn (string $header) => $header !== ''));
+
+        $rows = [];
+        foreach (is_array($table['rows'] ?? null) ? $table['rows'] : [] as $cells) {
+            if (! is_array($cells)) {
+                continue;
+            }
+            $clean = array_values(array_filter(array_map(
+                static fn ($cell) => is_string($cell) ? trim($cell) : '',
+                $cells
+            ), static fn (string $cell) => $cell !== ''));
+            if ($clean !== []) {
+                $rows[] = $clean;
+            }
+        }
+
+        if ($headers === [] || $rows === []) {
+            return null;
+        }
+
+        return [
+            'headers' => $headers,
+            'rows' => $rows,
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>  $config
      * @return list<array{heading: string|null, paragraphs: list<string>, figures: list<array{src: string, alt: string, caption: string|null}>}>
      */
@@ -429,6 +468,7 @@ class SeoMetaService
             }
 
             $note = is_string($section['note'] ?? null) ? trim($section['note']) : '';
+            $table = $this->normalizeDecisionTable($section['table'] ?? null);
             $rows = [];
             foreach (is_array($section['rows'] ?? null) ? $section['rows'] : [] as $comparisonRow) {
                 if (! is_array($comparisonRow)) {
@@ -450,7 +490,7 @@ class SeoMetaService
                 $rows[] = $cleanRow;
             }
 
-            if ($paragraphs === [] && $figures === [] && $list === [] && $note === '' && $rows === []) {
+            if ($paragraphs === [] && $figures === [] && $list === [] && $note === '' && $rows === [] && $table === null) {
                 continue;
             }
 
@@ -467,6 +507,9 @@ class SeoMetaService
             }
             if ($rows !== []) {
                 $row['rows'] = $rows;
+            }
+            if ($table !== null) {
+                $row['table'] = $table;
             }
 
             if ($layout !== null && $layout !== '') {
