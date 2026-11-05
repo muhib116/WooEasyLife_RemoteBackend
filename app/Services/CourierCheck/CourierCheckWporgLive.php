@@ -48,7 +48,9 @@ class CourierCheckWporgLive
     public function ensureListingIsPublic(): void
     {
         try {
+            // WordPress.org answers 403 to the default Guzzle user agent.
             $response = Http::timeout(5)
+                ->withUserAgent('WPSaleHub/1.0 (+https://app.wpsalehub.com)')
                 ->withOptions(['allow_redirects' => false])
                 ->head(self::DOWNLOAD_URL);
         } catch (Throwable) {
